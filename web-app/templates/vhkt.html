@@ -1,0 +1,644 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="page-header d-print-none mb-0">
+    <div class="row align-items-center">
+        <div class="col">
+            <h2 class="page-title">
+                <i class="fas fa-satellite-dish me-2"></i>Vận Hành Khai Thác
+            </h2>
+            <div class="text-muted small mt-1 d-none d-md-block">
+                Giám sát alarm SmartW: MĐ, MPĐ, MLL, VHKT
+            </div>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-outline-primary btn-refresh-header" id="refreshBtn" onclick="triggerRefresh()"
+                title="Cập nhật dữ liệu từ SmartW">
+                <i class="fas fa-sync-alt" id="refreshIcon"></i>
+                <span class="d-none d-md-inline ms-1">Refresh</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Navigation Cards — 5 in a row -->
+<style>
+    .nav-card {
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: 2px solid transparent;
+        position: relative;
+    }
+
+    .nav-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .nav-card.active {
+        border-color: currentColor;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .nav-card.active::after {
+        content: '';
+        position: absolute;
+        bottom: -8px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        border-left: 8px solid transparent;
+        border-right: 8px solid transparent;
+        border-top: 8px solid var(--arrow-color, #667);
+    }
+
+    .nav-card-body {
+        padding: 0.15rem 0.25rem;
+        text-align: center;
+    }
+
+    .nav-card-count {
+        font-size: 1.25rem;
+        font-weight: 700;
+        line-height: 1.2;
+    }
+
+    .nav-card-label {
+        font-size: 0.65rem;
+        color: #667;
+        white-space: nowrap;
+    }
+
+    /* Refresh button in header — matches nav card height */
+    .btn-refresh-header {
+        min-height: 52px;
+        width: calc(25vw - 20px);
+        max-width: 140px;
+        padding: 0.25rem 0.75rem;
+        font-size: 0.85rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+    }
+
+    .btn-refresh-header.is-loading {
+        opacity: 0.6;
+        pointer-events: none;
+    }
+
+    .btn-refresh-header .fa-spin {
+        animation-duration: 0.8s;
+    }
+
+    /* Per-tab info bar */
+    .tab-info-bar {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.35rem 0.5rem;
+        font-size: 0.72rem;
+        color: #667;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    }
+
+    .tab-info-bar .badge {
+        font-size: 0.68rem;
+    }
+
+    /* Per-tab error text */
+    .tab-error-text {
+        color: #b91c1c;
+        font-size: 0.65rem;
+        margin-left: auto;
+        max-width: 60%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    @media (min-width: 768px) {
+        .nav-card-body {
+            padding: 0.5rem;
+        }
+
+        .nav-card-count {
+            font-size: 1.5rem;
+        }
+
+        .nav-card-label {
+            font-size: 0.75rem;
+        }
+
+        .btn-refresh-header {
+            min-height: 58px;
+            min-width: 90px;
+        }
+    }
+
+    /* ── MĐ tab mobile compact ── */
+    @media (max-width: 767.98px) {
+        #tableMd {
+            font-size: 0.72rem;
+            --tblr-table-cell-padding-y: 3px;
+            --tblr-table-cell-padding-x: 4px;
+        }
+
+        #tableMd .col-canh-bao {
+            max-width: 110px;
+            white-space: normal;
+            word-break: break-word;
+        }
+
+        #tableMd .col-site {
+            white-space: nowrap;
+        }
+    }
+</style>
+<div class="row g-2 mt-2 mb-1" id="navCards">
+    <div class="col">
+        <div class="card shadow-sm nav-card active" data-table="md" onclick="switchTab('md')"
+            style="border-left: 3px solid var(--tblr-warning); --arrow-color: var(--tblr-warning);">
+            <div class="nav-card-body">
+                <div class="nav-card-count text-warning" id="mdCount">0</div>
+                <div class="nav-card-label">⚠️ MĐ</div>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card shadow-sm nav-card" data-table="mpd" onclick="switchTab('mpd')"
+            style="border-left: 3px solid var(--tblr-success); --arrow-color: var(--tblr-success);">
+            <div class="nav-card-body">
+                <div class="nav-card-count text-success" id="mpdCount">0</div>
+                <div class="nav-card-label">🟢 MPĐ</div>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card shadow-sm nav-card" data-table="mll" onclick="switchTab('mll')"
+            style="border-left: 3px solid var(--tblr-danger); --arrow-color: var(--tblr-danger);">
+            <div class="nav-card-body">
+                <div class="nav-card-count text-danger" id="mllCount">0</div>
+                <div class="nav-card-label">🔴 MLL</div>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card shadow-sm nav-card" data-table="vhkt" onclick="switchTab('vhkt')"
+            style="border-left: 3px solid var(--tblr-azure); --arrow-color: var(--tblr-azure);">
+            <div class="nav-card-body">
+                <div class="nav-card-count text-azure">📊</div>
+                <div class="nav-card-label">SLA</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Data Table Card -->
+<div class="card shadow-sm">
+    <div class="card-body p-0 p-md-2">
+        <!-- Tab MĐ -->
+        <div class="tab-pane" id="tab-md">
+            <div class="tab-info-bar" id="infoBarMd">
+                <span id="badgeMd"><span class="badge bg-secondary-lt">⏳ Đang tải...</span></span>
+                <span class="text-muted" id="timeMd"></span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-vcenter table-hover card-table small text-nowrap text-center mb-0"
+                    id="tableMd">
+                    <thead>
+                        <tr>
+                            <th>Site ID</th>
+                            <th class="d-none d-md-table-cell">Mạng</th>
+                            <th>Cảnh báo</th>
+                            <th>Bắt đầu</th>
+                            <th>Số phút</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="empty py-4 d-none" id="emptyMd">
+                <p class="empty-title">Không có alarm MĐ nào</p>
+                <p class="empty-subtitle text-muted">✅ Tất cả trạm đang có điện lưới.</p>
+            </div>
+        </div>
+
+        <!-- Tab MPĐ -->
+        <div class="tab-pane d-none" id="tab-mpd">
+            <div class="tab-info-bar" id="infoBarMpd">
+                <span id="badgeMpd"><span class="badge bg-secondary-lt">⏳ Đang tải...</span></span>
+                <span class="text-muted" id="timeMpd"></span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-vcenter table-hover card-table small text-nowrap text-center mb-0"
+                    id="tableMpd">
+                    <thead>
+                        <tr>
+                            <th>Site ID</th>
+                            <th class="d-none d-md-table-cell">Loại TB</th>
+                            <th>Cảnh báo</th>
+                            <th>Bắt đầu</th>
+                            <th>Số phút</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="empty py-4 d-none" id="emptyMpd">
+                <p class="empty-title">Không có alarm MPĐ nào</p>
+                <p class="empty-subtitle text-muted">Chưa có trạm nào đang chạy máy phát.</p>
+            </div>
+        </div>
+
+        <!-- Tab MLL -->
+        <div class="tab-pane d-none" id="tab-mll">
+            <div class="tab-info-bar" id="infoBarMll">
+                <span id="badgeMll"><span class="badge bg-secondary-lt">⏳ Đang tải...</span></span>
+                <span class="text-muted" id="timeMll"></span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-vcenter table-hover card-table small text-nowrap text-center mb-0"
+                    id="tableMll">
+                    <thead>
+                        <tr>
+                            <th>Site ID</th>
+                            <th>Mạng</th>
+                            <th>Bắt đầu</th>
+                            <th>Số phút</th>
+                            <th class="d-none d-md-table-cell">Cấp 1</th>
+                            <th class="d-none d-md-table-cell">Cấp 2</th>
+                            <th class="d-none d-md-table-cell">Cấp 3</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="empty py-4 d-none" id="emptyMll">
+                <p class="empty-title">Không có alarm MLL nào</p>
+                <p class="empty-subtitle text-muted">✅ Tất cả trạm đang liên lạc bình thường.</p>
+            </div>
+        </div>
+
+        <!-- Tab VHKT -->
+        <div class="tab-pane d-none" id="tab-vhkt">
+            <div class="d-flex justify-content-between align-items-center px-2 py-1 bg-light border-bottom d-none"
+                id="vhktInfoBar" style="font-size:0.78rem">
+                <span>📊 Báo cáo ngày: <strong id="vhktReportDate">--</strong></span>
+                <span class="text-muted">🕐 Cập nhật: <span id="vhktScrapedAt">--</span></span>
+            </div>
+            <div class="d-none tab-info-bar" id="vhktErrorBar"
+                style="background:#fff5f5; border-bottom:1px solid #fecaca; color:#b91c1c;">
+                <span class="badge bg-danger-lt">❌ Lỗi VHKT</span>
+                <span class="tab-error-text" id="vhktErrMsg"></span>
+                <span style="font-size:0.63rem; color:#92400e; white-space:nowrap" id="vhktErrTime"></span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-vcenter table-hover card-table text-nowrap mb-0" id="tableVhkt"
+                    style="font-size:0.8rem; --tblr-table-cell-padding-y:2px; --tblr-table-cell-padding-x:4px">
+                    <thead>
+                        <!-- Group header row — desktop only -->
+                        <tr class="d-none d-md-table-row">
+                            <th rowspan="2" style="vertical-align:middle">Trạm</th>
+                            <th colspan="3" class="text-center bg-red-lt">Mất điện</th>
+                            <th colspan="2" class="text-center bg-yellow-lt">Chạy máy phát</th>
+                            <th colspan="3" class="text-center bg-azure-lt">Mất liên lạc</th>
+                        </tr>
+                        <!-- Sub-header row — desktop -->
+                        <tr class="d-none d-md-table-row">
+                            <th class="text-center">Lần</th>
+                            <th class="text-center">Phút</th>
+                            <th class="text-center">SLA</th>
+                            <th class="text-center">Lần</th>
+                            <th class="text-center">Phút</th>
+                            <th class="text-center">Lần</th>
+                            <th class="text-center">Phút</th>
+                            <th class="text-center">SLA</th>
+                        </tr>
+                        <!-- Mobile compact header -->
+                        <tr class="d-md-none" style="font-size:0.7rem">
+                            <th>Trạm</th>
+                            <th class="text-center px-1">MĐ<br>Lần</th>
+                            <th class="text-center px-1">MĐ<br>Phút</th>
+                            <th class="text-center px-1">MĐ<br>SLA</th>
+                            <th class="text-center px-1">MPĐ<br>Lần</th>
+                            <th class="text-center px-1">MPĐ<br>Phút</th>
+                            <th class="text-center px-1">MLL<br>Lần</th>
+                            <th class="text-center px-1">MLL<br>Phút</th>
+                            <th class="text-center px-1">MLL<br>SLA</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="empty py-4 d-none" id="emptyVhkt">
+                <p class="empty-title">Chưa có dữ liệu SLA</p>
+                <p class="empty-subtitle text-muted">SLA được cập nhật 1 lần/sáng (5:00 AM) — dữ liệu ngày hôm qua.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ── State ───────────────────────────────────────────────
+    let currentTab = 'md';
+    let tabDataLoaded = { md: false, mpd: false, mll: false, vhkt: false };
+
+    // ── Card-Based Tab Switching ────────────────────────────
+    function switchTab(tabName) {
+        if (tabName === currentTab) return;
+        currentTab = tabName;
+
+        // Update active card
+        document.querySelectorAll('#navCards .nav-card[data-table]').forEach(card => {
+            card.classList.toggle('active', card.getAttribute('data-table') === tabName);
+        });
+
+        // Show/hide tab panes
+        document.querySelectorAll('.tab-pane').forEach(pane => {
+            pane.classList.toggle('d-none', pane.id !== 'tab-' + tabName);
+        });
+
+        // Load data if not yet loaded
+        if (!tabDataLoaded[tabName]) {
+            loadTabData(tabName);
+        }
+    }
+
+    // ── Summary Refresh + Per-tab info bar update ───────────
+    function refreshSummary() {
+        fetch(`/api/smartw/summary?_=${Date.now()}`)
+            .then(r => r.json())
+            .then(d => {
+                document.getElementById('mdCount').textContent = d.md_count || 0;
+                document.getElementById('mpdCount').textContent = d.mpd_count || 0;
+                document.getElementById('mllCount').textContent = d.mll_count || 0;
+
+                // Update MĐ/MPĐ/MLL info bars with shared last_poll + alarm error
+                ['md', 'mpd', 'mll'].forEach(tab => updateTabInfoBar(tab, d.last_poll, d.status, d.last_alarm_error, d.login_paused));
+
+                // Update VHKT error bar
+                const vhktErrBar = document.getElementById('vhktErrorBar');
+                if (d.last_vhkt_error) {
+                    document.getElementById('vhktErrMsg').textContent = d.last_vhkt_error.message;
+                    document.getElementById('vhktErrTime').textContent = d.last_vhkt_error.time;
+                    vhktErrBar.classList.remove('d-none');
+                } else {
+                    vhktErrBar.classList.add('d-none');
+                }
+            })
+            .catch(() => { });
+    }
+
+    // ── Per-tab badge + time + error updater ──
+    function updateTabInfoBar(tabName, lastPoll, statusStr, alarmError, loginPaused) {
+        const badgeMap = { md: 'badgeMd', mpd: 'badgeMpd', mll: 'badgeMll' };
+        const timeMap = { md: 'timeMd', mpd: 'timeMpd', mll: 'timeMll' };
+        const badgeEl = document.getElementById(badgeMap[tabName]);
+        const timeEl = document.getElementById(timeMap[tabName]);
+        if (!badgeEl || !timeEl) return;
+
+        if (loginPaused) {
+            badgeEl.innerHTML = '<span class="badge bg-warning-lt">⛔ TẠM DỪNG</span>';
+            timeEl.innerHTML = '<span style="color:#92400e;font-size:0.75rem">Login thất bại 10 lần — Cập nhật mật khẩu trong Admin → SmartW</span>';
+        } else if (alarmError) {
+            badgeEl.innerHTML = '<span class="badge bg-danger-lt">❌ Lỗi</span>';
+            timeEl.innerHTML = '<span style="color:#b91c1c">' + alarmError.message + '</span> <span style="color:#92400e;font-size:0.63rem">' + alarmError.time + '</span>';
+        } else if (lastPoll) {
+            badgeEl.innerHTML = '<span class="badge bg-success-lt">🟢 OK</span>';
+            timeEl.textContent = 'Cập nhật lúc ' + lastPoll;
+        } else if (statusStr === 'not_configured') {
+            badgeEl.innerHTML = '<span class="badge bg-secondary-lt">⚪ Chưa cấu hình</span>';
+            timeEl.textContent = '';
+        } else {
+            badgeEl.innerHTML = '<span class="badge bg-secondary-lt">⏳ Chờ dữ liệu</span>';
+            timeEl.textContent = '';
+        }
+    }
+
+    // ── Row class calculator ────────────────────────────────
+    function getRowClass(tabName, r) {
+        if (tabName === 'md') {
+            return (!r.has_mpd && r.status === 'ACTIVE') ? '' : '';
+        }
+        if (tabName === 'mll') {
+            const flags = r.flags || {};
+            if (flags.inconsistent_cause && r.status === 'ACTIVE') return 'table-danger';
+            if (flags.missing_cause && r.status === 'ACTIVE') return 'table-warning';
+        }
+        return '';
+    }
+
+    // ── Tab Data Loader (flicker-free with row-level diff) ─
+
+    function loadTabData(tabName) {
+        fetch(`/api/smartw/${tabName}?_=${Date.now()}`)
+            .then(r => r.json())
+            .then(data => {
+                tabDataLoaded[tabName] = true;
+                const rows = data.data || [];
+                const capName = tabName.charAt(0).toUpperCase() + tabName.slice(1);
+                const emptyEl = document.getElementById('empty' + capName);
+                const tableEl = document.getElementById('table' + capName);
+                const tbody = tableEl.querySelector('tbody');
+
+                if (rows.length === 0) {
+                    emptyEl.classList.remove('d-none');
+                    tableEl.classList.add('d-none');
+                    tbody.innerHTML = '';
+                    // Sync card count to 0
+                    const countMap0 = { md: 'mdCount', mpd: 'mpdCount', mll: 'mllCount' };
+                    if (countMap0[tabName]) document.getElementById(countMap0[tabName]).textContent = '0';
+
+                    return;
+                }
+
+                // Sort rows (active first)
+                if (tabName !== 'vhkt') {
+                    rows.sort((a, b) => (a.status === 'ACTIVE' ? 0 : 1) - (b.status === 'ACTIVE' ? 0 : 1));
+                }
+
+                // Build row data: { html (td cells), cls (tr class) }
+                let newRows;
+                if (tabName === 'md') newRows = rows.map(r => ({ html: buildMdRow(r), cls: getRowClass('md', r) }));
+                else if (tabName === 'mpd') newRows = rows.map(r => ({ html: buildMpdRow(r), cls: '' }));
+                else if (tabName === 'mll') newRows = rows.map(r => ({ html: buildMllRow(r), cls: getRowClass('mll', r) }));
+                else if (tabName === 'vhkt') newRows = rows.map(r => ({ html: buildVhktRow(r), cls: '' }));
+
+                // Row-level diff: only touch changed rows
+                const existingTrs = Array.from(tbody.querySelectorAll('tr'));
+                if (existingTrs.length === newRows.length) {
+                    // Same row count — update cells in place (no flicker)
+                    newRows.forEach((nr, i) => {
+                        const tr = existingTrs[i];
+                        if (tr.innerHTML !== nr.html) tr.innerHTML = nr.html;
+                        if (tr.className !== nr.cls) tr.className = nr.cls;
+                    });
+                } else {
+                    // Row count changed — full rebuild in one shot
+                    tbody.innerHTML = newRows.map(nr =>
+                        `<tr class="${nr.cls}">${nr.html}</tr>`
+                    ).join('');
+                }
+
+                emptyEl.classList.add('d-none');
+                tableEl.classList.remove('d-none');
+
+                // VHKT: show report date and scrape time
+                if (tabName === 'vhkt') {
+                    const infoBar = document.getElementById('vhktInfoBar');
+                    if (rows.length > 0 && rows[0].ngay) {
+                        document.getElementById('vhktReportDate').textContent = rows[0].ngay;
+                    }
+                    if (data.scraped_at) {
+                        const dt = new Date(data.scraped_at);
+                        const hm = dt.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+                        const dmy = dt.toLocaleDateString('vi-VN');
+                        document.getElementById('vhktScrapedAt').textContent = hm + ' ' + dmy;
+                    }
+                    infoBar.classList.remove('d-none');
+                }
+
+
+                // Sync card count with actual data
+                const countMap = { md: 'mdCount', mpd: 'mpdCount', mll: 'mllCount' };
+                if (countMap[tabName]) {
+                    if (tabName === 'md') {
+                        // Count unique stations instead of total alarms
+                        const uniqueStations = new Set(rows.map(r => (r.site_id || '').trim()).filter(Boolean));
+                        document.getElementById(countMap[tabName]).textContent = uniqueStations.size;
+                    } else {
+                        document.getElementById(countMap[tabName]).textContent = rows.length;
+                    }
+                }
+            })
+            .catch(err => console.error('Load error:', err));
+    }
+
+    // ── Row Builders (return HTML string, NO DOM mutation) ──
+
+    function statusBadge(status) {
+        if (status === 'ACTIVE') return '<span class="badge bg-danger-lt">🔴 ACTIVE</span>';
+        if (status === 'CLEARED') return '<span class="badge bg-success-lt">🟢 CLEAR</span>';
+        return '<span class="badge bg-secondary-lt">--</span>';
+    }
+
+    function buildMdRow(r) {
+        const siteColor = r.has_mpd ? 'color:#2ea043' : 'color:#d1242f';
+        const siteIcon = r.has_mpd ? '🟢' : '🔴';
+        const mins = r.so_phut || 0;
+        const minsClass = mins >= 60 ? 'text-danger fw-bold' : (mins >= 30 ? 'text-warning' : '');
+        // Short time for mobile: extract just HH:MM from "20/02/2026 15:28"
+        const batDau = r.bat_dau || '';
+        const timePart = batDau.split(' ').pop() || batDau; // "15:28"
+        const datePart = batDau.split(' ').slice(0, -1).join(' '); // "20/02/2026"
+        const timeCell = datePart
+            ? `<span class="d-none d-md-inline">${datePart} </span>${timePart}`
+            : batDau;
+        return `<td class="fw-bold col-site" style="${siteColor}">${siteIcon} ${r.site_id || '--'}</td><td class="d-none d-md-table-cell small">${r.mang || ''}</td><td class="col-canh-bao text-start">${r.canh_bao || ''}</td><td class="small">${timeCell}</td><td class="${minsClass}">${mins}</td>`;
+    }
+
+    function buildMpdRow(r) {
+        const mins = r.so_phut || 0;
+        const minsClass = mins >= 60 ? 'text-danger fw-bold' : (mins >= 30 ? 'text-warning' : '');
+        return `<td class="fw-bold">${r.site_id || '--'}</td><td class="d-none d-md-table-cell small">${r.loai_thiet_bi || ''}</td><td class="small text-start">${r.canh_bao || ''}</td><td class="small">${r.bat_dau || ''}</td><td class="${minsClass}">${mins}</td>`;
+    }
+
+    function buildMllRow(r) {
+        const flags = r.flags || {};
+        const missing = flags.missing_cause && r.status === 'ACTIVE';
+        const inconsistent = flags.inconsistent_cause && r.status === 'ACTIVE';
+        const detail = flags.inconsistent_detail || '';
+        let flagIcon = '';
+        if (inconsistent) flagIcon = ` <i class="fas fa-exclamation-triangle text-danger" title="Mâu thuẫn: ${detail}" style="cursor:help"></i>`;
+        else if (missing) flagIcon = ' <i class="fas fa-exclamation-circle text-warning" title="Thiếu nguyên nhân"></i>';
+        const c1 = r.nguyen_nhan_1 || '';
+        const c2 = r.nguyen_nhan_2 || '';
+        const c3 = r.nguyen_nhan_3 || '';
+        // Color-coded Mạng badges
+        const mang = r.mang || '--';
+        const mangColor = mang.includes('Mobi') ? 'bg-blue-lt' : (mang.includes('Vina') ? 'bg-red-lt' : (mang.includes('Viettel') ? 'bg-green-lt' : 'bg-azure-lt'));
+        // Color-coded Số phút
+        const mins = r.so_phut || 0;
+        const minsClass = mins >= 60 ? 'text-danger fw-bold' : (mins >= 30 ? 'text-warning fw-bold' : 'text-success');
+        // Cause badges
+        const causeBadge = (c) => c ? `<span class="badge bg-azure-lt">${c}</span>` : '<span class="text-danger">—</span>';
+        return `<td class="fw-bold">${r.site_id || '--'}${flagIcon}</td><td><span class="badge ${mangColor}">${mang}</span></td><td class="small">${r.bat_dau || ''}</td><td class="${minsClass}">${mins}</td><td class="d-none d-md-table-cell small">${causeBadge(c1)}</td><td class="d-none d-md-table-cell small">${causeBadge(c2)}</td><td class="d-none d-md-table-cell small">${causeBadge(c3)}</td>`;
+    }
+
+    function buildVhktRow(r) {
+        const mdSla = (r.md_sla || '').toLowerCase().includes('đạt')
+            ? '<span class="badge bg-success-lt">Đạt</span>'
+            : (r.md_sla ? '<span class="badge bg-danger-lt">✗</span>' : '--');
+        const mllSla = (r.mll_sla || '').toLowerCase().includes('đạt')
+            ? '<span class="badge bg-success-lt">Đạt</span>'
+            : (r.mll_sla ? '<span class="badge bg-danger-lt">✗</span>' : '--');
+        return `<td class="fw-bold">${r.tram || '--'}</td><td class="text-center px-1">${r.md_so_lan || 0}</td><td class="text-center px-1">${r.md_phut || 0}</td><td class="text-center px-1">${mdSla}</td><td class="text-center px-1">${r.mpd_so_lan || 0}</td><td class="text-center px-1">${r.mpd_phut || 0}</td><td class="text-center px-1">${r.mll_so_lan || 0}</td><td class="text-center px-1">${r.mll_phut || 0}</td><td class="text-center px-1">${mllSla}</td>`;
+    }
+
+    // ── Init + Auto-refresh ─────────────────────────────────
+    document.addEventListener('DOMContentLoaded', function () {
+        // Load first tab + summary
+        loadTabData('md');
+        refreshSummary();
+
+        // Auto-refresh summary every 30s
+        setInterval(refreshSummary, 30000);
+
+        // Auto-refresh current tab every 60s
+        setInterval(() => {
+            loadTabData(currentTab);
+        }, 60000);
+    });
+
+    // ── Manual Refresh Trigger ──────────────────────────────
+    let refreshCooldown = false;
+
+    function triggerRefresh() {
+        if (refreshCooldown) return;
+
+        const btn = document.getElementById('refreshBtn');
+        const icon = document.getElementById('refreshIcon');
+
+        // Start loading state
+        refreshCooldown = true;
+        icon.classList.add('fa-spin');
+        btn.classList.add('is-loading');
+
+        fetch('/api/smartw/trigger', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'alarm' })
+        })
+            .then(r => r.json())
+            .then(d => {
+                if (!d.ok) {
+                    alert(d.message);
+                    resetRefreshBtn();
+                    return;
+                }
+                // Wait 30s then reload all tabs
+                setTimeout(() => {
+                    tabDataLoaded = { md: false, mpd: false, mll: false, vhkt: false };
+                    loadTabData(currentTab);
+                    refreshSummary();
+                    resetRefreshBtn();
+                }, 30000);
+            })
+            .catch(err => {
+                console.error('Trigger error:', err);
+                alert('Lỗi kết nối, thử lại sau.');
+                resetRefreshBtn();
+            });
+    }
+
+    function resetRefreshBtn() {
+        const btn = document.getElementById('refreshBtn');
+        const icon = document.getElementById('refreshIcon');
+        refreshCooldown = false;
+        icon.classList.remove('fa-spin');
+        btn.classList.remove('is-loading');
+    }
+</script>
+{% endblock %}

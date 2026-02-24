@@ -1,0 +1,24 @@
+<!-- Modal Import Outages -->
+<div class="modal modal-blur fade" id="importModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg">
+            <div class="modal-header">
+                <h5 class="modal-title">Nhập dữ liệu từ Excel</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('generator.import_power_schedule') }}" method="POST" enctype="multipart/form-data">
+                <div class="modal-body text-center py-4">
+                    <div class="mb-3">
+                        <i class="fas fa-file-excel fa-3x text-green opacity-20"></i>
+                    </div>
+                    <div class="text-muted mb-4">Chọn file Excel (.xlsx hoặc .xls) đúng mẫu để nhập dữ liệu lịch cúp
+                        điện.</div>
+                    <input type="file" class="form-control" name="file" accept=".xlsx, .xls" required>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-success w-100">Bắt đầu tải lên</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

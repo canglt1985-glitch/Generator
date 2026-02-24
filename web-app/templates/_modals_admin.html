@@ -1,0 +1,190 @@
+<!-- Add Info Modal -->
+<div class="modal modal-blur fade" id="addInfoModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content shadow-lg">
+            <div class="modal-header">
+                <h5 class="modal-title">Thêm Mới Trạm Viễn Thông</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('generator.add_general_info') }}" method="POST">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6"><label class="form-label">ID Trạm</label><input type="text" name="id_tram"
+                                class="form-control" required></div>
+                        <div class="col-md-6"><label class="form-label">Huyện</label><input type="text" name="huyen"
+                                class="form-control"></div>
+                        <div class="col-md-6"><label class="form-label">Quản lý trạm</label><input type="text"
+                                name="quan_ly_tram" class="form-control"></div>
+                        <div class="col-md-6"><label class="form-label">Loại máy phát</label><input type="text"
+                                name="may_phat_dien" class="form-control"></div>
+                        <div class="col-md-4"><label class="form-label">Công suất</label><input type="text"
+                                name="dung_tich" class="form-control"></div>
+                        <div class="col-md-4"><label class="form-label">Định mức thực</label><input type="number"
+                                step="0.1" name="dinh_muc_thuc_te" class="form-control"></div>
+                        <div class="col-md-4"><label class="form-label">Loại nhiên liệu</label><select
+                                name="loai_nhien_lieu" class="form-select">
+                                <option value="Dầu">Dầu</option>
+                                <option value="Xăng">Xăng</option>
+                            </select></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary ms-auto w-100">Lưu thông tin trạm</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Add Log Modal -->
+<div class="modal modal-blur fade" id="addLogsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content shadow-lg">
+            <div class="modal-header">
+                <h5 class="modal-title">Ghi nhận chạy máy phát điện</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('generator.add_generator_log') }}" method="POST">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-4"><label class="form-label">ID Trạm</label><input type="text" name="id_tram"
+                                class="form-control" required list="stationList"></div>
+                        <div class="col-md-4"><label class="form-label">Ngày vận hành</label><input type="date"
+                                name="ngay_van_hanh" class="form-control" required value="{{ now_date }}"></div>
+                        <div class="col-md-4"><label class="form-label">Loại NL</label><select name="nhien_lieu"
+                                class="form-select">
+                                <option value="Dầu">Dầu</option>
+                                <option value="Xăng">Xăng</option>
+                            </select></div>
+                        <div class="col-md-3"><label class="form-label">Bắt đầu</label><input type="time"
+                                name="gio_bat_dau" class="form-control" id="start_time" required></div>
+                        <div class="col-md-3"><label class="form-label">Kết thúc</label><input type="time"
+                                name="gio_ket_thuc" class="form-control" id="end_time" required></div>
+                        <div class="col-md-2"><label class="form-label">ĐM (L/h)</label><input type="number" step="0.01"
+                                name="dinh_muc" class="form-control" id="log_rate"></div>
+                        <div class="col-md-2"><label class="form-label">Đơn giá</label><input type="number" step="1"
+                                name="don_gia" class="form-control" id="log_price" placeholder="VNĐ..."></div>
+                        <div class="col-md-2">
+                            <label class="form-label text-muted small">Thông tin tự tính</label>
+                            <div class="p-2 bg-light rounded small" id="log_calc_preview">0h | 0L | 0đ</div>
+                            <input type="hidden" name="thoi_gian_hoat_dong" id="log_duration">
+                            <input type="hidden" name="nhien_lieu_tieu_hao" id="log_consumed">
+                            <input type="hidden" name="thanh_tien" id="log_total">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary ms-auto w-100">Lưu dữ liệu vận hành</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Add User Modal -->
+<div class="modal modal-blur fade" id="addUserModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg">
+            <div class="modal-header">
+                <h5 class="modal-title">Thêm Tài Khoản Nhân Viên</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('core.add_user') }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3"><label class="form-label">Username</label><input type="text" name="username"
+                            class="form-control" required></div>
+                    <div class="mb-3"><label class="form-label">Mật khẩu</label><input type="password" name="password"
+                            class="form-control" required></div>
+                    <div class="mb-3"><label class="form-label">Họ và Tên</label><input type="text" name="full_name"
+                            class="form-control"></div>
+                    <div class="mb-3"><label class="form-label">Vai trò</label><select name="role" class="form-select">
+                            <option value="user">Nhân viên</option>
+                            <option value="admin">Quản trị viên</option>
+                        </select></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary w-100">Tạo tài khoản</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Import Modals -->
+{% for id, title, url in [
+('importInfoModal', 'Import Trạm', 'generator.import_general_info'),
+('importLogsModal', 'Import Chạy Máy', 'generator.import_generator_log'),
+('importPurchaseModal', 'Import Mua Dầu', 'generator.import_fuel_purchase'),
+('importRefillModal', 'Import Đổ Dầu', 'generator.import_fuel_refill')
+] %}
+<div class="modal modal-blur fade" id="{{ id }}" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ title }}</h5><button type="button" class="btn-close"
+                    data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for(url) }}" method="POST" enctype="multipart/form-data">
+                <div class="modal-body py-4 text-center">
+                    <div class="mb-3"><i class="fas fa-file-excel fa-3x text-green opacity-20"></i></div>
+                    <input type="file" name="file" class="form-control" required accept=".xlsx, .xls">
+                </div>
+                <div class="modal-footer"><button type="submit" class="btn btn-success w-100">Tải lên dữ liệu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<!-- Reset PW Modals -->
+{% for user in users %}
+<div class="modal modal-blur fade" id="resetPasswordModal{{ user.id }}" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg">
+            <div class="modal-header">
+                <h5 class="modal-title">Đặt lại mật khẩu: {{ user.username }}</h5><button type="button"
+                    class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('core.reset_password', user_id=user.id) }}" method="POST">
+                <div class="modal-body"><label class="form-label">Mật khẩu mới</label><input type="password"
+                        name="new_password" class="form-control" required></div>
+                <div class="modal-footer"><button type="submit" class="btn btn-warning w-100">Xác nhận thay đổi</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<datalist id="stationList">{% for s in stations %}<option value="{{ s.id_tram }}">{% endfor %}</datalist>
+
+<script>
+    // Logic for Add Log calculation
+    const sIn = document.getElementById('start_time');
+    const eIn = document.getElementById('end_time');
+    const rIn = document.getElementById('log_rate');
+    const pIn = document.getElementById('log_price');
+    const preview = document.getElementById('log_calc_preview');
+
+    function updateLogCalc() {
+        if (sIn.value && eIn.value) {
+            let s = sIn.value.split(':'), e = eIn.value.split(':');
+            let ms = (new Date(0, 0, 0, e[0], e[1]) - new Date(0, 0, 0, s[0], s[1]));
+            if (ms < 0) ms += 24 * 3600 * 1000;
+            let hrs = ms / 3600000;
+            let rate = parseFloat(rIn.value) || 0;
+            let vol = hrs * rate;
+            let price = parseFloat(pIn.value) || 0;
+            let total = Math.round(vol * price);
+
+            preview.innerText = `${hrs.toFixed(2)}h | ${vol.toFixed(2)}L | ${total.toLocaleString('vi-VN')}đ`;
+
+            document.getElementById('log_duration').value = hrs.toFixed(2);
+            document.getElementById('log_consumed').value = vol.toFixed(2);
+            document.getElementById('log_total').value = total;
+        }
+    }
+    [sIn, eIn, rIn, pIn].forEach(i => i && i.addEventListener('change', updateLogCalc));
+    [sIn, eIn, rIn, pIn].forEach(i => i && i.addEventListener('input', updateLogCalc));
+</script>

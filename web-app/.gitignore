@@ -1,0 +1,67 @@
+# ── Python ──
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+*.egg
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ── Virtual Environment ──
+.venv/
+venv/
+env/
+ENV/
+
+# ── Environment / Secrets ──
+.env
+.env.*
+!.env.example
+
+# ── Database ──
+*.db
+*.sqlite
+*.sqlite3
+instance/
+
+# ── IDE / Editor ──
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+
+# ── OS ──
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Data files (nhạy cảm / nặng) ──
+data/*.json
+data/*.csv
+data/smartw/
+
+# ── Upload / Export files ──
+*.xlsx
+*.xls
+*.csv
+
+# ── Logs ──
+*.log
+logs/
+
+# ── AI / Tool internals ──
+.brain/
+.zencoder/
+.zenflow/
+.gemini/
+
+# ── Misc ──
+*.bak
+*.tmp
+*.temp

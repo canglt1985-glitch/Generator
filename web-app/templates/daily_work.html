@@ -1,0 +1,371 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="page-header d-print-none mb-4">
+    <div class="row g-2 align-items-center">
+        <div class="col">
+            <h2 class="page-title">
+                <i class="fas fa-tasks me-2 text-primary"></i>Công Việc Hàng Ngày
+            </h2>
+            <div class="text-muted small mt-1">Ghi nhận và quản lý hoạt động kỹ thuật trạm BTS.</div>
+        </div>
+        <div class="col-md-6 text-md-end">
+            <div class="d-flex flex-wrap gap-2 justify-content-md-end">
+                <button type="button" class="btn btn-sm btn-primary rounded-pill px-4" data-bs-toggle="modal"
+                    data-bs-target="#addWorkModal">
+                    <i class="fas fa-plus me-1"></i>Thêm Công Việc
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="card shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-vcenter table-hover card-table text-nowrap">
+            <thead>
+                <tr>
+                    <th class="col-date">Ngày</th>
+                    <th class="col-id">ID Trạm</th>
+                    <th class="col-content">Nội Dung</th>
+                    <th class="col-category">Hạng Mục</th>
+                    <th class="col-vhkt">Tồn tại VHKT</th>
+                    <th class="col-csht">Tồn tại CSHT</th>
+                    <th class="col-note">Ghi chú</th>
+                    <th class="col-staff">Người Thực Hiện</th>
+                    <th class="text-end col-action">Thao Tác</th>
+                </tr>
+                <tr class="filter-row bg-light-lt">
+                    <th><input type="date" class="form-control form-control-sm" onchange="filterTable(this)"></th>
+                    <th><input type="text" class="form-control form-control-sm" placeholder="🔍 Trạm"
+                            oninput="filterTable(this)"></th>
+                    <th><input type="text" class="form-control form-control-sm" placeholder="🔍 Nội dung"
+                            oninput="filterTable(this)"></th>
+                    <th></th>
+                    <th></th>
+                    <th></th>
+                    <th></th>
+                    <th></th>
+                    <th class="text-end"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in works %}
+                <tr>
+                    <td class="col-date text-dark fw-bold">
+                        {{ item.ngay | format_date }}
+                    </td>
+                    <td class="col-id"><span class="badge bg-blue-lt fw-bold cursor-pointer station-trigger"
+                            data-id="{{ item.id_tram }}">{{ item.id_tram }}</span></td>
+                    <td class="col-content small">
+                        <div class="line-clamp-2">{{ item.noi_dung }}</div>
+                    </td>
+                    <td class="col-category small text-muted">
+                        <div class="line-clamp-2">{{ item.hang_muc }}</div>
+                    </td>
+                    <td class="col-vhkt small">
+                        <div class="line-clamp-2">{{ item.ton_tai_vhkt or '' }}</div>
+                    </td>
+                    <td class="col-csht small">
+                        <div class="line-clamp-2">{{ item.ton_tai_csht or '' }}</div>
+                    </td>
+                    <td class="col-note small">
+                        <div class="line-clamp-2">{{ item.ghi_chu or '' }}</div>
+                    </td>
+                    <td class="col-staff small">{{ item.nhan_vien }}</td>
+                    <td class="text-end">
+                        <button class="btn btn-ghost-primary btn-icon" title="Sửa" data-bs-toggle="modal"
+                            data-bs-target="#editWorkModal" data-id="{{ item.id }}" data-ngay="{{ item.ngay }}"
+                            data-idtram="{{ item.id_tram }}" data-hangmuc="{{ item.hang_muc }}"
+                            data-noidung="{{ item.noi_dung }}" data-vhkt="{{ item.ton_tai_vhkt }}"
+                            data-csht="{{ item.ton_tai_csht }}" data-ghichu="{{ item.ghi_chu }}">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <form action="{{ url_for('daily_work.delete_daily_work', work_id=item.id) }}" method="POST"
+                            class="d-inline" onsubmit="return confirm('Xóa công việc này?')">
+                            <button type="submit" class="btn btn-ghost-danger btn-icon" title="Xóa">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="9" class="text-center py-5 text-muted">Chưa có dữ liệu công việc.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal Thêm Công Việc -->
+<div class="modal modal-blur fade" id="addWorkModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content shadow-lg">
+            <div class="modal-header">
+                <h5 class="modal-title">Ghi nhận công việc mới</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('daily_work.add_daily_work') }}" method="POST">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Ngày thực hiện</label>
+                            <input type="date" name="ngay" class="form-control" required value="{{ now_date }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Mã Trạm (ID)</label>
+                            <input type="text" name="id_tram" class="form-control" required list="stationList">
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Hạng mục</label>
+                            <select name="hang_muc" class="form-select">
+                                <option value="A1-Hiệu chỉnh mạng lưới">A1-Hiệu chỉnh mạng lưới</option>
+                                <option value="A2-Hiệu chỉnh truyền dẫn">A2-Hiệu chỉnh truyền dẫn</option>
+                                <option value="A3-Xử lý cảnh báo theo yêu cầu">A3-Xử lý cảnh báo theo yêu cầu</option>
+                                <option value="A4-Xử lý Cell Off theo yêu cầu">A4-Xử lý Cell Off theo yêu cầu</option>
+                                <option value="A5-Xử lý feedback theo PAKH">A5-Xử lý feedback theo PAKH</option>
+                                <option value="B1-Giám sát công việc tại trạm">B1-Giám sát công việc tại trạm</option>
+                                <option value="C2-Kiểm tra nhà trạm">C2-Kiểm tra nhà trạm</option>
+                                <option value="Công việc khác">Công việc khác</option>
+                                <option value="Ứng cứu thông tin">Ứng cứu thông tin</option>
+                            </select>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Nội dung chi tiết</label>
+                            <textarea name="noi_dung" class="form-control" rows="3" required
+                                placeholder="Ghi chú các công việc đã xử lý..."></textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small">Tồn tại VHKT</label>
+                            <textarea name="ton_tai_vhkt" class="form-control" rows="2"></textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small">Tồn tại CSHT</label>
+                            <textarea name="ton_tai_csht" class="form-control" rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary w-100">Lưu công việc</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .col-id {
+        width: 100px;
+    }
+
+    .col-date {
+        width: 110px;
+    }
+
+    .col-content {
+        min-width: 250px;
+    }
+
+    .col-category {
+        min-width: 150px;
+    }
+
+    .col-vhkt,
+    .col-csht,
+    .col-note {
+        min-width: 150px;
+    }
+
+    .col-staff {
+        min-width: 120px;
+    }
+
+    .line-clamp-2 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        white-space: normal !important;
+        word-wrap: break-word;
+    }
+
+    .text-nowrap td {
+        white-space: nowrap;
+    }
+
+    .text-nowrap td:has(.line-clamp-2) {
+        white-space: normal;
+    }
+
+    .col-action {
+        width: 80px;
+    }
+
+    /* ===== MOBILE RESPONSIVE (< 768px) ===== */
+    @media (max-width: 767.98px) {
+
+        /* Hide less essential columns on mobile */
+        .col-category,
+        .col-vhkt,
+        .col-csht,
+        .col-note {
+            display: none !important;
+        }
+
+        /* Compact filter row on mobile */
+        .filter-row input {
+            font-size: 0.65rem !important;
+            padding: 0.15rem 0.25rem !important;
+            height: 26px !important;
+        }
+
+        /* Compact remaining columns */
+        .col-date {
+            width: 65px;
+            white-space: nowrap !important;
+            font-size: 0.7rem;
+        }
+
+        .col-id {
+            width: 60px;
+            white-space: nowrap !important;
+        }
+
+        .col-id .badge {
+            font-size: 0.65rem;
+            padding: 0.2em 0.4em;
+        }
+
+        .col-content {
+            min-width: unset;
+            max-width: 140px;
+        }
+
+        .col-staff {
+            min-width: unset;
+            width: 70px;
+            font-size: 0.7rem;
+            white-space: nowrap !important;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .col-action {
+            width: 50px;
+        }
+
+        .col-action .btn-icon {
+            width: 1.5rem;
+            height: 1.5rem;
+            padding: 0;
+        }
+
+        .col-action .btn-icon i {
+            font-size: 0.7rem;
+        }
+
+        /* Compact table cells */
+        .card-table td,
+        .card-table th {
+            padding: 0.3rem 0.25rem !important;
+            font-size: 0.75rem;
+        }
+
+        /* Allow content cells to wrap but keep date/id tight */
+        .text-nowrap td {
+            white-space: normal;
+        }
+    }
+</style>
+<!-- Edit Work Modal -->
+<div class="modal modal-blur fade" id="editWorkModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content shadow-lg">
+            <div class="modal-header">
+                <h5 class="modal-title">Chỉnh sửa công việc</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editWorkForm" method="POST">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Ngày thực hiện</label>
+                            <input type="date" name="ngay" id="edit_ngay" class="form-control" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Mã Trạm (ID)</label>
+                            <input type="text" name="id_tram" id="edit_id_tram_work" class="form-control" required
+                                readonly>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Hạng mục</label>
+                            <select name="hang_muc" id="edit_hang_muc" class="form-select">
+                                <option value="A1-Hiệu chỉnh mạng lưới">A1-Hiệu chỉnh mạng lưới</option>
+                                <option value="A2-Hiệu chỉnh truyền dẫn">A2-Hiệu chỉnh truyền dẫn</option>
+                                <option value="A3-Xử lý cảnh báo theo yêu cầu">A3-Xử lý cảnh báo theo yêu cầu</option>
+                                <option value="A4-Xử lý Cell Off theo yêu cầu">A4-Xử lý Cell Off theo yêu cầu</option>
+                                <option value="A5-Xử lý feedback theo PAKH">A5-Xử lý feedback theo PAKH</option>
+                                <option value="B1-Giám sát công việc tại trạm">B1-Giám sát công việc tại trạm</option>
+                                <option value="C2-Kiểm tra nhà trạm">C2-Kiểm tra nhà trạm</option>
+                                <option value="Công việc khác">Công việc khác</option>
+                                <option value="Ứng cứu thông tin">Ứng cứu thông tin</option>
+                            </select>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Nội dung chi tiết</label>
+                            <textarea name="noi_dung" id="edit_noi_dung_work" class="form-control" rows="3"
+                                required></textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small">Tồn tại VHKT</label>
+                            <textarea name="ton_tai_vhkt" id="edit_ton_tai_vhkt" class="form-control"
+                                rows="2"></textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small">Tồn tại CSHT</label>
+                            <textarea name="ton_tai_csht" id="edit_ton_tai_csht" class="form-control"
+                                rows="2"></textarea>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Ghi Chú</label>
+                            <textarea name="ghi_chu" id="edit_ghi_chu_work" class="form-control" rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary w-100">Lưu thay đổi</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    var editWorkModal = document.getElementById('editWorkModal');
+    editWorkModal.addEventListener('show.bs.modal', function (event) {
+        var button = event.relatedTarget;
+        var id = button.getAttribute('data-id');
+        var ngay = button.getAttribute('data-ngay');
+        var idtram = button.getAttribute('data-idtram');
+        var hangmuc = button.getAttribute('data-hangmuc');
+        var noidung = button.getAttribute('data-noidung');
+        var vhkt = button.getAttribute('data-vhkt');
+        var csht = button.getAttribute('data-csht');
+        var ghichu = button.getAttribute('data-ghichu');
+
+        var form = document.getElementById('editWorkForm');
+        form.action = '/daily-work/edit/' + id;
+
+        document.getElementById('edit_ngay').value = ngay;
+        document.getElementById('edit_id_tram_work').value = idtram;
+        document.getElementById('edit_hang_muc').value = hangmuc;
+        document.getElementById('edit_noi_dung_work').value = noidung;
+        document.getElementById('edit_ton_tai_vhkt').value = vhkt;
+        document.getElementById('edit_ton_tai_csht').value = csht;
+        document.getElementById('edit_ghi_chu_work').value = ghichu;
+    });
+</script>
+{% endblock %}

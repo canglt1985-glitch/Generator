@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title if title else "Tổ Viễn Thông 3" }}</title>
+    <!-- Tabler Core CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@latest/dist/css/tabler.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ range(100000)|random }}">
+    <style>
+        :root {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .nav-link.active {
+            font-weight: 700 !important;
+            color: var(--tblr-primary) !important;
+        }
+
+        .cursor-pointer {
+            cursor: pointer;
+        }
+
+        .station-trigger:hover {
+            opacity: 0.8;
+            transform: scale(1.05);
+            transition: all 0.2s ease;
+        }
+
+        /* ── Compact: eliminate spacing below collapsed navbar (< lg breakpoint) ── */
+        @media (max-width: 991.98px) {
+            .navbar.navbar-vertical {
+                padding-bottom: 0 !important;
+                margin-bottom: 0 !important;
+            }
+
+            .page-wrapper {
+                margin-top: 0 !important;
+                padding-top: 0 !important;
+            }
+
+            .page-body {
+                padding-top: 0 !important;
+                margin-top: 0.25rem !important;
+            }
+
+            .page-body>.container-xl {
+                padding-top: 0 !important;
+            }
+
+            .page-header {
+                margin-bottom: 0.25rem !important;
+                margin-top: 0 !important;
+                padding-top: 0.35rem !important;
+            }
+
+            .page-title {
+                font-size: 1.1rem !important;
+            }
+        }
+
+        /* ── Flash alert fade-out animation ── */
+        .alert-autodismiss {
+            transition: opacity 0.5s ease;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="page">
+        <!-- Sidebar -->
+        <aside class="navbar navbar-vertical navbar-expand-lg" data-bs-theme="dark">
+            <div class="container-fluid">
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-menu">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <h1 class="navbar-brand navbar-brand-autodark">
+                    <a href="{{ url_for('smartw.vhkt') }}"
+                        class="d-flex align-items-center gap-2 text-decoration-none brand-link">
+                        <div class="brand-logo-wrapper">
+                            <img src="{{ url_for('static', filename='mobifone_5g.png') }}" alt="MobiFone">
+                        </div>
+                        <div class="d-flex flex-column lh-1">
+                            <span class="brand-title">Tổ VT3</span>
+                            <span class="brand-subtitle">MobiFone Đồng Nai</span>
+                        </div>
+                    </a>
+                </h1>
+
+                <!-- Mobile User Profile -->
+                <div class="navbar-nav flex-row d-lg-none mt-2 mb-3 px-3">
+                    <div class="nav-item dropdown">
+                        <a href="#" class="nav-link d-flex lh-1 text-reset p-0" data-bs-toggle="dropdown">
+                            <span class="avatar avatar-sm bg-primary-lt text-primary fw-bold">{{ session.get('username',
+                                'U')[0]|upper }}</span>
+                            <div class="ps-2">
+                                <div class="text-white">{{ session.get('username', 'User') }}</div>
+                                <div class="mt-1 small text-muted-foreground">{{ session.get('role', 'user')|upper }}
+                                </div>
+                            </div>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
+                            <a href="#" class="dropdown-item" data-bs-toggle="modal"
+                                data-bs-target="#changePasswordModal">
+                                <i class="fas fa-key me-2"></i> Đổi mật khẩu
+                            </a>
+                            <div class="dropdown-divider"></div>
+                            <a href="{{ url_for('core.logout') }}" class="dropdown-item text-danger">
+                                <i class="fas fa-sign-out-alt me-2"></i> Đăng xuất
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="collapse navbar-collapse" id="sidebar-menu">
+                    <ul class="navbar-nav pt-lg-3">
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'smartw.vhkt' %}active{% endif %}"
+                                href="{{ url_for('smartw.vhkt') }}">
+                                <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                    <i class="fas fa-satellite-dish"></i>
+                                </span>
+                                <span class="nav-link-title">VHKT SmartW</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'generator' %}active{% endif %}"
+                                href="{{ url_for('generator.generator') }}">
+                                <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                    <i class="fas fa-bolt"></i>
+                                </span>
+                                <span class="nav-link-title">VH Máy Phát Điện</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'daily_work' %}active{% endif %}"
+                                href="{{ url_for('daily_work.daily_work') }}">
+                                <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                    <i class="fas fa-tasks"></i>
+                                </span>
+                                <span class="nav-link-title">Công việc hàng ngày</span>
+                            </a>
+                        </li>
+                        {% if session['role'] == 'admin' %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'admin' %}active{% endif %}"
+                                href="{{ url_for('core.admin') }}">
+                                <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                    <i class="fas fa-cog"></i>
+                                </span>
+                                <span class="nav-link-title">
+                                    Quản Trị
+                                    {% if pending_req_count is defined and pending_req_count > 0 %}
+                                    <span class="badge badge-sm bg-red ms-2">{{ pending_req_count }}</span>
+                                    {% endif %}
+                                </span>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+        </aside>
+
+        <header class="navbar navbar-expand-md d-none d-lg-flex d-print-none">
+            <div class="container-xl">
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar-menu">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="navbar-nav flex-row order-md-last">
+                    <div class="nav-item dropdown">
+                        <a href="#" class="nav-link d-flex lh-1 text-reset p-0" data-bs-toggle="dropdown">
+                            <span class="avatar avatar-sm bg-primary-lt text-primary fw-bold">{{ session.get('username',
+                                'U')[0]|upper }}</span>
+                            <div class="d-none d-xl-block ps-2">
+                                <div>{{ session.get('username', 'User') }}</div>
+                                <div class="mt-1 small text-muted">{{ session.get('role', 'user')|upper }}</div>
+                            </div>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
+                            <a href="#" class="dropdown-item" data-bs-toggle="modal"
+                                data-bs-target="#changePasswordModal">
+                                <i class="fas fa-key me-2"></i> Đổi mật khẩu
+                            </a>
+                            <div class="dropdown-divider"></div>
+                            <a href="{{ url_for('core.logout') }}" class="dropdown-item text-danger">
+                                <i class="fas fa-sign-out-alt me-2"></i> Đăng xuất
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="collapse navbar-collapse" id="navbar-menu">
+                    <!-- Top links if needed -->
+                </div>
+            </div>
+        </header>
+
+        <div class="page-wrapper">
+            <div class="page-body">
+                <div class="container-xl">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                    {% for category, message in messages %}
+                    <div class="alert alert-important alert-{{ 'danger' if category == 'error' or category == 'danger' else 'success' }} alert-dismissible alert-autodismiss"
+                        role="alert">
+                        <div class="d-flex">
+                            <div><i class="fas fa-info-circle me-2"></i></div>
+                            <div>{{ message }}</div>
+                        </div>
+                        <a class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="close"></a>
+                    </div>
+                    {% endfor %}
+                    {% endif %}
+                    {% endwith %}
+
+                    {% block content %}{% endblock %}
+                </div>
+            </div>
+            <footer class="footer footer-transparent d-print-none">
+                <div class="container-xl text-center">
+                    <p class="text-muted small">© 2026 Tổ Viễn Thông 3 - MobiFone</p>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Change Password Modal -->
+    <div class="modal modal-blur fade" id="changePasswordModal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content shadow-lg">
+                <div class="modal-header">
+                    <h5 class="modal-title">Đổi Mật Khẩu</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form action="{{ url_for('core.change_password') }}" method="POST">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Mật khẩu hiện tại</label>
+                            <input type="password" name="old_password" class="form-control" required
+                                placeholder="Nhập mật khẩu hiện tại...">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Mật khẩu mới</label>
+                            <input type="password" name="new_password" class="form-control" required
+                                placeholder="Nhập mật khẩu mới...">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-primary ms-auto">Cập nhật</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Station Info Modal -->
+    <div class="modal modal-blur fade" id="stationInfoModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white py-2">
+                    <h6 class="modal-title mb-0">
+                        <i class="fas fa-broadcast-tower me-2"></i>
+                        <span id="modal_station_id" class="fw-bold"></span>
+                    </h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-3">
+                    <!-- Đổ Dầu Gần Nhất -->
+                    <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                        <div>
+                            <div class="text-muted small"><i class="fas fa-gas-pump me-1 text-success"></i>Đổ Dầu Gần
+                                Nhất</div>
+                            <div class="fw-bold" id="modal_latest_refill_date">--</div>
+                        </div>
+                        <div class="text-end">
+                            <div class="text-muted small">Số Lượng</div>
+                            <div class="fw-bold text-success fs-5" id="modal_latest_refill_qty">0 L</div>
+                        </div>
+                    </div>
+
+                    <!-- Chạy Máy Gần Nhất -->
+                    <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                        <div>
+                            <div class="text-muted small"><i class="fas fa-cogs me-1 text-warning"></i>Chạy Máy Gần Nhất
+                            </div>
+                            <div class="fw-bold" id="modal_latest_log_date">--</div>
+                        </div>
+                        <div class="text-end">
+                            <div class="text-muted small">Thời Gian</div>
+                            <div class="fw-bold text-warning fs-5" id="modal_latest_log_duration">0 giờ</div>
+                        </div>
+                    </div>
+
+                    <!-- Dầu Tồn -->
+                    <div class="text-center py-2 bg-light rounded mb-3">
+                        <div class="text-muted small">Dầu Tồn Ước Lượng</div>
+                        <div class="fw-bold text-primary fs-4" id="modal_estimated_remaining">0 L</div>
+                    </div>
+
+                    <!-- Delete Button -->
+                    <div id="modal_delete_section" class="d-none">
+                        <button type="button" class="btn btn-outline-danger w-100" id="modal_delete_btn">
+                            <i class="fas fa-trash-alt me-2"></i>Xóa Dòng Này
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabler Core JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@tabler/core@latest/dist/js/tabler.min.js"></script>
+    <script>
+        // Global Filter Function (supports multiple tables)
+        function filterTable(triggerEl) {
+            var table;
+            if (triggerEl && triggerEl.closest) {
+                table = triggerEl.closest('table');
+            } else {
+                var firstRow = document.querySelector('.filter-row');
+                if (!firstRow) return;
+                table = firstRow.closest('table');
+            }
+            if (!table) return;
+
+            var tbody = table.querySelector('tbody');
+            var rows = tbody.getElementsByTagName('tr');
+            var filterRows = table.querySelectorAll('.filter-row');
+
+            var filters = [];
+            filterRows.forEach(function (frow) {
+                var inputs = frow.querySelectorAll('input, select');
+                inputs.forEach(function (input) {
+                    var val = input.value.trim();
+                    if (val !== '') {
+                        var cell = input.closest('th') || input.closest('td');
+                        var filterVal = val.toUpperCase();
+
+                        // Smart date format handling
+                        if (val.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                            var parts = val.split('-');
+                            filterVal = parts[2] + '/' + parts[1] + '/' + parts[0];
+                        } else if (val.match(/^\d{2}[/-]\d{2}[/-]\d{4}$/)) {
+                            filterVal = val.replace(/-/g, '/');
+                        }
+
+                        filters.push({
+                            index: cell.cellIndex,
+                            value: filterVal
+                        });
+                    }
+                });
+            });
+
+            for (var i = 0; i < rows.length; i++) {
+                if (rows[i].cells.length < 2) continue;
+                var show = true;
+                for (var j = 0; j < filters.length; j++) {
+                    var f = filters[j];
+                    var cell = rows[i].cells[f.index];
+                    if (cell) {
+                        var txt = (cell.textContent || cell.innerText).toUpperCase();
+                        if (txt.indexOf(f.value) === -1) {
+                            show = false;
+                            break;
+                        }
+                    }
+                }
+                rows[i].style.display = show ? "" : "none";
+            }
+        }
+
+        // Station Info Modal Handler
+        let currentDeleteUrl = null;
+        let currentTriggerElement = null;
+
+        // Use event delegation for station triggers
+        document.addEventListener('click', function (e) {
+            const trigger = e.target.closest('.station-trigger');
+            if (trigger) {
+                const stationId = trigger.getAttribute('data-id');
+                currentTriggerElement = trigger;
+                if (stationId && stationId !== '--') {
+                    loadStationInfo(stationId, trigger);
+                }
+            }
+        });
+
+        // Delete button handler
+        document.addEventListener('DOMContentLoaded', function () {
+            document.getElementById('modal_delete_btn')?.addEventListener('click', function () {
+                if (currentDeleteUrl && confirm('Bạn có chắc chắn muốn xóa dòng này?')) {
+                    window.location.href = currentDeleteUrl;
+                }
+            });
+        });
+
+        function loadStationInfo(stationId, triggerElement) {
+            fetch(`/api/station-info/${encodeURIComponent(stationId)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displayStationModal(data, triggerElement);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading station info:', error);
+                });
+        }
+
+        function displayStationModal(data, triggerElement) {
+            const modal = document.getElementById('stationInfoModal');
+
+            // Update modal content
+            document.getElementById('modal_station_id').textContent = data.station.id_tram;
+
+            // Latest refill
+            document.getElementById('modal_latest_refill_date').textContent = data.latest_refill.date;
+            document.getElementById('modal_latest_refill_qty').textContent = data.latest_refill.quantity + ' L';
+
+            // Latest log
+            document.getElementById('modal_latest_log_date').textContent = data.latest_log.date;
+            document.getElementById('modal_latest_log_duration').textContent = data.latest_log.duration + ' giờ';
+
+            // Fuel stats
+            document.getElementById('modal_estimated_remaining').textContent = data.fuel_stats.estimated_remaining + ' L';
+
+            // Find delete URL from the row
+            const row = triggerElement.closest('tr');
+            const deleteForm = row?.querySelector('form[action*="delete"]');
+            const deleteSection = document.getElementById('modal_delete_section');
+
+            if (deleteForm) {
+                currentDeleteUrl = deleteForm.getAttribute('action');
+                deleteSection.classList.remove('d-none');
+            } else {
+                currentDeleteUrl = null;
+                deleteSection.classList.add('d-none');
+            }
+
+            // Show modal
+            const bsModal = bootstrap.Modal.getOrCreateInstance(modal);
+            bsModal.show();
+        }
+    </script>
+
+    <!-- Auto-dismiss flash alerts after 3 seconds -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('.alert-autodismiss').forEach(function (el) {
+                setTimeout(function () {
+                    el.style.opacity = '0';
+                    setTimeout(function () { el.remove(); }, 500);
+                }, 3000);
+            });
+        });
+    </script>
+</body>
+
+</html>

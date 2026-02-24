@@ -1,0 +1,415 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="page-header d-print-none mb-4">
+    <div class="row g-2 align-items-center">
+        <div class="col">
+            <h2 class="page-title">
+                <i class="fas fa-cogs me-2 text-primary"></i>Nhật Ký Chạy Máy
+            </h2>
+            <div class="text-muted small mt-1">Quản lý vận hành và tiêu hao nhiên liệu máy phát điện.</div>
+        </div>
+        <div class="col-md-6 text-md-end">
+            <div class="d-flex flex-wrap gap-2 justify-content-md-end">
+                {% if session['role'] == 'admin' %}
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle rounded-pill px-3 shadow-none"
+                        type="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-tools me-1"></i>Công cụ
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-end shadow border-0">
+                        <a href="{{ url_for('generator.template_generator_logs') }}" class="dropdown-item">
+                            <i class="fas fa-file-download me-2"></i>File Mẫu
+                        </a>
+                        <button type="button" class="dropdown-item" data-bs-toggle="modal"
+                            data-bs-target="#importModal">
+                            <i class="fas fa-file-excel me-2"></i>Import
+                        </button>
+                        <a href="{{ url_for('generator.export_generator_logs') }}" class="dropdown-item">
+                            <i class="fas fa-file-export me-2"></i>Xuất báo cáo
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <form action="{{ url_for('generator.reset_generator_logs') }}" method="POST" class="d-inline">
+                            <button type="submit" class="dropdown-item text-danger fw-bold"
+                                onclick="return confirm('CẢNH BÁO: BẠN CÓ CHẮC MUỐN XÓA TOÀN BỘ DỮ LIỆU CHẠY MÁY?')">
+                                <i class="fas fa-trash-alt me-2"></i>Reset Dữ Liệu
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                {% endif %}
+                <button type="button" class="btn btn-sm btn-primary rounded-pill px-4 shadow-sm" data-bs-toggle="modal"
+                    data-bs-target="#addModal">
+                    <i class="fas fa-plus me-2"></i>Thêm Mới
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="table-responsive">
+            <style>
+                .compact-search {
+                    min-width: 60px;
+                    max-width: 100px;
+                    font-size: 0.8rem;
+                    padding: 0.25rem;
+                    height: 28px;
+                }
+            </style>
+            <table class="table table-vcenter table-hover card-table" style="min-width: 1500px;">
+                <datalist id="stationList">
+                    {% for s in stations %}
+                    <option value="{{ s.id_tram }}">
+                        {% endfor %}
+                </datalist>
+                <thead>
+                    <tr>
+                        <th>STT</th>
+                        <th>ID Trạm</th>
+                        <th>Site</th>
+                        <th>CS Máy</th>
+                        <th>Loại Máy</th>
+                        <th>Định Mức</th>
+                        <th>Ngày VH</th>
+                        <th>Bắt Đầu</th>
+                        <th>Kết Thúc</th>
+                        <th>Thời Gian</th>
+                        <th>Tiêu Hao</th>
+                        <th>Đơn Giá</th>
+                        <th>Thành Tiền</th>
+                        <th>Kết Quả</th>
+                        <th>Nhiên Liệu</th>
+                        <th>Ghi Chú</th>
+                        <th class="text-end">Thao tác</th>
+                    </tr>
+                    <tr class="filter-row bg-light-lt">
+                        <th></th>
+                        <th><input type="text" class="form-control form-control-sm compact-search" placeholder="ID..."
+                                onkeyup="filterTable()"></th>
+                        <th><input type="text" class="form-control form-control-sm compact-search" placeholder="Site..."
+                                onkeyup="filterTable()"></th>
+                        <th></th>
+                        <th></th>
+                        <th></th>
+                        <th><input type="date" class="form-control form-control-sm compact-search"
+                                onchange="filterTable()"></th>
+                        <th></th>
+                        <th></th>
+                        <th></th>
+                        <th></th>
+                        <th></th>
+                        <th></th>
+                        <th><input type="text" class="form-control form-control-sm compact-search" placeholder="KQ..."
+                                onkeyup="filterTable()"></th>
+                        <th></th>
+                        <th></th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td><span class="badge bg-secondary cursor-pointer station-trigger"
+                                data-id="{{ log.id_tram }}">{{
+                                log.id_tram }}</span></td>
+                        <td>{{ log.site }}</td>
+                        <td>{{ log.cong_suat_may }}</td>
+                        <td>{{ log.loai_may }}</td>
+                        <td>{{ log.dinh_muc }}</td>
+                        <td>
+                            {{ log.ngay_van_hanh | format_date }}
+                        </td>
+                        <td>{{ log.gio_bat_dau or '--' }}</td>
+                        <td>{{ log.gio_ket_thuc or '--' }}</td>
+                        <td>{{ log.thoi_gian_hoat_dong }}</td>
+                        <td>{{ log.nhien_lieu_tieu_hao }}</td>
+                        <td>{{ "{:,.0f}".format(log.don_gia or 0) }}</td>
+                        <td>{{ "{:,.0f}".format(log.thanh_tien or 0) }}</td>
+                        <td>{{ log.ket_qua_doi_soat }}</td>
+                        <td>{{ log.nhien_lieu }}</td>
+                        <td>{{ log.ghi_chu }}</td>
+                        <td class="text-end">
+                            <button class="btn btn-icon btn-sm btn-ghost-primary" data-bs-toggle="modal"
+                                data-bs-target="#editModal" data-id="{{ log.id }}" data-idtram="{{ log.id_tram }}"
+                                data-ngay="{{ log.ngay_van_hanh }}" data-batdau="{{ log.gio_bat_dau }}"
+                                data-ketthuc="{{ log.gio_ket_thuc }}" data-duration="{{ log.thoi_gian_hoat_dong }}"
+                                data-consumed="{{ log.nhien_lieu_tieu_hao }}" data-dongia="{{ log.don_gia or 0 }}"
+                                data-thanhtien="{{ log.thanh_tien or 0 }}" data-ghichu="{{ log.ghi_chu }}">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <form action="{{ url_for('generator.delete_generator_log', id=log.id) }}" method="POST"
+                                class="d-inline" onsubmit="return confirm('Bạn có chắc chắn muốn xóa không?');">
+                                <button class="btn btn-icon btn-sm btn-ghost-danger">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="17" class="text-center py-4">Chưa có dữ liệu</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal Thêm Mới -->
+    <div class="modal fade" id="addModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Thêm Nhật Ký Chạy Máy</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form action="{{ url_for('generator.add_generator_log') }}" method="POST">
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label">ID Trạm</label>
+                                <input type="text" class="form-control" name="id_tram" required list="stationList"
+                                    autocomplete="off">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Site (Tên Trạm)</label>
+                                <input type="text" class="form-control" name="site">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Công Suất Máy</label>
+                                <input type="number" step="0.1" class="form-control" name="cong_suat_may">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Loại Máy</label>
+                                <input type="text" class="form-control" name="loai_may">
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Định Mức (Lít/Giờ)</label>
+                                <input type="number" step="0.01" class="form-control" name="dinh_muc" id="dinh_muc">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Loại Nhiên Liệu</label>
+                                <select class="form-select" name="nhien_lieu">
+                                    <option value="Dầu">Dầu</option>
+                                    <option value="Xăng">Xăng</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Ngày Vận Hành</label>
+                                <input type="date" class="form-control" name="ngay_van_hanh" required>
+                            </div>
+                            <div class="col-md-3"></div>
+
+
+                            <div class="col-md-3">
+                                <label class="form-label">Giờ Bắt Đầu</label>
+                                <input type="time" class="form-control" name="gio_bat_dau" required id="gio_bat_dau">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Giờ Kết Thúc</label>
+                                <input type="time" class="form-control" name="gio_ket_thuc" required id="gio_ket_thuc">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Thời Gian Chạy Máy (Giờ)</label>
+                                <input type="number" step="0.01" class="form-control bg-light"
+                                    name="thoi_gian_hoat_dong" id="gio_chay" readonly>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Tiêu Hao (Lít)</label>
+                                <input type="number" step="0.01" class="form-control bg-light"
+                                    name="nhien_lieu_tieu_hao" id="tieu_hao" readonly>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Đơn Giá</label>
+                                <input type="number" step="1" class="form-control" name="don_gia" id="don_gia_dau">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Thành Tiền</label>
+                                <input type="number" step="1" class="form-control bg-light" name="thanh_tien"
+                                    id="thanh_tien_may" readonly>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Kết Quả Đối Soát</label>
+                                <input type="text" class="form-control" name="ket_qua_doi_soat">
+                            </div>
+                            <div class="col-md-3"></div>
+
+                            <div class="col-md-12">
+                                <label class="form-label">Ghi Chú</label>
+                                <textarea class="form-control" name="ghi_chu"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                        <button type="submit" class="btn btn-primary">Lưu</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Import Excel -->
+    <div class="modal fade" id="importModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Import Dữ Liệu Từ Excel</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form action="{{ url_for('generator.import_generator_log') }}" method="POST"
+                    enctype="multipart/form-data">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Chọn file Excel (.xlsx, .xls)</label>
+                            <input type="file" class="form-control" name="file" accept=".xlsx, .xls" required>
+                            <div class="form-text">
+                                File cần có các cột: ID Trạm, Site, Công suất máy, Loại máy, Định mức, Ngày vận hành,
+                                Giờ
+                                bắt đầu, Giờ kết thúc...
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                        <button type="submit" class="btn btn-success">Upload & Import</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Logic tính toán đơn giản
+        const start = document.getElementById('gio_bat_dau');
+        const end = document.getElementById('gio_ket_thuc');
+        const duration = document.getElementById('gio_chay');
+        const rate = document.getElementById('dinh_muc');
+        const consumed = document.getElementById('tieu_hao');
+        const price = document.getElementById('don_gia_dau');
+        const total = document.getElementById('thanh_tien_may');
+
+        function calc() {
+            if (start.value && end.value) {
+                // Lấy giờ phút từ input time
+                let sPoints = start.value.split(':');
+                let ePoints = end.value.split(':');
+                let sDate = new Date(0, 0, 0, sPoints[0], sPoints[1]);
+                let eDate = new Date(0, 0, 0, ePoints[0], ePoints[1]);
+
+                // Xử lý qua đêm nếu cần (Demo: chưa xử lý qua đêm)
+                let diffMs = eDate - sDate;
+                if (diffMs < 0) diffMs += 24 * 60 * 60 * 1000; // Nếu qua đêm thì cộng 24h
+
+                let diffHrs = diffMs / 3600000;
+                duration.value = diffHrs.toFixed(2);
+
+                if (rate.value) {
+                    let lit = diffHrs * parseFloat(rate.value);
+                    consumed.value = lit.toFixed(2);
+                    if (price.value) {
+                        total.value = (lit * parseFloat(price.value)).toFixed(0);
+                    }
+                }
+            }
+        }
+
+        [start, end, rate, price].forEach(el => el.addEventListener('change', calc));
+    </script>
+
+    <!-- Edit Modal -->
+    <div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Chỉnh sửa Nhật Ký Chạy Máy</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="editForm" method="POST">
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">ID Trạm</label>
+                                <input type="text" class="form-control" name="id_tram" id="edit_id_tram" required
+                                    readonly>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Ngày Vận Hành</label>
+                                <input type="date" class="form-control" name="ngay_van_hanh" id="edit_ngay_van_hanh"
+                                    required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Giờ Bắt Đầu</label>
+                                <input type="time" class="form-control" name="gio_bat_dau" id="edit_gio_bat_dau">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Giờ Kết Thúc</label>
+                                <input type="time" class="form-control" name="gio_ket_thuc" id="edit_gio_ket_thuc">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Thời gian hoạt động (h)</label>
+                                <input type="number" step="0.01" class="form-control" name="thoi_gian_hoat_dong"
+                                    id="edit_thoi_gian_hoat_dong" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Nhiên liệu tiêu hao (L)</label>
+                                <input type="number" step="0.01" class="form-control" name="nhien_lieu_tieu_hao"
+                                    id="edit_nhien_lieu_tieu_hao" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Đơn giá</label>
+                                <input type="number" step="0.01" class="form-control" name="don_gia" id="edit_don_gia">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Thành tiền</label>
+                                <input type="number" step="0.01" class="form-control" name="thanh_tien"
+                                    id="edit_thanh_tien">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Ghi Chú</label>
+                                <textarea class="form-control" name="ghi_chu" id="edit_ghi_chu"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                        <button type="submit" class="btn btn-primary">Lưu thay đổi</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var editModal = document.getElementById('editModal');
+        editModal.addEventListener('show.bs.modal', function (event) {
+            var button = event.relatedTarget;
+            var id = button.getAttribute('data-id');
+            var idtram = button.getAttribute('data-idtram');
+            var ngay = button.getAttribute('data-ngay');
+            var batdau = button.getAttribute('data-batdau');
+            var ketthuc = button.getAttribute('data-ketthuc');
+            var duration = button.getAttribute('data-duration');
+            var consumed = button.getAttribute('data-consumed');
+            var dongia = button.getAttribute('data-dongia');
+            var thanhtien = button.getAttribute('data-thanhtien');
+            var ghichu = button.getAttribute('data-ghichu');
+
+            var form = editModal.querySelector('form');
+            form.action = '/generator-logs/edit/' + id;
+
+            document.getElementById('edit_id_tram').value = idtram;
+            document.getElementById('edit_ngay_van_hanh').value = ngay;
+            document.getElementById('edit_gio_bat_dau').value = batdau;
+            document.getElementById('edit_gio_ket_thuc').value = ketthuc;
+            document.getElementById('edit_thoi_gian_hoat_dong').value = duration;
+            document.getElementById('edit_nhien_lieu_tieu_hao').value = consumed;
+            document.getElementById('edit_don_gia').value = dongia;
+            document.getElementById('edit_thanh_tien').value = thanhtien;
+            document.getElementById('edit_ghi_chu').value = ghichu;
+        });
+        {% endblock %}

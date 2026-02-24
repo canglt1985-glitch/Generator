@@ -1,0 +1,80 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="page-header d-print-none mb-4">
+    <div class="row g-2 align-items-center">
+        <div class="col">
+            <h2 class="page-title">
+                Chỉnh sửa thông tin trạm: {{ item.id_tram }}
+            </h2>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm mx-auto" style="max-width: 800px;">
+    <div class="card-status-top bg-primary"></div>
+    <div class="card-body p-5">
+        <form action="{{ url_for('generator.edit_general_info', id=item.id) }}" method="POST">
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">ID Trạm</label>
+                    <input type="text" class="form-control" name="id_tram" value="{{ item.id_tram }}" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">Mã Khách Hàng</label>
+                    <input type="text" class="form-control" name="ma_khach_hang" value="{{ item.ma_khach_hang }}">
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">Huyện</label>
+                    <input type="text" class="form-control" name="huyen" value="{{ item.huyen }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">Quản Lý Trạm</label>
+                    <input type="text" class="form-control" name="quan_ly_tram" value="{{ item.quan_ly_tram }}">
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">Máy Phát Điện</label>
+                    <input type="text" class="form-control" name="may_phat_dien" value="{{ item.may_phat_dien }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">Loại Máy</label>
+                    <input type="text" class="form-control" name="loai_may" value="{{ item.loai_may }}">
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label fw-bold">Dung Tích (Lít)</label>
+                    <input type="number" class="form-control" name="dung_tich" value="{{ item.dung_tich }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-bold">Định Mức Thực Tế</label>
+                    <input type="number" step="0.1" class="form-control" name="dinh_muc_thuc_te"
+                        value="{{ item.dinh_muc_thuc_te }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-bold">Định Mức Thanh Toán</label>
+                    <input type="number" step="0.1" class="form-control" name="dinh_muc" value="{{ item.dinh_muc }}">
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">Loại Nhiên Liệu</label>
+                    <select class="form-select" name="loai_nhien_lieu">
+                        <option value="Dầu" {% if item.loai_nhien_lieu=='Dầu' %}selected{% endif %}>Dầu</option>
+                        <option value="Xăng" {% if item.loai_nhien_lieu=='Xăng' %}selected{% endif %}>Xăng</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">Vùng Phủ</label>
+                    <input type="text" class="form-control" name="vung_phu" value="{{ item.vung_phu }}">
+                </div>
+            </div>
+
+            <div class="mt-5 d-flex gap-2 justify-content-end">
+                <a href="{{ url_for('core.admin') }}" class="btn btn-outline-secondary px-4">Hủy</a>
+                <button type="submit" class="btn btn-primary px-5 fw-bold">Lưu Thay Đổi</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
