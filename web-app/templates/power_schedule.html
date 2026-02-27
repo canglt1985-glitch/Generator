@@ -745,24 +745,24 @@
         const typeLabels = {
             'DIRECT_BUY': 'Đổ NL (MUA)',
             'STOCK_IN': 'Nhập Kho',
-            'STATION_OUT': 'Lấy Kho Ra',
+            'STATION_OUT': 'Xuất Kho',
             'ADJUSTMENT': 'Chỉnh NL Tồn'
         };
         modal.querySelector('.modal-title').textContent = 'Sửa: ' + (typeLabels[log.type] || log.type) + ' #' + log.id;
         modal.querySelector('form').action = "/fuel-ledger/edit/" + log.id;
 
-        // HIDE tab pills when editing (lock to current type)
-        modal.querySelector('.nav-pills').style.display = 'none';
+        // SHOW tab pills khi edit (cho phép đổi loại giao dịch)
+        modal.querySelector('.nav-pills').style.display = '';
 
-        // Set Values
+        // Set Values TRƯỚC khi setFuelType (vì setFuelType clear 1 số field)
         modal.querySelector('input[name="ngay"]').value = log.ngay ? log.ngay.split(' ')[0] : '';
+        modal.querySelector('input[name="id_tram"]').value = log.id_tram || '';
+        modal.querySelector('select[name="loai_nhien_lieu"]').value = log.loai_nhien_lieu || 'Dầu';
         modal.querySelector('input[name="so_luong"]').value = log.so_luong;
         modal.querySelector('input[name="don_gia"]').value = Math.round(log.don_gia || 0);
         modal.querySelector('input[name="thanh_tien"]').value = Math.round(log.thanh_tien || 0);
-        modal.querySelector('input[name="nha_cung_cap"]').value = log.nha_cung_cap || '';
+        modal.querySelector('select[name="nha_cung_cap"]').value = log.nha_cung_cap || '';
         modal.querySelector('input[name="ghi_chu"]').value = log.ghi_chu || '';
-        modal.querySelector('input[name="id_tram"]').value = log.id_tram || '';
-        modal.querySelector('select[name="loai_nhien_lieu"]').value = log.loai_nhien_lieu || 'Dầu';
 
         // Set Type & Tab
         setFuelType(log.type);
