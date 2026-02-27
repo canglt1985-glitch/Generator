@@ -185,6 +185,15 @@
         </div>
     </div>
     <div class="col">
+        <div class="card shadow-sm nav-card" data-table="mll_cell" onclick="switchTab('mll_cell')"
+            style="border-left: 3px solid var(--tblr-purple); --arrow-color: var(--tblr-purple);">
+            <div class="nav-card-body">
+                <div class="nav-card-count text-purple" id="mllCellCount">0</div>
+                <div class="nav-card-label">📡 CellOff</div>
+            </div>
+        </div>
+    </div>
+    <div class="col">
         <div class="card shadow-sm nav-card" data-table="vhkt" onclick="switchTab('vhkt')"
             style="border-left: 3px solid var(--tblr-azure); --arrow-color: var(--tblr-azure);">
             <div class="nav-card-body">
@@ -213,7 +222,7 @@
                             <th class="d-none d-md-table-cell">Mạng</th>
                             <th>Cảnh báo</th>
                             <th>Bắt đầu</th>
-                            <th>Số phút</th>
+                            <th>Giờ</th>
                         </tr>
                     </thead>
                     <tbody></tbody>
@@ -240,7 +249,7 @@
                             <th class="d-none d-md-table-cell">Loại TB</th>
                             <th>Cảnh báo</th>
                             <th>Bắt đầu</th>
-                            <th>Số phút</th>
+                            <th>Giờ</th>
                         </tr>
                     </thead>
                     <tbody></tbody>
@@ -266,10 +275,8 @@
                             <th>Site ID</th>
                             <th>Mạng</th>
                             <th>Bắt đầu</th>
-                            <th>Số phút</th>
-                            <th class="d-none d-md-table-cell">Cấp 1</th>
-                            <th class="d-none d-md-table-cell">Cấp 2</th>
-                            <th class="d-none d-md-table-cell">Cấp 3</th>
+                            <th>Giờ</th>
+                            <th class="d-none d-md-table-cell">Vendor</th>
                         </tr>
                     </thead>
                     <tbody></tbody>
@@ -278,6 +285,35 @@
             <div class="empty py-4 d-none" id="emptyMll">
                 <p class="empty-title">Không có alarm MLL nào</p>
                 <p class="empty-subtitle text-muted">✅ Tất cả trạm đang liên lạc bình thường.</p>
+            </div>
+        </div>
+
+        <!-- Tab CellOff (MLL Cell) -->
+        <div class="tab-pane d-none" id="tab-mll_cell">
+            <div class="tab-info-bar" id="infoBarMllCell">
+                <span id="badgeMllCell"><span class="badge bg-secondary-lt">⏳ Đang tải...</span></span>
+                <span class="text-muted" id="timeMllCell"></span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-vcenter table-hover card-table small text-nowrap text-center mb-0"
+                    id="tableMllCell">
+                    <thead>
+                        <tr>
+                            <th>Site ID</th>
+                            <th class="d-none d-md-table-cell">Cell ID</th>
+                            <th>Mạng</th>
+                            <th>Cảnh báo</th>
+                            <th>Bắt đầu</th>
+                            <th>Giờ</th>
+                            <th class="d-none d-md-table-cell">Vendor</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="empty py-4 d-none" id="emptyMllCell">
+                <p class="empty-title">Không có CellOff nào</p>
+                <p class="empty-subtitle text-muted">✅ Tất cả cell đang hoạt động bình thường.</p>
             </div>
         </div>
 
@@ -343,7 +379,7 @@
 <script>
     // ── State ───────────────────────────────────────────────
     let currentTab = 'md';
-    let tabDataLoaded = { md: false, mpd: false, mll: false, vhkt: false };
+    let tabDataLoaded = { md: false, mpd: false, mll: false, mll_cell: false, vhkt: false };
 
     // ── Card-Based Tab Switching ────────────────────────────
     function switchTab(tabName) {
@@ -371,12 +407,26 @@
         fetch(`/api/smartw/summary?_=${Date.now()}`)
             .then(r => r.json())
             .then(d => {
-                document.getElementById('mdCount').textContent = d.md_count || 0;
-                document.getElementById('mpdCount').textContent = d.mpd_count || 0;
-                document.getElementById('mllCount').textContent = d.mll_count || 0;
+                // Reload only the currently visible tab
+                loadTabData(currentTab);
+
+                // Mark OTHER tabs as stale — they'll reload when clicked
+                ['md', 'mpd', 'mll', 'mll_cell', 'vhkt'].forEach(tab => {
+                    if (tab !== currentTab) tabDataLoaded[tab] = false;
+                });
+
+                // Update card counts from summary for non-active tabs
+                // (active tab count is set by loadTabData after rendering)
+                const countFields = { md: 'md_count', mpd: 'mpd_count', mll: 'mll_count', mll_cell: 'mll_cell_count' };
+                const countEls = { md: 'mdCount', mpd: 'mpdCount', mll: 'mllCount', mll_cell: 'mllCellCount' };
+                Object.keys(countFields).forEach(tab => {
+                    if (tab !== currentTab) {
+                        document.getElementById(countEls[tab]).textContent = d[countFields[tab]] || 0;
+                    }
+                });
 
                 // Update MĐ/MPĐ/MLL info bars with shared last_poll + alarm error
-                ['md', 'mpd', 'mll'].forEach(tab => updateTabInfoBar(tab, d.last_poll, d.status, d.last_alarm_error, d.login_paused));
+                ['md', 'mpd', 'mll', 'mll_cell'].forEach(tab => updateTabInfoBar(tab, d.last_poll, d.status, d.last_alarm_error, d.login_paused));
 
                 // Update VHKT error bar
                 const vhktErrBar = document.getElementById('vhktErrorBar');
@@ -393,8 +443,8 @@
 
     // ── Per-tab badge + time + error updater ──
     function updateTabInfoBar(tabName, lastPoll, statusStr, alarmError, loginPaused) {
-        const badgeMap = { md: 'badgeMd', mpd: 'badgeMpd', mll: 'badgeMll' };
-        const timeMap = { md: 'timeMd', mpd: 'timeMpd', mll: 'timeMll' };
+        const badgeMap = { md: 'badgeMd', mpd: 'badgeMpd', mll: 'badgeMll', mll_cell: 'badgeMllCell' };
+        const timeMap = { md: 'timeMd', mpd: 'timeMpd', mll: 'timeMll', mll_cell: 'timeMllCell' };
         const badgeEl = document.getElementById(badgeMap[tabName]);
         const timeEl = document.getElementById(timeMap[tabName]);
         if (!badgeEl || !timeEl) return;
@@ -433,12 +483,14 @@
     // ── Tab Data Loader (flicker-free with row-level diff) ─
 
     function loadTabData(tabName) {
-        fetch(`/api/smartw/${tabName}?_=${Date.now()}`)
+        const apiName = tabName === 'mll_cell' ? 'mll-cell' : tabName;
+        fetch(`/api/smartw/${apiName}?_=${Date.now()}`)
             .then(r => r.json())
             .then(data => {
                 tabDataLoaded[tabName] = true;
                 const rows = data.data || [];
-                const capName = tabName.charAt(0).toUpperCase() + tabName.slice(1);
+                const idMap = { md: 'Md', mpd: 'Mpd', mll: 'Mll', mll_cell: 'MllCell', vhkt: 'Vhkt' };
+                const capName = idMap[tabName] || tabName.charAt(0).toUpperCase() + tabName.slice(1);
                 const emptyEl = document.getElementById('empty' + capName);
                 const tableEl = document.getElementById('table' + capName);
                 const tbody = tableEl.querySelector('tbody');
@@ -447,10 +499,9 @@
                     emptyEl.classList.remove('d-none');
                     tableEl.classList.add('d-none');
                     tbody.innerHTML = '';
-                    // Sync card count to 0
-                    const countMap0 = { md: 'mdCount', mpd: 'mpdCount', mll: 'mllCount' };
+                    // Update card count to 0
+                    const countMap0 = { md: 'mdCount', mpd: 'mpdCount', mll: 'mllCount', mll_cell: 'mllCellCount' };
                     if (countMap0[tabName]) document.getElementById(countMap0[tabName]).textContent = '0';
-
                     return;
                 }
 
@@ -464,6 +515,7 @@
                 if (tabName === 'md') newRows = rows.map(r => ({ html: buildMdRow(r), cls: getRowClass('md', r) }));
                 else if (tabName === 'mpd') newRows = rows.map(r => ({ html: buildMpdRow(r), cls: '' }));
                 else if (tabName === 'mll') newRows = rows.map(r => ({ html: buildMllRow(r), cls: getRowClass('mll', r) }));
+                else if (tabName === 'mll_cell') newRows = rows.map(r => ({ html: buildMllCellRow(r), cls: '' }));
                 else if (tabName === 'vhkt') newRows = rows.map(r => ({ html: buildVhktRow(r), cls: '' }));
 
                 // Row-level diff: only touch changed rows
@@ -502,11 +554,11 @@
 
 
                 // Sync card count with actual data
-                const countMap = { md: 'mdCount', mpd: 'mpdCount', mll: 'mllCount' };
+                const countMap = { md: 'mdCount', mpd: 'mpdCount', mll: 'mllCount', mll_cell: 'mllCellCount' };
                 if (countMap[tabName]) {
                     if (tabName === 'md') {
                         // Count unique stations instead of total alarms
-                        const uniqueStations = new Set(rows.map(r => (r.site_id || '').trim()).filter(Boolean));
+                        const uniqueStations = new Set(rows.map(r => (r.site || '').trim()).filter(Boolean));
                         document.getElementById(countMap[tabName]).textContent = uniqueStations.size;
                     } else {
                         document.getElementById(countMap[tabName]).textContent = rows.length;
@@ -527,44 +579,48 @@
     function buildMdRow(r) {
         const siteColor = r.has_mpd ? 'color:#2ea043' : 'color:#d1242f';
         const siteIcon = r.has_mpd ? '🟢' : '🔴';
-        const mins = r.so_phut || 0;
-        const minsClass = mins >= 60 ? 'text-danger fw-bold' : (mins >= 30 ? 'text-warning' : '');
-        // Short time for mobile: extract just HH:MM from "20/02/2026 15:28"
-        const batDau = r.bat_dau || '';
-        const timePart = batDau.split(' ').pop() || batDau; // "15:28"
-        const datePart = batDau.split(' ').slice(0, -1).join(' '); // "20/02/2026"
+        const durMins = r.duaration || r.minute || 0;
+        const hours = (durMins / 60).toFixed(1);
+        const hoursClass = durMins >= 120 ? 'text-danger fw-bold' : (durMins >= 60 ? 'text-warning' : '');
+        const batDau = r.sdateStr || '';
+        const timePart = batDau.split(' ').pop() || batDau;
+        const datePart = batDau.split(' ').slice(0, -1).join(' ');
         const timeCell = datePart
             ? `<span class="d-none d-md-inline">${datePart} </span>${timePart}`
             : batDau;
-        return `<td class="fw-bold col-site" style="${siteColor}">${siteIcon} ${r.site_id || '--'}</td><td class="d-none d-md-table-cell small">${r.mang || ''}</td><td class="col-canh-bao text-start">${r.canh_bao || ''}</td><td class="small">${timeCell}</td><td class="${minsClass}">${mins}</td>`;
+        return `<td class="fw-bold col-site" style="${siteColor}">${siteIcon} ${r.site || '--'}</td><td class="d-none d-md-table-cell small">${r.network || ''}</td><td class="col-canh-bao text-start">${r.alarmName || ''}</td><td class="small">${timeCell}</td><td class="${hoursClass}">${hours}</td>`;
     }
 
     function buildMpdRow(r) {
-        const mins = r.so_phut || 0;
-        const minsClass = mins >= 60 ? 'text-danger fw-bold' : (mins >= 30 ? 'text-warning' : '');
-        return `<td class="fw-bold">${r.site_id || '--'}</td><td class="d-none d-md-table-cell small">${r.loai_thiet_bi || ''}</td><td class="small text-start">${r.canh_bao || ''}</td><td class="small">${r.bat_dau || ''}</td><td class="${minsClass}">${mins}</td>`;
+        const durMins = r.duaration || r.minute || 0;
+        const hours = (durMins / 60).toFixed(1);
+        const hoursClass = durMins >= 120 ? 'text-danger fw-bold' : (durMins >= 60 ? 'text-warning' : '');
+        return `<td class="fw-bold">${r.site || '--'}</td><td class="d-none d-md-table-cell small">${r.neType || ''}</td><td class="small text-start">${r.alarmName || ''}</td><td class="small">${r.sdateStr || ''}</td><td class="${hoursClass}">${hours}</td>`;
     }
 
     function buildMllRow(r) {
-        const flags = r.flags || {};
-        const missing = flags.missing_cause && r.status === 'ACTIVE';
-        const inconsistent = flags.inconsistent_cause && r.status === 'ACTIVE';
-        const detail = flags.inconsistent_detail || '';
-        let flagIcon = '';
-        if (inconsistent) flagIcon = ` <i class="fas fa-exclamation-triangle text-danger" title="Mâu thuẫn: ${detail}" style="cursor:help"></i>`;
-        else if (missing) flagIcon = ' <i class="fas fa-exclamation-circle text-warning" title="Thiếu nguyên nhân"></i>';
-        const c1 = r.nguyen_nhan_1 || '';
-        const c2 = r.nguyen_nhan_2 || '';
-        const c3 = r.nguyen_nhan_3 || '';
-        // Color-coded Mạng badges
-        const mang = r.mang || '--';
+        const flagIcon = '';
+        const mang = r.network || '--';
         const mangColor = mang.includes('Mobi') ? 'bg-blue-lt' : (mang.includes('Vina') ? 'bg-red-lt' : (mang.includes('Viettel') ? 'bg-green-lt' : 'bg-azure-lt'));
-        // Color-coded Số phút
-        const mins = r.so_phut || 0;
-        const minsClass = mins >= 60 ? 'text-danger fw-bold' : (mins >= 30 ? 'text-warning fw-bold' : 'text-success');
-        // Cause badges
-        const causeBadge = (c) => c ? `<span class="badge bg-azure-lt">${c}</span>` : '<span class="text-danger">—</span>';
-        return `<td class="fw-bold">${r.site_id || '--'}${flagIcon}</td><td><span class="badge ${mangColor}">${mang}</span></td><td class="small">${r.bat_dau || ''}</td><td class="${minsClass}">${mins}</td><td class="d-none d-md-table-cell small">${causeBadge(c1)}</td><td class="d-none d-md-table-cell small">${causeBadge(c2)}</td><td class="d-none d-md-table-cell small">${causeBadge(c3)}</td>`;
+        const durMins = r.duaration || r.minute || 0;
+        const hours = (durMins / 60).toFixed(1);
+        const hoursClass = durMins >= 120 ? 'text-danger fw-bold' : (durMins >= 60 ? 'text-warning fw-bold' : 'text-success');
+        return `<td class="fw-bold">${r.site || '--'}${flagIcon}</td><td><span class="badge ${mangColor}">${mang}</span></td><td class="small">${r.sdateStr || ''}</td><td class="${hoursClass}">${hours}</td><td class="d-none d-md-table-cell small">${r.vendor || ''}</td>`;
+    }
+
+    function buildMllCellRow(r) {
+        const durMins = r.duaration || r.minute || 0;
+        const hours = (durMins / 60).toFixed(1);
+        const hoursClass = durMins >= 120 ? 'text-danger fw-bold' : (durMins >= 60 ? 'text-warning' : '');
+        const mang = r.network || '--';
+        const mangColor = mang.includes('Mobi') ? 'bg-blue-lt' : (mang.includes('Vina') ? 'bg-red-lt' : (mang.includes('Viettel') ? 'bg-green-lt' : 'bg-azure-lt'));
+        return `<td class="fw-bold">${r.site || '--'}</td>`
+            + `<td class="d-none d-md-table-cell small">${r.cellid || ''}</td>`
+            + `<td><span class="badge ${mangColor}">${mang}</span></td>`
+            + `<td class="small text-start">${r.alarmName || ''}</td>`
+            + `<td class="small">${r.sdateStr || ''}</td>`
+            + `<td class="${hoursClass}">${hours}</td>`
+            + `<td class="d-none d-md-table-cell small">${r.vendor || ''}</td>`;
     }
 
     function buildVhktRow(r) {
@@ -583,13 +639,8 @@
         loadTabData('md');
         refreshSummary();
 
-        // Auto-refresh summary every 30s
+        // Single auto-refresh cycle every 30s (refreshSummary reloads current tab)
         setInterval(refreshSummary, 30000);
-
-        // Auto-refresh current tab every 60s
-        setInterval(() => {
-            loadTabData(currentTab);
-        }, 60000);
     });
 
     // ── Manual Refresh Trigger ──────────────────────────────
@@ -618,13 +669,18 @@
                     resetRefreshBtn();
                     return;
                 }
-                // Wait 30s then reload all tabs
+                // Poll quickly after trigger to catch fresh data
                 setTimeout(() => {
-                    tabDataLoaded = { md: false, mpd: false, mll: false, vhkt: false };
+                    tabDataLoaded = { md: false, mpd: false, mll: false, mll_cell: false, vhkt: false };
+                    loadTabData(currentTab);
+                    refreshSummary();
+                }, 5000);
+                // Second poll at 15s if scrape takes longer
+                setTimeout(() => {
                     loadTabData(currentTab);
                     refreshSummary();
                     resetRefreshBtn();
-                }, 30000);
+                }, 15000);
             })
             .catch(err => {
                 console.error('Trigger error:', err);

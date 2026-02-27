@@ -307,7 +307,9 @@ def run_alarm_poll():
 
             results['md'] = await scraper.scrape_md()
             results['mpd'] = await scraper.scrape_mpd()
-            results['mll'] = await scraper.scrape_mll()
+            mll_tram, mll_cell = await scraper.scrape_mll_all()
+            results['mll'] = mll_tram
+            results['mll_cell'] = mll_cell
             results['status'] = 'success'
             results['scraped_at'] = datetime.now().isoformat()
         except Exception as e:
@@ -325,7 +327,9 @@ def run_alarm_poll():
                         await scraper._ensure_login()
                         results['md'] = await scraper.scrape_md()
                         results['mpd'] = await scraper.scrape_mpd()
-                        results['mll'] = await scraper.scrape_mll()
+                        mll_tram, mll_cell = await scraper.scrape_mll_all()
+                        results['mll'] = mll_tram
+                        results['mll_cell'] = mll_cell
                         results['status'] = 'success'
                         results['scraped_at'] = datetime.now().isoformat()
                         logger.info('SmartW Worker: ✅ Alarm retry succeeded!')
@@ -344,7 +348,7 @@ def run_alarm_poll():
         logger.info(f'⏰ SmartW Worker: Starting alarm poll at {datetime.now()}')
 
         # Backup active → previous (for clear detection)
-        for table_type in ['md', 'mpd', 'mll']:
+        for table_type in ['md', 'mpd', 'mll', 'mll_cell']:
             _backup_active(table_type)
 
         result = _run_async(_do_alarm_poll)
@@ -366,7 +370,8 @@ def run_alarm_poll():
             logger.info(f'SmartW Worker: ✅ Alarm poll done — '
                         f'MĐ: {len(result.get("md", []))}, '
                         f'MPĐ: {len(result.get("mpd", []))}, '
-                        f'MLL: {len(result.get("mll", []))}')
+                        f'MLL: {len(result.get("mll", []))}, '
+                        f'MLL Cell: {len(result.get("mll_cell", []))}')
 
             # Login succeeded → reset failure counter
             status['login_fail_count'] = 0
@@ -378,7 +383,7 @@ def run_alarm_poll():
             ]
 
             # Clear detection
-            for table_type in ['md', 'mpd', 'mll']:
+            for table_type in ['md', 'mpd', 'mll', 'mll_cell']:
                 cleared = _detect_cleared(table_type)
                 if cleared:
                     _update_cleared_list(table_type, cleared)

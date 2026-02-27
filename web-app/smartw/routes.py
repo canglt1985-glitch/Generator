@@ -24,14 +24,14 @@ def save_config():
     """Save SmartW credentials (encrypted)."""
     if session.get('role') != 'admin':
         flash('Chỉ admin mới được thay đổi cài đặt SmartW.', 'danger')
-        return redirect(url_for('admin', tab='smartw'))
+        return redirect(url_for('core.admin', tab='smartw'))
 
     username = request.form.get('smartw_username', '').strip()
     password = request.form.get('smartw_password', '').strip()
 
     if not username or not password:
         flash('Vui lòng nhập đầy đủ tài khoản SmartW.', 'warning')
-        return redirect(url_for('admin', tab='smartw'))
+        return redirect(url_for('core.admin', tab='smartw'))
 
     try:
         save_smartw_config(username, password)
@@ -42,7 +42,7 @@ def save_config():
     except Exception as e:
         flash(f'❌ Lỗi lưu cài đặt: {e}', 'danger')
 
-    return redirect(url_for('admin', tab='smartw'))
+    return redirect(url_for('core.admin', tab='smartw'))
 
 
 # --- API Endpoints (Skeleton — will be implemented in Phase 04) ---
@@ -62,10 +62,12 @@ def api_summary():
     md_active = [r for r in _classify_records(md_raw) if r.get('status') == 'ACTIVE']
     mpd_active = [r for r in _classify_records(mpd_raw) if r.get('status') == 'ACTIVE']
     mll_active = [r for r in _classify_records(mll_raw) if r.get('status') == 'ACTIVE']
+    mll_cell_raw = load_cached_data('mll_cell')
+    mll_cell_active = [r for r in _classify_records(mll_cell_raw) if r.get('status') == 'ACTIVE']
 
     # Cross-check: MĐ sites without MPĐ → ung_cuu (only active ones)
-    md_sites = {r.get('site_id', '').strip() for r in md_active if r.get('site_id')}
-    mpd_sites = {r.get('site_id', '').strip() for r in mpd_active if r.get('site_id')}
+    md_sites = {r.get('site', '').strip() for r in md_active if r.get('site')}
+    mpd_sites = {r.get('site', '').strip() for r in mpd_active if r.get('site')}
     ung_cuu = list(md_sites - mpd_sites)
 
     # Format last_poll timestamp
@@ -102,12 +104,13 @@ def api_summary():
         if last_alarm_error and last_vhkt_error:
             break
     # Count unique MĐ stations (not total alarms)
-    md_stations = {r.get('site_id', '').strip() for r in md_active if r.get('site_id')}
+    md_stations = {r.get('site', '').strip() for r in md_active if r.get('site')}
 
     return jsonify({
         'md_count': len(md_stations),
         'mpd_count': len(mpd_active),
         'mll_count': len(mll_active),
+        'mll_cell_count': len(mll_cell_active),
         'ung_cuu_count': len(ung_cuu),
         'last_poll': last_poll,
         'status': 'running' if status.get('is_running') else ('configured' if md_raw else 'not_configured'),
@@ -119,10 +122,10 @@ def api_summary():
 
 
 def _classify_records(cached: dict | None) -> list[dict]:
-    """Classify records as ACTIVE / CLEARED based on ket_thuc field.
-    - ket_thuc empty → ACTIVE
-    - ket_thuc < 2h ago → CLEARED (still visible)
-    - ket_thuc >= 2h ago → HIDDEN (filtered out)
+    """Classify records as ACTIVE / CLEARED based on end-time field.
+    Handles both:
+    - New alarmLog-new JSON: 'edate' = epoch ms (int) or null
+    - Old HTML-parsed data: 'ket_thuc' = date string or ''
     """
     if not cached or not cached.get('data'):
         return []
@@ -132,23 +135,37 @@ def _classify_records(cached: dict | None) -> list[dict]:
     results = []
 
     for r in cached['data']:
+        # New format: edate is epoch milliseconds (int) or null
+        edate = r.get('edate')
         ket_thuc = (r.get('ket_thuc') or '').strip()
 
-        if not ket_thuc:
+        if edate is None and not ket_thuc:
             # No end time → still active
             r['status'] = 'ACTIVE'
             results.append(r)
-        else:
-            # Try parsing end time to determine if within CLEAR_HIDE_HOURS
+        elif edate is not None:
+            # edate is epoch ms (e.g., 1772180947000)
+            if isinstance(edate, (int, float)) and edate > 0:
+                try:
+                    kt_dt = datetime.fromtimestamp(edate / 1000)
+                    if kt_dt >= cutoff:
+                        r['status'] = 'CLEARED'
+                        results.append(r)
+                except (ValueError, OSError):
+                    r['status'] = 'CLEARED'
+                    results.append(r)
+            else:
+                # edate = 0 or invalid → treat as active
+                r['status'] = 'ACTIVE'
+                results.append(r)
+        elif ket_thuc:
+            # Old format: ket_thuc is a date string
             try:
-                # SmartW time formats: "DD/MM/YYYY HH:mm" or "HH:mm DD/MM/YYYY" etc.
                 kt_dt = _parse_smartw_time(ket_thuc, r.get('ngay', ''))
                 if kt_dt and kt_dt >= cutoff:
                     r['status'] = 'CLEARED'
                     results.append(r)
-                # else: older than cutoff → hidden, skip
             except Exception:
-                # Can't parse → show as cleared to be safe
                 r['status'] = 'CLEARED'
                 results.append(r)
 
@@ -198,11 +215,11 @@ def api_md():
     mpd_active_sites = set()
     if mpd_cached:
         for r in _classify_records(mpd_cached):
-            if r.get('status') == 'ACTIVE' and r.get('site_id'):
-                mpd_active_sites.add(r['site_id'].strip())
+            if r.get('status') == 'ACTIVE' and r.get('site'):
+                mpd_active_sites.add(r['site'].strip())
 
     for r in records:
-        r['has_mpd'] = r.get('site_id', '').strip() in mpd_active_sites
+        r['has_mpd'] = r.get('site', '').strip() in mpd_active_sites
 
     return jsonify({
         'count': len(records),
@@ -243,6 +260,20 @@ def api_mll():
     })
 
 
+@smartw_bp.route('/api/smartw/mll-cell')
+def api_mll_cell():
+    """Return MLL Cell data — active CellOff (isDownSite=N)."""
+    from .scraper import load_cached_data
+    cached = load_cached_data('mll_cell')
+    records = _classify_records(cached)
+
+    return jsonify({
+        'count': len(records),
+        'data': records,
+        'scraped_at': cached.get('scraped_at') if cached else None
+    })
+
+
 @smartw_bp.route('/api/smartw/vhkt')
 def api_vhkt():
     """Return VHKT daily data — filtered by TVT Đồng Nai 3."""
@@ -274,7 +305,7 @@ def manual_trigger():
     """Manual trigger scrape from admin panel."""
     if session.get('role') != 'admin':
         flash('Chỉ admin mới được thực hiện.', 'danger')
-        return redirect(url_for('admin', tab='smartw'))
+        return redirect(url_for('core.admin', tab='smartw'))
 
     trigger_type = request.form.get('trigger_type', 'both')
 
@@ -302,7 +333,7 @@ def manual_trigger():
     except Exception as e:
         flash(f'❌ Lỗi: {e}', 'danger')
 
-    return redirect(url_for('admin', tab='smartw'))
+    return redirect(url_for('core.admin', tab='smartw'))
 
 
 @smartw_bp.route('/api/smartw/trigger', methods=['POST'])

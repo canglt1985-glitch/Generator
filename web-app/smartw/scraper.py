@@ -48,69 +48,22 @@ SSO_AUTH_BASE = 'https://auth-sso2fa.mobifone.vn:8080/realms/master/protocol/ope
 
 # Team & region constants
 TEAM_ALARM = 'TVT Đồng Nai 3'
-TEAM_MLL = 'MBF_MN_DONG_NAI_PVT_TVT3'
 PROVINCE = 'Tỉnh Đồng Nai'
 REGION = 'MN'
+GROUP_ALARM = 'PVT Đồng Nai'
+TRUNG_TAM = 'MobiFone Đồng Nai'
+ALARM_PAGESIZE = 300
+MPD_FILTER_KEYWORD = 'generat'
 
 # ── Column mappings ──────────────────────────────────────────────
-# Maps column header → JSON key.
-# "!" prefix = important field, no prefix = informational
-
-MD_COLUMNS = {
-    'Ngày': 'ngay',
-    'Site ID': 'site_id',
-    'Cảnh báo': 'canh_bao',
-    'Bắt đầu': 'bat_dau',
-    'Kết thúc': 'ket_thuc',
-    'Số phút': 'so_phut',
-    'Tên thiết bị': 'ten_thiet_bi',
-    'Cell ID': 'cell_id',
-    'UCTT đóng bao': 'uctt',
-    'Loại thiết bị': 'loai_thiet_bi',
-    'Loại cảnh báo': 'loai_canh_bao',
-    'XS/Phường': 'phuong',
-    'Tỉnh/Thành phố': 'tinh',
-    'Tổ viễn thông': 'to_vt',
-    'Bài viễn thông': 'bai_vt',
-    'Mạng': 'mang',
-    'Vendor': 'vendor',
-}
-
-MPD_COLUMNS = {
-    'Ngày': 'ngay',
-    'Site ID': 'site_id',
-    'Cảnh báo': 'canh_bao',
-    'Bắt đầu': 'bat_dau',
-    'Kết thúc': 'ket_thuc',
-    'Số phút': 'so_phut',
-    'Tên thiết bị': 'ten_thiet_bi',
-    'Loại thiết bị': 'loai_thiet_bi',
-    'Vendor': 'vendor',
-    'XS/Phường': 'phuong',
-    'Tỉnh/Thành phố': 'tinh',
-    'Tổ viễn thông': 'to_vt',
-    'Bài viễn thông': 'bai_vt',
-}
-
-MLL_COLUMNS = {
-    'Site ID': 'site_id',
-    'Bắt đầu': 'bat_dau',
-    'Kết thúc': 'ket_thuc',
-    'Số phút': 'so_phut',
-    'Mạng': 'mang',
-    'Cấp 1': 'nguyen_nhan_1',
-    'Cấp 2': 'nguyen_nhan_2',
-    'Cấp 3': 'nguyen_nhan_3',
-    'Ticket Id': 'ticket_id',
-    'Is Auto Ticket': 'auto_ticket',
-    'Giảm trừ': 'giam_tru',
-    'Ưu tiên PCLB': 'uu_tien_pclb',
-    'Xã/Phường': 'phuong',
-    'Tỉnh/Thành phố': 'tinh',
-    'Tổ viễn thông': 'to_vt',
-    'Đài viễn thông': 'dai_vt',
-    'Miền': 'mien',
-}
+# Column maps now unused for alarmLog-new (JSON returns raw fields)
+# Kept for reference — VHKT still uses HTML table parsing
+# alarmLog-new JSON fields: site, ne, cellid, alarmName, sdate, edate,
+#   sdateStr, edateStr, minutes, network, vendor, team, severity, province, ...
+MD_COLUMNS = {}
+MPD_COLUMNS = {}
+MLL_COLUMNS = {}
+MLL_CELL_COLUMNS = {}
 
 VHKT_COLUMNS = {
     'Ngày': 'ngay',
@@ -639,70 +592,205 @@ class SmartWScraper:
 
     # ── Scrape Functions ─────────────────────────────────────────
 
-    async def scrape_md(self) -> list[dict]:
-        """Scrape MĐ (Mất Điện) — active alarms only (sActive=on)."""
-        await self._ensure_login()
-        sdate, edate = self._date_range()
-        url = f'{BASE_URL}/smartw/alarm/site/list.htm?' + urlencode({
-            'type': 'MD',
-            'level': 'CELL',
-            'team': TEAM_ALARM,
-            'sdate': sdate,
-            'edate': edate,
-            'isActive': 'on',
-        })
-        logger.info(f'SmartW Scrape MĐ: {url}')
-        await self._page.goto(url, wait_until='networkidle', timeout=60000)
-        await self._handle_session_expired()
+    async def _fetch_alarm_data(self, url: str, column_map: dict) -> list[dict]:
+        """Fetch alarm data directly via browser fetch() → JSON.
+        Much faster than page.goto() + _parse_table() since data.htm returns JSON.
+        Falls back to old page navigation if JSON fetch fails.
+        """
+        # Ensure we're on SmartW domain for cookies to work
+        current_url = self._page.url or ''
+        if 'smartw.mobifone.vn' not in current_url:
+            await self._page.goto(f'{BASE_URL}/smartw/', wait_until='domcontentloaded', timeout=30000)
+            await self._handle_session_expired()
 
-        data = await self._parse_table(self._page, MD_COLUMNS)
+        # Fetch JSON directly via browser (keeps SSO session cookies)
+        result = await self._page.evaluate('''
+            async (url) => {
+                try {
+                    const res = await fetch(url, { credentials: "include" });
+                    if (!res.ok) return { ok: false, status: res.status, data: "" };
+                    const text = await res.text();
+                    return { ok: true, status: res.status, data: text };
+                } catch(e) {
+                    return { ok: false, status: 0, data: e.message };
+                }
+            }
+        ''', url)
+
+        if not result.get('ok'):
+            status_code = result.get('status', 0)
+            logger.warning(f'SmartW Fetch: HTTP {status_code} — falling back to page navigation')
+            # Session expired? Try re-login
+            if status_code in (401, 302, 0, 403):
+                await self._handle_session_expired()
+                # Retry fetch once
+                result = await self._page.evaluate('''
+                    async (url) => {
+                        try {
+                            const res = await fetch(url, { credentials: "include" });
+                            if (!res.ok) return { ok: false, status: res.status, data: "" };
+                            const text = await res.text();
+                            return { ok: true, status: res.status, data: text };
+                        } catch(e) {
+                            return { ok: false, status: 0, data: e.message };
+                        }
+                    }
+                ''', url)
+            if not result.get('ok'):
+                # Ultimate fallback: old page navigation method
+                logger.warning('SmartW Fetch: Retry failed, using page.goto fallback')
+                await self._page.goto(url, wait_until='networkidle', timeout=60000)
+                await self._handle_session_expired()
+                return await self._parse_table(self._page, column_map)
+
+        # Parse JSON response
+        import json as _json
+        try:
+            raw = _json.loads(result['data'])
+        except (_json.JSONDecodeError, TypeError) as e:
+            logger.error(f'SmartW Fetch: JSON parse error: {e}')
+            logger.info('SmartW Fetch: Falling back to page navigation')
+            await self._page.goto(url, wait_until='networkidle', timeout=60000)
+            await self._handle_session_expired()
+            return await self._parse_table(self._page, column_map)
+
+        # Handle different response formats
+        if isinstance(raw, list):
+            rows = raw
+        elif isinstance(raw, dict):
+            rows = raw.get('Rows') or raw.get('rows') or raw.get('data') or []
+        else:
+            rows = []
+
+        # Log first record keys for debugging (helps tune column maps)
+        if rows and isinstance(rows[0], dict):
+            logger.info(f'SmartW Fetch: {len(rows)} records, keys: {list(rows[0].keys())[:15]}')
+        else:
+            logger.info(f'SmartW Fetch: {len(rows)} records')
+
+        # Map JSON keys → our keys using column_map (if provided)
+        # If column_map is empty, return raw records as-is
+        if not column_map:
+            return rows
+
+        mapped = []
+        for record in rows:
+            row = {}
+            for header, our_key in column_map.items():
+                if header in record:
+                    row[our_key] = record[header]
+            if not row:
+                row = record
+            mapped.append(row)
+
+        return mapped
+
+    async def scrape_md(self) -> list[dict]:
+        """Scrape MĐ (Mất Điện) — alarmLog-new endpoint (center=POWER)."""
+        await self._ensure_login()
+        url = self._build_alarm_url(center='POWER')
+        logger.info(f'SmartW Scrape MĐ (fast fetch): {url[:100]}...')
+
+        data = await self._fetch_alarm_data(url, MD_COLUMNS)
         self._save_json(data, 'md.json')
         logger.info(f'SmartW Scrape MĐ: ✅ {len(data)} records')
         return data
 
     async def scrape_mpd(self) -> list[dict]:
-        """Scrape MPĐ (Máy Phát Điện) — active alarms only (sActive=on)."""
+        """Scrape MPĐ (Máy Phát Điện) — alarmLog-new endpoint (center=TTML).
+        Filters: chỉ giữ records có cảnh báo chứa 'gener' (generator).
+        """
         await self._ensure_login()
-        sdate, edate = self._date_range()
-        url = f'{BASE_URL}/smartw/alarm/site/list.htm?' + urlencode({
-            'type': 'MFD',
-            'level': 'SITE',
-            'team': TEAM_ALARM,
-            'sdate': sdate,
-            'edate': edate,
-            'isActive': 'on',
-        })
-        logger.info(f'SmartW Scrape MPĐ: {url}')
-        await self._page.goto(url, wait_until='networkidle', timeout=60000)
-        await self._handle_session_expired()
+        url = self._build_alarm_url(center='TTML')
+        logger.info(f'SmartW Scrape MPĐ (fast fetch): {url[:100]}...')
 
-        data = await self._parse_table(self._page, MPD_COLUMNS)
+        all_data = await self._fetch_alarm_data(url, MPD_COLUMNS)
+
+        # Filter: chỉ giữ alarm có cảnh báo chứa "gener" (generator)
+        data = [r for r in all_data
+                if MPD_FILTER_KEYWORD in (r.get('alarmName') or '').lower()]
+
+        logger.info(f'SmartW Scrape MPĐ: {len(all_data)} raw → {len(data)} after filter "{MPD_FILTER_KEYWORD}"')
         self._save_json(data, 'mpd.json')
         logger.info(f'SmartW Scrape MPĐ: ✅ {len(data)} records')
         return data
 
-    async def scrape_mll(self) -> list[dict]:
-        """Scrape MLL (Mất Liên Lạc) — active alarms only (tramMll=on)."""
+    async def scrape_mll_all(self) -> tuple[list[dict], list[dict]]:
+        """Scrape ALL MLL — single fetch, smart-classify into Trạm + Cell.
+        Classification rules:
+        - 4G without cellid → MLL Trạm
+        - 3G site with ≥ 3 cells off → MLL Trạm (grouped as 1 entry)
+        - Everything else → CellOff
+        Returns (mll_tram, mll_cell) tuple.
+        """
         await self._ensure_login()
-        sdate, edate = self._date_range()
-        url = f'{BASE_URL}/smartw/rp-site-v2/list.htm?' + urlencode({
-            'region': REGION,
-            'team': TEAM_MLL,
-            'province': PROVINCE,
-            'sdate': sdate,
-            'edate': edate,
-            'tramMll': 'on',
-        })
-        logger.info(f'SmartW Scrape MLL: {url}')
-        await self._page.goto(url, wait_until='networkidle', timeout=60000)
-        await self._handle_session_expired()
+        url = self._build_alarm_url(center='MLL')
+        logger.info(f'SmartW Scrape MLL ALL (single fetch): {url[:100]}...')
 
+        all_data = await self._fetch_alarm_data(url, MLL_COLUMNS)
 
+        mll_tram = []
+        cell_candidates = []
 
-        data = await self._parse_table(self._page, MLL_COLUMNS)
-        self._save_json(data, 'mll.json')
-        logger.info(f'SmartW Scrape MLL: ✅ {len(data)} records')
-        return data
+        for r in all_data:
+            cellid = r.get('cellid') or ''
+            site = r.get('site') or ''
+            network = (r.get('network') or '').upper()
+
+            # Rule 1: 4G without cellid (or cellid == site) → MLL Trạm
+            if ('4G' in network or 'RAN_4G' in network) and (not cellid or cellid == site):
+                mll_tram.append(r)
+            # Rule 1b: Any network without cellid → MLL Trạm
+            elif not cellid or cellid == site:
+                mll_tram.append(r)
+            else:
+                cell_candidates.append(r)
+
+        # Rule 2: 3G sites with ≥ 3 cells off → promote to MLL Trạm
+        from collections import defaultdict
+        site_3g_cells = defaultdict(list)
+        for r in cell_candidates:
+            network = (r.get('network') or '').upper()
+            if '3G' in network or 'UTRAN' in network:
+                site_3g_cells[r.get('site', '')].append(r)
+
+        promoted_sites = set()
+        for site, cells in site_3g_cells.items():
+            if len(cells) >= 3:
+                promoted_sites.add(site)
+                # Create a single MLL Trạm entry from first cell record
+                tram_entry = dict(cells[0])  # Copy first cell
+                tram_entry['cellid'] = None   # Clear cellid for Trạm display
+                tram_entry['cellName'] = None
+                # Use the earliest sdate among the cells
+                earliest = min(c.get('sdate') or float('inf') for c in cells)
+                if earliest != float('inf'):
+                    tram_entry['sdate'] = earliest
+                # Use max duration
+                max_dur = max(c.get('duaration') or c.get('minute') or 0 for c in cells)
+                tram_entry['duaration'] = max_dur
+                tram_entry['minute'] = max_dur
+                mll_tram.append(tram_entry)
+
+        # CellOff = cell_candidates minus promoted 3G sites
+        mll_cell = [r for r in cell_candidates
+                    if r.get('site') not in promoted_sites]
+
+        logger.info(f'SmartW Scrape MLL: {len(all_data)} total → '
+                    f'{len(mll_tram)} trạm (4G no-cell + 3G ≥3cell) + {len(mll_cell)} cell')
+        self._save_json(mll_tram, 'mll.json')
+        self._save_json(mll_cell, 'mll_cell.json')
+        return mll_tram, mll_cell
+
+    async def scrape_mll(self) -> list[dict]:
+        """Backward compat wrapper — use scrape_mll_all() instead."""
+        tram, _ = await self.scrape_mll_all()
+        return tram
+
+    async def scrape_mll_cell(self) -> list[dict]:
+        """Backward compat wrapper — use scrape_mll_all() instead."""
+        _, cell = await self.scrape_mll_all()
+        return cell
 
     async def scrape_vhkt(self, date_str: str = None) -> list[dict]:
         """Scrape VHKT (Đánh Giá Tổng Hợp) — typically run once/morning.
@@ -907,6 +995,51 @@ class SmartWScraper:
         edate = now.strftime('%d/%m/%Y') + ' 23:59'
         return sdate, edate
 
+    @staticmethod
+    def _date_range_full(days_back: int = 30) -> tuple[str, str]:
+        """Date range for alarmLog-new endpoint (format: DD/MM/YYYY HH:mm:ss)."""
+        now = datetime.now()
+        sdate = (now - timedelta(days=days_back)).strftime('%d/%m/%Y') + ' 00:00:00'
+        edate = now.strftime('%d/%m/%Y') + ' 23:59:00'
+        return sdate, edate
+
+    def _build_alarm_url(self, center: str, is_down_site: str = '') -> str:
+        """Build alarmLog-new URL for all alarm types.
+        Args:
+            center: 'POWER' (MĐ), 'TTML' (MPĐ), 'MLL'
+            is_down_site: 'Y' (MLL Trạm), 'N' (MLL Cell), '' (MĐ/MPĐ)
+        """
+        sdate, edate = self._date_range_full(30)
+        params = {
+            'center': center,
+            'sdateF': sdate, 'sdateT': edate,
+            'edateF': '', 'edateT': '',
+            'bscid': '', 'cellid': '', 'vendor': '', 'district': '',
+            'function': 'active',
+            'severity': '',
+            'network': 'ALL',
+            'province': '',
+            'team': TEAM_ALARM,
+            'group': GROUP_ALARM,
+            'alarmType': '', 'statusFinish': '', 'statusView': '',
+            'duarationF': '', 'duarationT': '',
+            'region': REGION,
+            'neType': '', 'ackStatus': '', 'ackUserTk': '',
+            'loaiCB': '', 'ip': '', 'active7': '',
+            'isDownSite': is_down_site,
+            'alarmName': '',
+            'isAlarmTicketed': 'N',
+            'isAlarmNotTicketed': 'N',
+            'tienXuLyFilter': '',
+            'trungTamFilter': TRUNG_TAM,
+            'filterscount': '0', 'groupscount': '0',
+            'pagenum': '0',
+            'pagesize': str(ALARM_PAGESIZE),
+            'recordstartindex': '0',
+            'recordendindex': str(ALARM_PAGESIZE),
+        }
+        return f'{BASE_URL}/smartw/alarmLog-new/data.htm?' + urlencode(params)
+
     # ── Session Management ───────────────────────────────────────
 
     async def _handle_session_expired(self):
@@ -981,7 +1114,7 @@ def run_scrape_sync(username: str, password: str, tables: list[str] = None, vhkt
         dict with results per table
     """
     if tables is None:
-        tables = ['md', 'mpd', 'mll']
+        tables = ['md', 'mpd', 'mll', 'mll_cell']
 
     async def _run():
         scraper = SmartWScraper(username, password)
@@ -998,6 +1131,8 @@ def run_scrape_sync(username: str, password: str, tables: list[str] = None, vhkt
                 results['mpd'] = await scraper.scrape_mpd()
             if 'mll' in tables:
                 results['mll'] = await scraper.scrape_mll()
+            if 'mll_cell' in tables:
+                results['mll_cell'] = await scraper.scrape_mll_cell()
             if 'vhkt' in tables:
                 results['vhkt'] = await scraper.scrape_vhkt(date_str=vhkt_date)
 
@@ -1034,6 +1169,7 @@ def load_cached_data(table_type: str) -> dict | None:
         'md': 'md.json',
         'mpd': 'mpd.json',
         'mll': 'mll.json',
+        'mll_cell': 'mll_cell.json',
         'vhkt': 'vhkt.json'
     }
     filename = filenames.get(table_type)
