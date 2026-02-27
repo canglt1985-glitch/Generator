@@ -51,10 +51,15 @@ def add_fuel_ledger():
             # Nhập kho: không cần mã trạm (nhập vào kho tổng)
             id_tram = ''
         elif trans_type == 'STATION_OUT':
-            # Xuất kho: không cần NCC/giá/thành tiền (lấy từ kho)
+            # Xuất kho: không cần NCC, auto đơn giá từ lần nhập kho gần nhất
             nha_cung_cap = ''
-            don_gia = 0
-            thanh_tien = 0
+            if don_gia == 0:
+                latest_price = db.session.query(FuelLedger.don_gia).filter(
+                    FuelLedger.type.in_(['STOCK_IN', 'DIRECT_BUY']),
+                    FuelLedger.don_gia > 0
+                ).order_by(FuelLedger.ngay.desc()).first()
+                don_gia = latest_price[0] if latest_price else 0
+            thanh_tien = so_luong * don_gia
 
         new_trans = FuelLedger(
             type=trans_type, is_approved=is_approved,
@@ -152,8 +157,14 @@ def edit_fuel_ledger(id):
         elif trans_type == 'STATION_OUT':
             item.id_tram = request.form.get('id_tram') or ''
             item.nha_cung_cap = ''
-            item.don_gia = 0
-            item.thanh_tien = 0
+            # Auto đơn giá từ lần nhập kho gần nhất nếu chưa có
+            if item.don_gia == 0:
+                latest_price = db.session.query(FuelLedger.don_gia).filter(
+                    FuelLedger.type.in_(['STOCK_IN', 'DIRECT_BUY']),
+                    FuelLedger.don_gia > 0
+                ).order_by(FuelLedger.ngay.desc()).first()
+                item.don_gia = latest_price[0] if latest_price else 0
+            item.thanh_tien = item.so_luong * item.don_gia
         else:
             item.id_tram = request.form.get('id_tram') or ''
             item.nha_cung_cap = request.form.get('nha_cung_cap') or ''

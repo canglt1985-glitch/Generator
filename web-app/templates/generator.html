@@ -1054,10 +1054,14 @@
             g.style.pointerEvents = 'auto';
             g.style.display = 'block';
             g.style.visibility = 'visible';
-            g.querySelectorAll('input, select').forEach(el => el.disabled = false);
+            g.querySelectorAll('input, select').forEach(el => {
+                el.disabled = false;
+                el.readOnly = false;
+            });
         });
         nccSelect.required = true;
         stationInput.required = false;
+        document.getElementById('inp_dongia').style.backgroundColor = '';
 
         function dimGroup(group) {
             group.style.opacity = '0.35';
@@ -1071,12 +1075,17 @@
             dimGroup(groupActual);
             nccSelect.required = true;
         } else if (type === 'STATION_OUT') {
-            // Xuất kho: cần trạm, KHÔNG cần NCC/giá/thành tiền
-            dimGroup(groupPrice);
-            dimGroup(groupMoney);
+            // Xuất kho: cần trạm + SL, đơn giá auto từ nhập kho gần nhất
             dimGroup(groupSupplier);
             nccSelect.required = false;
             stationInput.required = true;
+            // Auto-fill đơn giá từ lần nhập kho gần nhất
+            const priceInput = document.getElementById('inp_dongia');
+            priceInput.value = SUGGESTED_PRICE;
+            priceInput.readOnly = true;
+            priceInput.style.backgroundColor = '#f0f0f0';
+            // Auto-calc thành tiền
+            calcMoney();
         } else {
             // Đổ NL (mua): cần tất cả
             nccSelect.required = true;
