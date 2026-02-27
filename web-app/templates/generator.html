@@ -1053,8 +1053,6 @@
         const groupActual = document.getElementById('group-actual-stock');
         const nccSelect = document.getElementById('inp_ncc');
         const stationInput = document.getElementById('inp_id_tram');
-        const priceInput = document.getElementById('inp_dongia');
-        const moneyInput = document.getElementById('inp_thanhtien');
 
         // Reset visibility - show all first
         groupStation.style.display = 'block';
@@ -1066,23 +1064,19 @@
         stationInput.required = false;
 
         if (type === 'STOCK_IN') {
-            // Nhập kho: mua dầu về kho → cần NCC (mua từ ai), KHÔNG cần mã trạm
+            // Nhập kho: mua dầu về kho → cần NCC, KHÔNG cần mã trạm
             groupStation.style.display = 'none';
             groupActual.style.display = 'none';
-            stationInput.value = '';  // Clear mã trạm
             nccSelect.required = true;
         } else if (type === 'STATION_OUT') {
-            // Xuất kho: lấy từ kho đổ cho trạm → cần mã trạm, KHÔNG cần NCC/giá/thành tiền
+            // Xuất kho: lấy từ kho → cần trạm, KHÔNG cần NCC/giá/thành tiền
             groupPrice.style.visibility = 'hidden';
             groupMoney.style.display = 'none';
             groupSupplier.style.display = 'none';
-            nccSelect.value = '';     // Clear NCC
             nccSelect.required = false;
-            priceInput.value = '';    // Clear đơn giá
-            moneyInput.value = '';    // Clear thành tiền
-            stationInput.required = true; // Bắt buộc chọn trạm
+            stationInput.required = true;
         } else {
-            // Đổ NL (mua): mua đổ thẳng → cần cả trạm + NCC + giá
+            // Đổ NL (mua): cần cả trạm + NCC + giá
             nccSelect.required = true;
             stationInput.required = true;
         }
