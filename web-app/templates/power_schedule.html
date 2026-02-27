@@ -490,17 +490,16 @@
                     <!-- Custom Tabs -->
                     <ul class="nav nav-pills nav-fill p-2 bg-light mb-3" role="tablist">
                         <li class="nav-item">
-                            <button class="nav-link active rounded-pill" data-bs-toggle="pill"
-                                data-bs-target="#tab-direct" type="button" onclick="setFuelType('DIRECT_BUY')">ĐỔ NL
-                                (MUA)</button>
+                            <button class="nav-link active rounded-pill" data-fuel-type="DIRECT_BUY" type="button"
+                                onclick="setFuelType('DIRECT_BUY')">ĐỔ NL (MUA)</button>
                         </li>
                         <li class="nav-item">
-                            <button class="nav-link rounded-pill" data-bs-toggle="pill" data-bs-target="#tab-in"
-                                type="button" onclick="setFuelType('STOCK_IN')">NHẬP KHO</button>
+                            <button class="nav-link rounded-pill" data-fuel-type="STOCK_IN" type="button"
+                                onclick="setFuelType('STOCK_IN')">NHẬP KHO</button>
                         </li>
                         <li class="nav-item">
-                            <button class="nav-link rounded-pill" data-bs-toggle="pill" data-bs-target="#tab-out"
-                                type="button" onclick="setFuelType('STATION_OUT')">XUẤT KHO</button>
+                            <button class="nav-link rounded-pill" data-fuel-type="STATION_OUT" type="button"
+                                onclick="setFuelType('STATION_OUT')">XUẤT KHO</button>
                         </li>
                     </ul>
                     <input type="hidden" name="type" id="fuel_type" value="DIRECT_BUY">
@@ -609,6 +608,12 @@
         const nccSelect = document.getElementById('inp_ncc');
         const stationInput = document.getElementById('inp_id_tram');
 
+        // Update active tab button
+        const modal = document.querySelector('#smartFuelModal');
+        modal.querySelectorAll('.nav-pills .nav-link').forEach(btn => {
+            btn.classList.toggle('active', btn.getAttribute('data-fuel-type') === type);
+        });
+
         // Reset visibility - show all first
         groupStation.style.display = 'block';
         groupPrice.style.visibility = 'visible';
@@ -619,19 +624,16 @@
         stationInput.required = false;
 
         if (type === 'STOCK_IN') {
-            // Nhập kho: mua dầu về kho → cần NCC, KHÔNG cần mã trạm
             groupStation.style.display = 'none';
             groupActual.style.display = 'none';
             nccSelect.required = true;
         } else if (type === 'STATION_OUT') {
-            // Xuất kho: lấy từ kho → cần trạm, KHÔNG cần NCC/giá/thành tiền
             groupPrice.style.visibility = 'hidden';
             groupMoney.style.display = 'none';
             groupSupplier.style.display = 'none';
             nccSelect.required = false;
             stationInput.required = true;
         } else {
-            // Đổ NL (mua): cần cả trạm + NCC + giá
             nccSelect.required = true;
             stationInput.required = true;
         }
@@ -726,10 +728,8 @@
         modal.querySelector('form').reset();
         // Show all tabs (for new transaction)
         modal.querySelector('.nav-pills').style.display = '';
-        // Reset type
+        // Reset type + active tab
         setFuelType('DIRECT_BUY');
-        const tabTrigger = new bootstrap.Tab(modal.querySelector(`button[data-bs-target="#tab-direct"]`));
-        tabTrigger.show();
     }
 
     function editFuel(btn) {
@@ -758,19 +758,8 @@
         modal.querySelector('select[name="nha_cung_cap"]').value = log.nha_cung_cap || '';
         modal.querySelector('input[name="ghi_chu"]').value = log.ghi_chu || '';
 
-        // Set Type & Tab
+        // Set Type & active tab
         setFuelType(log.type);
-        const typeMap = {
-            'DIRECT_BUY': '#tab-direct',
-            'STOCK_IN': '#tab-in',
-            'STATION_OUT': '#tab-out',
-            'ADJUSTMENT': '#tab-adjust'
-        };
-        const tabSelector = typeMap[log.type];
-        if (tabSelector) {
-            const tabTrigger = new bootstrap.Tab(modal.querySelector(`button[data-bs-target="${tabSelector}"]`));
-            tabTrigger.show();
-        }
     }
 
     function editExpense(btn) {
