@@ -44,13 +44,25 @@ def add_fuel_ledger():
         if thanh_tien == 0 and trans_type in ['STOCK_IN', 'DIRECT_BUY']:
             thanh_tien = so_luong * don_gia
 
+        # Sanitize fields based on transaction type
+        id_tram = request.form.get('id_tram') or ''
+        nha_cung_cap = request.form.get('nha_cung_cap') or ''
+        if trans_type == 'STOCK_IN':
+            # Nhập kho: không cần mã trạm (nhập vào kho tổng)
+            id_tram = ''
+        elif trans_type == 'STATION_OUT':
+            # Xuất kho: không cần NCC/giá/thành tiền (lấy từ kho)
+            nha_cung_cap = ''
+            don_gia = 0
+            thanh_tien = 0
+
         new_trans = FuelLedger(
             type=trans_type, is_approved=is_approved,
             ngay=request.form.get('ngay').replace('T', ' '),
-            id_tram=request.form.get('id_tram'),
+            id_tram=id_tram,
             loai_nhien_lieu=request.form.get('loai_nhien_lieu'),
             so_luong=so_luong, don_gia=don_gia, thanh_tien=thanh_tien,
-            nha_cung_cap=request.form.get('nha_cung_cap'),
+            nha_cung_cap=nha_cung_cap,
             nguoi_thuc_hien=request.form.get('nguoi_thuc_hien') or session.get('full_name'),
             ghi_chu=request.form.get('ghi_chu')
         )
@@ -124,15 +136,28 @@ def delete_fuel_ledger(id):
 def edit_fuel_ledger(id):
     try:
         item = FuelLedger.query.get_or_404(id)
+        trans_type = request.form.get('type')
         item.ngay = request.form.get('ngay')
-        item.type = request.form.get('type')
-        item.id_tram = request.form.get('id_tram')
+        item.type = trans_type
         item.loai_nhien_lieu = request.form.get('loai_nhien_lieu')
         item.so_luong = float(request.form.get('so_luong') or 0)
         item.don_gia = float(request.form.get('don_gia') or 0)
         item.thanh_tien = float(request.form.get('thanh_tien') or 0)
-        item.nha_cung_cap = request.form.get('nha_cung_cap')
         item.ghi_chu = request.form.get('ghi_chu')
+
+        # Sanitize fields based on transaction type
+        if trans_type == 'STOCK_IN':
+            item.id_tram = ''
+            item.nha_cung_cap = request.form.get('nha_cung_cap') or ''
+        elif trans_type == 'STATION_OUT':
+            item.id_tram = request.form.get('id_tram') or ''
+            item.nha_cung_cap = ''
+            item.don_gia = 0
+            item.thanh_tien = 0
+        else:
+            item.id_tram = request.form.get('id_tram') or ''
+            item.nha_cung_cap = request.form.get('nha_cung_cap') or ''
+
         item.ngay_cap_nhat = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         db.session.commit()
         flash('Cập nhật giao dịch thành công!', 'success')

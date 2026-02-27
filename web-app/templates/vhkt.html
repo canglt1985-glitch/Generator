@@ -402,30 +402,19 @@
         }
     }
 
-    // ── Summary Refresh + Per-tab info bar update ───────────
+    // ── Summary Refresh (used for initial load + fallback) ────────
     function refreshSummary() {
         fetch(`/api/smartw/summary?_=${Date.now()}`)
             .then(r => r.json())
             .then(d => {
-                // Reload only the currently visible tab
-                loadTabData(currentTab);
-
-                // Mark OTHER tabs as stale — they'll reload when clicked
-                ['md', 'mpd', 'mll', 'mll_cell', 'vhkt'].forEach(tab => {
-                    if (tab !== currentTab) tabDataLoaded[tab] = false;
-                });
-
-                // Update card counts from summary for non-active tabs
-                // (active tab count is set by loadTabData after rendering)
+                // Update card counts
                 const countFields = { md: 'md_count', mpd: 'mpd_count', mll: 'mll_count', mll_cell: 'mll_cell_count' };
                 const countEls = { md: 'mdCount', mpd: 'mpdCount', mll: 'mllCount', mll_cell: 'mllCellCount' };
                 Object.keys(countFields).forEach(tab => {
-                    if (tab !== currentTab) {
-                        document.getElementById(countEls[tab]).textContent = d[countFields[tab]] || 0;
-                    }
+                    document.getElementById(countEls[tab]).textContent = d[countFields[tab]] || 0;
                 });
 
-                // Update MĐ/MPĐ/MLL info bars with shared last_poll + alarm error
+                // Update status/time/error info bars
                 ['md', 'mpd', 'mll', 'mll_cell'].forEach(tab => updateTabInfoBar(tab, d.last_poll, d.status, d.last_alarm_error, d.login_paused));
 
                 // Update VHKT error bar
@@ -440,6 +429,81 @@
             })
             .catch(() => { });
     }
+
+    // ── SSE: Real-time push from backend ────────────────────────
+    let sseSource = null;
+    let sseFallbackTimer = null;
+
+    function connectSSE() {
+        if (sseSource) { sseSource.close(); }
+
+        sseSource = new EventSource('/api/smartw/events');
+
+        sseSource.addEventListener('connected', () => {
+            console.log('SSE: Connected to server');
+            // Clear fallback polling if SSE works
+            if (sseFallbackTimer) { clearInterval(sseFallbackTimer); sseFallbackTimer = null; }
+        });
+
+        sseSource.addEventListener('scrape_start', (e) => {
+            // Show "Đang quét..." on info bars
+            ['md', 'mpd', 'mll', 'mll_cell'].forEach(tab => {
+                const badge = document.querySelector(`#tab-${tab} .status-badge`);
+                if (badge) {
+                    badge.innerHTML = '<span class="badge bg-warning-lt">⏳ Đang quét...</span>';
+                }
+            });
+        });
+
+        sseSource.addEventListener('scrape_done', (e) => {
+            const d = JSON.parse(e.data);
+
+            // Reload current tab data immediately
+            loadTabData(currentTab);
+
+            // Mark other tabs as stale
+            ['md', 'mpd', 'mll', 'mll_cell', 'vhkt'].forEach(tab => {
+                if (tab !== currentTab) tabDataLoaded[tab] = false;
+            });
+
+            // Update ALL card counts from push data
+            const countEls = { md: 'mdCount', mpd: 'mpdCount', mll: 'mllCount', mll_cell: 'mllCellCount' };
+            if (d.md_count !== undefined) document.getElementById(countEls.md).textContent = d.md_count;
+            if (d.mpd_count !== undefined) document.getElementById(countEls.mpd).textContent = d.mpd_count;
+            if (d.mll_count !== undefined) document.getElementById(countEls.mll).textContent = d.mll_count;
+            if (d.mll_cell_count !== undefined) document.getElementById(countEls.mll_cell).textContent = d.mll_cell_count;
+
+            // Update info bars
+            ['md', 'mpd', 'mll', 'mll_cell'].forEach(tab => {
+                updateTabInfoBar(tab, d.last_poll, d.status, null, false);
+            });
+
+            // Reset refresh button if it's spinning
+            resetRefreshBtn();
+        });
+
+        sseSource.onerror = () => {
+            console.warn('SSE: Connection lost, falling back to polling');
+            sseSource.close();
+            sseSource = null;
+            // Fallback: poll every 60s if SSE dies
+            if (!sseFallbackTimer) {
+                sseFallbackTimer = setInterval(refreshSummary, 60000);
+            }
+            // Try reconnect SSE after 10s
+            setTimeout(connectSSE, 10000);
+        };
+    }
+
+    // ── Init ────────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', function () {
+        // Load first tab + summary
+        loadTabData('md');
+        refreshSummary();
+
+        // Connect SSE for real-time push (no polling needed!)
+        connectSSE();
+    });
 
     // ── Per-tab badge + time + error updater ──
     function updateTabInfoBar(tabName, lastPoll, statusStr, alarmError, loginPaused) {
@@ -633,16 +697,6 @@
         return `<td class="fw-bold">${r.tram || '--'}</td><td class="text-center px-1">${r.md_so_lan || 0}</td><td class="text-center px-1">${r.md_phut || 0}</td><td class="text-center px-1">${mdSla}</td><td class="text-center px-1">${r.mpd_so_lan || 0}</td><td class="text-center px-1">${r.mpd_phut || 0}</td><td class="text-center px-1">${r.mll_so_lan || 0}</td><td class="text-center px-1">${r.mll_phut || 0}</td><td class="text-center px-1">${mllSla}</td>`;
     }
 
-    // ── Init + Auto-refresh ─────────────────────────────────
-    document.addEventListener('DOMContentLoaded', function () {
-        // Load first tab + summary
-        loadTabData('md');
-        refreshSummary();
-
-        // Single auto-refresh cycle every 30s (refreshSummary reloads current tab)
-        setInterval(refreshSummary, 30000);
-    });
-
     // ── Manual Refresh Trigger ──────────────────────────────
     let refreshCooldown = false;
 
@@ -669,18 +723,11 @@
                     resetRefreshBtn();
                     return;
                 }
-                // Poll quickly after trigger to catch fresh data
-                setTimeout(() => {
-                    tabDataLoaded = { md: false, mpd: false, mll: false, mll_cell: false, vhkt: false };
-                    loadTabData(currentTab);
-                    refreshSummary();
-                }, 5000);
-                // Second poll at 15s if scrape takes longer
-                setTimeout(() => {
-                    loadTabData(currentTab);
-                    refreshSummary();
-                    resetRefreshBtn();
-                }, 15000);
+                // Mark all tabs stale — SSE 'scrape_done' will trigger reload
+                tabDataLoaded = { md: false, mpd: false, mll: false, mll_cell: false, vhkt: false };
+
+                // Safety: reset button after 30s even if SSE doesn't fire
+                setTimeout(resetRefreshBtn, 30000);
             })
             .catch(err => {
                 console.error('Trigger error:', err);

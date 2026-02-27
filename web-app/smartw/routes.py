@@ -1,10 +1,39 @@
 """
 SmartW Routes — /vhkt page + API endpoints
 """
-from flask import render_template, jsonify, request, flash, redirect, url_for, session
+from flask import render_template, jsonify, request, flash, redirect, url_for, session, Response
 from datetime import datetime, timedelta
 from . import smartw_bp
 from .config import load_smartw_config, save_smartw_config
+
+
+# ── SSE Endpoint ─────────────────────────────────────────────────
+@smartw_bp.route('/api/smartw/events')
+def api_sse_events():
+    """Server-Sent Events stream — pushes scrape status to browsers in real-time."""
+    from .worker import sse_subscribe, sse_unsubscribe
+    import queue as _queue
+
+    client_q = sse_subscribe()
+
+    def event_stream():
+        try:
+            # Send initial heartbeat
+            yield 'event: connected\ndata: {}\n\n'
+            while True:
+                try:
+                    msg = client_q.get(timeout=30)  # 30s heartbeat
+                    yield f'event: {msg["event"]}\ndata: {msg["data"]}\n\n'
+                except _queue.Empty:
+                    # Send heartbeat to keep connection alive
+                    yield ': heartbeat\n\n'
+        except GeneratorExit:
+            pass
+        finally:
+            sse_unsubscribe(client_q)
+
+    return Response(event_stream(), mimetype='text/event-stream',
+                    headers={'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no'})
 
 # Cleared alarms older than this are hidden from the UI
 CLEAR_HIDE_HOURS = 2
@@ -113,6 +142,7 @@ def api_summary():
         'mll_cell_count': len(mll_cell_active),
         'ung_cuu_count': len(ung_cuu),
         'last_poll': last_poll,
+        'scraped_at': status.get('last_alarm_poll'),  # raw ISO for change detection
         'status': 'running' if status.get('is_running') else ('configured' if md_raw else 'not_configured'),
         'last_alarm_error': last_alarm_error,
         'last_vhkt_error': last_vhkt_error,

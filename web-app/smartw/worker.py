@@ -8,6 +8,8 @@ import json
 import shutil
 import asyncio
 import logging
+import threading
+import queue
 from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
@@ -20,6 +22,43 @@ _is_running = False
 
 # Circuit breaker: stop polling after this many consecutive login failures
 MAX_LOGIN_FAILURES = 10
+
+# ── SSE Event System ─────────────────────────────────────────────
+_sse_subscribers: list[queue.Queue] = []
+_sse_lock = threading.Lock()
+
+
+def sse_subscribe() -> queue.Queue:
+    """Subscribe a new SSE client. Returns a queue to read events from."""
+    q = queue.Queue(maxsize=50)
+    with _sse_lock:
+        _sse_subscribers.append(q)
+    return q
+
+
+def sse_unsubscribe(q: queue.Queue):
+    """Remove an SSE client subscription."""
+    with _sse_lock:
+        try:
+            _sse_subscribers.remove(q)
+        except ValueError:
+            pass
+
+
+def _sse_broadcast(event_type: str, data: dict):
+    """Broadcast an event to all connected SSE clients."""
+    import json as _json
+    msg = _json.dumps(data, ensure_ascii=False)
+    with _sse_lock:
+        dead = []
+        for q in _sse_subscribers:
+            try:
+                q.put_nowait({'event': event_type, 'data': msg})
+            except queue.Full:
+                dead.append(q)
+        for q in dead:
+            _sse_subscribers.remove(q)
+
 
 # ── Persistent Scraper Session ───────────────────────────────────
 _scraper = None           # SmartWScraper instance (persistent)
@@ -346,6 +385,7 @@ def run_alarm_poll():
 
     try:
         logger.info(f'⏰ SmartW Worker: Starting alarm poll at {datetime.now()}')
+        _sse_broadcast('scrape_start', {'status': 'running'})
 
         # Backup active → previous (for clear detection)
         for table_type in ['md', 'mpd', 'mll', 'mll_cell']:
@@ -402,6 +442,24 @@ def run_alarm_poll():
     finally:
         _is_running = False
         _save_status(status)
+
+        # Broadcast to all connected browsers via SSE
+        from .scraper import load_cached_data
+        md_raw = load_cached_data('md')
+        mpd_raw = load_cached_data('mpd')
+        mll_raw = load_cached_data('mll')
+        mll_cell_raw = load_cached_data('mll_cell')
+
+        _sse_broadcast('scrape_done', {
+            'scraped_at': status.get('last_alarm_poll'),
+            'last_poll': datetime.now().strftime('%H:%M'),
+            'status': 'configured',
+            'md_count': len([r for r in (md_raw or {}).get('data', []) if not r.get('edate')]),
+            'mpd_count': len([r for r in (mpd_raw or {}).get('data', []) if not r.get('edate')]),
+            'mll_count': len((mll_raw or {}).get('data', [])),
+            'mll_cell_count': len((mll_cell_raw or {}).get('data', [])),
+            'has_error': bool(result.get('error')) if 'result' in dir() else False
+        })
 
 
 def run_vhkt_poll():

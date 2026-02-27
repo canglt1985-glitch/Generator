@@ -29,7 +29,8 @@
                             <i class="fas fa-file-excel me-2"></i>Nhập từ Excel
                         </button>
                         <div class="dropdown-divider"></div>
-                        <a class="dropdown-item text-danger fw-bold" href="{{ url_for('generator.reset_power_schedule') }}"
+                        <a class="dropdown-item text-danger fw-bold"
+                            href="{{ url_for('generator.reset_power_schedule') }}"
                             onclick="return confirm('Xóa toàn bộ lịch cúp điện?')">
                             <i class="fas fa-trash me-2"></i>Xóa sạch dữ liệu
                         </a>
@@ -605,26 +606,40 @@
         const groupMoney = document.getElementById('group-money');
         const groupSupplier = document.getElementById('group-supplier');
         const groupActual = document.getElementById('group-actual-stock');
+        const nccSelect = document.getElementById('inp_ncc');
+        const stationInput = document.getElementById('inp_id_tram');
+        const priceInput = document.getElementById('inp_dongia');
+        const moneyInput = document.getElementById('inp_thanhtien');
 
-        // Reset visibility
+        // Reset visibility - show all first
         groupStation.style.display = 'block';
         groupPrice.style.visibility = 'visible';
         groupMoney.style.display = 'block';
         groupSupplier.style.display = 'block';
         groupActual.style.display = 'block';
+        nccSelect.required = true;
+        stationInput.required = false;
 
-        const nccSelect = document.getElementById('inp_ncc');
         if (type === 'STOCK_IN') {
+            // Nhập kho: mua dầu về kho → cần NCC (mua từ ai), KHÔNG cần mã trạm
             groupStation.style.display = 'none';
             groupActual.style.display = 'none';
+            stationInput.value = '';  // Clear mã trạm
             nccSelect.required = true;
         } else if (type === 'STATION_OUT') {
+            // Xuất kho: lấy từ kho đổ cho trạm → cần mã trạm, KHÔNG cần NCC/giá/thành tiền
             groupPrice.style.visibility = 'hidden';
             groupMoney.style.display = 'none';
             groupSupplier.style.display = 'none';
+            nccSelect.value = '';     // Clear NCC
             nccSelect.required = false;
+            priceInput.value = '';    // Clear đơn giá
+            moneyInput.value = '';    // Clear thành tiền
+            stationInput.required = true; // Bắt buộc chọn trạm
         } else {
+            // Đổ NL (mua): mua đổ thẳng → cần cả trạm + NCC + giá
             nccSelect.required = true;
+            stationInput.required = true;
         }
     }
 
