@@ -31,6 +31,7 @@ logs/
 
 # ── AI / Tool internals ──
 .brain/
+ .brain/
 .vscode/
 .idea/
 

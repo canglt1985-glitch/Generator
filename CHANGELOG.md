@@ -1,5 +1,23 @@
 # Changelog
 
+## [2026-02-27] - Payment Tab Enhancement & Modal Fix
+### Added
+- **Payment Group Cards**: 2 summary cards (Chi Phí Mua Ngoài, Chi Phí CX222) showing cutoff date, paid amount, remaining balance.
+- **Payment Group Modal**: Input modal for updating payment info (date, amount, notes). Accessible by ALL logged-in users.
+- **Auto-Calc Suggestion**: When selecting a date in the modal, app auto-calculates total expenses and suggests remaining amount. Shows "Đã TT rồi" if date ≤ last paid date.
+- **API Endpoint**: `GET /payment-group/calc?group=&den_ngay=` — calculates total CP minus already paid.
+- **API Endpoint**: `POST /payment-group/save` — saves payment group data to JSON file.
+
+### Changed
+- **Payment Table**: Removed redundant "Đã TT" and "Còn lại" columns (now shown in summary cards).
+- **Modal Placement**: All modals moved to `layout.html` (body-level) to avoid container clipping.
+
+### Fixed
+- **Jinja2 UndefinedError**: Restored `pr`/`da_tt` variables accidentally removed during column cleanup.
+- **Modal Backdrop Freeze**: Modal inside `{% block content %}` was clipped by `container-xl`. Moved to `layout.html`.
+- **JS Timing Bug**: Scripts in block content run before layout.html modals parse. Wrapped in `DOMContentLoaded`.
+- **Modal Hide Error**: `bootstrap.Modal.getInstance()` null check added before `.hide()`.
+
 ## [2026-02-14] - UI Compacting & Generator Performance
 ### Added
 - **Deferred Query Loading**: Generator route only queries admin tabs (Chạy Máy, Thông Tin) when user navigates to them. Saves 2+ DB queries on normal page loads.

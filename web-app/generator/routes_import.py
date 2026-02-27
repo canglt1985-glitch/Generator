@@ -108,11 +108,41 @@ def generic_import(model_class, col_map, redirect_route, date_cols=[], float_col
                         pass
                 return s
 
+            def parse_duration(val):
+                """Parse thời gian chạy máy → số giờ (float).
+                Nhận: 5.5  /  "5.5"  /  "5:30"  /  "05:30:00"  /  5  /  None
+                Trả về: float số giờ, hoặc 0.0 nếu không hợp lệ.
+                """
+                if val is None or (isinstance(val, float) and pd.isna(val)):
+                    return 0.0
+                if isinstance(val, (int, float)):
+                    return float(val)
+                s = str(val).strip()
+                if not s or s.lower() in ('nan', 'none', ''):
+                    return 0.0
+                # Dạng HH:MM:SS hoặc HH:MM
+                if ':' in s:
+                    parts = s.split(':')
+                    try:
+                        h = int(parts[0])
+                        m = int(parts[1]) if len(parts) > 1 else 0
+                        return h + m / 60.0
+                    except Exception:
+                        pass
+                # Dạng số thập phân hoặc nguyên
+                try:
+                    cleaned = s.replace(',', '.').strip()
+                    return float(cleaned)
+                except Exception:
+                    return 0.0
+
             def parse_float(val):
-                if pd.isna(val) or val == '':
+                if val is None or (isinstance(val, float) and pd.isna(val)):
                     return 0.0
                 try:
                     s = str(val).strip()
+                    if not s or s.lower() in ('nan', 'none', ''):
+                        return 0.0
                     if ',' in s and '.' not in s:
                         s = s.replace(',', '.')
                     elif '.' in s and ',' in s:
@@ -138,17 +168,11 @@ def generic_import(model_class, col_map, redirect_route, date_cols=[], float_col
                             data[field] = parse_date_str(val)
                         elif field in datetime_cols:
                             data[field] = parse_dt_str(val)
+                        elif field in duration_cols:
+                            # duration_cols: luôn dùng parse_duration chuyên dụng
+                            data[field] = parse_duration(val)
                         elif field in float_cols:
-                            f_val = parse_float(val)
-                            if f_val == 0.0 and field in duration_cols and pd.notna(val) and val != '':
-                                try:
-                                    t_str = parse_time_str(val)
-                                    if ':' in t_str:
-                                        h, m = map(int, t_str.split(':'))
-                                        f_val = h + m / 60.0
-                                except Exception:
-                                    pass
-                            data[field] = f_val
+                            data[field] = parse_float(val)
                         else:
                             if 'gio' in field or 'time' in field.lower() or 'cup' in field or 'co' in field:
                                 data[field] = parse_time_str(val)

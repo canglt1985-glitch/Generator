@@ -22,12 +22,7 @@
                     <i class="fas fa-chart-line me-2"></i>Báo Cáo
                 </a>
             </li>
-            <li class="nav-item">
-                <a href="#logs" class="nav-link {{ 'active' if active_tab == 'logs' else '' }} fw-bold"
-                    data-bs-toggle="tab">
-                    <i class="fas fa-history me-2"></i>Chạy Máy
-                </a>
-            </li>
+
             <li class="nav-item">
                 <a href="#infos" class="nav-link {{ 'active' if active_tab == 'infos' else '' }} fw-bold"
                     data-bs-toggle="tab">
@@ -61,93 +56,6 @@
 
     <div class="card-body">
         <div class="tab-content">
-            <!-- Tab: Logs (Chạy Máy) -->
-            <div class="tab-pane fade {{ 'show active' if active_tab == 'logs' else '' }}" id="logs">
-                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                    <h4 class="mb-0">Dữ liệu chạy máy phát</h4>
-                    <div class="d-flex gap-2 align-items-end flex-wrap">
-                        <form id="logsFilterForm" action="{{ url_for('core.admin') }}" method="GET"
-                            class="d-flex gap-2 align-items-end flex-wrap">
-                            <input type="hidden" name="tab" value="logs">
-                            <select name="filter_month" class="form-select form-select-sm rounded-pill"
-                                style="width:105px;" onchange="this.form.submit()">
-                                <option value="">-- Cả năm --</option>
-                                {% for m in range(1, 13) %}
-                                <option value="{{ m }}" {% if filter_month==m %}selected{% endif %}>Tháng {{ m }}
-                                </option>
-                                {% endfor %}
-                            </select>
-                            <select name="filter_year" class="form-select form-select-sm rounded-pill"
-                                style="width:90px;" onchange="this.form.submit()">
-                                {% for y in available_years %}
-                                <option value="{{ y }}" {% if filter_year==y %}selected{% endif %}>{{ y }}</option>
-                                {% endfor %}
-                            </select>
-                        </form>
-                        <button class="btn btn-sm btn-success" data-bs-toggle="modal"
-                            data-bs-target="#importLogsModal"><i class="fas fa-file-excel me-1"></i>Import</button>
-                        <a href="{{ url_for('generator.export_generator_logs') }}"
-                            class="btn btn-sm btn-outline-info btn-export"><i
-                                class="fas fa-file-export me-1"></i>Xuất</a>
-                        <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addLogsModal"><i
-                                class="fas fa-plus me-1"></i>Thêm</button>
-                    </div>
-                </div>
-                <div class="table-responsive">
-                    <table id="logsTable" class="table table-vcenter table-hover card-table small text-nowrap">
-
-                        <thead>
-                            <tr>
-                                <th>Ngày VH</th>
-                                <th>Trạm</th>
-                                <th>Site</th>
-                                <th>CS Máy</th>
-                                <th>Giờ BĐ</th>
-                                <th>Giờ KT</th>
-                                <th>Thời Gian</th>
-                                <th>NL Hao</th>
-                                <th>Đơn Giá</th>
-                                <th>Thành Tiền</th>
-                                <th>Ghi Chú</th>
-                                <th class="text-end">#</th>
-                            </tr>
-                            <tr class="filter-row bg-light-lt">
-                                <th><input type="date" class="form-control form-control-sm" style="font-size:11px"
-                                        onchange="filterTable(this)"></th>
-                                <th><input type="text" class="form-control form-control-sm" placeholder="🔍 Trạm"
-                                        style="font-size:11px" oninput="filterTable(this)"></th>
-                                <th colspan="10"></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for log in logs %}
-                            <tr>
-                                <td class="text-muted small">{{ log.ngay_van_hanh.split('-')|reverse|join('/') if
-                                    log.ngay_van_hanh else '--' }}</td>
-                                <td class="fw-bold">{{ log.id_tram }}</td>
-                                <td class="small">{{ log.site or '' }}</td>
-                                <td class="small">{{ log.cong_suat_may or '' }}</td>
-                                <td class="small">{{ log.gio_bat_dau or '--' }}</td>
-                                <td class="small">{{ log.gio_ket_thuc or '--' }}</td>
-                                <td>{{ log.thoi_gian_hoat_dong }}h</td>
-                                <td class="text-end">{{ log.nhien_lieu_tieu_hao or 0 }}L</td>
-                                <td class="text-end">{{ "{:,.0f}".format(log.don_gia or 0) }}</td>
-                                <td class="fw-bold text-end">{{ "{:,.0f}".format(log.thanh_tien or 0) }} đ</td>
-                                <td class="small text-muted">{{ log.ghi_chu or '' }}</td>
-                                <td class="text-end">
-                                    <form action="{{ url_for('generator.delete_generator_log', id=log.id) }}"
-                                        method="POST" class="d-inline"
-                                        onsubmit="return confirm('Bạn có chắc chắn muốn xóa bản ghi này?');">
-                                        <button class="btn btn-ghost-danger btn-icon border-0"><i
-                                                class="fas fa-trash"></i></button>
-                                    </form>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
 
             <!-- Tab: Users -->
             <div class="tab-pane fade {{ 'show active' if active_tab == 'users' else '' }}" id="users">

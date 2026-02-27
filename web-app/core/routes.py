@@ -2,10 +2,11 @@
 Core routes — Auth, Admin, Dashboard, Audit, Reports, User Management
 Extracted from app.py
 """
-from flask import render_template, request, redirect, url_for, flash, send_file, session, abort
+from flask import render_template, request, redirect, url_for, flash, send_file, session, abort, jsonify
 from datetime import datetime
 from io import BytesIO
 import pandas as pd
+import json, os
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from extensions import db
@@ -293,12 +294,6 @@ def admin():
     smartw_username = smartw_cfg.get('username', '') if smartw_cfg else ''
     smartw_updated_at = smartw_cfg.get('updated_at', '') if smartw_cfg else ''
     
-    # Generator logs for Logs tab
-    logs_q = GeneratorLog.query.filter(
-        GeneratorLog.ngay_van_hanh >= month_start,
-        GeneratorLog.ngay_van_hanh < month_end
-    ).order_by(GeneratorLog.ngay_van_hanh.desc()).all()
-
     # Station info for Infos tab
     infos = GeneralInfo.query.order_by(GeneralInfo.id_tram).all()
 
@@ -310,7 +305,7 @@ def admin():
                            active_tab=active_tab,
                            smartw_configured=smartw_configured, smartw_username=smartw_username,
                            smartw_updated_at=smartw_updated_at,
-                           logs=logs_q, infos=infos)
+                           infos=infos)
 
 
 @core_bp.route('/admin/requests/approve/<int:req_id>', methods=['POST'])
@@ -347,6 +342,53 @@ def reject_deletion(req_id):
     db.session.commit()
     flash('Đã từ chối yêu cầu xóa.', 'warning')
     return redirect(url_for('core.admin'))
+
+
+# --- PAYMENT TRACKING HELPERS ---
+
+PAYMENT_FILE = os.path.join(os.path.dirname(__file__), '..', 'payment_records.json')
+PAYMENT_GROUPS_FILE = os.path.join(os.path.dirname(__file__), '..', 'data', 'payment_groups.json')
+
+def load_payment_records():
+    """Load payment records from JSON file."""
+    try:
+        if os.path.exists(PAYMENT_FILE):
+            with open(PAYMENT_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+    except Exception:
+        pass
+    return {}
+
+def save_payment_records(data):
+    """Save payment records to JSON file."""
+    with open(PAYMENT_FILE, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+def load_payment_groups():
+    """Load payment group records (mua_ngoai, cx222) from JSON file."""
+    default = {
+        'mua_ngoai': {'da_thanh_toan_den': '', 'so_tien_da_tt': 0, 'ghi_chu': '', 'updated_at': '', 'updated_by': ''},
+        'cx222':     {'da_thanh_toan_den': '', 'so_tien_da_tt': 0, 'ghi_chu': '', 'updated_at': '', 'updated_by': ''}
+    }
+    try:
+        if os.path.exists(PAYMENT_GROUPS_FILE):
+            with open(PAYMENT_GROUPS_FILE, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                # Merge với default để đảm bảo đủ keys
+                for group in default:
+                    if group not in data:
+                        data[group] = default[group]
+                return data
+    except Exception:
+        pass
+    return default
+
+def save_payment_groups(data):
+    """Save payment group records atomically."""
+    tmp = PAYMENT_GROUPS_FILE + '.tmp'
+    with open(tmp, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    os.replace(tmp, PAYMENT_GROUPS_FILE)
 
 
 # --- REPORTS ROUTE ---
@@ -424,8 +466,88 @@ def admin_reports():
     available_years = list(range(2025, now.year + 1))
     station_summary = get_audit_data(huyen_filter, start_date, end_date)
 
-    return render_template('reports.html', 
-                           employee_data=employee_data, 
+    # Load payment records (legacy)
+    payment_records = load_payment_records()
+
+    # Load payment groups (new: mua_ngoai + cx222)
+    payment_groups = load_payment_groups()
+
+    # Tính tổng phát sinh theo 2 nhóm trong kỳ lọc
+    from sqlalchemy import func as _fn
+    fuel_group_q = db.session.query(
+        FuelLedger.nha_cung_cap,
+        _fn.sum(FuelLedger.thanh_tien)
+    ).filter(
+        FuelLedger.ngay >= start_date,
+        FuelLedger.ngay <= end_date,
+        FuelLedger.type.in_(['STOCK_IN', 'DIRECT_BUY'])
+    ).group_by(FuelLedger.nha_cung_cap).all()
+
+    cx222_total = 0
+    mua_ngoai_total = 0
+    for ncc, amt in fuel_group_q:
+        ncc_up = (ncc or '').strip().upper()
+        if 'CX' in ncc_up or 'CÂY XĂNG' in ncc_up or 'CX222' in ncc_up:
+            cx222_total += (amt or 0)
+        else:
+            mua_ngoai_total += (amt or 0)
+
+    # Cộng thêm OtherExpense vào mua_ngoai
+    oe_total = db.session.query(_fn.sum(OtherExpense.so_tien)).filter(
+        OtherExpense.ngay_su_dung >= start_date,
+        OtherExpense.ngay_su_dung <= end_date
+    ).scalar() or 0
+    mua_ngoai_total += oe_total
+
+    # Tính phát sinh MỚI sau ngày đã thanh toán
+    def _calc_new_since(group_key, cutoff_date_str):
+        """Tính phát sinh sau ngày cutoff đến hôm nay."""
+        if not cutoff_date_str:
+            return 0
+        try:
+            # cutoff phải là YYYY-MM-DD
+            cutoff = cutoff_date_str
+            today = datetime.now().strftime('%Y-%m-%d')
+            if group_key == 'cx222':
+                q = db.session.query(_fn.sum(FuelLedger.thanh_tien)).filter(
+                    FuelLedger.ngay > cutoff,
+                    FuelLedger.ngay <= today,
+                    FuelLedger.type.in_(['STOCK_IN', 'DIRECT_BUY'])
+                )
+                result = 0
+                for ncc, amt in db.session.query(FuelLedger.nha_cung_cap, _fn.sum(FuelLedger.thanh_tien)).filter(
+                    FuelLedger.ngay > cutoff,
+                    FuelLedger.ngay <= today,
+                    FuelLedger.type.in_(['STOCK_IN', 'DIRECT_BUY'])
+                ).group_by(FuelLedger.nha_cung_cap).all():
+                    ncc_up = (ncc or '').strip().upper()
+                    if 'CX' in ncc_up or 'CÂY XĂNG' in ncc_up or 'CX222' in ncc_up:
+                        result += (amt or 0)
+                return result
+            else:  # mua_ngoai
+                result = 0
+                for ncc, amt in db.session.query(FuelLedger.nha_cung_cap, _fn.sum(FuelLedger.thanh_tien)).filter(
+                    FuelLedger.ngay > cutoff,
+                    FuelLedger.ngay <= today,
+                    FuelLedger.type.in_(['STOCK_IN', 'DIRECT_BUY'])
+                ).group_by(FuelLedger.nha_cung_cap).all():
+                    ncc_up = (ncc or '').strip().upper()
+                    if 'CX' not in ncc_up and 'CÂY XĂNG' not in ncc_up and 'CX222' not in ncc_up:
+                        result += (amt or 0)
+                # Cộng OtherExpense mới
+                result += db.session.query(_fn.sum(OtherExpense.so_tien)).filter(
+                    OtherExpense.ngay_su_dung > cutoff,
+                    OtherExpense.ngay_su_dung <= today
+                ).scalar() or 0
+                return result
+        except Exception:
+            return 0
+
+    mua_ngoai_new = _calc_new_since('mua_ngoai', payment_groups['mua_ngoai'].get('da_thanh_toan_den', ''))
+    cx222_new = _calc_new_since('cx222', payment_groups['cx222'].get('da_thanh_toan_den', ''))
+
+    return render_template('reports.html',
+                           employee_data=employee_data,
                            source_stats=source_stats,
                            monthly_data=monthly_data,
                            year=current_year,
@@ -434,7 +556,71 @@ def admin_reports():
                            selected_huyen=huyen_filter,
                            filter_year=fy,
                            filter_month=fm,
-                           available_years=available_years)
+                           available_years=available_years,
+                           payment_records=payment_records,
+                           payment_groups=payment_groups,
+                           mua_ngoai_total=mua_ngoai_total,
+                           cx222_total=cx222_total,
+                           mua_ngoai_new=mua_ngoai_new,
+                           cx222_new=cx222_new)
+
+
+@core_bp.route('/admin/save-payment', methods=['POST'])
+@login_required
+@admin_required
+def save_payment():
+    """Save/update payment record for a payer (employee or supplier) [legacy]."""
+    data = request.get_json()
+    if not data:
+        return jsonify({'ok': False, 'msg': 'No data'}), 400
+
+    key = data.get('key', '').strip()      # e.g. "Tuấn" or "CX222"
+    da_tt = data.get('da_tt', 0)
+    ghi_chu = data.get('ghi_chu', '').strip()
+
+    if not key:
+        return jsonify({'ok': False, 'msg': 'Thiếu key'}), 400
+
+    records = load_payment_records()
+    records[key] = {
+        'da_tt': float(da_tt),
+        'ghi_chu': ghi_chu,
+        'updated_at': datetime.now().strftime('%Y-%m-%d %H:%M')
+    }
+    save_payment_records(records)
+    return jsonify({'ok': True})
+
+
+@core_bp.route('/admin/save-payment-group', methods=['POST'])
+@login_required
+@admin_required
+def save_payment_group():
+    """Save/update payment group record (mua_ngoai or cx222)."""
+    data = request.get_json()
+    if not data:
+        return jsonify({'ok': False, 'msg': 'No data'}), 400
+
+    group = data.get('group', '').strip()   # 'mua_ngoai' or 'cx222'
+    da_thanh_toan_den = data.get('da_thanh_toan_den', '').strip()  # YYYY-MM-DD
+    so_tien_da_tt = data.get('so_tien_da_tt', 0)
+    ghi_chu = data.get('ghi_chu', '').strip()
+
+    if group not in ('mua_ngoai', 'cx222'):
+        return jsonify({'ok': False, 'msg': 'Nhóm không hợp lệ'}), 400
+
+    records = load_payment_groups()
+    records[group] = {
+        'da_thanh_toan_den': da_thanh_toan_den,
+        'so_tien_da_tt': float(so_tien_da_tt),
+        'ghi_chu': ghi_chu,
+        'updated_at': datetime.now().strftime('%Y-%m-%d %H:%M'),
+        'updated_by': session.get('username', '')
+    }
+    try:
+        save_payment_groups(records)
+    except Exception as e:
+        return jsonify({'ok': False, 'msg': str(e)}), 500
+    return jsonify({'ok': True})
 
 
 @core_bp.route('/export/station-summary')

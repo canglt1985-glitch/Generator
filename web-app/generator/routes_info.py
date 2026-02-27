@@ -209,8 +209,9 @@ def add_generator_log():
         db.session.commit()
         flash('Thêm mới thành công!', 'success')
     except Exception as e:
+        db.session.rollback()
         flash(f'Lỗi: {str(e)}', 'danger')
-    return redirect(url_for('core.admin'))
+    return redirect(url_for('generator.generator', tab='logs'))
 
 
 @generator_bp.route('/generator-logs/edit/<int:id>', methods=['POST'])
@@ -260,11 +261,21 @@ def export_generator_logs():
         query = query.filter(GeneratorLog.ngay_van_hanh <= end_date)
     data = query.all()
     col_map = {
-        'id_tram': 'ID Trạm', 'site': 'Site', 'cong_suat_may': 'Công suất máy', 'loai_may': 'Loại máy',
-        'dinh_muc': 'Định mức', 'ngay_van_hanh': 'Ngày vận hành', 'gio_bat_dau': 'Giờ bắt đầu',
-        'gio_ket_thuc': 'Giờ kết thúc', 'thoi_gian_hoat_dong': 'Thời gian hoạt động',
-        'nhien_lieu_tieu_hao': 'Nhiên liệu tiêu hao', 'don_gia': 'Đơn giá', 'thanh_tien': 'Thành tiền',
-        'ket_qua_doi_soat': 'Kết quả đối soát', 'nhien_lieu': 'Nhiên liệu', 'ghi_chu': 'Ghi chú'
+        'id_tram': 'ID Trạm',
+        'site': 'Site',
+        'cong_suat_may': 'Công suất máy (KVA)',
+        'loai_may': 'Loại máy',
+        'dinh_muc': 'Định mức (Lít/Giờ)',
+        'ngay_van_hanh': 'Ngày vận hành',
+        'gio_bat_dau': 'Giờ bắt đầu',
+        'gio_ket_thuc': 'Giờ kết thúc',
+        'thoi_gian_hoat_dong': 'Thời gian chạy máy (Giờ)',
+        'nhien_lieu_tieu_hao': 'Nhiên liệu tiêu hao (Lít)',
+        'don_gia': 'Đơn giá',
+        'thanh_tien': 'Thành tiền',
+        'ket_qua_doi_soat': 'Kết quả đối soát',
+        'nhien_lieu': 'Nhiên liệu',
+        'ghi_chu': 'Ghi chú'
     }
     return export_excel(data, 'nhat_ky_chay_may.xlsx', col_map)
 
@@ -274,11 +285,21 @@ def export_generator_logs():
 @admin_required
 def template_generator_logs():
     col_map = {
-        'id_tram': 'ID Trạm', 'site': 'Site', 'cong_suat_may': 'Công suất máy', 'loai_may': 'Loại máy',
-        'dinh_muc': 'Định mức', 'ngay_van_hanh': 'Ngày vận hành', 'gio_bat_dau': 'Giờ bắt đầu',
-        'gio_ket_thuc': 'Giờ kết thúc', 'thoi_gian_hoat_dong': 'Thời gian hoạt động',
-        'nhien_lieu_tieu_hao': 'Nhiên liệu tiêu hao', 'don_gia': 'Đơn giá', 'thanh_tien': 'Thành tiền',
-        'ket_qua_doi_soat': 'Kết quả đối soát', 'nhien_lieu': 'Nhiên liệu', 'ghi_chu': 'Ghi chú'
+        'id_tram': 'ID Trạm',
+        'site': 'Site',
+        'cong_suat_may': 'Công suất máy (KVA)',
+        'loai_may': 'Loại máy',
+        'dinh_muc': 'Định mức (Lít/Giờ)',
+        'ngay_van_hanh': 'Ngày vận hành',
+        'gio_bat_dau': 'Giờ bắt đầu',
+        'gio_ket_thuc': 'Giờ kết thúc',
+        'thoi_gian_hoat_dong': 'Thời gian chạy máy (Giờ)',
+        'nhien_lieu_tieu_hao': 'Nhiên liệu tiêu hao (Lít)',
+        'don_gia': 'Đơn giá',
+        'thanh_tien': 'Thành tiền',
+        'ket_qua_doi_soat': 'Kết quả đối soát',
+        'nhien_lieu': 'Nhiên liệu',
+        'ghi_chu': 'Ghi chú'
     }
     return export_excel(None, 'mau_nhat_ky_chay_may.xlsx', col_map)
 
@@ -305,13 +326,14 @@ def import_generator_log():
         'id_tram': ['ID Trạm', 'Mã Trạm', 'Site ID', 'Mã nhà trạm', 'Trạm'],
         'site': ['Site', 'Tên Trạm', 'Site Name', 'Name'],
         'ngay_van_hanh': ['Ngày vận hành', 'Ngày chạy', 'Date', 'Ngày'],
-        'cong_suat_may': ['Công suất máy', 'Công suất', 'Capacity', 'KVA'],
+        'cong_suat_may': ['Công suất máy (KVA)', 'Công suất máy', 'Công suất', 'Capacity', 'KVA'],
         'loai_may': ['Loại máy', 'Model', 'Nhãn hiệu', 'Máy phát'],
-        'dinh_muc': ['Định mức', 'Quota', 'Định mức châm'],
+        'dinh_muc': ['Định mức (Lít/Giờ)', 'Định mức', 'Quota', 'Định mức châm'],
         'gio_bat_dau': ['Giờ bắt đầu', 'Start Time', 'Bắt đầu', 'Start'],
         'gio_ket_thuc': ['Giờ kết thúc', 'End Time', 'Kết thúc', 'End'],
-        'thoi_gian_hoat_dong': ['Thời gian hoạt động', 'Giờ chạy', 'Duration', 'Tổng giờ', 'Run Hours', 'Hours', 'Số giờ'],
-        'nhien_lieu_tieu_hao': ['Nhiên liệu tiêu hao', 'Tiêu hao', 'Lít', 'Consumed', 'Fuel Consumed'],
+        'thoi_gian_hoat_dong': ['Thời gian chạy máy (Giờ)', 'Thời gian hoạt động', 'Giờ chạy',
+                                'Duration', 'Tổng giờ', 'Run Hours', 'Hours', 'Số giờ', 'Thời gian chạy máy'],
+        'nhien_lieu_tieu_hao': ['Nhiên liệu tiêu hao (Lít)', 'Nhiên liệu tiêu hao', 'Tiêu hao', 'Lít', 'Consumed', 'Fuel Consumed'],
         'don_gia': ['Đơn giá', 'Price', 'Cost per Liter'],
         'thanh_tien': ['Thành tiền', 'Amount', 'Tổng tiền', 'Total Cost'],
         'ket_qua_doi_soat': ['Kết quả đối soát', 'Kết quả', 'Result', 'Status'],
@@ -320,7 +342,7 @@ def import_generator_log():
     }
     return generic_import(GeneratorLog, col_map, 'generator.generator_logs',
                           date_cols=['ngay_van_hanh'],
-                          float_cols=['thoi_gian_hoat_dong', 'nhien_lieu_tieu_hao', 'don_gia', 'thanh_tien'],
+                          float_cols=['nhien_lieu_tieu_hao', 'don_gia', 'thanh_tien'],
                           duration_cols=['thoi_gian_hoat_dong'])
 
 

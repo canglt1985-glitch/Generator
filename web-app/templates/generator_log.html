@@ -68,14 +68,14 @@
                         <th>STT</th>
                         <th>ID Trạm</th>
                         <th>Site</th>
-                        <th>CS Máy</th>
+                        <th>CS Máy (KVA)</th>
                         <th>Loại Máy</th>
                         <th>Định Mức</th>
                         <th>Ngày VH</th>
                         <th>Bắt Đầu</th>
                         <th>Kết Thúc</th>
-                        <th>Thời Gian</th>
-                        <th>Tiêu Hao</th>
+                        <th>Thời Gian (h)</th>
+                        <th>Tiêu Hao (L)</th>
                         <th>Đơn Giá</th>
                         <th>Thành Tiền</th>
                         <th>Kết Quả</th>
@@ -123,7 +123,7 @@
                         </td>
                         <td>{{ log.gio_bat_dau or '--' }}</td>
                         <td>{{ log.gio_ket_thuc or '--' }}</td>
-                        <td>{{ log.thoi_gian_hoat_dong }}</td>
+                        <td><strong>{{ log.thoi_gian_hoat_dong }}</strong></td>
                         <td>{{ log.nhien_lieu_tieu_hao }}</td>
                         <td>{{ "{:,.0f}".format(log.don_gia or 0) }}</td>
                         <td>{{ "{:,.0f}".format(log.thanh_tien or 0) }}</td>
@@ -133,10 +133,15 @@
                         <td class="text-end">
                             <button class="btn btn-icon btn-sm btn-ghost-primary" data-bs-toggle="modal"
                                 data-bs-target="#editModal" data-id="{{ log.id }}" data-idtram="{{ log.id_tram }}"
-                                data-ngay="{{ log.ngay_van_hanh }}" data-batdau="{{ log.gio_bat_dau }}"
-                                data-ketthuc="{{ log.gio_ket_thuc }}" data-duration="{{ log.thoi_gian_hoat_dong }}"
+                                data-site="{{ log.site }}" data-ngay="{{ log.ngay_van_hanh }}"
+                                data-batdau="{{ log.gio_bat_dau }}" data-ketthuc="{{ log.gio_ket_thuc }}"
+                                data-duration="{{ log.thoi_gian_hoat_dong }}"
                                 data-consumed="{{ log.nhien_lieu_tieu_hao }}" data-dongia="{{ log.don_gia or 0 }}"
-                                data-thanhtien="{{ log.thanh_tien or 0 }}" data-ghichu="{{ log.ghi_chu }}">
+                                data-thanhtien="{{ log.thanh_tien or 0 }}"
+                                data-ketqua="{{ log.ket_qua_doi_soat or '' }}"
+                                data-nhienlieu="{{ log.nhien_lieu or '' }}" data-ghichu="{{ log.ghi_chu or '' }}"
+                                data-congsuatmay="{{ log.cong_suat_may or '' }}" data-loaimay="{{ log.loai_may or '' }}"
+                                data-dinhmuc="{{ log.dinh_muc or '' }}">
                                 <i class="fas fa-edit"></i>
                             </button>
                             <form action="{{ url_for('generator.delete_generator_log', id=log.id) }}" method="POST"
@@ -149,7 +154,7 @@
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="17" class="text-center py-4">Chưa có dữ liệu</td>
+                        <td colspan="18" class="text-center py-4">Chưa có dữ liệu</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -168,8 +173,12 @@
                 <form action="{{ url_for('generator.add_generator_log') }}" method="POST">
                     <div class="modal-body">
                         <div class="row g-3">
+                            <div class="col-12">
+                                <h6 class="text-muted border-bottom pb-1"><i class="fas fa-info-circle me-1"></i>Thông
+                                    tin trạm &amp; máy</h6>
+                            </div>
                             <div class="col-md-3">
-                                <label class="form-label">ID Trạm</label>
+                                <label class="form-label">ID Trạm <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" name="id_tram" required list="stationList"
                                     autocomplete="off">
                             </div>
@@ -178,14 +187,13 @@
                                 <input type="text" class="form-control" name="site">
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">Công Suất Máy</label>
+                                <label class="form-label">Công Suất Máy (KVA)</label>
                                 <input type="number" step="0.1" class="form-control" name="cong_suat_may">
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">Loại Máy</label>
+                                <label class="form-label">Loại Máy / Model</label>
                                 <input type="text" class="form-control" name="loai_may">
                             </div>
-
                             <div class="col-md-3">
                                 <label class="form-label">Định Mức (Lít/Giờ)</label>
                                 <input type="number" step="0.01" class="form-control" name="dinh_muc" id="dinh_muc">
@@ -197,19 +205,21 @@
                                     <option value="Xăng">Xăng</option>
                                 </select>
                             </div>
+
+                            <div class="col-12">
+                                <h6 class="text-muted border-bottom pb-1 mt-2"><i class="fas fa-clock me-1"></i>Thông
+                                    tin vận hành</h6>
+                            </div>
                             <div class="col-md-3">
-                                <label class="form-label">Ngày Vận Hành</label>
+                                <label class="form-label">Ngày Vận Hành <span class="text-danger">*</span></label>
                                 <input type="date" class="form-control" name="ngay_van_hanh" required>
                             </div>
-                            <div class="col-md-3"></div>
-
-
                             <div class="col-md-3">
-                                <label class="form-label">Giờ Bắt Đầu</label>
+                                <label class="form-label">Giờ Bắt Đầu <span class="text-danger">*</span></label>
                                 <input type="time" class="form-control" name="gio_bat_dau" required id="gio_bat_dau">
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">Giờ Kết Thúc</label>
+                                <label class="form-label">Giờ Kết Thúc <span class="text-danger">*</span></label>
                                 <input type="time" class="form-control" name="gio_ket_thuc" required id="gio_ket_thuc">
                             </div>
                             <div class="col-md-3">
@@ -222,7 +232,6 @@
                                 <input type="number" step="0.01" class="form-control bg-light"
                                     name="nhien_lieu_tieu_hao" id="tieu_hao" readonly>
                             </div>
-
                             <div class="col-md-3">
                                 <label class="form-label">Đơn Giá</label>
                                 <input type="number" step="1" class="form-control" name="don_gia" id="don_gia_dau">
@@ -236,7 +245,6 @@
                                 <label class="form-label">Kết Quả Đối Soát</label>
                                 <input type="text" class="form-control" name="ket_qua_doi_soat">
                             </div>
-                            <div class="col-md-3"></div>
 
                             <div class="col-md-12">
                                 <label class="form-label">Ghi Chú</label>
@@ -283,43 +291,8 @@
         </div>
     </div>
 
-    <script>
-        // Logic tính toán đơn giản
-        const start = document.getElementById('gio_bat_dau');
-        const end = document.getElementById('gio_ket_thuc');
-        const duration = document.getElementById('gio_chay');
-        const rate = document.getElementById('dinh_muc');
-        const consumed = document.getElementById('tieu_hao');
-        const price = document.getElementById('don_gia_dau');
-        const total = document.getElementById('thanh_tien_may');
 
-        function calc() {
-            if (start.value && end.value) {
-                // Lấy giờ phút từ input time
-                let sPoints = start.value.split(':');
-                let ePoints = end.value.split(':');
-                let sDate = new Date(0, 0, 0, sPoints[0], sPoints[1]);
-                let eDate = new Date(0, 0, 0, ePoints[0], ePoints[1]);
 
-                // Xử lý qua đêm nếu cần (Demo: chưa xử lý qua đêm)
-                let diffMs = eDate - sDate;
-                if (diffMs < 0) diffMs += 24 * 60 * 60 * 1000; // Nếu qua đêm thì cộng 24h
-
-                let diffHrs = diffMs / 3600000;
-                duration.value = diffHrs.toFixed(2);
-
-                if (rate.value) {
-                    let lit = diffHrs * parseFloat(rate.value);
-                    consumed.value = lit.toFixed(2);
-                    if (price.value) {
-                        total.value = (lit * parseFloat(price.value)).toFixed(0);
-                    }
-                }
-            }
-        }
-
-        [start, end, rate, price].forEach(el => el.addEventListener('change', calc));
-    </script>
 
     <!-- Edit Modal -->
     <div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
@@ -332,42 +305,64 @@
                 <form id="editForm" method="POST">
                     <div class="modal-body">
                         <div class="row g-3">
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <label class="form-label">ID Trạm</label>
                                 <input type="text" class="form-control" name="id_tram" id="edit_id_tram" required
                                     readonly>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-4">
+                                <label class="form-label">Site</label>
+                                <input type="text" class="form-control" name="site" id="edit_site">
+                            </div>
+                            <div class="col-md-4">
                                 <label class="form-label">Ngày Vận Hành</label>
                                 <input type="date" class="form-control" name="ngay_van_hanh" id="edit_ngay_van_hanh"
                                     required>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-3">
+                                <label class="form-label">Công Suất (KVA)</label>
+                                <input type="text" class="form-control" name="cong_suat_may" id="edit_cong_suat_may">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Loại Máy</label>
+                                <input type="text" class="form-control" name="loai_may" id="edit_loai_may">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Định Mức (L/h)</label>
+                                <input type="text" class="form-control" name="dinh_muc" id="edit_dinh_muc">
+                            </div>
+                            <div class="col-md-3"></div>
+                            <div class="col-md-4">
                                 <label class="form-label">Giờ Bắt Đầu</label>
                                 <input type="time" class="form-control" name="gio_bat_dau" id="edit_gio_bat_dau">
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <label class="form-label">Giờ Kết Thúc</label>
                                 <input type="time" class="form-control" name="gio_ket_thuc" id="edit_gio_ket_thuc">
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <label class="form-label">Thời gian hoạt động (h)</label>
                                 <input type="number" step="0.01" class="form-control" name="thoi_gian_hoat_dong"
                                     id="edit_thoi_gian_hoat_dong" required>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <label class="form-label">Nhiên liệu tiêu hao (L)</label>
                                 <input type="number" step="0.01" class="form-control" name="nhien_lieu_tieu_hao"
                                     id="edit_nhien_lieu_tieu_hao" required>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <label class="form-label">Đơn giá</label>
                                 <input type="number" step="0.01" class="form-control" name="don_gia" id="edit_don_gia">
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <label class="form-label">Thành tiền</label>
                                 <input type="number" step="0.01" class="form-control" name="thanh_tien"
                                     id="edit_thanh_tien">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Kết quả Đối Soát</label>
+                                <input type="text" class="form-control" name="ket_qua_doi_soat"
+                                    id="edit_ket_qua_doi_soat">
                             </div>
                             <div class="col-12">
                                 <label class="form-label">Ghi Chú</label>
@@ -385,31 +380,56 @@
     </div>
 
     <script>
+        // ADD MODAL: tính thời gian và nhiên liệu tự động
+        const start = document.getElementById('gio_bat_dau');
+        const end = document.getElementById('gio_ket_thuc');
+        const dur = document.getElementById('gio_chay');
+        const rate = document.getElementById('dinh_muc');
+        const cons = document.getElementById('tieu_hao');
+        const price = document.getElementById('don_gia_dau');
+        const total = document.getElementById('thanh_tien_may');
+
+        function calc() {
+            if (start && end && start.value && end.value) {
+                let sP = start.value.split(':');
+                let eP = end.value.split(':');
+                let diffMs = new Date(0, 0, 0, eP[0], eP[1]) - new Date(0, 0, 0, sP[0], sP[1]);
+                if (diffMs < 0) diffMs += 86400000;
+                let hrs = diffMs / 3600000;
+                if (dur) dur.value = hrs.toFixed(2);
+                if (rate && rate.value) {
+                    let lit = hrs * parseFloat(rate.value);
+                    if (cons) cons.value = lit.toFixed(2);
+                    if (price && price.value && total)
+                        total.value = (lit * parseFloat(price.value)).toFixed(0);
+                }
+            }
+        }
+        [start, end, rate, price].forEach(el => el && el.addEventListener('change', calc));
+
+        // EDIT MODAL: populate fields when opened
         var editModal = document.getElementById('editModal');
-        editModal.addEventListener('show.bs.modal', function (event) {
-            var button = event.relatedTarget;
-            var id = button.getAttribute('data-id');
-            var idtram = button.getAttribute('data-idtram');
-            var ngay = button.getAttribute('data-ngay');
-            var batdau = button.getAttribute('data-batdau');
-            var ketthuc = button.getAttribute('data-ketthuc');
-            var duration = button.getAttribute('data-duration');
-            var consumed = button.getAttribute('data-consumed');
-            var dongia = button.getAttribute('data-dongia');
-            var thanhtien = button.getAttribute('data-thanhtien');
-            var ghichu = button.getAttribute('data-ghichu');
+        if (editModal) {
+            editModal.addEventListener('show.bs.modal', function (event) {
+                var btn = event.relatedTarget;
+                var form = editModal.querySelector('form');
+                form.action = '/generator-logs/edit/' + btn.getAttribute('data-id');
 
-            var form = editModal.querySelector('form');
-            form.action = '/generator-logs/edit/' + id;
-
-            document.getElementById('edit_id_tram').value = idtram;
-            document.getElementById('edit_ngay_van_hanh').value = ngay;
-            document.getElementById('edit_gio_bat_dau').value = batdau;
-            document.getElementById('edit_gio_ket_thuc').value = ketthuc;
-            document.getElementById('edit_thoi_gian_hoat_dong').value = duration;
-            document.getElementById('edit_nhien_lieu_tieu_hao').value = consumed;
-            document.getElementById('edit_don_gia').value = dongia;
-            document.getElementById('edit_thanh_tien').value = thanhtien;
-            document.getElementById('edit_ghi_chu').value = ghichu;
-        });
-        {% endblock %}
+                document.getElementById('edit_id_tram').value = btn.getAttribute('data-idtram') || '';
+                document.getElementById('edit_site').value = btn.getAttribute('data-site') || '';
+                document.getElementById('edit_cong_suat_may').value = btn.getAttribute('data-congsuatmay') || '';
+                document.getElementById('edit_loai_may').value = btn.getAttribute('data-loaimay') || '';
+                document.getElementById('edit_dinh_muc').value = btn.getAttribute('data-dinhmuc') || '';
+                document.getElementById('edit_ngay_van_hanh').value = btn.getAttribute('data-ngay') || '';
+                document.getElementById('edit_gio_bat_dau').value = btn.getAttribute('data-batdau') || '';
+                document.getElementById('edit_gio_ket_thuc').value = btn.getAttribute('data-ketthuc') || '';
+                document.getElementById('edit_thoi_gian_hoat_dong').value = btn.getAttribute('data-duration') || '';
+                document.getElementById('edit_nhien_lieu_tieu_hao').value = btn.getAttribute('data-consumed') || '';
+                document.getElementById('edit_don_gia').value = btn.getAttribute('data-dongia') || '';
+                document.getElementById('edit_thanh_tien').value = btn.getAttribute('data-thanhtien') || '';
+                document.getElementById('edit_ket_qua_doi_soat').value = btn.getAttribute('data-ketqua') || '';
+                document.getElementById('edit_ghi_chu').value = btn.getAttribute('data-ghichu') || '';
+            });
+        }
+    </script>
+    {% endblock %}

@@ -182,6 +182,82 @@ def generator():
         payment_data[name]['other_exp'] += amt
         payment_data[name]['can_ck'] += amt
 
+    # Load payment settlement records (JSON)
+    from core.routes import load_payment_records, load_payment_groups, save_payment_groups
+    payment_records = load_payment_records()
+
+    # Load payment groups (mua_ngoai / cx222)
+    payment_groups = load_payment_groups()
+
+    # Tính tổng phát sinh theo kỳ lọc
+    from sqlalchemy import func as _fn2
+    fuel_grp_q = db.session.query(
+        FuelLedger.nha_cung_cap,
+        _fn2.sum(FuelLedger.thanh_tien)
+    ).filter(
+        FuelLedger.ngay >= p_start,
+        FuelLedger.ngay < p_end,
+        FuelLedger.type.in_(['STOCK_IN', 'DIRECT_BUY'])
+    ).group_by(FuelLedger.nha_cung_cap).all()
+
+    mua_ngoai_total = 0
+    cx222_total = 0
+    for ncc, amt in fuel_grp_q:
+        ncc_up = (ncc or '').strip().upper()
+        if 'CX' in ncc_up or 'CÂY XĂNG' in ncc_up or 'CX222' in ncc_up:
+            cx222_total += (amt or 0)
+        else:
+            mua_ngoai_total += (amt or 0)
+    # Cộng thêm OtherExpense vào mua_ngoai
+    oe_total = db.session.query(_fn2.sum(OtherExpense.so_tien)).filter(
+        OtherExpense.ngay_su_dung >= p_start,
+        OtherExpense.ngay_su_dung < p_end
+    ).scalar() or 0
+    mua_ngoai_total += oe_total
+
+    # Phát sinh MỚI sau ngày đã thanh toán đến hôm nay
+    today_str2 = datetime.now().strftime('%Y-%m-%d')
+
+    def _calc_new(group_key, cutoff):
+        if not cutoff:
+            return 0
+        try:
+            if group_key == 'cx222':
+                result = 0
+                for ncc2, amt2 in db.session.query(
+                    FuelLedger.nha_cung_cap, _fn2.sum(FuelLedger.thanh_tien)
+                ).filter(
+                    FuelLedger.ngay > cutoff,
+                    FuelLedger.ngay <= today_str2,
+                    FuelLedger.type.in_(['STOCK_IN', 'DIRECT_BUY'])
+                ).group_by(FuelLedger.nha_cung_cap).all():
+                    ncc_u = (ncc2 or '').strip().upper()
+                    if 'CX' in ncc_u or 'CÂY XĂNG' in ncc_u or 'CX222' in ncc_u:
+                        result += (amt2 or 0)
+                return result
+            else:  # mua_ngoai
+                result = 0
+                for ncc2, amt2 in db.session.query(
+                    FuelLedger.nha_cung_cap, _fn2.sum(FuelLedger.thanh_tien)
+                ).filter(
+                    FuelLedger.ngay > cutoff,
+                    FuelLedger.ngay <= today_str2,
+                    FuelLedger.type.in_(['STOCK_IN', 'DIRECT_BUY'])
+                ).group_by(FuelLedger.nha_cung_cap).all():
+                    ncc_u = (ncc2 or '').strip().upper()
+                    if 'CX' not in ncc_u and 'CÂY XĂNG' not in ncc_u and 'CX222' not in ncc_u:
+                        result += (amt2 or 0)
+                result += db.session.query(_fn2.sum(OtherExpense.so_tien)).filter(
+                    OtherExpense.ngay_su_dung > cutoff,
+                    OtherExpense.ngay_su_dung <= today_str2
+                ).scalar() or 0
+                return result
+        except Exception:
+            return 0
+
+    mua_ngoai_new = _calc_new('mua_ngoai', payment_groups['mua_ngoai'].get('da_thanh_toan_den', ''))
+    cx222_new = _calc_new('cx222', payment_groups['cx222'].get('da_thanh_toan_den', ''))
+
     return render_template('generator.html',
                            schedules=schedules,
                            stations=stations,
@@ -193,15 +269,131 @@ def generator():
                            now_dt=datetime.now().strftime('%Y-%m-%dT%H:%M'),
                            active_tab=active_tab,
                            payment_data=payment_data,
+                           payment_records=payment_records,
                            pay_month=pay_month,
                            pay_year=pay_year,
                            pay_years=pay_years,
+                           payment_groups=payment_groups,
+                           mua_ngoai_total=mua_ngoai_total,
+                           cx222_total=cx222_total,
+                           mua_ngoai_new=mua_ngoai_new,
+                           cx222_new=cx222_new,
                            logs=gen_logs,
                            infos=infos,
                            filter_month=gen_fm,
                            filter_year=gen_fy,
                            available_years=gen_available_years,
                            users=[])
+
+
+# ============================================================
+# PAYMENT GROUP SAVE (accessible by all logged-in users)
+# ============================================================
+
+@generator_bp.route('/payment-group/save', methods=['POST'])
+@login_required
+def save_payment_group_gen():
+    """Lưu trạng thái thanh toán nhóm (mua_ngoai / cx222). Không cần admin."""
+    from flask import jsonify
+    from core.routes import load_payment_groups, save_payment_groups
+    data = request.get_json()
+    if not data:
+        return jsonify({'ok': False, 'msg': 'No data'}), 400
+
+    group = data.get('group', '').strip()
+    da_thanh_toan_den = data.get('da_thanh_toan_den', '').strip()
+    so_tien_da_tt = data.get('so_tien_da_tt', 0)
+    ghi_chu = data.get('ghi_chu', '').strip()
+
+    if group not in ('mua_ngoai', 'cx222'):
+        return jsonify({'ok': False, 'msg': 'Nhóm không hợp lệ'}), 400
+
+    records = load_payment_groups()
+    records[group] = {
+        'da_thanh_toan_den': da_thanh_toan_den,
+        'so_tien_da_tt': float(so_tien_da_tt),
+        'ghi_chu': ghi_chu,
+        'updated_at': datetime.now().strftime('%Y-%m-%d %H:%M'),
+        'updated_by': session.get('username', '')
+    }
+    try:
+        save_payment_groups(records)
+    except Exception as e:
+        return jsonify({'ok': False, 'msg': str(e)}), 500
+    return jsonify({'ok': True})
+
+
+@generator_bp.route('/payment-group/calc')
+@login_required
+def calc_payment_amount():
+    """Tính số tiền CÒN LẠI cần thanh toán đến den_ngay cho nhóm group.
+    Logic: Tổng CP(đầu năm → den_ngay) - số tiền đã TT trước đó.
+    Nếu den_ngay <= ngày TT gần nhất → báo đã TT rồi.
+    """
+    from flask import jsonify
+    from sqlalchemy import func as _fn
+    from core.routes import load_payment_groups
+
+    group = request.args.get('group', '').strip()
+    den_ngay = request.args.get('den_ngay', '').strip()
+    if group not in ('mua_ngoai', 'cx222') or not den_ngay:
+        return jsonify({'ok': False, 'total': 0}), 400
+
+    try:
+        year = int(den_ngay[:4])
+        p_start = f"{year}-01-01"
+    except (ValueError, IndexError):
+        return jsonify({'ok': False, 'total': 0}), 400
+
+    # Đọc thông tin thanh toán gần nhất
+    pg = load_payment_groups()
+    grp_info = pg.get(group, {})
+    last_paid_date = grp_info.get('da_thanh_toan_den', '')
+    last_paid_amount = float(grp_info.get('so_tien_da_tt', 0))
+
+    # Nếu ngày chọn <= ngày đã TT gần nhất → đã TT rồi
+    if last_paid_date and den_ngay <= last_paid_date:
+        return jsonify({'ok': True, 'total': 0, 'already_paid': True,
+                        'last_paid_date': last_paid_date})
+
+    # Tính tổng CP từ đầu năm đến den_ngay
+    total_cp = 0
+    fuel_q = db.session.query(
+        FuelLedger.nha_cung_cap, _fn.sum(FuelLedger.thanh_tien)
+    ).filter(
+        FuelLedger.ngay >= p_start,
+        FuelLedger.ngay <= den_ngay,
+        FuelLedger.type.in_(['STOCK_IN', 'DIRECT_BUY'])
+    ).group_by(FuelLedger.nha_cung_cap).all()
+
+    for ncc, amt in fuel_q:
+        ncc_up = (ncc or '').strip().upper()
+        is_cx = 'CX' in ncc_up or 'CÂY XĂNG' in ncc_up or 'CX222' in ncc_up
+        if group == 'cx222' and is_cx:
+            total_cp += (amt or 0)
+        elif group == 'mua_ngoai' and not is_cx:
+            total_cp += (amt or 0)
+
+    if group == 'mua_ngoai':
+        oe = db.session.query(_fn.sum(OtherExpense.so_tien)).filter(
+            OtherExpense.ngay_su_dung >= p_start,
+            OtherExpense.ngay_su_dung <= den_ngay
+        ).scalar() or 0
+        total_cp += oe
+
+    # Số còn lại = tổng CP - số đã TT
+    con_lai = total_cp - last_paid_amount
+    if con_lai < 0:
+        con_lai = 0
+
+    return jsonify({
+        'ok': True,
+        'total': total_cp,
+        'da_tt': last_paid_amount,
+        'con_lai': con_lai,
+        'already_paid': False,
+        'last_paid_date': last_paid_date
+    })
 
 
 # ============================================================

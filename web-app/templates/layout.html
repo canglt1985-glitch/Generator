@@ -317,6 +317,46 @@
         </div>
     </div>
 
+    <!-- Payment Group Modal -->
+    <div class="modal modal-blur fade" id="paymentGroupModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-pen me-2"></i>Cập Nhật Thanh Toán</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="pgGroup">
+                    <div class="mb-2">
+                        <label class="form-label fw-bold small mb-1">Nhóm chi phí:</label>
+                        <div id="pgLabelDisplay" class="text-primary fw-bold small"></div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small mb-1">Đã thanh toán đến ngày</label>
+                        <input type="date" id="pgDenNgay" class="form-control form-control-sm">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small mb-1">Số tiền đã thanh toán (đ)</label>
+                        <input type="number" id="pgDaTT" class="form-control form-control-sm" placeholder="0" min="0"
+                            step="1000">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small mb-1">Ghi chú <span class="text-muted">(số CK,
+                                ngày...)</span></label>
+                        <input type="text" id="pgGhiChu" class="form-control form-control-sm"
+                            placeholder="VD: CK 500M ngày 15/02">
+                    </div>
+                </div>
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Huỷ</button>
+                    <button type="button" class="btn btn-primary btn-sm" id="pgSaveBtn">
+                        <i class="fas fa-save me-1"></i>Lưu
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Tabler Core JS -->
     <script src="https://cdn.jsdelivr.net/npm/@tabler/core@latest/dist/js/tabler.min.js"></script>
     <script>

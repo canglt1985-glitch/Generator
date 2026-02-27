@@ -207,8 +207,10 @@
         </div>
     </div>
 
+
     <!-- Monthly Chart/Table -->
     <div class="col-12">
+
         <div class="card">
             <div class="card-header">
                 <h3 class="card-title">Lũy Kế Chi Phí Năm {{ year }}</h3>
@@ -231,4 +233,301 @@
         </div>
     </div>
 </div>
+
+{# --- Payment Group Tracking (Admin only) --- #}
+{% if session['role'] == 'admin' %}
+<div class="card shadow-sm mb-4 mt-4">
+    <div class="card-header">
+        <h3 class="card-title mb-0"><i class="fas fa-credit-card me-2 text-primary"></i>Theo Dõi Thanh Toán</h3>
+        <div class="card-options">
+            <span class="text-muted small">Dữ liệu theo kỳ lọc đã chọn</span>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+
+            {# --- Card 1: Chi phí Mua Ngoài --- #}
+            {% set mn = payment_groups.mua_ngoai %}
+            {% set mn_da_tt = mn.so_tien_da_tt | float %}
+            {% set mn_con_lai = mua_ngoai_total - mn_da_tt %}
+            <div class="col-md-6" id="card-mua-ngoai">
+                <div class="card border-warning h-100">
+                    <div class="card-header bg-warning-lt">
+                        <h4 class="card-title mb-0">
+                            <span class="badge bg-orange me-2">🟠</span>Chi Phí Mua Ngoài
+                        </h4>
+                        <div class="card-options text-muted small">(Mua lẻ + VNPT/VTL + Chi phí khác)</div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-2">
+                            <div class="col-6 text-muted small">Tổng phát sinh (kỳ):</div>
+                            <div class="col-6 text-end fw-bold" id="mn-tong-ps">{{ "{:,.0f}".format(mua_ngoai_total) }}
+                                đ</div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-6 text-muted small">Đã TT đến ngày:</div>
+                            <div class="col-6 text-end" id="mn-den-ngay">
+                                {% if mn.da_thanh_toan_den %}
+                                <span class="badge bg-blue-lt">{{ mn.da_thanh_toan_den }}</span>
+                                {% else %}
+                                <span class="text-muted">—</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-6 text-muted small">Số tiền đã TT:</div>
+                            <div class="col-6 text-end text-success fw-bold" id="mn-da-tt">{{ "{:,.0f}".format(mn_da_tt)
+                                }} đ</div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-6 text-muted small">Phát sinh mới (sau TT):</div>
+                            <div class="col-6 text-end text-orange fw-semibold" id="mn-ps-moi">
+                                {% if mua_ngoai_new > 0 %}+{{ "{:,.0f}".format(mua_ngoai_new) }} đ{% else %}—{% endif %}
+                            </div>
+                        </div>
+                        <hr class="my-2">
+                        <div class="row mb-2">
+                            <div class="col-6 text-muted small fw-bold">Còn phải trả:</div>
+                            <div class="col-6 text-end fw-bold" id="mn-con-lai">
+                                {% if mn_con_lai > 0 %}
+                                <span class="text-danger">{{ "{:,.0f}".format(mn_con_lai) }} đ 🔴</span>
+                                {% else %}
+                                <span class="text-success">✅ Đã TT hết</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% if mn.ghi_chu %}
+                        <div class="row mb-2">
+                            <div class="col-6 text-muted small">Ghi chú:</div>
+                            <div class="col-6 text-end small text-muted" id="mn-ghi-chu">{{ mn.ghi_chu }}</div>
+                        </div>
+                        {% else %}
+                        <div class="row mb-2 d-none" id="mn-ghi-chu-row">
+                            <div class="col-6 text-muted small">Ghi chú:</div>
+                            <div class="col-6 text-end small text-muted" id="mn-ghi-chu"></div>
+                        </div>
+                        {% endif %}
+                        {% if mn.updated_at %}
+                        <div class="text-muted small mt-1">Cập nhật lúc: {{ mn.updated_at }} bởi {{ mn.updated_by }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="card-footer text-end">
+                        <button class="btn btn-warning btn-sm btn-edit-payment-group" data-group="mua_ngoai"
+                            data-label="Chi Phí Mua Ngoài" data-den-ngay="{{ mn.da_thanh_toan_den }}"
+                            data-da-tt="{{ mn_da_tt }}" data-ghi-chu="{{ mn.ghi_chu }}">
+                            <i class="fas fa-pen me-1"></i>Cập nhật
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {# --- Card 2: Chi phí CX222 --- #}
+            {% set cx = payment_groups.cx222 %}
+            {% set cx_da_tt = cx.so_tien_da_tt | float %}
+            {% set cx_con_lai = cx222_total - cx_da_tt %}
+            <div class="col-md-6" id="card-cx222">
+                <div class="card border-primary h-100">
+                    <div class="card-header bg-primary-lt">
+                        <h4 class="card-title mb-0">
+                            <span class="badge bg-blue me-2">🔵</span>Chi Phí CX222
+                        </h4>
+                        <div class="card-options text-muted small">(Trạm xăng CX222)</div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-2">
+                            <div class="col-6 text-muted small">Tổng phát sinh (kỳ):</div>
+                            <div class="col-6 text-end fw-bold" id="cx-tong-ps">{{ "{:,.0f}".format(cx222_total) }} đ
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-6 text-muted small">Đã TT đến ngày:</div>
+                            <div class="col-6 text-end" id="cx-den-ngay">
+                                {% if cx.da_thanh_toan_den %}
+                                <span class="badge bg-blue-lt">{{ cx.da_thanh_toan_den }}</span>
+                                {% else %}
+                                <span class="text-muted">—</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-6 text-muted small">Số tiền đã TT:</div>
+                            <div class="col-6 text-end text-success fw-bold" id="cx-da-tt">{{ "{:,.0f}".format(cx_da_tt)
+                                }} đ</div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-6 text-muted small">Phát sinh mới (sau TT):</div>
+                            <div class="col-6 text-end text-orange fw-semibold" id="cx-ps-moi">
+                                {% if cx222_new > 0 %}+{{ "{:,.0f}".format(cx222_new) }} đ{% else %}—{% endif %}
+                            </div>
+                        </div>
+                        <hr class="my-2">
+                        <div class="row mb-2">
+                            <div class="col-6 text-muted small fw-bold">Còn phải trả:</div>
+                            <div class="col-6 text-end fw-bold" id="cx-con-lai">
+                                {% if cx_con_lai > 0 %}
+                                <span class="text-danger">{{ "{:,.0f}".format(cx_con_lai) }} đ 🔴</span>
+                                {% else %}
+                                <span class="text-success">✅ Đã TT hết</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% if cx.ghi_chu %}
+                        <div class="row mb-2">
+                            <div class="col-6 text-muted small">Ghi chú:</div>
+                            <div class="col-6 text-end small text-muted" id="cx-ghi-chu">{{ cx.ghi_chu }}</div>
+                        </div>
+                        {% else %}
+                        <div class="row mb-2 d-none" id="cx-ghi-chu-row">
+                            <div class="col-6 text-muted small">Ghi chú:</div>
+                            <div class="col-6 text-end small text-muted" id="cx-ghi-chu"></div>
+                        </div>
+                        {% endif %}
+                        {% if cx.updated_at %}
+                        <div class="text-muted small mt-1">Cập nhật lúc: {{ cx.updated_at }} bởi {{ cx.updated_by }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="card-footer text-end">
+                        <button class="btn btn-primary btn-sm btn-edit-payment-group" data-group="cx222"
+                            data-label="Chi Phí CX222" data-den-ngay="{{ cx.da_thanh_toan_den }}"
+                            data-da-tt="{{ cx_da_tt }}" data-ghi-chu="{{ cx.ghi_chu }}">
+                            <i class="fas fa-pen me-1"></i>Cập nhật
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>{# end row #}
+    </div>
+</div>
+
+{# --- Modal Cập Nhật Thanh Toán Nhóm --- #}
+<div class="modal modal-blur fade" id="paymentGroupModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-sm" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-pen me-2"></i>Cập Nhật Thanh Toán</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="pgGroup">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Nhóm chi phí:</label>
+                    <div id="pgLabelDisplay" class="text-primary fw-bold"></div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Đã thanh toán đến ngày</label>
+                    <input type="date" id="pgDenNgay" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Số tiền đã thanh toán (đ)</label>
+                    <input type="number" id="pgDaTT" class="form-control" placeholder="0" min="0" step="1000">
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">Ghi chú <span class="text-muted">(số CK, ngày...)</span></label>
+                    <input type="text" id="pgGhiChu" class="form-control" placeholder="VD: CK 500M ngày 15/02">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Huỷ</button>
+                <button type="button" class="btn btn-primary" id="pgSaveBtn">
+                    <i class="fas fa-save me-1"></i>Lưu
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        const fmt = v => v > 0 ? Math.round(v).toLocaleString('vi-VN') : '—';
+
+        // Mở modal khi bấm nút Cập nhật
+        document.addEventListener('click', function (e) {
+            const btn = e.target.closest('.btn-edit-payment-group');
+            if (!btn) return;
+
+            document.getElementById('pgGroup').value = btn.dataset.group;
+            document.getElementById('pgLabelDisplay').textContent = btn.dataset.label;
+            document.getElementById('pgDenNgay').value = btn.dataset.denNgay || '';
+            document.getElementById('pgDaTT').value = parseFloat(btn.dataset.daTt) || '';
+            document.getElementById('pgGhiChu').value = btn.dataset.ghiChu || '';
+
+            const modal = new bootstrap.Modal(document.getElementById('paymentGroupModal'));
+            modal.show();
+        });
+
+        // Lưu dữ liệu
+        document.getElementById('pgSaveBtn').addEventListener('click', function () {
+            const group = document.getElementById('pgGroup').value;
+            const den_ngay = document.getElementById('pgDenNgay').value.trim();
+            const da_tt = parseFloat(document.getElementById('pgDaTT').value) || 0;
+            const ghi_chu = document.getElementById('pgGhiChu').value.trim();
+
+            const btn = this;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang lưu...';
+
+            fetch('{{ url_for("core.save_payment_group") }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    group: group,
+                    da_thanh_toan_den: den_ngay,
+                    so_tien_da_tt: da_tt,
+                    ghi_chu: ghi_chu
+                })
+            })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.ok) {
+                        // Cập nhật card live mà không cần reload
+                        const prefix = group === 'mua_ngoai' ? 'mn' : 'cx';
+                        const totalEl = document.getElementById(prefix + '-tong-ps');
+                        const total = totalEl ? parseFloat(totalEl.textContent.replace(/[^0-9]/g, '')) || 0 : 0;
+                        const conLai = total - da_tt;
+
+                        // Đã TT đến ngày
+                        const denNgayEl = document.getElementById(prefix + '-den-ngay');
+                        if (denNgayEl) denNgayEl.innerHTML = den_ngay
+                            ? `<span class="badge bg-blue-lt">${den_ngay}</span>`
+                            : '<span class="text-muted">—</span>';
+
+                        // Đã TT
+                        const daTTEl = document.getElementById(prefix + '-da-tt');
+                        if (daTTEl) daTTEl.textContent = fmt(da_tt) + ' đ';
+
+                        // Còn lại
+                        const conLaiEl = document.getElementById(prefix + '-con-lai');
+                        if (conLaiEl) conLaiEl.innerHTML = conLai > 0
+                            ? `<span class="text-danger">${Math.round(conLai).toLocaleString('vi-VN')} đ 🔴</span>`
+                            : '<span class="text-success">✅ Đã TT hết</span>';
+
+                        // Ghi chú
+                        const ghiChuEl = document.getElementById(prefix + '-ghi-chu');
+                        if (ghiChuEl) ghiChuEl.textContent = ghi_chu || '';
+
+                        // Cập nhật data trên button để lần sau mở đúng
+                        const editBtn = document.querySelector(`.btn-edit-payment-group[data-group="${group}"]`);
+                        if (editBtn) {
+                            editBtn.dataset.denNgay = den_ngay;
+                            editBtn.dataset.daTt = da_tt;
+                            editBtn.dataset.ghiChu = ghi_chu;
+                        }
+
+                        bootstrap.Modal.getInstance(document.getElementById('paymentGroupModal')).hide();
+                    } else {
+                        alert('Lỗi: ' + (data.msg || 'Không lưu được'));
+                    }
+                })
+                .catch(() => alert('Lỗi kết nối máy chủ'))
+                .finally(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-save me-1"></i>Lưu';
+                });
+        });
+    })();
+</script>
+{% endif %}
 {% endblock %}

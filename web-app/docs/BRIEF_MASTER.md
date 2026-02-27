@@ -84,7 +84,7 @@ web-app/
 | 7 | [PAKH Tab](file:///d:/download/VH%20may%20phat%20dien/web-app/docs/BRIEF_PAKH.md) | Tab Phản Ánh Khách Hàng trong VHKT, scrape SmartW/feedback 1h/lần, mobile-first | � TB |
 | 8 | [Backup Pin](file:///d:/download/VH%20may%20phat%20dien/web-app/docs/BRIEF_backup_pin.md) | Thêm cột backup_minutes vào StationInfo, hiện popup khi xem lịch cúp | 🟢 Dễ |
 
-### � Backlog (chưa có Brief riêng):
+###  Backlog (chưa có Brief riêng):
 - Quản lý tồn tại trạm (tab mới, phân loại CSHT/VHKT/Nguồn)
 - Notion workspace cho TVT
 - Full scrape SmartW (bỏ cờ active)
