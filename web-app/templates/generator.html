@@ -931,23 +931,17 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form action="{{ url_for('generator.add_fuel_ledger') }}" method="POST">
-                <div class="modal-body p-0">
-                    <!-- Custom Tabs -->
-                    <ul class="nav nav-pills nav-fill p-2 bg-light mb-3" role="tablist">
-                        <li class="nav-item">
-                            <button class="nav-link active rounded-pill" data-fuel-type="DIRECT_BUY" type="button"
-                                onclick="setFuelType('DIRECT_BUY')">ĐỔ NL (MUA)</button>
-                        </li>
-                        <li class="nav-item">
-                            <button class="nav-link rounded-pill" data-fuel-type="STOCK_IN" type="button"
-                                onclick="setFuelType('STOCK_IN')">NHẬP KHO</button>
-                        </li>
-                        <li class="nav-item">
-                            <button class="nav-link rounded-pill" data-fuel-type="STATION_OUT" type="button"
-                                onclick="setFuelType('STATION_OUT')">XUẤT KHO</button>
-                        </li>
-                    </ul>
-                    <input type="hidden" name="type" id="fuel_type" value="DIRECT_BUY">
+                <div class="modal-body">
+                    <!-- Loại giao dịch -->
+                    <div class="px-3 pt-3 pb-2">
+                        <label class="form-label small fw-bold mb-1">Loại giao dịch</label>
+                        <select class="form-select form-select-sm fw-bold" name="type" id="fuel_type"
+                            onchange="setFuelType(this.value)" required>
+                            <option value="DIRECT_BUY" selected>⛽ ĐỔ NL (MUA) — mua đổ thẳng cho trạm</option>
+                            <option value="STOCK_IN">📥 NHẬP KHO — mua dầu về kho</option>
+                            <option value="STATION_OUT">📤 XUẤT KHO — lấy từ kho đổ cho trạm</option>
+                        </select>
+                    </div>
                     <input type="hidden" name="active_tab" value="fuel">
 
                     <div class="tab-content px-3 pb-3">
@@ -1031,10 +1025,11 @@
                             </div>
                         </div>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="modal">Hủy</button>
-                        <button type="submit" class="btn btn-primary w-50" id="btn-submit-fuel">Lưu</button>
-                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary w-50" id="btn-submit-fuel">Lưu</button>
+                </div>
             </form>
         </div>
     </div>
@@ -1053,32 +1048,37 @@
         const nccSelect = document.getElementById('inp_ncc');
         const stationInput = document.getElementById('inp_id_tram');
 
-        // Update active tab button
-        const modal = document.querySelector('#smartFuelModal');
-        modal.querySelectorAll('.nav-pills .nav-link').forEach(btn => {
-            btn.classList.toggle('active', btn.getAttribute('data-fuel-type') === type);
+        // Reset all fields: visible + enabled
+        [groupStation, groupPrice, groupMoney, groupSupplier, groupActual].forEach(g => {
+            g.style.opacity = '1';
+            g.style.pointerEvents = 'auto';
+            g.style.display = 'block';
+            g.style.visibility = 'visible';
+            g.querySelectorAll('input, select').forEach(el => el.disabled = false);
         });
-
-        // Reset visibility - show all first
-        groupStation.style.display = 'block';
-        groupPrice.style.visibility = 'visible';
-        groupMoney.style.display = 'block';
-        groupSupplier.style.display = 'block';
-        groupActual.style.display = 'block';
         nccSelect.required = true;
         stationInput.required = false;
 
+        function dimGroup(group) {
+            group.style.opacity = '0.35';
+            group.style.pointerEvents = 'none';
+            group.querySelectorAll('input, select').forEach(el => el.disabled = true);
+        }
+
         if (type === 'STOCK_IN') {
-            groupStation.style.display = 'none';
-            groupActual.style.display = 'none';
+            // Nhập kho: cần NCC + giá, KHÔNG cần trạm
+            dimGroup(groupStation);
+            dimGroup(groupActual);
             nccSelect.required = true;
         } else if (type === 'STATION_OUT') {
-            groupPrice.style.visibility = 'hidden';
-            groupMoney.style.display = 'none';
-            groupSupplier.style.display = 'none';
+            // Xuất kho: cần trạm, KHÔNG cần NCC/giá/thành tiền
+            dimGroup(groupPrice);
+            dimGroup(groupMoney);
+            dimGroup(groupSupplier);
             nccSelect.required = false;
             stationInput.required = true;
         } else {
+            // Đổ NL (mua): cần tất cả
             nccSelect.required = true;
             stationInput.required = true;
         }
@@ -1169,11 +1169,7 @@
         const modal = document.querySelector('#smartFuelModal');
         modal.querySelector('.modal-title').textContent = 'Giao Dịch Nhiên Liệu Mới';
         modal.querySelector('form').action = "{{ url_for('generator.add_fuel_ledger') }}";
-        // Reset form
         modal.querySelector('form').reset();
-        // Show all tabs (for new transaction)
-        modal.querySelector('.nav-pills').style.display = '';
-        // Reset type + active tab
         setFuelType('DIRECT_BUY');
     }
 
@@ -1182,18 +1178,15 @@
         const modal = document.querySelector('#smartFuelModal');
 
         const typeLabels = {
-            'DIRECT_BUY': 'Đổ NL (MUA)',
-            'STOCK_IN': 'Nhập Kho',
-            'STATION_OUT': 'Xuất Kho',
-            'ADJUSTMENT': 'Chỉnh NL Tồn'
+            'DIRECT_BUY': 'Sửa: Đổ NL (MUA)',
+            'STOCK_IN': 'Sửa: Nhập Kho',
+            'STATION_OUT': 'Sửa: Xuất Kho',
+            'ADJUSTMENT': 'Sửa: Chỉnh NL Tồn'
         };
-        modal.querySelector('.modal-title').textContent = 'Sửa: ' + (typeLabels[log.type] || log.type) + ' #' + log.id;
+        modal.querySelector('.modal-title').textContent = (typeLabels[log.type] || 'Sửa') + ' #' + log.id;
         modal.querySelector('form').action = "/fuel-ledger/edit/" + log.id;
 
-        // SHOW tab pills khi edit (cho phép đổi loại giao dịch)
-        modal.querySelector('.nav-pills').style.display = '';
-
-        // Set Values TRƯỚC khi setFuelType (vì setFuelType clear 1 số field)
+        // Populate data TRƯỚC setFuelType
         modal.querySelector('input[name="ngay"]').value = log.ngay ? log.ngay.split(' ')[0] : '';
         modal.querySelector('input[name="id_tram"]').value = log.id_tram || '';
         modal.querySelector('select[name="loai_nhien_lieu"]').value = log.loai_nhien_lieu || 'Dầu';
@@ -1203,7 +1196,7 @@
         modal.querySelector('select[name="nha_cung_cap"]').value = log.nha_cung_cap || '';
         modal.querySelector('input[name="ghi_chu"]').value = log.ghi_chu || '';
 
-        // Set Type & active tab
+        // Set dropdown + field visibility
         setFuelType(log.type);
     }
 
