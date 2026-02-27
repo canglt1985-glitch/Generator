@@ -1,5 +1,21 @@
 # Changelog
 
+## [2026-02-27] - Fuel Form Overhaul & Edit Modal Fix
+### Added
+- **Dropdown Transaction Type**: Replaced tab pills with dropdown select (`⛽ ĐỔ NL`, `📥 NHẬP KHO`, `📤 XUẤT KHO`) for clearer transaction type selection.
+- **STATION_OUT Auto Price**: Xuất kho auto-fills đơn giá from latest STOCK_IN/DIRECT_BUY entry. Price field is read-only (grey background). Thành tiền auto-calculates.
+- **Dimmed Disabled Fields**: Irrelevant fields now dim to 35% opacity + disabled instead of hiding completely, letting users see all fields at a glance.
+
+### Fixed
+- **CRITICAL: Edit Modal Blank**: `editFuel()` function was undefined due to a corrupted `SUGGESTED_PRICE` line in the `<script>` block. Fixed the truncated variable declaration.
+- **Tab Switching Broken**: Bootstrap `data-bs-toggle="pill"` referenced non-existent tab-pane elements (`#tab-direct`, `#tab-in`, `#tab-out`). Removed Bootstrap pill toggle entirely; `setFuelType()` now manages all UI state.
+- **setFuelType Clearing Values**: Removed value-clearing logic from `setFuelType()` — it now only controls visibility and `required` fields, preserving data during edit.
+- **NCC Selector Bug**: Changed `input[name="nha_cung_cap"]` to `select[name="nha_cung_cap"]` in `editFuel()` to match actual HTML.
+
+### Changed
+- **Backend STATION_OUT Logic**: No longer zeros out `don_gia`/`thanh_tien`. Instead auto-fills price from latest purchase and calculates cost for station tracking.
+- **Consistent Templates**: Applied all fixes to both `generator.html` and `power_schedule.html`.
+
 ## [2026-02-27] - Payment Tab Enhancement & Modal Fix
 ### Added
 - **Payment Group Cards**: 2 summary cards (Chi Phí Mua Ngoài, Chi Phí CX222) showing cutoff date, paid amount, remaining balance.
