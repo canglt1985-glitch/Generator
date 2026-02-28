@@ -113,15 +113,25 @@ def generator():
     gen_fy = now.year
     gen_available_years = list(range(2024, now.year + 1))
 
+    # ── 2 tháng liền kề (tháng trước + tháng này) ──
+    from datetime import timedelta
+    first_of_this_month = now.replace(day=1)
+    first_of_prev_month = (first_of_this_month - timedelta(days=1)).replace(day=1)
+    date_2m_start = first_of_prev_month.strftime('%Y-%m-%d')
+
     # ── Tab-specific data loading ──
     if active_tab == 'fuel':
-        # Only load fuel ledger + stock
-        fuel_logs = FuelLedger.query.order_by(FuelLedger.ngay.desc()).limit(200).all()
+        # Load fuel ledger 2 tháng liền kề + stock
+        fuel_logs = FuelLedger.query.filter(
+            FuelLedger.ngay >= date_2m_start
+        ).order_by(FuelLedger.ngay.desc()).all()
         central_stock = get_central_stock()
 
     elif active_tab == 'expense':
-        # Only load expenses
-        expenses = OtherExpense.query.order_by(OtherExpense.ngay_su_dung.desc()).limit(20).all()
+        # Load expenses 2 tháng liền kề
+        expenses = OtherExpense.query.filter(
+            OtherExpense.ngay_su_dung >= date_2m_start
+        ).order_by(OtherExpense.ngay_su_dung.desc()).all()
 
     elif active_tab == 'payment':
         # Payment aggregation (heaviest query — only when needed)

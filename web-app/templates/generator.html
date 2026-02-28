@@ -280,13 +280,16 @@
                         <div>
                             <div class="text-uppercase small fw-bold text-muted">TỒN KHO</div>
                             <div class="mb-0">
-                                <span class="fw-bold text-primary">Dầu: {{ "{:,.0f}".format(central_stock['Dầu'])
+                                <span class="fw-bold text-primary">Dầu: {{ "{:,.0f}".format([central_stock['Dầu'], 0] |
+                                    max)
                                     }}L</span>
                                 <span class="text-muted mx-1">|</span>
-                                <span class="fw-bold text-warning">Xăng: {{ "{:,.0f}".format(central_stock['Xăng'])
+                                <span class="fw-bold text-warning">Xăng: {{ "{:,.0f}".format([central_stock['Xăng'], 0]
+                                    | max)
                                     }}L</span>
                                 <span class="text-muted mx-1">|</span>
-                                <span class="text-muted small">Tổng: {{ "{:,.0f}".format(central_stock['total'])
+                                <span class="text-muted small">Tổng: {{ "{:,.0f}".format([central_stock['total'], 0] |
+                                    max)
                                     }}L</span>
                             </div>
                         </div>
@@ -315,7 +318,20 @@
         <!-- Ledger Table -->
         <div class="card shadow-sm border-0">
             <div class="table-responsive">
-                <table class="table table-vcenter table-hover table-compact text-nowrap">
+                <table class="table table-vcenter table-hover table-compact text-nowrap" style="table-layout:fixed;">
+                    <colgroup>
+                        <col style="width:100px;"> <!-- Trạm -->
+                        <col style="width:95px;"> <!-- Ngày -->
+                        <col style="width:75px;"> <!-- Loại -->
+                        <col style="width:45px;"> <!-- NL -->
+                        <col style="width:65px;"> <!-- Lượng -->
+                        <col style="width:70px;"> <!-- Đơn giá -->
+                        <col style="width:90px;"> <!-- Thành tiền -->
+                        <col style="width:85px;"> <!-- NCC -->
+                        <col style="width:75px;"> <!-- Người -->
+                        <col> <!-- Ghi chú -->
+                        <col style="width:70px;"> <!-- Actions -->
+                    </colgroup>
                     <thead>
                         <tr>
                             <th class="col-id">Trạm</th>
@@ -425,7 +441,16 @@
         </div>
         <div class="card shadow-sm border-0">
             <div class="table-responsive">
-                <table class="table table-vcenter table-hover card-table table-compact text-nowrap">
+                <table class="table table-vcenter table-hover card-table table-compact text-nowrap"
+                    style="table-layout:fixed;">
+                    <colgroup>
+                        <col style="width:100px;"> <!-- Người Chi -->
+                        <col style="width:100px;"> <!-- Ngày -->
+                        <col style="width:100px;"> <!-- Số Tiền -->
+                        <col> <!-- Nội Dung -->
+                        <col style="width:180px;"> <!-- Ghi Chú -->
+                        <col style="width:70px;"> <!-- Actions -->
+                    </colgroup>
                     <thead>
                         <tr>
                             <th class="col-shrink">Người Chi</th>
@@ -668,7 +693,18 @@
                 <h5 class="card-title mb-0"><i class="fas fa-money-check-alt me-2 text-success"></i>Bảng Thanh Toán</h5>
             </div>
             <div class="table-responsive">
-                <table class="table table-vcenter table-hover card-table table-compact text-nowrap">
+                <table class="table table-vcenter table-hover card-table table-compact text-nowrap"
+                    style="table-layout:fixed;">
+                    <colgroup>
+                        <col style="width:120px;"> <!-- Nhân viên -->
+                        <col style="width:100px;"> <!-- Mua Lẻ -->
+                        <col style="width:90px;"> <!-- CX222 -->
+                        <col style="width:100px;"> <!-- VNPT-VTL -->
+                        <col style="width:100px;"> <!-- Chi phí khác -->
+                        <col style="width:110px;"> <!-- Tổng cộng -->
+                        {% if session['role'] == 'admin' %}
+                        <col style="width:40px;">{% endif %}
+                    </colgroup>
                     <thead class="table-light">
                         <tr>
                             <th>Nhân viên</th>
