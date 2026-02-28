@@ -96,7 +96,10 @@ def generator():
     expenses = []
     payment_data = {}
     payment_records = {}
-    payment_groups = {'mua_ngoai': {}, 'cx222': {}}
+    payment_groups = {
+        'mua_ngoai': {'so_tien_da_tt': 0, 'da_thanh_toan_den': '', 'ghi_chu': '', 'updated_at': '', 'updated_by': ''},
+        'cx222': {'so_tien_da_tt': 0, 'da_thanh_toan_den': '', 'ghi_chu': '', 'updated_at': '', 'updated_by': ''}
+    }
     pay_month = None
     pay_year = now.year
     pay_years = list(range(now.year - 3, now.year + 1))
