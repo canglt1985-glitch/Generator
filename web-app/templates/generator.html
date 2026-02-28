@@ -1434,48 +1434,9 @@
 <script>
     // Switch generatoa nav-cards
     function switchGenTab(tabName) {
-        // Admin tabs (logs, infos) need server-side data loading
-        var adminTabs = ['logs', 'infos'];
-        var currentTab = '{{ active_tab }}';
-
-        // Redirect if: going TO admin tab, or coming FROM admin tab (data may be stale)
-        if (adminTabs.indexOf(tabName) !== -1 || adminTabs.indexOf(currentTab) !== -1) {
-            localStorage.setItem('psActiveTab', tabName);
-            window.location.href = '/generator?tab=' + tabName;
-            return;
-        }
-
-        // 1. Deactivate ALL hidden tab buttons
-        document.querySelectorAll('#mainTabs .nav-link').forEach(function (btn) {
-            btn.classList.remove('active');
-            btn.setAttribute('aria-selected', 'false');
-        });
-        // Activate the target tab button
-        var tabBtn = document.getElementById(tabName + '-tab');
-        if (tabBtn) {
-            tabBtn.classList.add('active');
-            tabBtn.setAttribute('aria-selected', 'true');
-        }
-
-        // 2. Deactivate ALL tab panes
-        document.querySelectorAll('#mainTabContent > .tab-pane').forEach(function (pane) {
-            pane.classList.remove('show', 'active');
-        });
-        // Activate the target pane
-        var targetPane = document.getElementById(tabName + '-content');
-        if (targetPane) {
-            targetPane.classList.add('show', 'active');
-        }
-
-        // 3. Update nav-card active states
-        document.querySelectorAll('#psNavCards .ps-nav-card').forEach(function (card) {
-            card.classList.remove('active');
-        });
-        var clickedCard = document.querySelector('#psNavCards .ps-nav-card[onclick*="' + tabName + '"]');
-        if (clickedCard) clickedCard.classList.add('active');
-
-        // 4. Save to localStorage
+        // ALL tabs need server-side data loading (conditional queries)
         localStorage.setItem('psActiveTab', tabName);
+        window.location.href = '/generator?tab=' + tabName;
     }
 
     // Tab memory - preserve active tab across page reloads
@@ -1484,12 +1445,7 @@
         if (!urlParams.get('tab')) {
             var savedTab = localStorage.getItem('psActiveTab');
             if (savedTab) {
-                // Admin tabs need server reload, redirect once
-                if (['logs', 'infos'].indexOf(savedTab) !== -1) {
-                    window.location.href = '/generator?tab=' + savedTab;
-                } else {
-                    switchGenTab(savedTab);
-                }
+                window.location.href = '/generator?tab=' + savedTab;
             }
         }
     });
