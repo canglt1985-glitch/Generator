@@ -5,10 +5,10 @@
     <div class="row align-items-center">
         <div class="col">
             <h2 class="page-title">
-                <i class="fas fa-satellite-dish me-2"></i>Vận Hành Khai Thác
+                <i class="fas fa-satellite-dish me-2"></i>VHKT RAN
             </h2>
             <div class="text-muted small mt-1 d-none d-md-block">
-                Giám sát alarm SmartW: MĐ, MPĐ, MLL, VHKT
+                Giám sát vận hành: Lịch Cúp, MĐ, MPĐ, MLL, SLA
             </div>
         </div>
         <div class="col-auto">
@@ -21,7 +21,7 @@
     </div>
 </div>
 
-<!-- Navigation Cards — 5 in a row -->
+<!-- Navigation Cards — 6 in a row -->
 <style>
     .nav-card {
         cursor: pointer;
@@ -158,7 +158,16 @@
 </style>
 <div class="row g-2 mt-2 mb-1" id="navCards">
     <div class="col">
-        <div class="card shadow-sm nav-card active" data-table="md" onclick="switchTab('md')"
+        <div class="card shadow-sm nav-card active" data-table="lich_cup" onclick="switchTab('lich_cup')"
+            style="border-left: 3px solid var(--tblr-orange); --arrow-color: var(--tblr-orange);">
+            <div class="nav-card-body">
+                <div class="nav-card-count text-orange" id="lichCupCount">0</div>
+                <div class="nav-card-label">📅 Lịch Cúp</div>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card shadow-sm nav-card" data-table="md" onclick="switchTab('md')"
             style="border-left: 3px solid var(--tblr-warning); --arrow-color: var(--tblr-warning);">
             <div class="nav-card-body">
                 <div class="nav-card-count text-warning" id="mdCount">0</div>
@@ -207,8 +216,36 @@
 <!-- Data Table Card -->
 <div class="card shadow-sm">
     <div class="card-body p-0 p-md-2">
+        <!-- Tab Lịch Cúp -->
+        <div class="tab-pane" id="tab-lich_cup">
+            <div class="tab-info-bar" id="infoBarLichCup">
+                <span class="badge bg-orange-lt">📅 Lịch cúp điện EVN</span>
+                <span class="text-muted" id="timeLichCup"></span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-vcenter table-hover card-table small text-nowrap text-center mb-0"
+                    id="tableLichCup">
+                    <thead>
+                        <tr>
+                            <th>ID Trạm</th>
+                            <th>Ngày Cúp</th>
+                            <th>Cúp</th>
+                            <th>Có Điện</th>
+                            <th class="d-none d-md-table-cell text-start">Lý Do</th>
+                            <th class="d-none d-md-table-cell">QL Trạm</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="empty py-4 d-none" id="emptyLichCup">
+                <p class="empty-title">Không có lịch cúp điện nào sắp tới</p>
+                <p class="empty-subtitle text-muted">✅ Hiện tại chưa có lịch cúp từ EVN.</p>
+            </div>
+        </div>
+
         <!-- Tab MĐ -->
-        <div class="tab-pane" id="tab-md">
+        <div class="tab-pane d-none" id="tab-md">
             <div class="tab-info-bar" id="infoBarMd">
                 <span id="badgeMd"><span class="badge bg-secondary-lt">⏳ Đang tải...</span></span>
                 <span class="text-muted" id="timeMd"></span>
@@ -378,8 +415,8 @@
 
 <script>
     // ── State ───────────────────────────────────────────────
-    let currentTab = 'md';
-    let tabDataLoaded = { md: false, mpd: false, mll: false, mll_cell: false, vhkt: false };
+    let currentTab = 'lich_cup';
+    let tabDataLoaded = { lich_cup: false, md: false, mpd: false, mll: false, mll_cell: false, vhkt: false };
 
     // ── Card-Based Tab Switching ────────────────────────────
     function switchTab(tabName) {
@@ -408,8 +445,8 @@
             .then(r => r.json())
             .then(d => {
                 // Update card counts
-                const countFields = { md: 'md_count', mpd: 'mpd_count', mll: 'mll_count', mll_cell: 'mll_cell_count' };
-                const countEls = { md: 'mdCount', mpd: 'mpdCount', mll: 'mllCount', mll_cell: 'mllCellCount' };
+                const countFields = { md: 'md_count', mpd: 'mpd_count', mll: 'mll_count', mll_cell: 'mll_cell_count', lich_cup: 'lich_cup_count' };
+                const countEls = { md: 'mdCount', mpd: 'mpdCount', mll: 'mllCount', mll_cell: 'mllCellCount', lich_cup: 'lichCupCount' };
                 Object.keys(countFields).forEach(tab => {
                     document.getElementById(countEls[tab]).textContent = d[countFields[tab]] || 0;
                 });
@@ -462,7 +499,7 @@
             loadTabData(currentTab);
 
             // Mark other tabs as stale
-            ['md', 'mpd', 'mll', 'mll_cell', 'vhkt'].forEach(tab => {
+            ['lich_cup', 'md', 'mpd', 'mll', 'mll_cell', 'vhkt'].forEach(tab => {
                 if (tab !== currentTab) tabDataLoaded[tab] = false;
             });
 
@@ -498,7 +535,7 @@
     // ── Init ────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', function () {
         // Load first tab + summary
-        loadTabData('md');
+        loadTabData('lich_cup');
         refreshSummary();
 
         // Connect SSE for real-time push (no polling needed!)
@@ -547,13 +584,13 @@
     // ── Tab Data Loader (flicker-free with row-level diff) ─
 
     function loadTabData(tabName) {
-        const apiName = tabName === 'mll_cell' ? 'mll-cell' : tabName;
+        const apiName = tabName === 'mll_cell' ? 'mll-cell' : (tabName === 'lich_cup' ? 'lich-cup' : tabName);
         fetch(`/api/smartw/${apiName}?_=${Date.now()}`)
             .then(r => r.json())
             .then(data => {
                 tabDataLoaded[tabName] = true;
                 const rows = data.data || [];
-                const idMap = { md: 'Md', mpd: 'Mpd', mll: 'Mll', mll_cell: 'MllCell', vhkt: 'Vhkt' };
+                const idMap = { lich_cup: 'LichCup', md: 'Md', mpd: 'Mpd', mll: 'Mll', mll_cell: 'MllCell', vhkt: 'Vhkt' };
                 const capName = idMap[tabName] || tabName.charAt(0).toUpperCase() + tabName.slice(1);
                 const emptyEl = document.getElementById('empty' + capName);
                 const tableEl = document.getElementById('table' + capName);
@@ -564,19 +601,20 @@
                     tableEl.classList.add('d-none');
                     tbody.innerHTML = '';
                     // Update card count to 0
-                    const countMap0 = { md: 'mdCount', mpd: 'mpdCount', mll: 'mllCount', mll_cell: 'mllCellCount' };
+                    const countMap0 = { lich_cup: 'lichCupCount', md: 'mdCount', mpd: 'mpdCount', mll: 'mllCount', mll_cell: 'mllCellCount' };
                     if (countMap0[tabName]) document.getElementById(countMap0[tabName]).textContent = '0';
                     return;
                 }
 
                 // Sort rows (active first)
-                if (tabName !== 'vhkt') {
+                if (tabName !== 'vhkt' && tabName !== 'lich_cup') {
                     rows.sort((a, b) => (a.status === 'ACTIVE' ? 0 : 1) - (b.status === 'ACTIVE' ? 0 : 1));
                 }
 
                 // Build row data: { html (td cells), cls (tr class) }
                 let newRows;
-                if (tabName === 'md') newRows = rows.map(r => ({ html: buildMdRow(r), cls: getRowClass('md', r) }));
+                if (tabName === 'lich_cup') newRows = rows.map(r => ({ html: buildLichCupRow(r), cls: '' }));
+                else if (tabName === 'md') newRows = rows.map(r => ({ html: buildMdRow(r), cls: getRowClass('md', r) }));
                 else if (tabName === 'mpd') newRows = rows.map(r => ({ html: buildMpdRow(r), cls: '' }));
                 else if (tabName === 'mll') newRows = rows.map(r => ({ html: buildMllRow(r), cls: getRowClass('mll', r) }));
                 else if (tabName === 'mll_cell') newRows = rows.map(r => ({ html: buildMllCellRow(r), cls: '' }));
@@ -618,7 +656,7 @@
 
 
                 // Sync card count with actual data
-                const countMap = { md: 'mdCount', mpd: 'mpdCount', mll: 'mllCount', mll_cell: 'mllCellCount' };
+                const countMap = { lich_cup: 'lichCupCount', md: 'mdCount', mpd: 'mpdCount', mll: 'mllCount', mll_cell: 'mllCellCount' };
                 if (countMap[tabName]) {
                     if (tabName === 'md') {
                         // Count unique stations instead of total alarms
@@ -638,6 +676,24 @@
         if (status === 'ACTIVE') return '<span class="badge bg-danger-lt">🔴 ACTIVE</span>';
         if (status === 'CLEARED') return '<span class="badge bg-success-lt">🟢 CLEAR</span>';
         return '<span class="badge bg-secondary-lt">--</span>';
+    }
+
+    function buildLichCupRow(r) {
+        const lyDo = (r.ly_do || '').length > 50
+            ? (r.ly_do.substring(0, 50) + '...')
+            : (r.ly_do || '--');
+        const qlTram = r.quan_ly_tram || '--';
+        // Check if outage is today
+        const today = new Date().toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        const isToday = r.ngay_mat_dien === today;
+        const trStyle = isToday ? 'fw-bold' : '';
+        const dayBadge = isToday ? '<span class="badge bg-warning-lt ms-1">Hôm nay</span>' : '';
+        return `<td class="${trStyle}">${r.id_tram || '--'}</td>`
+            + `<td>${r.ngay_mat_dien || '--'}${dayBadge}</td>`
+            + `<td class="text-danger">${r.thoi_gian_cup_dien || '--'}</td>`
+            + `<td class="text-success">${r.thoi_gian_co_dien || '--'}</td>`
+            + `<td class="d-none d-md-table-cell text-start small" style="white-space:normal;max-width:250px">${lyDo}</td>`
+            + `<td class="d-none d-md-table-cell small">${qlTram}</td>`;
     }
 
     function buildMdRow(r) {
@@ -724,7 +780,7 @@
                     return;
                 }
                 // Mark all tabs stale — SSE 'scrape_done' will trigger reload
-                tabDataLoaded = { md: false, mpd: false, mll: false, mll_cell: false, vhkt: false };
+                tabDataLoaded = { lich_cup: false, md: false, mpd: false, mll: false, mll_cell: false, vhkt: false };
 
                 // Safety: reset button after 30s even if SSE doesn't fire
                 setTimeout(resetRefreshBtn, 30000);

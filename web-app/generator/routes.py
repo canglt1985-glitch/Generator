@@ -57,15 +57,26 @@ def handle_deletion(model_class, record_id, redirect_route, table_name):
     return redirect(url_for(redirect_route))
 
 
+# ── Backward compatibility redirects ──
+@generator_bp.route('/power-schedule')
+@generator_bp.route('/lich-cup')
+@login_required
+def legacy_schedule_redirect():
+    """Redirect old power schedule URLs to VHKT RAN."""
+    return redirect(url_for('smartw.vhkt'))
+
+
 # ============================================================
-# MAIN GENERATOR PAGE
+# MAIN GENERATOR PAGE (now: Chi Phí)
 # ============================================================
 
 @generator_bp.route('/generator')
-@generator_bp.route('/power-schedule')
 @login_required
 def generator():
-    active_tab = request.args.get('tab', 'schedule')
+    active_tab = request.args.get('tab', 'fuel')
+    # Redirect schedule tab → VHKT RAN (lịch cúp moved there)
+    if active_tab == 'schedule':
+        return redirect(url_for('smartw.vhkt'))
     today_str = datetime.now().strftime('%Y-%m-%d')
 
     stations = GeneralInfo.query.with_entities(GeneralInfo.id_tram).all()

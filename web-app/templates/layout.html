@@ -125,16 +125,16 @@
                                 <span class="nav-link-icon d-md-none d-lg-inline-block">
                                     <i class="fas fa-satellite-dish"></i>
                                 </span>
-                                <span class="nav-link-title">VHKT SmartW</span>
+                                <span class="nav-link-title">VHKT RAN</span>
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link {% if request.endpoint == 'generator' %}active{% endif %}"
-                                href="{{ url_for('generator.generator') }}">
+                            <a class="nav-link {% if request.endpoint == 'generator' and request.args.get('tab','schedule') in ['fuel','expense','payment','schedule'] %}active{% endif %}"
+                                href="{{ url_for('generator.generator', tab='fuel') }}">
                                 <span class="nav-link-icon d-md-none d-lg-inline-block">
-                                    <i class="fas fa-bolt"></i>
+                                    <i class="fas fa-coins"></i>
                                 </span>
-                                <span class="nav-link-title">VH Máy Phát Điện</span>
+                                <span class="nav-link-title">Chi Phí</span>
                             </a>
                         </li>
                         <li class="nav-item">
@@ -147,9 +147,10 @@
                             </a>
                         </li>
                         {% if session['role'] == 'admin' %}
-                        <li class="nav-item">
-                            <a class="nav-link {% if request.endpoint == 'admin' %}active{% endif %}"
-                                href="{{ url_for('core.admin') }}">
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle {% if request.endpoint in ['admin', 'generator'] and request.args.get('tab','') in ['logs','infos'] %}active{% endif %}"
+                                href="#" data-bs-toggle="dropdown" data-bs-auto-close="false" role="button"
+                                aria-expanded="{{ 'true' if request.endpoint in ['admin'] or request.args.get('tab','') in ['logs','infos'] else 'false' }}">
                                 <span class="nav-link-icon d-md-none d-lg-inline-block">
                                     <i class="fas fa-cog"></i>
                                 </span>
@@ -160,6 +161,24 @@
                                     {% endif %}
                                 </span>
                             </a>
+                            <div
+                                class="dropdown-menu {% if request.endpoint in ['admin'] or request.args.get('tab','') in ['logs','infos'] %}show{% endif %}">
+                                <a class="dropdown-item {% if request.args.get('tab') == 'logs' %}active{% endif %}"
+                                    href="{{ url_for('generator.generator', tab='logs') }}">
+                                    <i class="fas fa-cogs me-2"></i>Chạy Máy
+                                </a>
+                                <a class="dropdown-item {% if request.args.get('tab') == 'infos' %}active{% endif %}"
+                                    href="{{ url_for('generator.generator', tab='infos') }}">
+                                    <i class="fas fa-info-circle me-2"></i>Thông Tin MPĐ
+                                </a>
+                                <a class="dropdown-item {% if request.endpoint == 'admin' %}active{% endif %}"
+                                    href="{{ url_for('core.admin') }}">
+                                    <i class="fas fa-chart-bar me-2"></i>Báo Cáo & Cấu Hình
+                                    {% if pending_req_count is defined and pending_req_count > 0 %}
+                                    <span class="badge badge-sm bg-red ms-1">{{ pending_req_count }}</span>
+                                    {% endif %}
+                                </a>
+                            </div>
                         </li>
                         {% endif %}
                     </ul>

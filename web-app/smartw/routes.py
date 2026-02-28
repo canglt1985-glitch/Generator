@@ -1,8 +1,8 @@
 """
-SmartW Routes — /vhkt page + API endpoints
+SmartW Routes — /vhkt page + API endpoints (VHKT RAN)
 """
 from flask import render_template, jsonify, request, flash, redirect, url_for, session, Response
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date as date_type
 from . import smartw_bp
 from .config import load_smartw_config, save_smartw_config
 
@@ -135,12 +135,24 @@ def api_summary():
     # Count unique MĐ stations (not total alarms)
     md_stations = {r.get('site', '').strip() for r in md_active if r.get('site')}
 
+    # Count upcoming power schedules
+    lich_cup_count = 0
+    try:
+        from models import PowerSchedule
+        today_str = datetime.now().strftime('%d/%m/%Y')
+        lich_cup_count = PowerSchedule.query.filter(
+            PowerSchedule.ngay_mat_dien >= today_str
+        ).count()
+    except Exception:
+        pass
+
     return jsonify({
         'md_count': len(md_stations),
         'mpd_count': len(mpd_active),
         'mll_count': len(mll_active),
         'mll_cell_count': len(mll_cell_active),
         'ung_cuu_count': len(ung_cuu),
+        'lich_cup_count': lich_cup_count,
         'last_poll': last_poll,
         'scraped_at': status.get('last_alarm_poll'),  # raw ISO for change detection
         'status': 'running' if status.get('is_running') else ('configured' if md_raw else 'not_configured'),
@@ -302,6 +314,22 @@ def api_mll_cell():
         'data': records,
         'scraped_at': cached.get('scraped_at') if cached else None
     })
+
+
+@smartw_bp.route('/api/smartw/lich-cup')
+def api_lich_cup():
+    """Return upcoming power outage schedules (ngay >= today)."""
+    from models import PowerSchedule
+    try:
+        today_str = datetime.now().strftime('%d/%m/%Y')
+        schedules = PowerSchedule.query.filter(
+            PowerSchedule.ngay_mat_dien >= today_str
+        ).order_by(PowerSchedule.ngay_mat_dien.asc()).all()
+
+        data = [s.to_dict() for s in schedules]
+        return jsonify({'data': data, 'total': len(data)})
+    except Exception as e:
+        return jsonify({'data': [], 'total': 0, 'error': str(e)})
 
 
 @smartw_bp.route('/api/smartw/vhkt')

@@ -5,9 +5,14 @@
     <div class="row g-0 align-items-center">
         <div class="col">
             <h2 class="page-title">
-                <i class="fas fa-bolt me-2 text-warning"></i>Vận Hành Máy Phát Điện
+                <i class="fas fa-coins me-2 text-warning"></i>
+                {% if active_tab in ['logs','infos'] %}Quản Trị{% else %}Chi Phí{% endif %}
             </h2>
-            <div class="text-muted small">Lịch cúp điện và quản lý vận hành trạm.</div>
+            <div class="text-muted small">
+                {% if active_tab == 'logs' %}Dữ liệu chạy máy phát điện
+                {% elif active_tab == 'infos' %}Danh sách thiết bị máy phát điện
+                {% else %}Quản lý nhiên liệu, chi phí khác và tổng hợp thanh toán.{% endif %}
+            </div>
         </div>
         {% if session['role'] == 'admin' %}
         <div class="col-auto text-end">
@@ -101,90 +106,61 @@
         }
     </style>
 
-    <!-- NAVIGATION CARDS -->
-    <div class="row g-2 mt-0" id="psNavCards">
-        <div class="col">
-            <div class="card shadow-sm ps-nav-card {{ 'active' if active_tab == 'schedule' else '' }}"
-                onclick="switchGenTab('schedule')"
-                style="border-left: 3px solid var(--tblr-warning); --arrow-color: var(--tblr-warning);">
-                <div class="ps-nav-body">
-                    <div class="ps-nav-icon text-warning">📅</div>
-                    <div class="ps-nav-label">Lịch Cúp</div>
-                </div>
-            </div>
-        </div>
-        <div class="col">
-            <div class="card shadow-sm ps-nav-card {{ 'active' if active_tab == 'fuel' else '' }}"
-                onclick="switchGenTab('fuel')"
-                style="border-left: 3px solid var(--tblr-teal); --arrow-color: var(--tblr-teal);">
-                <div class="ps-nav-body">
-                    <div class="ps-nav-icon text-teal">⛽</div>
-                    <div class="ps-nav-label">Nhiên Liệu</div>
-                </div>
-            </div>
-        </div>
-        <div class="col">
-            <div class="card shadow-sm ps-nav-card {{ 'active' if active_tab == 'expense' else '' }}"
-                onclick="switchGenTab('expense')"
-                style="border-left: 3px solid var(--tblr-pink); --arrow-color: var(--tblr-pink);">
-                <div class="ps-nav-body">
-                    <div class="ps-nav-icon text-pink">💳</div>
-                    <div class="ps-nav-label">Chi Phí</div>
-                </div>
-            </div>
-        </div>
-        <div class="col">
-            <div class="card shadow-sm ps-nav-card {{ 'active' if active_tab == 'payment' else '' }}"
-                onclick="switchGenTab('payment')"
-                style="border-left: 3px solid var(--tblr-success); --arrow-color: var(--tblr-success);">
-                <div class="ps-nav-body">
-                    <div class="ps-nav-icon text-success">💰</div>
-                    <div class="ps-nav-label">Thanh Toán</div>
-                </div>
-            </div>
-        </div>
-        {% if session['role'] == 'admin' %}
-        <div class="col">
-            <div class="card shadow-sm ps-nav-card {{ 'active' if active_tab == 'logs' else '' }}"
-                onclick="switchGenTab('logs')"
-                style="border-left: 3px solid var(--tblr-azure); --arrow-color: var(--tblr-azure);">
-                <div class="ps-nav-body">
-                    <div class="ps-nav-icon text-azure">🏭</div>
-                    <div class="ps-nav-label">Chạy Máy</div>
-                </div>
-            </div>
-        </div>
-        <div class="col">
-            <div class="card shadow-sm ps-nav-card {{ 'active' if active_tab == 'infos' else '' }}"
-                onclick="switchGenTab('infos')"
-                style="border-left: 3px solid var(--tblr-purple); --arrow-color: var(--tblr-purple);">
-                <div class="ps-nav-body">
-                    <div class="ps-nav-icon text-purple">🔧</div>
-                    <div class="ps-nav-label">Thông Tin</div>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-    </div>
+</div>
 
-    <!-- Hidden Bootstrap tab triggers (for JS tab switching) -->
-    <ul class="nav d-none" id="mainTabs" role="tablist">
-        <li class="nav-item"><button class="nav-link {{ 'active' if active_tab == 'schedule' else '' }}"
-                id="schedule-tab" data-bs-toggle="tab" data-bs-target="#schedule-content" type="button"
-                role="tab"></button></li>
-        <li class="nav-item"><button class="nav-link {{ 'active' if active_tab == 'fuel' else '' }}" id="fuel-tab"
-                data-bs-toggle="tab" data-bs-target="#fuel-content" type="button" role="tab"></button></li>
-        <li class="nav-item"><button class="nav-link {{ 'active' if active_tab == 'expense' else '' }}" id="expense-tab"
-                data-bs-toggle="tab" data-bs-target="#expense-content" type="button" role="tab"></button></li>
-        <li class="nav-item"><button class="nav-link {{ 'active' if active_tab == 'payment' else '' }}" id="payment-tab"
-                data-bs-toggle="tab" data-bs-target="#payment-content" type="button" role="tab"></button></li>
-        {% if session['role'] == 'admin' %}
-        <li class="nav-item"><button class="nav-link {{ 'active' if active_tab == 'logs' else '' }}" id="logs-tab"
-                data-bs-toggle="tab" data-bs-target="#logs-content" type="button" role="tab"></button></li>
-        <li class="nav-item"><button class="nav-link {{ 'active' if active_tab == 'infos' else '' }}" id="infos-tab"
-                data-bs-toggle="tab" data-bs-target="#infos-content" type="button" role="tab"></button></li>
-        {% endif %}
-    </ul>
+<!-- NAVIGATION CARDS -->
+<div class="row g-2 mt-0" id="psNavCards">
+    {% if active_tab not in ['logs', 'infos'] %}
+    <div class="col">
+        <div class="card shadow-sm ps-nav-card {{ 'active' if active_tab == 'fuel' else '' }}"
+            onclick="switchGenTab('fuel')"
+            style="border-left: 3px solid var(--tblr-teal); --arrow-color: var(--tblr-teal);">
+            <div class="ps-nav-body">
+                <div class="ps-nav-icon text-teal">⛽</div>
+                <div class="ps-nav-label">Nhiên Liệu</div>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card shadow-sm ps-nav-card {{ 'active' if active_tab == 'expense' else '' }}"
+            onclick="switchGenTab('expense')"
+            style="border-left: 3px solid var(--tblr-pink); --arrow-color: var(--tblr-pink);">
+            <div class="ps-nav-body">
+                <div class="ps-nav-icon text-pink">💳</div>
+                <div class="ps-nav-label">Chi Phí Khác</div>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card shadow-sm ps-nav-card {{ 'active' if active_tab == 'payment' else '' }}"
+            onclick="switchGenTab('payment')"
+            style="border-left: 3px solid var(--tblr-success); --arrow-color: var(--tblr-success);">
+            <div class="ps-nav-body">
+                <div class="ps-nav-icon text-success">📊</div>
+                <div class="ps-nav-label">Tổng Hợp</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Hidden Bootstrap tab triggers (for JS tab switching) -->
+<ul class="nav d-none" id="mainTabs" role="tablist">
+    <li class="nav-item"><button class="nav-link {{ 'active' if active_tab == 'schedule' else '' }}" id="schedule-tab"
+            data-bs-toggle="tab" data-bs-target="#schedule-content" type="button" role="tab"></button></li>
+    <li class="nav-item"><button class="nav-link {{ 'active' if active_tab == 'fuel' else '' }}" id="fuel-tab"
+            data-bs-toggle="tab" data-bs-target="#fuel-content" type="button" role="tab"></button></li>
+    <li class="nav-item"><button class="nav-link {{ 'active' if active_tab == 'expense' else '' }}" id="expense-tab"
+            data-bs-toggle="tab" data-bs-target="#expense-content" type="button" role="tab"></button></li>
+    <li class="nav-item"><button class="nav-link {{ 'active' if active_tab == 'payment' else '' }}" id="payment-tab"
+            data-bs-toggle="tab" data-bs-target="#payment-content" type="button" role="tab"></button></li>
+    {% if session['role'] == 'admin' %}
+    <li class="nav-item"><button class="nav-link {{ 'active' if active_tab == 'logs' else '' }}" id="logs-tab"
+            data-bs-toggle="tab" data-bs-target="#logs-content" type="button" role="tab"></button></li>
+    <li class="nav-item"><button class="nav-link {{ 'active' if active_tab == 'infos' else '' }}" id="infos-tab"
+            data-bs-toggle="tab" data-bs-target="#infos-content" type="button" role="tab"></button></li>
+    {% endif %}
+</ul>
 </div>
 
 <div class="tab-content" id="mainTabContent">
