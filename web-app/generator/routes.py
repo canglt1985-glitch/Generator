@@ -94,6 +94,9 @@ def generator():
     fuel_logs = []
     central_stock = {'Dầu': 0, 'Xăng': 0, 'total': 0}
     expenses = []
+    exp_year = None
+    exp_month = None
+    exp_years = list(range(2024, now.year + 1))
     payment_data = {}
     payment_records = {}
     payment_groups = {
@@ -129,10 +132,29 @@ def generator():
         central_stock = get_central_stock()
 
     elif active_tab == 'expense':
-        # Load expenses 2 tháng liền kề
-        expenses = OtherExpense.query.filter(
-            OtherExpense.ngay_su_dung >= date_3m_start
-        ).order_by(OtherExpense.ngay_su_dung.desc()).all()
+        # Chi phí khác: hỗ trợ lọc theo năm/tháng, default 3 tháng gần nhất
+        exp_year_raw = request.args.get('exp_year', '')
+        exp_month_raw = request.args.get('exp_month', '')
+        if exp_year_raw:
+            exp_year = int(exp_year_raw)
+            if exp_month_raw:
+                exp_month = int(exp_month_raw)
+                e_start = f"{exp_year}-{exp_month:02d}-01"
+                e_end = f"{exp_year}-{exp_month+1:02d}-01" if exp_month < 12 else f"{exp_year+1}-01-01"
+            else:
+                e_start = f"{exp_year}-01-01"
+                e_end = f"{exp_year+1}-01-01"
+                exp_month = None
+            expenses = OtherExpense.query.filter(
+                OtherExpense.ngay_su_dung >= e_start,
+                OtherExpense.ngay_su_dung < e_end
+            ).order_by(OtherExpense.ngay_su_dung.desc()).all()
+        else:
+            exp_year = None
+            exp_month = None
+            expenses = OtherExpense.query.filter(
+                OtherExpense.ngay_su_dung >= date_3m_start
+            ).order_by(OtherExpense.ngay_su_dung.desc()).all()
 
     elif active_tab == 'payment':
         # Payment aggregation (heaviest query — only when needed)
@@ -299,6 +321,9 @@ def generator():
                            central_stock=central_stock,
                            suggested_price=suggested_price,
                            expenses=expenses,
+                           exp_year=exp_year,
+                           exp_month=exp_month,
+                           exp_years=exp_years,
                            now_date=today_str,
                            now_dt=now.strftime('%Y-%m-%dT%H:%M'),
                            active_tab=active_tab,
