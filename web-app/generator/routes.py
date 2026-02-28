@@ -93,12 +93,12 @@ def generator():
     schedules = []
     fuel_logs = []
     central_stock = {'Dầu': 0, 'Xăng': 0, 'total': 0}
-    fuel_year = None
-    fuel_month = None
+    fuel_year = now.year
+    fuel_month = now.month
     fuel_years = list(range(2025, now.year + 1))
     expenses = []
-    exp_year = None
-    exp_month = None
+    exp_year = now.year
+    exp_month = now.month
     exp_years = list(range(2025, now.year + 1))
     payment_data = {}
     payment_records = {}
@@ -121,41 +121,35 @@ def generator():
 
     # ── Tab-specific data loading ──
     if active_tab == 'fuel':
-        # Nhiên liệu: lọc tháng/năm, default 30 dòng gần nhất
-        fuel_year_raw = request.args.get('fuel_year', '')
+        # Nhiên liệu: lọc tháng/năm, default tháng hiện tại
+        fuel_year = request.args.get('fuel_year', type=int, default=now.year)
         fuel_month_raw = request.args.get('fuel_month', '')
+        fuel_month = int(fuel_month_raw) if fuel_month_raw.strip() else None
         central_stock = get_central_stock()
-        q = FuelLedger.query
-        if fuel_year_raw:
-            fuel_year = int(fuel_year_raw)
-            if fuel_month_raw:
-                fuel_month = int(fuel_month_raw)
-                f_start = f"{fuel_year}-{fuel_month:02d}-01"
-                f_end = f"{fuel_year}-{fuel_month+1:02d}-01" if fuel_month < 12 else f"{fuel_year+1}-01-01"
-            else:
-                f_start = f"{fuel_year}-01-01"
-                f_end = f"{fuel_year+1}-01-01"
-                fuel_month = None
-            q = q.filter(FuelLedger.ngay >= f_start, FuelLedger.ngay < f_end)
-        fuel_logs = q.order_by(FuelLedger.ngay.desc()).limit(30).all()
+        if fuel_month:
+            f_start = f"{fuel_year}-{fuel_month:02d}-01"
+            f_end = f"{fuel_year}-{fuel_month+1:02d}-01" if fuel_month < 12 else f"{fuel_year+1}-01-01"
+        else:
+            f_start = f"{fuel_year}-01-01"
+            f_end = f"{fuel_year+1}-01-01"
+        fuel_logs = FuelLedger.query.filter(
+            FuelLedger.ngay >= f_start, FuelLedger.ngay < f_end
+        ).order_by(FuelLedger.ngay.desc()).limit(30).all()
 
     elif active_tab == 'expense':
-        # Chi phí khác: lọc tháng/năm, default 30 dòng gần nhất
-        exp_year_raw = request.args.get('exp_year', '')
+        # Chi phí khác: lọc tháng/năm, default tháng hiện tại
+        exp_year = request.args.get('exp_year', type=int, default=now.year)
         exp_month_raw = request.args.get('exp_month', '')
-        q = OtherExpense.query
-        if exp_year_raw:
-            exp_year = int(exp_year_raw)
-            if exp_month_raw:
-                exp_month = int(exp_month_raw)
-                e_start = f"{exp_year}-{exp_month:02d}-01"
-                e_end = f"{exp_year}-{exp_month+1:02d}-01" if exp_month < 12 else f"{exp_year+1}-01-01"
-            else:
-                e_start = f"{exp_year}-01-01"
-                e_end = f"{exp_year+1}-01-01"
-                exp_month = None
-            q = q.filter(OtherExpense.ngay_su_dung >= e_start, OtherExpense.ngay_su_dung < e_end)
-        expenses = q.order_by(OtherExpense.ngay_su_dung.desc()).limit(30).all()
+        exp_month = int(exp_month_raw) if exp_month_raw.strip() else None
+        if exp_month:
+            e_start = f"{exp_year}-{exp_month:02d}-01"
+            e_end = f"{exp_year}-{exp_month+1:02d}-01" if exp_month < 12 else f"{exp_year+1}-01-01"
+        else:
+            e_start = f"{exp_year}-01-01"
+            e_end = f"{exp_year+1}-01-01"
+        expenses = OtherExpense.query.filter(
+            OtherExpense.ngay_su_dung >= e_start, OtherExpense.ngay_su_dung < e_end
+        ).order_by(OtherExpense.ngay_su_dung.desc()).limit(30).all()
 
     elif active_tab == 'payment':
         # Payment aggregation (heaviest query — only when needed)
