@@ -93,10 +93,13 @@ def generator():
     schedules = []
     fuel_logs = []
     central_stock = {'Dầu': 0, 'Xăng': 0, 'total': 0}
+    fuel_year = None
+    fuel_month = None
+    fuel_years = list(range(2025, now.year + 1))
     expenses = []
     exp_year = None
     exp_month = None
-    exp_years = list(range(2024, now.year + 1))
+    exp_years = list(range(2025, now.year + 1))
     payment_data = {}
     payment_records = {}
     payment_groups = {
@@ -105,7 +108,7 @@ def generator():
     }
     pay_month = None
     pay_year = now.year
-    pay_years = list(range(now.year - 3, now.year + 1))
+    pay_years = list(range(2025, now.year + 1))
     mua_ngoai_total = 0
     cx222_total = 0
     mua_ngoai_new = 0
@@ -116,25 +119,31 @@ def generator():
     gen_fy = now.year
     gen_available_years = list(range(2024, now.year + 1))
 
-    # ── 3 tháng (tháng hiện tại + 2 tháng trước) ──
-    from datetime import timedelta
-    first_of_this_month = now.replace(day=1)
-    first_of_prev1 = (first_of_this_month - timedelta(days=1)).replace(day=1)
-    first_of_prev2 = (first_of_prev1 - timedelta(days=1)).replace(day=1)
-    date_3m_start = first_of_prev2.strftime('%Y-%m-%d')
-
     # ── Tab-specific data loading ──
     if active_tab == 'fuel':
-        # Load fuel ledger 2 tháng liền kề + stock
-        fuel_logs = FuelLedger.query.filter(
-            FuelLedger.ngay >= date_3m_start
-        ).order_by(FuelLedger.ngay.desc()).all()
+        # Nhiên liệu: lọc tháng/năm, default 30 dòng gần nhất
+        fuel_year_raw = request.args.get('fuel_year', '')
+        fuel_month_raw = request.args.get('fuel_month', '')
         central_stock = get_central_stock()
+        q = FuelLedger.query
+        if fuel_year_raw:
+            fuel_year = int(fuel_year_raw)
+            if fuel_month_raw:
+                fuel_month = int(fuel_month_raw)
+                f_start = f"{fuel_year}-{fuel_month:02d}-01"
+                f_end = f"{fuel_year}-{fuel_month+1:02d}-01" if fuel_month < 12 else f"{fuel_year+1}-01-01"
+            else:
+                f_start = f"{fuel_year}-01-01"
+                f_end = f"{fuel_year+1}-01-01"
+                fuel_month = None
+            q = q.filter(FuelLedger.ngay >= f_start, FuelLedger.ngay < f_end)
+        fuel_logs = q.order_by(FuelLedger.ngay.desc()).limit(30).all()
 
     elif active_tab == 'expense':
-        # Chi phí khác: hỗ trợ lọc theo năm/tháng, default 3 tháng gần nhất
+        # Chi phí khác: lọc tháng/năm, default 30 dòng gần nhất
         exp_year_raw = request.args.get('exp_year', '')
         exp_month_raw = request.args.get('exp_month', '')
+        q = OtherExpense.query
         if exp_year_raw:
             exp_year = int(exp_year_raw)
             if exp_month_raw:
@@ -145,16 +154,8 @@ def generator():
                 e_start = f"{exp_year}-01-01"
                 e_end = f"{exp_year+1}-01-01"
                 exp_month = None
-            expenses = OtherExpense.query.filter(
-                OtherExpense.ngay_su_dung >= e_start,
-                OtherExpense.ngay_su_dung < e_end
-            ).order_by(OtherExpense.ngay_su_dung.desc()).all()
-        else:
-            exp_year = None
-            exp_month = None
-            expenses = OtherExpense.query.filter(
-                OtherExpense.ngay_su_dung >= date_3m_start
-            ).order_by(OtherExpense.ngay_su_dung.desc()).all()
+            q = q.filter(OtherExpense.ngay_su_dung >= e_start, OtherExpense.ngay_su_dung < e_end)
+        expenses = q.order_by(OtherExpense.ngay_su_dung.desc()).limit(30).all()
 
     elif active_tab == 'payment':
         # Payment aggregation (heaviest query — only when needed)
@@ -320,6 +321,9 @@ def generator():
                            fuel_logs=fuel_logs,
                            central_stock=central_stock,
                            suggested_price=suggested_price,
+                           fuel_year=fuel_year,
+                           fuel_month=fuel_month,
+                           fuel_years=fuel_years,
                            expenses=expenses,
                            exp_year=exp_year,
                            exp_month=exp_month,

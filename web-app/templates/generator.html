@@ -272,27 +272,43 @@
     <!-- TAB 2: FUEL CONTENT (New Unified View) -->
 
     <div class="tab-pane fade {{ 'show active' if active_tab == 'fuel' else '' }}" id="fuel-content" role="tabpanel">
-        <!-- Summary Card -->
+        <!-- Filter + Summary + Actions -->
         <div class="row mb-1">
             <div class="col-12">
                 <div class="card bg-primary-lt border-0 shadow-sm">
-                    <div class="card-body d-flex justify-content-between align-items-center p-3">
-                        <div>
-                            <div class="text-uppercase small fw-bold text-muted">TỒN KHO</div>
-                            <div class="mb-0">
+                    <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-2 p-3">
+                        <!-- Left: Filter + Tồn kho -->
+                        <div class="d-flex gap-3 align-items-center flex-wrap">
+                            <form action="{{ url_for('generator.generator') }}" method="GET"
+                                class="d-flex gap-1 align-items-center">
+                                <input type="hidden" name="tab" value="fuel">
+                                <select name="fuel_month" class="form-select form-select-sm rounded-pill"
+                                    style="width:auto; min-width:85px; font-size:0.75rem;"
+                                    onchange="this.form.submit()">
+                                    <option value="">Cả năm</option>
+                                    {% for m in range(1, 13) %}
+                                    <option value="{{ m }}" {% if fuel_month==m %}selected{% endif %}>Tháng {{ m }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <select name="fuel_year" class="form-select form-select-sm rounded-pill"
+                                    style="width:auto; min-width:75px; font-size:0.75rem;"
+                                    onchange="this.form.submit()">
+                                    <option value="">Gần nhất</option>
+                                    {% for y in fuel_years | reverse %}
+                                    <option value="{{ y }}" {% if fuel_year==y %}selected{% endif %}>{{ y }}</option>
+                                    {% endfor %}
+                                </select>
+                            </form>
+                            <div class="small">
                                 <span class="fw-bold text-primary">Dầu: {{ "{:,.0f}".format([central_stock['Dầu'], 0] |
-                                    max)
-                                    }}L</span>
+                                    max) }}L</span>
                                 <span class="text-muted mx-1">|</span>
                                 <span class="fw-bold text-warning">Xăng: {{ "{:,.0f}".format([central_stock['Xăng'], 0]
-                                    | max)
-                                    }}L</span>
-                                <span class="text-muted mx-1">|</span>
-                                <span class="text-muted small">Tổng: {{ "{:,.0f}".format([central_stock['total'], 0] |
-                                    max)
-                                    }}L</span>
+                                    | max) }}L</span>
                             </div>
                         </div>
+                        <!-- Right: Export + Create -->
                         <div class="d-flex gap-2 align-items-center">
                             <form action="{{ url_for('generator.export_fuel_ledger') }}" method="GET"
                                 class="d-none d-md-flex gap-2 align-items-center">
