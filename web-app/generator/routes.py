@@ -77,8 +77,11 @@ def generator():
     # Redirect schedule tab → VHKT RAN (lịch cúp moved there)
     if active_tab == 'schedule':
         return redirect(url_for('smartw.vhkt'))
-    today_str = datetime.now().strftime('%Y-%m-%d')
 
+    now = datetime.now()
+    today_str = now.strftime('%Y-%m-%d')
+
+    # ── Shared lightweight data (always needed for modals/forms) ──
     stations = GeneralInfo.query.with_entities(GeneralInfo.id_tram).all()
     latest_fuel_price = db.session.query(FuelLedger.don_gia).filter(
         FuelLedger.type.in_(['STOCK_IN', 'DIRECT_BUY']),
@@ -86,27 +89,169 @@ def generator():
     ).order_by(FuelLedger.ngay.desc()).first()
     suggested_price = latest_fuel_price[0] if latest_fuel_price else 20000
 
-    schedules = PowerSchedule.query.filter(PowerSchedule.ngay_mat_dien >= today_str).order_by(PowerSchedule.ngay_mat_dien.asc()).all()
-    fuel_logs = FuelLedger.query.order_by(FuelLedger.ngay.desc()).limit(200).all()
-    central_stock = get_central_stock()
-    expenses = OtherExpense.query.order_by(OtherExpense.ngay_su_dung.desc()).limit(20).all()
-
+    # ── Safe defaults (unused tabs get empty data) ──
+    schedules = []
+    fuel_logs = []
+    central_stock = {'Dầu': 0, 'Xăng': 0, 'total': 0}
+    expenses = []
+    payment_data = {}
+    payment_records = {}
+    payment_groups = {'mua_ngoai': {}, 'cx222': {}}
+    pay_month = None
+    pay_year = now.year
+    pay_years = list(range(now.year - 3, now.year + 1))
+    mua_ngoai_total = 0
+    cx222_total = 0
+    mua_ngoai_new = 0
+    cx222_new = 0
     gen_logs = []
     infos = []
     gen_fm = None
-    gen_fy = datetime.now().year
-    gen_available_years = list(range(2024, datetime.now().year + 1))
+    gen_fy = now.year
+    gen_available_years = list(range(2024, now.year + 1))
 
-    if active_tab in ('logs', 'infos'):
+    # ── Tab-specific data loading ──
+    if active_tab == 'fuel':
+        # Only load fuel ledger + stock
+        fuel_logs = FuelLedger.query.order_by(FuelLedger.ngay.desc()).limit(200).all()
+        central_stock = get_central_stock()
+
+    elif active_tab == 'expense':
+        # Only load expenses
+        expenses = OtherExpense.query.order_by(OtherExpense.ngay_su_dung.desc()).limit(20).all()
+
+    elif active_tab == 'payment':
+        # Payment aggregation (heaviest query — only when needed)
+        from core.routes import load_payment_records, load_payment_groups
+        payment_records = load_payment_records()
+        payment_groups = load_payment_groups()
+
+        pay_year = request.args.get('pay_year', type=int, default=now.year)
+        pay_month_raw = request.args.get('pay_month', '')
+        pay_month = int(pay_month_raw) if pay_month_raw.strip() else None
+
+        if pay_month:
+            p_start = f"{pay_year}-{pay_month:02d}-01"
+            p_end = f"{pay_year}-{pay_month+1:02d}-01" if pay_month < 12 else f"{pay_year+1}-01-01"
+        else:
+            p_start = f"{pay_year}-01-01"
+            p_end = f"{pay_year+1}-01-01"
+
+        from sqlalchemy import func as fn
+        purchase_q = db.session.query(
+            FuelLedger.nguoi_thuc_hien, FuelLedger.nha_cung_cap, fn.sum(FuelLedger.thanh_tien)
+        ).filter(
+            FuelLedger.ngay >= p_start, FuelLedger.ngay < p_end,
+            FuelLedger.type.in_(['STOCK_IN', 'DIRECT_BUY'])
+        ).group_by(FuelLedger.nguoi_thuc_hien, FuelLedger.nha_cung_cap).all()
+
+        legacy_q = db.session.query(
+            FuelPurchaseLog.nguoi_mua, FuelPurchaseLog.nha_cung_cap, fn.sum(FuelPurchaseLog.thanh_tien)
+        ).filter(
+            FuelPurchaseLog.ngay_mua >= p_start, FuelPurchaseLog.ngay_mua < p_end
+        ).group_by(FuelPurchaseLog.nguoi_mua, FuelPurchaseLog.nha_cung_cap).all()
+
+        expense_q = db.session.query(
+            OtherExpense.nguoi_tam_ung, fn.sum(OtherExpense.so_tien)
+        ).filter(
+            OtherExpense.ngay_su_dung >= p_start, OtherExpense.ngay_su_dung < p_end
+        ).group_by(OtherExpense.nguoi_tam_ung).all()
+
+        def _add_purchase(name, source, amt):
+            if name not in payment_data:
+                payment_data[name] = {'mua_le': 0, 'cx222': 0, 'vnpt_vtl': 0, 'other_exp': 0, 'can_ck': 0}
+            source_up = (source or '').strip().upper()
+            if 'CX' in source_up or 'CÂY XĂNG' in source_up or 'CX222' in source_up:
+                payment_data[name]['cx222'] += amt
+            elif 'VNPT' in source_up or 'VTL' in source_up:
+                payment_data[name]['vnpt_vtl'] += amt
+                payment_data[name]['can_ck'] += amt
+            else:
+                payment_data[name]['mua_le'] += amt
+                payment_data[name]['can_ck'] += amt
+
+        for row in purchase_q:
+            _add_purchase(row[0] or 'Không rõ', row[1], row[2] or 0)
+        for row in legacy_q:
+            _add_purchase(row[0] or 'Không rõ', row[1], row[2] or 0)
+        for row in expense_q:
+            name = row[0] or 'Không rõ'
+            amt = row[1] or 0
+            if name not in payment_data:
+                payment_data[name] = {'mua_le': 0, 'cx222': 0, 'vnpt_vtl': 0, 'other_exp': 0, 'can_ck': 0}
+            payment_data[name]['other_exp'] += amt
+            payment_data[name]['can_ck'] += amt
+
+        # Group totals
+        fuel_grp_q = db.session.query(
+            FuelLedger.nha_cung_cap, fn.sum(FuelLedger.thanh_tien)
+        ).filter(
+            FuelLedger.ngay >= p_start, FuelLedger.ngay < p_end,
+            FuelLedger.type.in_(['STOCK_IN', 'DIRECT_BUY'])
+        ).group_by(FuelLedger.nha_cung_cap).all()
+
+        for ncc, amt in fuel_grp_q:
+            ncc_up = (ncc or '').strip().upper()
+            if 'CX' in ncc_up or 'CÂY XĂNG' in ncc_up or 'CX222' in ncc_up:
+                cx222_total += (amt or 0)
+            else:
+                mua_ngoai_total += (amt or 0)
+        oe_total = db.session.query(fn.sum(OtherExpense.so_tien)).filter(
+            OtherExpense.ngay_su_dung >= p_start,
+            OtherExpense.ngay_su_dung < p_end
+        ).scalar() or 0
+        mua_ngoai_total += oe_total
+
+        # New expenses since last payment
+        today_str2 = now.strftime('%Y-%m-%d')
+        def _calc_new(group_key, cutoff):
+            if not cutoff:
+                return 0
+            try:
+                if group_key == 'cx222':
+                    result = 0
+                    for ncc2, amt2 in db.session.query(
+                        FuelLedger.nha_cung_cap, fn.sum(FuelLedger.thanh_tien)
+                    ).filter(
+                        FuelLedger.ngay > cutoff, FuelLedger.ngay <= today_str2,
+                        FuelLedger.type.in_(['STOCK_IN', 'DIRECT_BUY'])
+                    ).group_by(FuelLedger.nha_cung_cap).all():
+                        ncc_u = (ncc2 or '').strip().upper()
+                        if 'CX' in ncc_u or 'CÂY XĂNG' in ncc_u or 'CX222' in ncc_u:
+                            result += (amt2 or 0)
+                    return result
+                else:
+                    result = 0
+                    for ncc2, amt2 in db.session.query(
+                        FuelLedger.nha_cung_cap, fn.sum(FuelLedger.thanh_tien)
+                    ).filter(
+                        FuelLedger.ngay > cutoff, FuelLedger.ngay <= today_str2,
+                        FuelLedger.type.in_(['STOCK_IN', 'DIRECT_BUY'])
+                    ).group_by(FuelLedger.nha_cung_cap).all():
+                        ncc_u = (ncc2 or '').strip().upper()
+                        if 'CX' not in ncc_u and 'CÂY XĂNG' not in ncc_u and 'CX222' not in ncc_u:
+                            result += (amt2 or 0)
+                    result += db.session.query(fn.sum(OtherExpense.so_tien)).filter(
+                        OtherExpense.ngay_su_dung > cutoff,
+                        OtherExpense.ngay_su_dung <= today_str2
+                    ).scalar() or 0
+                    return result
+            except Exception:
+                return 0
+
+        mua_ngoai_new = _calc_new('mua_ngoai', payment_groups['mua_ngoai'].get('da_thanh_toan_den', ''))
+        cx222_new = _calc_new('cx222', payment_groups['cx222'].get('da_thanh_toan_den', ''))
+
+    elif active_tab in ('logs', 'infos'):
+        # Admin-only tabs: generator logs + general info
         gen_filter_month = request.args.get('filter_month', '')
         gen_filter_year_raw = request.args.get('filter_year', '')
         if gen_filter_year_raw:
             try:
                 gen_fy = int(gen_filter_year_raw)
             except (ValueError, TypeError):
-                gen_fy = datetime.now().year
+                gen_fy = now.year
         else:
-            # Auto-detect: use latest year that has data, fallback to current year
             from sqlalchemy import func as sqlfn
             latest = db.session.query(
                 sqlfn.max(sqlfn.substr(GeneratorLog.ngay_van_hanh, 1, 4))
@@ -115,7 +260,7 @@ def generator():
                 try:
                     gen_fy = int(latest)
                 except (ValueError, TypeError):
-                    gen_fy = datetime.now().year
+                    gen_fy = now.year
         if gen_filter_month and gen_filter_month.strip():
             try:
                 gen_fm = int(gen_filter_month)
@@ -133,142 +278,6 @@ def generator():
         ).order_by(GeneratorLog.ngay_van_hanh.desc()).all()
         infos = GeneralInfo.query.all()
 
-    # Payment data
-    now = datetime.now()
-    pay_year = request.args.get('pay_year', type=int, default=now.year)
-    pay_month_raw = request.args.get('pay_month', '')
-    pay_month = int(pay_month_raw) if pay_month_raw.strip() else None
-    pay_years = list(range(now.year - 3, now.year + 1))
-
-    if pay_month:
-        p_start = f"{pay_year}-{pay_month:02d}-01"
-        p_end = f"{pay_year}-{pay_month+1:02d}-01" if pay_month < 12 else f"{pay_year+1}-01-01"
-    else:
-        p_start = f"{pay_year}-01-01"
-        p_end = f"{pay_year+1}-01-01"
-
-    from sqlalchemy import func as fn
-    purchase_q = db.session.query(
-        FuelLedger.nguoi_thuc_hien, FuelLedger.nha_cung_cap, fn.sum(FuelLedger.thanh_tien)
-    ).filter(
-        FuelLedger.ngay >= p_start, FuelLedger.ngay < p_end,
-        FuelLedger.type.in_(['STOCK_IN', 'DIRECT_BUY'])
-    ).group_by(FuelLedger.nguoi_thuc_hien, FuelLedger.nha_cung_cap).all()
-
-    legacy_q = db.session.query(
-        FuelPurchaseLog.nguoi_mua, FuelPurchaseLog.nha_cung_cap, fn.sum(FuelPurchaseLog.thanh_tien)
-    ).filter(
-        FuelPurchaseLog.ngay_mua >= p_start, FuelPurchaseLog.ngay_mua < p_end
-    ).group_by(FuelPurchaseLog.nguoi_mua, FuelPurchaseLog.nha_cung_cap).all()
-
-    expense_q = db.session.query(
-        OtherExpense.nguoi_tam_ung, fn.sum(OtherExpense.so_tien)
-    ).filter(
-        OtherExpense.ngay_su_dung >= p_start, OtherExpense.ngay_su_dung < p_end
-    ).group_by(OtherExpense.nguoi_tam_ung).all()
-
-    payment_data = {}
-    def _add_purchase(name, source, amt):
-        if name not in payment_data:
-            payment_data[name] = {'mua_le': 0, 'cx222': 0, 'vnpt_vtl': 0, 'other_exp': 0, 'can_ck': 0}
-        source_up = (source or '').strip().upper()
-        if 'CX' in source_up or 'CÂY XĂNG' in source_up or 'CX222' in source_up:
-            payment_data[name]['cx222'] += amt
-        elif 'VNPT' in source_up or 'VTL' in source_up:
-            payment_data[name]['vnpt_vtl'] += amt
-            payment_data[name]['can_ck'] += amt
-        else:
-            payment_data[name]['mua_le'] += amt
-            payment_data[name]['can_ck'] += amt
-
-    for row in purchase_q:
-        _add_purchase(row[0] or 'Không rõ', row[1], row[2] or 0)
-    for row in legacy_q:
-        _add_purchase(row[0] or 'Không rõ', row[1], row[2] or 0)
-    for row in expense_q:
-        name = row[0] or 'Không rõ'
-        amt = row[1] or 0
-        if name not in payment_data:
-            payment_data[name] = {'mua_le': 0, 'cx222': 0, 'vnpt_vtl': 0, 'other_exp': 0, 'can_ck': 0}
-        payment_data[name]['other_exp'] += amt
-        payment_data[name]['can_ck'] += amt
-
-    # Load payment settlement records (JSON)
-    from core.routes import load_payment_records, load_payment_groups, save_payment_groups
-    payment_records = load_payment_records()
-
-    # Load payment groups (mua_ngoai / cx222)
-    payment_groups = load_payment_groups()
-
-    # Tính tổng phát sinh theo kỳ lọc
-    from sqlalchemy import func as _fn2
-    fuel_grp_q = db.session.query(
-        FuelLedger.nha_cung_cap,
-        _fn2.sum(FuelLedger.thanh_tien)
-    ).filter(
-        FuelLedger.ngay >= p_start,
-        FuelLedger.ngay < p_end,
-        FuelLedger.type.in_(['STOCK_IN', 'DIRECT_BUY'])
-    ).group_by(FuelLedger.nha_cung_cap).all()
-
-    mua_ngoai_total = 0
-    cx222_total = 0
-    for ncc, amt in fuel_grp_q:
-        ncc_up = (ncc or '').strip().upper()
-        if 'CX' in ncc_up or 'CÂY XĂNG' in ncc_up or 'CX222' in ncc_up:
-            cx222_total += (amt or 0)
-        else:
-            mua_ngoai_total += (amt or 0)
-    # Cộng thêm OtherExpense vào mua_ngoai
-    oe_total = db.session.query(_fn2.sum(OtherExpense.so_tien)).filter(
-        OtherExpense.ngay_su_dung >= p_start,
-        OtherExpense.ngay_su_dung < p_end
-    ).scalar() or 0
-    mua_ngoai_total += oe_total
-
-    # Phát sinh MỚI sau ngày đã thanh toán đến hôm nay
-    today_str2 = datetime.now().strftime('%Y-%m-%d')
-
-    def _calc_new(group_key, cutoff):
-        if not cutoff:
-            return 0
-        try:
-            if group_key == 'cx222':
-                result = 0
-                for ncc2, amt2 in db.session.query(
-                    FuelLedger.nha_cung_cap, _fn2.sum(FuelLedger.thanh_tien)
-                ).filter(
-                    FuelLedger.ngay > cutoff,
-                    FuelLedger.ngay <= today_str2,
-                    FuelLedger.type.in_(['STOCK_IN', 'DIRECT_BUY'])
-                ).group_by(FuelLedger.nha_cung_cap).all():
-                    ncc_u = (ncc2 or '').strip().upper()
-                    if 'CX' in ncc_u or 'CÂY XĂNG' in ncc_u or 'CX222' in ncc_u:
-                        result += (amt2 or 0)
-                return result
-            else:  # mua_ngoai
-                result = 0
-                for ncc2, amt2 in db.session.query(
-                    FuelLedger.nha_cung_cap, _fn2.sum(FuelLedger.thanh_tien)
-                ).filter(
-                    FuelLedger.ngay > cutoff,
-                    FuelLedger.ngay <= today_str2,
-                    FuelLedger.type.in_(['STOCK_IN', 'DIRECT_BUY'])
-                ).group_by(FuelLedger.nha_cung_cap).all():
-                    ncc_u = (ncc2 or '').strip().upper()
-                    if 'CX' not in ncc_u and 'CÂY XĂNG' not in ncc_u and 'CX222' not in ncc_u:
-                        result += (amt2 or 0)
-                result += db.session.query(_fn2.sum(OtherExpense.so_tien)).filter(
-                    OtherExpense.ngay_su_dung > cutoff,
-                    OtherExpense.ngay_su_dung <= today_str2
-                ).scalar() or 0
-                return result
-        except Exception:
-            return 0
-
-    mua_ngoai_new = _calc_new('mua_ngoai', payment_groups['mua_ngoai'].get('da_thanh_toan_den', ''))
-    cx222_new = _calc_new('cx222', payment_groups['cx222'].get('da_thanh_toan_den', ''))
-
     return render_template('generator.html',
                            schedules=schedules,
                            stations=stations,
@@ -277,7 +286,7 @@ def generator():
                            suggested_price=suggested_price,
                            expenses=expenses,
                            now_date=today_str,
-                           now_dt=datetime.now().strftime('%Y-%m-%dT%H:%M'),
+                           now_dt=now.strftime('%Y-%m-%dT%H:%M'),
                            active_tab=active_tab,
                            payment_data=payment_data,
                            payment_records=payment_records,

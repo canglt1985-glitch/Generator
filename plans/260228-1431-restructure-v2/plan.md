@@ -21,13 +21,13 @@ Xóa bỏ generator.html (83KB), tái cấu trúc thành 3 khu vực:
 
 | Phase | Name | Status | Progress |
 |-------|------|--------|----------|
-| 00 | Rollback + Chuẩn bị | ⬜ Pending | 0% |
-| 01 | VHKT RAN: Đổi tên + Thêm tab Lịch Cúp | ⬜ Pending | 0% |
-| 02 | Trang Chi Phí (`/chi-phi`) | ⬜ Pending | 0% |
-| 03 | Trang Admin (4 trang riêng) | ⬜ Pending | 0% |
-| 04 | Sidebar mới + Layout | ⬜ Pending | 0% |
-| 05 | Backward Compat + Cleanup | ⬜ Pending | 0% |
-| 06 | Testing toàn diện | ⬜ Pending | 0% |
+| 00 | Rollback + Chuẩn bị | ✅ Complete | 100% |
+| 01 | VHKT RAN: Đổi tên + Thêm tab Lịch Cúp | ✅ Complete | 100% |
+| 02 | Trang Chi Phí (`/chi-phi`) | ✅ Complete (reuse generator.html) | 100% |
+| 03 | Trang Admin (4 trang riêng) | ✅ Complete (sidebar dropdown) | 100% |
+| 04 | Sidebar mới + Layout | ✅ Complete | 100% |
+| 05 | Backward Compat + Cleanup | ✅ Complete | 100% |
+| 06 | Testing toàn diện | 🟡 In Progress | 50% |
 
 ## Route Mapping (Final)
 
