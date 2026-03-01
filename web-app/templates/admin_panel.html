@@ -5,40 +5,25 @@
     <div class="row align-items-center">
         <div class="col">
             <h2 class="page-title">
-                <i class="fas fa-user-shield me-2"></i>Quản Trị Hệ Thống
+                <i class="fas fa-cog me-2"></i>Cấu Hình Hệ Thống
             </h2>
-            <div class="text-muted small mt-1">Trung tâm điều hành và phê duyệt dữ liệu.</div>
+            <div class="text-muted small mt-1">Quản lý người dùng, phê duyệt và cấu hình dịch vụ.</div>
         </div>
     </div>
 </div>
 
 <div class="card shadow-sm">
-    <!-- Tabler Card Tabs -->
     <div class="card-header border-0 pb-0 bg-transparent">
-        <ul class="nav nav-tabs card-header-tabs" id="adminTabs" data-bs-toggle="tabs">
+        <ul class="nav nav-tabs card-header-tabs" id="adminTabs">
             <li class="nav-item">
-                <a href="#reports" class="nav-link {{ 'active' if active_tab == 'reports' else '' }} fw-bold"
-                    data-bs-toggle="tab">
-                    <i class="fas fa-chart-line me-2"></i>Báo Cáo
-                </a>
-            </li>
-
-            <li class="nav-item">
-                <a href="#infos" class="nav-link {{ 'active' if active_tab == 'infos' else '' }} fw-bold"
-                    data-bs-toggle="tab">
-                    <i class="fas fa-broadcast-tower me-2"></i>Trạm Site
-                </a>
-            </li>
-            <li class="nav-item">
-                <a href="#users" class="nav-link {{ 'active' if active_tab == 'users' else '' }} fw-bold"
-                    data-bs-toggle="tab">
+                <a href="{{ url_for('core.admin', tab='users') }}"
+                    class="nav-link {{ 'active' if active_tab == 'users' else '' }} fw-bold">
                     <i class="fas fa-users me-2"></i>User
                 </a>
             </li>
             <li class="nav-item">
-                <a href="#requests"
-                    class="nav-link {{ 'active' if active_tab == 'requests' else '' }} fw-bold position-relative"
-                    data-bs-toggle="tab">
+                <a href="{{ url_for('core.admin', tab='requests') }}"
+                    class="nav-link {{ 'active' if active_tab == 'requests' else '' }} fw-bold position-relative">
                     <i class="fas fa-tasks me-2"></i>Yêu Cầu
                     {% if pending_req_count > 0 %}
                     <span class="badge bg-red ms-2">{{ pending_req_count }}</span>
@@ -46,8 +31,8 @@
                 </a>
             </li>
             <li class="nav-item">
-                <a href="#smartw" class="nav-link {{ 'active' if active_tab == 'smartw' else '' }} fw-bold"
-                    data-bs-toggle="tab">
+                <a href="{{ url_for('core.admin', tab='smartw') }}"
+                    class="nav-link {{ 'active' if active_tab == 'smartw' else '' }} fw-bold">
                     <i class="fas fa-satellite-dish me-2"></i>SmartW
                 </a>
             </li>
@@ -57,8 +42,9 @@
     <div class="card-body">
         <div class="tab-content">
 
+            {% if active_tab == 'users' %}
             <!-- Tab: Users -->
-            <div class="tab-pane fade {{ 'show active' if active_tab == 'users' else '' }}" id="users">
+            <div class="tab-pane fade show active" id="users">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h4 class="mb-0">Danh sách nhân viên</h4>
                     <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal"><i
@@ -111,85 +97,11 @@
                     </table>
                 </div>
             </div>
+            {% endif %}
 
-            <!-- Tab: Info (Stations) -->
-            <div class="tab-pane fade {{ 'show active' if active_tab == 'infos' else '' }}" id="infos">
-                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                    <h4 class="mb-0">Danh mục Trạm & Định mức</h4>
-                    <div class="d-flex gap-2">
-                        <button class="btn btn-sm btn-success" data-bs-toggle="modal"
-                            data-bs-target="#importInfoModal"><i class="fas fa-file-excel me-1"></i>Import</button>
-                        <a href="{{ url_for('generator.export_general_info') }}"
-                            class="btn btn-sm btn-outline-info btn-export"><i class="fas fa-file-export me-1"></i>Xuất
-                            báo cáo</a>
-                        <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addInfoModal"><i
-                                class="fas fa-plus me-1"></i>Thêm Mới</button>
-                    </div>
-                </div>
-                <div class="table-responsive">
-                    <form method="POST" action="{{ url_for('generator.bulk_delete_general_info') }}">
-                        <div class="mb-3 d-flex align-items-center gap-2">
-                            <input type="checkbox" id="selectAllInfo" class="form-check-input ms-3">
-                            <label class="form-check-label small text-muted">Chọn tất cả</label>
-                            <button type="submit" class="btn btn-ghost-danger btn-sm"
-                                onclick="return confirm('Xóa các mục đã chọn?')">
-                                <i class="fas fa-trash me-1"></i>Xóa hàng loạt
-                            </button>
-                        </div>
-                        <table class="table table-vcenter table-hover card-table small">
-                            <thead>
-                                <tr>
-                                    <th></th>
-                                    <th>ID Trạm</th>
-                                    <th>Mã KH</th>
-                                    <th>Huyện</th>
-                                    <th>Quản lý</th>
-                                    <th>Máy phát</th>
-                                    <th>Dung tích</th>
-                                    <th>ĐM TT</th>
-                                    <th>ĐM TT</th>
-                                    <th>NL</th>
-                                    <th>Loại trạm</th>
-                                    <th>Loại máy</th>
-                                    <th class="text-end">#</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for item in infos %}
-                                <tr>
-                                    <td><input type="checkbox" name="ids" value="{{ item.id }}"
-                                            class="form-check-input"></td>
-                                    <td><span class="badge bg-info-lt fw-bold">{{ item.id_tram }}</span></td>
-                                    <td class="small">{{ item.ma_khach_hang or '--' }}</td>
-                                    <td>{{ item.huyen or '--' }}</td>
-                                    <td class="small">{{ item.quan_ly_tram or '--' }}</td>
-                                    <td class="small">{{ item.may_phat_dien or '--' }}</td>
-                                    <td class="text-end">{{ item.dung_tich or 0 }}</td>
-                                    <td class="fw-bold text-end">{{ item.dinh_muc_thuc_te or '0' }}</td>
-                                    <td class="text-end">{{ item.dinh_muc or '0' }}</td>
-                                    <td class="small">{{ item.loai_nhien_lieu or '--' }}</td>
-                                    <td class="small">{{ item.loai_tram or '--' }}</td>
-                                    <td class="small">{{ item.loai_may or '--' }}</td>
-                                    <td class="text-end">
-                                        <a href="{{ url_for('generator.edit_general_info', id=item.id) }}"
-                                            class="btn btn-ghost-primary btn-icon"><i class="fas fa-edit"></i></a>
-                                        <form action="{{ url_for('generator.delete_general_info', id=item.id) }}"
-                                            method="POST" class="d-inline" onsubmit="return confirm('Xóa?')">
-                                            <button class="btn btn-ghost-danger btn-icon">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </form>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </form>
-                </div>
-            </div>
-
+            {% if active_tab == 'requests' %}
             <!-- Tab: Requests -->
-            <div class="tab-pane fade {{ 'show active' if active_tab == 'requests' else '' }}" id="requests">
+            <div class="tab-pane fade show active" id="requests">
                 <div class="mb-3">
                     <h4>Phê duyệt yêu cầu điều chỉnh</h4>
                 </div>
@@ -235,210 +147,11 @@
                     </table>
                 </div>
             </div>
+            {% endif %}
 
-            <!-- Tab: Reports (Báo Cáo) - Active by default -->
-            <div class="tab-pane fade {{ 'show active' if active_tab == 'reports' else '' }}" id="reports">
-                <!-- Filter: Tháng/Năm + Huyện -->
-                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                    <h4 class="mb-0"><i class="fas fa-chart-line me-2 text-primary"></i>Báo Cáo {% if filter_month
-                        %}Tháng {{ filter_month }}/{{ filter_year }}{% else %}Cả năm {{ filter_year }}{% endif %}</h4>
-                    <div class="d-flex gap-2 align-items-end flex-wrap">
-                        <form id="reportsFilterForm" action="{{ url_for('core.admin') }}" method="GET"
-                            class="d-flex gap-2 align-items-end flex-wrap">
-                            <input type="hidden" name="tab" value="reports">
-                            <select name="filter_month" class="form-select form-select-sm rounded-pill"
-                                style="width:105px;" onchange="this.form.submit()">
-                                <option value="">-- Cả năm --</option>
-                                {% for m in range(1, 13) %}
-                                <option value="{{ m }}" {% if filter_month==m %}selected{% endif %}>Tháng {{ m }}
-                                </option>
-                                {% endfor %}
-                            </select>
-                            <select name="filter_year" class="form-select form-select-sm rounded-pill"
-                                style="width:90px;" onchange="this.form.submit()">
-                                {% for y in available_years %}
-                                <option value="{{ y }}" {% if filter_year==y %}selected{% endif %}>{{ y }}</option>
-                                {% endfor %}
-                            </select>
-                            <select name="huyen" class="form-select form-select-sm rounded-pill" style="width:150px;"
-                                onchange="this.form.submit()">
-                                <option value="">-- Tất cả Huyện --</option>
-                                {% for h in huyen_list %}
-                                <option value="{{ h }}" {% if selected_huyen==h %}selected{% endif %}>{{ h }}</option>
-                                {% endfor %}
-                            </select>
-                        </form>
-                        <a href="{{ url_for('core.export_station_summary', huyen=selected_huyen or '', year=filter_year, month=filter_month or '') }}"
-                            class="btn btn-outline-success btn-sm rounded-pill fw-bold btn-export">
-                            <i class="fas fa-file-excel me-1"></i>Xuất Excel
-                        </a>
-                        <a href="{{ url_for('core.admin', tab='reports', filter_month=filter_month or '', filter_year=filter_year, huyen=selected_huyen or '') }}"
-                            class="btn btn-outline-primary btn-sm rounded-pill fw-bold">
-                            <i class="fas fa-sync-alt me-1"></i>Làm mới
-                        </a>
-                    </div>
-                </div>
-
-
-                <!-- Bảng Tiêu Hao Bất Thường (đặt trước bảng tổng hợp) -->
-                {% set anomaly_stations = station_summary|selectattr('chenh_lech','lt', 0)|list %}
-                {% if anomaly_stations %}
-                <div class="card border border-danger mb-4">
-                    <div class="card-header py-2 bg-danger-lt">
-                        <h5 class="card-title mb-0 text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Trạm
-                            Tiêu Hao Bất Thường ({{ anomaly_stations|length }} trạm)</h5>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table table-vcenter table-hover card-table small text-nowrap mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>ID Trạm</th>
-                                    <th>Huyện</th>
-                                    <th class="text-end">Giờ chạy</th>
-                                    <th class="text-end">Thanh toán máy</th>
-                                    <th class="text-end">Chi phí mua NL</th>
-                                    <th class="text-end fw-bold text-danger">Chênh lệch</th>
-                                    <th class="text-end">NL tồn</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for row in anomaly_stations %}
-                                <tr>
-                                    <td class="fw-bold"><span class="badge bg-danger-lt">{{ row.id_tram }}</span></td>
-                                    <td>{{ row.huyen }}</td>
-                                    <td class="text-end">{{ row.run_h }}h</td>
-                                    <td class="text-end">{{ "{:,.0f}".format(row.gen_cost) }}</td>
-                                    <td class="text-end">{{ "{:,.0f}".format(row.fuel_cost) }}</td>
-                                    <td class="text-end fw-bold text-danger">{{ "{:,.0f}".format(row.chenh_lech) }}</td>
-                                    <td class="text-end">{{ row.ton_real }}</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                {% endif %}
-
-                <!-- Station Summary -->
-                <h5 class="mb-3"><i class="fas fa-broadcast-tower me-2 text-info"></i>Tổng Hợp Theo Trạm (có biến động
-                    NL)
-                </h5>
-                <div class="table-responsive mb-4">
-                    <table class="table table-vcenter table-hover card-table small text-nowrap">
-                        <thead class="table-light">
-                            <tr>
-                                <th rowspan="2" class="align-middle bg-light">
-                                    ID Trạm</th>
-                                <th rowspan="2" class="align-middle">Huyện</th>
-                                <th colspan="4" class="text-center bg-primary-lt border-bottom-0">Thông tin trạm</th>
-                                <th colspan="2" class="text-center bg-info-lt border-bottom-0">Định mức</th>
-                                <th colspan="4" class="text-center bg-warning-lt border-bottom-0">Chạy máy</th>
-                                <th colspan="4" class="text-center bg-success-lt border-bottom-0">Nhiên liệu (Sổ cái)
-                                </th>
-                                <th colspan="3" class="text-center bg-secondary-lt border-bottom-0">Tồn kho</th>
-                                <th rowspan="2" class="text-center align-middle">Cúp điện</th>
-                                <th rowspan="2" class="text-center align-middle bg-danger-lt">Chênh lệch</th>
-                            </tr>
-                            <tr>
-                                <th class="bg-primary-lt small">Máy phát</th>
-                                <th class="bg-primary-lt small">Dung tích</th>
-                                <th class="bg-primary-lt small">Loại máy</th>
-                                <th class="bg-primary-lt small">Loại NL</th>
-                                <th class="bg-info-lt small text-end">Thực tế</th>
-                                <th class="bg-info-lt small text-end">Thanh toán</th>
-                                <th class="bg-warning-lt small text-end">Số lần</th>
-                                <th class="bg-warning-lt small text-end">Giờ (h)</th>
-                                <th class="bg-warning-lt small text-end">NL hao (L)</th>
-                                <th class="bg-warning-lt small text-end">Thành tiền</th>
-                                <th class="bg-success-lt small text-end">Mua TT (L)</th>
-                                <th class="bg-success-lt small text-end">Xuất kho (L)</th>
-                                <th class="bg-success-lt small text-end">Tổng đổ (L)</th>
-                                <th class="bg-success-lt small text-end">Chi phí mua</th>
-                                <th class="bg-secondary-lt small text-end">Tiêu hao ĐM</th>
-                                <th class="bg-secondary-lt small text-end">NL tồn</th>
-                                <th class="bg-secondary-lt small text-end">Tồn (min)</th>
-                            </tr>
-                            <tr class="filter-row bg-light-lt">
-                                <th><input type="text" class="form-control form-control-sm" placeholder="🔍 ID"
-                                        style="font-size:11px;width:80px" oninput="filterTable(this)"></th>
-                                <th><input type="text" class="form-control form-control-sm" placeholder="Huyện..."
-                                        style="font-size:11px;width:80px" oninput="filterTable(this)"></th>
-                                <th colspan="19"></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for row in station_summary %}
-                            <tr>
-                                <td class="fw-bold bg-light">
-                                    <span class="badge bg-info-lt">{{ row.id_tram }}</span>
-                                </td>
-                                <td>{{ row.huyen }}</td>
-                                <td class="small">{{ row.may_phat }}</td>
-                                <td class="text-end">{{ row.dung_tich }}</td>
-                                <td class="small">{{ row.loai_may }}</td>
-                                <td class="small">{{ row.loai_nl }}</td>
-                                <td class="text-end">{{ row.dm_thuc_te }}</td>
-                                <td class="text-end">{{ row.dm_thanh_toan }}</td>
-                                <td class="text-end">{{ row.gen_count }}</td>
-                                <td class="text-end fw-bold">{{ row.run_h }}</td>
-                                <td class="text-end">{{ row.gen_fuel }}</td>
-                                <td class="text-end">{{ "{:,.0f}".format(row.gen_cost) }}</td>
-                                <td class="text-end">{{ row.direct_buy_qty }}</td>
-                                <td class="text-end">{{ row.station_out_qty }}</td>
-                                <td class="text-end fw-bold">{{ row.total_refill }}</td>
-                                <td class="text-end">{{ "{:,.0f}".format(row.fuel_cost) }}</td>
-                                <td class="text-end">{{ row.actual_cons }}</td>
-                                <td class="text-end">{{ row.ton_real }}</td>
-                                <td class="text-end">{{ row.ton_min }}</td>
-                                <td class="text-center">{{ row.outages_cnt }}</td>
-                                <td
-                                    class="text-end fw-bold {{ 'text-success' if row.chenh_lech >= 0 else 'text-danger' }}">
-                                    {{ "{:,.0f}".format(row.chenh_lech) }}
-                                </td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                <td colspan="21" class="text-center py-4 text-muted">Không có trạm phát sinh chi phí
-                                    trong tháng này.</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                        {% if station_summary %}
-                        <tfoot class="table-light fw-bold">
-                            <tr>
-                                <td class="bg-light">TỔNG</td>
-                                <td colspan="7"></td>
-                                <td class="text-end">{{ station_summary|sum(attribute='gen_count') }}</td>
-                                <td class="text-end">{{ "%.2f"|format(station_summary|sum(attribute='run_h')) }}</td>
-                                <td class="text-end">{{ "%.2f"|format(station_summary|sum(attribute='gen_fuel')) }}</td>
-                                <td class="text-end">{{ "{:,.0f}".format(station_summary|sum(attribute='gen_cost')) }}
-                                </td>
-                                <td class="text-end">{{ "%.2f"|format(station_summary|sum(attribute='direct_buy_qty'))
-                                    }}</td>
-                                <td class="text-end">{{ "%.2f"|format(station_summary|sum(attribute='station_out_qty'))
-                                    }}</td>
-                                <td class="text-end">{{ "%.2f"|format(station_summary|sum(attribute='total_refill')) }}
-                                </td>
-                                <td class="text-end">{{ "{:,.0f}".format(station_summary|sum(attribute='fuel_cost')) }}
-                                </td>
-                                <td class="text-end">{{ "%.2f"|format(station_summary|sum(attribute='actual_cons')) }}
-                                </td>
-                                <td class="text-end">{{ "%.2f"|format(station_summary|sum(attribute='ton_real')) }}</td>
-                                <td class="text-end">{{ "%.2f"|format(station_summary|sum(attribute='ton_min')) }}</td>
-                                <td class="text-center">{{ station_summary|sum(attribute='outages_cnt') }}</td>
-                                <td
-                                    class="text-end {{ 'text-success' if station_summary|sum(attribute='chenh_lech') >= 0 else 'text-danger' }}">
-                                    {{ "{:,.0f}".format(station_summary|sum(attribute='chenh_lech')) }}
-                                </td>
-                            </tr>
-                        </tfoot>
-                        {% endif %}
-                    </table>
-                </div>
-            </div>
-
+            {% if active_tab == 'smartw' %}
             <!-- Tab: SmartW Config -->
-            <div class="tab-pane fade {{ 'show active' if active_tab == 'smartw' else '' }}" id="smartw">
+            <div class="tab-pane fade show active" id="smartw">
                 <div class="mb-3">
                     <h4><i class="fas fa-satellite-dish me-2 text-info"></i>Cài đặt SmartW</h4>
                     <p class="text-muted small">Nhập thông tin đăng nhập SmartW SSO để hệ thống tự động scrape dữ liệu
@@ -532,6 +245,8 @@
                     </div>
                 </div>
             </div>
+            {% endif %}
+
         </div>
     </div>
 </div>
@@ -540,36 +255,6 @@
 {% include "_modals_admin.html" %}
 
 <script>
-
-    document.addEventListener("DOMContentLoaded", function () {
-        const tabs = document.querySelectorAll('[data-bs-toggle="tab"]');
-        tabs.forEach(tab => {
-            tab.addEventListener("shown.bs.tab", function (e) {
-                localStorage.setItem("activeAdminTab", e.target.getAttribute("href"));
-            });
-        });
-
-        // Priority: URL param > localStorage > default (reports)
-        const urlParams = new URLSearchParams(window.location.search);
-        const tabParam = urlParams.get('tab');
-        const targetTab = tabParam ? '#' + tabParam : localStorage.getItem("activeAdminTab");
-        if (targetTab) {
-            const tabEl = document.querySelector(`a[href="${targetTab}"]`);
-            if (tabEl) {
-                new bootstrap.Tab(tabEl).show();
-            }
-        }
-    });
-
-    // Select All Checkbox
-    const selectAll = document.getElementById('selectAllInfo');
-    if (selectAll) {
-        selectAll.addEventListener('change', function () {
-            const boxes = document.querySelectorAll('input[name="ids"]');
-            boxes.forEach(b => b.checked = this.checked);
-        });
-    }
-
     // Toggle SmartW password visibility
     function togglePassword() {
         const input = document.getElementById('smartwPassword');

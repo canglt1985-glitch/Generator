@@ -606,9 +606,16 @@
                     return;
                 }
 
-                // Sort rows (active first)
-                if (tabName !== 'vhkt' && tabName !== 'lich_cup') {
-                    rows.sort((a, b) => (a.status === 'ACTIVE' ? 0 : 1) - (b.status === 'ACTIVE' ? 0 : 1));
+                // Sort rows
+                if (tabName === 'vhkt') {
+                    // SLA: sort by MĐ count descending (most outages first)
+                    rows.sort((a, b) => (b.md_so_lan || 0) - (a.md_so_lan || 0));
+                } else if (tabName !== 'lich_cup') {
+                    // MĐ/MPĐ/MLL/CellOff: ACTIVE first, then newest first (sdate DESC)
+                    rows.sort((a, b) => {
+                        if (a.status !== b.status) return a.status === 'ACTIVE' ? -1 : 1;
+                        return (b.sdate || 0) - (a.sdate || 0);
+                    });
                 }
 
                 // Build row data: { html (td cells), cls (tr class) }

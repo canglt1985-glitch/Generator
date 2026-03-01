@@ -113,11 +113,8 @@ def generator():
     cx222_total = 0
     mua_ngoai_new = 0
     cx222_new = 0
-    gen_logs = []
-    infos = []
-    gen_fm = None
-    gen_fy = now.year
-    gen_available_years = list(range(2024, now.year + 1))
+
+
 
     # ── Tab-specific data loading ──
     if active_tab == 'fuel':
@@ -273,41 +270,6 @@ def generator():
         mua_ngoai_new = _calc_new('mua_ngoai', payment_groups['mua_ngoai'].get('da_thanh_toan_den', ''))
         cx222_new = _calc_new('cx222', payment_groups['cx222'].get('da_thanh_toan_den', ''))
 
-    elif active_tab in ('logs', 'infos'):
-        # Admin-only tabs: generator logs + general info
-        gen_filter_month = request.args.get('filter_month', '')
-        gen_filter_year_raw = request.args.get('filter_year', '')
-        if gen_filter_year_raw:
-            try:
-                gen_fy = int(gen_filter_year_raw)
-            except (ValueError, TypeError):
-                gen_fy = now.year
-        else:
-            from sqlalchemy import func as sqlfn
-            latest = db.session.query(
-                sqlfn.max(sqlfn.substr(GeneratorLog.ngay_van_hanh, 1, 4))
-            ).scalar()
-            if latest:
-                try:
-                    gen_fy = int(latest)
-                except (ValueError, TypeError):
-                    gen_fy = now.year
-        if gen_filter_month and gen_filter_month.strip():
-            try:
-                gen_fm = int(gen_filter_month)
-            except (ValueError, TypeError):
-                gen_fm = None
-        if gen_fm:
-            gen_start = f"{gen_fy}-{gen_fm:02d}-01"
-            gen_end = f"{gen_fy}-{gen_fm+1:02d}-01" if gen_fm < 12 else f"{gen_fy+1}-01-01"
-        else:
-            gen_start = f"{gen_fy}-01-01"
-            gen_end = f"{gen_fy+1}-01-01"
-        gen_logs = GeneratorLog.query.filter(
-            GeneratorLog.ngay_van_hanh >= gen_start,
-            GeneratorLog.ngay_van_hanh < gen_end
-        ).order_by(GeneratorLog.ngay_van_hanh.desc()).all()
-        infos = GeneralInfo.query.all()
 
     return render_template('generator.html',
                            schedules=schedules,
@@ -335,11 +297,6 @@ def generator():
                            cx222_total=cx222_total,
                            mua_ngoai_new=mua_ngoai_new,
                            cx222_new=cx222_new,
-                           logs=gen_logs,
-                           infos=infos,
-                           filter_month=gen_fm,
-                           filter_year=gen_fy,
-                           available_years=gen_available_years,
                            users=[])
 
 

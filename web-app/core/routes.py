@@ -184,127 +184,140 @@ def request_delete(table_name, record_id):
 @login_required
 @admin_required
 def admin():
+    """Cấu Hình page — lightweight: users, requests, smartw only."""
     users = User.query.all()
     reqs = DeletionRequest.query.filter_by(status='Pending').order_by(DeletionRequest.timestamp.desc()).all()
-    
-    # Month/Year filter (for Báo Cáo tab)
-    now = datetime.now()
-    filter_month = request.args.get('filter_month', '')
-    filter_year = request.args.get('filter_year', str(now.year))
-    try:
-        fy = int(filter_year)
-    except (ValueError, TypeError):
-        fy = now.year
-    
-    if filter_month and filter_month.strip():
-        try:
-            fm = int(filter_month)
-        except (ValueError, TypeError):
-            fm = None
-    else:
-        fm = None
-    
-    if fm:
-        month_start = f"{fy}-{fm:02d}-01"
-        if fm == 12:
-            month_end = f"{fy+1}-01-01"
-        else:
-            month_end = f"{fy}-{fm+1:02d}-01"
-    else:
-        month_start = f"{fy}-01-01"
-        month_end = f"{fy+1}-01-01"
-    
-    available_years = list(range(2025, now.year + 1))
-    
-    # Audit & KPI Data
-    huyen_filter = request.args.get('huyen')
-    huyen_list = [h[0] for h in db.session.query(GeneralInfo.huyen).distinct().all() if h[0]]
-    
-    station_summary_all = get_audit_data(huyen_filter, month_start, month_end)
-    station_summary = sorted(
-        [s for s in station_summary_all if s.get('gen_count', 0) > 0 or s.get('total_refill', 0) > 0],
-        key=lambda x: x.get('ton_real', 0), reverse=True
-    )
-    audit_data = get_audit_data(huyen_filter)
-    
-    # Reports: Payment Data
-    from sqlalchemy import func as fn
-    purchase_q = db.session.query(
-        FuelLedger.nguoi_thuc_hien,
-        FuelLedger.nha_cung_cap,
-        fn.sum(FuelLedger.thanh_tien)
-    ).filter(
-        FuelLedger.ngay >= month_start,
-        FuelLedger.ngay < month_end,
-        FuelLedger.type.in_(['STOCK_IN', 'DIRECT_BUY'])
-    ).group_by(FuelLedger.nguoi_thuc_hien, FuelLedger.nha_cung_cap).all()
-    
-    legacy_q = db.session.query(
-        FuelPurchaseLog.nguoi_mua,
-        FuelPurchaseLog.nha_cung_cap,
-        fn.sum(FuelPurchaseLog.thanh_tien)
-    ).filter(
-        FuelPurchaseLog.ngay_mua >= month_start,
-        FuelPurchaseLog.ngay_mua < month_end
-    ).group_by(FuelPurchaseLog.nguoi_mua, FuelPurchaseLog.nha_cung_cap).all()
-    
-    expense_q = db.session.query(
-        OtherExpense.nguoi_tam_ung,
-        fn.sum(OtherExpense.so_tien)
-    ).filter(
-        OtherExpense.ngay_su_dung >= month_start,
-        OtherExpense.ngay_su_dung < month_end
-    ).group_by(OtherExpense.nguoi_tam_ung).all()
-    
-    payment_data = {}
-    def _add_purchase(name, source, amt):
-        if name not in payment_data:
-            payment_data[name] = {'mua_le': 0, 'cx222': 0, 'vnpt_vtl': 0, 'other_exp': 0, 'can_ck': 0}
-        source_up = (source or '').strip().upper()
-        if 'CX' in source_up or 'CÂY XĂNG' in source_up or 'CX222' in source_up:
-            payment_data[name]['cx222'] += amt
-        elif 'VNPT' in source_up or 'VTL' in source_up:
-            payment_data[name]['vnpt_vtl'] += amt
-            payment_data[name]['can_ck'] += amt
-        else:
-            payment_data[name]['mua_le'] += amt
-            payment_data[name]['can_ck'] += amt
-    
-    for row in purchase_q:
-        _add_purchase(row[0] or 'Không rõ', row[1], row[2] or 0)
-    for row in legacy_q:
-        _add_purchase(row[0] or 'Không rõ', row[1], row[2] or 0)
-    
-    for row in expense_q:
-        name = row[0] or 'Không rõ'
-        amt = row[1] or 0
-        if name not in payment_data:
-            payment_data[name] = {'mua_le': 0, 'cx222': 0, 'vnpt_vtl': 0, 'other_exp': 0, 'can_ck': 0}
-        payment_data[name]['other_exp'] += amt
-        payment_data[name]['can_ck'] += amt
-    
     pending_req_count = DeletionRequest.query.filter_by(status='Pending').count()
-    
-    active_tab = request.args.get('tab', 'reports')
-    
+    active_tab = request.args.get('tab', 'users')
+
     # SmartW config
     from smartw.config import load_smartw_config
     smartw_cfg = load_smartw_config()
     smartw_configured = smartw_cfg is not None
     smartw_username = smartw_cfg.get('username', '') if smartw_cfg else ''
     smartw_updated_at = smartw_cfg.get('updated_at', '') if smartw_cfg else ''
-    
-    # Station info for Infos tab
-    infos = GeneralInfo.query.order_by(GeneralInfo.id_tram).all()
 
     return render_template('admin_panel.html', users=users, requests=reqs,
-                           audit_data=audit_data, huyen_list=huyen_list, selected_huyen=huyen_filter,
                            pending_req_count=pending_req_count,
-                           station_summary=station_summary, payment_data=payment_data,
-                           filter_month=fm, filter_year=fy, available_years=available_years,
                            active_tab=active_tab,
                            smartw_configured=smartw_configured, smartw_username=smartw_username,
-                           smartw_updated_at=smartw_updated_at,
+                           smartw_updated_at=smartw_updated_at)
+
+
+@core_bp.route('/admin/mpd')
+@login_required
+@admin_required
+def admin_mpd():
+    """Quản lý MPĐ — reports, logs, infos with conditional loading."""
+    now = datetime.now()
+    active_tab = request.args.get('tab', 'reports')
+
+    # Shared filter setup
+    filter_month_raw = request.args.get('filter_month', str(now.month))
+    filter_year_raw = request.args.get('filter_year', str(now.year))
+    try:
+        fy = int(filter_year_raw)
+    except (ValueError, TypeError):
+        fy = now.year
+    if filter_month_raw and filter_month_raw.strip():
+        try:
+            fm = int(filter_month_raw)
+        except (ValueError, TypeError):
+            fm = now.month
+    else:
+        fm = now.month
+
+    if fm:
+        month_start = f"{fy}-{fm:02d}-01"
+        month_end = f"{fy}-{fm+1:02d}-01" if fm < 12 else f"{fy+1}-01-01"
+    else:
+        month_start = f"{fy}-01-01"
+        month_end = f"{fy+1}-01-01"
+
+    available_years = list(range(2025, now.year + 1))
+
+    # Safe defaults
+    station_summary = []
+    payment_data = {}
+    huyen_list = []
+    huyen_filter = None
+    gen_logs = []
+    infos = []
+
+    if active_tab == 'reports':
+        huyen_filter = request.args.get('huyen')
+        huyen_list = [h[0] for h in db.session.query(GeneralInfo.huyen).distinct().all() if h[0]]
+
+        station_summary_all = get_audit_data(huyen_filter, month_start, month_end)
+        station_summary = sorted(
+            [s for s in station_summary_all if s.get('gen_count', 0) > 0 or s.get('total_refill', 0) > 0],
+            key=lambda x: x.get('ton_real', 0), reverse=True
+        )
+
+        # Payment aggregation
+        from sqlalchemy import func as fn
+        purchase_q = db.session.query(
+            FuelLedger.nguoi_thuc_hien, FuelLedger.nha_cung_cap, fn.sum(FuelLedger.thanh_tien)
+        ).filter(
+            FuelLedger.ngay >= month_start, FuelLedger.ngay < month_end,
+            FuelLedger.type.in_(['STOCK_IN', 'DIRECT_BUY'])
+        ).group_by(FuelLedger.nguoi_thuc_hien, FuelLedger.nha_cung_cap).all()
+
+        legacy_q = db.session.query(
+            FuelPurchaseLog.nguoi_mua, FuelPurchaseLog.nha_cung_cap, fn.sum(FuelPurchaseLog.thanh_tien)
+        ).filter(
+            FuelPurchaseLog.ngay_mua >= month_start, FuelPurchaseLog.ngay_mua < month_end
+        ).group_by(FuelPurchaseLog.nguoi_mua, FuelPurchaseLog.nha_cung_cap).all()
+
+        expense_q = db.session.query(
+            OtherExpense.nguoi_tam_ung, fn.sum(OtherExpense.so_tien)
+        ).filter(
+            OtherExpense.ngay_su_dung >= month_start, OtherExpense.ngay_su_dung < month_end
+        ).group_by(OtherExpense.nguoi_tam_ung).all()
+
+        def _add_purchase(name, source, amt):
+            if name not in payment_data:
+                payment_data[name] = {'mua_le': 0, 'cx222': 0, 'vnpt_vtl': 0, 'other_exp': 0, 'can_ck': 0}
+            source_up = (source or '').strip().upper()
+            if 'CX' in source_up or 'CÂY XĂNG' in source_up or 'CX222' in source_up:
+                payment_data[name]['cx222'] += amt
+            elif 'VNPT' in source_up or 'VTL' in source_up:
+                payment_data[name]['vnpt_vtl'] += amt
+                payment_data[name]['can_ck'] += amt
+            else:
+                payment_data[name]['mua_le'] += amt
+                payment_data[name]['can_ck'] += amt
+
+        for row in purchase_q:
+            _add_purchase(row[0] or 'Không rõ', row[1], row[2] or 0)
+        for row in legacy_q:
+            _add_purchase(row[0] or 'Không rõ', row[1], row[2] or 0)
+        for row in expense_q:
+            name = row[0] or 'Không rõ'
+            amt = row[1] or 0
+            if name not in payment_data:
+                payment_data[name] = {'mua_le': 0, 'cx222': 0, 'vnpt_vtl': 0, 'other_exp': 0, 'can_ck': 0}
+            payment_data[name]['other_exp'] += amt
+            payment_data[name]['can_ck'] += amt
+
+    elif active_tab == 'logs':
+        gen_logs = GeneratorLog.query.filter(
+            GeneratorLog.ngay_van_hanh >= month_start,
+            GeneratorLog.ngay_van_hanh < month_end
+        ).order_by(GeneratorLog.ngay_van_hanh.desc()).all()
+
+    elif active_tab == 'infos':
+        infos = GeneralInfo.query.order_by(GeneralInfo.id_tram).all()
+
+    return render_template('admin_mpd.html',
+                           active_tab=active_tab,
+                           station_summary=station_summary,
+                           payment_data=payment_data,
+                           huyen_list=huyen_list,
+                           selected_huyen=huyen_filter,
+                           filter_month=fm, filter_year=fy,
+                           available_years=available_years,
+                           logs=gen_logs,
                            infos=infos)
 
 

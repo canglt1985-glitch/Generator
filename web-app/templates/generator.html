@@ -110,7 +110,7 @@
 
 <!-- NAVIGATION CARDS -->
 <div class="row g-2 mt-0" id="psNavCards">
-    {% if active_tab not in ['logs', 'infos'] %}
+    {% if active_tab != 'schedule' %}
     <div class="col">
         <div class="card shadow-sm ps-nav-card {{ 'active' if active_tab == 'fuel' else '' }}"
             onclick="switchGenTab('fuel')"
@@ -154,12 +154,7 @@
             data-bs-toggle="tab" data-bs-target="#expense-content" type="button" role="tab"></button></li>
     <li class="nav-item"><button class="nav-link {{ 'active' if active_tab == 'payment' else '' }}" id="payment-tab"
             data-bs-toggle="tab" data-bs-target="#payment-content" type="button" role="tab"></button></li>
-    {% if session['role'] == 'admin' %}
-    <li class="nav-item"><button class="nav-link {{ 'active' if active_tab == 'logs' else '' }}" id="logs-tab"
-            data-bs-toggle="tab" data-bs-target="#logs-content" type="button" role="tab"></button></li>
-    <li class="nav-item"><button class="nav-link {{ 'active' if active_tab == 'infos' else '' }}" id="infos-tab"
-            data-bs-toggle="tab" data-bs-target="#infos-content" type="button" role="tab"></button></li>
-    {% endif %}
+
 </ul>
 </div>
 
@@ -780,171 +775,9 @@
 </div>
 {% endif %}
 
-{% if session['role'] == 'admin' and active_tab == 'logs' %}
-<!-- TAB 5: CHẠY MÁY (Admin Only) -->
-<div class="tab-pane fade show active" id="logs-content" role="tabpanel">
-    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-        <h4 class="mb-0">Dữ liệu chạy máy phát</h4>
-        <div class="d-flex gap-2 align-items-end flex-wrap">
-            <form id="logsFilterForm" action="{{ url_for('generator.generator') }}" method="GET"
-                class="d-flex gap-2 align-items-end flex-wrap">
-                <input type="hidden" name="tab" value="logs">
-                <select name="filter_month" class="form-select form-select-sm rounded-pill" style="width:105px;"
-                    onchange="this.form.submit()">
-                    <option value="">-- Cả năm --</option>
-                    {% for m in range(1, 13) %}
-                    <option value="{{ m }}" {% if filter_month==m %}selected{% endif %}>Tháng {{ m }}
-                    </option>
-                    {% endfor %}
-                </select>
-                <select name="filter_year" class="form-select form-select-sm rounded-pill" style="width:90px;"
-                    onchange="this.form.submit()">
-                    {% for y in available_years %}
-                    <option value="{{ y }}" {% if filter_year==y %}selected{% endif %}>{{ y }}</option>
-                    {% endfor %}
-                </select>
-            </form>
-            <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#importLogsModal"><i
-                    class="fas fa-file-excel me-1"></i>Import</button>
-            <a href="{{ url_for('generator.export_generator_logs') }}" class="btn btn-sm btn-outline-info btn-export"><i
-                    class="fas fa-file-export me-1"></i>Xuất</a>
-            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addLogsModal"><i
-                    class="fas fa-plus me-1"></i>Thêm</button>
-        </div>
-    </div>
-    <div class="table-responsive">
-        <table id="logsTable" class="table table-vcenter table-hover card-table small text-nowrap">
-            <thead>
-                <tr>
-                    <th>Ngày VH</th>
-                    <th>Trạm</th>
-                    <th>Site</th>
-                    <th>CS Máy</th>
-                    <th>Giờ BĐ</th>
-                    <th>Giờ KT</th>
-                    <th>Thời Gian</th>
-                    <th>NL Hao</th>
-                    <th>Đơn Giá</th>
-                    <th>Thành Tiền</th>
-                    <th>Ghi Chú</th>
-                    <th class="text-end">#</th>
-                </tr>
-                <tr class="filter-row bg-light-lt">
-                    <th><input type="date" class="form-control form-control-sm" style="font-size:11px"
-                            onchange="filterTable(this)"></th>
-                    <th><input type="text" class="form-control form-control-sm" placeholder="🔍 Trạm"
-                            style="font-size:11px" oninput="filterTable(this)"></th>
-                    <th colspan="10"></th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for log in logs %}
-                <tr>
-                    <td class="text-muted small">{{ log.ngay_van_hanh.split('-')|reverse|join('/') if
-                        log.ngay_van_hanh else '--' }}</td>
-                    <td class="fw-bold">{{ log.id_tram }}</td>
-                    <td class="small">{{ log.site or '' }}</td>
-                    <td class="small">{{ log.cong_suat_may or '' }}</td>
-                    <td class="small">{{ log.gio_bat_dau or '--' }}</td>
-                    <td class="small">{{ log.gio_ket_thuc or '--' }}</td>
-                    <td>{{ log.thoi_gian_hoat_dong }}h</td>
-                    <td class="text-end">{{ log.nhien_lieu_tieu_hao or 0 }}L</td>
-                    <td class="text-end">{{ "{:,.0f}".format(log.don_gia or 0) }}</td>
-                    <td class="fw-bold text-end">{{ "{:,.0f}".format(log.thanh_tien or 0) }} đ</td>
-                    <td class="small text-muted">{{ log.ghi_chu or '' }}</td>
-                    <td class="text-end">
-                        <form action="{{ url_for('generator.delete_generator_log', id=log.id) }}" method="POST"
-                            class="d-inline" onsubmit="return confirm('Bạn có chắc chắn muốn xóa bản ghi này?');">
-                            <button class="btn btn-ghost-danger btn-icon border-0"><i class="fas fa-trash"></i></button>
-                        </form>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
-
-</div>
-{% endif %}
-
-{% if session['role'] == 'admin' and active_tab == 'infos' %}
-<!-- TAB 6: THÔNG TIN MPĐ (Admin Only) -->
-<div class="tab-pane fade show active" id="infos-content" role="tabpanel">
-    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-        <h4 class="mb-0">Danh mục Trạm & Định mức</h4>
-        <div class="d-flex gap-2">
-            <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#importInfoModal"><i
-                    class="fas fa-file-excel me-1"></i>Import</button>
-            <a href="{{ url_for('generator.export_general_info') }}" class="btn btn-sm btn-outline-info btn-export"><i
-                    class="fas fa-file-export me-1"></i>Xuất báo
-                cáo</a>
-            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addInfoModal"><i
-                    class="fas fa-plus me-1"></i>Thêm Mới</button>
-        </div>
-    </div>
-    <div class="table-responsive">
-        <form method="POST" action="{{ url_for('generator.bulk_delete_general_info') }}">
-            <div class="mb-3 d-flex align-items-center gap-2">
-                <input type="checkbox" id="selectAllInfo" class="form-check-input ms-3">
-                <label class="form-check-label small text-muted">Chọn tất cả</label>
-                <button type="submit" class="btn btn-ghost-danger btn-sm"
-                    onclick="return confirm('Xóa các mục đã chọn?')">
-                    <i class="fas fa-trash me-1"></i>Xóa hàng loạt
-                </button>
-            </div>
-            <table class="table table-vcenter table-hover card-table small">
-                <thead>
-                    <tr>
-                        <th></th>
-                        <th>ID Trạm</th>
-                        <th>Mã KH</th>
-                        <th>Huyện</th>
-                        <th>Quản lý</th>
-                        <th>Máy phát</th>
-                        <th>Dung tích</th>
-                        <th>ĐM TT</th>
-                        <th>ĐM TT</th>
-                        <th>NL</th>
-                        <th>Loại trạm</th>
-                        <th>Loại máy</th>
-                        <th class="text-end">#</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for item in infos %}
-                    <tr>
-                        <td><input type="checkbox" name="ids" value="{{ item.id }}" class="form-check-input"></td>
-                        <td><span class="badge bg-info-lt fw-bold">{{ item.id_tram }}</span></td>
-                        <td class="small">{{ item.ma_khach_hang or '--' }}</td>
-                        <td>{{ item.huyen or '--' }}</td>
-                        <td class="small">{{ item.quan_ly_tram or '--' }}</td>
-                        <td class="small">{{ item.may_phat_dien or '--' }}</td>
-                        <td class="text-end">{{ item.dung_tich or 0 }}</td>
-                        <td class="fw-bold text-end">{{ item.dinh_muc_thuc_te or '0' }}</td>
-                        <td class="text-end">{{ item.dinh_muc or '0' }}</td>
-                        <td class="small">{{ item.loai_nhien_lieu or '--' }}</td>
-                        <td class="small">{{ item.loai_tram or '--' }}</td>
-                        <td class="small">{{ item.loai_may or '--' }}</td>
-                        <td class="text-end">
-                            <a href="{{ url_for('generator.edit_general_info', id=item.id) }}"
-                                class="btn btn-ghost-primary btn-icon"><i class="fas fa-edit"></i></a>
-                            <form action="{{ url_for('generator.delete_general_info', id=item.id) }}" method="POST"
-                                class="d-inline" onsubmit="return confirm('Xóa?')">
-                                <button class="btn btn-ghost-danger btn-icon">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </form>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </form>
-    </div>
-</div>
-{% endif %}
 </div> <!-- Close mainTabContent -->
+
+
 
 
 <!-- SMART FUEL MODAL -->

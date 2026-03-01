@@ -21,7 +21,7 @@ from generator.routes import export_excel, handle_deletion
 @login_required
 @admin_required
 def general_info():
-    return redirect(url_for('generator.generator', tab='infos'))
+    return redirect(url_for('core.admin_mpd', tab='infos'))
 
 
 @generator_bp.route('/general-info/add', methods=['POST'])
@@ -49,7 +49,7 @@ def add_general_info():
         flash('Thêm mới thành công!', 'success')
     except Exception as e:
         flash(f'Lỗi: {str(e)}', 'danger')
-    return redirect(url_for('core.admin'))
+    return redirect(url_for('core.admin_mpd', tab='infos'))
 
 
 @generator_bp.route('/general-info/edit/<int:id>', methods=['GET', 'POST'])
@@ -74,7 +74,7 @@ def edit_general_info(id):
             info.ngay_cap_nhat = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             db.session.commit()
             flash('Cập nhật thành công!', 'success')
-            return redirect(url_for('core.admin'))
+            return redirect(url_for('core.admin_mpd', tab='infos'))
         except Exception as e:
             flash(f'Lỗi: {str(e)}', 'danger')
     return render_template('general_info_edit.html', item=info)
@@ -100,7 +100,7 @@ def bulk_delete_general_info():
             flash(f'Đã xóa {len(ids)} bản ghi thành công!', 'success')
     except Exception as e:
         flash(f'Lỗi: {str(e)}', 'danger')
-    return redirect(url_for('core.admin'))
+    return redirect(url_for('core.admin_mpd', tab='infos'))
 
 
 @generator_bp.route('/general-info/export')
@@ -147,7 +147,7 @@ def reset_general_info():
         flash('Đã xóa toàn bộ Thông tin chung!', 'success')
     except Exception as e:
         flash(f'Lỗi: {e}', 'danger')
-    return redirect(url_for('core.admin'))
+    return redirect(url_for('core.admin_mpd', tab='infos'))
 
 
 @generator_bp.route('/general-info/import', methods=['POST'])
@@ -180,7 +180,7 @@ def import_general_info():
 @login_required
 @admin_required
 def generator_logs():
-    return redirect(url_for('generator.generator', tab='logs'))
+    return redirect(url_for('core.admin_mpd', tab='logs'))
 
 
 @generator_bp.route('/generator-logs/add', methods=['POST'])
@@ -211,7 +211,7 @@ def add_generator_log():
     except Exception as e:
         db.session.rollback()
         flash(f'Lỗi: {str(e)}', 'danger')
-    return redirect(url_for('generator.generator', tab='logs'))
+    return redirect(url_for('core.admin_mpd', tab='logs'))
 
 
 @generator_bp.route('/generator-logs/edit/<int:id>', methods=['POST'])
@@ -239,7 +239,7 @@ def edit_generator_log(id):
         flash('Cập nhật nhật ký chạy máy thành công!', 'success')
     except Exception as e:
         flash(f'Lỗi cập nhật: {str(e)}', 'danger')
-    return redirect(request.referrer or url_for('core.admin'))
+    return redirect(request.referrer or url_for('core.admin_mpd', tab='logs'))
 
 
 @generator_bp.route('/generator-logs/delete/<int:id>', methods=['POST'])
@@ -314,7 +314,7 @@ def reset_generator_logs():
         flash('Đã xóa toàn bộ Nhật ký chạy máy!', 'success')
     except Exception as e:
         flash(f'Lỗi: {str(e)}', 'danger')
-    return redirect(url_for('core.admin'))
+    return redirect(url_for('core.admin_mpd', tab='logs'))
 
 
 @generator_bp.route('/generator-logs/import', methods=['POST'])
