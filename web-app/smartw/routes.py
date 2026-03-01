@@ -139,7 +139,7 @@ def api_summary():
     lich_cup_count = 0
     try:
         from models import PowerSchedule
-        today_str = datetime.now().strftime('%d/%m/%Y')
+        today_str = datetime.now().strftime('%Y-%m-%d')
         lich_cup_count = PowerSchedule.query.filter(
             PowerSchedule.ngay_mat_dien >= today_str
         ).count()
@@ -321,7 +321,7 @@ def api_lich_cup():
     """Return upcoming power outage schedules (ngay >= today)."""
     from models import PowerSchedule
     try:
-        today_str = datetime.now().strftime('%d/%m/%Y')
+        today_str = datetime.now().strftime('%Y-%m-%d')
         schedules = PowerSchedule.query.filter(
             PowerSchedule.ngay_mat_dien >= today_str
         ).order_by(PowerSchedule.ngay_mat_dien.asc()).all()
