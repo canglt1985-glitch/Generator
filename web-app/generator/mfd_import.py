@@ -105,7 +105,7 @@ def get_station_info(id_tram: str) -> dict | None:
         'loai_nhien_lieu': info.loai_nhien_lieu or 'Dầu',
         'may_phat_dien': info.may_phat_dien or 'MLĐ',
         'loai_may': info.loai_may or '',
-        'cong_suat_may': str(info.dung_tich) if info.dung_tich else '',
+        'cong_suat_may': str(info.cong_suat) if info.cong_suat else '',
     }
 
 
@@ -120,11 +120,22 @@ def build_alarm_id(record: dict) -> str:
     return f'{site}__{sdate}'
 
 
-def is_duplicate(alarm_id: str) -> bool:
-    """Check if this alarm was already imported."""
+def is_duplicate(alarm_id: str, id_tram: str = None, ngay: str = None, gio_bd: str = None, gio_kt: str = None) -> bool:
+    """Check if this alarm was already imported (by alarm_id OR by id_tram+date+times)."""
     from models import GeneratorLog
-    existing = GeneratorLog.query.filter_by(smartw_alarm_id=alarm_id).first()
-    return existing is not None
+    # Check by smartw_alarm_id
+    if alarm_id:
+        existing = GeneratorLog.query.filter_by(smartw_alarm_id=alarm_id).first()
+        if existing:
+            return True
+    # Also check by id_tram + ngay + gio to catch manual/other imports
+    if id_tram and ngay and gio_bd:
+        q = GeneratorLog.query.filter_by(id_tram=id_tram, ngay_van_hanh=ngay, gio_bat_dau=gio_bd)
+        if gio_kt:
+            q = q.filter_by(gio_ket_thuc=gio_kt)
+        if q.first():
+            return True
+    return False
 
 
 # ── Main Import Function ─────────────────────────────────────────
@@ -154,14 +165,20 @@ def import_mfd_data(raw_data: list[dict]) -> dict:
         site = record.get('siteid') or record.get('ne') or ''
         alarm_id = build_alarm_id(record)
 
-        # 1. Check duplicate
-        if is_duplicate(alarm_id):
+        # 1. Parse dates early (needed for dedup)
+        start_dt = parse_smartw_date(record.get('sdate'))
+        end_dt = parse_smartw_date(record.get('edate'))
+
+        ngay = start_dt.strftime('%Y-%m-%d') if start_dt else None
+        gio_bd = start_dt.strftime('%H:%M') if start_dt else None
+        gio_kt = end_dt.strftime('%H:%M') if end_dt else None
+
+        # 2. Check duplicate (alarm_id + id_tram+date+times)
+        if is_duplicate(alarm_id, id_tram=site, ngay=ngay, gio_bd=gio_bd, gio_kt=gio_kt):
             result['duplicates'] += 1
             continue
 
-        # 2. Parse dates
-        start_dt = parse_smartw_date(record.get('sdate'))
-        end_dt = parse_smartw_date(record.get('edate'))
+        # 3. Validate dates
         duration_min = record.get('minuteNumber') or 0
 
         if not start_dt:

@@ -343,10 +343,110 @@ def import_generator_log():
         'nhien_lieu': ['Nhiên liệu', 'Loại nhiên liệu', 'Fuel Type'],
         'ghi_chu': ['Ghi chú', 'Note', 'Remarks']
     }
-    return generic_import(GeneratorLog, col_map, 'generator.generator_logs',
-                          date_cols=['ngay_van_hanh'],
-                          float_cols=['nhien_lieu_tieu_hao', 'don_gia', 'thanh_tien'],
-                          duration_cols=['thoi_gian_hoat_dong'])
+    result = generic_import(GeneratorLog, col_map, 'generator.generator_logs',
+                            date_cols=['ngay_van_hanh'],
+                            float_cols=['nhien_lieu_tieu_hao', 'don_gia', 'thanh_tien'],
+                            duration_cols=['thoi_gian_hoat_dong'])
+
+    # Post-import: auto-calculate missing fields
+    try:
+        _auto_fill_generator_logs()
+    except Exception as e:
+        flash(f'Import OK nhưng lỗi khi tự tính: {str(e)}', 'warning')
+
+    return result
+
+
+def _auto_fill_generator_logs():
+    """Fill missing fields in GeneratorLog: duration, fuel, cost.
+    Only fills records where thanh_tien is 0 or empty (not yet calculated).
+    """
+    from generator.mfd_import import get_station_info, get_pretax_price
+
+    logs = GeneratorLog.query.filter(
+        (GeneratorLog.thanh_tien == None) |
+        (GeneratorLog.thanh_tien == 0) |
+        (GeneratorLog.thanh_tien == 0.0)
+    ).filter(
+        GeneratorLog.id_tram != None,
+        GeneratorLog.id_tram != ''
+    ).all()
+
+    if not logs:
+        return
+
+    filled = 0
+    for log in logs:
+        changed = False
+
+        # 1. Auto-fill thoi_gian from gio_bat_dau / gio_ket_thuc
+        if (not log.thoi_gian_hoat_dong or log.thoi_gian_hoat_dong == 0) and log.gio_bat_dau and log.gio_ket_thuc:
+            try:
+                bd = datetime.strptime(log.gio_bat_dau, '%H:%M')
+                kt = datetime.strptime(log.gio_ket_thuc, '%H:%M')
+                diff = (kt - bd).total_seconds() / 3600
+                if diff < 0:
+                    diff += 24  # overnight
+                log.thoi_gian_hoat_dong = round(diff, 2)
+                changed = True
+            except Exception:
+                pass
+
+        # 2. Lookup station info (dinh_muc, loai_nhien_lieu)
+        station = get_station_info(log.id_tram)
+        if station:
+            # Fill site if empty
+            if not log.site:
+                log.site = log.id_tram
+                changed = True
+            # Fill dinh_muc if empty
+            if not log.dinh_muc or log.dinh_muc in ('', '0', '0.0'):
+                log.dinh_muc = str(station['dinh_muc'])
+                changed = True
+            # Fill nhien_lieu type if empty
+            if not log.nhien_lieu:
+                log.nhien_lieu = station['loai_nhien_lieu']
+                changed = True
+            # Fill loai_may if empty
+            if not log.loai_may:
+                log.loai_may = station['loai_may']
+                changed = True
+            # Fill cong_suat_may if empty
+            if not log.cong_suat_may:
+                log.cong_suat_may = station['cong_suat_may']
+                changed = True
+
+        # 3. Calculate nhien_lieu_tieu_hao
+        dinh_muc_val = 0
+        try:
+            dinh_muc_val = float(log.dinh_muc or 0)
+        except (ValueError, TypeError):
+            pass
+
+        hours = log.thoi_gian_hoat_dong or 0
+        if (not log.nhien_lieu_tieu_hao or log.nhien_lieu_tieu_hao == 0) and hours > 0 and dinh_muc_val > 0:
+            log.nhien_lieu_tieu_hao = round(hours * dinh_muc_val, 2)
+            changed = True
+
+        # 4. Get don_gia from PVOil
+        if (not log.don_gia or log.don_gia == 0):
+            fuel_type = log.nhien_lieu or 'Dầu'
+            log.don_gia = get_pretax_price(fuel_type)
+            changed = True
+
+        # 5. Calculate thanh_tien
+        nl = log.nhien_lieu_tieu_hao or 0
+        dg = log.don_gia or 0
+        if nl > 0 and dg > 0:
+            log.thanh_tien = round(nl * dg)
+            changed = True
+
+        if changed:
+            filled += 1
+
+    if filled > 0:
+        db.session.commit()
+        flash(f'Đã tự tính NL + chi phí cho {filled} dòng!', 'info')
 
 
 # ============================================================

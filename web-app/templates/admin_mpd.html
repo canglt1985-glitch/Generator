@@ -267,12 +267,83 @@
                                 class="fas fa-plus me-1"></i>Thêm</button>
                     </div>
                 </div>
+                {% set ns = namespace(total=0, hours=0, fuel_xang=0, fuel_dau=0) %}
+                {% for log in logs %}
+                {% set ns.total = ns.total + (log.thanh_tien or 0) %}
+                {% set ns.hours = ns.hours + (log.thoi_gian_hoat_dong or 0) %}
+                {% if log.nhien_lieu and 'Xăng' in log.nhien_lieu %}
+                {% set ns.fuel_xang = ns.fuel_xang + (log.nhien_lieu_tieu_hao or 0) %}
+                {% else %}
+                {% set ns.fuel_dau = ns.fuel_dau + (log.nhien_lieu_tieu_hao or 0) %}
+                {% endif %}
+                {% endfor %}
+                {% set total_thanh_tien = ns.total %}
+                {% set total_vat = (total_thanh_tien * 0.08)|round(0)|int %}
+                {% set total_cong = (total_thanh_tien + total_vat)|int %}
+                <div class="row g-2 mb-3">
+                    <div class="col-auto">
+                        <div class="card card-sm bg-primary-lt">
+                            <div class="card-body py-2 px-3">
+                                <div class="text-muted small">Records</div>
+                                <div class="fw-bold">{{ logs|length }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <div class="card card-sm bg-cyan-lt">
+                            <div class="card-body py-2 px-3">
+                                <div class="text-muted small">⏱ Giờ chạy</div>
+                                <div class="fw-bold text-info">{{ "{:,.1f}".format(ns.hours) }}h</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <div class="card card-sm bg-red-lt">
+                            <div class="card-body py-2 px-3">
+                                <div class="text-muted small">⛽ Xăng</div>
+                                <div class="fw-bold text-red">{{ "{:,.1f}".format(ns.fuel_xang) }}L</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <div class="card card-sm bg-orange-lt">
+                            <div class="card-body py-2 px-3">
+                                <div class="text-muted small">🛢 Dầu</div>
+                                <div class="fw-bold text-orange">{{ "{:,.1f}".format(ns.fuel_dau) }}L</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <div class="card card-sm bg-blue-lt">
+                            <div class="card-body py-2 px-3">
+                                <div class="text-muted small">💰 Thành tiền</div>
+                                <div class="fw-bold text-primary">{{ "{:,.0f}".format(total_thanh_tien) }}đ</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <div class="card card-sm bg-yellow-lt">
+                            <div class="card-body py-2 px-3">
+                                <div class="text-muted small">VAT 8%</div>
+                                <div class="fw-bold text-warning">{{ "{:,.0f}".format(total_vat) }}đ</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <div class="card card-sm bg-green-lt">
+                            <div class="card-body py-2 px-3">
+                                <div class="text-muted small">🏆 Tổng cộng</div>
+                                <div class="fw-bold text-success fs-5">{{ "{:,.0f}".format(total_cong) }}đ</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <div class="table-responsive">
                     <table id="logsTable" class="table table-vcenter table-hover card-table small text-nowrap">
                         <thead>
                             <tr>
-                                <th>Ngày VH</th>
                                 <th>Trạm</th>
+                                <th>Ngày VH</th>
                                 <th>Site</th>
                                 <th>CS Máy</th>
                                 <th>Giờ BĐ</th>
@@ -285,19 +356,19 @@
                                 <th class="text-end">#</th>
                             </tr>
                             <tr class="filter-row bg-light-lt">
-                                <th><input type="date" class="form-control form-control-sm" style="font-size:11px"
-                                        onchange="filterTable(this)"></th>
                                 <th><input type="text" class="form-control form-control-sm" placeholder="🔍 Trạm"
                                         style="font-size:11px" oninput="filterTable(this)"></th>
+                                <th><input type="date" class="form-control form-control-sm" style="font-size:11px"
+                                        onchange="filterTable(this)"></th>
                                 <th colspan="10"></th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for log in logs %}
                             <tr>
+                                <td class="fw-bold">{{ log.id_tram }}</td>
                                 <td class="text-muted small">{{ log.ngay_van_hanh.split('-')|reverse|join('/') if
                                     log.ngay_van_hanh else '--' }}</td>
-                                <td class="fw-bold">{{ log.id_tram }}</td>
                                 <td class="small">{{ log.site or '' }}</td>
                                 <td class="small">{{ log.cong_suat_may or '' }}</td>
                                 <td class="small">{{ log.gio_bat_dau or '--' }}</td>

@@ -177,9 +177,8 @@ if __name__ == '__main__':
     if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
         scheduler.add_job(id='fetch_outages_task', func=scheduled_outage_fetch, trigger='cron', hour=5, minute=0)
 
-        # Fuel price: 7AM (for morning ops) + 4PM (catch new prices effective 3PM)
-        scheduler.add_job(id='fuel_price_morning', func=scheduled_fuel_price_fetch, trigger='cron', hour=7, minute=0)
-        scheduler.add_job(id='fuel_price_afternoon', func=scheduled_fuel_price_fetch, trigger='cron', hour=16, minute=0)
+        # Fuel price: 1x/day at 4PM (PVOil updates ~3PM)
+        scheduler.add_job(id='fuel_price_daily', func=scheduled_fuel_price_fetch, trigger='cron', hour=16, minute=0)
 
         from smartw.config import is_smartw_configured
         if is_smartw_configured():
@@ -204,10 +203,10 @@ if __name__ == '__main__':
                 trigger='cron', hour=6, minute=0,
                 max_instances=1
             )
-            print("📡 SmartW Scheduler: Alarm poll 15p + VHKT 5AM + MFD import 6AM")
+            print("SmartW Scheduler: Alarm poll 15p + VHKT 5AM + MFD import 6AM")
 
         scheduler.start()
-        print("🕒 Scheduler đã kích hoạt: Lịch cúp 5AM + Giá NL 7AM/4PM + MFD 6AM")
+        print("Scheduler: Lich cup 5AM + Gia NL 4PM + MFD 6AM")
 
         # Initial fuel price fetch on startup
         scheduled_fuel_price_fetch()

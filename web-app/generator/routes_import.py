@@ -78,14 +78,41 @@ def generic_import(model_class, col_map, redirect_route, date_cols=[], float_col
                 return s
 
             def parse_time_str(val):
-                if pd.isna(val) or val == '':
+                if val is None or (isinstance(val, float) and pd.isna(val)):
+                    return ''
+                if pd.isna(val):
                     return ''
                 if isinstance(val, time):
                     return val.strftime('%H:%M')
                 if isinstance(val, datetime):
                     return val.strftime('%H:%M')
+                # Handle pandas Timedelta (Excel stores time as timedelta)
+                if isinstance(val, pd.Timedelta):
+                    total_sec = int(val.total_seconds())
+                    h = total_sec // 3600
+                    m = (total_sec % 3600) // 60
+                    return f'{h:02d}:{m:02d}'
+                # Handle python timedelta
+                import datetime as dt_mod
+                if isinstance(val, dt_mod.timedelta):
+                    total_sec = int(val.total_seconds())
+                    h = total_sec // 3600
+                    m = (total_sec % 3600) // 60
+                    return f'{h:02d}:{m:02d}'
                 s = str(val).strip()
-                for fmt in ['%H:%M:%S', '%H:%M', '%I:%M %p', '%I:%M%p']:
+                if not s or s.lower() in ('nan', 'none', 'nat'):
+                    return ''
+                # Handle "0 days 08:30:00" format from pandas Timedelta str
+                if 'days' in s.lower():
+                    try:
+                        td = pd.Timedelta(s)
+                        total_sec = int(td.total_seconds())
+                        h = total_sec // 3600
+                        m = (total_sec % 3600) // 60
+                        return f'{h:02d}:{m:02d}'
+                    except Exception:
+                        pass
+                for fmt in ['%H:%M:%S', '%H:%M', '%I:%M %p', '%I:%M%p', '%H:%M:%S.%f']:
                     try:
                         return datetime.strptime(s, fmt).strftime('%H:%M')
                     except Exception:
@@ -155,11 +182,16 @@ def generic_import(model_class, col_map, redirect_route, date_cols=[], float_col
                 except Exception:
                     return 0.0
 
+
+            skipped_guide = 0
+            skipped_empty = 0
             for index, row in df.iterrows():
                 first_val = str(row.iloc[0]) if len(row) > 0 else ""
                 if "HƯỚNG DẪN" in first_val:
+                    skipped_guide += 1
                     continue
                 if row.isnull().all():
+                    skipped_empty += 1
                     continue
                 try:
                     data = {}
@@ -209,8 +241,19 @@ def generic_import(model_class, col_map, redirect_route, date_cols=[], float_col
                 if updated > 0:
                     parts.append(f'cập nhật {updated}')
                 flash(f'Import thành công: {", ".join(parts)} dòng!', 'success')
+            # Report skipped rows
+            skip_parts = []
+            if skipped_guide > 0:
+                skip_parts.append(f'{skipped_guide} dòng hướng dẫn')
+            if skipped_empty > 0:
+                skip_parts.append(f'{skipped_empty} dòng trống')
+            if skip_parts:
+                flash(f'Bỏ qua: {", ".join(skip_parts)}', 'info')
             if errors:
-                flash(f'Có {len(errors)} dòng không lọc được hoặc lỗi: {errors[0]}', 'warning')
+                import logging as _log
+                for e in errors:
+                    _log.warning(f'[IMPORT ERROR] {e}')
+                flash(f'Có {len(errors)} dòng lỗi: {errors[0]}', 'warning')
         except Exception as e:
             flash(f'Lỗi xử lý file: {str(e)}', 'danger')
 
