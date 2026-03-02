@@ -823,10 +823,10 @@ class SmartWScraper:
 
     async def scrape_mll_all(self) -> tuple[list[dict], list[dict]]:
         """Scrape ALL MLL — single fetch, smart-classify into Trạm + Cell.
-        Classification rules:
-        - 4G without cellid → MLL Trạm
-        - 3G site with ≥ 3 cells off → MLL Trạm (grouped as 1 entry)
-        - Everything else → CellOff
+        Classification rules (using site_cell_count.json):
+        - No cellid → MLL Trạm
+        - All cells of a site+network off → MLL Trạm (grouped as 1 entry)
+        - Otherwise → CellOff
         Returns (mll_tram, mll_cell) tuple.
         """
         await self._ensure_login()
@@ -835,40 +835,61 @@ class SmartWScraper:
 
         all_data = await self._fetch_alarm_data(url, MLL_COLUMNS)
 
+        # Load site cell counts reference
+        import json as _json
+        cell_count_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'site_cell_count.json')
+        site_cell_ref = {}
+        try:
+            with open(cell_count_path, 'r', encoding='utf-8') as f:
+                site_cell_ref = _json.load(f)
+        except Exception as e:
+            logger.warning(f'Cannot load site_cell_count.json: {e}')
+
         mll_tram = []
         cell_candidates = []
 
+        # Step 1: Separate no-cellid (always MLL Trạm) from cell-level alarms
         for r in all_data:
             cellid = r.get('cellid') or ''
             site = r.get('site') or ''
-            network = (r.get('network') or '').upper()
-
-            # Rule 1: ALL 4G → MLL Trạm (4G typically = 1 cell = whole site)
-            if '4G' in network or 'RAN_4G' in network:
-                mll_tram.append(r)
-            # Rule 1b: Any network without cellid → MLL Trạm
-            elif not cellid or cellid == site:
+            if not cellid or cellid == site:
                 mll_tram.append(r)
             else:
                 cell_candidates.append(r)
 
-        # Rule 2: 3G sites with ≥ 3 cells off → promote to MLL Trạm
+        # Step 2: Group cell alarms by site + network_key
         from collections import defaultdict
-        site_3g_cells = defaultdict(list)
+        site_net_cells = defaultdict(list)  # key: (site, net_key) → [records]
         for r in cell_candidates:
             network = (r.get('network') or '').upper()
-            if '3G' in network or 'UTRAN' in network:
-                site_3g_cells[r.get('site', '')].append(r)
+            if '4G' in network or 'RAN_4G' in network:
+                net_key = '4G'
+            elif '3G' in network or 'UTRAN' in network:
+                net_key = '3G'
+            elif '5G' in network:
+                net_key = '5G'
+            else:
+                net_key = 'other'
+            site_net_cells[(r.get('site', ''), net_key)].append(r)
 
-        promoted_sites = set()
-        for site, cells in site_3g_cells.items():
-            if len(cells) >= 3:
-                promoted_sites.add(site)
+        # Step 3: Compare cell-off count with total cell count per site+network
+        promoted_sites = set()  # set of (site, net_key) promoted to Trạm
+        for (site, net_key), cells in site_net_cells.items():
+            ref = site_cell_ref.get(site, {})
+            total_cells = ref.get(net_key, 0) if net_key != 'other' else 0
+
+            # Count unique cellids that are off
+            off_cellids = set(c.get('cellid', '') for c in cells)
+            off_count = len(off_cellids)
+
+            # Promote to MLL Trạm if ALL cells of this network are down
+            if total_cells > 0 and off_count >= total_cells:
+                promoted_sites.add((site, net_key))
                 # Create a single MLL Trạm entry from first cell record
-                tram_entry = dict(cells[0])  # Copy first cell
-                tram_entry['cellid'] = None   # Clear cellid for Trạm display
+                tram_entry = dict(cells[0])
+                tram_entry['cellid'] = None
                 tram_entry['cellName'] = None
-                # Use the earliest sdate among the cells
+                # Use earliest sdate
                 earliest = min(c.get('sdate') or float('inf') for c in cells)
                 if earliest != float('inf'):
                     tram_entry['sdate'] = earliest
@@ -877,13 +898,40 @@ class SmartWScraper:
                 tram_entry['duaration'] = max_dur
                 tram_entry['minute'] = max_dur
                 mll_tram.append(tram_entry)
+                logger.info(f'MLL promote {site} {net_key}: {off_count}/{total_cells} cells off → Trạm')
+            elif total_cells == 0 and off_count >= 3:
+                # Fallback: site not in reference, use old rule (≥3 cells = Trạm)
+                promoted_sites.add((site, net_key))
+                tram_entry = dict(cells[0])
+                tram_entry['cellid'] = None
+                tram_entry['cellName'] = None
+                earliest = min(c.get('sdate') or float('inf') for c in cells)
+                if earliest != float('inf'):
+                    tram_entry['sdate'] = earliest
+                max_dur = max(c.get('duaration') or c.get('minute') or 0 for c in cells)
+                tram_entry['duaration'] = max_dur
+                tram_entry['minute'] = max_dur
+                mll_tram.append(tram_entry)
+                logger.info(f'MLL promote {site} {net_key}: {off_count} cells (no ref) → Trạm')
 
-        # CellOff = cell_candidates minus promoted 3G sites
-        mll_cell = [r for r in cell_candidates
-                    if r.get('site') not in promoted_sites]
+        # CellOff = cell_candidates minus promoted
+        mll_cell = []
+        for r in cell_candidates:
+            site = r.get('site', '')
+            network = (r.get('network') or '').upper()
+            if '4G' in network or 'RAN_4G' in network:
+                nk = '4G'
+            elif '3G' in network or 'UTRAN' in network:
+                nk = '3G'
+            elif '5G' in network:
+                nk = '5G'
+            else:
+                nk = 'other'
+            if (site, nk) not in promoted_sites:
+                mll_cell.append(r)
 
         logger.info(f'SmartW Scrape MLL: {len(all_data)} total → '
-                    f'{len(mll_tram)} trạm (4G no-cell + 3G ≥3cell) + {len(mll_cell)} cell')
+                    f'{len(mll_tram)} trạm + {len(mll_cell)} cell')
         self._save_json(mll_tram, 'mll.json')
         self._save_json(mll_cell, 'mll_cell.json')
         return mll_tram, mll_cell
