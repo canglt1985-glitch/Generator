@@ -260,9 +260,9 @@
                         </form>
                         <button class="btn btn-sm btn-success" data-bs-toggle="modal"
                             data-bs-target="#importLogsModal"><i class="fas fa-file-excel me-1"></i>Import</button>
-                        <a href="{{ url_for('generator.export_generator_logs') }}"
-                            class="btn btn-sm btn-outline-info btn-export"><i
-                                class="fas fa-file-export me-1"></i>Xuất</a>
+                        <a href="{{ url_for('generator.export_generator_logs', month=filter_month, year=filter_year) }}"
+                            class="btn btn-sm btn-outline-info btn-export"><i class="fas fa-file-export me-1"></i>Xuất
+                            T{{ filter_month }}/{{ filter_year }}</a>
                         <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addLogsModal"><i
                                 class="fas fa-plus me-1"></i>Thêm</button>
                     </div>

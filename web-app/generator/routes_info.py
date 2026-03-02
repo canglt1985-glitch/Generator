@@ -255,14 +255,24 @@ def delete_generator_log(id):
 @login_required
 @admin_required
 def export_generator_logs():
-    start_date = request.args.get('start_date')
-    end_date = request.args.get('end_date')
+    month = request.args.get('month', type=int)
+    year = request.args.get('year', type=int)
     query = GeneratorLog.query
-    if start_date:
-        query = query.filter(GeneratorLog.ngay_van_hanh >= start_date)
-    if end_date:
-        query = query.filter(GeneratorLog.ngay_van_hanh <= end_date)
-    data = query.all()
+    filename = 'nhat_ky_chay_may.xlsx'
+
+    if month and year:
+        prefix = f'{year}-{month:02d}'
+        query = query.filter(GeneratorLog.ngay_van_hanh.like(f'{prefix}%'))
+        filename = f'Thoi_gian_chay_may_T{month}_{year}.xlsx'
+    else:
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        if start_date:
+            query = query.filter(GeneratorLog.ngay_van_hanh >= start_date)
+        if end_date:
+            query = query.filter(GeneratorLog.ngay_van_hanh <= end_date)
+
+    data = query.order_by(GeneratorLog.ngay_van_hanh.desc()).all()
     col_map = {
         'id_tram': 'ID Trạm',
         'site': 'Site',
@@ -280,7 +290,7 @@ def export_generator_logs():
         'nhien_lieu': 'Nhiên liệu',
         'ghi_chu': 'Ghi chú'
     }
-    return export_excel(data, 'nhat_ky_chay_may.xlsx', col_map)
+    return export_excel(data, filename, col_map)
 
 
 @generator_bp.route('/generator-logs/template')
