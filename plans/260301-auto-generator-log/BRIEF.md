@@ -168,11 +168,14 @@ Trong đó giá PVOil tra theo:
 ### 🚀 MVP (Bắt buộc):
 - [x] Scrape alarm MPĐ từ SmartW API (dùng scraper có sẵn)
 - [ ] Lọc event < 10p, detect bất thường > 12h
-- [ ] Auto-import normal → GeneratorLog (status=approved)
+- [x] Auto-import normal → GeneratorLog
 - [ ] Flag abnormal → GeneratorLog (status=pending)
-- [ ] Tính toán: NL tiêu hao, đơn giá trước VAT, thành tiền
+- [x] Tính toán: NL tiêu hao, đơn giá trước VAT, thành tiền
 - [ ] UI: Highlight pending records, admin approve/edit
-- [ ] Scheduler: 6 AM hàng ngày
+- [x] Scheduler: 6 AM hàng ngày
+- [x] Summary cards (records, giờ, xăng/dầu, chi phí)
+- [x] Export theo tháng filter
+- [x] Smart MLL classify (site_cell_count.json)
 
 ### 🎁 Phase 2 (Sau):
 - [ ] Cross-check với lịch cúp điện (MĐ alarm)
