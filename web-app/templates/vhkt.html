@@ -155,6 +155,33 @@
             white-space: nowrap;
         }
     }
+
+    /* ── Mobile nav cards fix ── */
+    @media (max-width: 576px) {
+        #navCards {
+            flex-wrap: wrap !important;
+        }
+
+        #navCards>.col {
+            flex: 0 0 33.333% !important;
+            max-width: 33.333% !important;
+            margin-bottom: 0.35rem !important;
+        }
+
+        .nav-card-label {
+            white-space: normal !important;
+            font-size: 0.6rem !important;
+            line-height: 1.15 !important;
+        }
+
+        .nav-card-count {
+            font-size: 1rem !important;
+        }
+
+        .nav-card-body {
+            padding: 0.15rem 0.1rem !important;
+        }
+    }
 </style>
 <div class="row g-2 mt-2 mb-1" id="navCards">
     <div class="col">

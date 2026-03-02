@@ -843,8 +843,8 @@ class SmartWScraper:
             site = r.get('site') or ''
             network = (r.get('network') or '').upper()
 
-            # Rule 1: 4G without cellid (or cellid == site) → MLL Trạm
-            if ('4G' in network or 'RAN_4G' in network) and (not cellid or cellid == site):
+            # Rule 1: ALL 4G → MLL Trạm (4G typically = 1 cell = whole site)
+            if '4G' in network or 'RAN_4G' in network:
                 mll_tram.append(r)
             # Rule 1b: Any network without cellid → MLL Trạm
             elif not cellid or cellid == site:
