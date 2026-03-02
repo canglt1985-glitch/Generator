@@ -841,12 +841,11 @@
                                         name="so_luong" id="inp_soluong" oninput="calcMoney()">
                                 </div>
                                 <div class="col-6" id="group-price">
-                                    <label class="form-label small fw-bold mb-1">Đơn giá</label>
-                                    <input type="number" step="1" class="form-control form-control-sm" name="don_gia"
-                                        id="inp_dongia" value="{{ suggested_price | int }}" oninput="calcMoney()">
-                                    <small class="text-muted d-block text-end cursor-pointer"
-                                        onclick="useSuggestedPrice()">Gợi ý: {{ "{:,.0f}".format(suggested_price)
-                                        }}</small>
+                                    <label class="form-label small fw-bold mb-1">Đơn giá <small
+                                            class="text-muted fw-normal">(PVOil)</small></label>
+                                    <input type="number" step="1" class="form-control form-control-sm bg-light"
+                                        name="don_gia" id="inp_dongia" readonly>
+                                    <small class="text-muted d-block text-end" id="price-source"></small>
                                 </div>
                             </div>
 
@@ -894,7 +893,32 @@
 </div>
 
 <script>
-    const SUGGESTED_PRICE = {{ suggested_price }};
+    // --- PVOil Fuel Price ---
+    let FUEL_PRICES = { xang_ron95: 0, dau_do: 0 };
+    fetch('/api/fuel-price')
+        .then(r => r.json())
+        .then(data => {
+            FUEL_PRICES = data;
+            applyFuelPrice();
+        })
+        .catch(() => console.warn('Không lấy được giá PVOil'));
+
+    function applyFuelPrice() {
+        const nlType = document.getElementById('inp_loai_nl');
+        const priceInput = document.getElementById('inp_dongia');
+        const priceSource = document.getElementById('price-source');
+        if (!nlType || !priceInput) return;
+        const price = nlType.value === 'Xăng' ? FUEL_PRICES.xang_ron95 : FUEL_PRICES.dau_do;
+        if (price > 0) {
+            priceInput.value = price;
+            if (priceSource) priceSource.textContent = 'PVOil: ' + price.toLocaleString('vi-VN') + 'đ';
+            calcMoney();
+        }
+    }
+
+    // Re-apply price when fuel type changes
+    const nlSelect = document.getElementById('inp_loai_nl');
+    if (nlSelect) nlSelect.addEventListener('change', applyFuelPrice);
 
     function setFuelType(type) {
         document.getElementById('fuel_type').value = type;
@@ -914,12 +938,12 @@
             g.style.visibility = 'visible';
             g.querySelectorAll('input, select').forEach(el => {
                 el.disabled = false;
-                el.readOnly = false;
             });
         });
+        // Price always readonly
+        document.getElementById('inp_dongia').readOnly = true;
         nccSelect.required = true;
         stationInput.required = false;
-        document.getElementById('inp_dongia').style.backgroundColor = '';
 
         function dimGroup(group) {
             group.style.opacity = '0.35';
@@ -933,22 +957,16 @@
             dimGroup(groupActual);
             nccSelect.required = true;
         } else if (type === 'STATION_OUT') {
-            // Xuất kho: cần trạm + SL, đơn giá auto từ nhập kho gần nhất
+            // Xuất kho: cần trạm + SL
             dimGroup(groupSupplier);
             nccSelect.required = false;
             stationInput.required = true;
-            // Auto-fill đơn giá từ lần nhập kho gần nhất
-            const priceInput = document.getElementById('inp_dongia');
-            priceInput.value = SUGGESTED_PRICE;
-            priceInput.readOnly = true;
-            priceInput.style.backgroundColor = '#f0f0f0';
-            // Auto-calc thành tiền
-            calcMoney();
         } else {
             // Đổ NL (mua): cần tất cả
             nccSelect.required = true;
             stationInput.required = true;
         }
+        applyFuelPrice();
     }
 
     function calcMoney() {
@@ -990,10 +1008,6 @@
         }
     }
 
-    function useSuggestedPrice() {
-        document.getElementById('inp_dongia').value = SUGGESTED_PRICE;
-        calcMoney();
-    }
 
     function checkStationStock(stationId) {
         const hint = document.getElementById('station-stock-hint');

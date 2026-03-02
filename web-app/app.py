@@ -87,6 +87,76 @@ def scheduled_outage_fetch():
         print(f"❌ [Scheduler] Lỗi: {e}")
 
 
+def scheduled_fuel_price_fetch():
+    from fuel_price import fetch_and_save
+    try:
+        fetch_and_save()
+    except Exception as e:
+        print(f"❌ [Scheduler] Lỗi scrape giá NL: {e}")
+
+
+# --- API: Fuel Price ---
+from flask import jsonify, request
+
+@app.route('/api/fuel-price')
+def api_fuel_price():
+    from fuel_price import get_fuel_prices
+    return jsonify(get_fuel_prices())
+
+
+# --- API: MFD Import (manual trigger) ---
+@app.route('/api/mfd-import', methods=['POST'])
+def api_mfd_import():
+    """Manually trigger MFĐ import for a specific date. Admin only."""
+    from flask_login import current_user
+    if not current_user.is_authenticated or current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    data = request.get_json(silent=True) or {}
+    target_date = data.get('date')  # DD/MM/YYYY or None (yesterday)
+
+    from smartw.worker import run_mfd_import_poll
+    result = run_mfd_import_poll(target_date)
+    return jsonify(result or {'error': 'No result'})
+
+
+# --- API: Station Info (for manual generator log form) ---
+@app.route('/api/station-info')
+def api_station_info():
+    """Get station details for generator log auto-fill.
+    Query: ?id=DNTN28
+    Returns: loai_may, dinh_muc, nhien_lieu, don_gia (PVOil trước VAT)
+    """
+    from flask_login import current_user
+    if not current_user.is_authenticated:
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    id_tram = request.args.get('id', '').strip()
+    if not id_tram:
+        return jsonify({'error': 'Missing id parameter'}), 400
+
+    from models import GeneralInfo
+    info = GeneralInfo.query.filter_by(id_tram=id_tram).first()
+    if not info:
+        return jsonify({'error': f'Station {id_tram} not found'}), 404
+
+    # Get PVOil price before VAT
+    from generator.mfd_import import get_pretax_price
+    loai_nl = info.loai_nhien_lieu or 'Dầu'
+    don_gia = get_pretax_price(loai_nl)
+
+    return jsonify({
+        'id_tram': info.id_tram,
+        'site': info.id_tram,
+        'loai_may': info.loai_may or '',
+        'may_phat_dien': info.may_phat_dien or '',
+        'cong_suat_may': str(info.cong_suat) if info.cong_suat else '',
+        'dinh_muc': info.dinh_muc or 0,
+        'nhien_lieu': loai_nl,
+        'don_gia': don_gia,
+    })
+
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
@@ -107,6 +177,10 @@ if __name__ == '__main__':
     if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
         scheduler.add_job(id='fetch_outages_task', func=scheduled_outage_fetch, trigger='cron', hour=5, minute=0)
 
+        # Fuel price: 7AM (for morning ops) + 4PM (catch new prices effective 3PM)
+        scheduler.add_job(id='fuel_price_morning', func=scheduled_fuel_price_fetch, trigger='cron', hour=7, minute=0)
+        scheduler.add_job(id='fuel_price_afternoon', func=scheduled_fuel_price_fetch, trigger='cron', hour=16, minute=0)
+
         from smartw.config import is_smartw_configured
         if is_smartw_configured():
             from smartw.worker import run_alarm_poll, run_vhkt_poll
@@ -122,9 +196,20 @@ if __name__ == '__main__':
                 trigger='cron', hour=5, minute=0,
                 max_instances=1
             )
-            print("📡 SmartW Scheduler: Alarm poll 15p + VHKT 5:00 AM")
+            # MFD daily import: 6 AM (scrape yesterday's generator runtime)
+            from smartw.worker import run_mfd_import_poll
+            scheduler.add_job(
+                id='mfd_import_daily',
+                func=lambda: app.app_context().push() or run_mfd_import_poll(),
+                trigger='cron', hour=6, minute=0,
+                max_instances=1
+            )
+            print("📡 SmartW Scheduler: Alarm poll 15p + VHKT 5AM + MFD import 6AM")
 
         scheduler.start()
-        print("🕒 Scheduler đã kích hoạt: Quét lịch tự động lúc 05:00 AM hàng ngày.")
+        print("🕒 Scheduler đã kích hoạt: Lịch cúp 5AM + Giá NL 7AM/4PM + MFD 6AM")
+
+        # Initial fuel price fetch on startup
+        scheduled_fuel_price_fetch()
 
     app.run(debug=True, port=5005)

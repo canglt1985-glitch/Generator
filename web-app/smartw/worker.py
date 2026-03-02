@@ -570,3 +570,123 @@ def run_vhkt_poll():
         _is_running = False
         _save_status(status)
 
+
+def run_mfd_import_poll(target_date: str = None):
+    """Daily MFĐ reports scrape + auto-import into GeneratorLog.
+    Called by APScheduler at 6:00 AM (scrapes yesterday's data).
+    Can also be triggered manually with a specific date.
+
+    Args:
+        target_date: Optional date string (DD/MM/YYYY). Default: yesterday.
+    """
+    global _is_running
+    if _is_running:
+        logger.info('SmartW Worker: Already running, skipping MFĐ import')
+        return {'error': 'Worker busy'}
+
+    from .config import load_smartw_config
+    config = load_smartw_config()
+    if not config:
+        logger.warning('SmartW Worker: Not configured, skipping MFĐ import')
+        return {'error': 'SmartW not configured'}
+
+    # Circuit breaker
+    status = _load_status()
+    fail_count = status.get('login_fail_count', 0)
+    if fail_count >= MAX_LOGIN_FAILURES:
+        logger.warning(f'SmartW Worker: MFĐ import PAUSED — {fail_count} login failures.')
+        return {'error': 'Login paused'}
+
+    _is_running = True
+
+    async def _do_mfd_scrape():
+        scraper = await _get_or_create_scraper(config['username'], config['password'])
+        if not scraper:
+            return {'error': 'Login failed'}
+
+        results = {}
+        try:
+            await scraper._ensure_login()
+            mfd_data = await scraper.scrape_mfd_reports(target_date)
+            results['raw_count'] = len(mfd_data)
+            results['data'] = mfd_data
+            results['status'] = 'success'
+        except Exception as e:
+            err_str = str(e)
+            logger.error(f'SmartW MFĐ Import Scrape Error: {err_str}')
+
+            # Browser crash → retry once
+            crash_keywords = ['NoneType', 'send', 'closed', 'Target page']
+            if any(kw in err_str for kw in crash_keywords):
+                logger.info('SmartW Worker: MFĐ browser crash — retrying...')
+                await _destroy_scraper()
+                try:
+                    scraper = await _get_or_create_scraper(config['username'], config['password'])
+                    if scraper:
+                        await scraper._ensure_login()
+                        mfd_data = await scraper.scrape_mfd_reports(target_date)
+                        results['raw_count'] = len(mfd_data)
+                        results['data'] = mfd_data
+                        results['status'] = 'success'
+                    else:
+                        results['error'] = 'Login failed (retry)'
+                except Exception as retry_err:
+                    results['error'] = str(retry_err)
+                    await _destroy_scraper()
+            else:
+                results['error'] = err_str
+                await _destroy_scraper()
+        return results
+
+    import_result = None
+    try:
+        date_label = target_date or 'yesterday'
+        logger.info(f'SmartW Worker: Starting MFD import for {date_label}')
+
+        scrape_result = _run_async(_do_mfd_scrape)
+
+        if scrape_result.get('error'):
+            logger.error(f'SmartW Worker: MFD scrape failed: {scrape_result["error"]}')
+            status['errors'].append({
+                'time': datetime.now().isoformat(),
+                'error': f'MFD: {scrape_result["error"]}',
+                'source': 'mfd_import'
+            })
+            status['errors'] = status['errors'][-10:]
+            err_lower = scrape_result['error'].lower()
+            if any(kw in err_lower for kw in ['login', 'credentials']):
+                status['login_fail_count'] = status.get('login_fail_count', 0) + 1
+        else:
+            # Scrape OK → run import logic (needs Flask app context)
+            status['login_fail_count'] = 0
+            raw_data = scrape_result.get('data', [])
+
+            if raw_data:
+                from generator.mfd_import import import_mfd_data
+                import_result = import_mfd_data(raw_data)
+                logger.info(f'SmartW Worker: MFD import done — '
+                            f'{import_result["imported"]} imported, '
+                            f'{import_result["pending"]} pending, '
+                            f'{import_result["skipped"]} skipped, '
+                            f'{import_result["duplicates"]} duplicates')
+            else:
+                import_result = {'imported': 0, 'pending': 0, 'skipped': 0,
+                                 'duplicates': 0, 'errors': []}
+                logger.info(f'SmartW Worker: MFD — no events for {date_label}')
+
+        status['last_mfd_import'] = datetime.now().isoformat()
+
+    except Exception as e:
+        logger.error(f'SmartW Worker: MFD unexpected error: {e}')
+        status['errors'].append({
+            'time': datetime.now().isoformat(),
+            'error': str(e),
+            'source': 'mfd_import'
+        })
+        status['errors'] = status['errors'][-10:]
+    finally:
+        _is_running = False
+        _save_status(status)
+
+    return import_result
+

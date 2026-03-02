@@ -309,6 +309,11 @@ def admin_mpd():
     elif active_tab == 'infos':
         infos = GeneralInfo.query.order_by(GeneralInfo.id_tram).all()
 
+    # Variables needed by _modals_admin.html (included in template)
+    stations = GeneralInfo.query.order_by(GeneralInfo.id_tram).all()
+    from models import User
+    users = User.query.all()
+
     return render_template('admin_mpd.html',
                            active_tab=active_tab,
                            station_summary=station_summary,
@@ -318,7 +323,10 @@ def admin_mpd():
                            filter_month=fm, filter_year=fy,
                            available_years=available_years,
                            logs=gen_logs,
-                           infos=infos)
+                           infos=infos,
+                           now_date=now.strftime('%Y-%m-%d'),
+                           stations=stations,
+                           users=users)
 
 
 @core_bp.route('/admin/requests/approve/<int:req_id>', methods=['POST'])

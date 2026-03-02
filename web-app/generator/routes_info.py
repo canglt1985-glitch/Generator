@@ -117,9 +117,10 @@ def export_general_info():
     data = query.all()
     col_map = {
         'id_tram': 'ID Trạm', 'ma_khach_hang': 'Mã KH', 'huyen': 'Huyện', 'quan_ly_tram': 'Quản lý trạm',
-        'may_phat_dien': 'Máy phát điện', 'dung_tich': 'Dung tích', 'dinh_muc_thuc_te': 'Định mức thực tế',
+        'may_phat_dien': 'Máy phát điện', 'loai_may': 'Nhãn hiệu', 'cong_suat': 'Công suất (KVA)',
+        'dung_tich': 'Dung tích bồn (L)', 'dinh_muc_thuc_te': 'Định mức thực tế',
         'dinh_muc': 'Định mức thanh toán', 'loai_tram': 'Loại trạm', 'vung_phu': 'Vùng phủ',
-        'loai_nhien_lieu': 'Loại nhiên liệu', 'loai_may': 'Loại máy', 'site': 'Site'
+        'loai_nhien_lieu': 'Loại nhiên liệu'
     }
     return export_excel(data, 'thong_tin_chung.xlsx', col_map)
 
@@ -130,9 +131,10 @@ def export_general_info():
 def template_general_info():
     col_map = {
         'id_tram': 'ID Trạm', 'ma_khach_hang': 'Mã KH', 'huyen': 'Huyện', 'quan_ly_tram': 'Quản lý trạm',
-        'may_phat_dien': 'Máy phát điện', 'dung_tich': 'Dung tích', 'dinh_muc_thuc_te': 'Định mức thực tế',
+        'may_phat_dien': 'Máy phát điện', 'loai_may': 'Nhãn hiệu', 'cong_suat': 'Công suất (KVA)',
+        'dung_tich': 'Dung tích bồn (L)', 'dinh_muc_thuc_te': 'Định mức thực tế',
         'dinh_muc': 'Định mức thanh toán', 'loai_tram': 'Loại trạm', 'vung_phu': 'Vùng phủ',
-        'loai_nhien_lieu': 'Loại nhiên liệu', 'loai_may': 'Loại máy'
+        'loai_nhien_lieu': 'Loại nhiên liệu'
     }
     return export_excel(None, 'mau_thong_tin_chung.xlsx', col_map)
 
@@ -161,15 +163,16 @@ def import_general_info():
         'huyen': ['Huyện', 'Quận/Huyện', 'District', 'Quận'],
         'quan_ly_tram': ['Quản lý trạm', 'QL Trạm', 'Đội quản lý', 'Tổ quản lý', 'Đơn vị quản lý'],
         'may_phat_dien': ['Máy phát điện', 'Loại máy phát', 'Máy phát', 'Tổ máy'],
-        'dung_tich': ['Dung tích', 'Dung tích máy', 'Dung tích thùng dầu', 'Thể tích bồn'],
+        'loai_may': ['Nhãn hiệu', 'Loại máy', 'Model máy', 'Hãng máy'],
+        'cong_suat': ['Công suất (KVA)', 'Công suất', 'KVA', 'Power'],
+        'dung_tich': ['Dung tích bồn (L)', 'Dung tích', 'Dung tích máy', 'Dung tích thùng dầu', 'Thể tích bồn'],
         'dinh_muc_thuc_te': ['Định mức thực tế', 'Định mức chạy máy', 'Rate Real', 'Định mức tiêu hao'],
         'dinh_muc': ['Định mức thanh toán', 'Định mức', 'Quota', 'Định mức TT'],
         'loai_tram': ['Loại trạm', 'Site Type', 'Phân loại'],
         'vung_phu': ['Vùng phủ', 'Khu vực', 'Region'],
-        'loai_nhien_lieu': ['Loại nhiên liệu', 'Nhiên liệu', 'Fuel Type'],
-        'loai_may': ['Loại máy', 'Model máy', 'Nhãn hiệu']
+        'loai_nhien_lieu': ['Loại nhiên liệu', 'Nhiên liệu', 'Fuel Type']
     }
-    return generic_import(GeneralInfo, col_map, 'generator.general_info', float_cols=['dung_tich', 'dinh_muc_thuc_te', 'dinh_muc'], dup_cols=['id_tram'])
+    return generic_import(GeneralInfo, col_map, 'generator.general_info', float_cols=['cong_suat', 'dung_tich', 'dinh_muc_thuc_te', 'dinh_muc'], dup_cols=['id_tram'])
 
 
 # ============================================================

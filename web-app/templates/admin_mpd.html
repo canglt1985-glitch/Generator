@@ -138,8 +138,8 @@
                             </tr>
                             <tr>
                                 <th class="bg-primary-lt small">Máy phát</th>
-                                <th class="bg-primary-lt small">Dung tích</th>
-                                <th class="bg-primary-lt small">Loại máy</th>
+                                <th class="bg-primary-lt small">Bồn NL (L)</th>
+                                <th class="bg-primary-lt small">Nhãn hiệu</th>
                                 <th class="bg-primary-lt small">Loại NL</th>
                                 <th class="bg-info-lt small text-end">Thực tế</th>
                                 <th class="bg-info-lt small text-end">Thanh toán</th>
@@ -348,7 +348,7 @@
                                 <i class="fas fa-trash me-1"></i>Xóa hàng loạt
                             </button>
                         </div>
-                        <table class="table table-vcenter table-hover card-table small">
+                        <table class="table table-vcenter table-hover card-table small text-nowrap">
                             <thead>
                                 <tr>
                                     <th></th>
@@ -357,12 +357,13 @@
                                     <th>Huyện</th>
                                     <th>Quản lý</th>
                                     <th>Máy phát</th>
-                                    <th>Dung tích</th>
+                                    <th>Nhãn hiệu</th>
+                                    <th>CS (KVA)</th>
+                                    <th>Bồn NL (L)</th>
                                     <th>ĐM TT</th>
                                     <th>ĐM TT</th>
                                     <th>NL</th>
                                     <th>Loại trạm</th>
-                                    <th>Loại máy</th>
                                     <th class="text-end">#</th>
                                 </tr>
                             </thead>
@@ -376,12 +377,13 @@
                                     <td>{{ item.huyen or '--' }}</td>
                                     <td class="small">{{ item.quan_ly_tram or '--' }}</td>
                                     <td class="small">{{ item.may_phat_dien or '--' }}</td>
+                                    <td class="small">{{ item.loai_may or '--' }}</td>
+                                    <td class="text-end">{{ item.cong_suat or '' }}</td>
                                     <td class="text-end">{{ item.dung_tich or 0 }}</td>
                                     <td class="fw-bold text-end">{{ item.dinh_muc_thuc_te or '0' }}</td>
                                     <td class="text-end">{{ item.dinh_muc or '0' }}</td>
                                     <td class="small">{{ item.loai_nhien_lieu or '--' }}</td>
                                     <td class="small">{{ item.loai_tram or '--' }}</td>
-                                    <td class="small">{{ item.loai_may or '--' }}</td>
                                     <td class="text-end">
                                         <a href="{{ url_for('generator.edit_general_info', id=item.id) }}"
                                             class="btn btn-ghost-primary btn-icon"><i class="fas fa-edit"></i></a>

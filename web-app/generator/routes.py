@@ -83,11 +83,6 @@ def generator():
 
     # ── Shared lightweight data (always needed for modals/forms) ──
     stations = GeneralInfo.query.with_entities(GeneralInfo.id_tram).all()
-    latest_fuel_price = db.session.query(FuelLedger.don_gia).filter(
-        FuelLedger.type.in_(['STOCK_IN', 'DIRECT_BUY']),
-        FuelLedger.don_gia > 0
-    ).order_by(FuelLedger.ngay.desc()).first()
-    suggested_price = latest_fuel_price[0] if latest_fuel_price else 20000
 
     # ── Safe defaults (unused tabs get empty data) ──
     schedules = []
@@ -276,7 +271,6 @@ def generator():
                            stations=stations,
                            fuel_logs=fuel_logs,
                            central_stock=central_stock,
-                           suggested_price=suggested_price,
                            fuel_year=fuel_year,
                            fuel_month=fuel_month,
                            fuel_years=fuel_years,
@@ -565,3 +559,75 @@ def manual_fetch_outages():
         flash(f'Lỗi hệ thống: {str(e)}', 'danger')
 
     return redirect(url_for('generator.generator'))
+
+
+# ============================================================
+# GENERATOR LOG — APPROVE / REJECT  (Admin only)
+# ============================================================
+
+@generator_bp.route('/generator/approve/<int:id>', methods=['POST'])
+@login_required
+@admin_required
+def approve_log(id):
+    """Approve a pending GeneratorLog record."""
+    log = GeneratorLog.query.get_or_404(id)
+    log.status = 'approved'
+    db.session.commit()
+    flash(f'✅ Đã duyệt: {log.id_tram} ({log.ngay_van_hanh})', 'success')
+    return redirect(request.referrer or url_for('generator.generator', tab='logs'))
+
+
+@generator_bp.route('/generator/reject/<int:id>', methods=['POST'])
+@login_required
+@admin_required
+def reject_log(id):
+    """Reject a pending GeneratorLog record."""
+    log = GeneratorLog.query.get_or_404(id)
+    log.status = 'rejected'
+    db.session.commit()
+    flash(f'❌ Đã từ chối: {log.id_tram} ({log.ngay_van_hanh})', 'warning')
+    return redirect(request.referrer or url_for('generator.generator', tab='logs'))
+
+
+@generator_bp.route('/generator/update-log/<int:id>', methods=['POST'])
+@login_required
+@admin_required
+def update_log(id):
+    """Update a GeneratorLog record (edit times) and auto-approve."""
+    log = GeneratorLog.query.get_or_404(id)
+
+    # Update editable fields
+    gio_bat_dau = request.form.get('gio_bat_dau', '').strip()
+    gio_ket_thuc = request.form.get('gio_ket_thuc', '').strip()
+
+    if gio_bat_dau:
+        log.gio_bat_dau = gio_bat_dau
+    if gio_ket_thuc:
+        log.gio_ket_thuc = gio_ket_thuc
+
+    # Recalculate duration + costs
+    if gio_bat_dau and gio_ket_thuc:
+        try:
+            t1 = datetime.strptime(gio_bat_dau, '%H:%M')
+            t2 = datetime.strptime(gio_ket_thuc, '%H:%M')
+            diff = (t2 - t1).total_seconds() / 3600
+            if diff < 0:
+                diff += 24  # Overnight
+            log.thoi_gian_hoat_dong = round(diff, 2)
+
+            # Recalculate fuel consumption
+            dinh_muc = float(log.dinh_muc) if log.dinh_muc else 0
+            log.nhien_lieu_tieu_hao = round(diff * dinh_muc, 2)
+
+            # Recalculate cost with current PVOil price
+            from generator.mfd_import import get_pretax_price
+            log.don_gia = get_pretax_price(log.nhien_lieu)
+            log.thanh_tien = round(log.nhien_lieu_tieu_hao * log.don_gia)
+        except (ValueError, TypeError):
+            pass
+
+    # Auto-approve after edit
+    log.status = 'approved'
+    db.session.commit()
+    flash(f'✅ Đã cập nhật và duyệt: {log.id_tram} ({log.ngay_van_hanh})', 'success')
+    return redirect(request.referrer or url_for('generator.generator', tab='logs'))

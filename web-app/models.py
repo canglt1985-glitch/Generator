@@ -12,14 +12,15 @@ class GeneralInfo(db.Model):
     ma_khach_hang = db.Column(db.String(50))
     huyen = db.Column(db.String(100))
     quan_ly_tram = db.Column(db.String(100))
-    may_phat_dien = db.Column(db.String(100))
-    dung_tich = db.Column(db.Integer)
+    may_phat_dien = db.Column(db.String(100))    # Tên đầy đủ (VD: "KIBII 6KVA")
+    cong_suat = db.Column(db.Float)               # Công suất máy (KVA)
+    dung_tich = db.Column(db.Integer)              # Dung tích bồn nhiên liệu (lít)
     dinh_muc_thuc_te = db.Column(db.Float)
-    dinh_muc = db.Column(db.Float)  # Định mức thanh toán
+    dinh_muc = db.Column(db.Float)                 # Định mức thanh toán (l/h)
     loai_tram = db.Column(db.String(100))
     vung_phu = db.Column(db.String(100))
     loai_nhien_lieu = db.Column(db.String(50))
-    loai_may = db.Column(db.String(100))
+    loai_may = db.Column(db.String(100))           # Nhãn hiệu máy (VD: "KIBII")
     ngay_cap_nhat = db.Column(db.String(20), default=lambda: datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
 
@@ -56,6 +57,10 @@ class GeneratorLog(db.Model):
     ghi_chu = db.Column(db.String(500))
     ket_qua_doi_soat = db.Column(db.String(200))
     nhien_lieu = db.Column(db.String(100))
+    # Auto-import support (MFĐ from SmartW)
+    status = db.Column(db.String(20), default='approved')   # approved / pending / rejected
+    source = db.Column(db.String(20), default='manual')      # manual / smartw
+    smartw_alarm_id = db.Column(db.String(100))               # Unique alarm ID (chống duplicate)
 
 
 class FuelLedger(db.Model):

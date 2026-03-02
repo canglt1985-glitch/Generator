@@ -61,6 +61,7 @@ def generic_import(model_class, col_map, redirect_route, date_cols=[], float_col
                 return row.get(col) if col else default
 
             count = 0
+            updated = 0
             errors = []
 
             def parse_date_str(val):
@@ -187,6 +188,11 @@ def generic_import(model_class, col_map, redirect_route, date_cols=[], float_col
                         if filter_args:
                             exists = model_class.query.filter_by(**filter_args).first()
                             if exists:
+                                # UPDATE existing record with new data
+                                for key, val in data.items():
+                                    if key not in dup_cols and val not in (None, '', '0', 0, 0.0, 'nan', 'None'):
+                                        setattr(exists, key, val)
+                                updated += 1
                                 continue
 
                     obj = model_class(**data)
@@ -195,9 +201,14 @@ def generic_import(model_class, col_map, redirect_route, date_cols=[], float_col
                 except Exception as e:
                     errors.append(f"Dòng {index + 2}: {str(e)}")
 
-            if count > 0:
+            if count > 0 or updated > 0:
                 db.session.commit()
-                flash(f'Import thành công {count} dòng!', 'success')
+                parts = []
+                if count > 0:
+                    parts.append(f'thêm mới {count}')
+                if updated > 0:
+                    parts.append(f'cập nhật {updated}')
+                flash(f'Import thành công: {", ".join(parts)} dòng!', 'success')
             if errors:
                 flash(f'Có {len(errors)} dòng không lọc được hoặc lỗi: {errors[0]}', 'warning')
         except Exception as e:

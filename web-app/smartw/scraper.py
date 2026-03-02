@@ -715,6 +715,112 @@ class SmartWScraper:
         logger.info(f'SmartW Scrape MPĐ: ✅ {len(data)} records')
         return data
 
+    async def scrape_mfd_reports(self, date_str: str = None) -> list[dict]:
+        """Scrape MFĐ Reports — alarm/site/data.htm endpoint.
+        Returns COMPLETED generator events with start + end times.
+        Different from scrape_mpd() which only gets ACTIVE alarms.
+
+        Args:
+            date_str: Date to scrape (format: DD/MM/YYYY). Default: yesterday.
+        Returns:
+            List of dicts with keys: siteid, alarmName, sdate, edate, minuteNumber, etc.
+        """
+        await self._ensure_login()
+
+        if not date_str:
+            yesterday = datetime.now() - timedelta(days=1)
+            date_str = yesterday.strftime('%d/%m/%Y')
+
+        url = self._build_mfd_report_url(date_str)
+        logger.info(f'SmartW Scrape MFĐ Reports: {date_str} — {url[:100]}...')
+
+        # Ensure we're on SmartW domain for cookies
+        current_url = self._page.url or ''
+        if 'smartw.mobifone.vn' not in current_url:
+            await self._page.goto(f'{BASE_URL}/smartw/', wait_until='domcontentloaded', timeout=30000)
+            await self._handle_session_expired()
+
+        # Fetch JSON via browser fetch() — keeps SSO session cookies
+        result = await self._page.evaluate('''
+            async (url) => {
+                try {
+                    const res = await fetch(url, { credentials: "include" });
+                    if (!res.ok) return { ok: false, status: res.status, data: "" };
+                    const text = await res.text();
+                    return { ok: true, status: res.status, data: text };
+                } catch(e) {
+                    return { ok: false, status: 0, data: e.message };
+                }
+            }
+        ''', url)
+
+        if not result.get('ok'):
+            logger.error(f'SmartW MFĐ Reports: HTTP {result.get("status")} — fetch failed')
+            # Try re-login and retry once
+            await self._handle_session_expired()
+            result = await self._page.evaluate('''
+                async (url) => {
+                    try {
+                        const res = await fetch(url, { credentials: "include" });
+                        if (!res.ok) return { ok: false, status: res.status, data: "" };
+                        const text = await res.text();
+                        return { ok: true, status: res.status, data: text };
+                    } catch(e) {
+                        return { ok: false, status: 0, data: e.message };
+                    }
+                }
+            ''', url)
+            if not result.get('ok'):
+                logger.error('SmartW MFĐ Reports: Retry also failed')
+                return []
+
+        # Parse SmartW JSON: [{TotalRows}, {strWhere}, {sort...}, {Rows: [...]}]
+        import json as _json
+        try:
+            parsed = _json.loads(result['data'])
+        except (_json.JSONDecodeError, TypeError) as e:
+            logger.error(f'SmartW MFĐ Reports: JSON parse error: {e}')
+            return []
+
+        # Extract Rows from the array
+        rows = []
+        total = 0
+        if isinstance(parsed, list):
+            for item in parsed:
+                if isinstance(item, dict):
+                    if 'TotalRows' in item:
+                        total = int(item['TotalRows'])
+                    if 'Rows' in item:
+                        rows = item['Rows']
+
+        # Filter: only generator alarms (case-insensitive)
+        data = [r for r in rows
+                if 'generat' in (r.get('alarmName') or '').lower()]
+
+        logger.info(f'SmartW MFĐ Reports: {total} total → {len(data)} generator events for {date_str}')
+        self._save_json(data, 'mfd_reports.json')
+        return data
+
+    def _build_mfd_report_url(self, date_str: str) -> str:
+        """Build alarm/site/data.htm URL for MFĐ reports.
+        Args:
+            date_str: Date in DD/MM/YYYY format.
+        """
+        params = {
+            'type': 'MFD', 'level': 'SITE',
+            'region': '', 'dept': '',
+            'team': TEAM_ALARM,
+            'province': '', 'district': '',
+            'minuteNumber': '', 'ipAddress': '',
+            'sdate': f'{date_str} 00:00',
+            'edate': f'{date_str} 23:59',
+            'siteid': '',
+            'filterscount': '0', 'groupscount': '0',
+            'pagenum': '0', 'pagesize': '300',
+            'recordstartindex': '0', 'recordendindex': '300',
+        }
+        return f'{BASE_URL}/smartw/alarm/site/data.htm?' + urlencode(params)
+
     async def scrape_mll_all(self) -> tuple[list[dict], list[dict]]:
         """Scrape ALL MLL — single fetch, smart-classify into Trạm + Cell.
         Classification rules:

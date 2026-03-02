@@ -47,29 +47,45 @@
             <form action="{{ url_for('generator.add_generator_log') }}" method="POST">
                 <div class="modal-body">
                     <div class="row g-3">
-                        <div class="col-md-4"><label class="form-label">ID Trạm</label><input type="text" name="id_tram"
-                                class="form-control" required list="stationList"></div>
-                        <div class="col-md-4"><label class="form-label">Ngày vận hành</label><input type="date"
-                                name="ngay_van_hanh" class="form-control" required value="{{ now_date }}"></div>
-                        <div class="col-md-4"><label class="form-label">Loại NL</label><select name="nhien_lieu"
-                                class="form-select">
-                                <option value="Dầu">Dầu</option>
-                                <option value="Xăng">Xăng</option>
-                            </select></div>
-                        <div class="col-md-3"><label class="form-label">Bắt đầu</label><input type="time"
-                                name="gio_bat_dau" class="form-control" id="start_time" required></div>
-                        <div class="col-md-3"><label class="form-label">Kết thúc</label><input type="time"
-                                name="gio_ket_thuc" class="form-control" id="end_time" required></div>
+                        <!-- User inputs: Station, Date, Start, End -->
+                        <div class="col-md-4"><label class="form-label">ID Trạm <span
+                                    class="text-danger">*</span></label><input type="text" name="id_tram"
+                                class="form-control" required list="stationList" id="log_station"
+                                placeholder="Chọn trạm..." autocomplete="off"></div>
+                        <div class="col-md-4"><label class="form-label">Ngày vận hành <span
+                                    class="text-danger">*</span></label><input type="date" name="ngay_van_hanh"
+                                class="form-control" required value="{{ now_date }}"></div>
+                        <div class="col-md-4">
+                            <label class="form-label text-muted small">Thông tin trạm</label>
+                            <div class="p-2 bg-light rounded small" id="log_station_info">
+                                <span class="text-muted">← Chọn trạm để xem</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3"><label class="form-label">Bắt đầu <span
+                                    class="text-danger">*</span></label><input type="time" name="gio_bat_dau"
+                                class="form-control" id="start_time" required></div>
+                        <div class="col-md-3"><label class="form-label">Kết thúc <span
+                                    class="text-danger">*</span></label><input type="time" name="gio_ket_thuc"
+                                class="form-control" id="end_time" required></div>
+                        <!-- Auto-filled fields (readonly) -->
+                        <div class="col-md-2"><label class="form-label">Loại NL</label><input type="text"
+                                name="nhien_lieu" class="form-control bg-light" id="log_fuel_type" readonly value="Dầu">
+                        </div>
                         <div class="col-md-2"><label class="form-label">ĐM (L/h)</label><input type="number" step="0.01"
-                                name="dinh_muc" class="form-control" id="log_rate"></div>
+                                name="dinh_muc" class="form-control bg-light" id="log_rate" readonly></div>
                         <div class="col-md-2"><label class="form-label">Đơn giá</label><input type="number" step="1"
-                                name="don_gia" class="form-control" id="log_price" placeholder="VNĐ..."></div>
-                        <div class="col-md-2">
-                            <label class="form-label text-muted small">Thông tin tự tính</label>
-                            <div class="p-2 bg-light rounded small" id="log_calc_preview">0h | 0L | 0đ</div>
+                                name="don_gia" class="form-control bg-light" id="log_price" readonly placeholder="Auto">
+                        </div>
+                        <!-- Calculation preview -->
+                        <div class="col-12">
+                            <div class="p-2 bg-primary bg-opacity-10 rounded text-center" id="log_calc_preview">
+                                <span class="text-muted">Chọn trạm + nhập giờ → tự động tính</span>
+                            </div>
                             <input type="hidden" name="thoi_gian_hoat_dong" id="log_duration">
                             <input type="hidden" name="nhien_lieu_tieu_hao" id="log_consumed">
                             <input type="hidden" name="thanh_tien" id="log_total">
+                            <input type="hidden" name="loai_may" id="log_loai_may">
+                            <input type="hidden" name="cong_suat_may" id="log_cong_suat">
                         </div>
                     </div>
                 </div>
@@ -160,15 +176,57 @@
 <datalist id="stationList">{% for s in stations %}<option value="{{ s.id_tram }}">{% endfor %}</datalist>
 
 <script>
-    // Logic for Add Log calculation
+    // ── Add Log: Auto-fill from station-info API ──
+    const logStation = document.getElementById('log_station');
     const sIn = document.getElementById('start_time');
     const eIn = document.getElementById('end_time');
     const rIn = document.getElementById('log_rate');
     const pIn = document.getElementById('log_price');
+    const fuelIn = document.getElementById('log_fuel_type');
     const preview = document.getElementById('log_calc_preview');
+    const stationInfo = document.getElementById('log_station_info');
 
+    // Fetch station info when station is selected
+    let stationDebounce;
+    if (logStation) {
+        logStation.addEventListener('change', fetchStationInfo);
+        logStation.addEventListener('input', function () {
+            clearTimeout(stationDebounce);
+            stationDebounce = setTimeout(fetchStationInfo, 300);
+        });
+    }
+
+    function fetchStationInfo() {
+        const id = logStation.value.trim();
+        if (!id || id.length < 3) return;
+
+        fetch(`/api/station-info?id=${encodeURIComponent(id)}`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.error) {
+                    stationInfo.innerHTML = `<span class="text-danger">${data.error}</span>`;
+                    return;
+                }
+                // Auto-fill readonly fields
+                rIn.value = data.dinh_muc || '';
+                pIn.value = data.don_gia || '';
+                fuelIn.value = data.nhien_lieu || 'Dầu';
+                document.getElementById('log_loai_may').value = data.loai_may || '';
+                document.getElementById('log_cong_suat').value = data.cong_suat_may || '';
+
+                // Show station info
+                stationInfo.innerHTML = `<strong>${data.id_tram}</strong> | ${data.nhien_lieu} | ĐM: ${data.dinh_muc} L/h | Giá: ${(data.don_gia || 0).toLocaleString('vi-VN')}đ`;
+
+                updateLogCalc();
+            })
+            .catch(() => {
+                stationInfo.innerHTML = '<span class="text-muted">Không tìm thấy</span>';
+            });
+    }
+
+    // Calculate when times change
     function updateLogCalc() {
-        if (sIn.value && eIn.value) {
+        if (sIn && eIn && sIn.value && eIn.value) {
             let s = sIn.value.split(':'), e = eIn.value.split(':');
             let ms = (new Date(0, 0, 0, e[0], e[1]) - new Date(0, 0, 0, s[0], s[1]));
             if (ms < 0) ms += 24 * 3600 * 1000;
@@ -178,13 +236,13 @@
             let price = parseFloat(pIn.value) || 0;
             let total = Math.round(vol * price);
 
-            preview.innerText = `${hrs.toFixed(2)}h | ${vol.toFixed(2)}L | ${total.toLocaleString('vi-VN')}đ`;
+            preview.innerHTML = `<strong>${hrs.toFixed(2)}h</strong> × ${rate} L/h = <strong>${vol.toFixed(2)}L</strong> × ${price.toLocaleString('vi-VN')}đ = <strong>${total.toLocaleString('vi-VN')}đ</strong>`;
 
             document.getElementById('log_duration').value = hrs.toFixed(2);
             document.getElementById('log_consumed').value = vol.toFixed(2);
             document.getElementById('log_total').value = total;
         }
     }
-    [sIn, eIn, rIn, pIn].forEach(i => i && i.addEventListener('change', updateLogCalc));
-    [sIn, eIn, rIn, pIn].forEach(i => i && i.addEventListener('input', updateLogCalc));
+    [sIn, eIn].forEach(i => i && i.addEventListener('change', updateLogCalc));
+    [sIn, eIn].forEach(i => i && i.addEventListener('input', updateLogCalc));
 </script>
