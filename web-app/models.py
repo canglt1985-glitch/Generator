@@ -77,6 +77,7 @@ class FuelLedger(db.Model):
     nha_cung_cap = db.Column(db.String(200))
     nguoi_thuc_hien = db.Column(db.String(100))
     ghi_chu = db.Column(db.String(500))
+    ton_sau_gd = db.Column(db.Float)               # NL tồn snapshot sau giao dịch (auto-calc, user có thể override)
     ngay_cap_nhat = db.Column(db.String(20), default=lambda: datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
     def to_dict(self):

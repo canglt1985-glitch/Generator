@@ -30,6 +30,25 @@ def fuel_ledger():
                            now_date=datetime.now().strftime('%Y-%m-%d'))
 
 
+def calc_ton_sau_gd(id_tram, so_luong, trans_type):
+    """Calculate fuel stock snapshot after transaction for a station."""
+    if not id_tram or trans_type == 'STOCK_IN':
+        return None
+    # Tìm ton_sau_gd gần nhất của trạm này
+    latest = db.session.query(FuelLedger.ton_sau_gd).filter(
+        FuelLedger.id_tram == id_tram,
+        FuelLedger.ton_sau_gd.isnot(None)
+    ).order_by(FuelLedger.ngay.desc(), FuelLedger.id.desc()).first()
+    if latest and latest[0] is not None:
+        ton_truoc = latest[0]
+    else:
+        # Fallback: tính từ running balance hiện tại
+        audit = get_audit_data()
+        row = next((r for r in audit if r['id_tram'] == id_tram), None)
+        ton_truoc = row['ton_real'] if row else 0
+    return round(max(0, ton_truoc + so_luong), 2)
+
+
 @generator_bp.route('/fuel-ledger/add', methods=['POST'])
 @login_required
 def add_fuel_ledger():
@@ -71,6 +90,12 @@ def add_fuel_ledger():
             nguoi_thuc_hien=request.form.get('nguoi_thuc_hien') or session.get('full_name'),
             ghi_chu=request.form.get('ghi_chu')
         )
+        # Auto-calc ton_sau_gd (user có thể override từ form)
+        user_ton = request.form.get('ton_sau_gd')
+        if user_ton:
+            new_trans.ton_sau_gd = float(user_ton)
+        else:
+            new_trans.ton_sau_gd = calc_ton_sau_gd(id_tram, so_luong, trans_type)
         db.session.add(new_trans)
         db.session.commit()
 
@@ -93,7 +118,8 @@ def add_fuel_ledger():
                         so_luong=diff, don_gia=0, thanh_tien=0,
                         nha_cung_cap='',
                         nguoi_thuc_hien=session.get('full_name'),
-                        ghi_chu=f'Calibrate: thực tế {nl_ton_thuc_te}L, ước lượng {estimated}L'
+                        ghi_chu=f'Calibrate: thực tế {nl_ton_thuc_te}L, ước lượng {estimated}L',
+                        ton_sau_gd=round(nl_ton_thuc_te, 2)
                     )
                     db.session.add(adj)
                     db.session.commit()
@@ -170,6 +196,14 @@ def edit_fuel_ledger(id):
             item.nha_cung_cap = request.form.get('nha_cung_cap') or ''
 
         item.ngay_cap_nhat = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+        # Update ton_sau_gd: user override hoặc auto-calc
+        user_ton = request.form.get('nl_ton_thuc_te')
+        if user_ton:
+            item.ton_sau_gd = float(user_ton)
+        elif item.id_tram and item.type != 'STOCK_IN':
+            item.ton_sau_gd = calc_ton_sau_gd(item.id_tram, item.so_luong, item.type)
+
         db.session.commit()
         flash('Cập nhật giao dịch thành công!', 'success')
     except Exception as e:
@@ -490,6 +524,40 @@ def import_fuel_purchase():
 # ============================================================
 # API ENDPOINTS
 # ============================================================
+
+@generator_bp.route('/api/fuel-stock-all')
+@login_required
+def get_fuel_stock_all():
+    """Return fuel stock for ALL stations (batch lookup).
+    Used by: fuel table 'NL tồn' column, power schedule color coding.
+    """
+    from flask import jsonify
+    audit = get_audit_data()
+    # Build lookup including stations with no transactions
+    all_stations = GeneralInfo.query.all()
+    result = {}
+    # Pre-fill from GeneralInfo
+    for s in all_stations:
+        result[s.id_tram] = {
+            'ton_real': 0, 'dung_tich': s.dung_tich or 0,
+            'dm_thuc_te': s.dinh_muc_thuc_te or 0,
+            'loai_nl': s.loai_nhien_lieu or '',
+            'may_phat': s.may_phat_dien or '',
+            'loai_may': s.loai_may or '',
+        }
+    # Override with audit data (has actual ton_real)
+    for row in audit:
+        sid = row['id_tram']
+        result[sid] = {
+            'ton_real': row['ton_real'],
+            'dung_tich': row['dung_tich'],
+            'dm_thuc_te': row['dm_thuc_te'],
+            'loai_nl': row['loai_nl'],
+            'may_phat': row['may_phat'],
+            'loai_may': row['loai_may'],
+        }
+    return jsonify(result)
+
 
 @generator_bp.route('/api/fuel-context')
 @login_required

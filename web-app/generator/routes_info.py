@@ -356,7 +356,8 @@ def import_generator_log():
     result = generic_import(GeneratorLog, col_map, 'generator.generator_logs',
                             date_cols=['ngay_van_hanh'],
                             float_cols=['nhien_lieu_tieu_hao', 'don_gia', 'thanh_tien'],
-                            duration_cols=['thoi_gian_hoat_dong'])
+                            duration_cols=['thoi_gian_hoat_dong'],
+                            dup_cols=['id_tram', 'ngay_van_hanh', 'gio_bat_dau'])
 
     # Post-import: auto-calculate missing fields
     try:

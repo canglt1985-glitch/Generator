@@ -245,6 +245,7 @@ def import_mfd_data(raw_data: list[dict]) -> dict:
         )
 
         db.session.add(log)
+        db.session.flush()  # Make visible to is_duplicate() within same batch
 
         detail = f'{site} | {start_dt.strftime("%H:%M")}-{end_dt.strftime("%H:%M") if end_dt else "?"} | {duration_min}p | {status}'
         result['details'].append(detail)
