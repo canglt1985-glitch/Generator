@@ -2,7 +2,7 @@
 <div class="tab-pane fade {{ 'show active' if active_tab == 'equipment' else '' }}" id="equipment-content"
     role="tabpanel">
 
-    <!-- Header with Add button (admin only) -->
+    <!-- Header -->
     <div class="d-flex align-items-center justify-content-between mb-2">
         <div class="text-muted small">
             <span class="badge bg-blue-lt me-1">{{ mobile_equipments|length }}</span> thiết bị
@@ -15,39 +15,65 @@
         {% endif %}
     </div>
 
-    <!-- Equipment Cards (mobile-first) -->
-    <div class="row g-2">
-        {% for e in mobile_equipments %}
-        <div class="col-12 col-sm-6 col-lg-4">
-            <div class="card shadow-sm eq-card {{ 'border-warning' if e.trang_thai != 'Tốt' else '' }}">
-                <div class="card-body p-2">
-                    <div class="d-flex align-items-center justify-content-between mb-1">
-                        <!-- Left: ID + type badge -->
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="fw-bold" style="font-size:0.85rem;">{{ e.ma_thiet_bi }}</span>
+    <!-- Equipment Table -->
+    <div class="card shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-vcenter table-hover mb-0 eq-table">
+                <thead>
+                    <tr class="bg-light-lt">
+                        <th class="eq-col-ma">Mã TB</th>
+                        <th class="eq-col-loai">Loại</th>
+                        <th class="eq-col-vitri">Vị trí</th>
+                        <th class="eq-col-spec d-none d-md-table-cell">Thông số</th>
+                        <th class="eq-col-fuel d-none d-sm-table-cell">NL tồn</th>
+                        <th class="eq-col-status d-none d-md-table-cell">TT</th>
+                        <th class="eq-col-action text-end">⚙</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for e in mobile_equipments %}
+                    <tr class="{{ 'table-warning-lt' if e.trang_thai != 'Tốt' else '' }}">
+                        <td class="eq-col-ma fw-bold">{{ e.ma_thiet_bi }}</td>
+                        <td class="eq-col-loai">
                             {% if e.loai == 'MPĐ' %}
-                            <span class="badge bg-warning-lt" style="font-size:0.65rem;">⚡ MPĐ</span>
+                            <span class="badge bg-warning-lt">⚡MPĐ</span>
                             {% else %}
-                            <span class="badge bg-cyan-lt" style="font-size:0.65rem;">🔋 Pin</span>
+                            <span class="badge bg-cyan-lt">🔋Pin</span>
                             {% endif %}
-                            {% if e.trang_thai != 'Tốt' %}
-                            <span class="badge bg-danger-lt" style="font-size:0.6rem;">Hư</span>
+                        </td>
+                        <td class="eq-col-vitri">
+                            {% if e.vi_tri_hien_tai == 'KHO' %}
+                            <span class="text-muted">📦 Kho</span>
+                            {% else %}
+                            <span class="fw-bold text-primary">📍{{ e.vi_tri_hien_tai }}</span>
                             {% endif %}
-                        </div>
-                        <!-- Right: Action buttons -->
-                        <div class="d-flex gap-1">
+                        </td>
+                        <td class="eq-col-spec d-none d-md-table-cell text-muted">{{ e.thong_so or '--' }}</td>
+                        <td class="eq-col-fuel d-none d-sm-table-cell">
+                            {% if e.loai == 'MPĐ' %}
+                            ⛽{{ '%.1f'|format(e.nl_ton or 0) }}L
+                            {% else %}--{% endif %}
+                        </td>
+                        <td class="eq-col-status d-none d-md-table-cell">
+                            {% if e.trang_thai == 'Tốt' %}
+                            <span class="badge bg-success-lt">Tốt</span>
+                            {% else %}
+                            <span class="badge bg-danger-lt">Hư</span>
+                            {% endif %}
+                        </td>
+                        <td class="eq-col-action text-end text-nowrap">
                             {% if e.vi_tri_hien_tai == 'KHO' and e.trang_thai == 'Tốt' %}
                             <button class="btn btn-sm btn-outline-success eq-btn" data-bs-toggle="modal"
                                 data-bs-target="#transferModal"
                                 onclick="prepareTransfer({{ e.id }}, '{{ e.ma_thiet_bi }}', '{{ e.vi_tri_hien_tai }}', 'dispatch')"
-                                title="Điều chuyển">
+                                title="Điều chuyển đến trạm">
                                 <i class="fas fa-arrow-right"></i>
                             </button>
                             {% elif e.vi_tri_hien_tai != 'KHO' %}
                             <button class="btn btn-sm btn-outline-warning eq-btn" data-bs-toggle="modal"
                                 data-bs-target="#transferModal"
                                 onclick="prepareTransfer({{ e.id }}, '{{ e.ma_thiet_bi }}', '{{ e.vi_tri_hien_tai }}', 'recall')"
-                                title="Thu hồi">
+                                title="Thu hồi về kho">
                                 <i class="fas fa-arrow-left"></i>
                             </button>
                             {% endif %}
@@ -58,120 +84,148 @@
                                 <i class="fas fa-trash"></i>
                             </a>
                             {% endif %}
-                        </div>
-                    </div>
-                    <!-- Info row -->
-                    <div class="d-flex align-items-center gap-2 text-muted" style="font-size:0.75rem;">
-                        {% if e.vi_tri_hien_tai == 'KHO' %}
-                        <span>📦 Kho</span>
-                        {% else %}
-                        <span class="text-primary fw-bold">📍 {{ e.vi_tri_hien_tai }}</span>
-                        {% endif %}
-                        <span>•</span>
-                        <span>{{ e.thong_so or '--' }}</span>
-                        {% if e.loai == 'MPĐ' %}
-                        <span>•</span>
-                        <span>⛽ {{ '%.1f'|format(e.nl_ton or 0) }}L</span>
-                        {% endif %}
-                    </div>
-                    {% if e.ghi_chu %}
-                    <div class="text-muted mt-1"
-                        style="font-size:0.68rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-                        💬 {{ e.ghi_chu }}
-                    </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% if not mobile_equipments %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-4">
+                            <i class="fas fa-box-open d-block mb-1" style="font-size:1.5rem;"></i>
+                            Chưa có thiết bị lưu động.
+                        </td>
+                    </tr>
                     {% endif %}
-                </div>
-            </div>
+                </tbody>
+            </table>
         </div>
-        {% endfor %}
-        {% if not mobile_equipments %}
-        <div class="col-12">
-            <div class="card shadow-sm">
-                <div class="card-body text-center text-muted py-4">
-                    <i class="fas fa-box-open fa-2x mb-2 d-block"></i>
-                    Chưa có thiết bị lưu động.
-                    {% if session.get('role') == 'admin' %}Nhấn "Thêm" để bắt đầu.{% endif %}
-                </div>
-            </div>
-        </div>
-        {% endif %}
     </div>
 
     <!-- Transfer History -->
     {% if transfer_history %}
-    <div class="card border-0 shadow-sm rounded-3 mt-2">
+    <div class="card shadow-sm mt-2">
         <div class="card-header py-2">
-            <h3 class="card-title mb-0" style="font-size:0.85rem;">
+            <h3 class="card-title mb-0" style="font-size:0.8rem;">
                 <i class="fas fa-history me-1 text-azure"></i>Lịch Sử Điều Chuyển
             </h3>
         </div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover table-vcenter mb-0 eq-history-table">
-                    <thead>
-                        <tr>
-                            <th>Ngày</th>
-                            <th>TB</th>
-                            <th>Từ</th>
-                            <th>Đến</th>
-                            <th class="d-none d-md-table-cell">Người</th>
-                            <th class="d-none d-md-table-cell">Ghi chú</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for t in transfer_history %}
-                        <tr>
-                            <td>{{ t.ngay_dieu_chuyen }}</td>
-                            <td class="fw-bold">{{ t.equipment.ma_thiet_bi }}</td>
-                            <td>{{ t.tu_vi_tri }}</td>
-                            <td class="fw-bold text-primary">{{ t.den_vi_tri }}</td>
-                            <td class="d-none d-md-table-cell">{{ t.nguoi_dieu_chuyen or '--' }}</td>
-                            <td class="d-none d-md-table-cell text-muted">{{ t.ghi_chu or '' }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+        <div class="table-responsive">
+            <table class="table table-hover table-vcenter mb-0 eq-table">
+                <thead>
+                    <tr>
+                        <th>Ngày</th>
+                        <th>TB</th>
+                        <th>Từ</th>
+                        <th>Đến</th>
+                        <th class="d-none d-md-table-cell">Người</th>
+                        <th class="d-none d-md-table-cell">Ghi chú</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in transfer_history %}
+                    <tr>
+                        <td>{{ t.ngay_dieu_chuyen }}</td>
+                        <td class="fw-bold">{{ t.equipment.ma_thiet_bi }}</td>
+                        <td>{{ t.tu_vi_tri }}</td>
+                        <td class="fw-bold text-primary">{{ t.den_vi_tri }}</td>
+                        <td class="d-none d-md-table-cell">{{ t.nguoi_dieu_chuyen or '--' }}</td>
+                        <td class="d-none d-md-table-cell text-muted">{{ t.ghi_chu or '' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
     {% endif %}
 </div>
 
 <style>
-    .eq-card {
-        transition: all 0.15s ease;
+    .eq-table td,
+    .eq-table th {
+        padding: 0.35rem 0.4rem;
+        font-size: 0.8rem;
+        vertical-align: middle;
     }
 
-    .eq-card:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    .eq-col-ma {
+        width: 80px;
+        white-space: nowrap;
     }
 
-    .eq-card.border-warning {
-        border-left: 3px solid var(--tblr-warning) !important;
+    .eq-col-loai {
+        width: 65px;
+    }
+
+    .eq-col-loai .badge {
+        font-size: 0.65rem;
+        padding: 0.15em 0.4em;
+    }
+
+    .eq-col-vitri {
+        min-width: 80px;
+        white-space: nowrap;
+    }
+
+    .eq-col-spec {
+        min-width: 90px;
+    }
+
+    .eq-col-fuel {
+        width: 65px;
+        white-space: nowrap;
+    }
+
+    .eq-col-status {
+        width: 50px;
+    }
+
+    .eq-col-action {
+        width: 70px;
     }
 
     .eq-btn {
-        width: 28px;
-        height: 28px;
+        width: 26px;
+        height: 26px;
         padding: 0;
-        display: flex;
+        display: inline-flex;
         align-items: center;
         justify-content: center;
-        font-size: 0.7rem;
+        font-size: 0.65rem;
     }
 
-    .eq-history-table td,
-    .eq-history-table th {
-        padding: 0.3rem 0.35rem;
-        font-size: 0.75rem;
+    .table-warning-lt {
+        background-color: rgba(255, 193, 7, 0.06) !important;
     }
 
+    /* MOBILE */
     @media (max-width: 575.98px) {
+
+        .eq-table td,
+        .eq-table th {
+            padding: 0.3rem 0.25rem;
+            font-size: 0.73rem;
+        }
+
+        .eq-col-ma {
+            width: 65px;
+            font-size: 0.72rem;
+        }
+
+        .eq-col-loai {
+            width: 50px;
+        }
+
+        .eq-col-loai .badge {
+            font-size: 0.58rem;
+        }
+
+        .eq-col-vitri {
+            font-size: 0.72rem;
+        }
+
         .eq-btn {
-            width: 32px;
-            height: 32px;
-            font-size: 0.75rem;
+            width: 30px;
+            height: 30px;
+            font-size: 0.7rem;
         }
     }
 </style>
