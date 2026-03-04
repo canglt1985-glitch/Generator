@@ -577,7 +577,7 @@
 
             .then(d => { window._fuelStock = d; })
 
-            .catch(() => {});
+            .catch(() => { });
 
     }
 
@@ -748,11 +748,11 @@
 
         try {
 
-            const [h1,m1] = cupStr.split(':').map(Number);
+            const [h1, m1] = cupStr.split(':').map(Number);
 
-            const [h2,m2] = coDienStr.split(':').map(Number);
+            const [h2, m2] = coDienStr.split(':').map(Number);
 
-            let mins = (h2*60+m2) - (h1*60+m1);
+            let mins = (h2 * 60 + m2) - (h1 * 60 + m1);
 
             if (mins <= 0) mins += 1440;
 
@@ -768,21 +768,25 @@
 
         const fs = window._fuelStock[r.id_tram];
 
-        if (!fs || !fs.loai_nl) return { color: '', emoji: '' };
+        if (!fs) return { color: '#6c757d' };  // no data → gray
 
-        if (fs.loai_nl.toLowerCase().includes('x')) return { color: '#6c757d', emoji: '' };
-
-        const need = calcFuelNeed(r.thoi_gian_cup_dien||'', r.thoi_gian_co_dien||'', fs.dm_thuc_te||0);
-
-        if (need <= 0) return { color: '#0ca678', emoji: '' };
+        // Gasoline stations → gray (don't track diesel)
+        if (fs.loai_nl && fs.loai_nl.toLowerCase().includes('x')) return { color: '#6c757d' };
 
         const ton = fs.ton_real || 0;
+        const need = calcFuelNeed(r.thoi_gian_cup_dien || '', r.thoi_gian_co_dien || '', fs.dm_thuc_te || 0);
 
-        if (ton >= need * 1.2) return { color: '#2fb344', emoji: '\u{1F7E2}' };
+        if (need <= 0) {
+            // No outage or no consumption rate → color by stock level
+            if (ton > 50) return { color: '#2fb344' };
+            if (ton > 20) return { color: '#f76707' };
+            if (ton > 0) return { color: '#d63939' };
+            return { color: '#6c757d' };
+        }
 
-        if (ton >= need * 0.8) return { color: '#f76707', emoji: '\u{1F7E1}' };
-
-        return { color: '#d63939', emoji: '\u{1F534}' };
+        if (ton >= need * 1.2) return { color: '#2fb344' };
+        if (ton >= need * 0.8) return { color: '#f76707' };
+        return { color: '#d63939' };
 
     }
 
@@ -790,7 +794,28 @@
 
     function showFuelModal(stationId, cupStr, coDienStr) {
         const fs = window._fuelStock[stationId];
-        if (!fs) { return; }
+        if (!fs) {
+            // Show simple modal for stations with no data
+            const old = document.getElementById('fuelModal');
+            if (old) old.remove();
+            document.body.insertAdjacentHTML('beforeend', `
+                <div class="modal fade" id="fuelModal" tabindex="-1">
+                    <div class="modal-dialog modal-sm modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header py-2">
+                                <h5 class="modal-title">\u26AA ${stationId}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body py-2 text-center text-muted small">
+                                Ch\u01B0a c\u00F3 d\u1EEF li\u1EC7u nhi\u00EAn li\u1EC7u
+                            </div>
+                        </div>
+                    </div>
+                </div>`);
+            const _bs = (typeof bootstrap !== 'undefined') ? bootstrap : (typeof tabler !== 'undefined' ? tabler.bootstrap : null);
+            if (_bs) new _bs.Modal(document.getElementById('fuelModal')).show();
+            return;
+        }
         const ton = (fs.ton_real || 0).toFixed(1);
         const dt = fs.dung_tich || 0;
         const dm = fs.dm_thuc_te || 0;
@@ -820,7 +845,7 @@
                                 <span class="fw-bold">${fillPct}%</span>
                             </div>
                             <div class="progress mb-2" style="height:6px">
-                                <div class="progress-bar ${pctCls}" style="width:${Math.min(fillPct,100)}%"></div>
+                                <div class="progress-bar ${pctCls}" style="width:${Math.min(fillPct, 100)}%"></div>
                             </div>
                             <div class="d-flex justify-content-between small">
                                 <span class="text-muted">Tr\u1EA1ng th\u00E1i</span>
@@ -866,7 +891,7 @@
 
 
 
-        return `<td class="${trStyle}" style="${colorStyle}" onclick="showFuelModal('${r.id_tram}','${r.thoi_gian_cup_dien||''}','${r.thoi_gian_co_dien||''}')">${fc.emoji} ${r.id_tram || '--'}</td>`
+        return `<td class="${trStyle}" style="${colorStyle}" onclick="showFuelModal('${r.id_tram}','${r.thoi_gian_cup_dien || ''}','${r.thoi_gian_co_dien || ''}')">${r.id_tram || '--'}</td>`
 
             + `<td>${r.ngay_mat_dien || '--'}${dayBadge}</td>`
 
