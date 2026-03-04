@@ -1,5 +1,20 @@
 # Changelog
 
+## [2026-03-04] - Approve UI + NL Tồn Snapshot + Fuel Stock Display
+### Added
+- **Approve/Reject UI**: Admin dashboard (`/admin/mpd?tab=logs`) now shows status badges (Chờ duyệt/Đã duyệt), source badges (SmartW/Thủ công), action buttons (Approve/Edit/Reject/Delete), and pending count card.
+- **NL Tồn Snapshot** (`ton_sau_gd`): New column in `FuelLedger` stores fuel stock level at time of transaction. Auto-calculated via `calc_ton_sau_gd()`, user can override via "NL tồn thực tế" field in modal.
+- **Fuel Stock Display**: API `/api/fuel-stock-all` returns batch fuel stock for all stations. VHKT lịch cúp page color-codes station IDs (green/yellow/red) based on fuel level vs estimated need. Click station ID opens fuel detail modal.
+- **NL Tồn Column**: Fuel ledger table shows NL tồn after NCC column, color-coded (green >50L, yellow 20-50L, red <20L), visible on all devices including mobile.
+
+### Fixed
+- **Duplicate Prevention**: `mfd_import.py` now uses `db.session.flush()` after each insert to prevent batch duplicates. `routes_info.py` Excel import uses `dup_cols` parameter.
+- **Edit NL Tồn**: `edit_fuel_ledger` route now correctly saves `nl_ton_thuc_te` as `ton_sau_gd`.
+
+### Changed
+- **Column Order**: Fuel ledger table: Trạm→Ngày→Loại→NL→Lượng→Đơn giá→Thành tiền→NCC→**NL tồn**→Người→Ghi chú.
+- **Plans Archived**: 5 completed plan folders moved to `plans/_archive/`.
+
 ## [2026-02-27] - Fuel Form Overhaul & Edit Modal Fix
 ### Added
 - **Dropdown Transaction Type**: Replaced tab pills with dropdown select (`⛽ ĐỔ NL`, `📥 NHẬP KHO`, `📤 XUẤT KHO`) for clearer transaction type selection.
