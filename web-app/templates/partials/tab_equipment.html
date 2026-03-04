@@ -1,120 +1,120 @@
 <!-- TAB: THIẾT BỊ LƯU ĐỘNG (equipment) -->
 <div class="tab-pane fade {{ 'show active' if active_tab == 'equipment' else '' }}" id="equipment-content"
     role="tabpanel">
-    <div class="card border-0 shadow-sm rounded-3 mt-2">
-        <div class="card-header d-flex align-items-center justify-content-between py-2">
-            <h3 class="card-title mb-0">
-                <i class="fas fa-truck-moving me-2 text-indigo"></i>Thiết Bị Lưu Động
-            </h3>
-            <button class="btn btn-sm btn-primary rounded-pill" data-bs-toggle="modal" data-bs-target="#equipModal"
-                onclick="resetEquipModal()">
-                <i class="fas fa-plus me-1"></i>Thêm
-            </button>
+
+    <!-- Header with Add button (admin only) -->
+    <div class="d-flex align-items-center justify-content-between mb-2">
+        <div class="text-muted small">
+            <span class="badge bg-blue-lt me-1">{{ mobile_equipments|length }}</span> thiết bị
         </div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover table-vcenter mb-0" style="font-size: 0.85rem;">
-                    <thead>
-                        <tr>
-                            <th>Mã TB</th>
-                            <th>Loại</th>
-                            <th>Thông số</th>
-                            <th>Trạng thái</th>
-                            <th>Vị trí</th>
-                            <th>NL tồn</th>
-                            <th class="d-none d-md-table-cell">Ghi chú</th>
-                            <th class="text-end" style="width:140px">Thao tác</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for e in mobile_equipments %}
-                        <tr>
-                            <td class="fw-bold">{{ e.ma_thiet_bi }}</td>
-                            <td>
-                                {% if e.loai == 'MPĐ' %}
-                                <span class="badge bg-warning-lt">⚡ MPĐ</span>
-                                {% else %}
-                                <span class="badge bg-cyan-lt">🔋 Pin</span>
-                                {% endif %}
-                            </td>
-                            <td>{{ e.thong_so or '--' }}</td>
-                            <td>
-                                {% if e.trang_thai == 'Tốt' %}
-                                <span class="badge bg-success-lt">🟢 Tốt</span>
-                                {% else %}
-                                <span class="badge bg-danger-lt">🔴 Hư</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if e.vi_tri_hien_tai == 'KHO' %}
-                                <span class="text-muted">📦 Kho</span>
-                                {% else %}
-                                <span class="text-primary fw-bold">📍 {{ e.vi_tri_hien_tai }}</span>
-                                {% endif %}
-                            </td>
-                            <td>{{ '%.1f'|format(e.nl_ton or 0) }}L</td>
-                            <td class="d-none d-md-table-cell text-muted small">{{ e.ghi_chu or '' }}</td>
-                            <td class="text-end">
-                                <!-- Transfer button -->
-                                {% if e.vi_tri_hien_tai == 'KHO' and e.trang_thai == 'Tốt' %}
-                                <button class="btn btn-sm btn-outline-success" data-bs-toggle="modal"
-                                    data-bs-target="#transferModal"
-                                    onclick="prepareTransfer({{ e.id }}, '{{ e.ma_thiet_bi }}', '{{ e.vi_tri_hien_tai }}', 'dispatch')">
-                                    <i class="fas fa-arrow-right"></i>
-                                </button>
-                                {% elif e.vi_tri_hien_tai != 'KHO' %}
-                                <button class="btn btn-sm btn-outline-warning" data-bs-toggle="modal"
-                                    data-bs-target="#transferModal"
-                                    onclick="prepareTransfer({{ e.id }}, '{{ e.ma_thiet_bi }}', '{{ e.vi_tri_hien_tai }}', 'recall')">
-                                    <i class="fas fa-arrow-left"></i>
-                                </button>
-                                {% endif %}
-                                <!-- Edit -->
-                                <button class="btn btn-sm btn-outline-primary"
-                                    onclick="editEquip({{ e.id }}, '{{ e.ma_thiet_bi }}', '{{ e.loai }}', '{{ e.thong_so or '' }}', '{{ e.trang_thai }}', {{ e.nl_ton or 0 }}, '{{ (e.ghi_chu or '')|e }}')">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <!-- Delete -->
-                                <a href="{{ url_for('daily_work.delete_mobile_equipment', id=e.id) }}"
-                                    class="btn btn-sm btn-outline-danger"
-                                    onclick="return confirm('Xóa {{ e.ma_thiet_bi }}?')">
-                                    <i class="fas fa-trash"></i>
-                                </a>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                        {% if not mobile_equipments %}
-                        <tr>
-                            <td colspan="8" class="text-center text-muted py-4">
-                                <i class="fas fa-box-open fa-2x mb-2 d-block"></i>
-                                Chưa có thiết bị lưu động. Nhấn "Thêm" để bắt đầu.
-                            </td>
-                        </tr>
+        {% if session.get('role') == 'admin' %}
+        <button class="btn btn-sm btn-primary rounded-pill" data-bs-toggle="modal" data-bs-target="#equipModal"
+            onclick="resetEquipModal()">
+            <i class="fas fa-plus me-1"></i>Thêm
+        </button>
+        {% endif %}
+    </div>
+
+    <!-- Equipment Cards (mobile-first) -->
+    <div class="row g-2">
+        {% for e in mobile_equipments %}
+        <div class="col-12 col-sm-6 col-lg-4">
+            <div class="card shadow-sm eq-card {{ 'border-warning' if e.trang_thai != 'Tốt' else '' }}">
+                <div class="card-body p-2">
+                    <div class="d-flex align-items-center justify-content-between mb-1">
+                        <!-- Left: ID + type badge -->
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="fw-bold" style="font-size:0.85rem;">{{ e.ma_thiet_bi }}</span>
+                            {% if e.loai == 'MPĐ' %}
+                            <span class="badge bg-warning-lt" style="font-size:0.65rem;">⚡ MPĐ</span>
+                            {% else %}
+                            <span class="badge bg-cyan-lt" style="font-size:0.65rem;">🔋 Pin</span>
+                            {% endif %}
+                            {% if e.trang_thai != 'Tốt' %}
+                            <span class="badge bg-danger-lt" style="font-size:0.6rem;">Hư</span>
+                            {% endif %}
+                        </div>
+                        <!-- Right: Action buttons -->
+                        <div class="d-flex gap-1">
+                            {% if e.vi_tri_hien_tai == 'KHO' and e.trang_thai == 'Tốt' %}
+                            <button class="btn btn-sm btn-outline-success eq-btn" data-bs-toggle="modal"
+                                data-bs-target="#transferModal"
+                                onclick="prepareTransfer({{ e.id }}, '{{ e.ma_thiet_bi }}', '{{ e.vi_tri_hien_tai }}', 'dispatch')"
+                                title="Điều chuyển">
+                                <i class="fas fa-arrow-right"></i>
+                            </button>
+                            {% elif e.vi_tri_hien_tai != 'KHO' %}
+                            <button class="btn btn-sm btn-outline-warning eq-btn" data-bs-toggle="modal"
+                                data-bs-target="#transferModal"
+                                onclick="prepareTransfer({{ e.id }}, '{{ e.ma_thiet_bi }}', '{{ e.vi_tri_hien_tai }}', 'recall')"
+                                title="Thu hồi">
+                                <i class="fas fa-arrow-left"></i>
+                            </button>
+                            {% endif %}
+                            {% if session.get('role') == 'admin' %}
+                            <a href="{{ url_for('daily_work.delete_mobile_equipment', id=e.id) }}"
+                                class="btn btn-sm btn-outline-danger eq-btn"
+                                onclick="return confirm('Xóa {{ e.ma_thiet_bi }}?')" title="Xóa">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <!-- Info row -->
+                    <div class="d-flex align-items-center gap-2 text-muted" style="font-size:0.75rem;">
+                        {% if e.vi_tri_hien_tai == 'KHO' %}
+                        <span>📦 Kho</span>
+                        {% else %}
+                        <span class="text-primary fw-bold">📍 {{ e.vi_tri_hien_tai }}</span>
                         {% endif %}
-                    </tbody>
-                </table>
+                        <span>•</span>
+                        <span>{{ e.thong_so or '--' }}</span>
+                        {% if e.loai == 'MPĐ' %}
+                        <span>•</span>
+                        <span>⛽ {{ '%.1f'|format(e.nl_ton or 0) }}L</span>
+                        {% endif %}
+                    </div>
+                    {% if e.ghi_chu %}
+                    <div class="text-muted mt-1"
+                        style="font-size:0.68rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                        💬 {{ e.ghi_chu }}
+                    </div>
+                    {% endif %}
+                </div>
             </div>
         </div>
+        {% endfor %}
+        {% if not mobile_equipments %}
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body text-center text-muted py-4">
+                    <i class="fas fa-box-open fa-2x mb-2 d-block"></i>
+                    Chưa có thiết bị lưu động.
+                    {% if session.get('role') == 'admin' %}Nhấn "Thêm" để bắt đầu.{% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </div>
 
     <!-- Transfer History -->
     {% if transfer_history %}
     <div class="card border-0 shadow-sm rounded-3 mt-2">
         <div class="card-header py-2">
-            <h3 class="card-title mb-0">
-                <i class="fas fa-history me-2 text-azure"></i>Lịch Sử Điều Chuyển (gần nhất)
+            <h3 class="card-title mb-0" style="font-size:0.85rem;">
+                <i class="fas fa-history me-1 text-azure"></i>Lịch Sử Điều Chuyển
             </h3>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover table-vcenter mb-0" style="font-size: 0.8rem;">
+                <table class="table table-hover table-vcenter mb-0 eq-history-table">
                     <thead>
                         <tr>
                             <th>Ngày</th>
-                            <th>Thiết bị</th>
+                            <th>TB</th>
                             <th>Từ</th>
                             <th>Đến</th>
-                            <th>Người ĐC</th>
+                            <th class="d-none d-md-table-cell">Người</th>
                             <th class="d-none d-md-table-cell">Ghi chú</th>
                         </tr>
                     </thead>
@@ -125,7 +125,7 @@
                             <td class="fw-bold">{{ t.equipment.ma_thiet_bi }}</td>
                             <td>{{ t.tu_vi_tri }}</td>
                             <td class="fw-bold text-primary">{{ t.den_vi_tri }}</td>
-                            <td>{{ t.nguoi_dieu_chuyen or '--' }}</td>
+                            <td class="d-none d-md-table-cell">{{ t.nguoi_dieu_chuyen or '--' }}</td>
                             <td class="d-none d-md-table-cell text-muted">{{ t.ghi_chu or '' }}</td>
                         </tr>
                         {% endfor %}
@@ -137,7 +137,47 @@
     {% endif %}
 </div>
 
-<!-- MODAL: Add/Edit Equipment -->
+<style>
+    .eq-card {
+        transition: all 0.15s ease;
+    }
+
+    .eq-card:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .eq-card.border-warning {
+        border-left: 3px solid var(--tblr-warning) !important;
+    }
+
+    .eq-btn {
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.7rem;
+    }
+
+    .eq-history-table td,
+    .eq-history-table th {
+        padding: 0.3rem 0.35rem;
+        font-size: 0.75rem;
+    }
+
+    @media (max-width: 575.98px) {
+        .eq-btn {
+            width: 32px;
+            height: 32px;
+            font-size: 0.75rem;
+        }
+    }
+</style>
+
+<!-- MODAL: Add Equipment (Admin only) -->
+{% if session.get('role') == 'admin' %}
 <div class="modal fade" id="equipModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -194,6 +234,7 @@
         </div>
     </div>
 </div>
+{% endif %}
 
 <!-- MODAL: Transfer Equipment -->
 <div class="modal fade" id="transferModal" tabindex="-1">
@@ -230,7 +271,7 @@
                     <div class="mb-2">
                         <label class="form-label">Người điều chuyển</label>
                         <input type="text" class="form-control" name="nguoi_dieu_chuyen"
-                            value="{{ session.get('username', '') }}">
+                            value="{{ session.get('full_name', '') or session.get('username', '') }}">
                     </div>
                     <div class="mb-0">
                         <label class="form-label">Ghi chú</label>
@@ -253,18 +294,6 @@
         document.getElementById('equipModalTitle').innerHTML = '<i class="fas fa-truck-moving me-1"></i>Thêm Thiết Bị';
         document.getElementById('equipForm').action = "{{ url_for('daily_work.add_mobile_equipment') }}";
         document.getElementById('equipForm').reset();
-    }
-
-    function editEquip(id, ma, loai, thongso, trangthai, nlton, ghichu) {
-        document.getElementById('equipModalTitle').innerHTML = '<i class="fas fa-edit me-1"></i>Sửa ' + ma;
-        document.getElementById('equipForm').action = "/daily-work/mobile-equipment/edit/" + id;
-        document.getElementById('eq_ma').value = ma;
-        document.getElementById('eq_loai').value = loai;
-        document.getElementById('eq_thongso').value = thongso;
-        document.getElementById('eq_trangthai').value = trangthai;
-        document.getElementById('eq_nlton').value = nlton;
-        document.getElementById('eq_ghichu').value = ghichu;
-        new bootstrap.Modal(document.getElementById('equipModal')).show();
     }
 
     function prepareTransfer(id, name, from, mode) {
