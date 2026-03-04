@@ -11,32 +11,7 @@
         </div>
         <div class="col-md-6 text-md-end">
             <div class="d-flex flex-wrap gap-2 justify-content-md-end">
-                {% if session['role'] == 'admin' %}
-                <div class="dropdown">
-                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle rounded-pill px-3 shadow-none"
-                        type="button" data-bs-toggle="dropdown">
-                        <i class="fas fa-tools me-1"></i>Công cụ Admin
-                    </button>
-                    <div class="dropdown-menu dropdown-menu-end shadow border-0">
-                        <a class="dropdown-item" href="{{ url_for('generator.template_power_schedule') }}">
-                            <i class="fas fa-file-download me-2"></i>Tải file mẫu
-                        </a>
-                        <a class="dropdown-item" href="{{ url_for('generator.export_power_schedule') }}">
-                            <i class="fas fa-file-export me-2"></i>Xuất báo cáo
-                        </a>
-                        <button type="button" class="dropdown-item" data-bs-toggle="modal"
-                            data-bs-target="#importModal">
-                            <i class="fas fa-file-excel me-2"></i>Nhập từ Excel
-                        </button>
-                        <div class="dropdown-divider"></div>
-                        <a class="dropdown-item text-danger fw-bold"
-                            href="{{ url_for('generator.reset_power_schedule') }}"
-                            onclick="return confirm('Xóa toàn bộ lịch cúp điện?')">
-                            <i class="fas fa-trash me-2"></i>Xóa sạch dữ liệu
-                        </a>
-                    </div>
-                </div>
-                {% endif %}
+
 
             </div>
         </div>
@@ -46,13 +21,6 @@
     <div class="row mt-3">
         <div class="col-12">
             <div class="d-flex gap-2 flex-nowrap" id="mainTabs" role="tablist">
-                <button class="nav-tab-card {{ 'active' if active_tab == 'schedule' else '' }}"
-                    style="--tab-color: var(--tblr-orange);" id="schedule-tab" data-bs-toggle="tab"
-                    data-bs-target="#schedule-content" type="button" role="tab">
-                    <i class="fas fa-calendar-alt"></i>
-                    <span class="d-none d-sm-inline">Lịch Cúp Điện</span>
-                    <span class="d-inline d-sm-none">Lịch</span>
-                </button>
                 <button class="nav-tab-card {{ 'active' if active_tab == 'fuel' else '' }}"
                     style="--tab-color: var(--tblr-teal);" id="fuel-tab" data-bs-toggle="tab"
                     data-bs-target="#fuel-content" type="button" role="tab">
@@ -74,406 +42,299 @@
                     <span class="d-none d-sm-inline">Thanh Toán</span>
                     <span class="d-inline d-sm-none">TT</span>
                 </button>
-                <a href="{{ url_for('generator.manual_fetch_outages') }}" class="nav-tab-card"
-                    style="--tab-color: var(--tblr-azure);">
-                    <i class="fas fa-sync-alt"></i>
-                    <span class="d-none d-sm-inline">Cập Nhật</span>
-                    <span class="d-inline d-sm-none">🔄</span>
-                </a>
+
             </div>
         </div>
     </div>
 </div>
 
-<div class="tab-content" id="mainTabContent">
-    <!-- TAB 1: SCHEDULE CONTENT -->
-    <div class="tab-pane fade {{ 'show active' if active_tab == 'schedule' else '' }}" id="schedule-content"
-        role="tabpanel">
-        <div class="row mb-3">
-            <div class="col-12">
-                <div class="card border-0 shadow-sm rounded-3 export-form">
-                    <div class="card-body p-3">
-                        <form action="{{ url_for('generator.export_power_schedule') }}" method="GET"
-                            class="d-flex gap-2 align-items-end">
+
+
+<div class="tab-pane fade {{ 'show active' if active_tab == 'fuel' else '' }}" id="fuel-content" role="tabpanel">
+    <!-- Summary Card -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="card bg-primary-lt border-0 shadow-sm">
+                <div class="card-body d-flex justify-content-between align-items-center p-3">
+                    <div>
+                        <div class="text-uppercase small fw-bold text-muted">TỒN KHO</div>
+                        <div class="mb-0">
+                            <span class="fw-bold text-primary">Dầu: {{ "{:,.0f}".format(central_stock['Dầu'])
+                                }}L</span>
+                            <span class="text-muted mx-1">|</span>
+                            <span class="fw-bold text-warning">Xăng: {{ "{:,.0f}".format(central_stock['Xăng'])
+                                }}L</span>
+                            <span class="text-muted mx-1">|</span>
+                            <span class="text-muted small">Tổng: {{ "{:,.0f}".format(central_stock['total'])
+                                }}L</span>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2 align-items-center">
+                        <form action="{{ url_for('generator.export_fuel_ledger') }}" method="GET"
+                            class="d-none d-md-flex gap-2 align-items-center">
                             <input type="date" name="start_date" class="form-control form-control-sm rounded-pill"
-                                style="width:130px;">
+                                title="Từ ngày">
                             <input type="date" name="end_date" class="form-control form-control-sm rounded-pill"
-                                style="width:130px;">
-                            <button type="submit" class="btn btn-outline-info btn-sm rounded-pill fw-bold">
-                                <i class="fas fa-file-export me-1"></i>Xuất
+                                title="Đến ngày">
+                            <button type="submit"
+                                class="btn btn-outline-primary btn-sm rounded-pill border-0 shadow-sm bg-white fw-bold text-nowrap">
+                                <i class="fas fa-file-excel me-1 text-success"></i>Xuất
                             </button>
+                        </form>
+                        <button class="btn btn-primary rounded-pill shadow-sm text-nowrap" data-bs-toggle="modal"
+                            data-bs-target="#smartFuelModal" onclick="resetFuelModal()">
+                            <i class="fas fa-plus me-2"></i>Tạo
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ledger Table -->
+    <div class="card shadow-sm border-0">
+        <div class="table-responsive">
+            <table class="table table-vcenter table-hover table-compact text-nowrap">
+                <thead>
+                    <tr>
+                        <th>Ngày</th>
+                        <th>Loại</th>
+                        <th>NL</th>
+                        <th>Trạm / Kho</th>
+                        <th>Lượng (Lít)</th>
+                        <th>Đơn giá</th>
+                        <th class="text-end">Thành tiền</th>
+                        <th>NCC</th>
+                        <th>Người mua</th>
+                        <th>Ghi chú</th>
+                        <th></th>
+                    </tr>
+                    <tr class="filter-row bg-light-lt">
+                        <th><input type="date" class="form-control form-control-sm" style="font-size:11px"
+                                onchange="filterTable(this)"></th>
+                        <th></th>
+                        <th></th>
+                        <th><input type="text" class="form-control form-control-sm" placeholder="🔍 Trạm..."
+                                style="font-size:11px" oninput="filterTable(this)"></th>
+                        <th></th>
+                        <th></th>
+                        <th></th>
+                        <th><input type="text" class="form-control form-control-sm" placeholder="NCC..."
+                                style="font-size:11px" oninput="filterTable(this)"></th>
+                        <th><input type="text" class="form-control form-control-sm" placeholder="Người..."
+                                style="font-size:11px" oninput="filterTable(this)"></th>
+                        <th></th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in fuel_logs %}
+                    <tr>
+                        <td>{{ log.ngay.split(' ')[0] if log.ngay else '' }}</td>
+                        <td>
+                            {% if log.type == 'DIRECT_BUY' %}
+                            <span class="badge bg-purple-lt">ĐỔ NL (MUA)</span>
+                            {% elif log.type == 'STOCK_IN' %}
+                            <span class="badge bg-green-lt">NHẬP KHO</span>
+                            {% elif log.type == 'STATION_OUT' %}
+                            <span class="badge bg-orange-lt">XUẤT TỪ KHO</span>
+                            {% elif log.type == 'ADJUSTMENT' %}
+                            <span class="badge bg-secondary-lt">CHỈNH NL TỒN</span>
+                            {% endif %}
+                        </td>
+                        <td><span class="badge bg-{{ 'cyan' if log.loai_nhien_lieu == 'Dầu' else 'yellow' }}-lt">{{
+                                log.loai_nhien_lieu or '--' }}</span></td>
+                        <td>{{ log.id_tram if log.id_tram else 'KHO TỔNG' }}</td>
+                        <td class="fw-bold">
+                            {{ "{:,.0f}".format(log.so_luong or 0) }}
+                        </td>
+                        <td>
+                            {% if (log.don_gia or 0) > 0 %}{{ "{:,.0f}".format(log.don_gia or 0) }}{% endif %}
+                        </td>
+                        <td class="text-end text-primary fw-bold">
+                            {% if (log.thanh_tien or 0) > 0 %}{{ "{:,.0f}".format(log.thanh_tien or 0) }}{% endif %}
+                        </td>
+                        <td>{{ log.nha_cung_cap if log.nha_cung_cap else '' }}</td>
+                        <td class="small"><span class="badge bg-blue-lt">{{ log.nguoi_thuc_hien or '--' }}</span>
+                        </td>
+                        <td class="small text-muted">{{ log.ghi_chu if log.ghi_chu else '' }}</td>
+                        <td class="text-end">
+                            <button type="button" class="btn btn-icon btn-ghost-primary btn-sm" data-bs-toggle="modal"
+                                data-bs-target="#smartFuelModal" data-json='{{ log.to_dict() | tojson | safe }}'
+                                onclick='editFuel(this)'>
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <form action="{{ url_for('generator.delete_fuel_ledger', id=log.id) }}" method="POST"
+                                class="d-inline" onsubmit="return confirm('Xóa?')">
+                                <button type="submit" class="btn btn-icon btn-ghost-danger btn-sm"><i
+                                        class="fas fa-trash-alt"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div> <!-- Close fuel-content -->
+
+<!-- TAB 3: EXPENSE CONTENT -->
+<div class="tab-pane fade {{ 'show active' if active_tab == 'expense' else '' }}" id="expense-content" role="tabpanel">
+    <div class="row mb-3">
+        <div class="col-12 d-flex gap-2 justify-content-end flex-wrap align-items-end">
+            <form action="{{ url_for('generator.export_expenses') }}" method="GET"
+                class="d-flex gap-2 align-items-end export-form">
+                <input type="date" name="start_date" class="form-control form-control-sm rounded-pill"
+                    style="width:130px;" title="Từ ngày">
+                <input type="date" name="end_date" class="form-control form-control-sm rounded-pill"
+                    style="width:130px;" title="Đến ngày">
+                <button type="submit" class="btn btn-outline-success btn-sm rounded-pill fw-bold">
+                    <i class="fas fa-file-excel me-1"></i>Xuất
+                </button>
+            </form>
+            <button class="btn btn-primary btn-sm rounded-pill shadow-sm" data-bs-toggle="modal"
+                data-bs-target="#addExpenseModal">
+                <i class="fas fa-plus me-1"></i>Thêm chi phí
+            </button>
+        </div>
+    </div>
+    <div class="card shadow-sm border-0">
+        <div class="table-responsive">
+            <table class="table table-vcenter table-hover card-table table-compact">
+                <thead>
+                    <tr>
+                        <th style="width: 120px;">Ngày</th>
+                        <th style="min-width: 200px;">Nội Dung</th>
+                        <th>Số Tiền</th>
+                        <th>Người Chi</th>
+                        <th class="d-none d-md-table-cell">Ghi Chú</th>
+                        <th class="text-end"></th>
+                    </tr>
+                    <tr class="filter-row bg-light-lt">
+                        <th><input type="date" class="form-control form-control-sm" style="font-size:11px"
+                                onchange="filterTable(this)"></th>
+                        <th><input type="text" class="form-control form-control-sm" placeholder="🔍 Nội dung..."
+                                style="font-size:11px" oninput="filterTable(this)"></th>
+                        <th></th>
+                        <th><input type="text" class="form-control form-control-sm" placeholder="Người..."
+                                style="font-size:11px" oninput="filterTable(this)"></th>
+                        <th class="d-none d-md-table-cell"></th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in expenses %}
+                    <tr>
+                        <td class="small fw-medium">{{ item.ngay_su_dung | format_date }}</td>
+                        <td>{{ item.noi_dung }}</td>
+                        <td class="text-danger fw-bold text-nowrap">{{ "{:,.0f}".format(item.so_tien or 0) }} đ</td>
+                        <td><span class="badge bg-green-lt">{{ item.nguoi_tam_ung or '--' }}</span></td>
+                        <td class="text-muted small d-none d-md-table-cell">{{ item.ghi_chu }}</td>
+                        <td class="text-end">
+                            <button type="button" class="btn btn-icon btn-ghost-primary btn-sm" data-bs-toggle="modal"
+                                data-bs-target="#addExpenseModal" data-json='{{ item.to_dict() | tojson | safe }}'
+                                onclick='editExpense(this)'>
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <form action="{{ url_for('generator.delete_other_expense', id=item.id) }}" method="POST"
+                                class="d-inline" onsubmit="return confirm('Xóa chi phí này?');">
+                                <button type="submit" class="btn btn-icon btn-ghost-danger btn-sm"><i
+                                        class="fas fa-trash-alt"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center py-5 text-muted">Chưa có dữ liệu chi phí</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- TAB 4: PAYMENT CONTENT -->
+<div class="tab-pane fade {{ 'show active' if active_tab == 'payment' else '' }}" id="payment-content" role="tabpanel">
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm rounded-3">
+                <div class="card-body p-3">
+                    <div class="d-flex flex-wrap gap-2 align-items-end">
+                        <form action="{{ url_for('generator.power_schedule') }}" method="GET"
+                            class="d-flex gap-2 align-items-end">
+                            <input type="hidden" name="tab" value="payment">
+                            <select name="pay_month" class="form-select form-select-sm rounded-pill"
+                                style="width:105px;" onchange="this.form.submit()">
+                                <option value="">-- Cả năm --</option>
+                                {% for m in range(1, 13) %}
+                                <option value="{{ m }}" {% if pay_month==m %}selected{% endif %}>Tháng {{ m }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <select name="pay_year" class="form-select form-select-sm rounded-pill" style="width:90px;"
+                                onchange="this.form.submit()">
+                                {% for y in pay_years %}
+                                <option value="{{ y }}" {% if pay_year==y %}selected{% endif %}>{{ y }}</option>
+                                {% endfor %}
+                            </select>
                         </form>
                     </div>
                 </div>
             </div>
-
-
-
-            <div class="card shadow-sm">
-                <div class="table-responsive">
-                    <table class="table table-vcenter table-hover card-table text-nowrap">
-                        <thead>
-                            <tr>
-                                <th class="col-id">ID Trạm</th>
-                                <th class="col-date">Ngày Cúp</th>
-                                <th class="">Bắt đầu</th>
-                                <th class="">Kết thúc</th>
-                                <th class="d-none d-md-table-cell">Đội QL</th>
-                                <th class="d-none d-md-table-cell">Khu Vực</th>
-                                {% if session['role'] == 'admin' %}
-                                <th class="d-none d-md-table-cell">NV Quản Lý</th>
-                                {% endif %}
-                            </tr>
-                            <tr class="filter-row bg-light-lt">
-                                <th><input type="text" class="form-control form-control-sm" placeholder="ID..."
-                                        onkeyup="filterTable()"></th>
-                                <th><input type="date" class="form-control form-control-sm" onchange="filterTable()">
-                                </th>
-                                <th></th>
-                                <th></th>
-                                <th class="d-none d-md-table-cell"><input type="text"
-                                        class="form-control form-control-sm" placeholder="Đội..."
-                                        onkeyup="filterTable()"></th>
-                                <th class="d-none d-md-table-cell"><input type="text"
-                                        class="form-control form-control-sm" placeholder="Xã/Huyện..."
-                                        onkeyup="filterTable()"></th>
-                                {% if session['role'] == 'admin' %}
-                                <th class="d-none d-md-table-cell"></th>
-                                {% endif %}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for item in schedules %}
-                            <tr>
-                                <td>
-                                    <span class="badge bg-blue-lt fw-bold cursor-pointer station-trigger"
-                                        data-id="{{ item.id_tram }}">{{ item.id_tram }}</span>
-                                </td>
-                                <td class="small fw-medium">
-                                    {{ item.ngay_mat_dien | format_date }}
-                                </td>
-                                <td><span class="badge bg-red-lt fw-bold">{{ item.thoi_gian_cup_dien }}</span></td>
-                                <td><span class="badge bg-green-lt fw-bold">{{ item.thoi_gian_co_dien }}</span></td>
-
-                                <td class="small text-muted d-none d-md-table-cell">{{ item.doi_quan_ly_dien or '--' }}
-                                </td>
-                                <td class="small text-muted d-none d-md-table-cell">{{ item.khu_vuc or '--' }}</td>
-                                {% if session['role'] == 'admin' %}
-                                <td class="small text-muted d-none d-md-table-cell">{{ item.quan_ly_tram }}</td>
-                                {% endif %}
-                            </tr>
-                            {% else %}
-                            <tr>
-                                <td colspan="7" class="text-center py-5">
-                                    <div class="empty">
-                                        <div class="empty-icon"><i class="fas fa-calendar-check fa-2x"></i></div>
-                                        <p class="empty-title">Không có lịch cúp điện</p>
-                                        <p class="empty-subtitle text-muted">Hiện tại không có ghi nhận lịch mất điện
-                                            nào
-                                            cho
-                                            trạm
-                                            của bạn.</p>
-                                    </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-        </div>
-    </div> <!-- Close schedule-content -->
-
-    <!-- TAB 2: FUEL CONTENT (New Unified View) -->
-
-    <div class="tab-pane fade {{ 'show active' if active_tab == 'fuel' else '' }}" id="fuel-content" role="tabpanel">
-        <!-- Summary Card -->
-        <div class="row mb-3">
-            <div class="col-12">
-                <div class="card bg-primary-lt border-0 shadow-sm">
-                    <div class="card-body d-flex justify-content-between align-items-center p-3">
-                        <div>
-                            <div class="text-uppercase small fw-bold text-muted">TỒN KHO</div>
-                            <div class="mb-0">
-                                <span class="fw-bold text-primary">Dầu: {{ "{:,.0f}".format(central_stock['Dầu'])
-                                    }}L</span>
-                                <span class="text-muted mx-1">|</span>
-                                <span class="fw-bold text-warning">Xăng: {{ "{:,.0f}".format(central_stock['Xăng'])
-                                    }}L</span>
-                                <span class="text-muted mx-1">|</span>
-                                <span class="text-muted small">Tổng: {{ "{:,.0f}".format(central_stock['total'])
-                                    }}L</span>
-                            </div>
-                        </div>
-                        <div class="d-flex gap-2 align-items-center">
-                            <form action="{{ url_for('generator.export_fuel_ledger') }}" method="GET"
-                                class="d-none d-md-flex gap-2 align-items-center">
-                                <input type="date" name="start_date" class="form-control form-control-sm rounded-pill"
-                                    title="Từ ngày">
-                                <input type="date" name="end_date" class="form-control form-control-sm rounded-pill"
-                                    title="Đến ngày">
-                                <button type="submit"
-                                    class="btn btn-outline-primary btn-sm rounded-pill border-0 shadow-sm bg-white fw-bold text-nowrap">
-                                    <i class="fas fa-file-excel me-1 text-success"></i>Xuất
-                                </button>
-                            </form>
-                            <button class="btn btn-primary rounded-pill shadow-sm text-nowrap" data-bs-toggle="modal"
-                                data-bs-target="#smartFuelModal" onclick="resetFuelModal()">
-                                <i class="fas fa-plus me-2"></i>Tạo
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Ledger Table -->
-        <div class="card shadow-sm border-0">
-            <div class="table-responsive">
-                <table class="table table-vcenter table-hover table-compact text-nowrap">
-                    <thead>
-                        <tr>
-                            <th>Ngày</th>
-                            <th>Loại</th>
-                            <th>NL</th>
-                            <th>Trạm / Kho</th>
-                            <th>Lượng (Lít)</th>
-                            <th>Đơn giá</th>
-                            <th class="text-end">Thành tiền</th>
-                            <th>NCC</th>
-                            <th>Người mua</th>
-                            <th>Ghi chú</th>
-                            <th></th>
-                        </tr>
-                        <tr class="filter-row bg-light-lt">
-                            <th><input type="date" class="form-control form-control-sm" style="font-size:11px"
-                                    onchange="filterTable(this)"></th>
-                            <th></th>
-                            <th></th>
-                            <th><input type="text" class="form-control form-control-sm" placeholder="🔍 Trạm..."
-                                    style="font-size:11px" oninput="filterTable(this)"></th>
-                            <th></th>
-                            <th></th>
-                            <th></th>
-                            <th><input type="text" class="form-control form-control-sm" placeholder="NCC..."
-                                    style="font-size:11px" oninput="filterTable(this)"></th>
-                            <th><input type="text" class="form-control form-control-sm" placeholder="Người..."
-                                    style="font-size:11px" oninput="filterTable(this)"></th>
-                            <th></th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for log in fuel_logs %}
-                        <tr>
-                            <td>{{ log.ngay.split(' ')[0] if log.ngay else '' }}</td>
-                            <td>
-                                {% if log.type == 'DIRECT_BUY' %}
-                                <span class="badge bg-purple-lt">ĐỔ NL (MUA)</span>
-                                {% elif log.type == 'STOCK_IN' %}
-                                <span class="badge bg-green-lt">NHẬP KHO</span>
-                                {% elif log.type == 'STATION_OUT' %}
-                                <span class="badge bg-orange-lt">XUẤT TỪ KHO</span>
-                                {% elif log.type == 'ADJUSTMENT' %}
-                                <span class="badge bg-secondary-lt">CHỈNH NL TỒN</span>
-                                {% endif %}
-                            </td>
-                            <td><span class="badge bg-{{ 'cyan' if log.loai_nhien_lieu == 'Dầu' else 'yellow' }}-lt">{{
-                                    log.loai_nhien_lieu or '--' }}</span></td>
-                            <td>{{ log.id_tram if log.id_tram else 'KHO TỔNG' }}</td>
-                            <td class="fw-bold">
-                                {{ "{:,.0f}".format(log.so_luong or 0) }}
-                            </td>
-                            <td>
-                                {% if (log.don_gia or 0) > 0 %}{{ "{:,.0f}".format(log.don_gia or 0) }}{% endif %}
-                            </td>
-                            <td class="text-end text-primary fw-bold">
-                                {% if (log.thanh_tien or 0) > 0 %}{{ "{:,.0f}".format(log.thanh_tien or 0) }}{% endif %}
-                            </td>
-                            <td>{{ log.nha_cung_cap if log.nha_cung_cap else '' }}</td>
-                            <td class="small"><span class="badge bg-blue-lt">{{ log.nguoi_thuc_hien or '--' }}</span>
-                            </td>
-                            <td class="small text-muted">{{ log.ghi_chu if log.ghi_chu else '' }}</td>
-                            <td class="text-end">
-                                <button type="button" class="btn btn-icon btn-ghost-primary btn-sm"
-                                    data-bs-toggle="modal" data-bs-target="#smartFuelModal"
-                                    data-json='{{ log.to_dict() | tojson | safe }}' onclick='editFuel(this)'>
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <form action="{{ url_for('generator.delete_fuel_ledger', id=log.id) }}" method="POST"
-                                    class="d-inline" onsubmit="return confirm('Xóa?')">
-                                    <button type="submit" class="btn btn-icon btn-ghost-danger btn-sm"><i
-                                            class="fas fa-trash-alt"></i></button>
-                                </form>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div> <!-- Close fuel-content -->
-
-    <!-- TAB 3: EXPENSE CONTENT -->
-    <div class="tab-pane fade {{ 'show active' if active_tab == 'expense' else '' }}" id="expense-content"
-        role="tabpanel">
-        <div class="row mb-3">
-            <div class="col-12 d-flex gap-2 justify-content-end flex-wrap align-items-end">
-                <form action="{{ url_for('generator.export_expenses') }}" method="GET"
-                    class="d-flex gap-2 align-items-end export-form">
-                    <input type="date" name="start_date" class="form-control form-control-sm rounded-pill"
-                        style="width:130px;" title="Từ ngày">
-                    <input type="date" name="end_date" class="form-control form-control-sm rounded-pill"
-                        style="width:130px;" title="Đến ngày">
-                    <button type="submit" class="btn btn-outline-success btn-sm rounded-pill fw-bold">
-                        <i class="fas fa-file-excel me-1"></i>Xuất
-                    </button>
-                </form>
-                <button class="btn btn-primary btn-sm rounded-pill shadow-sm" data-bs-toggle="modal"
-                    data-bs-target="#addExpenseModal">
-                    <i class="fas fa-plus me-1"></i>Thêm chi phí
-                </button>
-            </div>
-        </div>
-        <div class="card shadow-sm border-0">
-            <div class="table-responsive">
-                <table class="table table-vcenter table-hover card-table table-compact">
-                    <thead>
-                        <tr>
-                            <th style="width: 120px;">Ngày</th>
-                            <th style="min-width: 200px;">Nội Dung</th>
-                            <th>Số Tiền</th>
-                            <th>Người Chi</th>
-                            <th class="d-none d-md-table-cell">Ghi Chú</th>
-                            <th class="text-end"></th>
-                        </tr>
-                        <tr class="filter-row bg-light-lt">
-                            <th><input type="date" class="form-control form-control-sm" style="font-size:11px"
-                                    onchange="filterTable(this)"></th>
-                            <th><input type="text" class="form-control form-control-sm" placeholder="🔍 Nội dung..."
-                                    style="font-size:11px" oninput="filterTable(this)"></th>
-                            <th></th>
-                            <th><input type="text" class="form-control form-control-sm" placeholder="Người..."
-                                    style="font-size:11px" oninput="filterTable(this)"></th>
-                            <th class="d-none d-md-table-cell"></th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for item in expenses %}
-                        <tr>
-                            <td class="small fw-medium">{{ item.ngay_su_dung | format_date }}</td>
-                            <td>{{ item.noi_dung }}</td>
-                            <td class="text-danger fw-bold text-nowrap">{{ "{:,.0f}".format(item.so_tien or 0) }} đ</td>
-                            <td><span class="badge bg-green-lt">{{ item.nguoi_tam_ung or '--' }}</span></td>
-                            <td class="text-muted small d-none d-md-table-cell">{{ item.ghi_chu }}</td>
-                            <td class="text-end">
-                                <button type="button" class="btn btn-icon btn-ghost-primary btn-sm"
-                                    data-bs-toggle="modal" data-bs-target="#addExpenseModal"
-                                    data-json='{{ item.to_dict() | tojson | safe }}' onclick='editExpense(this)'>
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <form action="{{ url_for('generator.delete_other_expense', id=item.id) }}" method="POST"
-                                    class="d-inline" onsubmit="return confirm('Xóa chi phí này?');">
-                                    <button type="submit" class="btn btn-icon btn-ghost-danger btn-sm"><i
-                                            class="fas fa-trash-alt"></i></button>
-                                </form>
-                            </td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="6" class="text-center py-5 text-muted">Chưa có dữ liệu chi phí</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
         </div>
     </div>
 
-    <!-- TAB 4: PAYMENT CONTENT -->
-    <div class="tab-pane fade {{ 'show active' if active_tab == 'payment' else '' }}" id="payment-content"
-        role="tabpanel">
-        <div class="row mb-3">
-            <div class="col-12">
-                <div class="card border-0 shadow-sm rounded-3">
-                    <div class="card-body p-3">
-                        <div class="d-flex flex-wrap gap-2 align-items-end">
-                            <form action="{{ url_for('generator.power_schedule') }}" method="GET"
-                                class="d-flex gap-2 align-items-end">
-                                <input type="hidden" name="tab" value="payment">
-                                <select name="pay_month" class="form-select form-select-sm rounded-pill"
-                                    style="width:105px;" onchange="this.form.submit()">
-                                    <option value="">-- Cả năm --</option>
-                                    {% for m in range(1, 13) %}
-                                    <option value="{{ m }}" {% if pay_month==m %}selected{% endif %}>Tháng {{ m }}
-                                    </option>
-                                    {% endfor %}
-                                </select>
-                                <select name="pay_year" class="form-select form-select-sm rounded-pill"
-                                    style="width:90px;" onchange="this.form.submit()">
-                                    {% for y in pay_years %}
-                                    <option value="{{ y }}" {% if pay_year==y %}selected{% endif %}>{{ y }}</option>
-                                    {% endfor %}
-                                </select>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    <div class="card border shadow-sm">
+        <div class="card-header py-2">
+            <h5 class="card-title mb-0"><i class="fas fa-money-check-alt me-2 text-success"></i>Bảng Thanh Toán</h5>
         </div>
-
-        <div class="card border shadow-sm">
-            <div class="card-header py-2">
-                <h5 class="card-title mb-0"><i class="fas fa-money-check-alt me-2 text-success"></i>Bảng Thanh Toán</h5>
-            </div>
-            <div class="table-responsive">
-                <table class="table table-vcenter table-hover card-table table-compact">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Nhân viên</th>
-                            <th class="text-end">Mua Lẻ</th>
-                            <th class="text-end">CX222</th>
-                            <th class="text-end">VNPT-VTL</th>
-                            <th class="text-end">Chi phí khác</th>
-                            <th class="text-end fw-bold text-primary">Cần CK</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% set ns = namespace(total_canck=0, total_cx=0) %}
-                        {% for name, d in payment_data.items() %}
-                        <tr>
-                            <td class="fw-medium">{{ name }}</td>
-                            <td class="text-end">{{ "{:,.0f}".format(d.mua_le) if d.mua_le else '-' }}</td>
-                            <td class="text-end">{{ "{:,.0f}".format(d.cx222) if d.cx222 else '-' }}</td>
-                            <td class="text-end">{{ "{:,.0f}".format(d.vnpt_vtl) if d.vnpt_vtl else '-' }}</td>
-                            <td class="text-end">{{ "{:,.0f}".format(d.other_exp) if d.other_exp else '-' }}</td>
-                            <td class="text-end fw-bold text-primary">{{ "{:,.0f}".format(d.can_ck) }}</td>
-                        </tr>
-                        {% set ns.total_canck = ns.total_canck + d.can_ck %}
-                        {% set ns.total_cx = ns.total_cx + d.cx222 %}
-                        {% endfor %}
-                    </tbody>
-                    {% if payment_data %}
-                    <tfoot class="table-light">
-                        <tr class="fw-bold">
-                            <td colspan="5" class="text-end small">Tổng chi phí mua ngoài:</td>
-                            <td class="text-end text-primary">{{ "{:,.0f}".format(ns.total_canck) }}</td>
-                        </tr>
-                        <tr class="fw-bold">
-                            <td colspan="5" class="text-end small">Tổng chi phí CX222:</td>
-                            <td class="text-end text-success">{{ "{:,.0f}".format(ns.total_cx) }}</td>
-                        </tr>
-                    </tfoot>
-                    {% endif %}
-                </table>
-                {% if not payment_data %}
-                <div class="text-center py-4 text-muted">Không có dữ liệu thanh toán trong tháng này.</div>
+        <div class="table-responsive">
+            <table class="table table-vcenter table-hover card-table table-compact">
+                <thead class="table-light">
+                    <tr>
+                        <th>Nhân viên</th>
+                        <th class="text-end">Mua Lẻ</th>
+                        <th class="text-end">CX222</th>
+                        <th class="text-end">VNPT-VTL</th>
+                        <th class="text-end">Chi phí khác</th>
+                        <th class="text-end fw-bold text-primary">Cần CK</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% set ns = namespace(total_canck=0, total_cx=0) %}
+                    {% for name, d in payment_data.items() %}
+                    <tr>
+                        <td class="fw-medium">{{ name }}</td>
+                        <td class="text-end">{{ "{:,.0f}".format(d.mua_le) if d.mua_le else '-' }}</td>
+                        <td class="text-end">{{ "{:,.0f}".format(d.cx222) if d.cx222 else '-' }}</td>
+                        <td class="text-end">{{ "{:,.0f}".format(d.vnpt_vtl) if d.vnpt_vtl else '-' }}</td>
+                        <td class="text-end">{{ "{:,.0f}".format(d.other_exp) if d.other_exp else '-' }}</td>
+                        <td class="text-end fw-bold text-primary">{{ "{:,.0f}".format(d.can_ck) }}</td>
+                    </tr>
+                    {% set ns.total_canck = ns.total_canck + d.can_ck %}
+                    {% set ns.total_cx = ns.total_cx + d.cx222 %}
+                    {% endfor %}
+                </tbody>
+                {% if payment_data %}
+                <tfoot class="table-light">
+                    <tr class="fw-bold">
+                        <td colspan="5" class="text-end small">Tổng chi phí mua ngoài:</td>
+                        <td class="text-end text-primary">{{ "{:,.0f}".format(ns.total_canck) }}</td>
+                    </tr>
+                    <tr class="fw-bold">
+                        <td colspan="5" class="text-end small">Tổng chi phí CX222:</td>
+                        <td class="text-end text-success">{{ "{:,.0f}".format(ns.total_cx) }}</td>
+                    </tr>
+                </tfoot>
                 {% endif %}
-            </div>
+            </table>
+            {% if not payment_data %}
+            <div class="text-center py-4 text-muted">Không có dữ liệu thanh toán trong tháng này.</div>
+            {% endif %}
         </div>
     </div>
+</div>
 </div> <!-- Close mainTabContent -->
 
 

@@ -1,0 +1,203 @@
+{# Tab Tồn Tại — partials/tab_issues.html #}
+
+{# Toolbar #}
+<div class="d-flex flex-wrap gap-2 mb-2 align-items-center">
+    <div class="btn-group btn-group-sm">
+        <a href="{{ url_for('daily_work.daily_work', tab='issues') }}"
+            class="btn {{ 'btn-primary' if not request.args.get('status') else 'btn-outline-primary' }} rounded-pill-start">Tất
+            cả</a>
+        <a href="{{ url_for('daily_work.daily_work', tab='issues', status='Chưa XL') }}"
+            class="btn {{ 'btn-danger' if request.args.get('status') == 'Chưa XL' else 'btn-outline-danger' }}">🔴 Chưa
+            XL</a>
+        <a href="{{ url_for('daily_work.daily_work', tab='issues', status='Đã XL') }}"
+            class="btn {{ 'btn-success' if request.args.get('status') == 'Đã XL' else 'btn-outline-success' }} rounded-pill-end">🟢
+            Đã XL</a>
+    </div>
+    <button type="button" class="btn btn-sm btn-primary rounded-pill px-4 ms-auto" data-bs-toggle="modal"
+        data-bs-target="#addIssueModal">
+        <i class="fas fa-plus me-1"></i>Thêm Tồn Tại
+    </button>
+</div>
+
+{# Issues Table #}
+<div class="card shadow-sm border-0">
+    <div class="table-responsive">
+        <table class="table table-vcenter table-hover card-table text-nowrap" id="issuesTable">
+            <thead>
+                <tr>
+                    <th>Ngày</th>
+                    <th>Trạm</th>
+                    <th>Hạng Mục</th>
+                    <th>Mô Tả</th>
+                    <th>TT</th>
+                    <th class="d-none d-md-table-cell">Người BC</th>
+                    <th class="text-end">⚙</th>
+                </tr>
+                <tr class="filter-row bg-light-lt">
+                    <th></th>
+                    <th><input type="text" class="form-control form-control-sm dw-filter" data-col="1" placeholder="🔍">
+                    </th>
+                    <th>
+                        <select class="form-select form-select-sm dw-filter" data-col="2">
+                            <option value="">Tất cả</option>
+                            {% for hm in hang_muc_list %}
+                            <option value="{{ hm }}">{{ hm }}</option>
+                            {% endfor %}
+                        </select>
+                    </th>
+                    <th></th>
+                    <th></th>
+                    <th class="d-none d-md-table-cell"></th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in issues %}
+                <tr>
+                    <td class="small fw-medium">{{ item.ngay_phat_hien | format_date }}</td>
+                    <td><span class="badge bg-blue-lt fw-bold">{{ item.id_tram }}</span></td>
+                    <td>
+                        {% set hm_colors = {
+                        'Cột anten': 'bg-purple-lt',
+                        'Nhà trạm': 'bg-azure-lt',
+                        'Máy phát điện': 'bg-orange-lt',
+                        'Máy lạnh': 'bg-cyan-lt',
+                        'Hệ thống điện': 'bg-yellow-lt',
+                        'Hệ thống tiếp đất': 'bg-lime-lt',
+                        'Hệ thống PCCC': 'bg-red-lt',
+                        'Thiết bị truyền dẫn': 'bg-indigo-lt',
+                        'Thiết bị vô tuyến': 'bg-teal-lt',
+                        'Khác': 'bg-secondary-lt'
+                        } %}
+                        <span class="badge {{ hm_colors.get(item.hang_muc, 'bg-secondary-lt') }}">{{ item.hang_muc
+                            }}</span>
+                    </td>
+                    <td class="small" style="white-space:normal;max-width:250px;">{{ item.mo_ta }}</td>
+                    <td>
+                        <form action="{{ url_for('daily_work.toggle_issue', id=item.id) }}" method="POST"
+                            style="display:inline">
+                            {% if item.trang_thai == 'Chưa XL' %}
+                            <button type="submit" class="badge bg-red-lt border-0 cursor-pointer"
+                                title="Click để đánh dấu Đã XL">🔴 Chưa XL</button>
+                            {% else %}
+                            <button type="submit" class="badge bg-green-lt border-0 cursor-pointer"
+                                title="Click để đánh dấu Chưa XL">🟢 Đã XL</button>
+                            {% endif %}
+                        </form>
+                    </td>
+                    <td class="small text-muted d-none d-md-table-cell">{{ item.nguoi_bao_cao or '--' }}</td>
+                    <td class="text-end">
+                        <form action="{{ url_for('daily_work.delete_issue', id=item.id) }}" method="POST"
+                            style="display:inline" onsubmit="return confirm('Xóa tồn tại này?')">
+                            <button type="submit" class="btn btn-sm btn-ghost-danger p-1">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" class="text-center py-5">
+                        <div class="empty">
+                            <div class="empty-icon"><i class="fas fa-clipboard-check fa-2x"></i></div>
+                            <p class="empty-title">Không có tồn tại nào</p>
+                            <p class="empty-subtitle text-muted">Nhấn "Thêm Tồn Tại" để bắt đầu ghi nhận.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{# Add Issue Modal (Batch) #}
+<div class="modal fade" id="addIssueModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-exclamation-triangle me-2 text-warning"></i>Thêm Tồn Tại</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('daily_work.add_issue') }}" method="POST">
+                <div class="modal-body">
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Trạm</label>
+                            <input type="text" name="id_tram" class="form-control form-control-sm"
+                                list="stationListIssue" placeholder="VD: DNDQ41" required>
+                            <datalist id="stationListIssue">
+                                {% for s in stations %}
+                                <option value="{{ s.id_tram }}">
+                                    {% endfor %}
+                            </datalist>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Ngày phát hiện</label>
+                            <input type="date" name="ngay_phat_hien" class="form-control form-control-sm"
+                                value="{{ now_date }}">
+                        </div>
+                    </div>
+                    <hr class="my-2">
+                    <div id="issueRows">
+                        <div class="issue-row mb-2 p-2 bg-light rounded">
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <select name="hang_muc[]" class="form-select form-select-sm flex-grow-1" required>
+                                    <option value="">-- Hạng mục tồn tại --</option>
+                                    {% for hm in hang_muc_list %}
+                                    <option value="{{ hm }}">{{ hm }}</option>
+                                    {% endfor %}
+                                </select>
+                                <button type="button" class="btn btn-sm btn-ghost-danger p-0 flex-shrink-0"
+                                    onclick="removeIssueRow(this)" title="Xóa">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <textarea name="mo_ta[]" class="form-control form-control-sm" rows="2"
+                                placeholder="Mô tả chi tiết tồn tại..." required></textarea>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill mt-1"
+                        onclick="addIssueRow()">
+                        <i class="fas fa-plus me-1"></i>Thêm tồn tại
+                    </button>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i>Lưu tất cả
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function addIssueRow() {
+        const container = document.getElementById('issueRows');
+        const hmOptions = `{{ hang_muc_list | tojson }}`;
+        const options = JSON.parse(hmOptions).map(h => `<option value="${h}">${h}</option>`).join('');
+        container.insertAdjacentHTML('beforeend', `
+        <div class="issue-row mb-2 p-2 bg-light rounded">
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <select name="hang_muc[]" class="form-select form-select-sm flex-grow-1" required>
+                    <option value="">-- Hạng mục tồn tại --</option>
+                    ${options}
+                </select>
+                <button type="button" class="btn btn-sm btn-ghost-danger p-0 flex-shrink-0" onclick="removeIssueRow(this)" title="Xóa">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <textarea name="mo_ta[]" class="form-control form-control-sm" rows="2" placeholder="Mô tả chi tiết tồn tại..." required></textarea>
+        </div>
+    `);
+    }
+
+    function removeIssueRow(btn) {
+        const rows = document.querySelectorAll('.issue-row');
+        if (rows.length > 1) {
+            btn.closest('.issue-row').remove();
+        }
+    }
+</script>

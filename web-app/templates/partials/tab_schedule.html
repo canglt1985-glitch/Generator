@@ -1,0 +1,187 @@
+{# Tab Lịch Cúp Điện — Server-side rendered (instant, no JS delay) #}
+
+{# Admin toolbar #}
+<div class="d-flex flex-wrap gap-2 mb-2 align-items-center">
+    <span class="badge bg-orange-lt">📅 Lịch cúp điện EVN</span>
+    <span class="ms-2 small">
+        🟢 Đủ dầu &nbsp; 🟡 Sát &nbsp; 🔴 Thiếu &nbsp; ⚪ MLĐ
+    </span>
+    <div class="ms-auto d-flex gap-2">
+        <a href="{{ url_for('daily_work.manual_fetch_outages') }}" class="btn btn-outline-azure btn-sm rounded-pill">
+            <i class="fas fa-sync-alt me-1"></i>Cập nhật EVN
+        </a>
+        {% if session.get('role') == 'admin' %}
+        <div class="dropdown">
+            <button class="btn btn-sm btn-outline-secondary dropdown-toggle rounded-pill px-3" type="button"
+                data-bs-toggle="dropdown">
+                <i class="fas fa-tools me-1"></i>Admin
+            </button>
+            <div class="dropdown-menu dropdown-menu-end shadow border-0">
+                <a class="dropdown-item" href="{{ url_for('daily_work.template_power_schedule') }}">
+                    <i class="fas fa-file-download me-2"></i>Tải file mẫu
+                </a>
+                <a class="dropdown-item" href="{{ url_for('daily_work.export_power_schedule') }}">
+                    <i class="fas fa-file-export me-2"></i>Xuất báo cáo
+                </a>
+                <button type="button" class="dropdown-item" data-bs-toggle="modal"
+                    data-bs-target="#importScheduleModal">
+                    <i class="fas fa-file-excel me-2"></i>Nhập từ Excel
+                </button>
+                <div class="dropdown-divider"></div>
+                <a class="dropdown-item text-danger fw-bold" href="{{ url_for('daily_work.reset_power_schedule') }}"
+                    onclick="return confirm('Xóa toàn bộ lịch cúp điện?')">
+                    <i class="fas fa-trash me-2"></i>Xóa sạch dữ liệu
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{# Schedule Table — Server-side rendered #}
+<div class="card shadow-sm border-0">
+    <div class="table-responsive">
+        <table class="table table-vcenter table-hover card-table small text-nowrap text-center mb-0" id="scheduleTable">
+            <thead>
+                <tr>
+                    <th>ID Trạm</th>
+                    <th>Ngày Cúp</th>
+                    <th>Cúp</th>
+                    <th>Có Điện</th>
+                    <th class="d-none d-md-table-cell text-start">Lý Do</th>
+                    <th class="d-none d-md-table-cell">QL Trạm</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in schedules %}
+                {% set fs = fuel_stock.get(s.id_tram, {}) %}
+                {% set ton = fs.get('ton_real', 0) %}
+                {% set dm = fs.get('dm_thuc_te', 0) %}
+                {% set loai_nl = fs.get('loai_nl', '') %}
+                {% set is_xang = 'x' in loai_nl.lower() if loai_nl else false %}
+                {# Calculate fuel need (hours * dm) #}
+                {% set cup_h = (s.thoi_gian_cup_dien or '0:0').split(':') %}
+                {% set cd_h = (s.thoi_gian_co_dien or '0:0').split(':') %}
+                {% set mins = ((cd_h[0]|int * 60 + cd_h[1]|int) - (cup_h[0]|int * 60 + cup_h[1]|int)) %}
+                {% if mins <= 0 %}{% set mins=mins + 1440 %}{% endif %} {% set need=(mins / 60.0) * dm %} {# Determine
+                    color #} {% if is_xang or not fs %} {% set fuel_color='#6c757d' %} {% elif need> 0 and ton >= need
+                    %}
+                    {% set fuel_color = '#2fb344' %}
+                    {% elif need > 0 and ton >= need * 0.5 %}
+                    {% set fuel_color = '#f76707' %}
+                    {% elif need > 0 %}
+                    {% set fuel_color = '#d63939' %}
+                    {% elif ton > 0 %}
+                    {% set fuel_color = '#2fb344' %}
+                    {% else %}
+                    {% set fuel_color = '#d63939' %}
+                    {% endif %}
+                    {# Check if today #}
+                    {% set ngay_fmt = s.ngay_mat_dien | format_date if s.ngay_mat_dien else '--' %}
+                    {% set is_today = (ngay_fmt == today_str) %}
+                    <tr{% if is_today %} class="fw-bold" {% endif %}>
+                        <td style="color:{{ fuel_color }};font-weight:bold;cursor:pointer"
+                            onclick="showFuelModal('{{ s.id_tram }}', {{ ton }}, {{ fs.get('dung_tich', 0) }}, {{ dm }}, '{{ fs.get('may_phat', '') }}', '{{ loai_nl }}', {{ need|round(1) }})">
+                            {{ s.id_tram or '--' }}
+                        </td>
+                        <td>{{ ngay_fmt }}{% if is_today %}<span class="badge bg-warning-lt ms-1">Hôm nay</span>{% endif
+                            %}</td>
+                        <td class="text-danger">{{ s.thoi_gian_cup_dien or '--' }}</td>
+                        <td class="text-success">{{ s.thoi_gian_co_dien or '--' }}</td>
+                        <td class="d-none d-md-table-cell text-start small" style="white-space:normal;max-width:250px">
+                            {{ (s.ly_do or '--')[:50] }}{% if s.ly_do and s.ly_do|length > 50 %}...{% endif %}
+                        </td>
+                        <td class="d-none d-md-table-cell small">{{ s.quan_ly_tram or '--' }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center py-4">
+                                <div class="empty">
+                                    <p class="empty-title">Không có lịch cúp điện nào sắp tới</p>
+                                    <p class="empty-subtitle text-muted">✅ Hiện tại chưa có lịch cúp từ EVN.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{# Import Modal #}
+<div class="modal fade" id="importScheduleModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-file-excel me-2 text-success"></i>Nhập Lịch Cúp Từ Excel</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('daily_work.import_power_schedule') }}" method="POST"
+                enctype="multipart/form-data">
+                <div class="modal-body">
+                    <input type="file" name="file" class="form-control" accept=".xlsx,.xls,.csv" required>
+                    <div class="form-text">Hỗ trợ .xlsx, .xls, .csv</div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-success">Nhập</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{# Fuel Modal (lightweight JS — only for popup, no data fetching) #}
+<script>
+    function showFuelModal(stationId, ton, dt, dm, mayPhat, loaiNl, need) {
+        const old = document.getElementById('fuelModal');
+        if (old) old.remove();
+
+        const isXang = loaiNl && loaiNl.toLowerCase().includes('x');
+        let statusEmoji = '\u26AA', statusText = 'MLĐ';
+        if (!isXang && (ton > 0 || dt > 0 || mayPhat)) {
+            if (need > 0 && ton >= need) { statusEmoji = '\u{1F7E2}'; statusText = 'Đủ dầu'; }
+            else if (need > 0 && ton >= need * 0.5) { statusEmoji = '\u{1F7E1}'; statusText = 'Vừa đủ'; }
+            else if (need > 0) { statusEmoji = '\u{1F534}'; statusText = 'Thiếu!'; }
+            else if (ton > 0) { statusEmoji = '\u{1F7E2}'; statusText = 'Đủ dầu'; }
+            else { statusEmoji = '\u{1F534}'; statusText = 'Hết NL'; }
+        }
+        const fillPct = dt > 0 ? Math.round(ton / dt * 100) : 0;
+        const pctCls = fillPct > 50 ? 'bg-success' : fillPct > 20 ? 'bg-warning' : 'bg-danger';
+
+        document.body.insertAdjacentHTML('beforeend', `
+    <div class="modal fade" id="fuelModal" tabindex="-1">
+        <div class="modal-dialog modal-sm modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header py-2">
+                    <h5 class="modal-title">${statusEmoji} ${stationId}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body py-2">
+                    <div class="d-flex justify-content-between small mb-1">
+                        <span class="fw-bold">NL tồn: ${ton.toFixed(1)}L / ${dt}L</span>
+                        <span class="fw-bold">${fillPct}%</span>
+                    </div>
+                    <div class="progress mb-2" style="height:6px">
+                        <div class="progress-bar ${pctCls}" style="width:${Math.min(fillPct, 100)}%"></div>
+                    </div>
+                    <div class="d-flex justify-content-between small">
+                        <span class="text-muted">Trạng thái</span>
+                        <span class="fw-bold">${statusEmoji} ${statusText}</span>
+                    </div>
+                    <div class="d-flex justify-content-between small">
+                        <span class="text-muted">Máy phát</span>
+                        <span>${mayPhat || '--'}</span>
+                    </div>
+                    <div class="d-flex justify-content-between small">
+                        <span class="text-muted">Cần (ước)</span>
+                        <span>${need.toFixed(1)}L</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>`);
+        const _bs = (typeof bootstrap !== 'undefined') ? bootstrap : (typeof tabler !== 'undefined' ? tabler.bootstrap : null);
+        if (_bs) new _bs.Modal(document.getElementById('fuelModal')).show();
+    }
+</script>

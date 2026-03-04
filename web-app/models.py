@@ -130,6 +130,18 @@ class DailyWork(db.Model):
     ngay_cap_nhat = db.Column(db.String(20), default=lambda: datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
 
+class StationIssue(db.Model):
+    """Tồn tại kỹ thuật tại trạm BTS."""
+    id = db.Column(db.Integer, primary_key=True)
+    ngay_phat_hien = db.Column(db.String(20))           # YYYY-MM-DD
+    id_tram = db.Column(db.String(50))
+    hang_muc = db.Column(db.String(100))                # Dropdown 10 hạng mục
+    mo_ta = db.Column(db.Text)                          # Free text
+    trang_thai = db.Column(db.String(30), default='Chưa XL')  # Chưa XL / Đã XL
+    nguoi_bao_cao = db.Column(db.String(100))
+    ngay_cap_nhat = db.Column(db.String(20), default=lambda: datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+
+
 # --- LEGACY MODELS (kept for DB compatibility, not used in new code) ---
 
 class FuelRefillLog(db.Model):

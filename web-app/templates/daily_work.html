@@ -8,7 +8,9 @@
                 <i class="fas fa-tasks me-2 text-primary"></i>Công Việc Hàng Ngày
             </h2>
             <div class="text-muted small mt-1">
-                {% if active_tab == 'equipment' %}Quản lý thiết bị lưu động (MPĐ, Pin)
+                {% if active_tab == 'schedule' %}Lịch cúp điện và quản lý vận hành trạm.
+                {% elif active_tab == 'equipment' %}Quản lý thiết bị lưu động (MPĐ, Pin).
+                {% elif active_tab == 'issues' %}Theo dõi tồn tại kỹ thuật tại trạm BTS.
                 {% else %}Ghi nhận và quản lý hoạt động kỹ thuật trạm BTS.{% endif %}
             </div>
         </div>
@@ -26,11 +28,29 @@
 <!-- NAV CARDS -->
 <div class="row g-2 mb-2" id="dwNavCards">
     <div class="col">
+        <div class="card shadow-sm dw-nav {{ 'active' if active_tab == 'schedule' else '' }}"
+            onclick="switchDwTab('schedule')" style="border-left: 3px solid var(--tblr-orange); cursor:pointer;">
+            <div class="text-center py-1 px-2">
+                <div style="font-size:1.2rem;font-weight:700;" class="text-orange">⚡</div>
+                <div style="font-size:0.7rem;color:#667;">Lịch Cúp</div>
+            </div>
+        </div>
+    </div>
+    <div class="col">
         <div class="card shadow-sm dw-nav {{ 'active' if active_tab == 'work' else '' }}" onclick="switchDwTab('work')"
             style="border-left: 3px solid var(--tblr-primary); cursor:pointer;">
             <div class="text-center py-1 px-2">
                 <div style="font-size:1.2rem;font-weight:700;" class="text-primary">📋</div>
                 <div style="font-size:0.7rem;color:#667;">Công Việc</div>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card shadow-sm dw-nav {{ 'active' if active_tab == 'issues' else '' }}"
+            onclick="switchDwTab('issues')" style="border-left: 3px solid var(--tblr-red); cursor:pointer;">
+            <div class="text-center py-1 px-2">
+                <div style="font-size:1.2rem;font-weight:700;" class="text-red">⚠️</div>
+                <div style="font-size:0.7rem;color:#667;">Tồn Tại</div>
             </div>
         </div>
     </div>
@@ -62,32 +82,55 @@
     }
 </style>
 
+<!-- TAB: LỊCH CÚP ĐIỆN -->
+{% if active_tab == 'schedule' %}
+{% include 'partials/tab_schedule.html' %}
+{% endif %}
+
+<!-- TAB: TỒN TẠI -->
+{% if active_tab == 'issues' %}
+{% include 'partials/tab_issues.html' %}
+{% endif %}
+
 <!-- TAB: CÔNG VIỆC -->
 {% if active_tab == 'work' %}
+<div class="d-flex align-items-center gap-2 mb-2">
+    <span class="badge bg-blue-lt">📋 Tuần {{ start_date[8:] }}/{{ start_date[5:7] }} → {{ end_date[8:] }}/{{
+        end_date[5:7] }}</span>
+    <span class="small text-muted">{{ works|length }} công việc</span>
+</div>
 <div class="card shadow-sm">
     <div class="table-responsive">
-        <table class="table table-vcenter table-hover card-table" id="workTable">
+        <table class="table table-vcenter table-hover card-table table-nowrap" id="workTable">
             <thead>
                 <tr>
                     <th class="dw-col-date">Ngày</th>
                     <th class="dw-col-id">Trạm</th>
                     <th class="dw-col-cat">Hạng Mục</th>
                     <th class="dw-col-content">Nội Dung</th>
-                    <th class="dw-col-extra d-none d-lg-table-cell">Tồn tại VHKT</th>
-                    <th class="dw-col-extra d-none d-lg-table-cell">Tồn tại CSHT</th>
                     <th class="dw-col-extra d-none d-lg-table-cell">Ghi chú</th>
                     <th class="dw-col-staff d-none d-md-table-cell">Người TH</th>
                     <th class="text-end dw-col-action">⚙</th>
                 </tr>
                 <tr class="filter-row bg-light-lt">
-                    <th><input type="date" class="form-control form-control-sm" onchange="filterTable(this)"></th>
-                    <th><input type="text" class="form-control form-control-sm" placeholder="🔍"
-                            oninput="filterTable(this)"></th>
+                    <th><input type="date" class="form-control form-control-sm dw-filter" data-col="0"></th>
+                    <th><input type="text" class="form-control form-control-sm dw-filter" data-col="1" placeholder="🔍">
+                    </th>
+                    <th>
+                        <select class="form-select form-select-sm dw-filter" data-col="2">
+                            <option value="">Tất cả</option>
+                            <option>A1-Hiệu chỉnh mạng lưới</option>
+                            <option>A2-Hiệu chỉnh truyền dẫn</option>
+                            <option>A3-Xử lý cảnh báo theo yêu cầu</option>
+                            <option>A4-Xử lý Cell Off theo yêu cầu</option>
+                            <option>A5-Xử lý feedback theo PAKH</option>
+                            <option>B1-Giám sát công việc tại trạm</option>
+                            <option>C2-Kiểm tra nhà trạm</option>
+                            <option>Công việc khác</option>
+                            <option>Ứng cứu thông tin</option>
+                        </select>
+                    </th>
                     <th></th>
-                    <th><input type="text" class="form-control form-control-sm" placeholder="🔍"
-                            oninput="filterTable(this)"></th>
-                    <th class="d-none d-lg-table-cell"></th>
-                    <th class="d-none d-lg-table-cell"></th>
                     <th class="d-none d-lg-table-cell"></th>
                     <th class="d-none d-md-table-cell"></th>
                     <th></th>
@@ -108,12 +151,6 @@
                         <div class="dw-clamp">{{ item.noi_dung }}</div>
                     </td>
                     <td class="dw-col-extra d-none d-lg-table-cell small">
-                        <div class="dw-clamp">{{ item.ton_tai_vhkt or '' }}</div>
-                    </td>
-                    <td class="dw-col-extra d-none d-lg-table-cell small">
-                        <div class="dw-clamp">{{ item.ton_tai_csht or '' }}</div>
-                    </td>
-                    <td class="dw-col-extra d-none d-lg-table-cell small">
                         <div class="dw-clamp">{{ item.ghi_chu or '' }}</div>
                     </td>
                     <td class="dw-col-staff d-none d-md-table-cell small">{{ item.nhan_vien }}</td>
@@ -121,8 +158,7 @@
                         <button class="btn btn-ghost-primary btn-icon btn-sm" title="Sửa" data-bs-toggle="modal"
                             data-bs-target="#editWorkModal" data-id="{{ item.id }}" data-ngay="{{ item.ngay }}"
                             data-idtram="{{ item.id_tram }}" data-hangmuc="{{ item.hang_muc }}"
-                            data-noidung="{{ item.noi_dung }}" data-vhkt="{{ item.ton_tai_vhkt }}"
-                            data-csht="{{ item.ton_tai_csht }}" data-ghichu="{{ item.ghi_chu }}">
+                            data-noidung="{{ item.noi_dung }}" data-ghichu="{{ item.ghi_chu }}">
                             <i class="fas fa-edit"></i>
                         </button>
                         <form action="{{ url_for('daily_work.delete_daily_work', work_id=item.id) }}" method="POST"
@@ -135,7 +171,7 @@
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="9" class="text-center py-5 text-muted">Chưa có dữ liệu công việc.</td>
+                    <td colspan="7" class="text-center py-5 text-muted">Chưa có dữ liệu công việc.</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -158,16 +194,16 @@
     }
 
     .dw-col-id {
-        width: 80px;
+        width: 70px;
         white-space: nowrap;
     }
 
     .dw-col-cat {
-        width: 150px;
+        width: 130px;
     }
 
     .dw-col-content {
-        min-width: 200px;
+        min-width: 180px;
     }
 
     .dw-col-extra {
@@ -175,86 +211,101 @@
     }
 
     .dw-col-staff {
-        width: 100px;
+        width: 90px;
     }
 
     .dw-col-action {
-        width: 80px;
+        width: 70px;
+        white-space: nowrap;
     }
 
     .dw-clamp {
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
         overflow: hidden;
-        white-space: normal !important;
-        word-wrap: break-word;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        max-width: 100%;
     }
 
     #workTable td,
     #workTable th {
-        padding: 0.4rem 0.35rem;
+        padding: 0.35rem 0.3rem;
         font-size: 0.82rem;
     }
 
-    /* MOBILE: all columns flex in 1 row */
+    .table-nowrap td,
+    .table-nowrap th {
+        white-space: nowrap;
+    }
+
+    .filter-row input,
+    .filter-row select {
+        font-size: 0.75rem;
+        height: 26px;
+    }
+
+    /* MOBILE: ultra-compact single-line rows */
     @media (max-width: 767.98px) {
         .dw-col-date {
-            width: 62px;
-            font-size: 0.7rem;
+            width: 58px;
+            font-size: 0.65rem;
         }
 
         .dw-col-id {
-            width: 55px;
+            width: 52px;
         }
 
         .dw-col-id .badge {
-            font-size: 0.6rem;
-            padding: 0.15em 0.35em;
+            font-size: 0.58rem;
+            padding: 0.1em 0.25em;
         }
 
         .dw-col-cat {
-            width: 80px;
-            font-size: 0.68rem;
-        }
-
-        .dw-col-cat .dw-clamp {
-            -webkit-line-clamp: 1;
+            width: 55px;
+            font-size: 0.6rem;
         }
 
         .dw-col-content {
-            min-width: 100px;
-            font-size: 0.7rem;
-        }
-
-        .dw-col-content .dw-clamp {
-            -webkit-line-clamp: 1;
+            min-width: 70px;
+            font-size: 0.6rem;
         }
 
         .dw-col-action {
-            width: 50px;
+            width: 36px;
         }
 
         .dw-col-action .btn-icon {
-            width: 1.4rem;
-            height: 1.4rem;
+            width: 1.1rem;
+            height: 1.1rem;
             padding: 0;
         }
 
         .dw-col-action .btn-icon i {
-            font-size: 0.65rem;
+            font-size: 0.5rem;
         }
 
         #workTable td,
         #workTable th {
-            padding: 0.25rem 0.15rem;
-            font-size: 0.72rem;
+            padding: 0.15rem 0.08rem;
+            font-size: 0.62rem;
         }
 
-        .filter-row input {
-            font-size: 0.6rem !important;
-            padding: 0.1rem 0.2rem !important;
-            height: 22px !important;
+        .filter-row input,
+        .filter-row select {
+            font-size: 0.5rem !important;
+            padding: 0.05rem 0.1rem !important;
+            height: 18px !important;
+        }
+
+        /* Issues table compact */
+        #issuesTable td,
+        #issuesTable th {
+            padding: 0.2rem 0.1rem;
+            font-size: 0.62rem;
+        }
+
+        #issuesTable .badge {
+            font-size: 0.5rem;
+            padding: 0.08em 0.2em;
         }
     }
 </style>
@@ -269,45 +320,78 @@
             </div>
             <form action="{{ url_for('daily_work.add_daily_work') }}" method="POST">
                 <div class="modal-body">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Ngày thực hiện</label>
-                            <input type="date" name="ngay" class="form-control" required value="{{ now_date }}">
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <label class="form-label small mb-1">Ngày</label>
+                            <input type="date" name="ngay" class="form-control form-control-sm" required
+                                value="{{ now_date }}">
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Mã Trạm (ID)</label>
-                            <input type="text" name="id_tram" class="form-control" required list="stationList">
+                        <div class="col-6">
+                            <label class="form-label small mb-1">Mã Trạm</label>
+                            <input type="text" name="id_tram" class="form-control form-control-sm" required
+                                list="stationList" placeholder="VD: DNDQ41">
                         </div>
-                        <div class="col-md-12">
-                            <label class="form-label">Hạng mục</label>
-                            <select name="hang_muc" class="form-select">
+                        <div class="col-12">
+                            <label class="form-label small mb-1">Hạng mục</label>
+                            <select name="hang_muc" class="form-select form-select-sm">
                                 <option value="A1-Hiệu chỉnh mạng lưới">A1-Hiệu chỉnh mạng lưới</option>
                                 <option value="A2-Hiệu chỉnh truyền dẫn">A2-Hiệu chỉnh truyền dẫn</option>
                                 <option value="A3-Xử lý cảnh báo theo yêu cầu">A3-Xử lý cảnh báo theo yêu cầu</option>
                                 <option value="A4-Xử lý Cell Off theo yêu cầu">A4-Xử lý Cell Off theo yêu cầu</option>
                                 <option value="A5-Xử lý feedback theo PAKH">A5-Xử lý feedback theo PAKH</option>
                                 <option value="B1-Giám sát công việc tại trạm">B1-Giám sát công việc tại trạm</option>
-                                <option value="C2-Kiểm tra nhà trạm">C2-Kiểm tra nhà trạm</option>
+                                <option value="C2-Kiểm tra nhà trạm" selected>C2-Kiểm tra nhà trạm</option>
                                 <option value="Công việc khác">Công việc khác</option>
                                 <option value="Ứng cứu thông tin">Ứng cứu thông tin</option>
                             </select>
                         </div>
-                        <div class="col-md-12">
-                            <label class="form-label">Nội dung chi tiết</label>
-                            <textarea name="noi_dung" class="form-control" rows="3" required
+                        <div class="col-12">
+                            <label class="form-label small mb-1">Nội dung công việc</label>
+                            <textarea name="noi_dung" class="form-control" rows="4" required
                                 placeholder="Ghi chú các công việc đã xử lý..."></textarea>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label text-muted small">Tồn tại VHKT</label>
-                            <textarea name="ton_tai_vhkt" class="form-control" rows="2"></textarea>
+                        <div class="col-12">
+                            <label class="form-label small mb-1 text-muted">Ghi chú (tùy chọn)</label>
+                            <input type="text" name="ghi_chu" class="form-control form-control-sm"
+                                placeholder="Ghi chú thêm...">
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label text-muted small">Tồn tại CSHT</label>
-                            <textarea name="ton_tai_csht" class="form-control" rows="2"></textarea>
+                    </div>
+                    <!-- Section Tồn Tại (collapsible) -->
+                    <div class="mt-2">
+                        <button type="button" class="btn btn-sm btn-outline-warning rounded-pill w-100 py-1"
+                            data-bs-toggle="collapse" data-bs-target="#addIssueSection">
+                            ⚠️ Tồn tại phát hiện (tùy chọn)
+                        </button>
+                        <div class="collapse mt-2" id="addIssueSection">
+                            <div class="card card-body bg-yellow-lt border-0 p-2">
+                                <div id="workIssueRows">
+                                    <div class="work-issue-row mb-2 p-2 bg-white rounded">
+                                        <div class="d-flex align-items-center gap-2 mb-1">
+                                            <select name="issue_hang_muc[]"
+                                                class="form-select form-select-sm flex-grow-1">
+                                                <option value="">-- Hạng mục tồn tại --</option>
+                                                {% for hm in hang_muc_list %}
+                                                <option value="{{ hm }}">{{ hm }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            <button type="button" class="btn btn-sm btn-ghost-danger p-0 flex-shrink-0"
+                                                onclick="removeWorkIssueRow(this)" title="Xóa">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                        <textarea name="issue_mo_ta[]" class="form-control form-control-sm" rows="2"
+                                            placeholder="Mô tả chi tiết tồn tại..."></textarea>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill"
+                                    onclick="addWorkIssueRow()">
+                                    <i class="fas fa-plus me-1"></i>Thêm tồn tại
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer">
+                <div class="modal-footer py-2">
                     <button type="submit" class="btn btn-primary w-100">Lưu công việc</button>
                 </div>
             </form>
@@ -354,16 +438,6 @@
                             <textarea name="noi_dung" id="edit_noi_dung_work" class="form-control" rows="3"
                                 required></textarea>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label text-muted small">Tồn tại VHKT</label>
-                            <textarea name="ton_tai_vhkt" id="edit_ton_tai_vhkt" class="form-control"
-                                rows="2"></textarea>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label text-muted small">Tồn tại CSHT</label>
-                            <textarea name="ton_tai_csht" id="edit_ton_tai_csht" class="form-control"
-                                rows="2"></textarea>
-                        </div>
                         <div class="col-12">
                             <label class="form-label">Ghi Chú</label>
                             <textarea name="ghi_chu" id="edit_ghi_chu_work" class="form-control" rows="2"></textarea>
@@ -383,6 +457,38 @@
         window.location.href = '/daily-work?tab=' + tabName;
     }
 
+    // ── Generic table filter (works for both workTable & issuesTable) ──
+    document.querySelectorAll('.dw-filter').forEach(el => {
+        const evts = el.tagName === 'SELECT' ? ['change'] : ['input', 'change'];
+        evts.forEach(evt => el.addEventListener(evt, () => applyFilters(el)));
+    });
+
+    function applyFilters(trigger) {
+        const table = trigger.closest('table');
+        if (!table) return;
+        const filters = Array.from(table.querySelectorAll('.dw-filter'));
+        const rows = table.querySelectorAll('tbody tr');
+        rows.forEach(tr => {
+            let show = true;
+            filters.forEach(f => {
+                const col = parseInt(f.dataset.col);
+                const val = f.value.trim().toLowerCase();
+                if (!val) return;
+                const td = tr.querySelectorAll('td')[col];
+                if (!td) return;
+                const text = td.textContent.trim().toLowerCase();
+                if (f.tagName === 'SELECT') {
+                    if (!text.includes(val)) show = false;
+                } else if (f.type === 'date') {
+                    if (!text.includes(val)) show = false;
+                } else {
+                    if (!text.includes(val)) show = false;
+                }
+            });
+            tr.style.display = show ? '' : 'none';
+        });
+    }
+
     var editWorkModal = document.getElementById('editWorkModal');
     if (editWorkModal) {
         editWorkModal.addEventListener('show.bs.modal', function (event) {
@@ -394,10 +500,33 @@
             document.getElementById('edit_id_tram_work').value = button.getAttribute('data-idtram');
             document.getElementById('edit_hang_muc').value = button.getAttribute('data-hangmuc');
             document.getElementById('edit_noi_dung_work').value = button.getAttribute('data-noidung');
-            document.getElementById('edit_ton_tai_vhkt').value = button.getAttribute('data-vhkt');
-            document.getElementById('edit_ton_tai_csht').value = button.getAttribute('data-csht');
             document.getElementById('edit_ghi_chu_work').value = button.getAttribute('data-ghichu');
         });
+    }
+
+    // Issue rows in Add Work modal — stacked layout for mobile
+    function addWorkIssueRow() {
+        const container = document.getElementById('workIssueRows');
+        const hmOptions = `{{ hang_muc_list | tojson }}`;
+        const options = JSON.parse(hmOptions).map(h => `<option value="${h}">${h}</option>`).join('');
+        container.insertAdjacentHTML('beforeend', `
+            <div class="work-issue-row mb-2 p-2 bg-white rounded">
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <select name="issue_hang_muc[]" class="form-select form-select-sm flex-grow-1">
+                        <option value="">-- Hạng mục tồn tại --</option>
+                        ${options}
+                    </select>
+                    <button type="button" class="btn btn-sm btn-ghost-danger p-0 flex-shrink-0" onclick="removeWorkIssueRow(this)" title="Xóa">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <textarea name="issue_mo_ta[]" class="form-control form-control-sm" rows="2" placeholder="Mô tả chi tiết tồn tại..."></textarea>
+            </div>
+        `);
+    }
+    function removeWorkIssueRow(btn) {
+        const rows = document.querySelectorAll('.work-issue-row');
+        if (rows.length > 1) btn.closest('.work-issue-row').remove();
     }
 </script>
 {% endblock %}

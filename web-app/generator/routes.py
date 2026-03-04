@@ -62,8 +62,8 @@ def handle_deletion(model_class, record_id, redirect_route, table_name):
 @generator_bp.route('/lich-cup')
 @login_required
 def legacy_schedule_redirect():
-    """Redirect old power schedule URLs to VHKT RAN."""
-    return redirect(url_for('smartw.vhkt'))
+    """Redirect old power schedule URLs to Daily Work."""
+    return redirect(url_for('daily_work.daily_work', tab='schedule'))
 
 
 # ============================================================
@@ -74,9 +74,9 @@ def legacy_schedule_redirect():
 @login_required
 def generator():
     active_tab = request.args.get('tab', 'fuel')
-    # Redirect schedule tab → VHKT RAN (lịch cúp moved there)
+    # Redirect schedule tab → daily_work
     if active_tab == 'schedule':
-        return redirect(url_for('smartw.vhkt'))
+        return redirect(url_for('daily_work.daily_work', tab='schedule'))
 
     now = datetime.now()
     today_str = now.strftime('%Y-%m-%d')
@@ -405,161 +405,19 @@ def calc_payment_amount():
     })
 
 
-# ============================================================
-# POWER SCHEDULE
-# ============================================================
-
+# Power schedule routes moved to daily_work/routes_schedule.py
+# Legacy redirects for bookmarked URLs:
 @generator_bp.route('/power-schedule/add', methods=['POST'])
-@login_required
-def add_power_schedule():
-    try:
-        new_item = PowerSchedule(
-            id_tram=request.form.get('id_tram'),
-            ma_khach_hang=request.form.get('ma_khach_hang'),
-            khu_vuc=request.form.get('khu_vuc'),
-            ngay_mat_dien=request.form.get('ngay_mat_dien'),
-            thoi_gian_cup_dien=request.form.get('thoi_gian_cup_dien'),
-            thoi_gian_co_dien=request.form.get('thoi_gian_co_dien'),
-            ly_do=request.form.get('ly_do'),
-            doi_quan_ly_dien=request.form.get('doi_quan_ly_dien'),
-            quan_ly_tram=request.form.get('quan_ly_tram')
-        )
-        db.session.add(new_item)
-        db.session.commit()
-        flash('Thêm thành công!', 'success')
-    except Exception as e:
-        flash(f'Lỗi: {str(e)}', 'danger')
-    return redirect(url_for('generator.generator'))
-
-
 @generator_bp.route('/power-schedule/edit/<int:id>', methods=['POST'])
-@login_required
-def edit_power_schedule(id):
-    try:
-        item = PowerSchedule.query.get_or_404(id)
-        item.id_tram = request.form.get('id_tram')
-        item.ma_khach_hang = request.form.get('ma_khach_hang')
-        item.khu_vuc = request.form.get('khu_vuc')
-        item.ngay_mat_dien = request.form.get('ngay_mat_dien')
-        item.thoi_gian_cup_dien = request.form.get('thoi_gian_cup_dien')
-        item.thoi_gian_co_dien = request.form.get('thoi_gian_co_dien')
-        item.ly_do = request.form.get('ly_do')
-        item.doi_quan_ly_dien = request.form.get('doi_quan_ly_dien')
-        item.quan_ly_tram = request.form.get('quan_ly_tram')
-        db.session.commit()
-        flash('Cập nhật thành công!', 'success')
-    except Exception as e:
-        flash(f'Lỗi cập nhật: {str(e)}', 'danger')
-    return redirect(request.referrer or url_for('generator.generator'))
-
-
 @generator_bp.route('/power-schedule/delete/<int:id>')
-@login_required
-def delete_power_schedule(id):
-    return handle_deletion(PowerSchedule, id, 'generator.generator', 'PowerSchedule')
-
-
 @generator_bp.route('/power-schedule/export')
-@login_required
-def export_power_schedule():
-    start_date = request.args.get('start_date')
-    end_date = request.args.get('end_date')
-    query = PowerSchedule.query
-    if start_date:
-        query = query.filter(PowerSchedule.ngay_mat_dien >= start_date)
-    if end_date:
-        query = query.filter(PowerSchedule.ngay_mat_dien <= end_date)
-    data = query.all()
-    col_map = {
-        'id_tram': 'ID Trạm', 'ma_khach_hang': 'Mã KH', 'khu_vuc': 'Khu vực',
-        'ngay_mat_dien': 'Ngày mất điện', 'thoi_gian_cup_dien': 'Giờ cúp',
-        'thoi_gian_co_dien': 'Giờ có', 'ly_do': 'Lý do', 'doi_quan_ly_dien': 'Đội QL Điện',
-        'quan_ly_tram': 'Quản lý trạm'
-    }
-    return export_excel(data, 'lich_cup_dien.xlsx', col_map)
-
-
 @generator_bp.route('/power-schedule/template')
-@login_required
-def template_power_schedule():
-    col_map = {
-        'id_tram': 'ID Trạm', 'ma_khach_hang': 'Mã KH', 'khu_vuc': 'Khu vực',
-        'ngay_mat_dien': 'Ngày mất điện', 'thoi_gian_cup_dien': 'Giờ cúp',
-        'thoi_gian_co_dien': 'Giờ có', 'ly_do': 'Lý do', 'doi_quan_ly_dien': 'Đội QL Điện',
-        'quan_ly_tram': 'Quản lý trạm'
-    }
-    return export_excel(None, 'mau_lich_cup_dien.xlsx', col_map)
-
-
 @generator_bp.route('/power-schedule/reset')
-@login_required
-@admin_required
-def reset_power_schedule():
-    try:
-        PowerSchedule.query.delete()
-        db.session.commit()
-        flash('Đã xóa toàn bộ Lịch cúp điện!', 'success')
-    except Exception as e:
-        flash(f'Lỗi: {e}', 'danger')
-    return redirect(url_for('generator.generator'))
-
-
 @generator_bp.route('/power-schedule/import', methods=['POST'])
-@login_required
-def import_power_schedule():
-    from generator.routes_import import generic_import
-    col_map = {
-        'id_tram': ['ID Trạm', 'Trạm', 'ID Tram'],
-        'ma_khach_hang': ['Mã KH', 'Mã khách hàng'],
-        'khu_vuc': ['Khu vực', 'Khu Vực'],
-        'ngay_mat_dien': ['Ngày mất điện', 'Ngày', 'Ngày Có/Mất', 'Ngày Cúp'],
-        'thoi_gian_cup_dien': ['Giờ cúp', 'Giờ mất', 'Bắt Đầu', 'Giờ Bắt Đầu'],
-        'thoi_gian_co_dien': ['Giờ có điện', 'Kết Thúc', 'Giờ Kết Thúc'],
-        'ly_do': ['Lý do'],
-        'doi_quan_ly_dien': ['Đội QL Điện', 'Đội QL'],
-        'quan_ly_tram': ['Quản lý trạm', 'Quản Lý']
-    }
-    return generic_import(PowerSchedule, col_map, 'generator.generator', date_cols=['ngay_mat_dien'], dup_cols=['id_tram', 'ngay_mat_dien', 'thoi_gian_cup_dien'])
-
-
-# ============================================================
-# MANUAL FETCH OUTAGES
-# ============================================================
-
 @generator_bp.route('/admin/fetch-outages')
 @login_required
-def manual_fetch_outages():
-    try:
-        script_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'fetch_outages.py')
-        python_path = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
-            '.venv', 'bin', 'python'
-        )
-
-        if not os.path.exists(python_path):
-            python_path = 'python'
-
-        result = subprocess.run(
-            [python_path, script_path],
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace"
-        )
-
-        stdout = result.stdout or ""
-        stderr = result.stderr or ""
-
-        if result.returncode == 0:
-            last_line = stdout.splitlines()[-1] if stdout.strip() else "Quét xong (không có output)."
-            flash(f'Đã quét xong! Nội dung: {last_line}', 'success')
-        else:
-            flash(f'Lỗi khi quét: {stderr}', 'danger')
-
-    except Exception as e:
-        flash(f'Lỗi hệ thống: {str(e)}', 'danger')
-
-    return redirect(url_for('generator.generator'))
+def legacy_power_redirect(**kwargs):
+    return redirect(url_for('daily_work.daily_work', tab='schedule'))
 
 
 # ============================================================
