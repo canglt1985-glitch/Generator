@@ -529,6 +529,9 @@
 
     // ── Init ────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', function () {
+        // Show default tab (MĐ) — remove d-none that hides it
+        document.getElementById('tab-md').classList.remove('d-none');
+
         loadTabData('md');
         refreshSummary();
         connectSSE();
