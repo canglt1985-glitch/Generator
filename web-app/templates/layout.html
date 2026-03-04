@@ -81,7 +81,7 @@
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <h1 class="navbar-brand navbar-brand-autodark">
-                    <a href="{{ url_for('smartw.vhkt') }}"
+                    <a href="{{ url_for('daily_work.daily_work') }}"
                         class="d-flex align-items-center gap-2 text-decoration-none brand-link">
                         <div class="brand-logo-wrapper">
                             <img src="{{ url_for('static', filename='mobifone_5g.png') }}" alt="MobiFone">
@@ -120,6 +120,15 @@
                 <div class="collapse navbar-collapse" id="sidebar-menu">
                     <ul class="navbar-nav pt-lg-3">
                         <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'daily_work' %}active{% endif %}"
+                                href="{{ url_for('daily_work.daily_work') }}">
+                                <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                    <i class="fas fa-tasks"></i>
+                                </span>
+                                <span class="nav-link-title">Công việc hàng ngày</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link {% if request.endpoint == 'smartw.vhkt' %}active{% endif %}"
                                 href="{{ url_for('smartw.vhkt') }}">
                                 <span class="nav-link-icon d-md-none d-lg-inline-block">
@@ -135,15 +144,6 @@
                                     <i class="fas fa-coins"></i>
                                 </span>
                                 <span class="nav-link-title">Chi Phí</span>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {% if request.endpoint == 'daily_work' %}active{% endif %}"
-                                href="{{ url_for('daily_work.daily_work') }}">
-                                <span class="nav-link-icon d-md-none d-lg-inline-block">
-                                    <i class="fas fa-tasks"></i>
-                                </span>
-                                <span class="nav-link-title">Công việc hàng ngày</span>
                             </a>
                         </li>
                         {% if session['role'] == 'admin' %}

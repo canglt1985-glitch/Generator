@@ -78,31 +78,29 @@
                     {% endif %}
                     {# Check if today #}
                     {% set ngay_fmt = s.ngay_mat_dien | format_date if s.ngay_mat_dien else '--' %}
-                    {% set is_today = (ngay_fmt == today_str) %}
-                    <tr{% if is_today %} class="fw-bold" {% endif %}>
+                    <tr>
                         <td style="color:{{ fuel_color }};font-weight:bold;cursor:pointer"
                             onclick="showFuelModal('{{ s.id_tram }}', {{ ton }}, {{ fs.get('dung_tich', 0) }}, {{ dm }}, '{{ fs.get('may_phat', '') }}', '{{ loai_nl }}', {{ need|round(1) }})">
                             {{ s.id_tram or '--' }}
                         </td>
-                        <td>{{ ngay_fmt }}{% if is_today %}<span class="badge bg-warning-lt ms-1">Hôm nay</span>{% endif
-                            %}</td>
+                        <td>{{ ngay_fmt }}</td>
                         <td class="text-danger">{{ s.thoi_gian_cup_dien or '--' }}</td>
                         <td class="text-success">{{ s.thoi_gian_co_dien or '--' }}</td>
                         <td class="d-none d-md-table-cell text-start small" style="white-space:normal;max-width:250px">
                             {{ (s.ly_do or '--')[:50] }}{% if s.ly_do and s.ly_do|length > 50 %}...{% endif %}
                         </td>
                         <td class="d-none d-md-table-cell small">{{ s.quan_ly_tram or '--' }}</td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="6" class="text-center py-4">
-                                <div class="empty">
-                                    <p class="empty-title">Không có lịch cúp điện nào sắp tới</p>
-                                    <p class="empty-subtitle text-muted">✅ Hiện tại chưa có lịch cúp từ EVN.</p>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center py-4">
+                            <div class="empty">
+                                <p class="empty-title">Không có lịch cúp điện nào sắp tới</p>
+                                <p class="empty-subtitle text-muted">✅ Hiện tại chưa có lịch cúp từ EVN.</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
             </tbody>
         </table>
     </div>
