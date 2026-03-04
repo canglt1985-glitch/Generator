@@ -528,16 +528,25 @@
 
     // ── Fuel stock cache ──────────────────────────────────────
 
-    // ── Fuel stock data (server-side injected — instant) ──
-    window._fuelStock = {{ fuel_stock_json | safe }};
+    // ── Fuel stock cache (async — non-blocking) ──
+    window._fuelStock = {};
+    function loadFuelStock() {
+        return fetch('/api/fuel-stock-all')
+            .then(r => r.json())
+            .then(d => { window._fuelStock = d; })
+            .catch(() => { });
+    }
 
     // ── Init ────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', function () {
-        // Load first tab + summary (no waiting for fuel stock API!)
+        // Load alarm data IMMEDIATELY (no waiting)
         loadTabData('md');
         refreshSummary();
 
-        // Connect SSE for real-time push (no polling needed!)
+        // Load fuel stock ASYNC (fills colors later, doesn't block)
+        loadFuelStock();
+
+        // Connect SSE for real-time push
         connectSSE();
     });
 
