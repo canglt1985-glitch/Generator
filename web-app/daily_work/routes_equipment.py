@@ -8,14 +8,14 @@ from datetime import datetime
 from extensions import db
 from models import MobileEquipment, EquipmentTransfer
 from auth import login_required
-from generator import generator_bp
+from daily_work import daily_work_bp
 
 
 # ============================================================
 # API: Get all mobile equipment (for VHKT integration)
 # ============================================================
 
-@generator_bp.route('/api/mobile-equipment')
+@daily_work_bp.route('/api/mobile-equipment')
 @login_required
 def api_mobile_equipment():
     """Return all mobile equipment with current location."""
@@ -35,7 +35,7 @@ def api_mobile_equipment():
     return jsonify(result)
 
 
-@generator_bp.route('/api/mobile-equipment/by-station')
+@daily_work_bp.route('/api/mobile-equipment/by-station')
 @login_required
 def api_equipment_by_station():
     """Return mobile equipment at a specific station.
@@ -53,7 +53,7 @@ def api_equipment_by_station():
     } for e in equips])
 
 
-@generator_bp.route('/api/mobile-equipment/available')
+@daily_work_bp.route('/api/mobile-equipment/available')
 @login_required
 def api_equipment_available():
     """Return equipment available for dispatch (at KHO + status Tốt)."""
@@ -70,7 +70,7 @@ def api_equipment_available():
 # CRUD: Mobile Equipment
 # ============================================================
 
-@generator_bp.route('/mobile-equipment/add', methods=['POST'])
+@daily_work_bp.route('/mobile-equipment/add', methods=['POST'])
 @login_required
 def add_mobile_equipment():
     try:
@@ -89,10 +89,10 @@ def add_mobile_equipment():
     except Exception as e:
         db.session.rollback()
         flash(f'Lỗi: {e}', 'danger')
-    return redirect(url_for('generator.generator', tab='equipment'))
+    return redirect(url_for('daily_work.daily_work', tab='equipment'))
 
 
-@generator_bp.route('/mobile-equipment/edit/<int:id>', methods=['POST'])
+@daily_work_bp.route('/mobile-equipment/edit/<int:id>', methods=['POST'])
 @login_required
 def edit_mobile_equipment(id):
     try:
@@ -108,10 +108,10 @@ def edit_mobile_equipment(id):
     except Exception as e:
         db.session.rollback()
         flash(f'Lỗi: {e}', 'danger')
-    return redirect(url_for('generator.generator', tab='equipment'))
+    return redirect(url_for('daily_work.daily_work', tab='equipment'))
 
 
-@generator_bp.route('/mobile-equipment/delete/<int:id>')
+@daily_work_bp.route('/mobile-equipment/delete/<int:id>')
 @login_required
 def delete_mobile_equipment(id):
     try:
@@ -122,14 +122,14 @@ def delete_mobile_equipment(id):
         flash(f'Đã xóa {ma}', 'success')
     except Exception as e:
         flash(f'Lỗi: {e}', 'danger')
-    return redirect(url_for('generator.generator', tab='equipment'))
+    return redirect(url_for('daily_work.daily_work', tab='equipment'))
 
 
 # ============================================================
 # TRANSFER: Dispatch / Recall equipment
 # ============================================================
 
-@generator_bp.route('/mobile-equipment/transfer', methods=['POST'])
+@daily_work_bp.route('/mobile-equipment/transfer', methods=['POST'])
 @login_required
 def transfer_equipment():
     """Dispatch equipment to station or recall to KHO."""
@@ -144,7 +144,7 @@ def transfer_equipment():
 
         if tu_vi_tri == den_vi_tri:
             flash('Thiết bị đã ở vị trí này!', 'warning')
-            return redirect(request.referrer or url_for('generator.generator', tab='equipment'))
+            return redirect(request.referrer or url_for('daily_work.daily_work', tab='equipment'))
 
         # Log transfer
         transfer = EquipmentTransfer(
@@ -165,10 +165,10 @@ def transfer_equipment():
     except Exception as e:
         db.session.rollback()
         flash(f'Lỗi: {e}', 'danger')
-    return redirect(request.referrer or url_for('generator.generator', tab='equipment'))
+    return redirect(request.referrer or url_for('daily_work.daily_work', tab='equipment'))
 
 
-@generator_bp.route('/api/mobile-equipment/transfers/<int:equip_id>')
+@daily_work_bp.route('/api/mobile-equipment/transfers/<int:equip_id>')
 @login_required
 def api_equipment_transfers(equip_id):
     """Return transfer history for an equipment."""

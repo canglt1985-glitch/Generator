@@ -12,8 +12,7 @@ import subprocess
 from extensions import db
 from models import (
     GeneralInfo, PowerSchedule, GeneratorLog, FuelRefillLog,
-    FuelPurchaseLog, FuelLedger, OtherExpense,
-    MobileEquipment, EquipmentTransfer
+    FuelPurchaseLog, FuelLedger, OtherExpense
 )
 from helpers import get_central_stock, get_audit_data
 from auth import login_required, admin_required
@@ -109,8 +108,6 @@ def generator():
     cx222_total = 0
     mua_ngoai_new = 0
     cx222_new = 0
-    mobile_equipments = []
-    transfer_history = []
 
 
 
@@ -268,11 +265,6 @@ def generator():
         mua_ngoai_new = _calc_new('mua_ngoai', payment_groups['mua_ngoai'].get('da_thanh_toan_den', ''))
         cx222_new = _calc_new('cx222', payment_groups['cx222'].get('da_thanh_toan_den', ''))
 
-    elif active_tab == 'equipment':
-        mobile_equipments = MobileEquipment.query.order_by(MobileEquipment.loai, MobileEquipment.ma_thiet_bi).all()
-        transfer_history = EquipmentTransfer.query.order_by(
-            EquipmentTransfer.ngay_dieu_chuyen.desc()
-        ).limit(15).all()
 
 
     return render_template('generator.html',
@@ -300,8 +292,6 @@ def generator():
                            cx222_total=cx222_total,
                            mua_ngoai_new=mua_ngoai_new,
                            cx222_new=cx222_new,
-                           mobile_equipments=mobile_equipments,
-                           transfer_history=transfer_history,
                            users=[])
 
 

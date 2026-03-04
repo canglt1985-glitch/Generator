@@ -1,81 +1,124 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<div class="page-header d-print-none mb-4">
+<div class="page-header d-print-none mb-2">
     <div class="row g-2 align-items-center">
         <div class="col">
             <h2 class="page-title">
                 <i class="fas fa-tasks me-2 text-primary"></i>Công Việc Hàng Ngày
             </h2>
-            <div class="text-muted small mt-1">Ghi nhận và quản lý hoạt động kỹ thuật trạm BTS.</div>
+            <div class="text-muted small mt-1">
+                {% if active_tab == 'equipment' %}Quản lý thiết bị lưu động (MPĐ, Pin)
+                {% else %}Ghi nhận và quản lý hoạt động kỹ thuật trạm BTS.{% endif %}
+            </div>
         </div>
-        <div class="col-md-6 text-md-end">
-            <div class="d-flex flex-wrap gap-2 justify-content-md-end">
-                <button type="button" class="btn btn-sm btn-primary rounded-pill px-4" data-bs-toggle="modal"
-                    data-bs-target="#addWorkModal">
-                    <i class="fas fa-plus me-1"></i>Thêm Công Việc
-                </button>
+        {% if active_tab == 'work' %}
+        <div class="col-auto text-end">
+            <button type="button" class="btn btn-sm btn-primary rounded-pill px-4" data-bs-toggle="modal"
+                data-bs-target="#addWorkModal">
+                <i class="fas fa-plus me-1"></i>Thêm
+            </button>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- NAV CARDS -->
+<div class="row g-2 mb-2" id="dwNavCards">
+    <div class="col">
+        <div class="card shadow-sm dw-nav {{ 'active' if active_tab == 'work' else '' }}" onclick="switchDwTab('work')"
+            style="border-left: 3px solid var(--tblr-primary); cursor:pointer;">
+            <div class="text-center py-1 px-2">
+                <div style="font-size:1.2rem;font-weight:700;" class="text-primary">📋</div>
+                <div style="font-size:0.7rem;color:#667;">Công Việc</div>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card shadow-sm dw-nav {{ 'active' if active_tab == 'equipment' else '' }}"
+            onclick="switchDwTab('equipment')" style="border-left: 3px solid var(--tblr-indigo); cursor:pointer;">
+            <div class="text-center py-1 px-2">
+                <div style="font-size:1.2rem;font-weight:700;" class="text-indigo">🔧</div>
+                <div style="font-size:0.7rem;color:#667;">Thiết Bị LĐ</div>
             </div>
         </div>
     </div>
 </div>
 
+<style>
+    .dw-nav {
+        transition: all 0.2s ease;
+        border: 2px solid transparent;
+    }
 
+    .dw-nav:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .dw-nav.active {
+        border-color: currentColor;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+</style>
+
+<!-- TAB: CÔNG VIỆC -->
+{% if active_tab == 'work' %}
 <div class="card shadow-sm">
     <div class="table-responsive">
-        <table class="table table-vcenter table-hover card-table text-nowrap">
+        <table class="table table-vcenter table-hover card-table" id="workTable">
             <thead>
                 <tr>
-                    <th class="col-date">Ngày</th>
-                    <th class="col-id">ID Trạm</th>
-                    <th class="col-content">Nội Dung</th>
-                    <th class="col-category">Hạng Mục</th>
-                    <th class="col-vhkt">Tồn tại VHKT</th>
-                    <th class="col-csht">Tồn tại CSHT</th>
-                    <th class="col-note">Ghi chú</th>
-                    <th class="col-staff">Người Thực Hiện</th>
-                    <th class="text-end col-action">Thao Tác</th>
+                    <th class="dw-col-date">Ngày</th>
+                    <th class="dw-col-id">Trạm</th>
+                    <th class="dw-col-cat">Hạng Mục</th>
+                    <th class="dw-col-content">Nội Dung</th>
+                    <th class="dw-col-extra d-none d-lg-table-cell">Tồn tại VHKT</th>
+                    <th class="dw-col-extra d-none d-lg-table-cell">Tồn tại CSHT</th>
+                    <th class="dw-col-extra d-none d-lg-table-cell">Ghi chú</th>
+                    <th class="dw-col-staff d-none d-md-table-cell">Người TH</th>
+                    <th class="text-end dw-col-action">⚙</th>
                 </tr>
                 <tr class="filter-row bg-light-lt">
                     <th><input type="date" class="form-control form-control-sm" onchange="filterTable(this)"></th>
-                    <th><input type="text" class="form-control form-control-sm" placeholder="🔍 Trạm"
-                            oninput="filterTable(this)"></th>
-                    <th><input type="text" class="form-control form-control-sm" placeholder="🔍 Nội dung"
+                    <th><input type="text" class="form-control form-control-sm" placeholder="🔍"
                             oninput="filterTable(this)"></th>
                     <th></th>
+                    <th><input type="text" class="form-control form-control-sm" placeholder="🔍"
+                            oninput="filterTable(this)"></th>
+                    <th class="d-none d-lg-table-cell"></th>
+                    <th class="d-none d-lg-table-cell"></th>
+                    <th class="d-none d-lg-table-cell"></th>
+                    <th class="d-none d-md-table-cell"></th>
                     <th></th>
-                    <th></th>
-                    <th></th>
-                    <th></th>
-                    <th class="text-end"></th>
                 </tr>
             </thead>
             <tbody>
                 {% for item in works %}
                 <tr>
-                    <td class="col-date text-dark fw-bold">
-                        {{ item.ngay | format_date }}
+                    <td class="dw-col-date fw-bold">{{ item.ngay | format_date }}</td>
+                    <td class="dw-col-id">
+                        <span class="badge bg-blue-lt fw-bold cursor-pointer station-trigger"
+                            data-id="{{ item.id_tram }}">{{ item.id_tram }}</span>
                     </td>
-                    <td class="col-id"><span class="badge bg-blue-lt fw-bold cursor-pointer station-trigger"
-                            data-id="{{ item.id_tram }}">{{ item.id_tram }}</span></td>
-                    <td class="col-content small">
-                        <div class="line-clamp-2">{{ item.noi_dung }}</div>
+                    <td class="dw-col-cat text-muted small">
+                        <div class="dw-clamp">{{ item.hang_muc }}</div>
                     </td>
-                    <td class="col-category small text-muted">
-                        <div class="line-clamp-2">{{ item.hang_muc }}</div>
+                    <td class="dw-col-content small">
+                        <div class="dw-clamp">{{ item.noi_dung }}</div>
                     </td>
-                    <td class="col-vhkt small">
-                        <div class="line-clamp-2">{{ item.ton_tai_vhkt or '' }}</div>
+                    <td class="dw-col-extra d-none d-lg-table-cell small">
+                        <div class="dw-clamp">{{ item.ton_tai_vhkt or '' }}</div>
                     </td>
-                    <td class="col-csht small">
-                        <div class="line-clamp-2">{{ item.ton_tai_csht or '' }}</div>
+                    <td class="dw-col-extra d-none d-lg-table-cell small">
+                        <div class="dw-clamp">{{ item.ton_tai_csht or '' }}</div>
                     </td>
-                    <td class="col-note small">
-                        <div class="line-clamp-2">{{ item.ghi_chu or '' }}</div>
+                    <td class="dw-col-extra d-none d-lg-table-cell small">
+                        <div class="dw-clamp">{{ item.ghi_chu or '' }}</div>
                     </td>
-                    <td class="col-staff small">{{ item.nhan_vien }}</td>
-                    <td class="text-end">
-                        <button class="btn btn-ghost-primary btn-icon" title="Sửa" data-bs-toggle="modal"
+                    <td class="dw-col-staff d-none d-md-table-cell small">{{ item.nhan_vien }}</td>
+                    <td class="text-end dw-col-action">
+                        <button class="btn btn-ghost-primary btn-icon btn-sm" title="Sửa" data-bs-toggle="modal"
                             data-bs-target="#editWorkModal" data-id="{{ item.id }}" data-ngay="{{ item.ngay }}"
                             data-idtram="{{ item.id_tram }}" data-hangmuc="{{ item.hang_muc }}"
                             data-noidung="{{ item.noi_dung }}" data-vhkt="{{ item.ton_tai_vhkt }}"
@@ -84,7 +127,7 @@
                         </button>
                         <form action="{{ url_for('daily_work.delete_daily_work', work_id=item.id) }}" method="POST"
                             class="d-inline" onsubmit="return confirm('Xóa công việc này?')">
-                            <button type="submit" class="btn btn-ghost-danger btn-icon" title="Xóa">
+                            <button type="submit" class="btn btn-ghost-danger btn-icon btn-sm" title="Xóa">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </form>
@@ -99,6 +142,122 @@
         </table>
     </div>
 </div>
+{% endif %}
+
+<!-- TAB: THIẾT BỊ LƯU ĐỘNG -->
+{% if active_tab == 'equipment' %}
+{% include 'partials/tab_equipment.html' %}
+{% endif %}
+
+<!-- RESPONSIVE STYLES -->
+<style>
+    /* Desktop */
+    .dw-col-date {
+        width: 90px;
+        white-space: nowrap;
+    }
+
+    .dw-col-id {
+        width: 80px;
+        white-space: nowrap;
+    }
+
+    .dw-col-cat {
+        width: 150px;
+    }
+
+    .dw-col-content {
+        min-width: 200px;
+    }
+
+    .dw-col-extra {
+        min-width: 120px;
+    }
+
+    .dw-col-staff {
+        width: 100px;
+    }
+
+    .dw-col-action {
+        width: 80px;
+    }
+
+    .dw-clamp {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        white-space: normal !important;
+        word-wrap: break-word;
+    }
+
+    #workTable td,
+    #workTable th {
+        padding: 0.4rem 0.35rem;
+        font-size: 0.82rem;
+    }
+
+    /* MOBILE: all columns flex in 1 row */
+    @media (max-width: 767.98px) {
+        .dw-col-date {
+            width: 62px;
+            font-size: 0.7rem;
+        }
+
+        .dw-col-id {
+            width: 55px;
+        }
+
+        .dw-col-id .badge {
+            font-size: 0.6rem;
+            padding: 0.15em 0.35em;
+        }
+
+        .dw-col-cat {
+            width: 80px;
+            font-size: 0.68rem;
+        }
+
+        .dw-col-cat .dw-clamp {
+            -webkit-line-clamp: 1;
+        }
+
+        .dw-col-content {
+            min-width: 100px;
+            font-size: 0.7rem;
+        }
+
+        .dw-col-content .dw-clamp {
+            -webkit-line-clamp: 1;
+        }
+
+        .dw-col-action {
+            width: 50px;
+        }
+
+        .dw-col-action .btn-icon {
+            width: 1.4rem;
+            height: 1.4rem;
+            padding: 0;
+        }
+
+        .dw-col-action .btn-icon i {
+            font-size: 0.65rem;
+        }
+
+        #workTable td,
+        #workTable th {
+            padding: 0.25rem 0.15rem;
+            font-size: 0.72rem;
+        }
+
+        .filter-row input {
+            font-size: 0.6rem !important;
+            padding: 0.1rem 0.2rem !important;
+            height: 22px !important;
+        }
+    }
+</style>
 
 <!-- Modal Thêm Công Việc -->
 <div class="modal modal-blur fade" id="addWorkModal" tabindex="-1">
@@ -156,130 +315,6 @@
     </div>
 </div>
 
-<style>
-    .col-id {
-        width: 100px;
-    }
-
-    .col-date {
-        width: 110px;
-    }
-
-    .col-content {
-        min-width: 250px;
-    }
-
-    .col-category {
-        min-width: 150px;
-    }
-
-    .col-vhkt,
-    .col-csht,
-    .col-note {
-        min-width: 150px;
-    }
-
-    .col-staff {
-        min-width: 120px;
-    }
-
-    .line-clamp-2 {
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-        white-space: normal !important;
-        word-wrap: break-word;
-    }
-
-    .text-nowrap td {
-        white-space: nowrap;
-    }
-
-    .text-nowrap td:has(.line-clamp-2) {
-        white-space: normal;
-    }
-
-    .col-action {
-        width: 80px;
-    }
-
-    /* ===== MOBILE RESPONSIVE (< 768px) ===== */
-    @media (max-width: 767.98px) {
-
-        /* Hide less essential columns on mobile */
-        .col-category,
-        .col-vhkt,
-        .col-csht,
-        .col-note {
-            display: none !important;
-        }
-
-        /* Compact filter row on mobile */
-        .filter-row input {
-            font-size: 0.65rem !important;
-            padding: 0.15rem 0.25rem !important;
-            height: 26px !important;
-        }
-
-        /* Compact remaining columns */
-        .col-date {
-            width: 65px;
-            white-space: nowrap !important;
-            font-size: 0.7rem;
-        }
-
-        .col-id {
-            width: 60px;
-            white-space: nowrap !important;
-        }
-
-        .col-id .badge {
-            font-size: 0.65rem;
-            padding: 0.2em 0.4em;
-        }
-
-        .col-content {
-            min-width: unset;
-            max-width: 140px;
-        }
-
-        .col-staff {
-            min-width: unset;
-            width: 70px;
-            font-size: 0.7rem;
-            white-space: nowrap !important;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .col-action {
-            width: 50px;
-        }
-
-        .col-action .btn-icon {
-            width: 1.5rem;
-            height: 1.5rem;
-            padding: 0;
-        }
-
-        .col-action .btn-icon i {
-            font-size: 0.7rem;
-        }
-
-        /* Compact table cells */
-        .card-table td,
-        .card-table th {
-            padding: 0.3rem 0.25rem !important;
-            font-size: 0.75rem;
-        }
-
-        /* Allow content cells to wrap but keep date/id tight */
-        .text-nowrap td {
-            white-space: normal;
-        }
-    }
-</style>
 <!-- Edit Work Modal -->
 <div class="modal modal-blur fade" id="editWorkModal" tabindex="-1">
     <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -344,28 +379,25 @@
 </div>
 
 <script>
+    function switchDwTab(tabName) {
+        window.location.href = '/daily-work?tab=' + tabName;
+    }
+
     var editWorkModal = document.getElementById('editWorkModal');
-    editWorkModal.addEventListener('show.bs.modal', function (event) {
-        var button = event.relatedTarget;
-        var id = button.getAttribute('data-id');
-        var ngay = button.getAttribute('data-ngay');
-        var idtram = button.getAttribute('data-idtram');
-        var hangmuc = button.getAttribute('data-hangmuc');
-        var noidung = button.getAttribute('data-noidung');
-        var vhkt = button.getAttribute('data-vhkt');
-        var csht = button.getAttribute('data-csht');
-        var ghichu = button.getAttribute('data-ghichu');
-
-        var form = document.getElementById('editWorkForm');
-        form.action = '/daily-work/edit/' + id;
-
-        document.getElementById('edit_ngay').value = ngay;
-        document.getElementById('edit_id_tram_work').value = idtram;
-        document.getElementById('edit_hang_muc').value = hangmuc;
-        document.getElementById('edit_noi_dung_work').value = noidung;
-        document.getElementById('edit_ton_tai_vhkt').value = vhkt;
-        document.getElementById('edit_ton_tai_csht').value = csht;
-        document.getElementById('edit_ghi_chu_work').value = ghichu;
-    });
+    if (editWorkModal) {
+        editWorkModal.addEventListener('show.bs.modal', function (event) {
+            var button = event.relatedTarget;
+            var id = button.getAttribute('data-id');
+            var form = document.getElementById('editWorkForm');
+            form.action = '/daily-work/edit/' + id;
+            document.getElementById('edit_ngay').value = button.getAttribute('data-ngay');
+            document.getElementById('edit_id_tram_work').value = button.getAttribute('data-idtram');
+            document.getElementById('edit_hang_muc').value = button.getAttribute('data-hangmuc');
+            document.getElementById('edit_noi_dung_work').value = button.getAttribute('data-noidung');
+            document.getElementById('edit_ton_tai_vhkt').value = button.getAttribute('data-vhkt');
+            document.getElementById('edit_ton_tai_csht').value = button.getAttribute('data-csht');
+            document.getElementById('edit_ghi_chu_work').value = button.getAttribute('data-ghichu');
+        });
+    }
 </script>
 {% endblock %}

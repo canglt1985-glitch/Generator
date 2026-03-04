@@ -4,7 +4,7 @@ Daily Work routes — extracted from app.py
 from flask import render_template, request, redirect, url_for, flash, send_file, session
 from datetime import datetime
 from extensions import db
-from models import DailyWork, GeneralInfo
+from models import DailyWork, GeneralInfo, MobileEquipment, EquipmentTransfer
 from auth import login_required
 from daily_work import daily_work_bp
 
@@ -12,24 +12,37 @@ from daily_work import daily_work_bp
 @daily_work_bp.route('/daily-work')
 @login_required
 def daily_work():
+    active_tab = request.args.get('tab', 'work')
     start_date = request.args.get('start_date')
     end_date = request.args.get('end_date')
-    
-    query = DailyWork.query
-    
-    if start_date:
-        query = query.filter(DailyWork.ngay >= start_date)
-    if end_date:
-        query = query.filter(DailyWork.ngay <= end_date)
-        
-    works = query.order_by(DailyWork.ngay.desc()).all()
+
+    works = []
+    mobile_equipments = []
+    transfer_history = []
+
+    if active_tab == 'work':
+        query = DailyWork.query
+        if start_date:
+            query = query.filter(DailyWork.ngay >= start_date)
+        if end_date:
+            query = query.filter(DailyWork.ngay <= end_date)
+        works = query.order_by(DailyWork.ngay.desc()).all()
+    elif active_tab == 'equipment':
+        mobile_equipments = MobileEquipment.query.order_by(MobileEquipment.loai, MobileEquipment.ma_thiet_bi).all()
+        transfer_history = EquipmentTransfer.query.order_by(
+            EquipmentTransfer.ngay_dieu_chuyen.desc()
+        ).limit(15).all()
+
     stations = GeneralInfo.query.with_entities(GeneralInfo.id_tram).all()
-    return render_template('daily_work.html', 
-                         works=works, 
-                         stations=stations, 
+    return render_template('daily_work.html',
+                         works=works,
+                         stations=stations,
                          now_date=datetime.now().strftime('%Y-%m-%d'),
                          start_date=start_date,
-                         end_date=end_date)
+                         end_date=end_date,
+                         active_tab=active_tab,
+                         mobile_equipments=mobile_equipments,
+                         transfer_history=transfer_history)
 
 
 @daily_work_bp.route('/export-daily-work')

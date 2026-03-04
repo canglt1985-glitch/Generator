@@ -75,7 +75,7 @@
                                     <i class="fas fa-edit"></i>
                                 </button>
                                 <!-- Delete -->
-                                <a href="{{ url_for('generator.delete_mobile_equipment', id=e.id) }}"
+                                <a href="{{ url_for('daily_work.delete_mobile_equipment', id=e.id) }}"
                                     class="btn btn-sm btn-outline-danger"
                                     onclick="return confirm('Xóa {{ e.ma_thiet_bi }}?')">
                                     <i class="fas fa-trash"></i>
@@ -141,7 +141,7 @@
 <div class="modal fade" id="equipModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <form id="equipForm" method="POST" action="{{ url_for('generator.add_mobile_equipment') }}">
+            <form id="equipForm" method="POST" action="{{ url_for('daily_work.add_mobile_equipment') }}">
                 <div class="modal-header py-2 bg-indigo-lt">
                     <h5 class="modal-title" id="equipModalTitle">
                         <i class="fas fa-truck-moving me-1"></i>Thêm Thiết Bị
@@ -199,7 +199,7 @@
 <div class="modal fade" id="transferModal" tabindex="-1">
     <div class="modal-dialog modal-sm modal-dialog-centered">
         <div class="modal-content">
-            <form method="POST" action="{{ url_for('generator.transfer_equipment') }}">
+            <form method="POST" action="{{ url_for('daily_work.transfer_equipment') }}">
                 <div class="modal-header py-2 bg-success-lt">
                     <h5 class="modal-title" id="transferTitle">
                         <i class="fas fa-exchange-alt me-1"></i>Điều Chuyển
@@ -251,13 +251,13 @@
 <script>
     function resetEquipModal() {
         document.getElementById('equipModalTitle').innerHTML = '<i class="fas fa-truck-moving me-1"></i>Thêm Thiết Bị';
-        document.getElementById('equipForm').action = "{{ url_for('generator.add_mobile_equipment') }}";
+        document.getElementById('equipForm').action = "{{ url_for('daily_work.add_mobile_equipment') }}";
         document.getElementById('equipForm').reset();
     }
 
     function editEquip(id, ma, loai, thongso, trangthai, nlton, ghichu) {
         document.getElementById('equipModalTitle').innerHTML = '<i class="fas fa-edit me-1"></i>Sửa ' + ma;
-        document.getElementById('equipForm').action = "/generator/mobile-equipment/edit/" + id;
+        document.getElementById('equipForm').action = "/daily-work/mobile-equipment/edit/" + id;
         document.getElementById('eq_ma').value = ma;
         document.getElementById('eq_loai').value = loai;
         document.getElementById('eq_thongso').value = thongso;
