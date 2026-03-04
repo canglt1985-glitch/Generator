@@ -78,11 +78,12 @@
                             </button>
                             {% endif %}
                             {% if session.get('role') == 'admin' %}
-                            <a href="{{ url_for('daily_work.delete_mobile_equipment', id=e.id) }}"
-                                class="btn btn-sm btn-outline-danger eq-btn"
-                                onclick="return confirm('Xóa {{ e.ma_thiet_bi }}?')" title="Xóa">
-                                <i class="fas fa-trash"></i>
-                            </a>
+                            <form method="POST" action="{{ url_for('daily_work.delete_mobile_equipment', id=e.id) }}"
+                                style="display:inline;" onsubmit="return confirm('Xóa {{ e.ma_thiet_bi }}?')">
+                                <button type="submit" class="btn btn-sm btn-outline-danger eq-btn" title="Xóa">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
                             {% endif %}
                         </td>
                     </tr>

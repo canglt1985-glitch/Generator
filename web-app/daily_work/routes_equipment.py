@@ -3,11 +3,11 @@ Routes for Mobile Equipment (MPĐ lưu động / Pin lưu động)
 CRUD + Transfer (dispatch/recall) + API for Lịch Cúp integration
 """
 from flask import request, redirect, url_for, flash, jsonify, session
-from datetime import datetime
+import logging
 
 from extensions import db
 from models import MobileEquipment, EquipmentTransfer
-from auth import login_required
+from auth import login_required, admin_required
 from daily_work import daily_work_bp
 
 
@@ -72,6 +72,7 @@ def api_equipment_available():
 
 @daily_work_bp.route('/mobile-equipment/add', methods=['POST'])
 @login_required
+@admin_required
 def add_mobile_equipment():
     try:
         equip = MobileEquipment(
@@ -88,31 +89,14 @@ def add_mobile_equipment():
         flash(f'✅ Đã thêm {equip.ma_thiet_bi}', 'success')
     except Exception as e:
         db.session.rollback()
-        flash(f'Lỗi: {e}', 'danger')
+        logging.error(f'Add equipment error: {e}')
+        flash('Có lỗi xảy ra khi thêm thiết bị.', 'danger')
     return redirect(url_for('daily_work.daily_work', tab='equipment'))
 
 
-@daily_work_bp.route('/mobile-equipment/edit/<int:id>', methods=['POST'])
+@daily_work_bp.route('/mobile-equipment/delete/<int:id>', methods=['POST'])
 @login_required
-def edit_mobile_equipment(id):
-    try:
-        equip = MobileEquipment.query.get_or_404(id)
-        equip.ma_thiet_bi = request.form['ma_thiet_bi'].strip()
-        equip.loai = request.form.get('loai', equip.loai)
-        equip.thong_so = request.form.get('thong_so', '').strip()
-        equip.trang_thai = request.form.get('trang_thai', equip.trang_thai)
-        equip.nl_ton = float(request.form.get('nl_ton', 0) or 0)
-        equip.ghi_chu = request.form.get('ghi_chu', '').strip()
-        db.session.commit()
-        flash(f'✅ Đã cập nhật {equip.ma_thiet_bi}', 'success')
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Lỗi: {e}', 'danger')
-    return redirect(url_for('daily_work.daily_work', tab='equipment'))
-
-
-@daily_work_bp.route('/mobile-equipment/delete/<int:id>')
-@login_required
+@admin_required
 def delete_mobile_equipment(id):
     try:
         equip = MobileEquipment.query.get_or_404(id)
@@ -121,7 +105,8 @@ def delete_mobile_equipment(id):
         db.session.commit()
         flash(f'Đã xóa {ma}', 'success')
     except Exception as e:
-        flash(f'Lỗi: {e}', 'danger')
+        logging.error(f'Delete equipment error: {e}')
+        flash('Có lỗi xảy ra khi xóa thiết bị.', 'danger')
     return redirect(url_for('daily_work.daily_work', tab='equipment'))
 
 
@@ -164,7 +149,8 @@ def transfer_equipment():
         flash(f'✅ {equip.ma_thiet_bi}: {action}', 'success')
     except Exception as e:
         db.session.rollback()
-        flash(f'Lỗi: {e}', 'danger')
+        logging.error(f'Transfer equipment error: {e}')
+        flash('Có lỗi xảy ra khi điều chuyển.', 'danger')
     return redirect(request.referrer or url_for('daily_work.daily_work', tab='equipment'))
 
 
