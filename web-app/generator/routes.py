@@ -2,7 +2,8 @@
 Generator routes — Power Schedule, Fuel, General Info, Generator Logs, Expenses
 Extracted from app.py
 """
-from flask import render_template, request, redirect, url_for, flash, send_file, session
+from flask import render_template, request, redirect, url_for, flash, send_file, session, jsonify
+import json
 from datetime import datetime, time
 from io import BytesIO
 import pandas as pd
@@ -267,6 +268,28 @@ def generator():
 
 
 
+    # ── Pre-compute fuel prices + fuel stock for instant rendering ──
+    fuel_prices = {'xang_ron95': 0, 'dau_do': 0}
+    fuel_stock_json = '{}'
+    try:
+        from fuel_price import get_fuel_prices
+        fuel_prices = get_fuel_prices()
+    except Exception:
+        pass
+    if active_tab == 'fuel':
+        try:
+            from generator.routes_fuel import get_audit_data
+            audit = get_audit_data()
+            all_st = GeneralInfo.query.all()
+            fs = {}
+            for s in all_st:
+                fs[s.id_tram] = {'ton_real': 0}
+            for row in audit:
+                fs[row['id_tram']] = {'ton_real': row['ton_real']}
+            fuel_stock_json = json.dumps(fs)
+        except Exception:
+            pass
+
     return render_template('generator.html',
                            schedules=schedules,
                            stations=stations,
@@ -292,6 +315,8 @@ def generator():
                            cx222_total=cx222_total,
                            mua_ngoai_new=mua_ngoai_new,
                            cx222_new=cx222_new,
+                           fuel_prices=fuel_prices,
+                           fuel_stock_json=fuel_stock_json,
                            users=[])
 
 

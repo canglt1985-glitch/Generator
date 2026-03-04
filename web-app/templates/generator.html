@@ -909,15 +909,9 @@
 </div>
 
 <script>
-    // --- PVOil Fuel Price ---
-    let FUEL_PRICES = { xang_ron95: 0, dau_do: 0 };
-    fetch('/api/fuel-price')
-        .then(r => r.json())
-        .then(data => {
-            FUEL_PRICES = data;
-            applyFuelPrice();
-        })
-        .catch(() => console.warn('Không lấy được giá PVOil'));
+    // --- PVOil Fuel Price (server-side injected — instant) ---
+    let FUEL_PRICES = {{ fuel_prices | tojson }};
+    applyFuelPrice();
 
     function applyFuelPrice() {
         const nlType = document.getElementById('inp_loai_nl');
@@ -1571,31 +1565,28 @@
 </script>
 
 <script>
-    // ── NL Tồn per-station (tab fuel) ──
+    // ── NL Tồn per-station (server-side injected — instant) ──
     (function () {
         var cells = document.querySelectorAll('.fuel-ton-cell');
         if (!cells.length) return;
-        fetch('/api/fuel-stock-all')
-            .then(function (r) { return r.json(); })
-            .then(function (data) {
-                cells.forEach(function (cell) {
-                    var sid = cell.dataset.station;
-                    if (!sid) return;
-                    var info = data[sid];
-                    if (!info) {
-                        cell.innerHTML = '<span class="text-muted small">N/A</span>';
-                        return;
-                    }
-                    var ton = info.ton_real || 0;
-                    var cls = 'text-muted';
-                    if (ton > 50) cls = 'text-success fw-bold';
-                    else if (ton > 20) cls = 'text-warning fw-bold';
-                    else if (ton > 0) cls = 'text-danger fw-bold';
-                    cell.innerHTML = '<span class="' + cls + '">' + ton.toFixed(0) + 'L</span>';
-                });
-            })
-            .catch(function (err) { console.warn('Fuel stock fetch:', err); });
-    })();
+        var data = {{ fuel_stock_json | safe
+    }};
+    cells.forEach(function (cell) {
+        var sid = cell.dataset.station;
+        if (!sid) return;
+        var info = data[sid];
+        if (!info) {
+            cell.innerHTML = '<span class="text-muted small">N/A</span>';
+            return;
+        }
+        var ton = info.ton_real || 0;
+        var cls = 'text-muted';
+        if (ton > 50) cls = 'text-success fw-bold';
+        else if (ton > 20) cls = 'text-warning fw-bold';
+        else if (ton > 0) cls = 'text-danger fw-bold';
+        cell.innerHTML = '<span class="' + cls + '">' + ton.toFixed(0) + 'L</span>';
+    });
+    }) ();
 </script>
 
 {% endblock %}

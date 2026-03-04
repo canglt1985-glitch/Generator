@@ -528,33 +528,14 @@
 
     // ── Fuel stock cache ──────────────────────────────────────
 
-    window._fuelStock = {};
-
-    function loadFuelStock() {
-
-        return fetch('/api/fuel-stock-all')
-
-            .then(r => r.json())
-
-            .then(d => { window._fuelStock = d; })
-
-            .catch(() => { });
-
-    }
-
-
+    // ── Fuel stock data (server-side injected — instant) ──
+    window._fuelStock = {{ fuel_stock_json | safe }};
 
     // ── Init ────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', function () {
-        // Load first tab + summary
-        loadFuelStock().then(() => {
-
-            loadTabData('md');
-
-            refreshSummary();
-
-        });
-
+        // Load first tab + summary (no waiting for fuel stock API!)
+        loadTabData('md');
+        refreshSummary();
 
         // Connect SSE for real-time push (no polling needed!)
         connectSSE();

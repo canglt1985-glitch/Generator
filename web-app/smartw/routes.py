@@ -42,8 +42,33 @@ CLEAR_HIDE_HOURS = 2
 @smartw_bp.route('/vhkt')
 def vhkt():
     """Main VHKT monitoring page."""
-    # Will be implemented in Phase 05
-    return render_template('vhkt.html')
+    import json
+    fuel_stock_json = '{}'
+    try:
+        from generator.routes_fuel import get_audit_data
+        from models import GeneralInfo
+        audit = get_audit_data()
+        all_st = GeneralInfo.query.all()
+        fs = {}
+        for s in all_st:
+            fs[s.id_tram] = {
+                'ton_real': 0, 'dung_tich': s.dung_tich or 0,
+                'dm_thuc_te': s.dinh_muc_thuc_te or 0,
+                'loai_nl': s.loai_nhien_lieu or '',
+                'may_phat': s.may_phat_dien or '',
+            }
+        for row in audit:
+            fs[row['id_tram']] = {
+                'ton_real': row['ton_real'],
+                'dung_tich': row['dung_tich'],
+                'dm_thuc_te': row['dm_thuc_te'],
+                'loai_nl': row['loai_nl'],
+                'may_phat': row['may_phat'],
+            }
+        fuel_stock_json = json.dumps(fs)
+    except Exception:
+        pass
+    return render_template('vhkt.html', fuel_stock_json=fuel_stock_json)
 
 
 # --- Admin Config Route ---
