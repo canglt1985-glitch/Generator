@@ -102,7 +102,7 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
-    role = db.Column(db.String(20), default='user')
+    role = db.Column(db.String(20), default='nhanvien')  # admin / nhanvien / chuyenvien
     full_name = db.Column(db.String(100))
     phone_number = db.Column(db.String(20))
 

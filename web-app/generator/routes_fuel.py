@@ -9,7 +9,7 @@ import pandas as pd
 from extensions import db
 from models import GeneralInfo, FuelRefillLog, FuelPurchaseLog, FuelLedger
 from helpers import get_central_stock, get_audit_data
-from auth import login_required, admin_required
+from auth import login_required, admin_required, cost_access_required
 from generator import generator_bp
 from generator.routes import export_excel, handle_deletion
 
@@ -20,6 +20,7 @@ from generator.routes import export_excel, handle_deletion
 
 @generator_bp.route('/fuel-ledger')
 @login_required
+@cost_access_required
 def fuel_ledger():
     logs = FuelLedger.query.order_by(FuelLedger.ngay.desc()).all()
     stations = GeneralInfo.query.with_entities(GeneralInfo.id_tram).all()
@@ -51,6 +52,7 @@ def calc_ton_sau_gd(id_tram, so_luong, trans_type):
 
 @generator_bp.route('/fuel-ledger/add', methods=['POST'])
 @login_required
+@cost_access_required
 def add_fuel_ledger():
     try:
         trans_type = request.form.get('type')

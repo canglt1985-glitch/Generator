@@ -101,7 +101,8 @@
                                 'U')[0]|upper }}</span>
                             <div class="ps-2">
                                 <div class="text-white">{{ session.get('username', 'User') }}</div>
-                                <div class="mt-1 small text-muted-foreground">{{ session.get('role', 'user')|upper }}
+                                <div class="mt-1 small text-muted-foreground">{{ session.get('role',
+                                    'nhanvien')|role_label }}
                                 </div>
                             </div>
                         </a>
@@ -137,6 +138,7 @@
                                 <span class="nav-link-title">VHKT RAN</span>
                             </a>
                         </li>
+                        {% if session.get('role') != 'chuyenvien' %}
                         <li class="nav-item">
                             <a class="nav-link {% if request.endpoint == 'generator' and request.args.get('tab','schedule') in ['fuel','expense','payment','schedule'] %}active{% endif %}"
                                 href="{{ url_for('generator.generator', tab='fuel') }}">
@@ -146,6 +148,7 @@
                                 <span class="nav-link-title">Chi Phí</span>
                             </a>
                         </li>
+                        {% endif %}
                         {% if session['role'] == 'admin' %}
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle {% if request.endpoint in ['admin', 'admin_mpd'] %}active{% endif %}"
@@ -205,7 +208,8 @@
                                 'U')[0]|upper }}</span>
                             <div class="d-none d-xl-block ps-2">
                                 <div>{{ session.get('username', 'User') }}</div>
-                                <div class="mt-1 small text-muted">{{ session.get('role', 'user')|upper }}</div>
+                                <div class="mt-1 small text-muted">{{ session.get('role', 'nhanvien')|role_label }}
+                                </div>
                             </div>
                         </a>
                         <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">

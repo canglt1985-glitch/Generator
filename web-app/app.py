@@ -75,6 +75,14 @@ def format_date_filter(value):
         return value
 
 
+ROLE_LABELS = {'admin': 'Quản trị', 'nhanvien': 'Nhân viên', 'chuyenvien': 'Chuyên viên', 'user': 'Nhân viên'}
+
+
+@app.template_filter('role_label')
+def role_label_filter(value):
+    return ROLE_LABELS.get(value, value)
+
+
 # --- BACKGROUND SCHEDULER ---
 
 def scheduled_outage_fetch():

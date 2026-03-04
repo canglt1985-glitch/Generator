@@ -8,7 +8,7 @@ import pandas as pd
 
 from extensions import db
 from models import GeneralInfo, GeneratorLog, OtherExpense
-from auth import login_required, admin_required
+from auth import login_required, admin_required, cost_access_required
 from generator import generator_bp
 from generator.routes import export_excel, handle_deletion
 
@@ -466,6 +466,7 @@ def _auto_fill_generator_logs():
 
 @generator_bp.route('/other-expenses')
 @login_required
+@cost_access_required
 def other_expenses():
     expenses = OtherExpense.query.order_by(OtherExpense.ngay_su_dung.desc()).all()
     return render_template('expense_tracking.html', expenses=expenses)
@@ -473,6 +474,7 @@ def other_expenses():
 
 @generator_bp.route('/other-expenses/add', methods=['POST'])
 @login_required
+@cost_access_required
 def add_other_expense():
     try:
         new_item = OtherExpense(

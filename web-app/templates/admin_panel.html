@@ -74,19 +74,25 @@
                                 <td class="text-muted">{{ user.username }}</td>
                                 <td class="small">{{ user.phone_number or '--' }}</td>
                                 <td>
-                                    <span
-                                        class="badge {{ 'bg-red-lt text-red' if user.role == 'admin' else 'bg-blue-lt text-blue' }}">
-                                        {{ user.role|upper }}
-                                    </span>
+                                    {% if user.role == 'admin' %}
+                                    <span class="badge bg-red-lt text-red">Quản trị</span>
+                                    {% elif user.role == 'chuyenvien' %}
+                                    <span class="badge bg-green-lt text-green">Chuyên viên</span>
+                                    {% else %}
+                                    <span class="badge bg-blue-lt text-blue">Nhân viên</span>
+                                    {% endif %}
                                 </td>
                                 <td class="text-end">
+                                    <button class="btn btn-ghost-primary btn-icon" data-bs-toggle="modal"
+                                        data-bs-target="#editUserModal{{ user.id }}" title="Sửa thông tin"><i
+                                            class="fas fa-pen"></i></button>
                                     {% if user.username != session.get('username') %}
                                     <button class="btn btn-ghost-warning btn-icon" data-bs-toggle="modal"
-                                        data-bs-target="#resetPasswordModal{{ user.id }}"><i
+                                        data-bs-target="#resetPasswordModal{{ user.id }}" title="Đặt lại mật khẩu"><i
                                             class="fas fa-key"></i></button>
                                     <form action="{{ url_for('core.delete_user', user_id=user.id) }}" method="POST"
                                         class="d-inline" onsubmit="return confirm('Xóa?')">
-                                        <button class="btn btn-ghost-danger btn-icon"><i
+                                        <button class="btn btn-ghost-danger btn-icon" title="Xóa"><i
                                                 class="fas fa-trash-alt"></i></button>
                                     </form>
                                     {% endif %}

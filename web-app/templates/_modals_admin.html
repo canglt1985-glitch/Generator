@@ -107,16 +107,25 @@
             </div>
             <form action="{{ url_for('core.add_user') }}" method="POST">
                 <div class="modal-body">
-                    <div class="mb-3"><label class="form-label">Username</label><input type="text" name="username"
-                            class="form-control" required></div>
-                    <div class="mb-3"><label class="form-label">Mật khẩu</label><input type="password" name="password"
-                            class="form-control" required></div>
-                    <div class="mb-3"><label class="form-label">Họ và Tên</label><input type="text" name="full_name"
-                            class="form-control"></div>
-                    <div class="mb-3"><label class="form-label">Vai trò</label><select name="role" class="form-select">
-                            <option value="user">Nhân viên</option>
-                            <option value="admin">Quản trị viên</option>
-                        </select></div>
+                    <div class="row g-3">
+                        <div class="col-12"><label class="form-label">Họ và Tên <span
+                                    class="text-danger">*</span></label><input type="text" name="full_name"
+                                class="form-control" required placeholder="Nguyễn Văn A"></div>
+                        <div class="col-md-6"><label class="form-label">Username <span
+                                    class="text-danger">*</span></label><input type="text" name="username"
+                                class="form-control" required placeholder="Tên đăng nhập"></div>
+                        <div class="col-md-6"><label class="form-label">Mật khẩu <span
+                                    class="text-danger">*</span></label><input type="password" name="password"
+                                class="form-control" required placeholder="Mật khẩu đăng nhập"></div>
+                        <div class="col-md-6"><label class="form-label">Số điện thoại</label><input type="text"
+                                name="phone_number" class="form-control" placeholder="0901 234 567"></div>
+                        <div class="col-md-6"><label class="form-label">Vai trò</label><select name="role"
+                                class="form-select">
+                                <option value="nhanvien">Nhân viên</option>
+                                <option value="chuyenvien">Chuyên viên</option>
+                                <option value="admin">Quản trị viên</option>
+                            </select></div>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="submit" class="btn btn-primary w-100">Tạo tài khoản</button>
@@ -166,6 +175,52 @@
                 <div class="modal-body"><label class="form-label">Mật khẩu mới</label><input type="password"
                         name="new_password" class="form-control" required></div>
                 <div class="modal-footer"><button type="submit" class="btn btn-warning w-100">Xác nhận thay đổi</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<!-- Edit User Modals -->
+{% for user in users %}
+<div class="modal modal-blur fade" id="editUserModal{{ user.id }}" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-user-edit me-2"></i>Chỉnh sửa: {{ user.username }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('core.edit_user', user_id=user.id) }}" method="POST">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label">Họ và Tên</label>
+                            <input type="text" name="full_name" class="form-control" value="{{ user.full_name or '' }}"
+                                placeholder="Nguyễn Văn A">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Số điện thoại</label>
+                            <input type="text" name="phone_number" class="form-control"
+                                value="{{ user.phone_number or '' }}" placeholder="0901 234 567">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Vai trò</label>
+                            <select name="role" class="form-select">
+                                <option value="nhanvien" {{ 'selected' if user.role=='nhanvien' or user.role=='user' }}>
+                                    Nhân viên</option>
+                                <option value="chuyenvien" {{ 'selected' if user.role=='chuyenvien' }}>Chuyên viên
+                                </option>
+                                <option value="admin" {{ 'selected' if user.role=='admin' }}>Quản trị viên</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary ms-auto">
+                        <i class="fas fa-save me-1"></i>Lưu thay đổi
+                    </button>
                 </div>
             </form>
         </div>

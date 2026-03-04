@@ -16,7 +16,7 @@ from models import (
     DeletionRequest
 )
 from helpers import get_central_stock, get_dashboard_stats, detect_fuel_anomalies, get_upcoming_outages, get_audit_data
-from auth import login_required, admin_required
+from auth import login_required, admin_required, cost_access_required
 from core import core_bp
 
 
@@ -91,7 +91,7 @@ def list_users():
 def add_user():
     username = request.form.get('username')
     password = request.form.get('password')
-    role = request.form.get('role', 'user')
+    role = request.form.get('role', 'nhanvien')
     full_name = request.form.get('full_name')
     phone_number = request.form.get('phone_number')
     
@@ -117,6 +117,27 @@ def add_user():
     except Exception as e:
         flash(f'Lỗi: {str(e)}', 'danger')
         
+    return redirect(url_for('core.list_users'))
+
+
+@core_bp.route('/users/edit/<int:user_id>', methods=['POST'])
+@login_required
+@admin_required
+def edit_user(user_id):
+    user = User.query.get_or_404(user_id)
+    full_name = request.form.get('full_name', '').strip()
+    phone_number = request.form.get('phone_number', '').strip()
+    role = request.form.get('role', user.role)
+
+    try:
+        user.full_name = full_name
+        user.phone_number = phone_number
+        user.role = role
+        db.session.commit()
+        flash(f'Đã cập nhật thông tin {user.username}!', 'success')
+    except Exception as e:
+        flash(f'Lỗi: {str(e)}', 'danger')
+
     return redirect(url_for('core.list_users'))
 
 
@@ -416,6 +437,7 @@ def save_payment_groups(data):
 
 @core_bp.route('/admin/reports')
 @login_required
+@cost_access_required
 def admin_reports():
     from sqlalchemy import func
     

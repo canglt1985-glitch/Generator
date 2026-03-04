@@ -16,7 +16,7 @@ from models import (
     FuelPurchaseLog, FuelLedger, OtherExpense
 )
 from helpers import get_central_stock, get_audit_data
-from auth import login_required, admin_required
+from auth import login_required, admin_required, cost_access_required
 from generator import generator_bp
 
 
@@ -73,6 +73,7 @@ def legacy_schedule_redirect():
 
 @generator_bp.route('/generator')
 @login_required
+@cost_access_required
 def generator():
     active_tab = request.args.get('tab', 'fuel')
     # Redirect schedule tab → daily_work

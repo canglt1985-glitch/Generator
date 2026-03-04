@@ -14,7 +14,7 @@
                 {% else %}Quản lý nhiên liệu, chi phí khác và tổng hợp thanh toán.{% endif %}
             </div>
         </div>
-        {% if session['role'] == 'admin' %}
+        {% if session.get('role') == 'admin' and active_tab in ['fuel','expense','payment'] %}
         <div class="col-auto text-end">
             <div class="dropdown">
                 <button class="btn btn-sm btn-outline-secondary dropdown-toggle rounded-pill px-3 shadow-none"
@@ -22,20 +22,15 @@
                     <i class="fas fa-tools me-1"></i>Công cụ Admin
                 </button>
                 <div class="dropdown-menu dropdown-menu-end shadow border-0">
-                    <a class="dropdown-item" href="{{ url_for('generator.template_power_schedule') }}">
-                        <i class="fas fa-file-download me-2"></i>Tải file mẫu
+                    {% if active_tab == 'fuel' %}
+                    <a class="dropdown-item" href="{{ url_for('generator.export_fuel_ledger') }}">
+                        <i class="fas fa-file-export me-2"></i>Xuất sổ cái nhiên liệu
                     </a>
-                    <a class="dropdown-item" href="{{ url_for('generator.export_power_schedule') }}">
-                        <i class="fas fa-file-export me-2"></i>Xuất báo cáo
+                    {% elif active_tab == 'expense' %}
+                    <a class="dropdown-item" href="{{ url_for('generator.export_expenses') }}">
+                        <i class="fas fa-file-export me-2"></i>Xuất chi phí khác
                     </a>
-                    <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#importModal">
-                        <i class="fas fa-file-excel me-2"></i>Nhập từ Excel
-                    </button>
-                    <div class="dropdown-divider"></div>
-                    <a class="dropdown-item text-danger fw-bold" href="{{ url_for('generator.reset_power_schedule') }}"
-                        onclick="return confirm('Xóa toàn bộ lịch cúp điện?')">
-                        <i class="fas fa-trash me-2"></i>Xóa sạch dữ liệu
-                    </a>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -158,111 +153,7 @@
 </div>
 
 <div class="tab-content" id="mainTabContent">
-    <!-- TAB 1: SCHEDULE CONTENT -->
-    {% if active_tab == 'schedule' %}
-    <div class="tab-pane fade show active" id="schedule-content" role="tabpanel">
-        <div class="row mb-1">
-            <div class="col-12">
-                <div class="card border-0 shadow-sm rounded-3">
-                    <div class="card-body p-3">
-                        <div class="d-flex flex-wrap gap-2 align-items-end">
-                            <a href="{{ url_for('generator.manual_fetch_outages') }}"
-                                class="btn btn-sm btn-outline-primary rounded-pill px-3">
-                                <i class="fas fa-sync me-1"></i>Cập nhật lịch
-                            </a>
-                            <form action="{{ url_for('generator.export_power_schedule') }}" method="GET"
-                                class="d-none d-md-flex gap-2 align-items-end ms-auto">
-                                <input type="date" name="start_date" class="form-control form-control-sm rounded-pill"
-                                    style="width:130px;">
-                                <input type="date" name="end_date" class="form-control form-control-sm rounded-pill"
-                                    style="width:130px;">
-                                <button type="submit" class="btn btn-outline-info btn-sm rounded-pill fw-bold">
-                                    <i class="fas fa-file-export me-1"></i>Xuất
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-
-
-            <div class="card shadow-sm">
-                <div class="table-responsive">
-                    <table class="table table-vcenter table-hover card-table text-nowrap">
-                        <thead>
-                            <tr>
-                                <th class="col-id">ID Trạm</th>
-                                <th class="col-date">Ngày Cúp</th>
-                                <th>Bắt đầu</th>
-                                <th>Kết thúc</th>
-                                {% if session['role'] == 'admin' %}
-                                <th class="d-none d-md-table-cell">NV Quản Lý</th>
-                                {% endif %}
-                                <th class="d-none d-md-table-cell">Đội QL</th>
-                                <th class="d-none d-md-table-cell">Khu Vực</th>
-                            </tr>
-                            <tr class="filter-row bg-light-lt">
-                                <th><input type="text" class="form-control form-control-sm" placeholder="🔍"
-                                        onkeyup="filterTable()">
-                                </th>
-                                <th><input type="date" class="form-control form-control-sm" onchange="filterTable()">
-                                </th>
-                                <th></th>
-                                <th></th>
-                                {% if session['role'] == 'admin' %}
-                                <th class="d-none d-md-table-cell"><input type="text"
-                                        class="form-control form-control-sm" placeholder="🔍" onkeyup="filterTable()">
-                                </th>
-                                {% endif %}
-                                <th class="d-none d-md-table-cell"><input type="text"
-                                        class="form-control form-control-sm" placeholder="🔍" onkeyup="filterTable()">
-                                </th>
-                                <th class="d-none d-md-table-cell"></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for item in schedules %}
-                            <tr>
-                                <td>
-                                    <span class="badge bg-blue-lt fw-bold cursor-pointer station-trigger"
-                                        data-id="{{ item.id_tram }}">{{ item.id_tram }}</span>
-                                </td>
-                                <td class="small fw-medium">
-                                    {{ item.ngay_mat_dien | format_date }}
-                                </td>
-                                <td><span class="badge bg-red-lt fw-bold">{{ item.thoi_gian_cup_dien }}</span></td>
-                                <td><span class="badge bg-green-lt fw-bold">{{ item.thoi_gian_co_dien }}</span></td>
-                                {% if session['role'] == 'admin' %}
-                                <td class="small text-muted d-none d-md-table-cell">{{ item.quan_ly_tram }}</td>
-                                {% endif %}
-                                <td class="small text-muted d-none d-md-table-cell">{{ item.doi_quan_ly_dien or '--' }}
-                                </td>
-                                <td class="small text-muted d-none d-md-table-cell">{{ item.khu_vuc or '--' }}</td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                <td colspan="7" class="text-center py-5">
-                                    <div class="empty">
-                                        <div class="empty-icon"><i class="fas fa-calendar-check fa-2x"></i></div>
-                                        <p class="empty-title">Không có lịch cúp điện</p>
-                                        <p class="empty-subtitle text-muted">Hiện tại không có ghi nhận lịch mất điện
-                                            nào
-                                            cho
-                                            trạm
-                                            của bạn.</p>
-                                    </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-        </div>
-    </div>
-    {% endif %}
+    <!-- Schedule tab has been moved to Daily Work page -->
 
     <!-- TAB 2: FUEL CONTENT -->
     {% if active_tab == 'fuel' %}
