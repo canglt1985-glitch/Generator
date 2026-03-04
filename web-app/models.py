@@ -160,3 +160,31 @@ class FuelPurchaseLog(db.Model):
     ghi_chu = db.Column(db.String(500))
     nguoi_mua = db.Column(db.String(100))
     id_tram = db.Column(db.String(50))
+
+
+class MobileEquipment(db.Model):
+    """Thiết bị lưu động: MPĐ lưu động, Pin lưu động"""
+    id = db.Column(db.Integer, primary_key=True)
+    ma_thiet_bi = db.Column(db.String(50), unique=True, nullable=False)  # MPD-01, PIN-01
+    loai = db.Column(db.String(20), nullable=False)  # MPĐ / Pin
+    thong_so = db.Column(db.String(100))  # 5KVA, 48V/100Ah
+    trang_thai = db.Column(db.String(20), default='Tốt')  # Tốt / Hư
+    vi_tri_hien_tai = db.Column(db.String(50), default='KHO')  # KHO / id_tram
+    nl_ton = db.Column(db.Float, default=0)  # NL tồn theo máy (xăng)
+    ghi_chu = db.Column(db.Text)
+    ngay_tao = db.Column(db.String(20), default=lambda: datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+
+    transfers = db.relationship('EquipmentTransfer', backref='equipment', lazy=True,
+                                order_by='EquipmentTransfer.ngay_dieu_chuyen.desc()')
+
+
+class EquipmentTransfer(db.Model):
+    """Lịch sử điều chuyển thiết bị lưu động"""
+    id = db.Column(db.Integer, primary_key=True)
+    equipment_id = db.Column(db.Integer, db.ForeignKey('mobile_equipment.id'), nullable=False)
+    tu_vi_tri = db.Column(db.String(50), nullable=False)  # KHO / id_tram
+    den_vi_tri = db.Column(db.String(50), nullable=False)  # id_tram / KHO
+    ngay_dieu_chuyen = db.Column(db.String(20), default=lambda: datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+    nguoi_dieu_chuyen = db.Column(db.String(100))
+    ghi_chu = db.Column(db.String(500))
+
