@@ -24,9 +24,9 @@
                         <th class="eq-col-ma">Mã TB</th>
                         <th class="eq-col-loai">Loại</th>
                         <th class="eq-col-vitri">Vị trí</th>
-                        <th class="eq-col-spec d-none d-md-table-cell">Thông số</th>
-                        <th class="eq-col-fuel d-none d-sm-table-cell">NL tồn</th>
-                        <th class="eq-col-status d-none d-md-table-cell">TT</th>
+                        <th class="eq-col-spec">Thông số</th>
+                        <th class="eq-col-fuel">NL tồn</th>
+                        <th class="eq-col-status">TT</th>
                         <th class="eq-col-action text-end">⚙</th>
                     </tr>
                 </thead>
@@ -48,13 +48,13 @@
                             <span class="fw-bold text-primary">📍{{ e.vi_tri_hien_tai }}</span>
                             {% endif %}
                         </td>
-                        <td class="eq-col-spec d-none d-md-table-cell text-muted">{{ e.thong_so or '--' }}</td>
-                        <td class="eq-col-fuel d-none d-sm-table-cell">
+                        <td class="eq-col-spec text-muted">{{ e.thong_so or '--' }}</td>
+                        <td class="eq-col-fuel">
                             {% if e.loai == 'MPĐ' %}
                             ⛽{{ '%.1f'|format(e.nl_ton or 0) }}L
                             {% else %}--{% endif %}
                         </td>
-                        <td class="eq-col-status d-none d-md-table-cell">
+                        <td class="eq-col-status">
                             {% if e.trang_thai == 'Tốt' %}
                             <span class="badge bg-success-lt">Tốt</span>
                             {% else %}
@@ -116,8 +116,8 @@
                         <th>TB</th>
                         <th>Từ</th>
                         <th>Đến</th>
-                        <th class="d-none d-md-table-cell">Người</th>
-                        <th class="d-none d-md-table-cell">Ghi chú</th>
+                        <th>Người</th>
+                        <th>Ghi chú</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -127,8 +127,8 @@
                         <td class="fw-bold">{{ t.equipment.ma_thiet_bi }}</td>
                         <td>{{ t.tu_vi_tri }}</td>
                         <td class="fw-bold text-primary">{{ t.den_vi_tri }}</td>
-                        <td class="d-none d-md-table-cell">{{ t.nguoi_dieu_chuyen or '--' }}</td>
-                        <td class="d-none d-md-table-cell text-muted">{{ t.ghi_chu or '' }}</td>
+                        <td>{{ t.nguoi_dieu_chuyen or '--' }}</td>
+                        <td class="text-muted">{{ t.ghi_chu or '' }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -141,45 +141,31 @@
 <style>
     .eq-table td,
     .eq-table th {
-        padding: 0.35rem 0.4rem;
-        font-size: 0.8rem;
+        padding: 0.3rem 0.3rem;
+        font-size: 0.78rem;
         vertical-align: middle;
+        white-space: nowrap;
     }
 
     .eq-col-ma {
-        width: 80px;
         white-space: nowrap;
-    }
-
-    .eq-col-loai {
-        width: 65px;
     }
 
     .eq-col-loai .badge {
-        font-size: 0.65rem;
-        padding: 0.15em 0.4em;
+        font-size: 0.62rem;
+        padding: 0.12em 0.35em;
     }
 
     .eq-col-vitri {
-        min-width: 80px;
         white-space: nowrap;
-    }
-
-    .eq-col-spec {
-        min-width: 90px;
     }
 
     .eq-col-fuel {
-        width: 65px;
         white-space: nowrap;
     }
 
-    .eq-col-status {
-        width: 50px;
-    }
-
     .eq-col-action {
-        width: 70px;
+        white-space: nowrap;
     }
 
     .eq-btn {
@@ -196,36 +182,33 @@
         background-color: rgba(255, 193, 7, 0.06) !important;
     }
 
-    /* MOBILE */
     @media (max-width: 575.98px) {
 
         .eq-table td,
         .eq-table th {
-            padding: 0.3rem 0.25rem;
-            font-size: 0.73rem;
-        }
-
-        .eq-col-ma {
-            width: 65px;
-            font-size: 0.72rem;
-        }
-
-        .eq-col-loai {
-            width: 50px;
+            padding: 0.2rem 0.15rem;
+            font-size: 0.68rem;
         }
 
         .eq-col-loai .badge {
-            font-size: 0.58rem;
+            font-size: 0.55rem;
+            padding: 0.1em 0.25em;
         }
 
-        .eq-col-vitri {
-            font-size: 0.72rem;
+        .eq-col-spec {
+            max-width: 55px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .eq-col-status .badge {
+            font-size: 0.55rem;
         }
 
         .eq-btn {
-            width: 30px;
-            height: 30px;
-            font-size: 0.7rem;
+            width: 28px;
+            height: 28px;
+            font-size: 0.65rem;
         }
     }
 </style>
