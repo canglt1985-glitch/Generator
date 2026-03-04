@@ -830,14 +830,15 @@
                             <div class="row g-2 mb-2">
                                 <div class="col-6" id="group-station">
                                     <label class="form-label small fw-bold mb-1">Trạm</label>
-                                    <input type="text" class="form-control form-control-sm" name="id_tram"
-                                        id="inp_id_tram" list="stationList" placeholder="Nhập mã trạm..."
-                                        onchange="validateStation(this)">
-                                    <datalist id="stationList">
-                                        {% for s in stations %}
-                                        <option value="{{ s.id_tram }}">
-                                            {% endfor %}
-                                    </datalist>
+                                    <div class="position-relative" id="station-dropdown-wrap">
+                                        <input type="text" class="form-control form-control-sm" name="id_tram"
+                                            id="inp_id_tram" autocomplete="off" placeholder="🔍 Gõ mã trạm..."
+                                            onfocus="showStationDropdown()" oninput="filterStationDropdown(this.value)">
+                                        <input type="hidden" id="inp_id_tram_valid">
+                                        <div id="station-dropdown" class="dropdown-menu w-100 p-0"
+                                            style="max-height:220px;overflow-y:auto;font-size:0.82rem;">
+                                        </div>
+                                    </div>
                                     <div class="form-text small fw-bold" id="station-stock-hint" style="display:none;">
                                     </div>
                                 </div>
@@ -1024,39 +1025,82 @@
     }
 
 
-    function checkStationStock(stationId) {
-        const hint = document.getElementById('station-stock-hint');
-        if (!stationId) {
-            hint.style.display = 'none';
+    // --- Station Dropdown with Fuel Stock ---
+    const STATION_LIST = [{% for s in stations %}'{{ s.id_tram }}', {% endfor %}];
+    let _stationStock = {};  // cache: {id_tram: {ton_real, loai_nl, ...}}
+    let _stockLoaded = false;
+
+    function loadStationStock() {
+        if (_stockLoaded) return Promise.resolve();
+        return fetch('/api/fuel-stock-all')
+            .then(r => r.json())
+            .then(data => { _stationStock = data; _stockLoaded = true; })
+            .catch(() => { _stockLoaded = true; });
+    }
+
+    function getStockLabel(id) {
+        const s = _stationStock[id];
+        if (!s || s.ton_real === undefined || s.ton_real === null) return '';
+        const ton = Math.round(s.ton_real);
+        let cls = 'text-muted';
+        if (ton > 50) cls = 'text-success fw-bold';
+        else if (ton > 20) cls = 'text-warning fw-bold';
+        else if (ton > 0) cls = 'text-danger fw-bold';
+        return `<span class="${cls}">${ton}L</span>`;
+    }
+
+    function renderStationDropdown(filter) {
+        const dd = document.getElementById('station-dropdown');
+        const q = (filter || '').toUpperCase();
+        const matches = STATION_LIST.filter(id => !q || id.toUpperCase().includes(q));
+        if (matches.length === 0) {
+            dd.innerHTML = '<div class="px-2 py-1 text-muted">Không tìm thấy</div>';
             return;
         }
-
-        fetch(`/api/fuel-context?station_id=${encodeURIComponent(stationId)}`)
-            .then(res => res.json())
-            .then(data => {
-                if (data.station_stock !== undefined) {
-                    hint.textContent = `Tồn trạm hiện tại: ${data.station_stock} lít`;
-                    hint.style.display = 'block';
-                }
-            });
+        dd.innerHTML = matches.map(id => {
+            const stockHtml = getStockLabel(id);
+            return `<div class="dropdown-item d-flex justify-content-between align-items-center px-2 py-1" 
+                style="cursor:pointer" onmousedown="selectStation('${id}')">
+                <span class="fw-bold">${id}</span>
+                ${stockHtml ? stockHtml : '<span class="text-muted">--</span>'}
+            </div>`;
+        }).join('');
     }
 
-    function validateStation(input) {
-        checkStationStock(input.value);
-        const options = document.getElementById('stationList').options;
-        let valid = false;
-        for (let i = 0; i < options.length; i++) {
-            if (input.value === options[i].value) {
-                valid = true;
-                break;
-            }
-        }
-        if (!valid && input.value !== '') {
-            alert('Mã trạm "' + input.value + '" không có trong danh sách!');
-            input.value = ''; // Reset
-            document.getElementById('station-stock-hint').style.display = 'none';
+    function showStationDropdown() {
+        loadStationStock().then(() => {
+            renderStationDropdown(document.getElementById('inp_id_tram').value);
+            document.getElementById('station-dropdown').classList.add('show');
+        });
+    }
+
+    function filterStationDropdown(val) {
+        renderStationDropdown(val);
+        document.getElementById('station-dropdown').classList.add('show');
+    }
+
+    function selectStation(id) {
+        const inp = document.getElementById('inp_id_tram');
+        inp.value = id;
+        document.getElementById('station-dropdown').classList.remove('show');
+        // Show hint
+        const hint = document.getElementById('station-stock-hint');
+        const s = _stationStock[id];
+        if (s && s.ton_real !== undefined) {
+            hint.textContent = `📊 Tồn hiện tại: ${Math.round(s.ton_real)}L`;
+            hint.style.display = 'block';
+        } else {
+            hint.style.display = 'none';
         }
     }
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function (e) {
+        const wrap = document.getElementById('station-dropdown-wrap');
+        if (wrap && !wrap.contains(e.target)) {
+            document.getElementById('station-dropdown').classList.remove('show');
+        }
+    });
 
     // Init view
     setFuelType('DIRECT_BUY');
@@ -1066,6 +1110,8 @@
         modal.querySelector('.modal-title').textContent = 'Giao Dịch Nhiên Liệu Mới';
         modal.querySelector('form').action = "{{ url_for('generator.add_fuel_ledger') }}";
         modal.querySelector('form').reset();
+        document.getElementById('station-stock-hint').style.display = 'none';
+        document.getElementById('station-dropdown').classList.remove('show');
         setFuelType('DIRECT_BUY');
     }
 
@@ -1094,6 +1140,12 @@
 
         // Set dropdown + field visibility
         setFuelType(log.type);
+
+        // Load stock hint for this station
+        if (log.id_tram) {
+            loadStationStock().then(() => selectStation(log.id_tram));
+            document.getElementById('inp_id_tram').value = log.id_tram;
+        }
     }
 
     function editExpense(btn) {
