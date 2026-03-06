@@ -46,39 +46,38 @@
                 </div>
             </div>
 
-            <!-- Station Info Card (v2) -->
-            <div id="stationInfoCard" class="mb-4" style="display: none;">
-                <div class="row justify-content-center">
-                    <div class="col-md-10 col-lg-8">
-                        <div class="card shadow-md border-primary border-top border-3"
-                            style="border-radius: 12px; overflow: hidden;">
-                            <div
-                                class="card-header bg-white border-bottom-0 pt-3 pb-2 d-flex justify-content-between align-items-center">
-                                <h5 class="mb-0 fw-bold text-dark"><i
-                                        class="fas fa-satellite-dish text-primary me-2"></i>Thông Tin Trạm <span
-                                        id="headerSiteId" class="text-primary"></span></h5>
-                                <div>
-                                    <button class="btn btn-sm btn-light text-primary fw-bold px-3 shadow-none border"
-                                        onclick="showModalDetails('STATION')"><i class="fas fa-list me-1"></i>
-                                        Trạm</button>
-                                    <button id="btnContractModal"
-                                        class="btn btn-sm btn-light text-warning fw-bold px-3 shadow-none border"
-                                        onclick="showModalDetails('CONTRACT')" style="display:none;"><i
-                                            class="fas fa-file-contract me-1"></i> Hợp đồng</button>
-                                </div>
+            <div class="row" id="mainDashboardWrapper" style="display: none;">
+                <!-- Station Info Card (Bên trái) -->
+                <div class="col-xl-4 col-lg-5 mb-4" id="stationInfoCard">
+                    <div class="card shadow-md border-primary border-top border-3"
+                        style="border-radius: 12px; overflow: hidden; height: 100%;">
+                        <div
+                            class="card-header bg-white border-bottom-0 pt-3 pb-2 d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0 fw-bold text-dark"><i
+                                    class="fas fa-satellite-dish text-primary me-2"></i>Thông Tin Trạm <span
+                                    id="headerSiteId" class="text-primary"></span></h5>
+                            <div>
+                                <button class="btn btn-sm btn-light text-primary fw-bold px-3 shadow-none border"
+                                    onclick="showModalDetails('STATION')"><i class="fas fa-list me-1"></i>
+                                </button>
+                                <button id="btnContractModal"
+                                    class="btn btn-sm btn-light text-warning fw-bold px-3 shadow-none border"
+                                    onclick="showModalDetails('CONTRACT')" style="display:none;"><i
+                                        class="fas fa-file-contract me-1"></i>
+                                </button>
                             </div>
-                            <div class="card-body p-0" id="stationInfoBody">
-                            </div>
+                        </div>
+                        <div class="card-body p-0" id="stationInfoBody">
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- MAIN DASHBOARD CARDS -->
-            <div id="resultsDashboard" style="display: none;">
-                <h4 class="mb-3 text-primary" id="resultTitle"></h4>
-                <div class="row g-4" id="cardsContainer">
-                    <!-- Cards Rendered via JS -->
+                <!-- MAIN DASHBOARD CARDS (Bên phải) -->
+                <div class="col-xl-8 col-lg-7" id="resultsDashboard">
+                    <h5 class="mb-3 text-primary fw-bold" id="resultTitle"></h5>
+                    <div class="row g-3" id="cardsContainer">
+                        <!-- Cards Rendered via JS -->
+                    </div>
                 </div>
             </div>
         </div>
@@ -348,8 +347,9 @@
 
         document.getElementById('loadingIndicator').style.display = 'block';
         document.getElementById('errorMsg').style.display = 'none';
-        document.getElementById('resultsDashboard').style.display = 'none';
+        document.getElementById('mainDashboardWrapper').style.display = 'none';
         document.getElementById('stationInfoCard').style.display = 'none';
+        document.getElementById('resultsDashboard').style.display = 'none';
         document.getElementById('cardsContainer').innerHTML = '';
 
         try {
@@ -430,24 +430,17 @@
         if (contract) {
             document.getElementById('btnContractModal').style.display = 'inline-block';
             displayData.push({ k: 'so_hd', l: 'Số hợp đồng', v: contract.so_hd });
-            displayData.push({ k: 'site_id', l: 'Mã trạm', v: station.site_id });
             displayData.push({ k: 'chu_the_hop_dong', l: 'Chủ trạm', v: contract.chu_the_hop_dong });
-            displayData.push({ k: 'dia_chi', l: 'Địa chỉ đặt trạm', v: station.dia_chi });
-            displayData.push({ k: 'gia_thue_co_vat', l: 'Giá thuê trạm', v: contract.gia_thue_co_vat ? Number(contract.gia_thue_co_vat).toLocaleString() + ' đ' : '--' });
             displayData.push({ k: 'chu_ky_thanh_toan', l: 'Chu kỳ thanh toán', v: contract.chu_ky_thanh_toan });
-            displayData.push({ k: 'ngay_ket_thuc_hd', l: 'Ngày hết hợp đồng', v: contract.ngay_ket_thuc_hd });
         } else {
             document.getElementById('btnContractModal').style.display = 'none';
-            displayData.push({ k: 'site_id', l: 'Mã trạm', v: station.site_id });
-            displayData.push({ k: 'ten_tram', l: 'Tên trạm', v: station.ten_tram });
-            displayData.push({ k: 'dia_chi', l: 'Địa chỉ đặt trạm', v: station.dia_chi });
         }
 
-        displayData.push({ k: 'loai_tram', l: 'Loại trạm', v: station.loai_tram });
-        displayData.push({ k: 'vung_phu', l: 'Vùng phủ', v: station.vung_phu });
-        displayData.push({ k: 'nhom_ql', l: 'Nhóm quản lý', v: station.nhom_ql });
-        displayData.push({ k: 'phan_lop_csht', l: 'Phân lớp CSHT', v: station.phan_lop_csht });
-        displayData.push({ k: 'don_vi_dung_chung', l: 'Đơn vị dùng chung', v: station.don_vi_dung_chung });
+        // Ẩn bớt các trường trùng lặp hoặc không quan trọng ở thẻ nhỏ này
+        // Hầu hết mọi thứ đã được gom vào THÔNG TIN CHUNG (cards lưới bên phải)
+        displayData.push({ k: 'site_id', l: 'Mã trạm', v: station.site_id });
+        displayData.push({ k: 'gia_thue_co_vat', l: 'Giá thuê trạm', v: contract ? (contract.gia_thue_co_vat ? Number(contract.gia_thue_co_vat).toLocaleString() + ' đ' : '--') : '--' });
+        displayData.push({ k: 'ngay_ket_thuc_hd', l: 'Ngày hết hợp đồng', v: contract ? contract.ngay_ket_thuc_hd : '--' });
         displayData.push({ k: 'toa_do', l: 'Tọa độ', v: `Kinh độ ${station.kinh_do || '--'}, Vĩ độ ${station.vi_do || '--'}` });
 
         let html = '<ul class="list-group list-group-flush" style="font-size:0.9rem;">';
@@ -510,8 +503,9 @@
     }
 
     function renderDashboard(site_id, dataGroups) {
+        document.getElementById('mainDashboardWrapper').style.display = 'flex';
         document.getElementById('resultsDashboard').style.display = 'block';
-        document.getElementById('resultTitle').innerHTML = `<i class="fas fa-map-marker-alt"></i> Hồ sơ kỹ thuật trạm: <strong>${site_id.toUpperCase()}</strong>`;
+        document.getElementById('resultTitle').innerHTML = `<i class="fas fa-layer-group me-2"></i> Danh Mục Thiết Bị & Hạ Tầng: <strong>${site_id.toUpperCase()}</strong>`;
 
         const container = document.getElementById('cardsContainer');
         container.innerHTML = '';
