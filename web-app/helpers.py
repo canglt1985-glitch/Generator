@@ -284,7 +284,11 @@ def get_audit_data(huyen_filter=None, start_date=None, end_date=None):
         cum_g = cum_gen.get(s.id_tram, {'h': 0})
         cum_consumed_real = cum_g['h'] * (s.dinh_muc_thuc_te or 0)
         cum_consumed_max = cum_g['h'] * (s.dinh_muc or 0)
-        ton_real = max(0, cum_total_received - cum_consumed_real)
+        # Ưu tiên NL tồn nhập tay (GeneralInfo.nl_ton) nếu có
+        if s.nl_ton and s.nl_ton > 0:
+            ton_real = s.nl_ton
+        else:
+            ton_real = max(0, cum_total_received - cum_consumed_real)
         ton_min = max(0, cum_total_received - cum_consumed_max)
 
         fuel_cost = d['cost']

@@ -138,6 +138,15 @@
                                 <span class="nav-link-title">VHKT RAN</span>
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'datasite.datasite_dashboard' %}active{% endif %}"
+                                href="{{ url_for('datasite.datasite_dashboard') }}">
+                                <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                    <i class="fas fa-search-location text-info"></i>
+                                </span>
+                                <span class="nav-link-title text-info fw-bold">Datasite</span>
+                            </a>
+                        </li>
                         {% if session.get('role') != 'chuyenvien' %}
                         <li class="nav-item">
                             <a class="nav-link {% if request.endpoint == 'generator' and request.args.get('tab','schedule') in ['fuel','expense','payment','schedule'] %}active{% endif %}"
@@ -534,6 +543,7 @@
             });
         });
     </script>
+    {% block scripts %}{% endblock %}
 </body>
 
 </html>

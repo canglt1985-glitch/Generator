@@ -1,5 +1,29 @@
 # API Documentation
 
+## DataSite & Inventory
+### GET `/api/datasite/assets/by_type`
+- **Description:** Returns all assets of a specified type across all stations, sorted by `site_id` alphabetically.
+- **Parameters:** `type` (string) - Category constant like `MAY_LANH`, `MAY_PHAT`, `TU_NGUON`.
+- **Response:**
+  ```json
+  {
+    "success": true,
+    "data": [
+      {
+        "site_id": "DNTN28",
+        "asset_name": "Máy Lạnh 1",
+        "brand": "Daikin",
+        "capacity": "12000 BTU",
+        "quantity": 1,
+        "status": "Hoạt động tốt",
+        "extra_info_1": "...",
+        "extra_info_2": "..."
+      }
+    ]
+  }
+  ```
+
+
 ## Station Intelligence
 ### GET `/api/station-info/<station_id>`
 - **Description:** Fetches comprehensive data for a specific station, combining general info, latest fuel refill, latest generator log, and overall fuel statistics.

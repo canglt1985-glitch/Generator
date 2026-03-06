@@ -1,0 +1,771 @@
+{% extends "layout.html" %}
+
+{% block title %}Datasite{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card mb-4 shadow-sm">
+        <div class="card-header p-0">
+            <ul class="nav nav-tabs" id="datasiteTabs" role="tablist" style="border-bottom: 0;">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active py-3 fw-bold" id="station-tab" data-bs-toggle="tab"
+                        data-bs-target="#station" type="button" role="tab">
+                        <i class="fas fa-search me-2"></i>Tra Cứu Một Trạm
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link py-3 fw-bold text-success" id="category-tab" data-bs-toggle="tab"
+                        data-bs-target="#category" type="button" role="tab">
+                        <i class="fas fa-list-ul me-2"></i>Thống Kê Toàn Mạng
+                    </button>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Tab Content -->
+    <div class="tab-content">
+        <!-- Tab 1: Tra Cứu Trạm -->
+        <div class="tab-pane fade show active" id="station" role="tabpanel">
+            <div class="row mb-4 justify-content-center">
+                <div class="col-md-8 text-center">
+                    <h2 class="mb-3">
+                        <i class="fas fa-database"></i> TRA CỨU HỒ SƠ DATASITE
+                    </h2>
+                    <div class="input-group input-group-lg shadow-sm">
+                        <input type="text" id="siteIdInput" class="form-control"
+                            placeholder="Nhập mã trạm (VD: DNCM02)...">
+                        <button class="btn btn-primary px-4" id="btnSearch" onclick="searchStation()">
+                            <i class="fas fa-search me-2"></i> Tra Cứu Trạm
+                        </button>
+                    </div>
+                    <div id="loadingIndicator" class="mt-3 text-muted" style="display: none;">
+                        <i class="fas fa-spinner fa-spin"></i> Đang tải dữ liệu từ kho DataSite...
+                    </div>
+                    <div id="errorMsg" class="mt-3 text-danger fw-bold" style="display: none;"></div>
+                </div>
+            </div>
+
+            <!-- Station Info Card (v2) -->
+            <div id="stationInfoCard" class="mb-4" style="display: none;">
+                <div class="row justify-content-center">
+                    <div class="col-md-10 col-lg-8">
+                        <div class="card shadow-md border-primary border-top border-3"
+                            style="border-radius: 12px; overflow: hidden;">
+                            <div
+                                class="card-header bg-white border-bottom-0 pt-3 pb-2 d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0 fw-bold text-dark"><i
+                                        class="fas fa-satellite-dish text-primary me-2"></i>Thông Tin Trạm <span
+                                        id="headerSiteId" class="text-primary"></span></h5>
+                                <div>
+                                    <button class="btn btn-sm btn-light text-primary fw-bold px-3 shadow-none border"
+                                        onclick="showModalDetails('STATION')"><i class="fas fa-list me-1"></i>
+                                        Trạm</button>
+                                    <button id="btnContractModal"
+                                        class="btn btn-sm btn-light text-warning fw-bold px-3 shadow-none border"
+                                        onclick="showModalDetails('CONTRACT')" style="display:none;"><i
+                                            class="fas fa-file-contract me-1"></i> Hợp đồng</button>
+                                </div>
+                            </div>
+                            <div class="card-body p-0" id="stationInfoBody">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MAIN DASHBOARD CARDS -->
+            <div id="resultsDashboard" style="display: none;">
+                <h4 class="mb-3 text-primary" id="resultTitle"></h4>
+                <div class="row g-4" id="cardsContainer">
+                    <!-- Cards Rendered via JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 2: Tra Cứu Hạng Mục -->
+        <div class="tab-pane fade" id="category" role="tabpanel">
+            <div class="row mb-4 justify-content-center">
+                <div class="col-md-8 text-center">
+                    <h2 class="mb-3 text-success">
+                        <i class="fas fa-chart-pie"></i> THỐNG KÊ DATASITE TOÀN MẠNG
+                    </h2>
+                    <div class="input-group input-group-lg shadow-sm">
+                        <select id="assetTypeSelect" class="form-select">
+                            <option value="">-- Chọn Hạng Mục Tài Sản --</option>
+                            <optgroup label="📋 Thông Tin Chung">
+                                <option value="STATION">📍 Danh Sách Trạm (Thông tin chung)</option>
+                                <option value="CONTRACT">📄 Danh Sách Hợp Đồng</option>
+                            </optgroup>
+                            <optgroup label="🏢 Cơ Sở Hạ Tầng">
+                                <option value="COT_ANTEN">🗼 Cột Anten & Cáp</option>
+                                <option value="PHONG_MAY">🖥️ Phòng Máy</option>
+                                <option value="PHONG_MPD">🚪 Phòng MPĐ</option>
+                            </optgroup>
+                            <optgroup label="🔌 Phụ Trợ">
+                                <option value="MAY_LANH">❄️ Máy Lạnh</option>
+                                <option value="MAY_PHAT">⚡ Máy Phát Điện</option>
+                                <option value="TU_NGUON">🔌 Tủ Nguồn</option>
+                                <option value="ACCU">🔋 Tổ Accu</option>
+                            </optgroup>
+                            <optgroup label="📡 Kỹ Thuật">
+                                <option value="BTS_3G">📶 Tủ BTS 3G</option>
+                                <option value="BTS_4G">📡 Tủ BTS 4G</option>
+                                <option value="DATA_CELL">📊 Data Cell</option>
+                                <option value="THIET_BI_VT">🔧 Thiết bị Viễn thông</option>
+                            </optgroup>
+                        </select>
+                        <button class="btn btn-success px-4" onclick="searchByCategory()">
+                            <i class="fas fa-search me-2"></i> Thống Kê
+                        </button>
+                    </div>
+                    <div id="catLoading" class="mt-3 text-muted" style="display: none;">
+                        <i class="fas fa-spinner fa-spin"></i> Đang tổng hợp dữ liệu toàn mạng...
+                    </div>
+                    <div id="catErrorMsg" class="mt-3 text-danger fw-bold" style="display: none;"></div>
+                </div>
+            </div>
+
+            <!-- Category Results (Bảng ĐỘNG) -->
+            <div id="catResultsDashboard" style="display: none;">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="text-success fw-bold mb-0" id="catResultTitle"></h4>
+                    <div class="input-icon w-25">
+                        <span class="input-icon-addon"><i class="fas fa-filter"></i></span>
+                        <input type="text" class="form-control form-control-sm"
+                            placeholder="Lọc kết quả (hãng, tình trạng...)" onkeyup="filterLocalTable(this)">
+                    </div>
+                </div>
+
+                <div class="card shadow-sm border-0">
+                    <div class="table-responsive" id="catTableContainer"
+                        style="cursor: grab; -webkit-user-select: none; user-select: none;">
+                        <table class="table table-vcenter table-hover card-table small text-nowrap text-center mb-0"
+                            id="catTable">
+                            <thead class="bg-light" id="catTableHead">
+                                <!-- Header DYNAMIC từ JS -->
+                            </thead>
+                            <tbody id="catTableBody">
+                                <!-- Rows from JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Chi Tiết Trạm -->
+<div class="modal fade" id="stationDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold"><i class="fas fa-broadcast-tower me-2"></i>Chi Tiết Chuyên Sâu - Thông
+                    Tin Trạm</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                    aria-label="Close"></button>
+            </div>
+            <div class="modal-body bg-light">
+                <div class="row" id="stationFullDetails"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Chi Tiết Hợp Đồng -->
+<div class="modal fade" id="contractDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title fw-bold"><i class="fas fa-file-contract me-2"></i>Chi Tiết Chuyên Sâu - Hợp Đồng
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body bg-light">
+                <div class="row" id="contractFullDetails"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<template id="cardTemplate">
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100 shadow-sm border-0">
+            <div class="card-header text-white fw-bold d-flex justify-content-between align-items-center"
+                data-header-bg>
+                <span><i data-icon></i> <span data-title></span></span>
+                <span class="badge bg-light text-dark rounded-pill" data-qty></span>
+            </div>
+            <div class="card-body bg-light">
+                <div data-items-container></div>
+            </div>
+        </div>
+    </div>
+</template>
+
+<template id="itemTemplate">
+    <div class="mb-3 p-3 bg-white rounded shadow-sm position-relative border-start border-4 border-primary">
+        <div class="fw-bold text-dark fs-6 mb-1" data-name></div>
+        <div class="text-muted small mb-2"><i class="fas fa-tag"></i> <span data-brand></span></div>
+        <div class="mb-1" data-details></div>
+    </div>
+</template>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const typeConfigs = {
+        'STATION': {
+            title: 'Danh Sách Trạm', icon: 'fas fa-map-marker-alt', bg: 'bg-primary',
+            orderedCols: ['site_id', 'ma_ptm', 'ten_tram', 'loai_tram', 'dia_chi', 'kinh_do', 'vi_do', 'vung_phu', 'cosite', 'chu_csht', 'don_vi_dung_chung', 'hang_muc_dung_chung', 'tinh_trang', 'ghi_chu']
+        },
+        'CONTRACT': {
+            title: 'Danh Sách Hợp Đồng', icon: 'fas fa-file-contract', bg: 'bg-warning text-dark',
+            orderedCols: ['site_id', 'so_hd', 'chu_the_hop_dong', 'sdt_chu_nha', 'gia_thue_co_vat', 'gia_dien_khoan', 'chu_ky_thanh_toan', 'ngay_ky_hd', 'ngay_ket_thuc_hd', 'tinh_trang_hd', 'ghi_chu']
+        },
+        'COT_ANTEN': {
+            title: 'Cột Anten & Cáp', icon: 'fas fa-broadcast-tower', bg: 'bg-info text-dark',
+            orderedCols: ['site_id', 'dai_vt', 'loai_cot', 'chieu_cao_cot', 'chieu_cao_cong_trinh', 'dv_dung_chung_cot', 'dv_chu_quan_ccat', 'den_bao_khong', 'chieu_dai_cau_cap', 'serial', 'han_bao_hanh', 'han_bao_duong', 'trang_thai']
+        },
+        'MAY_LANH': {
+            title: 'Máy Lạnh', icon: 'fas fa-snowflake', bg: 'bg-primary',
+            orderedCols: ['site_id', 'dai_vt', 'nhan_hieu', 'ten_may_lanh', 'loai_may_lanh', 'cong_suat_btu', 'ngay_sd_hop_dong', 'ngay_su_dung', 'vi_tri_tai_san', 'product_code', 'serial', 'dv_chu_quan', 'han_bao_hanh', 'han_bao_duong', 'ghi_chu', 'trang_thai']
+        },
+        'MAY_PHAT': {
+            title: 'Máy Phát Điện', icon: 'fas fa-bolt', bg: 'bg-warning text-dark',
+            orderedCols: ['site_id', 'dai_vt', 'nhan_hieu', 'ten_mpd', 'cong_suat', 'phase', 'nhien_lieu', 'ats', 'ngay_sd_hop_dong', 'ngay_su_dung', 'vi_tri_tai_san', 'product_code', 'serial', 'dv_chu_quan', 'han_bao_hanh', 'han_bao_duong', 'ghi_chu', 'trang_thai']
+        },
+        'PHONG_MAY': {
+            title: 'Phòng Máy', icon: 'fas fa-server', bg: 'bg-dark',
+            orderedCols: ['site_id', 'dai_vt', 'loai_pm', 'vi_tri', 'dien_tich', 'dv_dung_chung', 'dv_chu_quan', 'serial', 'han_bao_hanh', 'han_bao_duong', 'trang_thai']
+        },
+        'PHONG_MPD': {
+            title: 'Phòng MPĐ', icon: 'fas fa-door-closed', bg: 'bg-secondary',
+            orderedCols: ['site_id', 'dai_vt', 'vi_tri', 'dien_tich', 'dv_dung_chung', 'dv_chu_quan', 'product_code', 'serial', 'han_bao_hanh', 'han_bao_duong', 'trang_thai']
+        },
+        'ACCU': {
+            title: 'Tổ Accu', icon: 'fas fa-car-battery', bg: 'bg-success',
+            orderedCols: ['site_id', 'dai_vt', 'nhan_hieu', 'loai_accu', 'dung_luong_binh', 'so_luong_binh', 'ngay_su_dung', 'product_code', 'serial', 'han_bao_hanh', 'han_bao_duong', 'ghi_chu', 'trang_thai']
+        },
+        'TU_NGUON': {
+            title: 'Tủ Nguồn', icon: 'fas fa-plug', bg: 'bg-danger',
+            orderedCols: ['site_id', 'dai_vt', 'nhan_hieu', 'so_luong_khe_rect', 'so_luong_rect', 'cong_suat_rect_w', 'thoi_gian_backup_phut', 'dong_tai_a', 'ngay_sd_hop_dong', 'ngay_su_dung', 'hop_dong_du_an', 'product_code', 'product_code_rect', 'serial', 'han_bao_hanh', 'han_bao_duong', 'trang_thai']
+        },
+        'BTS_3G': {
+            title: 'Tủ BTS 3G', icon: 'fas fa-signal', bg: 'bg-indigo',
+            orderedCols: ['site_id', 'chung_loai', 'hang_sx', 'rru', 'bbu', 'ngay_sd_hop_dong', 'ngay_su_dung', 'serial', 'han_bao_hanh', 'han_bao_duong', 'trang_thai']
+        },
+        'BTS_4G': {
+            title: 'Tủ BTS 4G', icon: 'fas fa-satellite-dish', bg: 'bg-purple',
+            orderedCols: ['site_id', 'dai_vt', 'chung_loai', 'hang_sx', 'rru', 'bbu', 'ngay_sd_hop_dong', 'ngay_su_dung', 'serial', 'han_bao_hanh', 'han_bao_duong', 'trang_thai']
+        },
+        'DATA_CELL': {
+            title: 'Data Cell', icon: 'fas fa-chart-bar', bg: 'bg-teal',
+            orderedCols: ['site_id', 'cell', 'sector', 'lat', 'long', 'height', 'azimuth', 'm_tilt', 'e_tilt', 'tilt', 'enb_id', 'c_id', 'psc_pci']
+        },
+        'THIET_BI_VT': {
+            title: 'Thiết bị VT', icon: 'fas fa-cogs', bg: 'bg-orange',
+            orderedCols: ['site_id', 'dai_vt', 'ten_thiet_bi', 'loai_thiet_bi', 'nha_cung_cap', 'product_code', 'thuoc_tram_remote', 'serial', 'trang_thai']
+        },
+    };
+
+    // Các cột ẩn (không hiện trên bảng Hạng Mục Toàn Mạng vì không có ý nghĩa trực quan)
+    const HIDDEN_COLS = ['id', 'sync_date', 'loai', 'extra_data', 'product_code', 'don_gia', 'don_vi_tinh'];
+
+    // Tên cột đẹp cho UI — khớp 100% key trong extra_data v2.1
+    const COL_LABELS = {
+        // Cột cứng
+        site_id: 'Mã Trạm', nhan_hieu: 'Nhãn Hiệu', serial: 'Serial', trang_thai: 'Tình Trạng',
+        han_bao_hanh: 'Hạn Bảo Hành', han_bao_duong: 'Hạn Bảo Dưỡng', ngay_su_dung: 'Ngày Sử Dụng',
+        // Thông tin chung (Station)
+        ma_ptm: 'Mã PTM', ten_tram: 'Tên Trạm', dia_chi: 'Địa Chỉ', kinh_do: 'Kinh Độ', vi_do: 'Vĩ Độ',
+        loai_tram: 'Loại Trạm', don_vi_dung_chung: 'ĐV Dùng Chung', hang_muc_dung_chung: 'Hạng Mục Dùng Chung',
+        ngay_phat_song: 'Ngày Phát Sóng', ngay_ky_bien_ban_ban_giao: 'Ngày Ký BB Giao', tinh_trang: 'Tình Trạng (TT)',
+        vung_phu: 'Vùng Phủ', cosite: 'Cosite', chu_csht: 'Chủ CSHT', so_kiem_dinh: 'Số KĐ/TCB', han_kiem_dinh: 'Hạn KĐ/TCB',
+        // Hợp đồng (Contract)
+        chu_the_hop_dong: 'Chủ Hợp Đồng', sdt_chu_nha: 'SĐT', tinh_trang_hd: 'Tình Trạng HĐ', so_hd: 'Số Hợp Đồng',
+        gia_thue_co_vat: 'Giá Thuê (VAT)', gia_dien_khoan: 'Điện Khoán', chu_ky_thanh_toan: 'Chu Kỳ TT',
+        ngay_ky_hd: 'Ngày Ký HĐ', ngay_ket_thuc_hd: 'Ngày Kết Thúc', msnv_quan_ly: 'MSNV Quản Lý',
+        so_cccd: 'Số CCCD', chu_tai_khoan: 'Chủ Tài Khoản', so_tai_khoan: 'Số Tài Khoản',
+        // Cột Anten
+        loai_cot: 'Loại Cột', chieu_cao_cot: 'Chiều Cao Cột', chieu_cao_cong_trinh: 'Chiều Cao CT',
+        den_bao_khong: 'Đèn Báo Không', dv_dung_chung_cot: 'ĐV Dùng Chung Cột',
+        chieu_dai_cau_cap: 'Chiều Dài Cầu Cáp', dv_chu_quan_ccat: 'ĐV Chủ Quản CCAT',
+        // Phòng máy/MPĐ
+        loai_pm: 'Loại Phòng Máy', vi_tri: 'Vị Trí', dien_tich: 'Diện Tích',
+        dv_dung_chung: 'ĐV Dùng Chung', dv_chu_quan: 'ĐV Chủ Quản', product_code: 'Product Code',
+        // Máy lạnh
+        cong_suat_btu: 'Công Suất (BTU)', loai_may_lanh: 'Loại Máy Lạnh', ten_may_lanh: 'Tên Máy Lạnh',
+        vi_tri_tai_san: 'Vị Trí Tài Sản',
+        // Máy phát
+        cong_suat: 'Công Suất', phase: 'Phase', nhien_lieu: 'Nhiên Liệu', ats: 'ATS',
+        ten_mpd: 'Tên Máy Phát Điện',
+        // Tủ nguồn
+        so_luong_khe_rect: 'Số Khe Rectifier', so_luong_rect: 'SL Rectifier',
+        cong_suat_rect_w: 'CS Rectifier (W)', thoi_gian_backup_phut: 'Backup (phút)',
+        dong_tai_a: 'Dòng Tải (A)', product_code_rect: 'PC Rectifier',
+        hop_dong_du_an: 'HĐ/Dự Án Trang Bị',
+        // Accu
+        loai_accu: 'Loại Accu', dung_luong_binh: 'Dung Lượng Bình', so_luong_binh: 'SL Bình',
+        // BTS
+        chung_loai: 'Chủng Loại', hang_sx: 'Hãng Sản Xuất', rru: 'RRU', bbu: 'BBU',
+        // Data Cell
+        cell: 'Cell', sector: 'Sector', enb_id: 'eNB-ID', c_id: 'C-ID', psc_pci: 'PSC/PCI',
+        azimuth: 'Azimuth', height: 'Height', m_tilt: 'M-Tilt', e_tilt: 'E-Tilt', tilt: 'Tilt',
+        lat: 'Lat', long: 'Long',
+        // Thiết bị VT
+        ten_thiet_bi: 'Tên Thiết Bị', loai_thiet_bi: 'Loại Thiết Bị', nha_cung_cap: 'Nhà Cung Cấp',
+        thuoc_tram_remote: 'Thuộc Trạm Remote',
+        // Chung
+        dai_vt: 'Đài VT', ghi_chu: 'Ghi Chú', don_gia: 'Đơn Giá', don_vi_tinh: 'ĐV Tính',
+        ngay_sd_hop_dong: 'Ngày SD (Theo HĐ)',
+    };
+
+    document.getElementById('siteIdInput').addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') searchStation();
+    });
+
+    // ====================================================================
+    // TAB 1: TRA CỨU 1 TRẠM
+    // ====================================================================
+
+    async function searchStation() {
+        const inputStr = document.getElementById('siteIdInput').value.trim();
+        if (!inputStr) return;
+
+        document.getElementById('loadingIndicator').style.display = 'block';
+        document.getElementById('errorMsg').style.display = 'none';
+        document.getElementById('resultsDashboard').style.display = 'none';
+        document.getElementById('stationInfoCard').style.display = 'none';
+        document.getElementById('cardsContainer').innerHTML = '';
+
+        try {
+            const resp = await fetch(`/api/datasite/search?site_id=${inputStr}`);
+            const json = await resp.json();
+            document.getElementById('loadingIndicator').style.display = 'none';
+
+            if (json.success) {
+                // Hiện thông tin Station nếu có (v2)
+                if (json.station) renderStationBaseInfo(json.station, json.contract);
+                renderDashboard(json.site_id, json.data);
+            } else {
+                showError(json.message);
+            }
+        } catch (e) {
+            document.getElementById('loadingIndicator').style.display = 'none';
+            showError("Lỗi kết nối máy chủ");
+        }
+    }
+
+    function showError(msg) {
+        const el = document.getElementById('errorMsg');
+        el.innerText = msg;
+        el.style.display = 'block';
+    }
+
+    // Lưu data vô biến Global để Modal xài
+    window.currentStationData = null;
+    window.currentContractData = null;
+
+    function getFieldEmoji(key) {
+        key = key.toLowerCase();
+        if (key.includes('so_hd') || key.includes('hop_dong')) return '📄';
+        if (key.includes('site_id') || key.includes('ma_tram')) return '🏷️';
+        if (key.includes('dia_chi_dat')) return '📍';
+        if (key.includes('dia_chi_lien_he') || key.includes('dia_chi')) return '🏠';
+        if (key.includes('chu_tram') || key.includes('chu_the')) return '👤';
+        if (key.includes('sdt') || key.includes('dien_thoai') || key.includes('lien_lac')) return '📞';
+        if (key.includes('gia_thue_tram') || key.includes('gia_') || key.includes('tien_')) return '💰';
+        if (key.includes('thue_vat') || key.includes('vat')) return '💸';
+        if (key.includes('chu_ky') || key.includes('ky_thanh_toan_tiep_theo')) return '🔄';
+        if (key.includes('ngay_het_') || key.includes('ngay_ket_thuc') || key.includes('han')) return '📆';
+        if (key.includes('ngay') || key.includes('thoi_gian')) return '📅';
+        if (key.includes('thanh_toan_den_ngay')) return '✅';
+        if (key.includes('ngan_hang') || key.includes('tai_khoan')) return '🏦';
+        if (key.includes('hinh_thuc_thanh_toan')) return '💳';
+        if (key.includes('tinh_thanh') || key.includes('quan_huyen')) return '🏙️';
+        if (key.includes('phuong_xa')) return '🏘️';
+        if (key.includes('tinh_trang_phat_song') || key.includes('tinh_trang') || key.includes('trang_thai')) return '📶';
+        if (key.includes('hinh_thuc_hop_dong')) return '📝';
+        if (key.includes('doi_tuong')) return '👥';
+        if (key.includes('dai_vien_thong') || key.includes('don_vi')) return '🏢';
+        if (key.includes('toa_do') || key.includes('kinh_do') || key.includes('vi_do')) return '📍';
+        if (key.includes('loai_tram') || key.includes('loai_')) return '🏗️';
+        if (key.includes('ten_')) return '🏢';
+        if (key.includes('ghi_chu')) return '📌';
+        return '🔹';
+    }
+
+    function renderStationBaseInfo(station, contract) {
+        document.getElementById('stationInfoCard').style.display = 'block';
+        document.getElementById('headerSiteId').innerText = station.site_id ? station.site_id.toUpperCase() : '';
+
+        window.currentStationData = station;
+        window.currentContractData = contract;
+
+        let displayData = [];
+
+        // Hợp đồng
+        if (contract) {
+            document.getElementById('btnContractModal').style.display = 'inline-block';
+            displayData.push({ k: 'so_hd', l: 'Số hợp đồng', v: contract.so_hd });
+            displayData.push({ k: 'site_id', l: 'Mã trạm', v: station.site_id });
+            displayData.push({ k: 'chu_the_hop_dong', l: 'Chủ trạm', v: contract.chu_the_hop_dong });
+            displayData.push({ k: 'dia_chi', l: 'Địa chỉ đặt trạm', v: station.dia_chi });
+            displayData.push({ k: 'gia_thue_co_vat', l: 'Giá thuê trạm', v: contract.gia_thue_co_vat ? Number(contract.gia_thue_co_vat).toLocaleString() + ' đ' : '--' });
+            displayData.push({ k: 'chu_ky_thanh_toan', l: 'Chu kỳ thanh toán', v: contract.chu_ky_thanh_toan });
+            displayData.push({ k: 'ngay_ket_thuc_hd', l: 'Ngày hết hợp đồng', v: contract.ngay_ket_thuc_hd });
+        } else {
+            document.getElementById('btnContractModal').style.display = 'none';
+            displayData.push({ k: 'site_id', l: 'Mã trạm', v: station.site_id });
+            displayData.push({ k: 'ten_tram', l: 'Tên trạm', v: station.ten_tram });
+            displayData.push({ k: 'dia_chi', l: 'Địa chỉ đặt trạm', v: station.dia_chi });
+        }
+
+        displayData.push({ k: 'loai_tram', l: 'Loại trạm', v: station.loai_tram });
+        displayData.push({ k: 'don_vi_dung_chung', l: 'Đơn vị dùng chung', v: station.don_vi_dung_chung });
+        displayData.push({ k: 'toa_do', l: 'Tọa độ', v: `Kinh độ ${station.kinh_do || '--'}, Vĩ độ ${station.vi_do || '--'}` });
+
+        let html = '<ul class="list-group list-group-flush" style="font-size:0.9rem;">';
+        displayData.forEach(item => {
+            let val = item.v;
+            if (val === undefined || val === null || val === '') val = '<span class="text-muted fst-italic">--</span>';
+            const emoji = getFieldEmoji(item.k);
+
+            html += `
+                <li class="list-group-item d-flex px-4 py-2 border-bottom-0 align-items-center">
+                    <span class="me-3" style="font-size: 1.15rem; line-height: 1;">${emoji}</span>
+                    <div style="flex-grow: 1; word-break: break-word;">
+                        <span class="fw-bold text-dark me-1">${item.l}:</span>
+                        <span class="text-secondary">${val}</span>
+                    </div>
+                </li>
+            `;
+        });
+        html += '</ul>';
+
+        document.getElementById('stationInfoBody').innerHTML = html;
+        document.getElementById('stationInfoBody').classList.remove('bg-light');
+        document.getElementById('stationInfoBody').classList.add('pb-3');
+    }
+
+    function showModalDetails(type) {
+        const item = type === 'STATION' ? window.currentStationData : window.currentContractData;
+        const conf = typeConfigs[type];
+        if (!item || !conf) return;
+
+        let html = '<ul class="list-group list-group-flush mb-0">';
+        conf.orderedCols.forEach(k => {
+            const label = COL_LABELS[k] || k;
+            let val = item[k];
+            if (val === undefined || val === null || val === '') val = '--';
+
+            if (k.includes('gia_') && val !== '--') val = Number(val).toLocaleString() + ' đ';
+
+            const emoji = getFieldEmoji(k);
+
+            html += `
+                <li class="list-group-item d-flex px-3 py-2 border-bottom align-items-start" style="font-size: 0.9rem; background-color: #fafbfc;">
+                    <span class="me-3 mt-1" style="font-size: 1.15rem; line-height: 1;">${emoji}</span>
+                    <div style="word-break: break-word; flex-grow: 1;">
+                        <span class="fw-bold text-dark me-1 d-block" style="font-size:0.8rem">${label}</span>
+                        <span class="text-secondary fs-6">${val}</span>
+                    </div>
+                </li>
+            `;
+        });
+        html += '</ul>';
+
+        if (type === 'STATION') {
+            document.getElementById('stationFullDetails').outerHTML = `<div id="stationFullDetails" class="p-0 m-0">${html}</div>`;
+            new bootstrap.Modal(document.getElementById('stationDetailModal')).show();
+        } else {
+            document.getElementById('contractFullDetails').outerHTML = `<div id="contractFullDetails" class="p-0 m-0">${html}</div>`;
+            new bootstrap.Modal(document.getElementById('contractDetailModal')).show();
+        }
+    }
+
+    function renderDashboard(site_id, dataGroups) {
+        document.getElementById('resultsDashboard').style.display = 'block';
+        document.getElementById('resultTitle').innerHTML = `<i class="fas fa-map-marker-alt"></i> Hồ sơ kỹ thuật trạm: <strong>${site_id.toUpperCase()}</strong>`;
+
+        const container = document.getElementById('cardsContainer');
+        container.innerHTML = '';
+        container.className = 'mt-3';
+
+        const categoryGroups = [
+            { key: 'HATANG', title: 'CƠ SỞ HẠ TẦNG', icon: 'fas fa-building', types: ['COT_ANTEN', 'PHONG_MAY', 'PHONG_MPD'] },
+            { key: 'PHUTRO', title: 'THIẾT BỊ PHỤ TRỢ', icon: 'fas fa-bolt', types: ['MAY_LANH', 'MAY_PHAT', 'TU_NGUON', 'ACCU'] },
+            { key: 'KYTHUAT', title: 'KỸ THUẬT - VIỄN THÔNG', icon: 'fas fa-satellite-dish', types: ['BTS_3G', 'BTS_4G', 'DATA_CELL', 'THIET_BI_VT'] }
+        ];
+
+        // Tạo khung chứa Tabs và Content
+        let navHtml = `<ul class="nav nav-pills nav-fill mb-4 shadow-sm rounded bg-white p-1" id="pills-tab" role="tablist">`;
+        let contentHtml = `<div class="tab-content" id="pills-tabContent">`;
+
+        let isFirstTab = true;
+
+        categoryGroups.forEach((group, index) => {
+            let groupHasData = false;
+            let groupContent = '';
+
+            group.types.forEach(type => {
+                if (dataGroups[type] && dataGroups[type].length > 0) {
+                    groupHasData = true;
+                    const items = dataGroups[type];
+                    const conf = typeConfigs[type] || { title: type, icon: 'fas fa-box', bg: 'bg-primary' };
+
+                    items.forEach((item, itemIndex) => {
+                        let headerClass = conf.bg;
+                        if (!headerClass.includes('text-')) headerClass += ' text-white';
+
+                        let itemHtml = `
+                            <div class="card shadow-sm border-0 mb-3 overflow-hidden">
+                                <div class="card-header ${headerClass} py-2 d-flex justify-content-between">
+                                    <span><i class="${conf.icon} me-2"></i><strong>${conf.title} #${itemIndex + 1}</strong></span>
+                                    <span class="badge bg-white text-dark">${item.trang_thai || item.status || 'OK'}</span>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div class="row g-0">`;
+
+                        const orderedKeys = conf.orderedCols || Object.keys(item).filter(k => !HIDDEN_COLS.includes(k));
+
+                        orderedKeys.filter(k => k !== 'site_id' && k !== 'trang_thai' && k !== 'status').forEach(k => {
+                            const label = COL_LABELS[k] || k;
+                            let val = item[k];
+                            if (val === undefined || val === null || val === '') val = '--';
+
+                            itemHtml += `
+                                <div class="col-6 col-md-4 col-lg-3 border-bottom border-end p-2 bg-white" style="min-height: 55px;">
+                                    <div class="text-muted small text-uppercase" style="font-size: 0.65rem;">${label}</div>
+                                    <div class="fw-bold text-dark" style="font-size: 0.85rem;">${val}</div>
+                                </div>`;
+                        });
+
+                        itemHtml += `</div></div></div>`;
+                        groupContent += itemHtml;
+                    });
+                }
+            });
+
+            if (groupHasData) {
+                const activeClass = isFirstTab ? 'active' : '';
+                const showClass = isFirstTab ? 'show active' : '';
+
+                navHtml += `
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-bold ${activeClass}" id="pills-${group.key}-tab" data-bs-toggle="pill" data-bs-target="#pills-${group.key}" type="button" role="tab" aria-controls="pills-${group.key}" aria-selected="${isFirstTab}">
+                            <i class="${group.icon} me-2"></i>${group.title}
+                        </button>
+                    </li>
+                `;
+
+                contentHtml += `
+                    <div class="tab-pane fade ${showClass}" id="pills-${group.key}" role="tabpanel" aria-labelledby="pills-${group.key}-tab">
+                        ${groupContent}
+                    </div>
+                `;
+
+                isFirstTab = false;
+            }
+        });
+
+        navHtml += `</ul>`;
+        contentHtml += `</div>`;
+
+        // Nếu không có dữ liệu nào ở 3 nhóm
+        if (isFirstTab) {
+            container.innerHTML = `<div class="alert alert-info shadow-sm"><i class="fas fa-info-circle me-2"></i> Không có dữ liệu trang thiết bị nào cho trạm này.</div>`;
+        } else {
+            container.innerHTML = navHtml + contentHtml;
+        }
+    }
+
+    // ====================================================================
+    // TAB 2: TRA CỨU HẠNG MỤC TOÀN MẠNG (BẢNG ĐỘNG)
+    // ====================================================================
+
+    async function searchByCategory() {
+        const assetType = document.getElementById('assetTypeSelect').value;
+        if (!assetType) {
+            showCatError("Vui lòng chọn một hạng mục thiết bị.");
+            return;
+        }
+
+        const loading = document.getElementById('catLoading');
+        loading.style.display = 'block';
+        document.getElementById('catErrorMsg').style.display = 'none';
+        document.getElementById('catResultsDashboard').style.display = 'none';
+        document.getElementById('catTableBody').innerHTML = '';
+        document.getElementById('catTableHead').innerHTML = '';
+
+        try {
+            const resp = await fetch(`/api/datasite/assets/by_type?type=${assetType}`);
+            const json = await resp.json();
+            loading.style.display = 'none';
+
+            if (json.success) {
+                renderDynamicCategoryTable(assetType, json.data);
+            } else {
+                showCatError(json.message);
+            }
+        } catch (e) {
+            loading.style.display = 'none';
+            showCatError("Lỗi kết nối máy chủ");
+        }
+    }
+
+    function showCatError(msg) {
+        const el = document.getElementById('catErrorMsg');
+        el.innerText = msg;
+        el.style.display = 'block';
+    }
+
+    function renderDynamicCategoryTable(assetType, items) {
+        document.getElementById('catResultsDashboard').style.display = 'block';
+
+        const typeConfig = typeConfigs[assetType] || { title: assetType, icon: 'fas fa-box' };
+
+        // Count broken
+        let brokenCount = 0;
+        items.forEach(it => {
+            const st = (it.trang_thai || it.status || '').toLowerCase();
+            if (st.includes('hỏng') || st.includes('lỗi')) brokenCount++;
+        });
+
+        document.getElementById('catResultTitle').innerHTML =
+            `<i class="${typeConfig.icon}"></i> ${typeConfig.title}
+            <span class="badge bg-success ms-3 fs-5">Tổng: ${items.length}</span>
+            ${brokenCount > 0 ? `<span class="badge bg-danger ms-2 fs-5">Hỏng: ${brokenCount}</span>` : ''}`;
+
+        // Lấy danh sách cột
+        let orderedKeys = [];
+        if (typeConfig.orderedCols && typeConfig.orderedCols.length > 0) {
+            orderedKeys = typeConfig.orderedCols;
+        } else {
+            const allKeys = new Set();
+            items.forEach(item => {
+                Object.keys(item).forEach(k => {
+                    if (!HIDDEN_COLS.includes(k)) allKeys.add(k);
+                });
+            });
+            orderedKeys = ['site_id'];
+            allKeys.delete('site_id');
+            allKeys.delete('trang_thai');
+            allKeys.forEach(k => orderedKeys.push(k));
+            orderedKeys.push('trang_thai');
+        }
+
+        // Render Header cho Table
+        let headHtml = '<tr><th class="fw-bold text-dark" style="width:4%">STT</th>';
+        orderedKeys.forEach(k => {
+            const label = COL_LABELS[k] || k;
+            const align = k === 'site_id' ? '' : 'text-start';
+            headHtml += `<th class="fw-bold text-dark ${align}">${label}</th>`;
+        });
+        headHtml += '</tr>';
+
+        // Render Rows cho Table
+        let bodyHtml = '';
+        items.forEach((item, index) => {
+            let rowHtml = `<tr><td class="text-muted">${index + 1}</td>`;
+
+            orderedKeys.forEach(k => {
+                let val = item[k];
+                if (val === undefined || val === null || val === '') val = '--';
+
+                let cls = 'text-start';
+
+                if (k === 'site_id') {
+                    cls = '';
+                    val = `<span style="color:#206bc4;font-weight:bold;cursor:pointer;text-decoration:underline;"
+                              onclick="document.getElementById('station-tab').click();document.getElementById('siteIdInput').value='${val}';searchStation();"
+                              title="Bấm để xem chi tiết trạm">${String(val).toUpperCase()}</span>`;
+                } else if (k === 'trang_thai' || k === 'status') {
+                    const lower = String(val).toLowerCase();
+                    if (lower.includes('hỏng') || lower.includes('lỗi'))
+                        val = `<span class="text-danger fw-bold">${val}</span>`;
+                    else if (lower.includes('tốt') || lower.includes('ok'))
+                        val = `<span class="text-success fw-bold">${val}</span>`;
+                    else
+                        val = `<span class="text-secondary fw-bold">${val}</span>`;
+                } else if (k === 'nhan_hieu' || k === 'ten_thiet_bi' || k === 'loai_cot') {
+                    cls = 'text-start fw-bold text-primary';
+                }
+
+                rowHtml += `<td class="${cls} align-middle" style="max-width:200px;white-space:normal;">${val}</td>`;
+            });
+            rowHtml += `</tr>`;
+            bodyHtml += rowHtml;
+        });
+
+        // Đảm bảo Table luôn hiển thị
+        const container = document.getElementById('catTableContainer');
+        container.innerHTML = `
+            <table class="table table-vcenter table-striped table-hover small text-nowrap text-center mb-0" id="catTable" style="margin-bottom:0 !important; border-collapse: collapse;">
+                <thead class="bg-light" id="catTableHead">
+                    ${headHtml}
+                </thead>
+                <tbody id="catTableBody">
+                    ${bodyHtml}
+                </tbody>
+            </table>
+        `;
+
+        // Kích hoạt tính năng kéo để cuộn bảng (Drag to Scroll)
+        initDragToScroll(container);
+    }
+
+    function initDragToScroll(slider) {
+        let isDown = false;
+        let startX;
+        let startY;
+        let scrollLeft;
+        let scrollTop;
+
+        slider.addEventListener('mousedown', (e) => {
+            isDown = true;
+            slider.style.cursor = 'grabbing';
+            startX = e.pageX - slider.offsetLeft;
+            startY = e.pageY - slider.offsetTop;
+            scrollLeft = slider.scrollLeft;
+            scrollTop = slider.scrollTop;
+        });
+        slider.addEventListener('mouseleave', () => {
+            isDown = false;
+            slider.style.cursor = 'grab';
+        });
+        slider.addEventListener('mouseup', () => {
+            isDown = false;
+            slider.style.cursor = 'grab';
+        });
+        slider.addEventListener('mousemove', (e) => {
+            if (!isDown) return;
+            e.preventDefault();
+            const x = e.pageX - slider.offsetLeft;
+            const y = e.pageY - slider.offsetTop;
+            const walkX = (x - startX) * 1.5; // Tốc độ trượt ngang
+            const walkY = (y - startY) * 1.5; // Tốc độ trượt dọc
+            slider.scrollLeft = scrollLeft - walkX;
+            slider.scrollTop = scrollTop - walkY;
+        });
+    }
+
+    function filterLocalTable(inputEl) {
+        const val = inputEl.value.toLowerCase();
+        const rows = document.getElementById('catTableBody').getElementsByTagName('tr');
+        for (let i = 0; i < rows.length; i++) {
+            const text = rows[i].textContent.toLowerCase();
+            rows[i].style.display = text.includes(val) ? "" : "none";
+        }
+    }
+</script>
+{% endblock %}

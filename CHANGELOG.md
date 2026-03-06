@@ -1,5 +1,17 @@
 # Changelog
 
+## [2026-03-05] - DataSite Category Search & UI Enhancements
+### Added
+- **Category Search API**: New endpoint `/api/datasite/assets/by_type?type=` to fetch all assets of a specific type (e.g., Máy Lạnh, Máy Phát) across all stations.
+- **Category Tab**: DataSite dashboard now has a split-tab design: "Tra Cứu 1 Trạm" and "Tra Cứu Hạng Mục Toàn Mạng".
+- **Compact Data Table**: A dense, Excel-like table for category results showing total counts and broken items.
+- **Dynamic Headers**: The "Ghi chú" columns dynamically adapt their headers based on the selected asset type (e.g., "Nhiên Liệu" and "ATS" for Máy Phát, or "Dòng tải" for Tủ Nguồn).
+- **Inter-Tab Navigation**: Clicking a `site_id` in the category table instantly switches back to the single-station tab and loads that station's profile.
+
+### Changed
+- **Status Display**: Removed pill/badge styling for asset statuses in favor of clean color-coded bold text to save space.
+- **Table Headers**: Enhanced with `bg-light` and `fw-bold text-dark` for clear column separation.
+
 ## [2026-03-04] - Approve UI + NL Tồn Snapshot + Fuel Stock Display
 ### Added
 - **Approve/Reject UI**: Admin dashboard (`/admin/mpd?tab=logs`) now shows status badges (Chờ duyệt/Đã duyệt), source badges (SmartW/Thủ công), action buttons (Approve/Edit/Reject/Delete), and pending count card.

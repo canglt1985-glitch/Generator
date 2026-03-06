@@ -21,6 +21,7 @@ class GeneralInfo(db.Model):
     vung_phu = db.Column(db.String(100))
     loai_nhien_lieu = db.Column(db.String(50))
     loai_may = db.Column(db.String(100))           # Nhãn hiệu máy (VD: "KIBII")
+    nl_ton = db.Column(db.Float, default=0)        # NL tồn thực tế tại trạm (nhập tay khi kiểm kê)
     ngay_cap_nhat = db.Column(db.String(20), default=lambda: datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
 
@@ -140,6 +141,201 @@ class StationIssue(db.Model):
     trang_thai = db.Column(db.String(30), default='Chưa XL')  # Chưa XL / Đã XL
     nguoi_bao_cao = db.Column(db.String(100))
     ngay_cap_nhat = db.Column(db.String(20), default=lambda: datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+
+
+# ============================================================================
+# DATASITE v2 - 5 NHÓM MODELS (Refactor 2026-03-06)
+# Nhóm 1: Thông Tin Chung (DsStation + DsContract)
+# Nhóm 2: Cơ Sở Hạ Tầng (DsInfrastructure)
+# Nhóm 3: Phụ Trợ (DsEquipment — category=PHU_TRO)
+# Nhóm 4: Kỹ Thuật (DsTelecom — category=KY_THUAT)
+# Nhóm 5: Cross-check (DataSiteAnomaly — giữ nguyên tên)
+# ============================================================================
+
+# Prefixes: Chỉ import trạm bắt đầu bằng DNTN, DNLK, DNXL, DNDQ, DNCM, DNTP
+DATASITE_PREFIXES = ['DNTN', 'DNLK', 'DNXL', 'DNDQ', 'DNCM', 'DNTP']
+
+
+# --- NHÓM 1: THÔNG TIN CHUNG ---
+
+class DsStation(db.Model):
+    """Thông tin chung trạm (gom từ thong tin chung.xlsx + data trạm nhà dân.xlsx)"""
+    __tablename__ = 'ds_stations'
+    id = db.Column(db.Integer, primary_key=True)
+    site_id = db.Column(db.String(50), nullable=False, unique=True, index=True)
+    ten_tram = db.Column(db.String(255))
+    loai_tram = db.Column(db.String(100))           # Nhà Dân, Pháp Nhân, VNPT, VNPOST...
+    dia_chi = db.Column(db.String(500))
+    tinh_tp = db.Column(db.String(100))
+    quan_huyen = db.Column(db.String(100))
+    phuong_xa = db.Column(db.String(100))
+    kinh_do = db.Column(db.String(50))
+    vi_do = db.Column(db.String(50))
+    ngay_phat_song = db.Column(db.String(20))
+    hinh_thuc_dau_tu = db.Column(db.String(100))
+    don_vi_dung_chung = db.Column(db.String(200))
+    # Thông tin chung mở rộng (từ thong tin chung.xlsx) — lưu dạng JSON
+    extra_data = db.Column(db.JSON)                    # Chứa thêm các thông tin: vùng 6 khu vực, loại cột, diện tích...
+    sync_date = db.Column(db.String(20), default=lambda: datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+
+    def to_dict(self):
+        d = {c.name: getattr(self, c.name) for c in self.__table__.columns}
+        return d
+
+
+class DsContract(db.Model):
+    """Hợp đồng thuê trạm (gom từ data trạm nhà dân.xlsx)"""
+    __tablename__ = 'ds_contracts'
+    id = db.Column(db.Integer, primary_key=True)
+    site_id = db.Column(db.String(50), nullable=False, index=True)
+    # Chủ thể
+    chu_the_hop_dong = db.Column(db.String(255))
+    sdt_chu_nha = db.Column(db.String(50))
+    cccd = db.Column(db.String(50))
+    dia_chi_lien_he = db.Column(db.String(500))
+    # Hợp đồng
+    so_hd = db.Column(db.String(100))
+    ngay_ky_hd = db.Column(db.String(20))
+    ngay_ket_thuc_hd = db.Column(db.String(20))
+    tinh_trang_hd = db.Column(db.String(100))        # Còn hạn, Hết hạn, Thanh lý...
+    # Giá
+    gia_thue_co_vat = db.Column(db.Float)
+    gia_thue_khong_vat = db.Column(db.Float)
+    gia_dien_khoan = db.Column(db.Float)
+    # Thanh toán
+    chu_ky_thanh_toan = db.Column(db.String(50))     # Quý, Tháng...
+    ngay_bat_dau_thanh_toan = db.Column(db.String(20))
+    da_thanh_toan_den = db.Column(db.String(20))
+    # Ngân hàng
+    chu_tai_khoan = db.Column(db.String(200))
+    so_tai_khoan = db.Column(db.String(50))
+    ngan_hang = db.Column(db.String(200))
+    # Metadata mở rộng (phụ lục, ERP, thanh toán các tháng...)
+    extra_data = db.Column(db.JSON)
+    sync_date = db.Column(db.String(20), default=lambda: datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+
+    def to_dict(self):
+        d = {c.name: getattr(self, c.name) for c in self.__table__.columns}
+        return d
+
+
+# --- NHÓM 2: CƠ SỞ HẠ TẦNG ---
+
+class DsInfrastructure(db.Model):
+    """Cơ sở hạ tầng trạm: Cột Anten, Phòng Máy, Phòng MFĐ"""
+    __tablename__ = 'ds_infrastructure'
+    id = db.Column(db.Integer, primary_key=True)
+    site_id = db.Column(db.String(50), nullable=False, index=True)
+    loai = db.Column(db.String(50), nullable=False)  # COT_ANTEN, PHONG_MAY, PHONG_MPD
+    # Cột cứng (áp dụng cho các loại)
+    serial = db.Column(db.String(200))
+    trang_thai = db.Column(db.String(100))
+    han_bao_hanh = db.Column(db.String(20))
+    han_bao_duong = db.Column(db.String(20))
+    # Metadata theo loại (JSON linh hoạt)
+    # COT_ANTEN: {loai_cot, chieu_cao, den_bao_khong, dv_dung_chung, chieu_dai_cau_cap, dv_chu_quan}
+    # PHONG_MAY: {loai_pm, vi_tri, dien_tich, dv_dung_chung, dv_chu_quan}
+    # PHONG_MPD: {vi_tri, dien_tich, dv_dung_chung, dv_chu_quan}
+    extra_data = db.Column(db.JSON)
+    sync_date = db.Column(db.String(20), default=lambda: datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+
+    def to_dict(self):
+        d = {c.name: getattr(self, c.name) for c in self.__table__.columns}
+        return d
+
+
+# --- NHÓM 3: PHỤ TRỢ (Thiết bị nguồn, môi trường) ---
+
+class DsEquipment(db.Model):
+    """Thiết bị Phụ trợ: Máy lạnh, MPĐ, Tủ nguồn, Accu, Solar, PCCC"""
+    __tablename__ = 'ds_equipments'
+    id = db.Column(db.Integer, primary_key=True)
+    site_id = db.Column(db.String(50), nullable=False, index=True)
+    loai = db.Column(db.String(50), nullable=False)  # MAY_LANH, MAY_PHAT, TU_NGUON, ACCU, SOLAR, PCCC
+    # Cột cứng (chung cho tất cả thiết bị)
+    nhan_hieu = db.Column(db.String(200))
+    serial = db.Column(db.String(200))
+    trang_thai = db.Column(db.String(100))           # Hoạt động tốt, Hỏng, Mới...
+    han_bao_hanh = db.Column(db.String(20))
+    han_bao_duong = db.Column(db.String(20))
+    ngay_su_dung = db.Column(db.String(20))           # Ngày đưa vào sử dụng tại trạm
+    # Metadata đặc thù loại (JSON linh hoạt) — VÔ HẠN THUỘC TÍNH
+    # MAY_LANH:  {btu, loai_may_lanh, product_code, dv_chu_quan, don_vi_tinh, don_gia, vi_tri}
+    # MAY_PHAT:  {cong_suat, phase, nhien_lieu, ats, product_code, dv_chu_quan, don_vi_tinh, don_gia, vi_tri}
+    # TU_NGUON:  {so_khe_rect, so_luong_rect, cs_rect_w, dong_tai_a, backup_phut, product_code, hop_dong_du_an}
+    # ACCU:      {loai_accu, dung_luong_ah, so_luong_binh, product_code}
+    extra_data = db.Column(db.JSON)
+    sync_date = db.Column(db.String(20), default=lambda: datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+
+    def to_dict(self):
+        d = {c.name: getattr(self, c.name) for c in self.__table__.columns}
+        return d
+
+
+# --- NHÓM 4: KỸ THUẬT (Thiết bị Viễn Thông) ---
+
+class DsTelecom(db.Model):
+    """Thiết bị Kỹ thuật: BTS 2G/3G/4G/5G, DataCell, Truyền dẫn, Kiểm định"""
+    __tablename__ = 'ds_telecom'
+    id = db.Column(db.Integer, primary_key=True)
+    site_id = db.Column(db.String(50), nullable=False, index=True)
+    loai = db.Column(db.String(50), nullable=False)  # BTS_3G, BTS_4G, DATA_CELL, THIET_BI_VT, TRUYEN_DAN, KIEM_DINH
+    # Cột cứng
+    serial = db.Column(db.String(200))
+    trang_thai = db.Column(db.String(100))
+    han_bao_hanh = db.Column(db.String(20))
+    han_bao_duong = db.Column(db.String(20))
+    ngay_su_dung = db.Column(db.String(20))
+    # Metadata đặc thù (JSON linh hoạt)
+    # BTS_3G:    {chung_loai, hang_sx, rru, bbu}
+    # BTS_4G:    {chung_loai, hang_sx, rru, bbu}
+    # DATA_CELL: {cell, sector, enb_id, c_id, psc_pci, azimuth, height, m_tilt, e_tilt, tilt, voice, data, vlr}
+    # THIET_BI_VT: {ten_tb, product_code, loai_tb, nha_cung_cap, thuoc_tram_remote}
+    extra_data = db.Column(db.JSON)
+    sync_date = db.Column(db.String(20), default=lambda: datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+
+    def to_dict(self):
+        d = {c.name: getattr(self, c.name) for c in self.__table__.columns}
+        return d
+
+
+# --- NHÓM 5: CROSS-CHECK / DATA QUALITY ---
+
+class DataSiteAnomaly(db.Model):
+    """Bảng bắt lỗi dữ liệu DataSite (Cross-check)"""
+    __tablename__ = 'datasite_anomalies'
+    id = db.Column(db.Integer, primary_key=True)
+    site_id = db.Column(db.String(50), nullable=False, index=True)
+    issue_type = db.Column(db.String(50), nullable=False)  # MISSING, LOGIC_ERROR, EXPIRED, DUPLICATE
+    description = db.Column(db.String(500))
+    severity = db.Column(db.String(20), default='warning')  # info, warning, critical
+    detected_at = db.Column(db.String(20), default=lambda: datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+    is_resolved = db.Column(db.Boolean, default=False)
+    resolved_at = db.Column(db.String(20))
+
+    def to_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+
+
+# --- LEGACY: DataSiteAsset (sẽ xóa sau Phase 02 Migration) ---
+
+class DataSiteAsset(db.Model):
+    """LEGACY — Sẽ xóa sau khi Migration sang ds_equipments + ds_telecom + ds_infrastructure."""
+    __tablename__ = 'datasite_assets'
+    id = db.Column(db.Integer, primary_key=True)
+    site_id = db.Column(db.String(50), nullable=False, index=True)
+    asset_type = db.Column(db.String(50), nullable=False)
+    asset_name = db.Column(db.String(255))
+    brand = db.Column(db.String(100))
+    capacity = db.Column(db.String(100))
+    quantity = db.Column(db.Integer, default=1)
+    status = db.Column(db.String(50))
+    extra_info_1 = db.Column(db.String(255))
+    extra_info_2 = db.Column(db.String(255))
+    sync_date = db.Column(db.String(20), default=lambda: datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+
+    def to_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
 
 # --- LEGACY MODELS (kept for DB compatibility, not used in new code) ---

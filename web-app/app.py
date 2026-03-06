@@ -31,11 +31,13 @@ from smartw import smartw_bp
 from core import core_bp
 from generator import generator_bp
 from daily_work import daily_work_bp
+from datasite_routes import datasite_bp
 
 app.register_blueprint(smartw_bp)
 app.register_blueprint(core_bp)
 app.register_blueprint(generator_bp)
 app.register_blueprint(daily_work_bp)
+app.register_blueprint(datasite_bp)
 
 # Import models for context processor
 from models import DeletionRequest, User
@@ -213,10 +215,23 @@ if __name__ == '__main__':
             )
             print("SmartW Scheduler: Alarm poll 15p + VHKT 5AM + MFD import 6AM")
 
+        # DataSite Auto-Sync: Weekly on Sunday at 2 AM
+        from datasite_scraper import perform_datasite_sync
+        scheduler.add_job(
+            id='datasite_sync_weekly',
+            func=lambda: app.app_context().push() or perform_datasite_sync(),
+            trigger='cron', day_of_week='sun', hour=2, minute=0,
+            max_instances=1
+        )
+
         scheduler.start()
-        print("Scheduler: Lich cup 5AM + Gia NL 4PM + MFD 6AM")
+        print("Scheduler: Lich cup 5AM + Gia NL 4PM + MFD 6AM + DataSite Sun 2AM")
 
         # Initial fuel price fetch on startup
         scheduled_fuel_price_fetch()
+        
+        # Start Telegram Bot Polling (if Token is provided)
+        from bot_telegram import start_bot_thread
+        start_bot_thread()
 
     app.run(debug=True, port=5005)

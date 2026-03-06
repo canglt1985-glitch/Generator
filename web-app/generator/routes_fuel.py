@@ -101,29 +101,15 @@ def add_fuel_ledger():
         db.session.add(new_trans)
         db.session.commit()
 
-        # Auto ADJUSTMENT if nl_ton_thuc_te provided
+        # Cập nhật NL tồn thực tế vào GeneralInfo.nl_ton (nếu có nhập)
         nl_ton_str = request.form.get('nl_ton_thuc_te')
         station_id = request.form.get('id_tram')
-        if nl_ton_str and station_id and trans_type in ('DIRECT_BUY', 'STATION_OUT'):
+        if nl_ton_str and station_id:
             try:
                 nl_ton_thuc_te = float(nl_ton_str)
-                audit = get_audit_data()
-                row = next((r for r in audit if r['id_tram'] == station_id), None)
-                estimated = row['ton_real'] if row else 0
-                diff = round(nl_ton_thuc_te - estimated, 2)
-                if abs(diff) > 0.01:
-                    adj = FuelLedger(
-                        type='ADJUSTMENT', is_approved=True,
-                        ngay=request.form.get('ngay').replace('T', ' '),
-                        id_tram=station_id,
-                        loai_nhien_lieu=request.form.get('loai_nhien_lieu'),
-                        so_luong=diff, don_gia=0, thanh_tien=0,
-                        nha_cung_cap='',
-                        nguoi_thuc_hien=session.get('full_name'),
-                        ghi_chu=f'Calibrate: thực tế {nl_ton_thuc_te}L, ước lượng {estimated}L',
-                        ton_sau_gd=round(nl_ton_thuc_te, 2)
-                    )
-                    db.session.add(adj)
+                station = GeneralInfo.query.filter_by(id_tram=station_id).first()
+                if station:
+                    station.nl_ton = nl_ton_thuc_te
                     db.session.commit()
             except (ValueError, TypeError):
                 pass
@@ -203,6 +189,11 @@ def edit_fuel_ledger(id):
         user_ton = request.form.get('nl_ton_thuc_te')
         if user_ton:
             item.ton_sau_gd = float(user_ton)
+            # Cập nhật NL tồn thực tế vào GeneralInfo.nl_ton
+            if item.id_tram:
+                station = GeneralInfo.query.filter_by(id_tram=item.id_tram).first()
+                if station:
+                    station.nl_ton = float(user_ton)
         elif item.id_tram and item.type != 'STOCK_IN':
             item.ton_sau_gd = calc_ton_sau_gd(item.id_tram, item.so_luong, item.type)
 
@@ -541,7 +532,7 @@ def get_fuel_stock_all():
     # Pre-fill from GeneralInfo
     for s in all_stations:
         result[s.id_tram] = {
-            'ton_real': 0, 'dung_tich': s.dung_tich or 0,
+            'ton_real': s.nl_ton or 0, 'dung_tich': s.dung_tich or 0,
             'dm_thuc_te': s.dinh_muc_thuc_te or 0,
             'loai_nl': s.loai_nhien_lieu or '',
             'may_phat': s.may_phat_dien or '',

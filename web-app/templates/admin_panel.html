@@ -36,6 +36,12 @@
                     <i class="fas fa-satellite-dish me-2"></i>SmartW
                 </a>
             </li>
+            <li class="nav-item">
+                <a href="{{ url_for('core.admin', tab='datasite') }}"
+                    class="nav-link {{ 'active' if active_tab == 'datasite' else '' }} fw-bold">
+                    <i class="fas fa-database text-warning me-2"></i>DataSite
+                </a>
+            </li>
         </ul>
     </div>
 
@@ -253,6 +259,56 @@
             </div>
             {% endif %}
 
+            {% if active_tab == 'datasite' %}
+            <!-- Tab: DataSite -->
+            <div class="tab-pane fade show active" id="datasite">
+                <div class="row g-4">
+                    <div class="col-md-4">
+                        <div class="card h-100 shadow-sm border-0">
+                            <div class="card-header bg-warning text-dark fw-bold">
+                                <span><i class="fas fa-sync-alt me-2"></i>Đồng Bộ DataSite</span>
+                            </div>
+                            <div class="card-body">
+                                <p class="text-muted small">Kéo dữ liệu Asset từ DataSite về Server. Việc này có thể mất
+                                    vài phút.</p>
+                                <button class="btn btn-warning w-100 mb-3" onclick="triggerDatasiteSync()">
+                                    <i class="fas fa-cloud-download-alt me-2"></i>Đồng Bộ Ngay
+                                </button>
+                                <div id="syncStatus" class="small text-success fw-bold"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-8">
+                        <div class="card h-100 shadow-sm border-0 border-start border-danger border-4">
+                            <div class="card-header bg-light fw-bold text-danger">
+                                <span><i class="fas fa-exclamation-triangle me-2"></i>Cảnh Báo Dữ Liệu (Anomaly)</span>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                                    <table class="table table-vcenter table-hover table-sm mb-0">
+                                        <thead class="sticky-top bg-white">
+                                            <tr>
+                                                <th>Mã Trạm</th>
+                                                <th>Loại Lỗi</th>
+                                                <th>Mô Tả</th>
+                                                <th>Ngày Quét</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="anomalyTableBody">
+                                            <tr>
+                                                <td colspan="4" class="text-center text-muted">Đang tải data lỗi...</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
         </div>
     </div>
 </div>
@@ -310,5 +366,66 @@
     }
     refreshWorkerStatus();
     setInterval(refreshWorkerStatus, 10000);
+
+    // ------ DATASITE LOGIC ------
+    async function triggerDatasiteSync() {
+        const btn = document.querySelector('button[onclick="triggerDatasiteSync()"]');
+        const stContainer = document.getElementById('syncStatus');
+        btn.disabled = true;
+        stContainer.innerHTML = '<i class="fas fa-spinner fa-spin text-warning"></i> Đang đồng bộ...';
+
+        try {
+            // Using the mock endpoint which reads local Excel for demo, 
+            // Replace with `/api/datasite/sync_real` for actual production
+            const res = await fetch('/api/datasite/sync_mock', { method: 'POST' });
+            const data = await res.json();
+            if (data.success) {
+                stContainer.innerHTML = '<i class="fas fa-check text-success"></i> ' + data.message;
+                // auto reload anomalies after 1s
+                setTimeout(loadAnomalies, 1000);
+            } else {
+                stContainer.innerHTML = '<i class="fas fa-times text-danger"></i> ' + data.message;
+            }
+        } catch (e) {
+            stContainer.innerHTML = '<i class="fas fa-times text-danger"></i> Lỗi kết nối.';
+        }
+        btn.disabled = false;
+    }
+
+    async function loadAnomalies() {
+        const tbody = document.getElementById('anomalyTableBody');
+        if (!tbody) return;
+        try {
+            const res = await fetch('/api/datasite/anomalies');
+            const data = await res.json();
+            if (data.success && data.data) {
+                if (data.data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-success fw-bold"><i class="fas fa-check-circle"></i> Không tìm thấy lỗi nào.</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = '';
+                data.data.forEach(item => {
+                    let tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td class="fw-bold text-primary">${item.site_id}</td>
+                        <td><span class="badge bg-danger">${item.issue_type}</span></td>
+                        <td>${item.description}</td>
+                        <td class="small text-muted">${item.detected_at}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+        } catch (e) {
+            console.error('Error loading anomalies:', e);
+        }
+    }
+
+    // Load anomalies on init if we are on datasite tab
+    document.addEventListener("DOMContentLoaded", function () {
+        if (document.getElementById('anomalyTableBody')) {
+            loadAnomalies();
+        }
+    });
+
 </script>
 {% endblock %}
