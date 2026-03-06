@@ -140,10 +140,18 @@ def ds_search():
             d.pop('extra_data', None)
         result[key].append(d)
 
+    station_dict = None
+    if station:
+        station_dict = station.to_dict()
+        if station_dict.get('extra_data') and isinstance(station_dict['extra_data'], dict):
+            station_dict.update(station_dict.pop('extra_data'))
+        else:
+            station_dict.pop('extra_data', None)
+
     return jsonify({
         "success": True,
         "site_id": site_id,
-        "station": station.to_dict() if station else None,
+        "station": station_dict,
         "contract": contract.to_dict() if contract else None,
         "data": result,
         "source": "v2"
