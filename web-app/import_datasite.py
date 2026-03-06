@@ -7,7 +7,7 @@ from datasite_utils import (
     import_thong_tin_chung, import_nha_dan, import_cot_anten,
     import_phong_may, import_phong_mpd, import_may_lanh,
     import_may_phat, import_tu_nguon, import_accu,
-    import_bts_3g, import_bts_4g, import_thiet_bi_vt
+    import_bts_3g, import_bts_4g, import_bts_5g, import_thiet_bi_vt
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -24,6 +24,7 @@ mapping = {
     'to accu.xlsx': import_accu,
     'BTS 3G.xlsx': import_bts_3g,
     'BTS 4G.xlsx': import_bts_4g,
+    'BTS 5G.xlsx': import_bts_5g,
     'Thiet bi vien thong.xlsx': import_thiet_bi_vt
 }
 

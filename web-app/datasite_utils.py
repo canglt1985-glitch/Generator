@@ -556,6 +556,39 @@ def import_bts_4g(file_path):
     return count
 
 
+def import_bts_5g(file_path):
+    """BTS 5G — Header: Chủng loại Tủ 5G, Hãng sản xuất tủ 5G, RRU 5G, BBU 5G, ..."""
+    df = read_excel_with_header(file_path)
+    if df is None:
+        return 0
+    DsTelecom.query.filter_by(loai='BTS_5G').delete()
+    count = 0
+    for _, row in df.iterrows():
+        site_id = g(row, ['SITE_ID'])
+        if not is_valid_site(site_id):
+            continue
+        obj = DsTelecom(
+            site_id=site_id, loai='BTS_5G',
+            serial=g(row, ['Serial tủ BTS 5G']),
+            trang_thai=g(row, ['Trạng thái']),
+            han_bao_hanh=g(row, ['Thời hạn bảo hành']),
+            han_bao_duong=g(row, ['Thời hạn bảo dưỡng']),
+            ngay_su_dung=g(row, ['Ngày đưa vào sử dụng tại trạm']),
+            extra_data={
+                'chung_loai': g(row, ['Chủng loại Tủ 5G']),
+                'hang_sx': g(row, ['Hãng sản xuất tủ 5G']),
+                'rru': g(row, ['RRU 5G']),
+                'bbu': g(row, ['BBU 5G']),
+                'ngay_sd_hop_dong': g(row, ['Ngày đưa vào sử dụng (theo hợp đồng trang bị)']),
+                'dai_vt': g(row, ['Đài VT']),
+            }
+        )
+        db.session.add(obj)
+        count += 1
+    db.session.commit()
+    return count
+
+
 def import_thiet_bi_vt(file_path):
     """Thiết bị viễn thông — Header: Tên thiết bị VT, Product_code, Loại TB VT, ..."""
     df = read_excel_with_header(file_path)

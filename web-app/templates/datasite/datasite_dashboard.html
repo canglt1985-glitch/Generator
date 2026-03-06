@@ -267,6 +267,10 @@
             title: 'Tủ BTS 4G', icon: 'fas fa-satellite-dish', bg: 'bg-purple',
             orderedCols: ['site_id', 'dai_vt', 'chung_loai', 'hang_sx', 'rru', 'bbu', 'ngay_sd_hop_dong', 'ngay_su_dung', 'serial', 'han_bao_hanh', 'han_bao_duong', 'trang_thai']
         },
+        'BTS_5G': {
+            title: 'Tủ BTS 5G', icon: 'fas fa-wifi', bg: 'bg-gradient-primary',
+            orderedCols: ['site_id', 'dai_vt', 'chung_loai', 'hang_sx', 'rru', 'bbu', 'ngay_sd_hop_dong', 'ngay_su_dung', 'serial', 'han_bao_hanh', 'han_bao_duong', 'trang_thai']
+        },
         'DATA_CELL': {
             title: 'Data Cell', icon: 'fas fa-chart-bar', bg: 'bg-teal',
             orderedCols: ['site_id', 'cell', 'sector', 'lat', 'long', 'height', 'azimuth', 'm_tilt', 'e_tilt', 'tilt', 'enb_id', 'c_id', 'psc_pci']
@@ -504,7 +508,7 @@
         const categoryGroups = [
             { key: 'HATANG', title: 'CƠ SỞ HẠ TẦNG', icon: 'fas fa-building', types: ['COT_ANTEN', 'PHONG_MAY', 'PHONG_MPD'] },
             { key: 'PHUTRO', title: 'THIẾT BỊ PHỤ TRỢ', icon: 'fas fa-bolt', types: ['MAY_LANH', 'MAY_PHAT', 'TU_NGUON', 'ACCU'] },
-            { key: 'KYTHUAT', title: 'KỸ THUẬT - VIỄN THÔNG', icon: 'fas fa-satellite-dish', types: ['BTS_3G', 'BTS_4G', 'DATA_CELL', 'THIET_BI_VT'] }
+            { key: 'KYTHUAT', title: 'KỸ THUẬT - VIỄN THÔNG', icon: 'fas fa-satellite-dish', types: ['BTS_3G', 'BTS_4G', 'BTS_5G', 'DATA_CELL', 'THIET_BI_VT'] }
         ];
 
         // Tạo khung chứa Tabs và Content
