@@ -225,7 +225,7 @@
     const typeConfigs = {
         'STATION': {
             title: 'Danh Sách Trạm', icon: 'fas fa-map-marker-alt', bg: 'bg-primary',
-            orderedCols: ['site_id', 'ma_ptm', 'ten_tram', 'loai_tram', 'dia_chi', 'kinh_do', 'vi_do', 'vung_phu', 'cosite', 'chu_csht', 'don_vi_dung_chung', 'hang_muc_dung_chung', 'tinh_trang', 'ghi_chu']
+            orderedCols: ['site_id', 'ma_ptm', 'ten_tram', 'loai_tram', 'vung_phu', 'nhom_ql', 'phan_lop_csht', 'dia_chi', 'phuong_xa', 'quan_huyen', 'tinh_tp', 'kinh_do', 'vi_do', 'cosite', 'chu_csht', 'don_vi_dung_chung', 'hang_muc_dung_chung', 'tinh_trang', 'ghi_chu']
         },
         'CONTRACT': {
             title: 'Danh Sách Hợp Đồng', icon: 'fas fa-file-contract', bg: 'bg-warning text-dark',
@@ -294,6 +294,7 @@
         loai_tram: 'Loại Trạm', don_vi_dung_chung: 'ĐV Dùng Chung', hang_muc_dung_chung: 'Hạng Mục Dùng Chung',
         ngay_phat_song: 'Ngày Phát Sóng', ngay_ky_bien_ban_ban_giao: 'Ngày Ký BB Giao', tinh_trang: 'Tình Trạng (TT)',
         vung_phu: 'Vùng Phủ', cosite: 'Cosite', chu_csht: 'Chủ CSHT', so_kiem_dinh: 'Số KĐ/TCB', han_kiem_dinh: 'Hạn KĐ/TCB',
+        nhom_ql: 'Nhóm Quản Lý', phan_lop_csht: 'Phân Lớp CSHT', phuong_xa: 'Phường/Xã', quan_huyen: 'Quận/Huyện', tinh_tp: 'Tỉnh/TP',
         // Hợp đồng (Contract)
         chu_the_hop_dong: 'Chủ Hợp Đồng', sdt_chu_nha: 'SĐT', tinh_trang_hd: 'Tình Trạng HĐ', so_hd: 'Số Hợp Đồng',
         gia_thue_co_vat: 'Giá Thuê (VAT)', gia_dien_khoan: 'Điện Khoán', chu_ky_thanh_toan: 'Chu Kỳ TT',
@@ -358,7 +359,13 @@
 
             if (json.success) {
                 // Hiện thông tin Station nếu có (v2)
-                if (json.station) renderStationBaseInfo(json.station, json.contract);
+                if (json.station) {
+                    renderStationBaseInfo(json.station, json.contract);
+                    // Đẩy dữ liệu Station vào biến Data chung để render thành thư mục Card
+                    if (!json.data.STATION) {
+                        json.data.STATION = [json.station];
+                    }
+                }
                 renderDashboard(json.site_id, json.data);
             } else {
                 showError(json.message);
@@ -399,9 +406,11 @@
         if (key.includes('phuong_xa')) return '🏘️';
         if (key.includes('tinh_trang_phat_song') || key.includes('tinh_trang') || key.includes('trang_thai')) return '📶';
         if (key.includes('hinh_thuc_hop_dong')) return '📝';
-        if (key.includes('doi_tuong')) return '👥';
-        if (key.includes('dai_vien_thong') || key.includes('don_vi')) return '🏢';
+        if (key.includes('doi_tuong') || key.includes('nhom_ql')) return '👥';
+        if (key.includes('dai_vien_thong') || key.includes('don_vi') || key.includes('chu_csht')) return '🏢';
         if (key.includes('toa_do') || key.includes('kinh_do') || key.includes('vi_do')) return '📍';
+        if (key.includes('vung_phu')) return '🌍';
+        if (key.includes('phan_lop')) return '⭐';
         if (key.includes('loai_tram') || key.includes('loai_')) return '🏗️';
         if (key.includes('ten_')) return '🏢';
         if (key.includes('ghi_chu')) return '📌';
@@ -435,6 +444,9 @@
         }
 
         displayData.push({ k: 'loai_tram', l: 'Loại trạm', v: station.loai_tram });
+        displayData.push({ k: 'vung_phu', l: 'Vùng phủ', v: station.vung_phu });
+        displayData.push({ k: 'nhom_ql', l: 'Nhóm quản lý', v: station.nhom_ql });
+        displayData.push({ k: 'phan_lop_csht', l: 'Phân lớp CSHT', v: station.phan_lop_csht });
         displayData.push({ k: 'don_vi_dung_chung', l: 'Đơn vị dùng chung', v: station.don_vi_dung_chung });
         displayData.push({ k: 'toa_do', l: 'Tọa độ', v: `Kinh độ ${station.kinh_do || '--'}, Vĩ độ ${station.vi_do || '--'}` });
 
@@ -506,6 +518,7 @@
         container.className = 'mt-3';
 
         const categoryGroups = [
+            { key: 'THONG_TIN', title: 'THÔNG TIN CHUNG', icon: 'fas fa-info-circle', types: ['STATION'] },
             { key: 'HATANG', title: 'CƠ SỞ HẠ TẦNG', icon: 'fas fa-building', types: ['COT_ANTEN', 'PHONG_MAY', 'PHONG_MPD'] },
             { key: 'PHUTRO', title: 'THIẾT BỊ PHỤ TRỢ', icon: 'fas fa-bolt', types: ['MAY_LANH', 'MAY_PHAT', 'TU_NGUON', 'ACCU'] },
             { key: 'KYTHUAT', title: 'KỸ THUẬT - VIỄN THÔNG', icon: 'fas fa-satellite-dish', types: ['BTS_3G', 'BTS_4G', 'BTS_5G', 'DATA_CELL', 'THIET_BI_VT'] }
