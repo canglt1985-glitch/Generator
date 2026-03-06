@@ -534,23 +534,30 @@
                                     <span class="badge bg-white text-dark">${item.trang_thai || item.status || 'OK'}</span>
                                 </div>
                                 <div class="card-body p-0">
-                                    <div class="row g-0">`;
+                                    <ul class="list-group list-group-flush" style="font-size:0.9rem;">`;
 
                         const orderedKeys = conf.orderedCols || Object.keys(item).filter(k => !HIDDEN_COLS.includes(k));
 
                         orderedKeys.filter(k => k !== 'site_id' && k !== 'trang_thai' && k !== 'status').forEach(k => {
                             const label = COL_LABELS[k] || k;
                             let val = item[k];
-                            if (val === undefined || val === null || val === '') val = '--';
+                            if (val === undefined || val === null || val === '') val = '<span class="text-muted fst-italic">--</span>';
+
+                            if (k.includes('gia_') && val !== '--') val = Number(val).toLocaleString() + ' đ';
+
+                            const emoji = getFieldEmoji(k);
 
                             itemHtml += `
-                                <div class="col-6 col-md-4 col-lg-3 border-bottom border-end p-2 bg-white" style="min-height: 55px;">
-                                    <div class="text-muted small text-uppercase" style="font-size: 0.65rem;">${label}</div>
-                                    <div class="fw-bold text-dark" style="font-size: 0.85rem;">${val}</div>
-                                </div>`;
+                                <li class="list-group-item d-flex px-4 py-2 border-bottom align-items-center">
+                                    <span class="me-3" style="font-size: 1.15rem; line-height: 1;">${emoji}</span>
+                                    <div style="flex-grow: 1; word-break: break-word;">
+                                        <span class="fw-bold text-dark me-1">${label}:</span>
+                                        <span class="text-secondary">${val}</span>
+                                    </div>
+                                </li>`;
                         });
 
-                        itemHtml += `</div></div></div>`;
+                        itemHtml += `</ul></div></div>`;
                         groupContent += itemHtml;
                     });
                 }
