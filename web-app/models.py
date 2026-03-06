@@ -190,25 +190,25 @@ class DsContract(db.Model):
     site_id = db.Column(db.String(50), nullable=False, index=True)
     # Chủ thể
     chu_the_hop_dong = db.Column(db.String(255))
-    sdt_chu_nha = db.Column(db.String(50))
-    cccd = db.Column(db.String(50))
+    sdt_chu_nha = db.Column(db.String(255))
+    cccd = db.Column(db.String(100))
     dia_chi_lien_he = db.Column(db.String(500))
     # Hợp đồng
-    so_hd = db.Column(db.String(100))
-    ngay_ky_hd = db.Column(db.String(20))
-    ngay_ket_thuc_hd = db.Column(db.String(20))
+    so_hd = db.Column(db.String(200))
+    ngay_ky_hd = db.Column(db.String(50))
+    ngay_ket_thuc_hd = db.Column(db.String(50))
     tinh_trang_hd = db.Column(db.String(100))        # Còn hạn, Hết hạn, Thanh lý...
     # Giá
     gia_thue_co_vat = db.Column(db.Float)
     gia_thue_khong_vat = db.Column(db.Float)
     gia_dien_khoan = db.Column(db.Float)
     # Thanh toán
-    chu_ky_thanh_toan = db.Column(db.String(50))     # Quý, Tháng...
-    ngay_bat_dau_thanh_toan = db.Column(db.String(20))
-    da_thanh_toan_den = db.Column(db.String(20))
+    chu_ky_thanh_toan = db.Column(db.String(100))     # Quý, Tháng...
+    ngay_bat_dau_thanh_toan = db.Column(db.String(50))
+    da_thanh_toan_den = db.Column(db.String(50))
     # Ngân hàng
     chu_tai_khoan = db.Column(db.String(200))
-    so_tai_khoan = db.Column(db.String(50))
+    so_tai_khoan = db.Column(db.String(100))
     ngan_hang = db.Column(db.String(200))
     # Metadata mở rộng (phụ lục, ERP, thanh toán các tháng...)
     extra_data = db.Column(db.JSON)
@@ -230,8 +230,8 @@ class DsInfrastructure(db.Model):
     # Cột cứng (áp dụng cho các loại)
     serial = db.Column(db.String(200))
     trang_thai = db.Column(db.String(100))
-    han_bao_hanh = db.Column(db.String(20))
-    han_bao_duong = db.Column(db.String(20))
+    han_bao_hanh = db.Column(db.String(100))
+    han_bao_duong = db.Column(db.String(100))
     # Metadata theo loại (JSON linh hoạt)
     # COT_ANTEN: {loai_cot, chieu_cao, den_bao_khong, dv_dung_chung, chieu_dai_cau_cap, dv_chu_quan}
     # PHONG_MAY: {loai_pm, vi_tri, dien_tich, dv_dung_chung, dv_chu_quan}
@@ -256,9 +256,9 @@ class DsEquipment(db.Model):
     nhan_hieu = db.Column(db.String(200))
     serial = db.Column(db.String(200))
     trang_thai = db.Column(db.String(100))           # Hoạt động tốt, Hỏng, Mới...
-    han_bao_hanh = db.Column(db.String(20))
-    han_bao_duong = db.Column(db.String(20))
-    ngay_su_dung = db.Column(db.String(20))           # Ngày đưa vào sử dụng tại trạm
+    han_bao_hanh = db.Column(db.String(100))
+    han_bao_duong = db.Column(db.String(100))
+    ngay_su_dung = db.Column(db.String(100))           # Ngày đưa vào sử dụng tại trạm
     # Metadata đặc thù loại (JSON linh hoạt) — VÔ HẠN THUỘC TÍNH
     # MAY_LANH:  {btu, loai_may_lanh, product_code, dv_chu_quan, don_vi_tinh, don_gia, vi_tri}
     # MAY_PHAT:  {cong_suat, phase, nhien_lieu, ats, product_code, dv_chu_quan, don_vi_tinh, don_gia, vi_tri}
@@ -283,9 +283,9 @@ class DsTelecom(db.Model):
     # Cột cứng
     serial = db.Column(db.String(200))
     trang_thai = db.Column(db.String(100))
-    han_bao_hanh = db.Column(db.String(20))
-    han_bao_duong = db.Column(db.String(20))
-    ngay_su_dung = db.Column(db.String(20))
+    han_bao_hanh = db.Column(db.String(100))
+    han_bao_duong = db.Column(db.String(100))
+    ngay_su_dung = db.Column(db.String(100))
     # Metadata đặc thù (JSON linh hoạt)
     # BTS_3G:    {chung_loai, hang_sx, rru, bbu}
     # BTS_4G:    {chung_loai, hang_sx, rru, bbu}
