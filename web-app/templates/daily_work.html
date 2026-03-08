@@ -15,7 +15,23 @@
             </div>
         </div>
         {% if active_tab == 'work' %}
-        <div class="col-auto text-end">
+        <div class="col-auto text-end d-flex gap-2">
+            <!-- Inline Export Form -->
+            <form action="{{ url_for('daily_work.export_daily_work') }}" method="GET"
+                class="d-flex align-items-center gap-2 m-0 p-0 bg-light rounded-pill px-2 py-1 border">
+                <span class="small text-muted fw-bold ms-1" style="font-size: 0.75rem;">XUẤT:</span>
+                <input type="date" name="start_date" class="form-control form-control-sm border-0 bg-transparent"
+                    value="{{ start_date or now_date }}" style="width: 110px; font-size: 0.8rem;" required
+                    title="Từ ngày">
+                <span class="text-muted small">→</span>
+                <input type="date" name="end_date" class="form-control form-control-sm border-0 bg-transparent"
+                    value="{{ end_date or now_date }}" style="width: 110px; font-size: 0.8rem;" required
+                    title="Đến ngày">
+                <button type="submit" class="btn btn-sm btn-success rounded-pill px-3">
+                    <i class="fas fa-file-excel me-1"></i>Excel
+                </button>
+            </form>
+
             <button type="button" class="btn btn-sm btn-primary rounded-pill px-4" data-bs-toggle="modal"
                 data-bs-target="#addWorkModal">
                 <i class="fas fa-plus me-1"></i>Thêm

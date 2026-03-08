@@ -216,10 +216,10 @@ if __name__ == '__main__':
             print("SmartW Scheduler: Alarm poll 15p + VHKT 5AM + MFD import 6AM")
 
         # DataSite Auto-Sync: Weekly on Sunday at 2 AM
-        from datasite_scraper import perform_datasite_sync
+        from datasite_scraper import perform_datasite_sync_real
         scheduler.add_job(
             id='datasite_sync_weekly',
-            func=lambda: app.app_context().push() or perform_datasite_sync(),
+            func=lambda: app.app_context().push() or perform_datasite_sync_real(),
             trigger='cron', day_of_week='sun', hour=2, minute=0,
             max_instances=1
         )
@@ -234,4 +234,4 @@ if __name__ == '__main__':
         from bot_telegram import start_bot_thread
         start_bot_thread()
 
-    app.run(debug=True, port=5005)
+    app.run(host='0.0.0.0', port=5005, debug=False)

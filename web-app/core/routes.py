@@ -218,11 +218,18 @@ def admin():
     smartw_username = smartw_cfg.get('username', '') if smartw_cfg else ''
     smartw_updated_at = smartw_cfg.get('updated_at', '') if smartw_cfg else ''
 
+    # DataSite config
+    from models import SystemConfig
+    ds_user_conf = SystemConfig.query.filter_by(key='datasite_username').first()
+    datasite_configured = ds_user_conf is not None and bool(ds_user_conf.value)
+    datasite_username = ds_user_conf.value if ds_user_conf else ''
+
     return render_template('admin_panel.html', users=users, requests=reqs,
                            pending_req_count=pending_req_count,
                            active_tab=active_tab,
                            smartw_configured=smartw_configured, smartw_username=smartw_username,
-                           smartw_updated_at=smartw_updated_at)
+                           smartw_updated_at=smartw_updated_at,
+                           datasite_configured=datasite_configured, datasite_username=datasite_username)
 
 
 @core_bp.route('/admin/mpd')

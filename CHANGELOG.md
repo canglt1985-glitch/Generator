@@ -1,5 +1,36 @@
 # Changelog
 
+## [2026-03-08]
+### Added
+- **DataSite Flexible Sync (Phase 1 & 2)**:
+  - Thêm form cấu hình tài khoản DataSite (Username/Password) trong tab Admin.
+  - Tính năng **SSO Sync**: Tự động lấy tài khoản từ SmartW sang DataSite.
+  - Tính năng **Granular Sync**: Cho phép chọn từng hạng mục tài sản để đồng bộ (Thông tin trạm, Hạ tầng, Phụ trợ, Viễn thông).
+  - Bảng `SystemConfig` trong Database để lưu trữ cấu hình hệ thống an toàn.
+  
+### Changed
+- Cấu trúc lại giao diện Admin tab DataSite để hiển thị form config và bảng cảnh báo dữ liệu anomaly.
+- Cập nhật JavaScript `triggerDatasiteSync` để gửi danh sách `targets` thay vì quét toàn bộ.
+
+### Fixed
+- Lỗi Template không cập nhật do stale flask processes.
+
+
+## [2026-03-06] - DataSite V3: BTS 5G/3G Support & Metadata Unpacking
+### Added
+- **BTS 5G & 3G Support**: Complete lifecycle support for 5G and 3G equipment (Import from Excel, Database storage, and Dashboard rendering).
+- **Metadata Unpacking**: Backend API `/api/datasite/search` now automatically flattens `extra_data` for Station objects, exposing fields like "Vùng phủ", "Nhóm QL", and "Phân lớp CSHT" to the frontend.
+- **Extended Station Fields**: Added "Vùng phủ" (🌍), "Nhóm quản lý" (👥), "Phân lớp CSHT" (⭐), and "Phường/Xã" (🏘️) directly to the main Station Info card.
+
+### Changed
+- **Dashboard Layout Rollback**: Reverted the "DataSite Dashboard" from horizontal cards back to a vertical top-card structure for better readability and focus.
+- **Field Clean-up**: Removed "Giá thuê trạm" from the top info card to eliminate redundancy with the Contract tab.
+- **Import Logic**: Enhanced `import_thong_tin_chung` to capture extended metadata into the `extra_data` JSON field.
+
+### Fixed
+- **Missing Metadata Bug**: Fixed an issue where "Vùng phủ" and other extended fields appeared empty because they were nested inside the `extra_data` JSON and not unpacked by the API.
+
+
 ## [2026-03-05] - DataSite Category Search & UI Enhancements
 ### Added
 - **Category Search API**: New endpoint `/api/datasite/assets/by_type?type=` to fetch all assets of a specific type (e.g., Máy Lạnh, Máy Phát) across all stations.

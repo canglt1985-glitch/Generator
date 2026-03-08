@@ -3,11 +3,27 @@ DataSite Routes v2 — API cho 5 Nhóm DataSite (Refactor 2026-03-06)
 """
 from flask import Blueprint, jsonify, request, session, render_template, redirect, url_for
 from datasite_utils import import_all_datasite_samples
-from datasite_scraper import perform_datasite_sync
+from datasite_scraper import perform_datasite_sync_real
 import threading
 import logging
+from datetime import datetime
 
 datasite_bp = Blueprint('datasite', __name__)
+
+# Global storage for sync logs (simple list for MVP)
+datasite_sync_logs = []
+
+def add_datasite_log(message):
+    now = datetime.now().strftime("%H:%M:%S")
+    log_entry = f"[{now}] {message}"
+    datasite_sync_logs.append(log_entry)
+    # Keep only last 50 logs
+    if len(datasite_sync_logs) > 50:
+        datasite_sync_logs.pop(0)
+
+@datasite_bp.route('/api/datasite/sync_logs', methods=['GET'])
+def get_sync_logs():
+    return jsonify({"success": True, "logs": datasite_sync_logs})
 
 
 # ============================================================================
@@ -47,14 +63,121 @@ def sync_real():
     if session.get('role') != 'admin':
         return jsonify({"success": False, "message": "Unauthorized"}), 403
 
-    def background_sync():
-        perform_datasite_sync()
+    from datasite_scraper import perform_datasite_sync_real
+    import asyncio
+    from flask import current_app
+    
+    data = request.get_json() or {}
+    targets = data.get('targets', [])
 
-    thread = threading.Thread(target=background_sync)
+    # Clear previous logs and start new session
+    global datasite_sync_logs
+    datasite_sync_logs.clear()
+    add_datasite_log(f"Bắt đầu đồng bộ cho: {', '.join(targets) if targets else 'tất cả'}")
+
+    # Lấy app object hiện tại ra để truyền vào thread
+    app = current_app._get_current_object()
+
+    def background_sync(flask_app, sync_targets):
+        with flask_app.app_context():
+            asyncio.run(perform_datasite_sync_real(sync_targets))
+
+    thread = threading.Thread(target=background_sync, args=(app, targets))
     thread.daemon = True
     thread.start()
-    return jsonify({"success": True, "message": "DataSite Real Auto-Sync started in background."})
+    
+    target_msg = ", ".join(targets) if targets else "tất cả"
+    return jsonify({"success": True, "message": f"Đang tiến hành đồng bộ DataSite tự động cho hạng mục: {target_msg}."})
 
+
+# ============================================================================
+# API: Config (Lưu tài khoản DataSite)
+# ============================================================================
+
+@datasite_bp.route('/api/datasite/save_config', methods=['POST'])
+def save_config():
+    from flask import flash, redirect, url_for
+    from models import SystemConfig
+    from extensions import db
+
+    if session.get('role') != 'admin':
+        flash("Bạn không có quyền lưu cấu hình.", "danger")
+        return redirect(url_for('core.admin', tab='datasite'))
+
+    ds_user = request.form.get('datasite_username', '').strip()
+    ds_pass = request.form.get('datasite_password', '')
+
+    try:
+        # Username
+        conf_user = SystemConfig.query.filter_by(key='datasite_username').first()
+        if not conf_user:
+            conf_user = SystemConfig(key='datasite_username', description='Tài khoản đăng nhập DataSite')
+            db.session.add(conf_user)
+        conf_user.value = ds_user
+        conf_user.updated_by = session.get('username')
+        from datetime import datetime
+        conf_user.updated_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+        # Password (only update if provided)
+        if ds_pass:
+            conf_pass = SystemConfig.query.filter_by(key='datasite_password').first()
+            if not conf_pass:
+                conf_pass = SystemConfig(key='datasite_password', description='Mật khẩu đăng nhập DataSite')
+                db.session.add(conf_pass)
+            
+            # TODO: Consider encrypting the password in the database
+            conf_pass.value = ds_pass
+            conf_pass.updated_by = session.get('username')
+            conf_pass.updated_at = conf_user.updated_at
+
+        db.session.commit()
+        flash("Lưu tài khoản DataSite thành công!", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Lỗi khi lưu cấu hình: {e}", "danger")
+
+    return redirect(url_for('core.admin', tab='datasite'))
+
+
+@datasite_bp.route('/api/datasite/sync_from_smartw', methods=['POST'])
+def sync_from_smartw():
+    from smartw.config import load_smartw_config
+    from models import SystemConfig
+    from extensions import db
+    from datetime import datetime
+
+    if session.get('role') != 'admin':
+        return jsonify({"success": False, "error": "Bạn không có quyền."}), 403
+
+    smartw_cfg = load_smartw_config()
+    if not smartw_cfg:
+        return jsonify({"success": False, "error": "Chưa có cấu hình SmartW để đồng bộ."})
+
+    try:
+        # Save Username
+        conf_user = SystemConfig.query.filter_by(key='datasite_username').first()
+        if not conf_user:
+            conf_user = SystemConfig(key='datasite_username', description='Tài khoản đăng nhập DataSite')
+            db.session.add(conf_user)
+        conf_user.value = smartw_cfg['username']
+        conf_user.updated_by = session.get('username')
+        conf_user.updated_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+        # Save Password
+        conf_pass = SystemConfig.query.filter_by(key='datasite_password').first()
+        if not conf_pass:
+            conf_pass = SystemConfig(key='datasite_password', description='Mật khẩu đăng nhập DataSite')
+            db.session.add(conf_pass)
+        conf_pass.value = smartw_cfg['password']
+        conf_pass.updated_by = session.get('username')
+        conf_pass.updated_at = conf_user.updated_at
+
+        db.session.commit()
+        return jsonify({"success": True, "message": "Đã đồng bộ từ SmartW!"})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "error": str(e)})
 
 # ============================================================================
 # API: Tra cứu theo Trạm (Search)

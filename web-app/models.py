@@ -396,3 +396,12 @@ class EquipmentTransfer(db.Model):
     nguoi_dieu_chuyen = db.Column(db.String(100))
     ghi_chu = db.Column(db.String(500))
 
+class SystemConfig(db.Model):
+    """Cấu hình hệ thống (lưu mật khẩu, mốc thời gian, thông số chung)"""
+    id = db.Column(db.Integer, primary_key=True)
+    key = db.Column(db.String(50), nullable=False, unique=True, index=True)
+    value = db.Column(db.String(500))
+    description = db.Column(db.String(200))
+    updated_at = db.Column(db.String(20), default=lambda: datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+    updated_by = db.Column(db.String(100))
+

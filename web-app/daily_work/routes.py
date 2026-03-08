@@ -119,8 +119,6 @@ def export_daily_work():
             'ID Trạm': w.id_tram,
             'Hạng Mục': w.hang_muc,
             'Nội Dung': w.noi_dung,
-            'Tồn Tại VHKT': w.ton_tai_vhkt,
-            'Tồn Tại CSHT': w.ton_tai_csht,
             'Ghi Chú': w.ghi_chu,
             'Người Thực Hiện': w.nhan_vien
         })
