@@ -72,7 +72,6 @@ def api_equipment_available():
 
 @daily_work_bp.route('/mobile-equipment/add', methods=['POST'])
 @login_required
-@admin_required
 def add_mobile_equipment():
     try:
         equip = MobileEquipment(

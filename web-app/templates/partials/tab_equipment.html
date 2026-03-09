@@ -7,12 +7,10 @@
         <div class="text-muted small">
             <span class="badge bg-blue-lt me-1">{{ mobile_equipments|length }}</span> thiết bị
         </div>
-        {% if session.get('role') == 'admin' %}
         <button class="btn btn-sm btn-primary rounded-pill" data-bs-toggle="modal" data-bs-target="#equipModal"
             onclick="resetEquipModal()">
             <i class="fas fa-plus me-1"></i>Thêm
         </button>
-        {% endif %}
     </div>
 
     <!-- Equipment Table -->
@@ -214,8 +212,7 @@
     }
 </style>
 
-<!-- MODAL: Add Equipment (Admin only) -->
-{% if session.get('role') == 'admin' %}
+<!-- MODAL: Add Equipment -->
 <div class="modal fade" id="equipModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -272,7 +269,6 @@
         </div>
     </div>
 </div>
-{% endif %}
 
 <!-- MODAL: Transfer Equipment -->
 <div class="modal fade" id="transferModal" tabindex="-1">
