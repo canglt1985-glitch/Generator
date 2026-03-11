@@ -662,17 +662,55 @@ def run_mfd_import_poll(target_date: str = None):
             raw_data = scrape_result.get('data', [])
 
             if raw_data:
-                from generator.mfd_import import import_mfd_data
+                from generator.mfd_import import import_mfd_data, update_incomplete_records
+
+                # Step 1: Update any incomplete records from previous scrapes
+                # (overnight events that now have end times in today's data)
+                updated_count = update_incomplete_records(raw_data)
+                if updated_count:
+                    logger.info(f'SmartW Worker: MFD updated {updated_count} incomplete overnight records')
+
+                # Step 2: Import new records
                 import_result = import_mfd_data(raw_data)
+                import_result['updated'] = updated_count
                 logger.info(f'SmartW Worker: MFD import done — '
                             f'{import_result["imported"]} imported, '
                             f'{import_result["pending"]} pending, '
                             f'{import_result["skipped"]} skipped, '
-                            f'{import_result["duplicates"]} duplicates')
+                            f'{import_result["duplicates"]} duplicates, '
+                            f'{updated_count} updated')
             else:
                 import_result = {'imported': 0, 'pending': 0, 'skipped': 0,
-                                 'duplicates': 0, 'errors': []}
+                                 'duplicates': 0, 'updated': 0, 'errors': []}
                 logger.info(f'SmartW Worker: MFD — no events for {date_label}')
+
+            # Step 3: Also scrape the day BEFORE target to catch overnight events
+            # that started on D-1 and ended on D (now completed with end time)
+            try:
+                if target_date:
+                    prev_dt = datetime.strptime(target_date, '%d/%m/%Y') - timedelta(days=1)
+                else:
+                    # Default target is yesterday, so prev is day-before-yesterday
+                    prev_dt = datetime.now() - timedelta(days=2)
+                prev_date_str = prev_dt.strftime('%d/%m/%Y')
+
+                logger.info(f'SmartW Worker: MFD also checking {prev_date_str} for overnight updates...')
+
+                async def _scrape_prev():
+                    scraper = await _get_or_create_scraper(config['username'], config['password'])
+                    if scraper:
+                        await scraper._ensure_login()
+                        return await scraper.scrape_mfd_reports(prev_date_str)
+                    return []
+
+                prev_data = _run_async(_scrape_prev)
+                if prev_data:
+                    prev_updated = update_incomplete_records(prev_data)
+                    if prev_updated:
+                        logger.info(f'SmartW Worker: MFD updated {prev_updated} records from {prev_date_str}')
+                        import_result['updated'] = import_result.get('updated', 0) + prev_updated
+            except Exception as prev_err:
+                logger.warning(f'SmartW Worker: MFD prev-day scrape error (non-critical): {prev_err}')
 
         status['last_mfd_import'] = datetime.now().isoformat()
 

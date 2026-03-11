@@ -34,29 +34,22 @@ def classify_event(start_dt: datetime, end_dt: datetime, duration_min: int) -> s
 
     Rules:
         < 10 min → 'skip' (test run, too short)
-        Overnight (start ≥ 21h, end ≤ 7h, ≤ 10h) → 'approved' (normal night outage)
-        ≤ 12 hours → 'approved' (normal)
+        ≤ 8 hours (480 min) → 'approved' (normal, covers all overnight runs)
+        ≤ 12 hours → 'approved' (normal daytime)
         > 12 hours → 'pending' (likely stuck alarm, admin review needed)
+        No end time → 'pending' (incomplete event, needs update)
 
     Returns: 'skip', 'approved', or 'pending'
     """
     if duration_min < 10:
+        # No end time with unknown duration → pending (overnight incomplete)
+        if not end_dt:
+            return 'pending'
         return 'skip'
 
-    start_hour = start_dt.hour
-    end_hour = end_dt.hour if end_dt else 0
-
-    # Check if this is an overnight event (started at night)
-    is_overnight_start = (start_hour >= 21)
-
-    # Overnight OK: start ≥ 21:00 AND end ≤ 07:00 AND duration ≤ 600 min (10h)
-    # This covers normal power outages at night
-    if is_overnight_start and end_hour <= 7 and duration_min <= 600:
+    # Any run ≤ 8 hours → always approved (covers overnight runs too)
+    if duration_min <= 480:
         return 'approved'
-
-    # Overnight BAD: started at night but runs past 7 AM → likely stuck alarm
-    if is_overnight_start and end_hour > 7:
-        return 'pending'
 
     # Normal daytime: ≤ 12 hours (720 min)
     if duration_min <= 720:
@@ -121,21 +114,91 @@ def build_alarm_id(record: dict) -> str:
 
 
 def is_duplicate(alarm_id: str, id_tram: str = None, ngay: str = None, gio_bd: str = None, gio_kt: str = None) -> bool:
-    """Check if this alarm was already imported (by alarm_id OR by id_tram+date+times)."""
+    """Check if this alarm was already imported (by alarm_id OR by id_tram+date+start_time)."""
     from models import GeneratorLog
     # Check by smartw_alarm_id
     if alarm_id:
         existing = GeneratorLog.query.filter_by(smartw_alarm_id=alarm_id).first()
         if existing:
             return True
-    # Also check by id_tram + ngay + gio to catch manual/other imports
+    # Check by id_tram + ngay + gio_bat_dau (start time is unique enough per site per day)
     if id_tram and ngay and gio_bd:
         q = GeneratorLog.query.filter_by(id_tram=id_tram, ngay_van_hanh=ngay, gio_bat_dau=gio_bd)
-        if gio_kt:
-            q = q.filter_by(gio_ket_thuc=gio_kt)
         if q.first():
             return True
     return False
+
+
+def update_incomplete_records(raw_data: list[dict]) -> int:
+    """Update existing records that are missing end time (overnight events).
+
+    When an overnight event starts on day D but ends on day D+1, the D scrape
+    creates a record with no end time. When we later scrape day D+1 (or re-scrape D),
+    SmartW returns the completed event. This function finds and updates those records.
+
+    Returns: number of records updated.
+    """
+    from extensions import db
+    from models import GeneratorLog
+
+    updated = 0
+    for record in raw_data:
+        site = record.get('siteid') or record.get('ne') or ''
+        start_dt = parse_smartw_date(record.get('sdate'))
+        end_dt = parse_smartw_date(record.get('edate'))
+        duration_min = record.get('minuteNumber') or 0
+
+        if not start_dt or not end_dt:
+            continue
+
+        ngay = start_dt.strftime('%Y-%m-%d')
+        gio_bd = start_dt.strftime('%H:%M')
+        gio_kt = end_dt.strftime('%H:%M')
+
+        # Find existing record with missing end time for this site+date+start
+        existing = GeneratorLog.query.filter_by(
+            id_tram=site, ngay_van_hanh=ngay, gio_bat_dau=gio_bd
+        ).filter(
+            (GeneratorLog.gio_ket_thuc == None) |
+            (GeneratorLog.gio_ket_thuc == '')
+        ).first()
+
+        if not existing:
+            continue
+
+        # Calculate duration from timestamps if minuteNumber is missing
+        if not duration_min and start_dt and end_dt:
+            duration_min = int((end_dt - start_dt).total_seconds() / 60)
+
+        # Update the record
+        hours = round(duration_min / 60, 2)
+        dinh_muc = float(existing.dinh_muc or 0)
+        nhien_lieu = round(hours * dinh_muc, 2)
+        don_gia = existing.don_gia or 0
+        thanh_tien = round(nhien_lieu * don_gia)
+
+        existing.gio_ket_thuc = gio_kt
+        existing.thoi_gian_hoat_dong = hours
+        existing.nhien_lieu_tieu_hao = nhien_lieu
+        existing.thanh_tien = thanh_tien
+
+        # Re-classify now that we have end time
+        status = classify_event(start_dt, end_dt, duration_min)
+        if status != 'skip':
+            existing.status = status
+
+        updated += 1
+        logger.info(f'MFD Update: {site} {ngay} {gio_bd}→{gio_kt} ({hours}h) → {status}')
+
+    if updated:
+        try:
+            db.session.commit()
+            logger.info(f'MFD Update: {updated} incomplete records updated')
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f'MFD Update: DB commit failed: {e}')
+
+    return updated
 
 
 # ── Main Import Function ─────────────────────────────────────────

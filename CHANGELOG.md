@@ -1,5 +1,16 @@
 # Changelog
 
+## [2026-03-09]
+### Added
+- **Daily Work UI Consolidate**: Di chuyển toàn bộ nút hành động chính (+ Thêm) lên Page Header trang Công Việc Hàng Ngày.
+- **Staff Equipment Permission**: Sửa lỗi nhân viên không có quyền thêm thiết bị lưu động.
+
+### Changed
+- Cải thiện độ ổn định của template: Sử dụng `|trim` cho biến `active_tab` và tách biệt hoàn toàn các khối `if` thay vì `elif` để tránh lỗi cache/logic trên một số trình duyệt.
+
+### Fixed
+- Lỗi hiển thị nút Thêm trễ hoặc không đúng Tab do logic conditional render bị lặp.
+
 ## [2026-03-08]
 ### Added
 - **DataSite Flexible Sync (Phase 1 & 2)**:
