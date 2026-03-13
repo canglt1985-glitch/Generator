@@ -12,6 +12,7 @@ from bs4 import BeautifulSoup
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
 FUEL_PRICE_FILE = os.path.join(DATA_DIR, 'fuel_prices.json')
+FUEL_PRICE_HISTORY_FILE = os.path.join(DATA_DIR, 'fuel_prices_history.json')
 
 PVOIL_URL = 'https://www.pvoil.com.vn/tin-gia-xang-dau'
 
@@ -22,6 +23,82 @@ PRODUCT_MAP = {
     'Dầu DO 0,05S-II': 'dau_do',
     'DO 0,05S-II': 'dau_do',
 }
+
+# ── Seeded Price History (manually verified from PVOil announcements) ─────
+# Format: (effective_date_str, xang_ron95, dau_do)
+# Prices are full retail including VAT in VND/liter
+# Sorted oldest to newest — used by get_fuel_price_for_date()
+SEEDED_PRICE_HISTORY = [
+    # Before March 2026: approximate known prices around Feb 2026
+    ('2025-01-01', 21000, 20000),  # Baseline fallback
+    ('2026-02-01', 26963, 25500),  # Approx Feb 2026 price (before March changes)
+    ('2026-03-07', 27040, 26000),  # After March 7 adjustment (+4,707 VND base)
+    ('2026-03-11', 29120, 30710),  # After March 11 adjustment (+2,080 VND)
+]
+
+
+def _load_price_history() -> list[dict]:
+    """Load price history from JSON file (sorted oldest to newest)."""
+    history = []
+    # Start from seeded data
+    for date_str, xang, dau in SEEDED_PRICE_HISTORY:
+        history.append({
+            'effective_date': date_str,
+            'xang_ron95': xang,
+            'dau_do': dau,
+            'source': 'seeded'
+        })
+
+    # Overlay with any recorded changes from our history file
+    if os.path.exists(FUEL_PRICE_HISTORY_FILE):
+        try:
+            with open(FUEL_PRICE_HISTORY_FILE, 'r', encoding='utf-8') as f:
+                extra = json.load(f)
+            history.extend(extra)
+        except Exception:
+            pass
+
+    # Deduplicate and sort by date
+    seen = {}
+    for entry in history:
+        seen[entry['effective_date']] = entry
+    history = sorted(seen.values(), key=lambda x: x['effective_date'])
+
+    return history
+
+
+def get_fuel_price_for_date(date_str: str, fuel_type: str = 'Dầu') -> int:
+    """Get the correct PVOil fuel price for a specific date.
+
+    Uses historical price table — finds the price entry that was effective
+    on or before the given date (i.e., the last price change before that date).
+
+    Args:
+        date_str: Date in 'YYYY-MM-DD' format.
+        fuel_type: 'Xăng' or 'Dầu'.
+
+    Returns:
+        Price per liter as integer (VND).
+    """
+    history = _load_price_history()
+    if not history:
+        return 20000 if 'Xăng' not in fuel_type else 19000
+
+    # Walk history from latest to find the last entry on or before date_str
+    matching = None
+    for entry in history:
+        if entry['effective_date'] <= date_str:
+            matching = entry
+        else:
+            break
+
+    if not matching:
+        matching = history[0]  # Fallback: use oldest known price
+
+    if fuel_type and 'Xăng' in fuel_type:
+        return matching.get('xang_ron95', 21000)
+    else:
+        return matching.get('dau_do', 20000)
 
 
 def scrape_pvoil_prices():
@@ -74,9 +151,10 @@ def scrape_pvoil_prices():
 
 
 def save_fuel_prices(prices):
-    """Save fuel prices to JSON file."""
+    """Save fuel prices to JSON file and append to history if price changed."""
     os.makedirs(DATA_DIR, exist_ok=True)
 
+    today = datetime.now().strftime('%Y-%m-%d')
     data = {
         'xang_ron95': prices.get('xang_ron95', 0),
         'dau_do': prices.get('dau_do', 0),
@@ -87,8 +165,42 @@ def save_fuel_prices(prices):
     with open(FUEL_PRICE_FILE, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
+    # Append to history if this is a new price for today
+    _append_price_history(today, prices.get('xang_ron95', 0), prices.get('dau_do', 0))
+
     print(f"[FuelPrice] Saved: Xang={data['xang_ron95']:,}d, Dau={data['dau_do']:,}d")
     return data
+
+
+def _append_price_history(date_str: str, xang_ron95: int, dau_do: int):
+    """Append a new price point to history file if price changed."""
+    history = []
+    if os.path.exists(FUEL_PRICE_HISTORY_FILE):
+        try:
+            with open(FUEL_PRICE_HISTORY_FILE, 'r', encoding='utf-8') as f:
+                history = json.load(f)
+        except Exception:
+            history = []
+
+    # Only append if price changed (avoid duplicates for same day)
+    existing_dates = {e['effective_date'] for e in history}
+    if date_str in existing_dates:
+        # Update the existing entry for today
+        for entry in history:
+            if entry['effective_date'] == date_str:
+                entry['xang_ron95'] = xang_ron95
+                entry['dau_do'] = dau_do
+                entry['source'] = 'pvoil'
+    else:
+        history.append({
+            'effective_date': date_str,
+            'xang_ron95': xang_ron95,
+            'dau_do': dau_do,
+            'source': 'pvoil'
+        })
+
+    with open(FUEL_PRICE_HISTORY_FILE, 'w', encoding='utf-8') as f:
+        json.dump(history, f, ensure_ascii=False, indent=2)
 
 
 def get_fuel_prices():

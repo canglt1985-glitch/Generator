@@ -316,37 +316,51 @@
                             </div>
                         </div>
 
-                        <div class="card shadow-sm border-0">
-                            <div class="card-header bg-warning text-dark fw-bold">
-                                <span><i class="fas fa-sync-alt me-2"></i>Đồng Bộ DataSite</span>
-                            </div>
-                            <div class="card-body">
-                                <p class="text-muted small">Kéo dữ liệu Asset từ DataSite về Server. Khuyến nghị chạy
-                                    vào ban đêm.</p>
-                                <!-- Checkboxes for granular sync -->
-                                <div class="mb-3">
-                                    <label class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="chkStation" checked>
-                                        <span class="form-check-label">Thông tin chung (Trạm & Hợp đồng)</span>
-                                    </label>
-                                    <label class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="chkInfra" checked>
-                                        <span class="form-check-label">Cơ sở hạ tầng (Cột, nhà trạm)</span>
-                                    </label>
-                                    <label class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="chkEquipment">
-                                        <span class="form-check-label">Phụ trợ (Máy phát, ĐH, Tủ Nguồn)</span>
-                                    </label>
-                                    <label class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="chkTelecom">
-                                        <span class="form-check-label">Viễn thông (Tủ BTS)</span>
-                                    </label>
+                        <div class="card shadow-sm border-0 mb-4">
+                            <div class="card-header fw-bold bg-light d-flex justify-content-between align-items-center">
+                                <span><i class="bi bi-check2-square me-2"></i>Chọn đối tượng cần đồng bộ sâu</span>
+                                <div>
+                                    <button class="btn btn-xs btn-outline-primary me-1"
+                                        onclick="selectAllObjects()">Chọn Tất Cả</button>
+                                    <button class="btn btn-xs btn-outline-secondary" onclick="clearAllObjects()">Bỏ
+                                        Chọn</button>
                                 </div>
+                            </div>
+                            <div class="card-body" id="objectMapContainer">
+                                <div class="text-center text-muted py-3"><i class="fas fa-spinner fa-spin"></i> Đang tải
+                                    danh sách...</div>
+                            </div>
+                        </div>
 
-                                <button class="btn btn-warning w-100 mb-3" onclick="triggerDatasiteSync()">
-                                    <i class="fas fa-cloud-download-alt me-2"></i>Đồng Bộ Ngay
-                                </button>
-                                <div id="syncStatus" class="small text-success fw-bold"></div>
+                        <div class="d-flex gap-2 mb-4 align-items-center">
+                            <button class="btn btn-danger w-100 fw-bold" id="btnStartDeepSync" onclick="startDeepSync()"
+                                disabled>
+                                <i class="fas fa-cloud-download-alt me-2"></i>Bắt đầu Đồng Bộ Sâu
+                            </button>
+                            <span id="syncCountLabel" class="text-muted small w-100 text-end">0 đối tượng chọn</span>
+                        </div>
+
+                        <div id="dsSyncPanel" style="display:none;">
+                            <div class="card border-0 shadow-sm mb-3 bg-light">
+                                <div class="card-body py-2 px-3">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span class="fw-bold small text-primary" id="dsSyncCurrentLabel">Đang
+                                            chờ...</span>
+                                        <span class="small fw-bold text-primary" id="dsSyncPercentLabel">0%</span>
+                                    </div>
+                                    <div class="progress" style="height:10px;">
+                                        <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
+                                            id="dsSyncProgressBar" role="progressbar" style="width:0%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card border-0 shadow-sm mb-4">
+                                <div class="card-header bg-white fw-bold py-2 small">
+                                    <i class="fas fa-list-check me-2"></i>Tiến độ chi tiết
+                                </div>
+                                <div class="card-body p-0" style="max-height: 200px; overflow-y: auto;">
+                                    <ul class="list-group list-group-flush" id="dsSyncItemList"></ul>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -355,14 +369,13 @@
                         <!-- Sync Logs Card -->
                         <div class="card shadow-sm border-0 mb-4">
                             <div class="card-header bg-dark text-white fw-bold d-flex justify-content-between">
-                                <span><i class="fas fa-terminal me-2"></i>Nhật ký đồng bộ (Real-time)</span>
-                                <span class="badge bg-success" id="syncLiveIndicator" style="display:none;">LIVE</span>
+                                <span><i class="fas fa-terminal me-2"></i>Terminal Sync Log (Deep Sync)</span>
                             </div>
-                            <div class="card-body p-0"
-                                style="background: #1e1e1e; color: #d4d4d4; font-family: 'Courier New', Courier, monospace; min-height: 300px; max-height: 400px; overflow-y: auto;"
-                                id="dsLogsContainer">
-                                <div class="p-3 small" id="dsLogsList">
-                                    <div class="text-muted italic">Sẵn sàng. Nhấn "Đồng bộ ngay" để bắt đầu...</div>
+                            <div class="card-body p-0 bg-dark text-success"
+                                style="font-family: 'Courier New', monospace; font-size: 0.85rem; height: 350px; overflow-y: auto;">
+                                <div class="p-3" id="dsSyncLog">
+                                    <div class="text-muted fst-italic">Sẵn sàng. Chọn đối tượng và nhấn Bắt đầu để
+                                        sync...</div>
                                 </div>
                             </div>
                         </div>
@@ -455,76 +468,152 @@
     refreshWorkerStatus();
     setInterval(refreshWorkerStatus, 10000);
 
-    // ------ DATASITE LOGIC ------
-    let syncInterval = null;
+    // ------ DEEP SYNC LOGIC (Phase 04) ------
+    let _dsSseSource = null, _dsObjectMap = null;
 
-    async function pollSyncLogs() {
-        const list = document.getElementById('dsLogsList');
-        const live = document.getElementById('syncLiveIndicator');
-        const container = document.getElementById('dsLogsContainer');
-        if (!list) return;
-
-        try {
-            const res = await fetch('/api/datasite/sync_logs');
-            const data = await res.json();
-            if (data.success && data.logs && data.logs.length > 0) {
-                list.innerHTML = data.logs.map(log => `<div class="mb-1">${log}</div>`).join('');
-                if (container) container.scrollTop = container.scrollHeight;
-
-                const lastLog = data.logs[data.logs.length - 1];
-                if (lastLog.includes("HOÀN TẤT") || lastLog.includes("thất bại") || lastLog.includes("thành công")) {
-                    if (syncInterval) {
-                        clearInterval(syncInterval);
-                        syncInterval = null;
-                    }
-                    if (live) live.style.display = 'none';
-                    setTimeout(loadAnomalies, 2000);
-                }
-            }
-        } catch (e) { console.error("Poll logs error:", e); }
+    // Load object map khi vừa vào trang nếu đang ở tab datasite
+    document.addEventListener("DOMContentLoaded", function () {
+        if (document.getElementById('objectMapContainer') && window.location.href.includes('tab=datasite')) {
+            loadObjectMap();
+        }
+    });
+    // Hoặc hook vào tab click
+    const dsTabBtn = document.querySelector('a[href$="tab=datasite"]');
+    if (dsTabBtn) {
+        dsTabBtn.addEventListener('click', function () {
+            if (!_dsObjectMap) loadObjectMap();
+        });
     }
 
-    async function triggerDatasiteSync(event) {
-        const targets = [];
-        if (document.getElementById('chkStation').checked) targets.push('general');
-        if (document.getElementById('chkInfra').checked) targets.push('infrastructure');
-        if (document.getElementById('chkEquipment').checked) targets.push('equipment');
-        if (document.getElementById('chkTelecom').checked) targets.push('telecom_bts');
-
-        if (targets.length === 0) {
-            alert("Vui lòng chọn ít nhất một hạng mục để đồng bộ!");
-            return;
+    async function loadObjectMap() {
+        try {
+            const r = await fetch('/api/datasite/objects_map');
+            const j = await r.json();
+            if (!j.success) throw new Error(j.error || 'Load failed');
+            _dsObjectMap = j.groups;
+            renderObjectMap(j.groups);
+        } catch (e) {
+            document.getElementById('objectMapContainer').innerHTML =
+                '<div class="alert alert-danger mx-3 my-2">Lỗi tải danh sách: ' + e.message + '</div>';
         }
+    }
 
-        const btn = event.target.closest('button');
-        const stContainer = document.getElementById('syncStatus');
-        const live = document.getElementById('syncLiveIndicator');
+    const _clrMap = { primary: '#206bc4', warning: '#f59f00', info: '#17a2b8', secondary: '#6c757d', success: '#2fb344', danger: '#d63939' };
 
-        btn.disabled = true;
-        stContainer.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Đang yêu cầu...';
+    function renderObjectMap(groups) {
+        let h = '<div class="row g-3">';
+        for (const [k, g] of Object.entries(groups)) {
+            const c = _clrMap[g.color] || '#6c757d';
+            h += '<div class="col-md-6"><div class="card border-0 bg-white shadow-none h-100">' +
+                '<div class="card-header fw-bold small py-2" style="border-left:4px solid ' + c + ';background:rgba(0,0,0,.02);">' +
+                '<i class="' + g.icon + ' me-1"></i> ' + g.label + '</div><div class="card-body py-2 px-3">';
+            g.objects.forEach(function (o) {
+                const id = 'dsobj_' + o.name.replace(/[\s()]/g, '_');
+                h += '<div class="form-check mb-1"><input class="form-check-input ds-obj-check" type="checkbox" value="' + o.name + '" id="' + id + '" onchange="updateSyncCount()">' +
+                    '<label class="form-check-label small" for="' + id + '">' + o.label + ' <div class="text-muted" style="font-size:0.7rem;">' + o.name + '</div></label></div>';
+            });
+            h += '</div></div></div>';
+        }
+        h += '</div>';
+        document.getElementById('objectMapContainer').innerHTML = h;
+        updateSyncCount();
+    }
+
+    function updateSyncCount() {
+        const n = document.querySelectorAll('.ds-obj-check:checked').length;
+        document.getElementById('syncCountLabel').textContent = n + ' đối tượng được chọn';
+        document.getElementById('btnStartDeepSync').disabled = (n === 0);
+    }
+    function selectAllObjects() { document.querySelectorAll('.ds-obj-check').forEach(function (cb) { cb.checked = true; }); updateSyncCount(); }
+    function clearAllObjects() { document.querySelectorAll('.ds-obj-check').forEach(function (cb) { cb.checked = false; }); updateSyncCount(); }
+
+    function appendSyncLog(msg, color) {
+        const el = document.getElementById('dsSyncLog');
+        const ts = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        el.innerHTML += '<div style="color:' + (color || '#7ee8a2') + '">[' + ts + '] ' + msg + '</div>';
+        el.scrollTop = el.scrollHeight;
+    }
+
+    function setObjectStatus(name, status) {
+        const id = 'dsitem_' + name.replace(/[\s()]/g, '_');
+        let li = document.getElementById(id);
+        if (!li) {
+            li = document.createElement('li'); li.id = id; li.className = 'list-group-item d-flex justify-content-between align-items-center py-2 small';
+            li.innerHTML = '<span>' + name + '</span><span class="badge" id="' + id + '_bdg"></span>';
+            document.getElementById('dsSyncItemList').appendChild(li);
+        }
+        const bdg = document.getElementById(id + '_bdg');
+        const m = { pending: ['bg-secondary', '⏳ Chờ'], running: ['bg-warning text-dark', '⚙️ Đang xuất'], done: ['bg-success', '✅ Xong'], error: ['bg-danger', '❌ Lỗi'], empty: ['bg-light text-dark', '⚠️ Trống'] };
+        const [cls, text] = m[status] || ['bg-secondary', status];
+        bdg.className = 'badge ' + cls; bdg.textContent = text;
+    }
+
+    async function startDeepSync() {
+        const sel = Array.from(document.querySelectorAll('.ds-obj-check:checked')).map(function (cb) { return cb.value; });
+        if (!sel.length) return;
+
+        if (!confirm('Bạn chuẩn bị đồng bộ ' + sel.length + ' đối tượng. Quá trình có thể mất thời gian. Tiếp tục?')) return;
+
+        document.getElementById('btnStartDeepSync').disabled = true;
+        document.getElementById('dsSyncPanel').style.display = 'block';
+        document.getElementById('dsSyncItemList').innerHTML = '';
+        document.getElementById('dsSyncLog').innerHTML = '';
+        const pb = document.getElementById('dsSyncProgressBar');
+        pb.style.width = '0%'; pb.classList.add('progress-bar-animated'); pb.classList.remove('bg-success'); pb.classList.add('bg-primary');
+        sel.forEach(function (n) { setObjectStatus(n, 'pending'); });
+
+        if (_dsSseSource) _dsSseSource.close();
+        _dsSseSource = new EventSource('/api/smartw/events');
+
+        _dsSseSource.addEventListener('ds_sync_start', function (e) {
+            const d = JSON.parse(e.data);
+            appendSyncLog('🚀 Bắt đầu đồng bộ ' + d.total + ' đối tượng..', '#f6c90e');
+            pb.style.width = '2%';
+        });
+
+        _dsSseSource.addEventListener('ds_sync_progress', function (e) {
+            const d = JSON.parse(e.data);
+            setObjectStatus(d.current_object, 'running');
+            appendSyncLog('[' + d.index + '/' + d.total + '] Đang xuất: ' + d.current_object, '#a8d8ea');
+            const pct = Math.max(d.percent, 5); pb.style.width = pct + '%';
+            document.getElementById('dsSyncPercentLabel').textContent = pct + '%';
+            document.getElementById('dsSyncCurrentLabel').textContent = 'Đang xử lý: ' + d.current_object;
+        });
+
+        _dsSseSource.addEventListener('ds_sync_object_done', function (e) {
+            const d = JSON.parse(e.data); setObjectStatus(d.object, d.count > 0 ? 'done' : 'empty');
+            appendSyncLog(d.message, d.count > 0 ? '#7ee8a2' : '#ffd700');
+        });
+
+        _dsSseSource.addEventListener('ds_sync_object_error', function (e) {
+            const d = JSON.parse(e.data); setObjectStatus(d.object, 'error');
+            appendSyncLog('❌ Lỗi ' + d.object + ': ' + d.error, '#ff6b6b');
+        });
+
+        _dsSseSource.addEventListener('ds_sync_done', function (e) {
+            const d = JSON.parse(e.data);
+            pb.style.width = '100%'; pb.classList.remove('progress-bar-animated', 'bg-primary'); pb.classList.add('bg-success');
+            document.getElementById('dsSyncPercentLabel').textContent = '100%';
+            document.getElementById('dsSyncCurrentLabel').textContent = '✅ Hoàn tất tiến trình!';
+            appendSyncLog('🎉 ' + d.message, '#7ee8a2');
+            (d.errors || []).forEach(function (err) { appendSyncLog('⚠️ ' + err, '#ff6b6b'); });
+            document.getElementById('btnStartDeepSync').disabled = false;
+            _dsSseSource.close(); _dsSseSource = null;
+            setTimeout(loadAnomalies, 2000); // Reload data anomalies if any
+        });
 
         try {
-            const res = await fetch('/api/datasite/sync_real', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ targets: targets })
-            });
-            const data = await res.json();
-            if (data.success) {
-                stContainer.innerHTML = '<i class="fas fa-check text-success"></i> ' + data.message;
-
-                // Start polling logs
-                if (live) live.style.display = 'block';
-                if (syncInterval) clearInterval(syncInterval);
-                syncInterval = setInterval(pollSyncLogs, 2000);
-                pollSyncLogs(); // Initial call
-            } else {
-                stContainer.innerHTML = '<i class="fas fa-times text-danger"></i> ' + data.message;
+            const r = await fetch('/api/datasite/sync/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ objects: sel }) });
+            const j = await r.json();
+            if (!j.success) {
+                appendSyncLog('❌ Khởi động thất bại: ' + (j.error || ''), '#ff6b6b');
+                document.getElementById('btnStartDeepSync').disabled = false;
+                if (_dsSseSource) { _dsSseSource.close(); _dsSseSource = null; }
             }
-        } catch (e) {
-            stContainer.innerHTML = '<i class="fas fa-times text-danger"></i> Lỗi kết nối.';
+        } catch (err) {
+            appendSyncLog('❌ Lỗi kết nối API: ' + err.message, '#ff6b6b');
+            document.getElementById('btnStartDeepSync').disabled = false;
         }
-        btn.disabled = false;
     }
 
     function togglePasswordDs() {

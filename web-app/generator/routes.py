@@ -495,9 +495,15 @@ def update_log(id):
         try:
             t1 = datetime.strptime(gio_bat_dau, '%H:%M')
             t2 = datetime.strptime(gio_ket_thuc, '%H:%M')
+            
             diff = (t2 - t1).total_seconds() / 3600
-            if diff < 0:
+            
+            # If end time is before start time, it's overnight
+            if t2.time() < t1.time():
                 diff += 24  # Overnight
+                if '(Chạy qua đêm)' not in (log.ghi_chu or ''):
+                    log.ghi_chu = f"(Chạy qua đêm) {log.ghi_chu or ''}".strip()
+                    
             log.thoi_gian_hoat_dong = round(diff, 2)
 
             # Recalculate fuel consumption

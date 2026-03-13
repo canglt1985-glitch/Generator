@@ -17,19 +17,29 @@
         <div class="col-auto text-end d-flex gap-2">
             {# --- Tab: Work --- #}
             {% if active_tab|trim == 'work' %}
-            <form action="{{ url_for('daily_work.export_daily_work') }}" method="GET"
-                class="d-flex align-items-center gap-2 m-0 p-0 bg-light rounded-pill px-2 py-1 border d-none d-md-flex">
-                <span class="small text-muted fw-bold ms-1" style="font-size: 0.75rem;">XUẤT:</span>
-                <input type="date" name="start_date" class="form-control form-control-sm border-0 bg-transparent"
-                    value="{{ start_date or now_date }}" style="width: 110px; font-size: 0.8rem;" required
-                    title="Từ ngày">
-                <span class="text-muted small">→</span>
-                <input type="date" name="end_date" class="form-control form-control-sm border-0 bg-transparent"
-                    value="{{ end_date or now_date }}" style="width: 110px; font-size: 0.8rem;" required
-                    title="Đến ngày">
-                <button type="submit" class="btn btn-sm btn-success rounded-pill px-3">
-                    <i class="fas fa-file-excel me-1"></i>Excel
-                </button>
+            <form action="{{ url_for('daily_work.daily_work') }}" method="GET"
+                class="d-flex flex-wrap align-items-center gap-2 m-0 p-0 bg-light rounded px-2 py-1 border mt-2 mt-md-0 w-100 w-md-auto">
+                <input type="hidden" name="tab" value="work">
+                <span class="small text-muted fw-bold ms-1 d-none d-sm-inline" style="font-size: 0.75rem;">LỌC:</span>
+                <div class="d-flex align-items-center gap-1 flex-grow-1 flex-sm-grow-0">
+                    <input type="date" name="start_date"
+                        class="form-control form-control-sm border-0 bg-transparent px-1"
+                        value="{{ start_date or now_date }}" style="width: 100px; font-size: 0.8rem;" required
+                        title="Từ ngày">
+                    <span class="text-muted small">→</span>
+                    <input type="date" name="end_date" class="form-control form-control-sm border-0 bg-transparent px-1"
+                        value="{{ end_date or now_date }}" style="width: 100px; font-size: 0.8rem;" required
+                        title="Đến ngày">
+                </div>
+                <div class="d-flex gap-1 ms-auto ms-sm-0">
+                    <button type="submit" class="btn btn-sm btn-info px-2 text-white fw-bold">
+                        <i class="fas fa-filter d-sm-none"></i><span class="d-none d-sm-inline">Xem</span>
+                    </button>
+                    <button type="submit" formaction="{{ url_for('daily_work.export_daily_work') }}"
+                        class="btn btn-sm btn-success px-2 fw-bold">
+                        <i class="fas fa-file-excel d-sm-none"></i><span class="d-none d-sm-inline">Excel</span>
+                    </button>
+                </div>
             </form>
 
             <button type="button" class="btn btn-sm btn-primary rounded-pill px-4" data-bs-toggle="modal"
@@ -127,9 +137,9 @@
 <!-- TAB: CÔNG VIỆC -->
 {% if active_tab == 'work' %}
 <div class="d-flex align-items-center gap-2 mb-2">
-    <span class="badge bg-blue-lt">📋 Tuần {{ start_date[8:] }}/{{ start_date[5:7] }} → {{ end_date[8:] }}/{{
-        end_date[5:7] }}</span>
-    <span class="small text-muted">{{ works|length }} công việc</span>
+    <span class="badge bg-blue-lt">📋 {{ start_date[8:10] }}/{{ start_date[5:7] }}/{{ start_date[0:4] }} → {{
+        end_date[8:10] }}/{{ end_date[5:7] }}/{{ end_date[0:4] }}</span>
+    <span class="small text-muted fw-bold">{{ works|length }} công việc</span>
 </div>
 <div class="card shadow-sm">
     <div class="table-responsive">

@@ -290,14 +290,14 @@ async def _get_or_create_scraper(username: str, password: str):
 
 def _run_async(coro_func):
     """Run an async function in a thread (safe from Flask/APScheduler context).
-    Timeout is 300s to allow for browser crash + retry scenarios.
+    Timeout is 1200s to allow for long DataSite deep sync operations.
     """
     import concurrent.futures
     try:
         loop = asyncio.get_running_loop()
         with concurrent.futures.ThreadPoolExecutor() as executor:
             future = executor.submit(asyncio.run, coro_func())
-            return future.result(timeout=300)
+            return future.result(timeout=1200)
     except RuntimeError:
         return asyncio.run(coro_func())
 
@@ -684,31 +684,39 @@ def run_mfd_import_poll(target_date: str = None):
                                  'duplicates': 0, 'updated': 0, 'errors': []}
                 logger.info(f'SmartW Worker: MFD — no events for {date_label}')
 
-            # Step 3: Also scrape the day BEFORE target to catch overnight events
-            # that started on D-1 and ended on D (now completed with end time)
+            # Step 3: Also scrape the past 3 days to catch overnight events
+            # that started previously and ended on D (now completed with end time)
             try:
                 if target_date:
-                    prev_dt = datetime.strptime(target_date, '%d/%m/%Y') - timedelta(days=1)
+                    base_dt = datetime.strptime(target_date, '%d/%m/%Y')
                 else:
-                    # Default target is yesterday, so prev is day-before-yesterday
-                    prev_dt = datetime.now() - timedelta(days=2)
-                prev_date_str = prev_dt.strftime('%d/%m/%Y')
+                    base_dt = datetime.now() - timedelta(days=1)
+                
+                total_updated = 0
+                for d in range(1, 4):  # Check 3 days back
+                    prev_dt = base_dt - timedelta(days=d)
+                    prev_date_str = prev_dt.strftime('%d/%m/%Y')
 
-                logger.info(f'SmartW Worker: MFD also checking {prev_date_str} for overnight updates...')
+                    logger.info(f'SmartW Worker: MFD also checking {prev_date_str} for overnight updates...')
 
-                async def _scrape_prev():
-                    scraper = await _get_or_create_scraper(config['username'], config['password'])
-                    if scraper:
-                        await scraper._ensure_login()
-                        return await scraper.scrape_mfd_reports(prev_date_str)
-                    return []
+                    async def _scrape_prev(date_str=prev_date_str):
+                        scraper = await _get_or_create_scraper(config['username'], config['password'])
+                        if scraper:
+                            await scraper._ensure_login()
+                            return await scraper.scrape_mfd_reports(date_str)
+                        return []
 
-                prev_data = _run_async(_scrape_prev)
-                if prev_data:
-                    prev_updated = update_incomplete_records(prev_data)
-                    if prev_updated:
-                        logger.info(f'SmartW Worker: MFD updated {prev_updated} records from {prev_date_str}')
-                        import_result['updated'] = import_result.get('updated', 0) + prev_updated
+                    prev_data = _run_async(_scrape_prev)
+                    if prev_data:
+                        from generator.mfd_import import update_incomplete_records
+                        prev_updated = update_incomplete_records(prev_data)
+                        if prev_updated:
+                            logger.info(f'SmartW Worker: MFD updated {prev_updated} records from {prev_date_str}')
+                            total_updated += prev_updated
+                
+                if total_updated:
+                    import_result['updated'] = import_result.get('updated', 0) + total_updated
+
             except Exception as prev_err:
                 logger.warning(f'SmartW Worker: MFD prev-day scrape error (non-critical): {prev_err}')
 
@@ -728,3 +736,266 @@ def run_mfd_import_poll(target_date: str = None):
 
     return import_result
 
+
+# ── DataSite Export Sync Worker ───────────────────────────────────
+# Phase 03: Background job that uses the DataSite Export modal to
+# bulk-download data by object name and upsert into DB.
+# ─────────────────────────────────────────────────────────────────
+
+# Track if DataSite deep sync is currently running
+_datasite_sync_running = False
+_datasite_sync_status: dict = {}  # Live progress dict
+
+
+def run_datasite_export_sync(objects: list, area: str = None):
+    """
+    [Phase 03 - Deep Sync]
+    Chạy DataSite Export Sync trong luồng nền.
+    Broadcast tiến độ qua SSE cho mỗi đối tượng hoàn thành.
+
+    Args:
+        objects: List tên đối tượng từ EXPORT_OBJECT_MAP
+                 VD: ['PHÒNG MÁY', 'MÁY PHÁT ĐIỆN']
+        area:    Khu vực (optional, mặc định dùng unit đã select trong SDM)
+    """
+    global _datasite_sync_running, _datasite_sync_status
+
+    if _datasite_sync_running:
+        logger.warning('DataSite Export Sync: Đang chạy, bỏ qua yêu cầu mới.')
+        return
+
+    if not objects:
+        logger.warning('DataSite Export Sync: Không có đối tượng nào được cung cấp.')
+        return
+
+    _datasite_sync_running = True
+    total = len(objects)
+    _datasite_sync_status = {
+        'running': True,
+        'total': total,
+        'done': 0,
+        'current': None,
+        'results': {},
+        'errors': [],
+        'started_at': datetime.now().isoformat()
+    }
+
+    _sse_broadcast('ds_sync_start', {
+        'total': total,
+        'objects': objects,
+        'message': f'Bắt đầu đồng bộ {total} đối tượng DataSite...'
+    })
+
+    async def _do_export_sync():
+        from models import SystemConfig
+        from datasite_scraper import DataSiteScraper
+
+        conf_user = SystemConfig.query.filter_by(key='datasite_username').first()
+        conf_pass = SystemConfig.query.filter_by(key='datasite_password').first()
+        user = conf_user.value if conf_user and conf_user.value else os.getenv('DATASITE_USER', '')
+        pwd = conf_pass.value if conf_pass and conf_pass.value else os.getenv('DATASITE_PWD', '')
+
+        if not user or not pwd:
+            logger.error('DataSite Export Sync: Chưa cấu hình tài khoản DataSite.')
+            _datasite_sync_status['errors'].append('Chưa cấu hình tài khoản DataSite.')
+            return
+
+        scraper = DataSiteScraper(user, pwd)
+        try:
+            await scraper.start()
+            await scraper.login()
+
+            for i, obj_name in enumerate(objects):
+                _datasite_sync_status['current'] = obj_name
+                _sse_broadcast('ds_sync_progress', {
+                    'current_object': obj_name,
+                    'index': i + 1,
+                    'total': total,
+                    'percent': round((i / total) * 100),
+                    'message': f'[{i + 1}/{total}] Đang xuất: {obj_name}...'
+                })
+
+                try:
+                    row_dict = await scraper.scrape_export_data([obj_name], area=area)
+                    rows = row_dict.get(obj_name, [])
+
+                    if rows:
+                        upserted = upsert_datasite_rows(obj_name, rows)
+                        _datasite_sync_status['results'][obj_name] = upserted
+                        _sse_broadcast('ds_sync_object_done', {
+                            'object': obj_name,
+                            'count': upserted,
+                            'message': f'✅ {obj_name}: {upserted} bản ghi.'
+                        })
+                    else:
+                        _datasite_sync_status['results'][obj_name] = 0
+                        _sse_broadcast('ds_sync_object_done', {
+                            'object': obj_name,
+                            'count': 0,
+                            'message': f'⚠️ {obj_name}: Không có dữ liệu.'
+                        })
+
+                except Exception as obj_err:
+                    err_msg = f'❌ {obj_name}: {obj_err}'
+                    logger.exception(f'DataSite Export Sync: {err_msg}')
+                    _datasite_sync_status['errors'].append(err_msg)
+                    _sse_broadcast('ds_sync_object_error', {
+                        'object': obj_name,
+                        'error': str(obj_err)
+                    })
+
+                _datasite_sync_status['done'] = i + 1
+
+        except Exception as e:
+            import traceback
+            logger.error(f'DataSite Export Sync: Critical error: {e}')
+            logger.error(traceback.format_exc())
+            _datasite_sync_status['errors'].append(f'Critical: {e}')
+            _sse_broadcast('ds_sync_object_error', {
+                'object': 'System',
+                'error': str(e)
+            })
+        finally:
+            await scraper.stop()
+            
+            global _datasite_sync_running
+            _datasite_sync_running = False
+            _datasite_sync_status['running'] = False
+            _datasite_sync_status['current'] = None
+            _datasite_sync_status['finished_at'] = datetime.now().isoformat()
+            
+            total_upserted = sum(_datasite_sync_status['results'].values())
+            _sse_broadcast('ds_sync_done', {
+                'total_objects': total,
+                'total_upserted': total_upserted,
+                'errors': _datasite_sync_status['errors'],
+                'message': f'Hoàn tất! Đã đồng bộ {total_upserted} bản ghi từ {total} đối tượng.'
+            })
+            logger.info(
+                f'DataSite Export Sync: Complete — {total_upserted} rows upserted from {total} objects.'
+            )
+
+    try:
+        _run_async(_do_export_sync)
+    except Exception as e:
+        logger.error(f'DataSite Export Sync: _run_async error: {e}')
+        _datasite_sync_status['errors'].append(str(e))
+        _datasite_sync_running = False
+        _datasite_sync_status['running'] = False
+        _sse_broadcast('ds_sync_done', {'message': f'Error starting background task: {e}'})
+
+
+def get_datasite_sync_status() -> dict:
+    """Trả về trạng thái hiện tại của DataSite Export Sync job."""
+    return dict(_datasite_sync_status)
+
+
+def upsert_datasite_rows(object_name: str, rows: list) -> int:
+    """
+    [Phase 03 - Deep Sync]
+    Chèn hoặc cập nhật (Upsert) list rows vào DB tương ứng theo EXPORT_OBJECT_MAP.
+    Dùng merge strategy: tìm record theo (site_id + loai + subcategory), nếu có thì update, không có thì insert.
+
+    Returns:
+        int: Số bản ghi đã xử lý (insert + update)
+    """
+    from datasite_sync_config import EXPORT_OBJECT_MAP
+    from extensions import db
+    from string import capwords
+
+    cfg = EXPORT_OBJECT_MAP.get(object_name)
+    if not cfg:
+        logger.warning(f'upsert_datasite_rows: Không tìm thấy config cho "{object_name}"')
+        return 0
+
+    db_table = cfg.get('db_table')  # 'infrastructure' / 'equipment' / 'telecom'
+    loai = cfg.get('loai', '')
+    sync_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+    # Import model tương ứng
+    model_map = {
+        'infrastructure': None,
+        'equipment': None,
+        'telecom': None,
+    }
+    try:
+        from models import DsInfrastructure, DsEquipment, DsTelecom
+        model_map['infrastructure'] = DsInfrastructure
+        model_map['equipment'] = DsEquipment
+        model_map['telecom'] = DsTelecom
+    except ImportError as ie:
+        logger.error(f'upsert_datasite_rows: Import models failed: {ie}')
+        return 0
+
+    Model = model_map.get(db_table)
+    if not Model:
+        logger.warning(f'upsert_datasite_rows: db_table "{db_table}" không hợp lệ')
+        return 0
+
+    upserted = 0
+    try:
+        for row in rows:
+            site_id = row.get('site_id', '').upper().strip()
+            if not site_id:
+                continue
+
+            extra_data = row.get('extra_data') or {}
+
+            # Tìm record hiện có theo (site_id + loai + subcategory)
+            existing = Model.query.filter_by(
+                site_id=site_id,
+                loai=loai,
+                subcategory=object_name
+            ).first()
+
+            if existing:
+                # Update
+                if row.get('serial') is not None:
+                    existing.serial = row.get('serial')
+                if row.get('trang_thai') is not None:
+                    existing.trang_thai = row.get('trang_thai')
+                if row.get('han_bao_hanh') is not None:
+                    existing.han_bao_hanh = row.get('han_bao_hanh')
+                if row.get('han_bao_duong') is not None:
+                    existing.han_bao_duong = row.get('han_bao_duong')
+                if row.get('ngay_su_dung') is not None and hasattr(existing, 'ngay_su_dung'):
+                    existing.ngay_su_dung = row.get('ngay_su_dung')
+                if row.get('nhan_hieu') is not None and hasattr(existing, 'nhan_hieu'):
+                    existing.nhan_hieu = row.get('nhan_hieu')
+                # Merge extra_data
+                if extra_data:
+                    old_extra = existing.extra_data or {}
+                    old_extra.update(extra_data)
+                    existing.extra_data = old_extra
+                existing.sync_date = sync_date
+            else:
+                # Insert
+                kwargs = {
+                    'site_id': site_id,
+                    'loai': loai,
+                    'subcategory': object_name,
+                    'serial': row.get('serial'),
+                    'trang_thai': row.get('trang_thai'),
+                    'han_bao_hanh': row.get('han_bao_hanh'),
+                    'han_bao_duong': row.get('han_bao_duong'),
+                    'extra_data': extra_data if extra_data else None,
+                    'sync_date': sync_date,
+                }
+                # Thêm các trường đặc biệt nếu Model có
+                if hasattr(Model, 'nhan_hieu') and row.get('nhan_hieu'):
+                    kwargs['nhan_hieu'] = row.get('nhan_hieu')
+                if hasattr(Model, 'ngay_su_dung') and row.get('ngay_su_dung'):
+                    kwargs['ngay_su_dung'] = row.get('ngay_su_dung')
+
+                db.session.add(Model(**kwargs))
+
+            upserted += 1
+
+        db.session.commit()
+        logger.info(f'upsert_datasite_rows: Upserted {upserted} rows for "{object_name}" ({loai})')
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f'upsert_datasite_rows: DB commit failed for "{object_name}": {e}')
+        upserted = 0
+
+    return upserted

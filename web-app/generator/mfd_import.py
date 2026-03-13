@@ -61,21 +61,28 @@ def classify_event(start_dt: datetime, end_dt: datetime, duration_min: int) -> s
 
 # ── Price Calculation ────────────────────────────────────────────
 
-def get_pretax_price(fuel_type: str) -> float:
-    """Get PVOil price ÷ 1.08 (trước VAT 8%).
+def get_pretax_price(fuel_type: str, date_str: str = None) -> float:
+    """Get PVOil price for a specific date (or current if no date given).
+
+    Uses historical price table when date_str is provided, so backfilled
+    records get the correct price for their actual run date.
 
     Args:
         fuel_type: 'Xăng' or 'Dầu' (from GeneralInfo.loai_nhien_lieu)
+        date_str: Log date in 'YYYY-MM-DD' format (optional)
     Returns:
         Price per liter (trước VAT), rounded to integer.
     """
-    from fuel_price import get_fuel_prices
-    prices = get_fuel_prices()
-
-    if fuel_type and 'Xăng' in fuel_type:
-        raw = prices.get('xang_ron95', 0)
+    if date_str:
+        from fuel_price import get_fuel_price_for_date
+        raw = get_fuel_price_for_date(date_str, fuel_type)
     else:
-        raw = prices.get('dau_do', 0)
+        from fuel_price import get_fuel_prices
+        prices = get_fuel_prices()
+        if fuel_type and 'Xăng' in fuel_type:
+            raw = prices.get('xang_ron95', 0)
+        else:
+            raw = prices.get('dau_do', 0)
 
     return round(raw / 1.08) if raw else 0
 
@@ -178,6 +185,15 @@ def update_incomplete_records(raw_data: list[dict]) -> int:
         thanh_tien = round(nhien_lieu * don_gia)
 
         existing.gio_ket_thuc = gio_kt
+        if gio_kt and gio_bd:
+            try:
+                t1 = datetime.strptime(gio_bd, '%H:%M').time()
+                t2 = datetime.strptime(gio_kt, '%H:%M').time()
+                if t2 < t1:
+                    if '(Chạy qua đêm)' not in (existing.ghi_chu or ''):
+                        existing.ghi_chu = f"(Chạy qua đêm) {existing.ghi_chu or ''}".strip()
+            except ValueError:
+                pass
         existing.thoi_gian_hoat_dong = hours
         existing.nhien_lieu_tieu_hao = nhien_lieu
         existing.thanh_tien = thanh_tien
@@ -281,7 +297,7 @@ def import_mfd_data(raw_data: list[dict]) -> dict:
         # 5. Calculate
         hours = round(duration_min / 60, 2)
         nhien_lieu = round(hours * dinh_muc, 2)
-        don_gia = get_pretax_price(loai_nhien_lieu)
+        don_gia = get_pretax_price(loai_nhien_lieu, date_str=ngay)
         thanh_tien = round(nhien_lieu * don_gia)
 
         # 6. Create GeneratorLog record
@@ -299,7 +315,7 @@ def import_mfd_data(raw_data: list[dict]) -> dict:
             don_gia=don_gia,
             thanh_tien=thanh_tien,
             nhien_lieu=loai_nhien_lieu,
-            ghi_chu='',
+            ghi_chu='(Chạy qua đêm)' if gio_kt and gio_bd and datetime.strptime(gio_kt, '%H:%M').time() < datetime.strptime(gio_bd, '%H:%M').time() else '',
             ket_qua_doi_soat='',
             # Auto-import fields
             status=status,
@@ -321,6 +337,8 @@ def import_mfd_data(raw_data: list[dict]) -> dict:
     # Commit all at once
     try:
         db.session.commit()
+        # After successful import & commit, resolve overlapping logs for the affected days
+        resolve_overlapping_logs(raw_data)
         logger.info(f'MFD Import: {result["imported"]} imported, {result["pending"]} pending, '
                      f'{result["skipped"]} skipped, {result["duplicates"]} duplicates')
     except Exception as e:
@@ -329,3 +347,102 @@ def import_mfd_data(raw_data: list[dict]) -> dict:
         result['errors'].append(f'DB error: {str(e)}')
 
     return result
+
+
+def resolve_overlapping_logs(raw_data: list[dict]) -> int:
+    """Resolve overlapping generator logs by keeping the longest one.
+    
+    If a station has multiple logs on the same day that overlap in time,
+    keep the one with the longest duration and delete the others.
+    
+    Returns: number of deleted overlapping records.
+    """
+    from extensions import db
+    from models import GeneratorLog
+    from datetime import datetime, timedelta
+    
+    # Collect unique dates affected by this import
+    affected_dates = set()
+    for record in raw_data:
+        start_dt = parse_smartw_date(record.get('sdate'))
+        if start_dt:
+            affected_dates.add(start_dt.strftime('%Y-%m-%d'))
+            
+    if not affected_dates:
+        return 0
+        
+    deleted_count = 0
+    
+    # Process day by day to keep memory low
+    for target_date in affected_dates:
+        # Get all logs for this date
+        logs = GeneratorLog.query.filter_by(ngay_van_hanh=target_date).all()
+        
+        # Group logs by station
+        by_station = {}
+        for log in logs:
+            if not log.gio_bat_dau or not log.thoi_gian_hoat_dong:
+                continue
+                
+            site_id = log.id_tram
+            if site_id not in by_station:
+                by_station[site_id] = []
+                
+            # Calculate absolute start and end datetimes for proper overlap checking
+            try:
+                start_dt = datetime.strptime(f"{log.ngay_van_hanh} {log.gio_bat_dau}", "%Y-%m-%d %H:%M")
+                
+                # Use duration to calculate end (more reliable than string parsing for edge cases)
+                duration_hours = float(log.thoi_gian_hoat_dong)
+                end_dt = start_dt + timedelta(hours=duration_hours)
+                
+                by_station[site_id].append({
+                    'log': log,
+                    'start_dt': start_dt,
+                    'end_dt': end_dt,
+                    'duration': duration_hours
+                })
+            except Exception as e:
+                logger.warning(f"Error parsing times for log {log.id}: {e}")
+                
+        # Resolve overlaps per station
+        for site_id, station_logs in by_station.items():
+            if len(station_logs) < 2:
+                continue
+                
+            # Sort by duration, longest first
+            station_logs.sort(key=lambda x: x['duration'], reverse=True)
+            
+            kept_logs = []
+            
+            for item in station_logs:
+                is_overlapping = False
+                
+                # Check if this log overlaps with any log we've already decided to keep
+                for kept in kept_logs:
+                    # Overlap condition: max(start1, start2) < min(end1, end2)
+                    overlap_start = max(item['start_dt'], kept['start_dt'])
+                    overlap_end = min(item['end_dt'], kept['end_dt'])
+                    
+                    if overlap_start < overlap_end:
+                        is_overlapping = True
+                        break
+                        
+                if is_overlapping:
+                    # This log overlaps with a longer one we are keeping, so delete it
+                    logger.info(f"Deleting overlapping log {item['log'].id} for {site_id} (duration: {item['duration']}h)")
+                    db.session.delete(item['log'])
+                    deleted_count += 1
+                else:
+                    # Keep this log
+                    kept_logs.append(item)
+                    
+    if deleted_count > 0:
+        try:
+            db.session.commit()
+            logger.info(f"Resolved overlapping logs: deleted {deleted_count} shorter records.")
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Failed to commit overlapping logs deletion: {e}")
+            
+    return deleted_count

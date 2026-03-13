@@ -63,6 +63,27 @@ class GeneratorLog(db.Model):
     source = db.Column(db.String(20), default='manual')      # manual / smartw
     smartw_alarm_id = db.Column(db.String(100))               # Unique alarm ID (chống duplicate)
 
+    @property
+    def end_datetime_formatted(self):
+        if not self.gio_ket_thuc or not self.ngay_van_hanh:
+            return self.gio_ket_thuc or '--'
+        try:
+            from datetime import datetime, timedelta
+            start_dt = datetime.strptime(f"{self.ngay_van_hanh} {self.gio_bat_dau}", "%Y-%m-%d %H:%M")
+            start_time = datetime.strptime(self.gio_bat_dau, "%H:%M").time()
+            end_time = datetime.strptime(self.gio_ket_thuc, "%H:%M").time()
+            end_dt = datetime.combine(start_dt.date(), end_time)
+            
+            # If end time is earlier in the day than start time, it's likely overnight
+            if end_time < start_time:
+                end_dt += timedelta(days=1)
+                return end_dt.strftime("%d/%m/%Y %H:%M")
+            else:
+                return end_dt.strftime("%H:%M")
+        except Exception:
+            return self.gio_ket_thuc
+
+
 
 class FuelLedger(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -226,7 +247,8 @@ class DsInfrastructure(db.Model):
     __tablename__ = 'ds_infrastructure'
     id = db.Column(db.Integer, primary_key=True)
     site_id = db.Column(db.String(50), nullable=False, index=True)
-    loai = db.Column(db.String(50), nullable=False)  # COT_ANTEN, PHONG_MAY, PHONG_MPD
+    loai = db.Column(db.String(50), nullable=False)  # Nhóm UI: COT_ANTEN, PHONG_MAY, PHONG_MPD
+    subcategory = db.Column(db.String(100))          # Đối tượng thực tế từ DataSite Export (VD: 'PHÒNG MÁY')
     # Cột cứng (áp dụng cho các loại)
     serial = db.Column(db.String(200))
     trang_thai = db.Column(db.String(100))
@@ -251,7 +273,8 @@ class DsEquipment(db.Model):
     __tablename__ = 'ds_equipments'
     id = db.Column(db.Integer, primary_key=True)
     site_id = db.Column(db.String(50), nullable=False, index=True)
-    loai = db.Column(db.String(50), nullable=False)  # MAY_LANH, MAY_PHAT, TU_NGUON, ACCU, SOLAR, PCCC
+    loai = db.Column(db.String(50), nullable=False)  # Nhóm UI: MAY_LANH, MAY_PHAT, TU_NGUON...
+    subcategory = db.Column(db.String(100))          # Đối tượng thực tế từ DataSite Export (VD: 'MÁY PHÁT ĐIỆN')
     # Cột cứng (chung cho tất cả thiết bị)
     nhan_hieu = db.Column(db.String(200))
     serial = db.Column(db.String(200))
@@ -279,7 +302,8 @@ class DsTelecom(db.Model):
     __tablename__ = 'ds_telecom'
     id = db.Column(db.Integer, primary_key=True)
     site_id = db.Column(db.String(50), nullable=False, index=True)
-    loai = db.Column(db.String(50), nullable=False)  # BTS_3G, BTS_4G, DATA_CELL, THIET_BI_VT, TRUYEN_DAN, KIEM_DINH
+    loai = db.Column(db.String(50), nullable=False)  # Nhóm UI: BTS_3G, DATA_CELL, THIET_BI_VT, TRUYEN_DAN...
+    subcategory = db.Column(db.String(100))          # Đối tượng thực tế từ DataSite Export (VD: 'THIẾT BỊ TRUYỀN DẪN METRO')
     # Cột cứng
     serial = db.Column(db.String(200))
     trang_thai = db.Column(db.String(100))

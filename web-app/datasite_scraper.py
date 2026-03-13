@@ -76,59 +76,93 @@ class DataSiteScraper:
         """Phase 1: Login."""
         try:
             await self._log("Đang đăng nhập vào DataSite...")
-            await self._page.goto(DATASITE_URL)
-            await self._page.fill('input[name="username"]', self.username)
-            await self._page.fill('input[name="password"]', self.password)
-            await self._page.click('button[type="submit"]')
-            await self._page.wait_for_selector('text="TRANG CHỦ"', timeout=30000)
-            self._logged_in = True
-            await self._log("Đăng nhập thành công.")
+            await self._page.goto(DATASITE_URL, wait_until="networkidle")
+            
+            is_sso = "auth-sso" in self._page.url
+            if not is_sso and "@mobifone.vn" in self.username:
+                sso_link = await self._page.query_selector('a:has-text("Đăng nhập bằng SSO")')
+                if sso_link:
+                    await self._log("Tài khoản @mobifone.vn: Đang chuyển hướng sang SSO...")
+                    await sso_link.click()
+                    await self._page.wait_for_load_state("networkidle")
+                    is_sso = True
+                    
+            if is_sso:
+                await self._log("Điền thông tin SSO...")
+                await self._page.fill('input[name="username"]', self.username)
+                await self._page.fill('input[name="password"]', self.password)
+                await self._page.click('input[type="submit"]')
+            else:
+                await self._log("Điền thông tin đăng nhập DataSite nội bộ...")
+                await self._page.fill('input[ng-model="modelName"]', self.username)
+                await self._page.fill('input[ng-model="modelPwd"]', self.password)
+                await self._page.evaluate('document.querySelector(\'input[ng-model="modelName"]\').dispatchEvent(new Event("input"))')
+                await self._page.evaluate('document.querySelector(\'input[ng-model="modelPwd"]\').dispatchEvent(new Event("input"))')
+                await self._page.click('button[type="submit"]', force=True)
+
+            # Wait for navigation or API auth
+            await self._page.wait_for_timeout(3000)
+            await self._page.wait_for_load_state("networkidle")
+            
+            # Check auth success: The Angular Header removes 'ng-hide' when logged in
+            try:
+                await self._page.wait_for_selector('.page-header.navbar:not(.ng-hide)', timeout=15000)
+                self._logged_in = True
+                await self._log("Đăng nhập thành công.")
+            except Exception:
+                raise Exception("Không thể đăng nhập. Vui lòng kiểm tra lại tài khoản/mật khẩu.")
         except Exception as e:
             # Fallback check
-            if await self._page.query_selector('text="TỔ TRƯỞNG"'):
+            if await self._page.query_selector('.page-header.navbar:not(.ng-hide)'):
                 self._logged_in = True
                 await self._log("Đăng nhập thành công (Dùng cache/session).")
             else:
                 await self._log(f"Đăng nhập thất bại: {str(e)}")
-                raise Exception("Login failed")
+                raise Exception(f"Login failed: {str(e)}")
 
     async def goto_sdm(self):
         """Navigate to SDM and expand tree to 'TỔ Long Khánh'."""
         logger.info("DataSite Scraper: Navigating to SDM...")
         await self._page.goto(f"{DATASITE_URL}/#/sdm")
-        # Wait for tree view (using input placeholder instead of text to avoid encoding issues)
+        # Wait for tree view
         await self._page.wait_for_selector('input[placeholder*="Tìm kiếm"]', timeout=30000)
+        await asyncio.sleep(3) # wait for tree to fully load
         
         # Click to expand TỈNH Đồng Nai and select TỔ Long Khánh
-        # Use javascript evaluation to find and click nodes by text
         await self._page.evaluate('''() => {
             const listItems = Array.from(document.querySelectorAll('li, div, span, a'));
             
             // 1. Expand TỈNH Đồng Nai
             const dnNode = listItems.find(el => el.textContent && el.textContent.includes('TỈNH Đồng Nai') && !el.textContent.includes('Kho'));
             if (dnNode) {
-                // Find nearest expand icon (often an i or span nearby)
-                const expandIcon = dnNode.closest('li, div').querySelector('.fa-plus, .tree-icon, i');
-                if (expandIcon) expandIcon.click();
-                else dnNode.click(); 
+                const parent = dnNode.closest('li');
+                // Check if already expanded (look for minus icon or expanded class)
+                const isExpanded = parent && (parent.querySelector('.fa-minus') || parent.classList.contains('tree-expanded'));
+                
+                if (!isExpanded) {
+                    const expandIcon = parent ? parent.querySelector('.fa-plus, .tree-icon') : null;
+                    if (expandIcon) expandIcon.click();
+                    else dnNode.click(); 
+                }
             }
         }''')
         
         await asyncio.sleep(2) # wait for tree to expand
         
-        # 2. Click TỔ Long Khánh using Playwright text selector
+        # 2. Click TỔ Long Khánh
         logger.info("DataSite Scraper: Selecting TỔ Long Khánh...")
         try:
-            await self._page.click('text="TỔ Long Khánh"')
+            await self._page.click('text="TỔ Long Khánh"', timeout=5000)
         except:
-            # Fallback if text is split
             await self._page.evaluate('''() => {
                 const nodes = Array.from(document.querySelectorAll('.tree-node, .tree-title, span, a'));
                 const target = nodes.find(n => n.textContent && n.textContent.includes('TỔ Long Khánh'));
                 if (target) target.click();
             }''')
         
-        await asyncio.sleep(2) # wait for right pane to load
+        await asyncio.sleep(3) # wait for right pane to load
+        await self._page.screenshot(path='tmp/debug_sdm_after_selection.png')
+        logger.info("DataSite Scraper: SDM area selected. Captured tmp/debug_sdm_after_selection.png")
 
     async def download_export_js(self, js_eval: str, filename_prefix: str):
         """Trigger a download using JS evaluation and return the local path."""
@@ -408,6 +442,281 @@ class DataSiteScraper:
         
         return results
 
+    async def scrape_export_data(self, object_names: list, area: str = None) -> dict:
+        """
+        [Phase 03 - Deep Sync]
+        Sử dụng tính năng 'Xuất dữ liệu tài sản' trên DataSite để bulk-export
+        từng Đối tượng và parse file Excel về dict.
+
+        Args:
+            object_names: List tên đối tượng CHÍNH XÁC theo EXPORT_OBJECT_MAP
+                          VD: ['PHÒNG MÁY', 'MÁY PHÁT ĐIỆN']
+            area:         Khu vực (không dùng nếu export theo unit đã select)
+
+        Returns:
+            dict: { object_name: [list of row dicts] }
+        """
+        from datasite_sync_config import EXPORT_OBJECT_MAP
+        results = {}
+
+        # Đảm bảo đang ở đúng trang SDM và đã select unit
+        await self.goto_sdm()
+
+        for obj_name in object_names:
+            cfg = EXPORT_OBJECT_MAP.get(obj_name)
+            if not cfg:
+                await self._log(f"⚠️  Bỏ qua '{obj_name}': Không có trong EXPORT_OBJECT_MAP.")
+                continue
+
+            await self._log(f"📤 Đang xuất đối tượng: {obj_name} ...")
+            try:
+                filepath = await self._export_object_from_modal(obj_name)
+                if not filepath:
+                    await self._log(f"❌ Không tải được file cho '{obj_name}'.")
+                    results[obj_name] = []
+                    continue
+
+                rows = parse_exported_excel(filepath, cfg)
+                results[obj_name] = rows
+                await self._log(f"✅ '{obj_name}': {len(rows)} bản ghi.")
+
+                # Cleanup file tạm
+                try:
+                    os.remove(filepath)
+                except Exception:
+                    pass
+
+            except Exception as e:
+                await self._log(f"❌ Lỗi khi xuất '{obj_name}': {e}")
+                results[obj_name] = []
+
+        return results
+
+    async def _export_object_from_modal(self, object_name: str) -> str | None:
+        """
+        Mở modal 'Xuất dữ liệu tài sản', chọn đúng đối tượng trong dropdown,
+        bấm Xuất dữ liệu và chờ file tải về.
+
+        Selectors đã xác minh qua live browser debug (2026-03-11):
+        - Tab Tài sản: .nav-tabs a:has-text("Tài sản")
+        - Nút mở modal: button.btn-primary / button:has-text("Xuất dữ liệu tài sản")
+        - Modal container: .modal.in hoặc .modal[style*="display: block"]
+        - Dropdown: select.form-control đầu tiên (có placeholder "Chọn đối tượng")
+        - Nút xuất trong modal: button.btn.green-meadow / button:has-text("Xuất dữ liệu")
+        """
+        safe_prefix = object_name.replace(' ', '_').replace('/', '-')
+        try:
+            # 1. Click tab Tài sản
+            await self._log(f"   → Chuyển sang tab Tài sản...")
+            try:
+                tab = self._page.locator('.nav-tabs a, .nav li a').filter(has_text='Tài sản').first
+                if await tab.count() > 0:
+                    await tab.click()
+                else:
+                    await self._page.evaluate('''() => {
+                        const tabs = Array.from(document.querySelectorAll('a'));
+                        const t = tabs.find(el => el.textContent && el.textContent.trim() === 'Tài sản');
+                        if (t) t.click();
+                    }''')
+            except Exception:
+                pass
+            await asyncio.sleep(2)
+
+            # 2. Click nút "Xuất dữ liệu tài sản" (xanh lá) để mở modal
+            await self._log(f"   → Click nút 'Xuất dữ liệu tài sản'...")
+            
+            # Đợi một chút để AJAX load các nút của tab Tài sản
+            await asyncio.sleep(2)
+            
+            clicked = False
+            # Dùng selector chính xác duy nhất để tránh click nhầm "Xuất báo cáo tổng hợp" (nút xanh dương)
+            for sel in [
+                'button.btn.green-meadow:has-text("Xuất dữ liệu tài sản")',
+                'button:has-text("Xuất dữ liệu tài sản")',
+                'a:has-text("Xuất dữ liệu tài sản")',
+            ]:
+                try:
+                    loc = self._page.locator(sel).first
+                    if await loc.count() > 0:
+                        await loc.click(timeout=3000)
+                        clicked = True
+                        break
+                except Exception:
+                    continue
+
+            if not clicked:
+                # JS fallback
+                await self._page.evaluate('''() => {
+                    const all = Array.from(document.querySelectorAll('a, button'));
+                    const btn = all.find(b => b.textContent && b.textContent.includes('Xuất dữ liệu tài sản'));
+                    if (btn) btn.click();
+                }''')
+
+            # 3. Đợi modal mở (dùng selector Bootstrap modal)
+            await self._log(f"   → Đợi modal hiện lên...")
+            modal_visible = False
+            for sel in [
+                '.modal.in',
+                '.modal[style*="display: block"]',
+                '.modal[style*="display:block"]',
+                '.modal:visible',
+            ]:
+                try:
+                    await self._page.wait_for_selector(sel, timeout=8000)
+                    modal_visible = True
+                    await self._log(f"   → Modal đã mở ({sel}).")
+                    break
+                except Exception:
+                    continue
+
+            if not modal_visible:
+                # Nếu không detect được modal qua selector, chờ cố định 4 giây
+                await self._log("   ⚠️ Không detect được modal selector, chờ 4s...")
+                await asyncio.sleep(4)
+
+            # Thêm thời gian cho AJAX load options
+            await asyncio.sleep(3)
+
+            # 4. Tìm ID của đối tượng trực tiếp từ Angular $scope của các thẻ <select>
+            found_val = None
+            available_opts = []
+            await self._log(f"   → Đang tìm '{object_name}' trong Angular $scope...")
+            for attempt in range(15):  # Thử tối đa 15s
+                found_val, available_opts = await self._page.evaluate('''
+                    (target_name) => {
+                        const sel = document.querySelector('.modal.in select[ng-model="objSelected"]') || 
+                                    document.querySelector('.modal.in select:not([ng-disabled])') ||
+                                    Array.from(document.querySelectorAll('.modal.in select')).find(s => s.options.length > 1);
+                        
+                        if (!sel || sel.options.length <= 1) return [null, ["AJAX loading or no options"]];
+                        
+                        let allNames = [];
+                        const t = target_name.toLowerCase().trim();
+
+                        for (const opt of sel.options) {
+                            const name = opt.label || opt.text || "";
+                            if (name) {
+                                allNames.push(name.trim());
+                                if (name.trim().toLowerCase() === t) {
+                                    return [opt.value, [opt.value + ": " + name]];
+                                }
+                            }
+                        }
+                        
+                        return [null, allNames];
+                    }
+                ''', object_name)
+
+                if found_val:
+                    await self._log(f"   ✅ Tìm thấy '{object_name}' ID: {found_val}")
+                    if available_opts and len(available_opts) > 0:
+                        logger.info(f"DataSite Scraper: ANGULAR SCOPE DUMP: {available_opts[0]}")
+                    break
+                await asyncio.sleep(1)
+
+            if not found_val:
+                await self._page.screenshot(path=f'tmp/debug_dropdown_{safe_prefix}.png')
+                logger.warning(
+                    f"DataSite Scraper: Không tìm thấy '{object_name}' trong dropdown. "
+                    f"Các option hiện có: {available_opts[:10]}"
+                )
+                await self._log(f"   ❌ Không tìm thấy '{object_name}'. Opts: {available_opts[:5]}")
+                await self._close_modal()
+                return None
+
+            # 5. Dùng Playwright Native Select 
+            # (Dump HTML chỉ ra là native select, ko phải select2 hide)
+            await self._log(f"   → Đang chọn '{object_name}' (value={found_val}) qua Playwright select_option...")
+            try:
+                # Cố gắng kích hoạt Angular change events bằng cách select option native
+                select_loc = self._page.locator('.modal.in select[ng-model="objSelected"]')
+                await select_loc.select_option(value=found_val)
+                await self._log(f"   → Native select thực hiện thành công.")
+            except Exception as e:
+                logger.warning(f"DataSite Scraper: Native select failed: {e}")
+
+            await asyncio.sleep(3)  # Đợi Angular update validation và bỏ disable nút xuất dữ liệu
+
+            # 6. Bấm nút "Xuất dữ liệu" trong modal và chờ download
+            await self._log(f"   → Kiểm tra trạng thái nút Export...")
+            try:
+                # Nút xanh trong modal: class green-jungle ng-click exportAssetData
+                btn_loc = self._page.locator('.modal.in button[ng-click*="export"]:not([disabled])')
+                count = await btn_loc.count()
+                if count == 0:
+                     btn_loc = self._page.locator('.modal.in button.green-jungle:not([disabled])')
+                     count = await btn_loc.count()
+
+                if count == 0:
+                    await self._log("   → ❌ Nút Xuất dữ liệu vẫn bị disable (Angular chưa nhận object).")
+                    await self._page.screenshot(path=f"tmp/debug_export_fail_{object_name.replace(' ', '_')}.png")
+                    return None
+
+                await self._log(f"   → Nút Xuất dữ liệu đã sẵn sàng. Bấm Export...")
+                async with self._page.expect_download(timeout=600000) as dl_info:
+                    await btn_loc.first.click(timeout=3000)
+                    
+                    self._is_downloading = True
+                    await self._log(f"   → Đã bấm Export. Đợi 30s để xem có thông báo gì không...")
+                    await asyncio.sleep(30)
+                    await self._page.screenshot(path=f"tmp/debug_after_click_{object_name.replace(' ', '_')}.png")
+                    await self._log(f"   → Chờ tải file về (timeout 10p)...")
+                    
+                download = await dl_info.value
+                downloads_dir = os.path.join(os.getcwd(), 'tmp', 'ds_exports')
+                os.makedirs(downloads_dir, exist_ok=True)
+                
+                safe_prefix = object_name.replace(' ', '_').replace('/', '_')
+                ts = datetime.now().strftime('%Y%m%d_%H%M%S')
+                save_path = os.path.join(downloads_dir, f"{safe_prefix}_{ts}{os.path.splitext(download.suggested_filename)[1]}")
+                
+                await download.save_as(save_path)
+                logger.info(f"DataSite Scraper: Saved '{object_name}' → {save_path}")
+                await self._log(f"   ✅ Đã tải: {os.path.basename(save_path)}")
+                
+                self._is_downloading = False
+                await asyncio.sleep(1)
+                await self._close_modal()
+                return save_path
+
+            except Exception as e:
+                logger.error(f"DataSite Scraper: Download timeout/error for '{object_name}': {e}")
+                self._is_downloading = False
+                safe_prefix = object_name.replace(' ', '_').replace('/', '_')
+                await self._page.screenshot(path=f'tmp/debug_export_fail_{safe_prefix}.png')
+                await self._log(f"   ❌ Download fail: {e}")
+                await self._close_modal()
+                return None
+
+        except Exception as e:
+            logger.error(f"DataSite Scraper: _export_object_from_modal failed for '{object_name}': {e}")
+            self._is_downloading = False
+            try:
+                await self._close_modal()
+            except Exception:
+                pass
+            return None
+            return None
+
+    async def _close_modal(self):
+        """Đóng bất kỳ modal/popup đang mở."""
+        try:
+            await self._page.evaluate('''() => {
+                const closers = Array.from(document.querySelectorAll(
+                    '.panel-tool-close, [class*="close"]'
+                ));
+                if (closers.length) { closers[closers.length - 1].click(); return; }
+                const btns = Array.from(document.querySelectorAll('.l-btn-text, span, button, a'));
+                const closeBtn = btns.find(b => b.textContent && (
+                    b.textContent.trim() === 'Đóng' ||
+                    b.textContent.trim() === 'Hủy'
+                ));
+                if (closeBtn) closeBtn.click();
+            }''')
+            await asyncio.sleep(0.8)
+        except Exception:
+            pass
+
     async def sync_all(self):
         """Execute full sync sequence as per phases."""
         if not self._logged_in:
@@ -416,6 +725,68 @@ class DataSiteScraper:
         await self.sync_station_general()
         await self.sync_assets()
         await self._log("--- HOÀN TẤT ĐỒNG BỘ TOÀN BỘ DATASITE ---")
+
+def parse_exported_excel(filepath: str, obj_config: dict) -> list:
+    """
+    [Phase 03 - Deep Sync]
+    Đọc file Excel được tải về từ DataSite Export và chuyển về
+    list of dicts, áp dụng col_map từ EXPORT_OBJECT_MAP.
+
+    Trả về:
+        list: mỗi item là dict với keys chuẩn (site_id, serial, trang_thai...) + extra_data
+    """
+    try:
+        import pandas as pd
+    except ImportError:
+        logger.error("parse_exported_excel: pandas chưa được cài. Chạy: pip install pandas openpyxl")
+        return []
+
+    col_map: dict = obj_config.get('col_map', {})
+    loai: str = obj_config.get('loai', '')
+    subcategory_name: str = None  # sẽ được set từ tên object ngoài
+
+    try:
+        df = pd.read_excel(filepath, dtype=str)
+        df = df.where(pd.notnull(df), None)  # NaN → None
+        df.columns = [str(c).strip() for c in df.columns]  # strip whitespace khỏi headers
+    except Exception as e:
+        logger.error(f"parse_exported_excel: Không đọc được file {filepath}: {e}")
+        return []
+
+    rows = []
+    for _, row_series in df.iterrows():
+        row = row_series.to_dict()
+        mapped = {}
+        extra_data = {}
+
+        for excel_col, val in row.items():
+            if val is None or (isinstance(val, str) and val.strip() == ''):
+                continue
+            val = str(val).strip() if val is not None else None
+
+            # Kiểm tra xem có trong col_map không
+            db_field = col_map.get(excel_col)
+            if db_field:
+                mapped[db_field] = val
+            else:
+                # Các cột không có trong col_map → đưa vào extra_data
+                extra_data[excel_col] = val
+
+        # Bỏ qua record nếu không có site_id
+        site_id = mapped.get('site_id', '')
+        if not site_id or not site_id.strip():
+            continue
+
+        # Chuẩn hóa site_id (uppercase)
+        mapped['site_id'] = site_id.upper().strip()
+        mapped['loai'] = loai
+        if extra_data:
+            mapped['extra_data'] = extra_data
+
+        rows.append(mapped)
+
+    logger.info(f"parse_exported_excel: Parsed {len(rows)} valid rows from {os.path.basename(filepath)}")
+    return rows
 
 async def perform_datasite_sync_real(targets=None):
     """Wrapper function for routes to call."""

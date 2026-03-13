@@ -1,0 +1,91 @@
+
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header bg-blue bg-font-blue">
+                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true"></button>
+                        <h4 class="modal-title text-bold text-center ng-binding">
+                            XUẤT DỮ LIỆU BÁO CÁO TRONG Long Khánh</h4>
+                    </div>
+                    <div class="modal-body font-blue-chambray">
+                        <div class="row margin-top-20">
+                            <div class="col-md-12 ng-hide" ng-hide="true">
+                                <label for=""><b>Nghiệp vụ:</b></label>
+                                <select ng-model="selectedWorkExp1" ng-disabled="true" ng-options="p.work_name for p in listWorkUserExp" class="form-control ng-pristine ng-untouched ng-valid ng-valid-required" required="" disabled="disabled"><option value="" class="" selected="selected"> Chọn nghiệp vụ</option><option label="THÔNG TIN CHUNG" value="object:211" selected="selected">THÔNG TIN CHUNG</option><option label="TÀI SẢN" value="object:212">TÀI SẢN</option><option label="CƠ SỞ HẠ TẦNG" value="object:213">CƠ SỞ HẠ TẦNG</option><option label="KỸ THUẬT" value="object:214">KỸ THUẬT</option><option label="TÒA NHÀ" value="object:215">TÒA NHÀ</option><option label="KIỂM ĐỊNH" value="object:216">KIỂM ĐỊNH</option><option label="ẢNH" value="object:217">ẢNH</option><option label="KẾ TOÁN" value="object:218">KẾ TOÁN</option></select>
+                            </div>
+
+                            <div class="col-md-12" style="padding: 0;" ng-show="selectedWorkExp1.work_id &gt; -1">
+                                <label for="" class="bold" style="padding-left: 15px">Chọn đối tượng:</label>
+                                <div class="col-md-12">
+                                    <div class="col-md-9" style="padding: 0;">
+                                        <select class="form-control ng-pristine ng-untouched ng-invalid ng-invalid-required" ng-options="p.name for p in listObj" ng-model="objSelected" required=""><option value="" class="" selected="selected">Chọn đối tượng</option><option label="ACCU ĐỀ" value="object:5037">ACCU ĐỀ</option><option label="ANTEN" value="object:5038">ANTEN</option><option label="ANTEN (THEO BỘ)" value="object:5039">ANTEN (THEO BỘ)</option><option label="ANTEN VIBA" value="object:5040">ANTEN VIBA</option><option label="ATOMAT" value="object:5041">ATOMAT</option><option label="ATS" value="object:5042">ATS</option><option label="BACKUP ACCU" value="object:5043">BACKUP ACCU</option><option label="BIẾN ÁP" value="object:5044">BIẾN ÁP</option><option label="BLOCK MÁY" value="object:5045">BLOCK MÁY</option><option label="BOARD MẠCH" value="object:5046">BOARD MẠCH</option><option label="BOOSTER" value="object:5047">BOOSTER</option><option label="BÌNH BỘT" value="object:5048">BÌNH BỘT</option><option label="BÌNH CO2" value="object:5049">BÌNH CO2</option><option label="BÌNH FM200" value="object:5050">BÌNH FM200</option><option label="BÌNH STAT-X" value="object:5051">BÌNH STAT-X</option><option label="BẢN QUYỀN" value="object:5052">BẢN QUYỀN</option><option label="BẢNG ĐIỀU KHIỂN" value="object:5053">BẢNG ĐIỀU KHIỂN</option><option label="BỘ BACKUP DC LƯU ĐỘNG" value="object:5054">BỘ BACKUP DC LƯU ĐỘNG</option><option label="BỘ THIẾT BỊ CWDM" value="object:5055">BỘ THIẾT BỊ CWDM</option><option label="CELL" value="object:5056">CELL</option><option label="CHIẾU SÁNG" value="object:5057">CHIẾU SÁNG</option><option label="CONTROLLER" value="object:5058">CONTROLLER</option><option label="CÁP QUANG VÀ PHỤ KIỆN" value="object:5059">CÁP QUANG VÀ PHỤ KIỆN</option><option label="CÔNG CỤ (THEO BỘ)" value="object:5060">CÔNG CỤ (THEO BỘ)</option><option label="CÔNG CỤ (ĐƠN CHIẾC)" value="object:5061">CÔNG CỤ (ĐƠN CHIẾC)</option><option label="CẢM BIẾN" value="object:5062">CẢM BIẾN</option><option label="CẢNH BÁO NGOÀI" value="object:5063">CẢNH BÁO NGOÀI</option><option label="CẦU CÁP, THANG CÁP" value="object:5064">CẦU CÁP, THANG CÁP</option><option label="CẦU DAO ĐẢO CHIỀU" value="object:5065">CẦU DAO ĐẢO CHIỀU</option><option label="CỘT ANTEN &amp; CẦU CÁP OUTDOOR" value="object:5066">CỘT ANTEN &amp; CẦU CÁP OUTDOOR</option><option label="CỘT ANTEN (THEO BỘ)" value="object:5067">CỘT ANTEN (THEO BỘ)</option><option label="CỘT ANTEN (ĐƠN CHIẾC)" value="object:5068">CỘT ANTEN (ĐƠN CHIẾC)</option><option label="CỘT ĐIỆN" value="object:5069">CỘT ĐIỆN</option><option label="DÂY DẪN TRONG PHÒNG" value="object:5070">DÂY DẪN TRONG PHÒNG</option><option label="DÂY DẪN TỪ ĐƠN VỊ CUNG CẤP" value="object:5071">DÂY DẪN TỪ ĐƠN VỊ CUNG CẤP</option><option label="DÂY QUANG BBU_RRU" value="object:5072">DÂY QUANG BBU_RRU</option><option label="DÂY ĐIỆN AC" value="object:5073">DÂY ĐIỆN AC</option><option label="FEEDER" value="object:5074">FEEDER</option><option label="HỆ THỐNG PHỤ TRỢ BTS (CSHT) (THEO BỘ)" value="object:5075">HỆ THỐNG PHỤ TRỢ BTS (CSHT) (THEO BỘ)</option><option label="HỆ THỐNG PHỤ TRỢ BTS (CSHT) (ĐƠN CHIẾC)" value="object:5076">HỆ THỐNG PHỤ TRỢ BTS (CSHT) (ĐƠN CHIẾC)</option><option label="JUMPER" value="object:5077">JUMPER</option><option label="LỌC SÉT" value="object:5078">LỌC SÉT</option><option label="MOBIFIBER" value="object:5079">MOBIFIBER</option><option label="MÁY CHỦ, SERVER" value="object:5080">MÁY CHỦ, SERVER</option><option label="MÁY LẠNH" value="object:5081">MÁY LẠNH</option><option label="MÁY LẠNH (THEO BỘ)" value="object:5082">MÁY LẠNH (THEO BỘ)</option><option label="MÁY MÓC THIẾT BỊ" value="object:5083">MÁY MÓC THIẾT BỊ</option><option label="MÁY PHÁT ĐIỆN" value="object:5084">MÁY PHÁT ĐIỆN</option><option label="MÁY ĐO" value="object:5085">MÁY ĐO</option><option label="NGUỒN ĐIỆN" value="object:5086">NGUỒN ĐIỆN</option><option label="NHÀ TRẠM (THEO BỘ)" value="object:5087">NHÀ TRẠM (THEO BỘ)</option><option label="NHÀ TRẠM (ĐƠN CHIẾC)" value="object:5088">NHÀ TRẠM (ĐƠN CHIẾC)</option><option label="NHÀ ĐIỀU HÀNH" value="object:5089">NHÀ ĐIỀU HÀNH</option><option label="NĂNG LƯỢNG MẶT TRỜI" value="object:5090">NĂNG LƯỢNG MẶT TRỜI</option><option label="PHÒNG MPĐ" value="object:5091">PHÒNG MPĐ</option><option label="PHÒNG MÁY" value="object:5092">PHÒNG MÁY</option><option label="PHẦN MỀM" value="object:5093">PHẦN MỀM</option><option label="PIN NLMT" value="object:5094">PIN NLMT</option><option label="QUẠT THÔNG GIÓ" value="object:5095">QUẠT THÔNG GIÓ</option><option label="RECTIFIER" value="object:5096">RECTIFIER</option><option label="REPEATER" value="object:5097">REPEATER</option><option label="SFP BBU_RRU" value="object:5098">SFP BBU_RRU</option><option label="TBVT" value="object:5099">TBVT</option><option label="THIẾT BỊ (THEO BỘ)" value="object:5100">THIẾT BỊ (THEO BỘ)</option><option label="THIẾT BỊ (ĐƠN CHIẾC)" value="object:5101">THIẾT BỊ (ĐƠN CHIẾC)</option><option label="THIẾT BỊ CHỐNG SÉT (SPD)" value="object:5102">THIẾT BỊ CHỐNG SÉT (SPD)</option><option label="THIẾT BỊ FTTX" value="object:5103">THIẾT BỊ FTTX</option><option label="THIẾT BỊ TRUYỀN DẪN METRO" value="object:5104">THIẾT BỊ TRUYỀN DẪN METRO</option><option label="THIẾT BỊ TRUYỀN DẪN QUANG (ACCESS)" value="object:5105">THIẾT BỊ TRUYỀN DẪN QUANG (ACCESS)</option><option label="THIẾT BỊ TRUYỀN DẪN VIBA" value="object:5106">THIẾT BỊ TRUYỀN DẪN VIBA</option><option label="THIẾT BỊ ĐIỆN" value="object:5107">THIẾT BỊ ĐIỆN</option><option label="THIẾT BỊ ĐỒNG BỘ" value="object:5108">THIẾT BỊ ĐỒNG BỘ</option><option label="TRUYỀN DẪN QUANG (THEO BỘ)" value="object:5109">TRUYỀN DẪN QUANG (THEO BỘ)</option><option label="TRẠM" value="object:5110">TRẠM</option><option label="TUYẾN QUANG" value="object:5111">TUYẾN QUANG</option><option label="TỔ ACCU" value="object:5112">TỔ ACCU</option><option label="TỔNG ĐÀI" value="object:5113">TỔNG ĐÀI</option><option label="TỦ BTS 2G" value="object:5114">TỦ BTS 2G</option><option label="TỦ BTS 3G" value="object:5115">TỦ BTS 3G</option><option label="TỦ BTS 4G" value="object:5116">TỦ BTS 4G</option><option label="TỦ BTS 5G" value="object:5117">TỦ BTS 5G</option><option label="TỦ DB" value="object:5118">TỦ DB</option><option label="TỦ NGUỒN" value="object:5119">TỦ NGUỒN</option><option label="TỦ THIẾT BỊ CORE" value="object:5120">TỦ THIẾT BỊ CORE</option><option label="VẬT TƯ" value="object:5121">VẬT TƯ</option><option label="Ô TÔ" value="object:5122">Ô TÔ</option><option label="ĐỐT CỘT" value="object:5123">ĐỐT CỘT</option><option label="Ổ CẮM, CÔNG TẮC" value="object:5124">Ổ CẮM, CÔNG TẮC</option><option label="ỔN ÁP" value="object:5125">ỔN ÁP</option></select>
+                                    </div>
+                                    <div class="col-md-3 ng-hide" style="padding: 0;" ng-show="objSelected!=null">
+                                        <a class="btn green pull-right" href="http://10.0.35.3:8080/data_site/area/gettemplate/asset/2/" target="_blank">Xuất mẫu</a>
+                                    </div>
+                                </div>
+                            </div>
+
+
+                            <!-- <div ng-show="selectedWorkExp1.work_id > -1" class="margin-top-20 col-md-12">
+                                <label for="" class="bold" style="padding-left: 15px">Chọn đối tượng:</label>
+                                <div class="col-md-12">
+                                    <div class="col-md-9" style="padding: 0;">
+                                        <select class="form-control" ng-model="objSelected" ng-options="p.name for p in listObj">
+                                            <option value="">Chọn đối tượng</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3" style="padding: 0;" ng-show="objSelected!=null">
+                                        <a class="btn green pull-right" href="{{host}}/area/gettemplate/asset/{{exportType.id}}/{{objSelected.id}}" target="_blank">Xuất mẫu</a>
+                                    </div>
+                                </div>
+                            </div> -->
+
+                            <div ng-show="treeSelected.data.obj_def == 0" class="col-md-12 margin-top-20">
+                                <div class="col-md-12" style="padding-left: 0px;">
+                                    <span><b>Xuất dữ liệu theo: </b></span>
+                                </div>
+                                <div class="col-md-12" style="padding: 0px;">
+                                    <select class="form-control ng-pristine ng-untouched ng-valid" ng-model="exportType" ng-options="p.name for p in exportAssetsOptions track by p.id"><option label="Trạm" value="2" selected="selected">Trạm</option><option label="Kho" value="1">Kho</option></select>
+                                </div>
+                            </div>
+
+                            <div class="margin-top-20 col-md-12" ng-init="bExportDetail=false">
+                                <div class="checker"><span><input type="checkbox" ng-model="bExportDetail" class="ng-pristine ng-untouched ng-valid" style=""></span></div> <b class="bold">Xuất kèm thông tin thời gian, nhân viên cập nhật</b>
+                            </div>
+                            <div class="margin-top-20 col-md-12" ng-init="bExportEror=false">
+                                <div class="checker"><span><input type="checkbox" ng-model="bExportEror" class="ng-pristine ng-untouched ng-valid" style=""></span></div> <b class="bold">Chỉ xuất dữ liệu lỗi</b>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Đóng cửa sổ</button>
+                        <button class="btn green-jungle caption-subject" ng-click="exportAssetData(AssetOrAccount)" ng-disabled="objSelected==null" ng-show="selectedWorkExp1.work_id &gt; -1" disabled="disabled"><i class="fa fa-download"></i> &nbsp; Xuất dữ liệu</button>
+                    </div>
+                </div>
+                
+                <!-- Modal load update Property excel-->
+                <div class="modal fade " id="mdloadUP" role="dialog" style="witdh:auto" data-backdrop="static" data-keyboard="true">
+                    <div class="modal-dialog">
+                        <!-- Modal content-->
+                        <div class="modal-content">
+                            <div class="modal-header">
+                             	<button type="button" class="close" data-dismiss="modal">×</button>
+                                <h4 class="modal-title text-center">Đang cập nhật dữ liệu thuộc tính...</h4>
+                                <h4 class="modal-title text-center" id="timeloadUP"></h4>
+                                <h4 class="modal-title text-center bold" id="captionloadUP">
+                                    <span class="label label-warning"><i class="fa fa-exclamation-triangle"></i></span> Yêu cầu của bạn đang được xử lý, vui lòng chờ kết quả ở cửa sổ hiện tại hoặc có thể tải file kết quả (nếu có) trong tab XỬ lý dữ liệu
+                                </h4>
+                            </div>
+                            <div class="modal-body">
+                                <div class="progress">
+                                    <div class="progress-bar progress-bar-success progress-bar-striped active ng-binding" role="progressbar" aria-valuenow="40" aria-valuemin="0" aria-valuemax="100" style="width:%">
+                                         % (/ Trạm)
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        

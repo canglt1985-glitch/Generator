@@ -394,7 +394,7 @@
                                 <td class="small d-none d-lg-table-cell">{{ log.site or '' }}</td>
                                 <td class="small d-none d-lg-table-cell">{{ log.cong_suat_may or '' }}</td>
                                 <td class="small">{{ log.gio_bat_dau or '--' }}</td>
-                                <td class="small">{{ log.gio_ket_thuc or '--' }}</td>
+                                <td class="small">{{ log.end_datetime_formatted }}</td>
                                 <td>{{ log.thoi_gian_hoat_dong }}h</td>
                                 <td class="text-end">{{ log.nhien_lieu_tieu_hao or 0 }}L</td>
                                 <td class="text-end d-none d-md-table-cell">{{ "{:,.0f}".format(log.don_gia or 0) }}

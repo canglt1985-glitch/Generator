@@ -1,5 +1,15 @@
 # Changelog
 
+## [2026-03-13]
+### Added
+- **DataSite Deep Sync (Phase 3-5)**: Hoàn thành parser Excel dùng Pandas để đồng bộ dữ liệu hạ tầng từ file xuất của DataSite.
+- **Daily Work Date Filter**: Thêm bộ lọc khoảng ngày (Từ ngày -> Đến ngày) ngay trên Header trang Công việc hàng ngày, hỗ trợ xem và xuất Excel linh hoạt.
+- **Generator Overnight Logic**: Tự động tính toán và đánh dấu các ca chạy máy qua đêm (Overnight), tự cộng 24h vào thời gian hoạt động.
+
+### Fixed
+- **Duplicate Button Server-side**: Giải quyết triệt để lỗi lặp nút "Thêm" trên môi trường production bằng logic Jinja2 `if` blocks riêng biệt và `trim`.
+- **UI Consistency**: Đồng bộ hiển thị badge ngày tháng chuẩn VN (DD/MM/YYYY) trên header Daily Work và cải thiện hiển thị mobile.
+
 ## [2026-03-09]
 ### Added
 - **Daily Work UI Consolidate**: Di chuyển toàn bộ nút hành động chính (+ Thêm) lên Page Header trang Công Việc Hàng Ngày.

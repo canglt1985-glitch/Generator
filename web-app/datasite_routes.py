@@ -437,3 +437,120 @@ def run_crosscheck():
         "message": f"Cross-check hoàn tất. Phát hiện {anomalies_found} vấn đề.",
         "count": anomalies_found
     })
+
+
+# ============================================================================
+# API: Deep Sync — Phase 03 Export-based Sync
+# ============================================================================
+
+@datasite_bp.route('/api/datasite/sync/start', methods=['POST'])
+def ds_deep_sync_start():
+    """
+    [Phase 03] Khởi động Deep Sync theo danh sách Đối tượng.
+
+    Body JSON:
+        {
+            "objects": ["PHÒNG MÁY", "MÁY PHÁT ĐIỆN", ...],
+            "area": "Long Khánh"  (optional)
+        }
+
+    - Validate objects dựa trên EXPORT_OBJECT_MAP
+    - Chạy background thread
+    - Broadcast tiến độ qua SSE: ds_sync_start, ds_sync_progress, ds_sync_object_done, ds_sync_done
+    """
+    if session.get('role') != 'admin':
+        return jsonify({"success": False, "error": "Chỉ admin mới được thực hiện."}), 403
+
+    data = request.get_json(silent=True) or {}
+    objects = data.get('objects', [])
+    area = data.get('area', None)
+
+    if not objects or not isinstance(objects, list):
+        return jsonify({"success": False, "error": "Vui lòng cung cấp danh sách 'objects'."}), 400
+
+    # Validate: chỉ chấp nhận các object có trong EXPORT_OBJECT_MAP
+    from datasite_sync_config import ALL_EXPORT_OBJECTS
+    invalid = [o for o in objects if o not in ALL_EXPORT_OBJECTS]
+    if invalid:
+        return jsonify({
+            "success": False,
+            "error": f"Đối tượng không hợp lệ: {invalid}",
+            "valid_objects": ALL_EXPORT_OBJECTS
+        }), 400
+
+    # Kiểm tra xem sync có đang chạy không
+    from smartw.worker import _datasite_sync_running
+    if _datasite_sync_running:
+        return jsonify({
+            "success": False,
+            "error": "Đang có tiến trình đồng bộ đang chạy. Vui lòng đợi hoàn tất."
+        }), 409
+
+    # Lấy app context để truyền vào thread
+    from flask import current_app
+    app = current_app._get_current_object()
+
+    def _background(flask_app, obj_list, area_name):
+        with flask_app.app_context():
+            from smartw.worker import run_datasite_export_sync
+            run_datasite_export_sync(obj_list, area=area_name)
+
+    t = threading.Thread(target=_background, args=(app, objects, area), daemon=True)
+    t.start()
+
+    add_datasite_log(f"[Deep Sync] Đã khởi động: {len(objects)} đối tượng — {', '.join(objects[:3])}{'...' if len(objects) > 3 else ''}")
+
+    return jsonify({
+        "success": True,
+        "message": f"Đã bắt đầu đồng bộ {len(objects)} đối tượng. Theo dõi tiến độ qua SSE.",
+        "objects": objects,
+        "total": len(objects)
+    })
+
+
+@datasite_bp.route('/api/datasite/sync/status', methods=['GET'])
+def ds_deep_sync_status():
+    """[Phase 03] Trả về trạng thái hiện tại của Deep Sync job."""
+    if 'username' not in session:
+        return jsonify({"success": False, "error": "Unauthorized"}), 403
+
+    from smartw.worker import get_datasite_sync_status
+    status = get_datasite_sync_status()
+    return jsonify({"success": True, "status": status})
+
+
+@datasite_bp.route('/api/datasite/objects_map', methods=['GET'])
+def ds_objects_map():
+    """
+    [Phase 03] Trả về toàn bộ EXPORT_OBJECT_MAP để frontend
+    dùng hiển thị UI chọn đối tượng khi sync.
+    """
+    if 'username' not in session:
+        return jsonify({"success": False, "error": "Unauthorized"}), 403
+
+    from datasite_sync_config import EXPORT_OBJECT_MAP, UI_GROUPS
+
+    # Group objects by ui_group for easy frontend rendering
+    grouped = {}
+    for obj_name, cfg in EXPORT_OBJECT_MAP.items():
+        grp = cfg.get('ui_group', 'OTHER')
+        if grp not in grouped:
+            group_info = UI_GROUPS.get(grp, {'label': grp, 'icon': 'bi-box', 'color': 'secondary'})
+            grouped[grp] = {
+                'label': group_info['label'],
+                'icon': group_info['icon'],
+                'color': group_info['color'],
+                'objects': []
+            }
+        grouped[grp]['objects'].append({
+            'name': obj_name,
+            'label': cfg.get('ui_label', obj_name),
+            'db_table': cfg.get('db_table'),
+            'loai': cfg.get('loai'),
+        })
+
+    return jsonify({
+        "success": True,
+        "groups": grouped,
+        "total_objects": len(EXPORT_OBJECT_MAP)
+    })
