@@ -31,6 +31,23 @@ def fuel_ledger():
                            now_date=datetime.now().strftime('%Y-%m-%d'))
 
 
+# Các loại giao dịch ảnh hưởng đến nl_ton tại trạm cụ thể
+_STATION_AFFECTING_TYPES = ('DIRECT_BUY', 'STATION_OUT', 'ADJUSTMENT')
+
+
+def _update_station_stock(id_tram, delta):
+    """Cộng/trừ nl_ton tại trạm id_tram một lượng delta (có thể âm để trừ).
+    Đảm bảo nl_ton không xuống dưới 0.
+    """
+    if not id_tram:
+        return
+    station = GeneralInfo.query.filter_by(id_tram=id_tram).first()
+    if station:
+        current = station.nl_ton or 0
+        station.nl_ton = round(max(0, current + delta), 2)
+        # Không commit ở đây – để caller commit 1 lần cùng với record chính
+
+
 def calc_ton_sau_gd(id_tram, so_luong, trans_type):
     """Calculate fuel stock snapshot after transaction for a station."""
     if not id_tram or trans_type == 'STOCK_IN':
@@ -99,20 +116,23 @@ def add_fuel_ledger():
         else:
             new_trans.ton_sau_gd = calc_ton_sau_gd(id_tram, so_luong, trans_type)
         db.session.add(new_trans)
-        db.session.commit()
 
-        # Cập nhật NL tồn thực tế vào GeneralInfo.nl_ton (nếu có nhập)
-        nl_ton_str = request.form.get('nl_ton_thuc_te')
-        station_id = request.form.get('id_tram')
-        if nl_ton_str and station_id:
-            try:
-                nl_ton_thuc_te = float(nl_ton_str)
-                station = GeneralInfo.query.filter_by(id_tram=station_id).first()
-                if station:
-                    station.nl_ton = nl_ton_thuc_te
-                    db.session.commit()
-            except (ValueError, TypeError):
-                pass
+        # ── Cộng nl_ton tại trạm (nếu là loại giao dịch ảnh hưởng trạm) ──
+        if trans_type in _STATION_AFFECTING_TYPES and id_tram:
+            # Nếu user nhập nl_ton_thuc_te thủ công → override hoàn toàn
+            nl_ton_str = request.form.get('nl_ton_thuc_te')
+            if nl_ton_str:
+                try:
+                    station = GeneralInfo.query.filter_by(id_tram=id_tram).first()
+                    if station:
+                        station.nl_ton = float(nl_ton_str)
+                except (ValueError, TypeError):
+                    pass
+            else:
+                # Cộng delta vào tồn hiện tại
+                _update_station_stock(id_tram, so_luong)
+
+        db.session.commit()
 
         msg = 'Đã thêm giao dịch thành công!'
         if not is_approved:
@@ -142,6 +162,9 @@ def approve_fuel_ledger(id):
 def delete_fuel_ledger(id):
     try:
         item = FuelLedger.query.get_or_404(id)
+        # ── Hoàn trả nl_ton khi xóa (chỉ áp dụng loại ảnh hưởng trạm) ──
+        if item.type in _STATION_AFFECTING_TYPES and item.id_tram:
+            _update_station_stock(item.id_tram, -item.so_luong)
         db.session.delete(item)
         db.session.commit()
         flash('Đã xóa giao dịch nhiên liệu thành công!', 'success')
@@ -155,6 +178,11 @@ def delete_fuel_ledger(id):
 def edit_fuel_ledger(id):
     try:
         item = FuelLedger.query.get_or_404(id)
+        # ── Lưu giá trị CŨ trước khi ghi đè (để rollback nl_ton chính xác) ──
+        old_so_luong = item.so_luong or 0
+        old_type = item.type
+        old_id_tram = item.id_tram or ''
+
         trans_type = request.form.get('type')
         item.ngay = request.form.get('ngay')
         item.type = trans_type
@@ -185,17 +213,27 @@ def edit_fuel_ledger(id):
 
         item.ngay_cap_nhat = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-        # Update ton_sau_gd: user override hoặc auto-calc
+        # ── Cập nhật nl_ton: hoàn trả cũ, cộng mới ──
+        so_luong_cu = old_so_luong
+        old_type_affects = old_type in _STATION_AFFECTING_TYPES
+        new_type_affects = trans_type in _STATION_AFFECTING_TYPES
+
         user_ton = request.form.get('nl_ton_thuc_te')
         if user_ton:
+            # Người dùng nhập tay → override hoàn toàn
             item.ton_sau_gd = float(user_ton)
-            # Cập nhật NL tồn thực tế vào GeneralInfo.nl_ton
             if item.id_tram:
                 station = GeneralInfo.query.filter_by(id_tram=item.id_tram).first()
                 if station:
                     station.nl_ton = float(user_ton)
-        elif item.id_tram and item.type != 'STOCK_IN':
-            item.ton_sau_gd = calc_ton_sau_gd(item.id_tram, item.so_luong, item.type)
+        else:
+            # Tự động: hoàn trả lượng cũ rồi cộng lượng mới
+            if old_type_affects and old_id_tram:
+                _update_station_stock(old_id_tram, -so_luong_cu)
+            if new_type_affects and item.id_tram:
+                _update_station_stock(item.id_tram, item.so_luong)
+            if item.id_tram and trans_type != 'STOCK_IN':
+                item.ton_sau_gd = calc_ton_sau_gd(item.id_tram, item.so_luong, trans_type)
 
         db.session.commit()
         flash('Cập nhật giao dịch thành công!', 'success')
