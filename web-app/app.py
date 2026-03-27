@@ -187,8 +187,9 @@ if __name__ == '__main__':
     if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
         scheduler.add_job(id='fetch_outages_task', func=scheduled_outage_fetch, trigger='cron', hour=5, minute=0)
 
-        # Fuel price: 1x/day at 4PM (PVOil updates ~3PM)
-        scheduler.add_job(id='fuel_price_daily', func=scheduled_fuel_price_fetch, trigger='cron', hour=16, minute=0)
+        # Fuel price: 2x/day (4PM after PVOil updates, and 0AM as fallback)
+        scheduler.add_job(id='fuel_price_daily_16h', func=scheduled_fuel_price_fetch, trigger='cron', hour=16, minute=0)
+        scheduler.add_job(id='fuel_price_daily_0h', func=scheduled_fuel_price_fetch, trigger='cron', hour=0, minute=0)
 
         from smartw.config import is_smartw_configured
         if is_smartw_configured():

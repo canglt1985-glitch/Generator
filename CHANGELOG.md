@@ -1,5 +1,15 @@
 # Changelog
 
+## [2026-03-15]
+### Added
+- **VHKT Data Assistant Brief**: Khởi tạo ý tưởng và BRIEF thiết kế cho trợ lý AI tra cứu SQL bằng ngôn ngữ tự nhiên (MCP Assistant), dự kiến dùng Gemini 1.5 Flash.
+- **Handover/Recap System v2**: Tối ưu hóa bộ nhớ AI với cấu trúc `.brain/` tách biệt (brain.json + session.json + handover.md), giúp AI phục hồi ngữ cảnh nhanh và chính xác hơn.
+
+## [2026-03-14]
+### Added
+- **Overlapping Log Resolution**: Tích hợp logic `resolve_overlapping_logs()` tự động so sánh và chỉ giữ lại bản ghi GeneratorLog có thời gian chạy dài nhất khi phát hiện sự chồng lấn thời gian cho cùng 1 trạm.
+- **Duplicate Clean-up Script**: Viết script `web-app/scripts/clean_duplicates.py` để quét và dọn dẹp hàng loạt các bản ghi máy phát bị lặp/chồng lấn của năm 2026.
+
 ## [2026-03-13]
 ### Added
 - **DataSite Deep Sync (Phase 3-5)**: Hoàn thành parser Excel dùng Pandas để đồng bộ dữ liệu hạ tầng từ file xuất của DataSite.

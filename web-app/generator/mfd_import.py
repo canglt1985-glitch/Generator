@@ -121,18 +121,33 @@ def build_alarm_id(record: dict) -> str:
 
 
 def is_duplicate(alarm_id: str, id_tram: str = None, ngay: str = None, gio_bd: str = None, gio_kt: str = None) -> bool:
-    """Check if this alarm was already imported (by alarm_id OR by id_tram+date+start_time)."""
+    """Check if this alarm was already imported (by alarm_id OR by id_tram+date+start_time).
+    Also checks the current session for pending objects to prevent duplicates within the same batch.
+    """
     from models import GeneratorLog
+    from extensions import db
+
+    # 1. Check in Database
     # Check by smartw_alarm_id
     if alarm_id:
         existing = GeneratorLog.query.filter_by(smartw_alarm_id=alarm_id).first()
         if existing:
             return True
-    # Check by id_tram + ngay + gio_bat_dau (start time is unique enough per site per day)
+    # Check by id_tram + ngay + gio_bat_dau
     if id_tram and ngay and gio_bd:
         q = GeneratorLog.query.filter_by(id_tram=id_tram, ngay_van_hanh=ngay, gio_bat_dau=gio_bd)
         if q.first():
             return True
+
+    # 2. Check in current session (pending objects not yet committed)
+    for obj in db.session.new:
+        if isinstance(obj, GeneratorLog):
+            if alarm_id and obj.smartw_alarm_id == alarm_id:
+                return True
+            if id_tram and ngay and gio_bd:
+                if obj.id_tram == id_tram and obj.ngay_van_hanh == ngay and obj.gio_bat_dau == gio_bd:
+                    return True
+    
     return False
 
 
@@ -240,7 +255,18 @@ def import_mfd_data(raw_data: list[dict]) -> dict:
         'details': [],
     }
 
+    # Internal batch dedup: remove exact duplicates from raw_data before processing
+    seen_in_batch = set()
+    unique_raw_data = []
     for record in raw_data:
+        alarm_id = build_alarm_id(record)
+        if alarm_id in seen_in_batch:
+            result['duplicates'] += 1
+            continue
+        seen_in_batch.add(alarm_id)
+        unique_raw_data.append(record)
+
+    for record in unique_raw_data:
         site = record.get('siteid') or record.get('ne') or ''
         alarm_id = build_alarm_id(record)
 
@@ -400,7 +426,8 @@ def resolve_overlapping_logs(raw_data: list[dict]) -> int:
                     'log': log,
                     'start_dt': start_dt,
                     'end_dt': end_dt,
-                    'duration': duration_hours
+                    'duration': duration_hours,
+                    'alarm_id': log.smartw_alarm_id
                 })
             except Exception as e:
                 logger.warning(f"Error parsing times for log {log.id}: {e}")
@@ -434,6 +461,17 @@ def resolve_overlapping_logs(raw_data: list[dict]) -> int:
                     db.session.delete(item['log'])
                     deleted_count += 1
                 else:
+                    # Check for exact duplicates by alarm_id within the database
+                    if item['alarm_id']:
+                        # If we have multiple records with same alarm_id, keep only one (the one with longest duration or smallest ID)
+                        # The sort above already ensured longest is first.
+                        dup_alarm = [k for k in kept_logs if k['alarm_id'] == item['alarm_id']]
+                        if dup_alarm:
+                            logger.info(f"Deleting duplicate alarm_id log {item['log'].id} for {site_id}")
+                            db.session.delete(item['log'])
+                            deleted_count += 1
+                            continue
+
                     # Keep this log
                     kept_logs.append(item)
                     

@@ -74,7 +74,8 @@
                         <div class="col-md-2"><label class="form-label">ĐM (L/h)</label><input type="number" step="0.01"
                                 name="dinh_muc" class="form-control bg-light" id="log_rate" readonly></div>
                         <div class="col-md-2"><label class="form-label">Đơn giá</label><input type="number" step="1"
-                                name="don_gia" class="form-control bg-light" id="log_price" readonly placeholder="Auto">
+                                name="don_gia" class="form-control bg-light" id="log_price" placeholder="Gợi ý PVOil"
+                                oninput="updateLogCalc()">
                         </div>
                         <!-- Calculation preview -->
                         <div class="col-12">
