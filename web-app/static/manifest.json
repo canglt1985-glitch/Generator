@@ -1,0 +1,21 @@
+{
+    "name": "Tổ Viễn Thông 3 - Quản Lý Máy Phát Điện",
+    "short_name": "Tổ VT3",
+    "description": "Hệ thống quản lý vận hành máy phát điện - Tổ VT3 MobiFone Đồng Nai",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#206bc4",
+    "icons": [
+        {
+            "src": "/static/icons/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/static/icons/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}

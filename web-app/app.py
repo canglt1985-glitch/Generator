@@ -1,5 +1,5 @@
 from flask import Flask
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 import sys
 from dotenv import load_dotenv
@@ -21,6 +21,7 @@ if db_url.startswith("postgres://"):
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your_secret_key_here')
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
 
 # Initialize extensions
 from extensions import db
