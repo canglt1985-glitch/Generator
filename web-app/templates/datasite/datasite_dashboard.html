@@ -111,6 +111,7 @@
                             <optgroup label="📡 Kỹ Thuật">
                                 <option value="BTS_3G">📶 Tủ BTS 3G</option>
                                 <option value="BTS_4G">📡 Tủ BTS 4G</option>
+                                <option value="TRUYEN_DAN">🌐 Thông Tin Truyền Dẫn</option>
                                 <option value="DATA_CELL">📊 Data Cell</option>
                                 <option value="THIET_BI_VT">🔧 Thiết bị Viễn thông</option>
                             </optgroup>
@@ -281,6 +282,10 @@
             title: 'Thiết bị VT', icon: 'fas fa-cogs', bg: 'bg-orange',
             orderedCols: ['site_id', 'dai_vt', 'ten_thiet_bi', 'loai_thiet_bi', 'nha_cung_cap', 'product_code', 'thuoc_tram_remote', 'serial', 'trang_thai']
         },
+        'TRUYEN_DAN': {
+            title: 'Truyền Dẫn', icon: 'fas fa-network-wired', bg: 'bg-azure',
+            orderedCols: ['site_id', 'loai_ket_noi', 'thiet_bi_td', 'huong_ket_noi', 'node_csg', 'chung_loai_csg', 'chu_dau_tu_cap', 'don_vi_van_hanh_cap', 'chung_loai_cwdm', 'hang_sx_cwdm', 'sync_date']
+        },
     };
 
     // Các cột ẩn (không hiện trên bảng Hạng Mục Toàn Mạng vì không có ý nghĩa trực quan)
@@ -333,6 +338,12 @@
         // Chung
         dai_vt: 'Đài VT', ghi_chu: 'Ghi Chú', don_gia: 'Đơn Giá', don_vi_tinh: 'ĐV Tính',
         ngay_sd_hop_dong: 'Ngày SD (Theo HĐ)',
+        // Truyền dẫn
+        loai_ket_noi: 'Loại kết nối 3G/4G', thiet_bi_td: 'Thiết bị TD 3G/4G/FO',
+        huong_ket_noi: 'Hướng kết nối', node_csg: 'Node CSG', chung_loai_csg: 'Chủng loại CSG',
+        chu_dau_tu_cap: 'Chủ đầu tư cáp', don_vi_van_hanh_cap: 'Đơn vị vận hành cáp',
+        chung_loai_cwdm: 'Chủng loại CWDM', hang_sx_cwdm: 'Hãng SX CWDM',
+        sync_date: 'Ngày cập nhật'
     };
 
     document.getElementById('siteIdInput').addEventListener('keypress', function (e) {
@@ -361,7 +372,7 @@
             if (json.success) {
                 // Hiện thông tin Station nếu có (v2)
                 if (json.station) renderStationBaseInfo(json.station, json.contract);
-                renderDashboard(json.site_id, json.data);
+                renderDashboard(json.site_id, json.data, json.transmission);
             } else {
                 showError(json.message);
             }
@@ -411,6 +422,11 @@
         if (key.includes('loai_tram') || key.includes('loai_')) return '🏗️';
         if (key.includes('ten_')) return '🏢';
         if (key.includes('ghi_chu')) return '📌';
+        if (key.includes('loai_ket_noi')) return '🔗';
+        if (key.includes('thiet_bi_td') || key.includes('_csg')) return '🛠️';
+        if (key.includes('huong_ket_noi')) return '⇄';
+        if (key.includes('cwdm')) return '📦';
+        if (key.includes('hang_sx')) return '🏭';
         return '🔹';
     }
 
@@ -517,8 +533,14 @@
         const categoryGroups = [
             { key: 'HATANG', title: 'CƠ SỞ HẠ TẦNG', icon: 'fas fa-building', types: ['COT_ANTEN', 'PHONG_MAY', 'PHONG_MPD'] },
             { key: 'PHUTRO', title: 'THIẾT BỊ PHỤ TRỢ', icon: 'fas fa-bolt', types: ['MAY_LANH', 'MAY_PHAT', 'TU_NGUON', 'ACCU'] },
-            { key: 'KYTHUAT', title: 'KỸ THUẬT - VIỄN THÔNG', icon: 'fas fa-satellite-dish', types: ['BTS_3G', 'BTS_4G', 'BTS_5G', 'DATA_CELL', 'THIET_BI_VT'] }
+            { key: 'KYTHUAT', title: 'KỸ THUẬT - VIỄN THÔNG', icon: 'fas fa-satellite-dish', types: ['BTS_3G', 'BTS_4G', 'BTS_5G', 'DATA_CELL', 'THIET_BI_VT'] },
+            { key: 'TRUYENDAN', title: 'TRUYỀN DẪN', icon: 'fas fa-network-wired', types: ['TRUYEN_DAN'] }
         ];
+
+        // Nếu có transmission data thực tế, ép nó vào dataGroups để renderDashboard xử lý chung
+        if (arguments[2]) { // json.transmission
+            dataGroups['TRUYEN_DAN'] = [arguments[2]];
+        }
 
         // Tạo khung chứa Tabs và Content
         let navHtml = `<ul class="nav nav-pills nav-fill mb-4 shadow-sm rounded bg-white p-1" id="pills-tab" role="tablist">`;

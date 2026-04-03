@@ -1,5 +1,11 @@
 # Changelog
 
+## [2026-03-31]
+### Added
+- **Mobile PWA Upgrade**: Chuyển đổi Web-app thành Progressive Web App (PWA) với đầy đủ `manifest.json`, `sw.js` và bộ icon 5G/Viễn thông mới.
+- **Standalone Mode**: Hỗ trợ chạy ứng dụng ở chế độ Standalone (mất thanh địa chỉ browser) khi "Thêm vào màn hình chính", mang lại trải nghiệm như app native.
+- **Persistent Sessions**: Cấu hình `PERMANENT_SESSION_LIFETIME = 30 ngày` và tự động duy trì đăng nhập (`session.permanent = True`), khắc phục triệt để lỗi thỉnh thoảng bị văng login trên điện thoại.
+
 ## [2026-03-15]
 ### Added
 - **VHKT Data Assistant Brief**: Khởi tạo ý tưởng và BRIEF thiết kế cho trợ lý AI tra cứu SQL bằng ngôn ngữ tự nhiên (MCP Assistant), dự kiến dùng Gemini 1.5 Flash.

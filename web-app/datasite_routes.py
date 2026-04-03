@@ -192,7 +192,10 @@ def ds_search():
     if not site_id:
         return jsonify({"success": False, "message": "Vui lòng nhập mã trạm."})
 
-    from models import DsStation, DsContract, DsInfrastructure, DsEquipment, DsTelecom
+    from models import DsStation, DsContract, DsInfrastructure, DsEquipment, DsTelecom, DsTransmission
+    
+    # Tìm truyền dẫn (mới)
+    transmission = DsTransmission.query.filter(DsTransmission.site_id.ilike(f'%{site_id}%')).first()
 
     # Tìm trạm
     station = DsStation.query.filter(DsStation.site_id.ilike(f'%{site_id}%')).first()
@@ -209,7 +212,7 @@ def ds_search():
     # Tìm kỹ thuật
     telecoms = DsTelecom.query.filter(DsTelecom.site_id.ilike(f'%{site_id}%')).all()
 
-    if not station and not infras and not equips and not telecoms:
+    if not station and not infras and not equips and not telecoms and not transmission:
         # Fallback: tìm trong bảng Legacy
         from models import DataSiteAsset
         legacy = DataSiteAsset.query.filter(DataSiteAsset.site_id.ilike(f'%{site_id}%')).all()
@@ -276,6 +279,7 @@ def ds_search():
         "site_id": site_id,
         "station": station_dict,
         "contract": contract.to_dict() if contract else None,
+        "transmission": transmission.to_dict() if transmission else None,
         "data": result,
         "source": "v2"
     })

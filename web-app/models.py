@@ -323,6 +323,28 @@ class DsTelecom(db.Model):
         return d
 
 
+# --- NHÓM 6: TRUYỀN DẪN (Bổ sung 2026-04-03) ---
+
+class DsTransmission(db.Model):
+    """Thông tin Truyền dẫn tại trạm (Bổ sung 2026-04-03)"""
+    __tablename__ = 'ds_transmissions'
+    id = db.Column(db.Integer, primary_key=True)
+    site_id = db.Column(db.String(50), nullable=False, index=True)
+    loai_ket_noi = db.Column(db.String(50))           # FO/MW/LL
+    thiet_bi_td = db.Column(db.String(200))           # Thiết bị TD 3G/4G/FO
+    huong_ket_noi = db.Column(db.String(500))         # Hướng(Viba/FO/LL/SW/IDU share)
+    node_csg = db.Column(db.String(100))              # Node CSG
+    chung_loai_csg = db.Column(db.String(200))        # Chủng loại CSG
+    chu_dau_tu_cap = db.Column(db.String(200))        # Chủ đầu tư cáp
+    don_vi_van_hanh_cap = db.Column(db.String(200))   # đơn vị vận hành cáp
+    chung_loai_cwdm = db.Column(db.String(255))       # Chủng loại CWDM
+    hang_sx_cwdm = db.Column(db.String(100))          # hãng SX CWDM
+    sync_date = db.Column(db.String(20), default=lambda: datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+
+    def to_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+
+
 # --- NHÓM 5: CROSS-CHECK / DATA QUALITY ---
 
 class DataSiteAnomaly(db.Model):
@@ -407,6 +429,7 @@ class MobileEquipment(db.Model):
     ngay_tao = db.Column(db.String(20), default=lambda: datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
     transfers = db.relationship('EquipmentTransfer', backref='equipment', lazy=True,
+                                cascade="all, delete-orphan",
                                 order_by='EquipmentTransfer.ngay_dieu_chuyen.desc()')
 
 
