@@ -2,9 +2,14 @@
 
 ## [2026-03-31]
 ### Added
-- **Mobile PWA Upgrade**: Chuyển đổi Web-app thành Progressive Web App (PWA) với đầy đủ `manifest.json`, `sw.js` và bộ icon 5G/Viễn thông mới.
-- **Standalone Mode**: Hỗ trợ chạy ứng dụng ở chế độ Standalone (mất thanh địa chỉ browser) khi "Thêm vào màn hình chính", mang lại trải nghiệm như app native.
-- **Persistent Sessions**: Cấu hình `PERMANENT_SESSION_LIFETIME = 30 ngày` và tự động duy trì đăng nhập (`session.permanent = True`), khắc phục triệt để lỗi thỉnh thoảng bị văng login trên điện thoại.
+- **Mobile PWA Upgrade**: Chuyển đổi Web-app thành Progressive Web App (PWA) với đầy đủ `manifest.json`, `sw.js` và bộ icon 5G/Viễn thông mới. Hỗ trợ chế độ Standalone (app-like experience).
+- **Persistent Sessions**: Cấu hình `PERMANENT_SESSION_LIFETIME = 30 ngày` và tự động duy trì đăng nhập, khắc phục triệt để lỗi bị văng login trên điện thoại.
+- **Cloudflared Windows Service**: Chuyển đổi Tunnel sang dạng Windows Service chạy ngầm tự động. Cung cấp script PowerShell để tự động sửa lỗi và phục hồi khi service bị treo.
+- **DataSite Transmission Import**: Hỗ trợ import dữ liệu truyền dẫn từ DataSite Excel, mở rộng khả năng quản lý hạ tầng đồng bộ.
+
+### Changed
+- **layout.html**: Tích hợp PWA meta tags và logic đăng ký Service Worker.
+- **app.py**: Cấu hình global cho session lifetime và proxy fix.
 
 ## [2026-03-15]
 ### Added
@@ -25,6 +30,15 @@
 ### Fixed
 - **Duplicate Button Server-side**: Giải quyết triệt để lỗi lặp nút "Thêm" trên môi trường production bằng logic Jinja2 `if` blocks riêng biệt và `trim`.
 - **UI Consistency**: Đồng bộ hiển thị badge ngày tháng chuẩn VN (DD/MM/YYYY) trên header Daily Work và cải thiện hiển thị mobile.
+
+## [2026-03-11]
+### Added
+- **SmartW MFD Overnight Reconciliation**: Tự động cập nhật giờ kết thúc cho các sự kiện máy phát chạy qua đêm (overnight events).
+- **D-2 Retroactive Scrape**: SmartW Worker quét lùi về 2 ngày trước để đảm bảo không bỏ sót dữ liệu.
+
+### Changed
+- **Auto-Approve Logic**: Tự động duyệt các lượt chạy máy phát ≤ 8 giờ.
+- **Robust Duplicate Detection**: Cải tiến bộ lọc so khớp trùng lặp [Trạm + Ngày + Giờ Bắt Đầu].
 
 ## [2026-03-09]
 ### Added
