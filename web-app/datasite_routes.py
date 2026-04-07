@@ -188,34 +188,60 @@ def ds_search():
     if 'username' not in session:
         return jsonify({"success": False, "message": "Unauthorized"}), 403
 
-    site_id = request.args.get('site_id', '').strip().upper()
-    if not site_id:
-        return jsonify({"success": False, "message": "Vui lòng nhập mã trạm."})
+    query_id = request.args.get('q', request.args.get('site_id', '')).strip().upper()
+    print(f"🕵️ SEARCH QUERY: '{query_id}'")
+    if not query_id:
+        return jsonify({"success": False, "message": "Vui lòng nhập mã trạm hoặc tên trạm."})
 
-    from models import DsStation, DsContract, DsInfrastructure, DsEquipment, DsTelecom, DsTransmission
+    from models import DsStation, DsContract, DsInfrastructure, DsEquipment, DsTelecom, DsTransmission, DsSiteRegistry, DsCellRegistry
     
-    # Tìm truyền dẫn (mới)
-    transmission = DsTransmission.query.filter(DsTransmission.site_id.ilike(f'%{site_id}%')).first()
+    # 🕵️ Bước 1: Kiểm tra mapping ID Mới/Cũ trong Wireless Registry trước
+    registry_match = DsSiteRegistry.query.filter(
+        (DsSiteRegistry.site_id_new.ilike(f'%{query_id}%')) |
+        (DsSiteRegistry.site_id_old.ilike(f'%{query_id}%'))
+    ).first()
 
-    # Tìm trạm
-    station = DsStation.query.filter(DsStation.site_id.ilike(f'%{site_id}%')).first()
+    # Nếu không thấy site, thử tìm qua cell
+    if not registry_match:
+        cell_match = DsCellRegistry.query.filter(
+            (DsCellRegistry.cell_id_new.ilike(f'%{query_id}%')) |
+            (DsCellRegistry.cell_id_old.ilike(f'%{query_id}%'))
+        ).first()
+        if cell_match:
+            registry_match = DsSiteRegistry.query.filter_by(site_id_new=cell_match.site_id_new).first()
 
-    # Tìm hợp đồng
-    contract = DsContract.query.filter(DsContract.site_id.ilike(f'%{site_id}%')).first()
+    # Tập hợp các Site ID liên quan để truy vấn các bảng khác (Tránh việc chỉ tìm theo 1 ID bị lệch)
+    ids_to_query = [query_id]
+    if registry_match:
+        if registry_match.site_id_new: ids_to_query.append(registry_match.site_id_new)
+        if registry_match.site_id_old: ids_to_query.append(registry_match.site_id_old)
+    
+    # Loại bỏ trùng lặp và rỗng
+    ids_to_query = list(set(filter(None, ids_to_query)))
+    print(f"   🔍 Querying for IDs: {ids_to_query}")
 
-    # Tìm hạ tầng
-    infras = DsInfrastructure.query.filter(DsInfrastructure.site_id.ilike(f'%{site_id}%')).all()
+    # 🕵️ Bước 1.5: Thử tìm theo Tên Trạm nếu không thấy theo Mã Trạm
+    station = DsStation.query.filter(
+        (DsStation.site_id.in_(ids_to_query)) | 
+        (DsStation.ten_tram.ilike(f'%{query_id}%'))
+    ).first()
+    
+    if station:
+        print(f"   Matches Station: {station.site_id} - {station.ten_tram}")
+        if station.site_id not in ids_to_query:
+            ids_to_query.append(station.site_id)
+    
+    # 🔍 Bước 2: Tìm dữ liệu con trong DataSite Core Tables dựa trên danh sách IDs
+    transmission = DsTransmission.query.filter(DsTransmission.site_id.in_(ids_to_query)).first()
+    contract = DsContract.query.filter(DsContract.site_id.in_(ids_to_query)).first()
+    infras = DsInfrastructure.query.filter(DsInfrastructure.site_id.in_(ids_to_query)).all()
+    equips = DsEquipment.query.filter(DsEquipment.site_id.in_(ids_to_query)).all()
+    telecoms = DsTelecom.query.filter(DsTelecom.site_id.in_(ids_to_query)).all()
 
-    # Tìm phụ trợ
-    equips = DsEquipment.query.filter(DsEquipment.site_id.ilike(f'%{site_id}%')).all()
-
-    # Tìm kỹ thuật
-    telecoms = DsTelecom.query.filter(DsTelecom.site_id.ilike(f'%{site_id}%')).all()
-
-    if not station and not infras and not equips and not telecoms and not transmission:
+    if not station and not infras and not equips and not telecoms and not transmission and not registry_match:
         # Fallback: tìm trong bảng Legacy
         from models import DataSiteAsset
-        legacy = DataSiteAsset.query.filter(DataSiteAsset.site_id.ilike(f'%{site_id}%')).all()
+        legacy = DataSiteAsset.query.filter(DataSiteAsset.site_id.in_(ids_to_query)).all()
         if legacy:
             grouped = {}
             for a in legacy:
@@ -223,47 +249,37 @@ def ds_search():
                 if typ not in grouped:
                     grouped[typ] = []
                 grouped[typ].append(a.to_dict())
-            return jsonify({"success": True, "site_id": site_id, "data": grouped, "source": "legacy"})
-        return jsonify({"success": False, "message": "Không tìm thấy dữ liệu cho trạm này."})
+            return jsonify({"success": True, "site_id": query_id, "data": grouped, "source": "legacy"})
+        return jsonify({"success": False, "message": f"Không tìm thấy dữ liệu cho trạm: {query_id}"})
 
     # Group theo nhóm
     result = {}
 
-    # Hạ tầng — group by loai
     for item in infras:
         key = item.loai
-        if key not in result:
-            result[key] = []
+        if key not in result: result[key] = []
         d = item.to_dict()
-        # Flatten extra_data vào dict chính
         if d.get('extra_data') and isinstance(d['extra_data'], dict):
             d.update(d.pop('extra_data'))
-        else:
-            d.pop('extra_data', None)
+        else: d.pop('extra_data', None)
         result[key].append(d)
 
-    # Phụ trợ — group by loai
     for item in equips:
         key = item.loai
-        if key not in result:
-            result[key] = []
+        if key not in result: result[key] = []
         d = item.to_dict()
         if d.get('extra_data') and isinstance(d['extra_data'], dict):
             d.update(d.pop('extra_data'))
-        else:
-            d.pop('extra_data', None)
+        else: d.pop('extra_data', None)
         result[key].append(d)
 
-    # Kỹ thuật — group by loai
     for item in telecoms:
         key = item.loai
-        if key not in result:
-            result[key] = []
+        if key not in result: result[key] = []
         d = item.to_dict()
         if d.get('extra_data') and isinstance(d['extra_data'], dict):
             d.update(d.pop('extra_data'))
-        else:
-            d.pop('extra_data', None)
+        else: d.pop('extra_data', None)
         result[key].append(d)
 
     station_dict = None
@@ -271,18 +287,80 @@ def ds_search():
         station_dict = station.to_dict()
         if station_dict.get('extra_data') and isinstance(station_dict['extra_data'], dict):
             station_dict.update(station_dict.pop('extra_data'))
-        else:
-            station_dict.pop('extra_data', None)
+        else: station_dict.pop('extra_data', None)
+
+    # Tích hợp Wireless Registry vào data kết quả
+    if registry_match:
+        from models import DsCellRegistry
+        cells = DsCellRegistry.query.filter_by(site_id_new=registry_match.site_id_new).all()
+        heights_by_ran = {}
+        for c in cells:
+            if c.antenna_height is not None:
+                h_str = str(c.antenna_height).strip()
+                if h_str and h_str != 'None':
+                    if c.ran_type not in heights_by_ran:
+                        heights_by_ran[c.ran_type] = set()
+                    heights_by_ran[c.ran_type].add(h_str)
+
+        height_display_parts = []
+        for ran in sorted(heights_by_ran.keys()):
+            h_vals = sorted(list(heights_by_ran[ran]))
+            if h_vals:
+                height_display_parts.append(f"{ran}: {'/'.join(h_vals)}m")
+        
+        antenna_height_display = " - ".join(height_display_parts) if height_display_parts else (registry_match.antenna_height or '--')
+
+        if 'WIRELESS' not in result: result['WIRELESS'] = []
+        result['WIRELESS'].append({
+            'site_id_new': registry_match.site_id_new,
+            'site_id_old': registry_match.site_id_old,
+            'antenna_height': registry_match.antenna_height,
+            'antenna_height_display': antenna_height_display,
+            'team': registry_match.team,
+            'zone': registry_match.zone,
+            'huyen': registry_match.huyen,
+            'xa': registry_match.xa,
+            'lat': registry_match.lat,
+            'long': registry_match.long
+        })
+
+    # Tích hợp Truyền dẫn vào data kết quả để frontend render được tab TRUYEN_DAN
+    if transmission:
+        if 'TRUYEN_DAN' not in result: result['TRUYEN_DAN'] = []
+        result['TRUYEN_DAN'].append(transmission.to_dict())
 
     return jsonify({
         "success": True,
-        "site_id": site_id,
+        "site_id": station.site_id if station else (registry_match.site_id_new if registry_match else query_id),
         "station": station_dict,
         "contract": contract.to_dict() if contract else None,
         "transmission": transmission.to_dict() if transmission else None,
+        "wireless": registry_match.to_dict() if registry_match else None,
         "data": result,
         "source": "v2"
     })
+
+@datasite_bp.route('/api/wireless/cells', methods=['GET'])
+def wireless_get_cells():
+    """Lấy danh sách cells thuộc 1 site."""
+    if 'username' not in session:
+        return jsonify({"success": False, "message": "Unauthorized"}), 403
+    
+    sid = request.args.get('site_id', '').strip().upper()
+    if not sid:
+        return jsonify({"success": False, "message": "Missing site_id"})
+        
+    from models import DsCellRegistry
+    # Có thể site_id truyền vào là cũ hoặc mới, ta tìm cả hai
+    cells = DsCellRegistry.query.filter(
+        (DsCellRegistry.site_id_new == sid) | (DsCellRegistry.cell_id_new.ilike(f'{sid}%'))
+    ).order_by(DsCellRegistry.cell_id_new).all()
+    
+    return jsonify({
+        "success": True,
+        "cells": [c.to_dict() for c in cells]
+    })
+
 
 
 # ============================================================================
@@ -298,7 +376,7 @@ def get_assets_by_type():
     if not asset_type:
         return jsonify({"success": False, "message": "Vui lòng truyền type."})
 
-    from models import DsInfrastructure, DsEquipment, DsTelecom, DsStation, DsContract
+    from models import DsInfrastructure, DsEquipment, DsTelecom, DsStation, DsContract, DsTransmission, DsSiteRegistry, DsCellRegistry
 
     items = []
 
@@ -321,6 +399,18 @@ def get_assets_by_type():
             else:
                 d.pop('extra_data', None)
             items.append(d)
+
+    elif asset_type == 'TRUYEN_DAN':
+        trans = DsTransmission.query.order_by(DsTransmission.site_id).all()
+        items = [t.to_dict() for t in trans]
+
+    elif asset_type == 'WIRELESS':
+        sites = DsSiteRegistry.query.order_by(DsSiteRegistry.site_id_new).all()
+        items = [s.to_dict() for s in sites]
+
+    elif asset_type == 'DATACELL':
+        cells = DsCellRegistry.query.order_by(DsCellRegistry.cell_id_new).all()
+        items = [c.to_dict() for c in cells]
 
     else:
         # Hạ tầng
@@ -557,4 +647,142 @@ def ds_objects_map():
         "success": True,
         "groups": grouped,
         "total_objects": len(EXPORT_OBJECT_MAP)
+    })
+
+
+# ============================================================================
+# API: Vô Tuyến — Site/Cell Registry (Bổ sung 2026-04-06)
+# ============================================================================
+
+@datasite_bp.route('/api/wireless/search', methods=['GET'])
+def wireless_search():
+    """Tìm kiếm SiteRegistry theo site_id (mới hoặc cũ) hoặc cell_id."""
+    if 'username' not in session:
+        return jsonify({"success": False, "message": "Unauthorized"}), 403
+
+    q = request.args.get('q', '').strip().upper()
+    if not q:
+        return jsonify({"success": False, "message": "Vui lòng nhập mã trạm hoặc cell."}), 400
+
+    from models import DsSiteRegistry, DsCellRegistry
+
+    # Tìm theo site_id_new hoặc site_id_old
+    site = DsSiteRegistry.query.filter(
+        (DsSiteRegistry.site_id_new.ilike(f'%{q}%')) |
+        (DsSiteRegistry.site_id_old.ilike(f'%{q}%'))
+    ).first()
+
+    # Nếu không tìm thấy theo site, thử tìm theo cell_id
+    if not site:
+        cell = DsCellRegistry.query.filter(
+            (DsCellRegistry.cell_id_new.ilike(f'%{q}%')) |
+            (DsCellRegistry.cell_id_old.ilike(f'%{q}%'))
+        ).first()
+        if cell:
+            site = DsSiteRegistry.query.filter_by(site_id_new=cell.site_id_new).first()
+
+    if not site:
+        return jsonify({"success": False, "message": f"Không tìm thấy Site/Cell nào với từ khoá: {q}"}), 404
+
+    cells = DsCellRegistry.query.filter_by(site_id_new=site.site_id_new).order_by(DsCellRegistry.cell_id_new).all()
+
+    return jsonify({
+        "success": True,
+        "site": site.to_dict(),
+        "cells": [c.to_dict() for c in cells],
+        "total_cells": len(cells)
+    })
+
+
+@datasite_bp.route('/api/wireless/cell/<string:cell_id>/update', methods=['POST'])
+def wireless_update_cell(cell_id):
+    """Cập nhật thông số Vô tuyến (Tilt/Azimuth/PCI) — ghi Audit Log."""
+    if 'username' not in session:
+        return jsonify({"success": False, "message": "Unauthorized"}), 403
+
+    from models import DsCellRegistry, DsWirelessHistory
+    from extensions import db
+
+    cell = DsCellRegistry.query.filter_by(cell_id_new=cell_id).first()
+    if not cell:
+        return jsonify({"success": False, "message": f"Không tìm thấy Cell: {cell_id}"}), 404
+
+    data = request.get_json(silent=True) or {}
+    allowed_fields = ['tilt', 'azimuth', 'pci_psc', 'antenna_height']
+    changed_by = session.get('username', 'unknown')
+    note = data.get('note', '')
+
+    changes_made = []
+    try:
+        for field in allowed_fields:
+            if field in data:
+                old_val = getattr(cell, field)
+                new_val = data[field]
+                if str(old_val) != str(new_val):
+                    # Ghi audit log (Enterprise)
+                    history = DsWirelessHistory(
+                        cell_id_new=cell_id,
+                        parameter=field.upper(),
+                        old_value=str(old_val) if old_val is not None else '',
+                        new_value=str(new_val),
+                        change_type='MANUAL',
+                        changed_by=changed_by,
+                        note=note
+                    )
+                    db.session.add(history)
+                    setattr(cell, field, new_val)
+                    changes_made.append(f"{field.upper()}: {old_val} → {new_val}")
+
+        cell.sync_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        
+        # Đồng bộ độ cao Anten cho các cell cùng công nghệ RAN (3G/4G/5G)
+        if 'antenna_height' in data:
+            new_height = data['antenna_height']
+            other_cells = DsCellRegistry.query.filter(
+                DsCellRegistry.site_id_new == cell.site_id_new,
+                DsCellRegistry.ran_type == cell.ran_type,
+                DsCellRegistry.cell_id_new != cell_id
+            ).all()
+            
+            for oc in other_cells:
+                old_h = oc.antenna_height
+                if str(old_h) != str(new_height):
+                    oc.antenna_height = new_height
+                    oc.sync_date = cell.sync_date
+                    db.session.add(DsWirelessHistory(
+                        cell_id_new=oc.cell_id_new,
+                        parameter='ANTENNA_HEIGHT',
+                        old_value=str(old_h) if old_h is not None else '',
+                        new_value=str(new_height),
+                        change_type='AUTO_SYNC_RAN',
+                        changed_by=changed_by,
+                        note=f"Đồng bộ tự động theo cell {cell_id}"
+                    ))
+        db.session.commit()
+
+        return jsonify({
+            "success": True,
+            "message": f"Đã cập nhật {len(changes_made)} thông số.",
+            "changes": changes_made
+        })
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f"Wireless update error: {e}")
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+@datasite_bp.route('/api/wireless/cell/<string:cell_id>/history', methods=['GET'])
+def wireless_cell_history(cell_id):
+    """Lấy lịch sử thay đổi thông số vô tuyến của một Cell."""
+    if 'username' not in session:
+        return jsonify({"success": False, "message": "Unauthorized"}), 403
+
+    from models import DsWirelessHistory
+    logs = DsWirelessHistory.query.filter_by(cell_id_new=cell_id)\
+        .order_by(DsWirelessHistory.changed_at.desc()).limit(50).all()
+
+    return jsonify({
+        "success": True,
+        "cell_id": cell_id,
+        "history": [h.to_dict() for h in logs]
     })

@@ -452,3 +452,70 @@ class SystemConfig(db.Model):
     updated_at = db.Column(db.String(20), default=lambda: datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
     updated_by = db.Column(db.String(100))
 
+
+# ============================================================================
+# WIRELESS REGISTRY v1 - ENTERPRISE GRADE (2026-04-06)
+# Quản lý danh mục Site/Cell và Lịch sử thay đổi thông số Anten
+# ============================================================================
+
+class DsSiteRegistry(db.Model):
+    """Bảng Registry quản lý ánh xạ Site ID cũ và mới + Thông số hạ tầng anten"""
+    __tablename__ = 'ds_site_registry'
+    id = db.Column(db.Integer, primary_key=True)
+    site_id_new = db.Column(db.String(50), unique=True, nullable=False, index=True)
+    site_id_old = db.Column(db.String(50), index=True)
+    ten_tram_moi = db.Column(db.String(255))
+    tinh = db.Column(db.String(100))
+    huyen = db.Column(db.String(100))
+    xa = db.Column(db.String(100))
+    lat = db.Column(db.Float)
+    long = db.Column(db.Float)
+    antenna_height = db.Column(db.Float) # Chiều cao anten (m)
+    team = db.Column(db.String(50))      # Tổ kỹ thuật
+    zone = db.Column(db.String(50))      # KV 7, KV 8...
+    sync_date = db.Column(db.String(20), default=lambda: datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+
+    # Link tới các cell
+    cells = db.relationship('DsCellRegistry', backref='site', lazy=True, cascade="all, delete-orphan")
+
+    def to_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+
+
+class DsCellRegistry(db.Model):
+    """Bảng chi tiết từng Cell/Sector: Tilt, Azimuth hiện tại"""
+    __tablename__ = 'ds_cell_registry'
+    id = db.Column(db.Integer, primary_key=True)
+    site_id_new = db.Column(db.String(50), db.ForeignKey('ds_site_registry.site_id_new'), nullable=False, index=True)
+    cell_id_new = db.Column(db.String(100), unique=True, index=True)
+    cell_id_old = db.Column(db.String(100), index=True)
+    ran_type = db.Column(db.String(20)) # 3G / 4G
+    pci_psc = db.Column(db.String(50))
+    node_id = db.Column(db.String(50))
+    cell_id_num = db.Column(db.String(50)) # ID số của cell
+    azimuth = db.Column(db.Float)
+    tilt = db.Column(db.Float)
+    antenna_height = db.Column(db.Float) # Chiều cao anten riêng biệt cho từng Cell (m)
+    vendor = db.Column(db.String(50))
+    sync_date = db.Column(db.String(20), default=lambda: datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+
+    def to_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+
+
+class DsWirelessHistory(db.Model):
+    """Nhật ký thay đổi thông số vô tuyến (Audit Log - ENTERPRISE LEVEL)"""
+    __tablename__ = 'ds_wireless_history'
+    id = db.Column(db.Integer, primary_key=True)
+    cell_id_new = db.Column(db.String(100), index=True, nullable=False)
+    parameter = db.Column(db.String(50))       # 'TILT', 'AZIMUTH', 'PCI'...
+    old_value = db.Column(db.String(100))
+    new_value = db.Column(db.String(100))
+    change_type = db.Column(db.String(50))     # 'IMPORT' (từ Excel), 'MANUAL' (Sửa tay)
+    changed_by = db.Column(db.String(100))     # Username
+    changed_at = db.Column(db.String(20), default=lambda: datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+    note = db.Column(db.String(500))
+
+    def to_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+

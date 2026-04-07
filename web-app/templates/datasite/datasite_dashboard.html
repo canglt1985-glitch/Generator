@@ -1,154 +1,185 @@
 {% extends "layout.html" %}
 
-{% block title %}Datasite{% endblock %}
+{% block title %}Datasite Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Custom styles for Network Statistics table */
+    .stats-table-wrapper {
+        border-radius: 8px;
+        overflow-x: auto !important;
+        border: 1px solid #dee2e6;
+        box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.05);
+        /* Soft shadow to distinguish from page */
+        scrollbar-width: thin;
+        /* Firefox */
+        -ms-overflow-style: auto;
+        /* IE/Edge */
+    }
+
+    /* Scrollbar Styling for Chrome/Safari/Edge */
+    .stats-table-wrapper::-webkit-scrollbar {
+        height: 12px;
+    }
+
+    .stats-table-wrapper::-webkit-scrollbar-track {
+        background: #f8f9fa;
+        border-radius: 6px;
+    }
+
+    .stats-table-wrapper::-webkit-scrollbar-thumb {
+        background: #cbd5e0;
+        border-radius: 6px;
+        border: 3px solid #f8f9fa;
+    }
+
+    .stats-table-wrapper::-webkit-scrollbar-thumb:hover {
+        background: #a0aec0;
+    }
+
+    #stats_table {
+        white-space: nowrap;
+        /* Prevent word wrapping to force horizontal expansion */
+        min-width: 1500px;
+        /* Minimum width to ensure scrolling works reliably */
+    }
+
+    #stats_table th {
+        background-color: #f1f5f9;
+        font-weight: 700;
+        color: #475569;
+        border-bottom: 2px solid #e2e8f0;
+        padding: 12px 16px;
+    }
+
+    #stats_table td {
+        padding: 10px 16px;
+        border-bottom: 1px solid #f1f5f9;
+        vertical-align: middle;
+    }
+
+    #stats_table tr:hover td {
+        background-color: #f8fafc;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="card mb-4 shadow-sm">
-        <div class="card-header p-0">
-            <ul class="nav nav-tabs" id="datasiteTabs" role="tablist" style="border-bottom: 0;">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active py-3 fw-bold" id="station-tab" data-bs-toggle="tab"
-                        data-bs-target="#station" type="button" role="tab">
-                        <i class="fas fa-search me-2"></i>Tra Cứu Một Trạm
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link py-3 fw-bold text-success" id="category-tab" data-bs-toggle="tab"
-                        data-bs-target="#category" type="button" role="tab">
-                        <i class="fas fa-list-ul me-2"></i>Thống Kê Toàn Mạng
-                    </button>
-                </li>
-            </ul>
+<div class="container-fluid mt-3">
+    <!-- Main Search & Stats Toggle -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-2">
+                    <ul class="nav nav-tabs border-0" id="mainTabs" role="tablist">
+                        <li class="nav-item">
+                            <button class="nav-link active fw-bold text-uppercase" id="nav-search-tab"
+                                data-bs-toggle="tab" data-bs-target="#pane-search" type="button">
+                                <i class="fas fa-search me-1"></i> Tra cứu trạm
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link fw-bold text-uppercase text-success" id="nav-stats-tab"
+                                data-bs-toggle="tab" data-bs-target="#pane-stats" type="button">
+                                <i class="fas fa-list-ul me-1"></i> Thống kê toàn mạng
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
         </div>
     </div>
 
     <!-- Tab Content -->
     <div class="tab-content">
-        <!-- Tab 1: Tra Cứu Trạm -->
-        <div class="tab-pane fade show active" id="station" role="tabpanel">
-            <div class="row mb-4 justify-content-center">
-                <div class="col-md-8 text-center">
-                    <h2 class="mb-3">
-                        <i class="fas fa-database"></i> TRA CỨU HỒ SƠ DATASITE
-                    </h2>
-                    <div class="input-group input-group-lg shadow-sm">
-                        <input type="text" id="siteIdInput" class="form-control"
-                            placeholder="Nhập mã trạm (VD: DNCM02)...">
-                        <button class="btn btn-primary px-4" id="btnSearch" onclick="searchStation()">
-                            <i class="fas fa-search me-2"></i> Tra Cứu Trạm
-                        </button>
-                    </div>
-                    <div id="loadingIndicator" class="mt-3 text-muted" style="display: none;">
-                        <i class="fas fa-spinner fa-spin"></i> Đang tải dữ liệu từ kho DataSite...
-                    </div>
-                    <div id="errorMsg" class="mt-3 text-danger fw-bold" style="display: none;"></div>
-                </div>
-            </div>
-
-            <!-- Station Info Card (v2) -->
-            <div id="stationInfoCard" class="mb-4" style="display: none;">
-                <div class="row justify-content-center">
-                    <div class="col-md-10 col-lg-8">
-                        <div class="card shadow-md border-primary border-top border-3"
-                            style="border-radius: 12px; overflow: hidden;">
-                            <div
-                                class="card-header bg-white border-bottom-0 pt-3 pb-2 d-flex justify-content-between align-items-center">
-                                <h5 class="mb-0 fw-bold text-dark"><i
-                                        class="fas fa-satellite-dish text-primary me-2"></i>Thông Tin Trạm <span
-                                        id="headerSiteId" class="text-primary"></span></h5>
-                                <div>
-                                    <button class="btn btn-sm btn-light text-primary fw-bold px-3 shadow-none border"
-                                        onclick="showModalDetails('STATION')"><i class="fas fa-list me-1"></i>
-                                        Trạm</button>
-                                    <button id="btnContractModal"
-                                        class="btn btn-sm btn-light text-warning fw-bold px-3 shadow-none border"
-                                        onclick="showModalDetails('CONTRACT')" style="display:none;"><i
-                                            class="fas fa-file-contract me-1"></i> Hợp đồng</button>
-                                </div>
-                            </div>
-                            <div class="card-body p-0" id="stationInfoBody">
+        <!-- PANE: SEARCH -->
+        <div class="tab-pane fade show active" id="pane-search">
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-body bg-light rounded shadow-inner">
+                    <div class="row align-items-center">
+                        <div class="col-md-5">
+                            <h4 class="mb-0 fw-bold"><i class="fas fa-database text-primary me-2"></i>Tra cứu hồ sơ
+                                DataSite</h4>
+                        </div>
+                        <div class="col-md-7">
+                            <div class="input-group">
+                                <input type="text" id="siteIdInput" class="form-control"
+                                    placeholder="Mã trạm cũ/mới, tên trạm hoặc Cell ID..." autofocus>
+                                <button class="btn btn-primary px-4" id="btn_search_tram" onclick="doSearch()">
+                                    <i class="fas fa-search"></i> Tra cứu
+                                </button>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- MAIN DASHBOARD CARDS -->
-            <div id="resultsDashboard" style="display: none;">
-                <h4 class="mb-3 text-primary" id="resultTitle"></h4>
-                <div class="row g-4" id="cardsContainer">
-                    <!-- Cards Rendered via JS -->
-                </div>
+            <div id="search_loading" class="text-center my-5" style="display: none;">
+                <div class="spinner-border text-primary" role="status"></div>
+                <div class="mt-2 text-muted">Đang truy vấn dữ liệu toàn hệ thống...</div>
             </div>
+
+            <div id="search_error" class="alert alert-warning text-center" style="display: none;"></div>
+
+            <!-- Dashboard Output -->
+            <div id="dashboard_result"></div>
         </div>
 
-        <!-- Tab 2: Tra Cứu Hạng Mục -->
-        <div class="tab-pane fade" id="category" role="tabpanel">
-            <div class="row mb-4 justify-content-center">
-                <div class="col-md-8 text-center">
-                    <h2 class="mb-3 text-success">
-                        <i class="fas fa-chart-pie"></i> THỐNG KÊ DATASITE TOÀN MẠNG
-                    </h2>
-                    <div class="input-group input-group-lg shadow-sm">
-                        <select id="assetTypeSelect" class="form-select">
-                            <option value="">-- Chọn Hạng Mục Tài Sản --</option>
-                            <optgroup label="📋 Thông Tin Chung">
-                                <option value="STATION">📍 Danh Sách Trạm (Thông tin chung)</option>
-                                <option value="CONTRACT">📄 Danh Sách Hợp Đồng</option>
-                            </optgroup>
-                            <optgroup label="🏢 Cơ Sở Hạ Tầng">
-                                <option value="COT_ANTEN">🗼 Cột Anten & Cáp</option>
-                                <option value="PHONG_MAY">🖥️ Phòng Máy</option>
-                                <option value="PHONG_MPD">🚪 Phòng MPĐ</option>
-                            </optgroup>
-                            <optgroup label="🔌 Phụ Trợ">
-                                <option value="MAY_LANH">❄️ Máy Lạnh</option>
-                                <option value="MAY_PHAT">⚡ Máy Phát Điện</option>
-                                <option value="TU_NGUON">🔌 Tủ Nguồn</option>
-                                <option value="ACCU">🔋 Tổ Accu</option>
-                            </optgroup>
-                            <optgroup label="📡 Kỹ Thuật">
-                                <option value="BTS_3G">📶 Tủ BTS 3G</option>
-                                <option value="BTS_4G">📡 Tủ BTS 4G</option>
-                                <option value="TRUYEN_DAN">🌐 Thông Tin Truyền Dẫn</option>
-                                <option value="DATA_CELL">📊 Data Cell</option>
-                                <option value="THIET_BI_VT">🔧 Thiết bị Viễn thông</option>
-                            </optgroup>
-                        </select>
-                        <button class="btn btn-success px-4" onclick="searchByCategory()">
-                            <i class="fas fa-search me-2"></i> Thống Kê
-                        </button>
+        <!-- PANE: STATS -->
+        <div class="tab-pane fade" id="pane-stats">
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-body bg-light">
+                    <div class="row align-items-center">
+                        <div class="col-md-4">
+                            <h4 class="mb-0 fw-bold text-success"><i class="fas fa-chart-pie me-2"></i>Thống kê nhanh
+                            </h4>
+                        </div>
+                        <div class="col-md-8">
+                            <div class="input-group">
+                                <span class="input-group-text bg-white border-end-0">Chọn hạng mục:</span>
+                                <select id="stat_select_type" class="form-select border-start-0">
+                                    <option value="">-- Chọn --</option>
+                                    <optgroup label="Cơ bản">
+                                        <option value="STATION">📍 Danh sách trạm</option>
+                                        <option value="WIRELESS">📶 Registry Vô tuyến (Site)</option>
+                                        <option value="DATACELL">📡 Chi tiết Cell (Datacell)</option>
+                                        <option value="CONTRACT">📄 Hợp đồng thuê</option>
+                                        <option value="TRUYEN_DAN">🔗 Truyền dẫn</option>
+                                    </optgroup>
+                                    <optgroup label="Tài sản hạ tầng">
+                                        <option value="COT_ANTEN">🗼 Cột Anten</option>
+                                        <option value="MAY_LANH">❄️ Máy Lạnh</option>
+                                        <option value="MAY_PHAT">⚡ Máy Phát Điện</option>
+                                        <option value="TU_NGUON">🔌 Tủ Nguồn DC</option>
+                                        <option value="ACCU">🔋 Tổ Accu</option>
+                                        <option value="BTS_4G">📡 BTS 4G</option>
+                                    </optgroup>
+                                </select>
+                                <button class="btn btn-success px-4" onclick="doStats()">
+                                    <i class="fas fa-eye me-1"></i> Xem kết quả
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                    <div id="catLoading" class="mt-3 text-muted" style="display: none;">
-                        <i class="fas fa-spinner fa-spin"></i> Đang tổng hợp dữ liệu toàn mạng...
-                    </div>
-                    <div id="catErrorMsg" class="mt-3 text-danger fw-bold" style="display: none;"></div>
                 </div>
             </div>
 
-            <!-- Category Results (Bảng ĐỘNG) -->
-            <div id="catResultsDashboard" style="display: none;">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h4 class="text-success fw-bold mb-0" id="catResultTitle"></h4>
-                    <div class="input-icon w-25">
-                        <span class="input-icon-addon"><i class="fas fa-filter"></i></span>
-                        <input type="text" class="form-control form-control-sm"
-                            placeholder="Lọc kết quả (hãng, tình trạng...)" onkeyup="filterLocalTable(this)">
-                    </div>
-                </div>
-
+            <div id="stats_container" style="display: none;">
                 <div class="card shadow-sm border-0">
-                    <div class="table-responsive" id="catTableContainer"
-                        style="cursor: grab; -webkit-user-select: none; user-select: none;">
-                        <table class="table table-vcenter table-hover card-table small text-nowrap text-center mb-0"
-                            id="catTable">
-                            <thead class="bg-light" id="catTableHead">
-                                <!-- Header DYNAMIC từ JS -->
-                            </thead>
-                            <tbody id="catTableBody">
-                                <!-- Rows from JS -->
-                            </tbody>
+                    <div
+                        class="card-header bg-success text-white d-flex justify-content-between align-items-center py-2">
+                        <h6 class="mb-0 fw-bold" id="stats_title">Dữ liệu hệ thống</h6>
+                        <div class="d-flex gap-2">
+                            <input type="text" class="form-control form-control-sm" placeholder="Tìm nhanh..."
+                                onkeyup="onFilterStats(this)">
+                            <button class="btn btn-sm btn-light border" onclick="doStats()">Làm mới</button>
+                        </div>
+                    </div>
+                    <div class="stats-table-wrapper" style="max-height: 70vh;">
+                        <table class="table table-bordered table-sm table-hover text-center small mb-0"
+                            id="stats_table">
+                            <thead class="table-light sticky-top" style="top: 0;" id="stats_thead"></thead>
+                            <tbody id="stats_tbody"></tbody>
                         </table>
                     </div>
                 </div>
@@ -157,661 +188,614 @@
     </div>
 </div>
 
-<!-- #deepsync tab-pane -->
-
-<!-- Modal Chi Tiết Trạm -->
-<div class="modal fade" id="stationDetailModal" tabindex="-1">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title fw-bold"><i class="fas fa-broadcast-tower me-2"></i>Chi Tiết Chuyên Sâu - Thông
-                    Tin Trạm</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                    aria-label="Close"></button>
+<!-- MODAL: EDIT ANTEN -->
+<div class="modal fade" id="modalEdit" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-primary text-white py-2">
+                <h6 class="modal-title fw-bold">Cập nhật thông số Anten</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body bg-light">
-                <div class="row" id="stationFullDetails"></div>
+            <div class="modal-body">
+                <div class="mb-2"><strong>Cell ID:</strong> <span id="edit_cell_id_display"
+                        class="text-danger fw-bold"></span></div>
+                <hr class="mt-1">
+                <div class="row g-3">
+                    <div class="col-6">
+                        <label class="form-label small fw-bold">Azimuth (°)</label>
+                        <input type="number" id="edit_azi" class="form-control" step="any">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-bold">Tilt (°)</label>
+                        <input type="number" id="edit_tilt" class="form-control" step="any">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label small fw-bold">PCI/PSC</label>
+                        <input type="text" id="edit_pci" class="form-control">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label small fw-bold">Chiều cao Anten (m)</label>
+                        <input type="number" id="edit_height" class="form-control" step="any">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label small fw-bold">Ghi chú (Note)</label>
+                        <textarea id="edit_note" class="form-control" rows="2"
+                            placeholder="Lý do thay đổi..."></textarea>
+                    </div>
+                </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+            <div class="modal-footer p-2 bg-light">
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-sm btn-primary px-4" onclick="saveEdit()">Lưu thay đổi</button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Modal Chi Tiết Hợp Đồng -->
-<div class="modal fade" id="contractDetailModal" tabindex="-1">
+<!-- MODAL: HISTORY -->
+<div class="modal fade" id="modalHist" tabindex="-1">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header bg-warning text-dark">
-                <h5 class="modal-title fw-bold"><i class="fas fa-file-contract me-2"></i>Chi Tiết Chuyên Sâu - Hợp Đồng
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header py-2">
+                <h6 class="modal-title fw-bold text-primary"><i class="fas fa-history me-1"></i>Lịch sử Audit Log: <span
+                        id="hist_target"></span></h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body bg-light">
-                <div class="row" id="contractFullDetails"></div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
-            </div>
+            <div class="modal-body p-0" id="hist_content" style="min-height: 200px;"></div>
         </div>
     </div>
 </div>
-
-<template id="cardTemplate">
-    <div class="col-md-6 col-lg-4">
-        <div class="card h-100 shadow-sm border-0">
-            <div class="card-header text-white fw-bold d-flex justify-content-between align-items-center"
-                data-header-bg>
-                <span><i data-icon></i> <span data-title></span></span>
-                <span class="badge bg-light text-dark rounded-pill" data-qty></span>
-            </div>
-            <div class="card-body bg-light">
-                <div data-items-container></div>
-            </div>
-        </div>
-    </div>
-</template>
-
-<template id="itemTemplate">
-    <div class="mb-3 p-3 bg-white rounded shadow-sm position-relative border-start border-4 border-primary">
-        <div class="fw-bold text-dark fs-6 mb-1" data-name></div>
-        <div class="text-muted small mb-2"><i class="fas fa-tag"></i> <span data-brand></span></div>
-        <div class="mb-1" data-details></div>
-    </div>
-</template>
 
 {% endblock %}
 
 {% block scripts %}
 <script>
-    const typeConfigs = {
+    const CONFIGS = {
+        'WIRELESS': {
+            title: 'Registry Vô tuyến', icon: 'fas fa-satellite-dish', bg: 'bg-danger',
+            cols: ['site_id_new', 'site_id_old', 'antenna_height', 'team', 'zone', 'note_import']
+        },
         'STATION': {
-            title: 'Danh Sách Trạm', icon: 'fas fa-map-marker-alt', bg: 'bg-primary',
-            orderedCols: ['site_id', 'ma_ptm', 'ten_tram', 'loai_tram', 'dia_chi', 'kinh_do', 'vi_do', 'vung_phu', 'cosite', 'chu_csht', 'don_vi_dung_chung', 'hang_muc_dung_chung', 'tinh_trang', 'ghi_chu']
+            title: 'Thông tin trạm', icon: 'fas fa-map-marker-alt', bg: 'bg-primary',
+            cols: ['site_id', 'ten_tram', 'loai_tram', 'dia_chi', 'hinh_thuc_dau_tu', 'tinh_tp', 'quan_huyen', 'phuong_xa', 'ngay_phat_song', 'tinh_trang']
         },
         'CONTRACT': {
-            title: 'Danh Sách Hợp Đồng', icon: 'fas fa-file-contract', bg: 'bg-warning text-dark',
-            orderedCols: ['site_id', 'so_hd', 'chu_the_hop_dong', 'sdt_chu_nha', 'gia_thue_co_vat', 'gia_dien_khoan', 'chu_ky_thanh_toan', 'ngay_ky_hd', 'ngay_ket_thuc_hd', 'tinh_trang_hd', 'ghi_chu']
+            title: 'Hợp đồng thuê', icon: 'fas fa-file-contract', bg: 'bg-warning text-dark',
+            cols: ['site_id', 'so_hd', 'chu_the_hop_dong', 'sdt_chu_nha', 'gia_thue_co_vat', 'ngay_ki_hd', 'ngay_ket_thuc_hd', 'tinh_trang_hd', 'chu_ky_thanh_toan', 'ngan_hang']
         },
         'COT_ANTEN': {
-            title: 'Cột Anten & Cáp', icon: 'fas fa-broadcast-tower', bg: 'bg-info text-dark',
-            orderedCols: ['site_id', 'dai_vt', 'loai_cot', 'chieu_cao_cot', 'chieu_cao_cong_trinh', 'dv_dung_chung_cot', 'dv_chu_quan_ccat', 'den_bao_khong', 'chieu_dai_cau_cap', 'serial', 'han_bao_hanh', 'han_bao_duong', 'trang_thai']
+            title: 'Cột Anten', icon: 'fas fa-broadcast-tower', bg: 'bg-info text-dark',
+            cols: ['site_id', 'loai_cot', 'chieu_cao_cot', 'chieu_cao_cong_trinh', 'chieu_dai_cau_cap', 'den_bao_khong', 'trang_thai', 'serial']
+        },
+        'PHONG_MAY': {
+            title: 'Phòng Máy', icon: 'fas fa-home', bg: 'bg-secondary',
+            cols: ['site_id', 'loai_pm', 'dien_tich', 'vi_tri', 'trang_thai', 'han_bao_hanh', 'serial']
+        },
+        'PHONG_MPD': {
+            title: 'Phòng Máy Phát Điện', icon: 'fas fa-bolt', bg: 'bg-dark',
+            cols: ['site_id', 'vi_tri', 'dien_tich', 'trang_thai', 'serial']
         },
         'MAY_LANH': {
             title: 'Máy Lạnh', icon: 'fas fa-snowflake', bg: 'bg-primary',
-            orderedCols: ['site_id', 'dai_vt', 'nhan_hieu', 'ten_may_lanh', 'loai_may_lanh', 'cong_suat_btu', 'ngay_sd_hop_dong', 'ngay_su_dung', 'vi_tri_tai_san', 'product_code', 'serial', 'dv_chu_quan', 'han_bao_hanh', 'han_bao_duong', 'ghi_chu', 'trang_thai']
+            cols: ['site_id', 'nhan_hieu', 'cong_suat_btu', 'trang_thai', 'loai_may_lanh', 'product_code', 'serial', 'vi_tri', 'han_bao_hanh']
         },
         'MAY_PHAT': {
-            title: 'Máy Phát Điện', icon: 'fas fa-bolt', bg: 'bg-warning text-dark',
-            orderedCols: ['site_id', 'dai_vt', 'nhan_hieu', 'ten_mpd', 'cong_suat', 'phase', 'nhien_lieu', 'ats', 'ngay_sd_hop_dong', 'ngay_su_dung', 'vi_tri_tai_san', 'product_code', 'serial', 'dv_chu_quan', 'han_bao_hanh', 'han_bao_duong', 'ghi_chu', 'trang_thai']
-        },
-        'PHONG_MAY': {
-            title: 'Phòng Máy', icon: 'fas fa-server', bg: 'bg-dark',
-            orderedCols: ['site_id', 'dai_vt', 'loai_pm', 'vi_tri', 'dien_tich', 'dv_dung_chung', 'dv_chu_quan', 'serial', 'han_bao_hanh', 'han_bao_duong', 'trang_thai']
-        },
-        'PHONG_MPD': {
-            title: 'Phòng MPĐ', icon: 'fas fa-door-closed', bg: 'bg-secondary',
-            orderedCols: ['site_id', 'dai_vt', 'vi_tri', 'dien_tich', 'dv_dung_chung', 'dv_chu_quan', 'product_code', 'serial', 'han_bao_hanh', 'han_bao_duong', 'trang_thai']
-        },
-        'ACCU': {
-            title: 'Tổ Accu', icon: 'fas fa-car-battery', bg: 'bg-success',
-            orderedCols: ['site_id', 'dai_vt', 'nhan_hieu', 'loai_accu', 'dung_luong_binh', 'so_luong_binh', 'ngay_su_dung', 'product_code', 'serial', 'han_bao_hanh', 'han_bao_duong', 'ghi_chu', 'trang_thai']
+            title: 'Máy Phát Điện', icon: 'fas fa-bolt', bg: 'bg-dark',
+            cols: ['site_id', 'nhan_hieu', 'cong_suat', 'nhien_lieu', 'trang_thai', 'ats', 'loai_dau_no', 'loai_dau_phat', 'product_code', 'serial']
         },
         'TU_NGUON': {
-            title: 'Tủ Nguồn', icon: 'fas fa-plug', bg: 'bg-danger',
-            orderedCols: ['site_id', 'dai_vt', 'nhan_hieu', 'so_luong_khe_rect', 'so_luong_rect', 'cong_suat_rect_w', 'thoi_gian_backup_phut', 'dong_tai_a', 'ngay_sd_hop_dong', 'ngay_su_dung', 'hop_dong_du_an', 'product_code', 'product_code_rect', 'serial', 'han_bao_hanh', 'han_bao_duong', 'trang_thai']
+            title: 'Tủ Nguồn DC', icon: 'fas fa-plug', bg: 'bg-secondary',
+            cols: ['site_id', 'nhan_hieu', 'cong_suat_rect_w', 'dong_tai_a', 'serial', 'trang_thai', 'so_khe_rect', 'so_luong_rect', 'backup_phut', 'product_code']
+        },
+        'ACCU': {
+            title: 'Tổ Accu/Bình điện', icon: 'fas fa-battery-half', bg: 'bg-success',
+            cols: ['site_id', 'nhan_hieu', 'loai_accu', 'dung_luong_ah', 'so_luong_binh', 'product_code', 'trang_thai', 'serial', 'ngay_su_dung']
         },
         'BTS_3G': {
-            title: 'Tủ BTS 3G', icon: 'fas fa-signal', bg: 'bg-indigo',
-            orderedCols: ['site_id', 'chung_loai', 'hang_sx', 'rru', 'bbu', 'ngay_sd_hop_dong', 'ngay_su_dung', 'serial', 'han_bao_hanh', 'han_bao_duong', 'trang_thai']
+            title: 'Thiết bị 3G (NodeB)', icon: 'fas fa-signal', bg: 'bg-success',
+            cols: ['site_id', 'nhan_hieu', 'chung_loai', 'trang_thai', 'hang_sx', 'rru', 'bbu', 'serial']
         },
         'BTS_4G': {
-            title: 'Tủ BTS 4G', icon: 'fas fa-satellite-dish', bg: 'bg-purple',
-            orderedCols: ['site_id', 'dai_vt', 'chung_loai', 'hang_sx', 'rru', 'bbu', 'ngay_sd_hop_dong', 'ngay_su_dung', 'serial', 'han_bao_hanh', 'han_bao_duong', 'trang_thai']
-        },
-        'BTS_5G': {
-            title: 'Tủ BTS 5G', icon: 'fas fa-wifi', bg: 'bg-gradient-primary',
-            orderedCols: ['site_id', 'dai_vt', 'chung_loai', 'hang_sx', 'rru', 'bbu', 'ngay_sd_hop_dong', 'ngay_su_dung', 'serial', 'han_bao_hanh', 'han_bao_duong', 'trang_thai']
-        },
-        'DATA_CELL': {
-            title: 'Data Cell', icon: 'fas fa-chart-bar', bg: 'bg-teal',
-            orderedCols: ['site_id', 'cell', 'sector', 'lat', 'long', 'height', 'azimuth', 'm_tilt', 'e_tilt', 'tilt', 'enb_id', 'c_id', 'psc_pci']
+            title: 'Thiết bị 4G (eNodeB)', icon: 'fas fa-signal', bg: 'bg-primary',
+            cols: ['site_id', 'nhan_hieu', 'chung_loai', 'trang_thai', 'hang_sx', 'rru', 'bbu', 'serial']
         },
         'THIET_BI_VT': {
-            title: 'Thiết bị VT', icon: 'fas fa-cogs', bg: 'bg-orange',
-            orderedCols: ['site_id', 'dai_vt', 'ten_thiet_bi', 'loai_thiet_bi', 'nha_cung_cap', 'product_code', 'thuoc_tram_remote', 'serial', 'trang_thai']
+            title: 'Thiết bị viễn thông', icon: 'fas fa-broadcast-tower', bg: 'bg-info text-dark',
+            cols: ['site_id', 'ten_thiet_bi', 'loai_thiet_bi', 'nha_cung_cap', 'trang_thai', 'product_code', 'serial']
+        },
+        'DATACELL': {
+            title: 'Chi tiết Cell (Datacell)', icon: 'fas fa-broadcast-tower', bg: 'bg-danger',
+            cols: ['site_id_new', 'cell_id_new', 'cell_id_old', 'ran_type', 'node_id', 'cell_id_num', 'azimuth', 'tilt', 'pci_psc', 'vendor']
         },
         'TRUYEN_DAN': {
-            title: 'Truyền Dẫn', icon: 'fas fa-network-wired', bg: 'bg-azure',
-            orderedCols: ['site_id', 'loai_ket_noi', 'thiet_bi_td', 'huong_ket_noi', 'node_csg', 'chung_loai_csg', 'chu_dau_tu_cap', 'don_vi_van_hanh_cap', 'chung_loai_cwdm', 'hang_sx_cwdm', 'sync_date']
-        },
+            title: 'Truyền Dẫn', icon: 'fas fa-network-wired', bg: 'bg-teal text-white',
+            cols: ['site_id', 'loai_ket_noi', 'thiet_bi_td', 'huong_ket_noi', 'node_csg', 'chung_loai_csg', 'chu_dau_tu_cap', 'don_vi_van_hanh_cap', 'hang_sx_cwdm', 'chung_loai_cwdm']
+        }
     };
 
-    // Các cột ẩn (không hiện trên bảng Hạng Mục Toàn Mạng vì không có ý nghĩa trực quan)
-    const HIDDEN_COLS = ['id', 'sync_date', 'loai', 'extra_data', 'product_code', 'don_gia', 'don_vi_tinh'];
+    const LABEL_MAP = {
+        // --- Cột Anten ---
+        'loai_cot': { lab: 'Loại cột' },
+        'chieu_cao_cot': { lab: 'Chiều cao cột', unit: 'm' },
+        'chieu_cao_cong_trinh': { lab: 'Chiều cao công trình', unit: 'm' },
+        'chieu_dai_cau_cap': { lab: 'Chiều dài cầu cáp', unit: 'm' },
+        'den_bao_khong': { lab: 'Đèn cảnh báo' },
+        'dai_vt': { lab: 'Đài viễn thông' },
+        'dv_chu_quan_ccat': { lab: 'Chủ quản cáp' },
 
-    // Tên cột đẹp cho UI — khớp 100% key trong extra_data v2.1
-    const COL_LABELS = {
-        // Cột cứng
-        site_id: 'Mã Trạm', nhan_hieu: 'Nhãn Hiệu', serial: 'Serial', trang_thai: 'Tình Trạng',
-        han_bao_hanh: 'Hạn Bảo Hành', han_bao_duong: 'Hạn Bảo Dưỡng', ngay_su_dung: 'Ngày Sử Dụng',
-        // Thông tin chung (Station)
-        ma_ptm: 'Mã PTM', ten_tram: 'Tên Trạm', dia_chi: 'Địa Chỉ', kinh_do: 'Kinh Độ', vi_do: 'Vĩ Độ',
-        loai_tram: 'Loại Trạm', don_vi_dung_chung: 'ĐV Dùng Chung', hang_muc_dung_chung: 'Hạng Mục Dùng Chung',
-        ngay_phat_song: 'Ngày Phát Sóng', ngay_ky_bien_ban_ban_giao: 'Ngày Ký BB Giao', tinh_trang: 'Tình Trạng (TT)',
-        vung_phu: 'Vùng Phủ', cosite: 'Cosite', chu_csht: 'Chủ CSHT', so_kiem_dinh: 'Số KĐ/TCB', han_kiem_dinh: 'Hạn KĐ/TCB',
-        // Hợp đồng (Contract)
-        chu_the_hop_dong: 'Chủ Hợp Đồng', sdt_chu_nha: 'SĐT', tinh_trang_hd: 'Tình Trạng HĐ', so_hd: 'Số Hợp Đồng',
-        gia_thue_co_vat: 'Giá Thuê (VAT)', gia_dien_khoan: 'Điện Khoán', chu_ky_thanh_toan: 'Chu Kỳ TT',
-        ngay_ky_hd: 'Ngày Ký HĐ', ngay_ket_thuc_hd: 'Ngày Kết Thúc', msnv_quan_ly: 'MSNV Quản Lý',
-        so_cccd: 'Số CCCD', chu_tai_khoan: 'Chủ Tài Khoản', so_tai_khoan: 'Số Tài Khoản',
-        // Cột Anten
-        loai_cot: 'Loại Cột', chieu_cao_cot: 'Chiều Cao Cột', chieu_cao_cong_trinh: 'Chiều Cao CT',
-        den_bao_khong: 'Đèn Báo Không', dv_dung_chung_cot: 'ĐV Dùng Chung Cột',
-        chieu_dai_cau_cap: 'Chiều Dài Cầu Cáp', dv_chu_quan_ccat: 'ĐV Chủ Quản CCAT',
-        // Phòng máy/MPĐ
-        loai_pm: 'Loại Phòng Máy', vi_tri: 'Vị Trí', dien_tich: 'Diện Tích',
-        dv_dung_chung: 'ĐV Dùng Chung', dv_chu_quan: 'ĐV Chủ Quản', product_code: 'Product Code',
-        // Máy lạnh
-        cong_suat_btu: 'Công Suất (BTU)', loai_may_lanh: 'Loại Máy Lạnh', ten_may_lanh: 'Tên Máy Lạnh',
-        vi_tri_tai_san: 'Vị Trí Tài Sản',
-        // Máy phát
-        cong_suat: 'Công Suất', phase: 'Phase', nhien_lieu: 'Nhiên Liệu', ats: 'ATS',
-        ten_mpd: 'Tên Máy Phát Điện',
-        // Tủ nguồn
-        so_luong_khe_rect: 'Số Khe Rectifier', so_luong_rect: 'SL Rectifier',
-        cong_suat_rect_w: 'CS Rectifier (W)', thoi_gian_backup_phut: 'Backup (phút)',
-        dong_tai_a: 'Dòng Tải (A)', product_code_rect: 'PC Rectifier',
-        hop_dong_du_an: 'HĐ/Dự Án Trang Bị',
-        // Accu
-        loai_accu: 'Loại Accu', dung_luong_binh: 'Dung Lượng Bình', so_luong_binh: 'SL Bình',
-        // BTS
-        chung_loai: 'Chủng Loại', hang_sx: 'Hãng Sản Xuất', rru: 'RRU', bbu: 'BBU',
-        // Data Cell
-        cell: 'Cell', sector: 'Sector', enb_id: 'eNB-ID', c_id: 'C-ID', psc_pci: 'PSC/PCI',
-        azimuth: 'Azimuth', height: 'Height', m_tilt: 'M-Tilt', e_tilt: 'E-Tilt', tilt: 'Tilt',
-        lat: 'Lat', long: 'Long',
-        // Thiết bị VT
-        ten_thiet_bi: 'Tên Thiết Bị', loai_thiet_bi: 'Loại Thiết Bị', nha_cung_cap: 'Nhà Cung Cấp',
-        thuoc_tram_remote: 'Thuộc Trạm Remote',
-        // Chung
-        dai_vt: 'Đài VT', ghi_chu: 'Ghi Chú', don_gia: 'Đơn Giá', don_vi_tinh: 'ĐV Tính',
-        ngay_sd_hop_dong: 'Ngày SD (Theo HĐ)',
-        // Truyền dẫn
-        loai_ket_noi: 'Loại kết nối 3G/4G', thiet_bi_td: 'Thiết bị TD 3G/4G/FO',
-        huong_ket_noi: 'Hướng kết nối', node_csg: 'Node CSG', chung_loai_csg: 'Chủng loại CSG',
-        chu_dau_tu_cap: 'Chủ đầu tư cáp', don_vi_van_hanh_cap: 'Đơn vị vận hành cáp',
-        chung_loai_cwdm: 'Chủng loại CWDM', hang_sx_cwdm: 'Hãng SX CWDM',
-        sync_date: 'Ngày cập nhật'
+        // --- Phòng Máy / MPD ---
+        'dien_tich': { lab: 'Diện tích', unit: ' m²' },
+        'dv_chu_quan': { lab: 'Đơn vị chủ quản' },
+        'dv_dung_chung': { lab: 'Dùng chung' },
+        'han_bao_duong': { lab: 'Hạn bảo dưỡng' },
+        'han_bao_hanh': { lab: 'Hạn bảo hành' },
+        'loai_pm': { lab: 'Loại phòng máy' },
+        'vi_tri': { lab: 'Vị trí' },
+        'product_code': { lab: 'Mã sản phẩm' },
+        'vi_tri_tai_san': { lab: 'Vị trí tài sản' },
+        'ngay_su_dung': { lab: 'Ngày sử dụng' },
+        'ngay_sd_hop_dong': { lab: 'Ngày SD hợp đồng' },
+        'ghi_chu': { lab: 'Ghi chú' },
+        'don_vi_tinh': { lab: 'Đơn vị tính' },
+        'don_gia': { lab: 'Đơn giá' },
+
+        // --- Thiết bị chung ---
+        'nhan_hieu': { lab: 'Nhãn hiệu' },
+        'model': { lab: 'Model' },
+        'serial': { lab: 'Serial' },
+        'so_luong': { lab: 'Số lượng' },
+        'trang_thai': { lab: 'Trạng thái' },
+        'loai_may_lanh': { lab: 'Loại máy lạnh' },
+
+        // --- Tủ Nguồn DC / Rectifier ---
+        'cong_suat_rect_w': { lab: 'Công suất Rect', unit: ' W' },
+        'so_luong_rect': { lab: 'Số lượng Rect' },
+        'so_luong_khe_rect': { lab: 'Số lượng khe Rect' },
+        'dong_tai_a': { lab: 'Dòng tải', unit: ' A' },
+        'thoi_gian_backup_phut': { lab: 'Thời gian Backup', unit: ' phút' },
+        'product_code_rect': { lab: 'Mã SP Rect' },
+        'hop_dong_du_an': { lab: 'Hợp đồng dự án' },
+
+        // --- Tổ Accu / Pin ---
+        'loai_accu': { lab: 'Loại Accu' },
+        'dung_luong_binh': { lab: 'Dung lượng bình', unit: ' Ah' },
+        'so_luong_binh': { lab: 'Số lượng bình' },
+
+        // --- Máy phát điện (MPD) ---
+        'nhan_hieu_dau_no': { lab: 'Nhãn hiệu đầu nổ' },
+        'cong_suat': { lab: 'Công suất', unit: ' kVA' },
+        'loai_dau_no': { lab: 'Loại đầu nổ' },
+        'so_pha': { lab: 'Số pha' },
+        'ats': { lab: 'Tủ ATS' },
+
+        // --- Truyền dẫn ---
+        'loai_ket_noi': { lab: 'Loại kết nối' },
+        'thiet_bi_td': { lab: 'Thiết bị truyền dẫn' },
+        'huong_ket_noi': { lab: 'Hướng kết nối' },
+        'node_csg': { lab: 'Node CSG' },
+        'chung_loai_csg': { lab: 'Chủng loại CSG' },
+        'chu_dau_tu_cap': { lab: 'Chủ đầu tư cáp' },
+        'don_vi_van_hanh_cap': { lab: 'Đơn vị vận hành cáp' },
+        'hang_sx_cwdm': { lab: 'Hãng SX CWDM' },
+        'chung_loai_cwdm': { lab: 'Chủng loại CWDM' },
+
+        // --- Hợp đồng ---
+        'so_hd': { lab: 'Số HĐ' },
+        'chu_the_hop_dong': { lab: 'Chủ thể HĐ' },
+        'sdt_chu_nha': { lab: 'SĐT Chủ nhà' },
+        'ngay_ki_hd': { lab: 'Ngày ký' },
+        'gia_thue_co_vat': { lab: 'Giá thuê', unit: ' VNĐ' },
+        'ngay_ket_thuc_hd': { lab: 'Ngày hết hạn' },
+        'tinh_trang_hd': { lab: 'Tình trạng' },
+        'chu_ky_thanh_toan': { lab: 'Chu kỳ TT' },
+        'ngan_hang': { lab: 'Ngân hàng' },
+
+        // --- Registry ---
+        'site_id': { lab: 'Mã trạm' },
+        'site_id_new': { lab: 'Site ID' },
+        'site_id_old': { lab: 'ID Cũ' },
+        'cell_id_new': { lab: 'Cell ID' },
+        'cell_id_old': { lab: 'Cell ID Cũ' },
+        'antenna_height': { lab: 'Chiều cao anten', unit: 'm' },
+        'team': { lab: 'Tổ kỹ thuật' },
+        'zone': { lab: 'Khu vực' }
     };
 
-    document.getElementById('siteIdInput').addEventListener('keypress', function (e) {
-        if (e.key === 'Enter') searchStation();
-    });
+    // Chuyển snake_case → Title Case Tiếng Việt khi không có mapping
+    function snakeToTitle(key) {
+        const k = (key || '').toLowerCase();
+        const override = {
+            'id': null, 'site_id': 'Mã trạm', 'site_id_new': 'Mã trạm mới', 'cell_id_new': 'Cell ID',
+            'ran_type': 'RAN', 'node_id': 'Node ID', 'cell_id_num': 'Cell ID Num',
+            'ip': 'IP', 'mac': 'MAC', 'vlan': 'VLAN', 'pci_psc': 'PCI/PSC'
+        };
+        if (override[k] !== undefined) return override[k];
+        return k.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    }
 
-    // ====================================================================
-    // TAB 1: TRA CỨU 1 TRẠM
-    // ====================================================================
+    function formatValue(key, val) {
+        if (val === null || val === undefined || val === '' || val === '--' || val === 'KHO' || val === 'KHÔNG CÓ') return null;
 
-    async function searchStation() {
-        const inputStr = document.getElementById('siteIdInput').value.trim();
-        if (!inputStr) return;
+        // Bỏ bớt trường đài viễn thông / đơn vị chủ quản theo yêu cầu user
+        const IGNORE_FIELDS = ['dai_vt', 'dv_chu_quan', 'đài viễn thông', 'đơn vị chủ quản', 'dai_vien_thong'];
+        if (IGNORE_FIELDS.includes(key.toLowerCase())) return null;
 
-        document.getElementById('loadingIndicator').style.display = 'block';
-        document.getElementById('errorMsg').style.display = 'none';
-        document.getElementById('resultsDashboard').style.display = 'none';
-        document.getElementById('stationInfoCard').style.display = 'none';
-        document.getElementById('cardsContainer').innerHTML = '';
+        const cfg = LABEL_MAP[key];
+        const label = cfg ? cfg.lab : snakeToTitle(key);
+
+        let display = val;
+        // Format date: bỏ phần time nếu có
+        if (typeof val === 'string' && val.includes(':') && val.includes('-') && val.length > 10) {
+            display = val.split(' ')[0];
+        }
+        if (cfg?.unit) display = `${display}${cfg.unit}`;
+
+        return `<div class="col-6 mb-1 small"><span class="text-muted">${label}:</span> <strong>${display}</strong></div>`;
+    }
+
+    let ACTIVE_CELL = null;
+
+    // Lắng nghe phím Enter
+    document.getElementById('siteIdInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') doSearch(); });
+
+    async function doSearch() {
+        const q = document.getElementById('siteIdInput').value.trim();
+        if (!q) return;
+
+        const load = document.getElementById('search_loading');
+        const err_box = document.getElementById('search_error');
+        const res_box = document.getElementById('dashboard_result');
+
+        load.style.display = 'block';
+        err_box.style.display = 'none';
+        res_box.innerHTML = '';
 
         try {
-            const resp = await fetch(`/api/datasite/search?site_id=${inputStr}`);
+            const resp = await fetch(`/api/datasite/search?q=${encodeURIComponent(q)}`);
             const json = await resp.json();
-            document.getElementById('loadingIndicator').style.display = 'none';
+            load.style.display = 'none';
 
             if (json.success) {
-                // Hiện thông tin Station nếu có (v2)
-                if (json.station) renderStationBaseInfo(json.station, json.contract);
-                renderDashboard(json.site_id, json.data, json.transmission);
+                renderDashboard(json);
             } else {
-                showError(json.message);
+                err_box.innerText = json.message || "Không tìm thấy dữ liệu.";
+                err_box.style.display = 'block';
             }
         } catch (e) {
-            document.getElementById('loadingIndicator').style.display = 'none';
-            showError("Lỗi kết nối máy chủ");
+            load.style.display = 'none';
+            err_box.innerText = "Lỗi kết nối máy chủ API.";
+            err_box.style.display = 'block';
         }
     }
 
-    function showError(msg) {
-        const el = document.getElementById('errorMsg');
-        el.innerText = msg;
-        el.style.display = 'block';
-    }
-
-    // Lưu data vô biến Global để Modal xài
-    window.currentStationData = null;
-    window.currentContractData = null;
-
-    function getFieldEmoji(key) {
-        key = key.toLowerCase();
-        if (key.includes('so_hd') || key.includes('hop_dong')) return '📄';
-        if (key.includes('site_id') || key.includes('ma_tram')) return '🏷️';
-        if (key.includes('dia_chi_dat')) return '📍';
-        if (key.includes('dia_chi_lien_he') || key.includes('dia_chi')) return '🏠';
-        if (key.includes('chu_tram') || key.includes('chu_the')) return '👤';
-        if (key.includes('sdt') || key.includes('dien_thoai') || key.includes('lien_lac')) return '📞';
-        if (key.includes('gia_thue_tram') || key.includes('gia_') || key.includes('tien_')) return '💰';
-        if (key.includes('thue_vat') || key.includes('vat')) return '💸';
-        if (key.includes('chu_ky') || key.includes('ky_thanh_toan_tiep_theo')) return '🔄';
-        if (key.includes('ngay_het_') || key.includes('ngay_ket_thuc') || key.includes('han')) return '📆';
-        if (key.includes('ngay') || key.includes('thoi_gian')) return '📅';
-        if (key.includes('thanh_toan_den_ngay')) return '✅';
-        if (key.includes('ngan_hang') || key.includes('tai_khoan')) return '🏦';
-        if (key.includes('hinh_thuc_thanh_toan')) return '💳';
-        if (key.includes('tinh_thanh') || key.includes('quan_huyen')) return '🏙️';
-        if (key.includes('phuong_xa')) return '🏘️';
-        if (key.includes('tinh_trang_phat_song') || key.includes('tinh_trang') || key.includes('trang_thai')) return '📶';
-        if (key.includes('hinh_thuc_hop_dong')) return '📝';
-        if (key.includes('doi_tuong') || key.includes('nhom_ql')) return '👥';
-        if (key.includes('dai_vien_thong') || key.includes('don_vi') || key.includes('chu_csht')) return '🏢';
-        if (key.includes('toa_do') || key.includes('kinh_do') || key.includes('vi_do')) return '📍';
-        if (key.includes('vung_phu')) return '🌍';
-        if (key.includes('phan_lop')) return '⭐';
-        if (key.includes('dai_vien_thong') || key.includes('don_vi')) return '🏢';
-        if (key.includes('toa_do') || key.includes('kinh_do') || key.includes('vi_do')) return '📍';
-        if (key.includes('loai_tram') || key.includes('loai_')) return '🏗️';
-        if (key.includes('ten_')) return '🏢';
-        if (key.includes('ghi_chu')) return '📌';
-        if (key.includes('loai_ket_noi')) return '🔗';
-        if (key.includes('thiet_bi_td') || key.includes('_csg')) return '🛠️';
-        if (key.includes('huong_ket_noi')) return '⇄';
-        if (key.includes('cwdm')) return '📦';
-        if (key.includes('hang_sx')) return '🏭';
-        return '🔹';
-    }
-
-    function renderStationBaseInfo(station, contract) {
-        document.getElementById('stationInfoCard').style.display = 'block';
-        document.getElementById('headerSiteId').innerText = station.site_id ? station.site_id.toUpperCase() : '';
-
-        window.currentStationData = station;
-        window.currentContractData = contract;
-
-        let displayData = [];
-
-        // Hợp đồng
-        if (contract) {
-            document.getElementById('btnContractModal').style.display = 'inline-block';
-            displayData.push({ k: 'so_hd', l: 'Số hợp đồng', v: contract.so_hd });
-            displayData.push({ k: 'site_id', l: 'Mã trạm', v: station.site_id });
-            displayData.push({ k: 'chu_the_hop_dong', l: 'Chủ trạm', v: contract.chu_the_hop_dong });
-            displayData.push({ k: 'dia_chi', l: 'Địa chỉ đặt trạm', v: station.dia_chi });
-            displayData.push({ k: 'chu_ky_thanh_toan', l: 'Chu kỳ thanh toán', v: contract.chu_ky_thanh_toan });
-            displayData.push({ k: 'ngay_ket_thuc_hd', l: 'Ngày hết hợp đồng', v: contract.ngay_ket_thuc_hd });
-        } else {
-            document.getElementById('btnContractModal').style.display = 'none';
-            displayData.push({ k: 'site_id', l: 'Mã trạm', v: station.site_id });
-            displayData.push({ k: 'ten_tram', l: 'Tên trạm', v: station.ten_tram });
-            displayData.push({ k: 'dia_chi', l: 'Địa chỉ đặt trạm', v: station.dia_chi });
-        }
-
-        displayData.push({ k: 'loai_tram', l: 'Loại trạm', v: station.loai_tram });
-        displayData.push({ k: 'vung_phu', l: 'Vùng phủ', v: station.vung_phu });
-        displayData.push({ k: 'nhom_ql', l: 'Nhóm quản lý', v: station.nhom_ql });
-        displayData.push({ k: 'phan_lop_csht', l: 'Phân lớp CSHT', v: station.phan_lop_csht });
-        displayData.push({ k: 'phuong_xa', l: 'Phường/Xã', v: station.phuong_xa });
-        displayData.push({ k: 'don_vi_dung_chung', l: 'Đơn vị dùng chung', v: station.don_vi_dung_chung });
-        displayData.push({ k: 'toa_do', l: 'Tọa độ', v: `Kinh độ ${station.kinh_do || '--'}, Vĩ độ ${station.vi_do || '--'}` });
-
-        let html = '<ul class="list-group list-group-flush" style="font-size:0.9rem;">';
-        displayData.forEach(item => {
-            let val = item.v;
-            if (val === undefined || val === null || val === '') val = '<span class="text-muted fst-italic">--</span>';
-            const emoji = getFieldEmoji(item.k);
-
-            html += `
-                <li class="list-group-item d-flex px-4 py-2 border-bottom-0 align-items-center">
-                    <span class="me-3" style="font-size: 1.15rem; line-height: 1;">${emoji}</span>
-                    <div style="flex-grow: 1; word-break: break-word;">
-                        <span class="fw-bold text-dark me-1">${item.l}:</span>
-                        <span class="text-secondary">${val}</span>
-                    </div>
-                </li>
-            `;
-        });
-        html += '</ul>';
-
-        document.getElementById('stationInfoBody').innerHTML = html;
-        document.getElementById('stationInfoBody').classList.remove('bg-light');
-        document.getElementById('stationInfoBody').classList.add('pb-3');
-    }
-
-    function showModalDetails(type) {
-        const item = type === 'STATION' ? window.currentStationData : window.currentContractData;
-        const conf = typeConfigs[type];
-        if (!item || !conf) return;
-
-        let html = '<ul class="list-group list-group-flush mb-0">';
-        conf.orderedCols.forEach(k => {
-            const label = COL_LABELS[k] || k;
-            let val = item[k];
-            if (val === undefined || val === null || val === '') val = '--';
-
-            if (k.includes('gia_') && val !== '--') val = Number(val).toLocaleString() + ' đ';
-
-            const emoji = getFieldEmoji(k);
-
-            html += `
-                <li class="list-group-item d-flex px-3 py-2 border-bottom align-items-start" style="font-size: 0.9rem; background-color: #fafbfc;">
-                    <span class="me-3 mt-1" style="font-size: 1.15rem; line-height: 1;">${emoji}</span>
-                    <div style="word-break: break-word; flex-grow: 1;">
-                        <span class="fw-bold text-dark me-1 d-block" style="font-size:0.8rem">${label}</span>
-                        <span class="text-secondary fs-6">${val}</span>
-                    </div>
-                </li>
-            `;
-        });
-        html += '</ul>';
-
-        if (type === 'STATION') {
-            document.getElementById('stationFullDetails').outerHTML = `<div id="stationFullDetails" class="p-0 m-0">${html}</div>`;
-            new bootstrap.Modal(document.getElementById('stationDetailModal')).show();
-        } else {
-            document.getElementById('contractFullDetails').outerHTML = `<div id="contractFullDetails" class="p-0 m-0">${html}</div>`;
-            new bootstrap.Modal(document.getElementById('contractDetailModal')).show();
-        }
-    }
-
-    function renderDashboard(site_id, dataGroups) {
-        document.getElementById('resultsDashboard').style.display = 'block';
-        document.getElementById('resultTitle').innerHTML = `<i class="fas fa-map-marker-alt"></i> Hồ sơ kỹ thuật trạm: <strong>${site_id.toUpperCase()}</strong>`;
-
-        const container = document.getElementById('cardsContainer');
-        container.innerHTML = '';
-        container.className = 'mt-3';
-
-        const categoryGroups = [
-            { key: 'HATANG', title: 'CƠ SỞ HẠ TẦNG', icon: 'fas fa-building', types: ['COT_ANTEN', 'PHONG_MAY', 'PHONG_MPD'] },
-            { key: 'PHUTRO', title: 'THIẾT BỊ PHỤ TRỢ', icon: 'fas fa-bolt', types: ['MAY_LANH', 'MAY_PHAT', 'TU_NGUON', 'ACCU'] },
-            { key: 'KYTHUAT', title: 'KỸ THUẬT - VIỄN THÔNG', icon: 'fas fa-satellite-dish', types: ['BTS_3G', 'BTS_4G', 'BTS_5G', 'DATA_CELL', 'THIET_BI_VT'] },
-            { key: 'TRUYENDAN', title: 'TRUYỀN DẪN', icon: 'fas fa-network-wired', types: ['TRUYEN_DAN'] }
+    let CURRENT_SITE = '';
+    function renderDashboard(json) {
+        CURRENT_SITE = json.site_id || '';
+        const out = document.getElementById('dashboard_result');
+        const groups = [
+            { key: 'G1', title: 'Thông tin chung', icon: 'fas fa-info-circle', types: ['STATIC'] },
+            { key: 'G2', title: 'Cơ sở hạ tầng', icon: 'fas fa-building', types: ['COT_ANTEN', 'PHONG_MAY', 'PHONG_MPD'] },
+            { key: 'G3', title: 'Thiết bị phụ trợ', icon: 'fas fa-plug', types: ['MAY_LANH', 'MAY_PHAT', 'TU_NGUON', 'ACCU'] },
+            { key: 'G4', title: 'Thiết bị viễn thông', icon: 'fas fa-broadcast-tower', types: ['BTS_3G', 'BTS_4G', 'THIET_BI_VT'] },
+            { key: 'G5', title: 'Vô tuyến', icon: 'fas fa-satellite-dish', types: ['WIRELESS'] },
+            { key: 'G6', title: 'Truyền dẫn', icon: 'fas fa-network-wired', types: ['TRUYEN_DAN'] }
         ];
 
-        // Nếu có transmission data thực tế, ép nó vào dataGroups để renderDashboard xử lý chung
-        if (arguments[2]) { // json.transmission
-            dataGroups['TRUYEN_DAN'] = [arguments[2]];
-        }
+        let nav = `<div class="card shadow-sm border-0 mb-3"><div class="card-body p-2 bg-light"><ul class="nav nav-pills nav-fill" role="tablist">`;
+        let panes = `<div class="tab-content">`;
+        let first = true;
 
-        // Tạo khung chứa Tabs và Content
-        let navHtml = `<ul class="nav nav-pills nav-fill mb-4 shadow-sm rounded bg-white p-1" id="pills-tab" role="tablist">`;
-        let contentHtml = `<div class="tab-content" id="pills-tabContent">`;
+        groups.forEach(g => {
+            let innerHtml = "";
+            let has_content = false;
 
-        let isFirstTab = true;
+            g.types.forEach(t => {
+                if (t === 'STATIC') {
+                    has_content = true;
+                    // Format date helper for inner strings
+                    const formatDate = (v) => (v && typeof v === 'string' && v.includes(' ')) ? v.split(' ')[0] : v;
 
-        categoryGroups.forEach((group, index) => {
-            let groupHasData = false;
-            let groupContent = '';
-
-            group.types.forEach(type => {
-                if (dataGroups[type] && dataGroups[type].length > 0) {
-                    groupHasData = true;
-                    const items = dataGroups[type];
-                    const conf = typeConfigs[type] || { title: type, icon: 'fas fa-box', bg: 'bg-primary' };
-
-                    items.forEach((item, itemIndex) => {
-                        let headerClass = conf.bg;
-                        if (!headerClass.includes('text-')) headerClass += ' text-white';
-
-                        let itemHtml = `
-                            <div class="col-md-6 col-xl-4 mb-3">
-                            <div class="card shadow-sm border-0 h-100 overflow-hidden">
-                                <div class="card-header ${headerClass} py-2 d-flex justify-content-between" style="font-size:0.85rem;">
-                                    <span><i class="${conf.icon} me-1"></i><strong>${conf.title} #${itemIndex + 1}</strong></span>
-                                    <span class="badge bg-white text-dark" style="font-size:0.7rem;">${item.trang_thai || item.status || 'OK'}</span>
-                                </div>
-                                <div class="card-body p-0">
-                                    <ul class="list-group list-group-flush" style="font-size:0.8rem;">`;
-
-                        const orderedKeys = conf.orderedCols || Object.keys(item).filter(k => !HIDDEN_COLS.includes(k));
-
-                        orderedKeys.filter(k => k !== 'site_id' && k !== 'trang_thai' && k !== 'status').forEach(k => {
-                            const label = COL_LABELS[k] || k;
-                            let val = item[k];
-                            if (val === undefined || val === null || val === '') val = '<span class="text-muted fst-italic">--</span>';
-
-                            if (k.includes('gia_') && val !== '--') val = Number(val).toLocaleString() + ' đ';
-
-                            const emoji = getFieldEmoji(k);
-
-                            itemHtml += `
-                                <li class="list-group-item d-flex px-3 py-1 border-bottom align-items-center">
-                                    <span class="me-2" style="font-size: 1rem; line-height: 1;">${emoji}</span>
-                                    <div style="flex-grow: 1; word-break: break-word;">
-                                        <span class="fw-bold text-dark me-1" style="font-size:0.75rem;">${label}:</span>
-                                        <span class="text-secondary">${val}</span>
+                    innerHtml += `
+                        <div class="col-md-6 mb-3">
+                            <div class="card border-0 shadow-sm h-100 overflow-hidden">
+                                <div class="card-header bg-primary text-white py-2 small fw-bold uppercase"><i class="fas fa-map-marker-alt me-1"></i>HỒ SƠ TRẠM: ${json.site_id}</div>
+                                <div class="card-body py-3">
+                                    <div class="mb-2 h5 fw-bold text-primary">${json.station?.ten_tram || '--'}</div>
+                                    <div class="mb-1 text-muted small"><i class="fas fa-map-marker-alt me-1"></i>Địa chỉ: <span class="text-dark">${json.station?.dia_chi || '--'}</span></div>
+                                    <div class="row g-2 mb-2 pt-2 border-top">
+                                        <div class="col-6 small">Loại trạm: <b>${json.station?.loai_tram || '--'}</b></div>
+                                        <div class="col-6 small">Vùng: <b>${json.station?.extra_data?.vung_6_khu_vuc || '--'}</b></div>
+                                        <div class="col-6 small">Đầu tư: <b>${json.station?.hinh_thuc_dau_tu || '--'}</b></div>
+                                        <div class="col-6 small">Phát sóng: <b>${formatDate(json.station?.ngay_phat_song) || '--'}</b></div>
+                                        <div class="col-6 small">Phòng máy: <b>${json.station?.loai_nha_tram || '--'} (${json.station?.extra_data?.dien_tich || '--'}m²)</b></div>
+                                        <div class="col-6 small">Tọa độ: <b>${json.station?.kinh_do || '--'}, ${json.station?.vi_do || '--'}</b></div>
                                     </div>
-                                </li>`;
-                        });
+                                    <div class="mt-3">
+                                        <span class="badge bg-success">Trạng thái trạm: ${json.station?.tinh_trang || 'Hoạt động'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="card border-0 shadow-sm h-100 border-start border-warning border-4">
+                                <div class="card-header bg-white py-2 text-warning fw-bold small"><i class="fas fa-file-contract me-1"></i>THÔNG TIN HỢP ĐỒNG</div>
+                                <div class="card-body py-3">
+                                    <div class="mb-2 h5 fw-bold text-dark">${json.contract?.chu_the_hop_dong || 'Chưa cập nhật tên chủ nhà'}</div>
+                                    <div class="mb-2 text-muted small"><i class="fas fa-phone-alt me-1"></i>SĐT: <span class="text-primary fw-bold h5">${json.contract?.sdt_chu_nha || '--'}</span></div>
+                                    <div class="list-group list-group-flush small">
+                                        <div class="list-group-item px-0 py-1 bg-transparent d-flex justify-content-between"><span>Số HĐ:</span> <b>${json.contract?.so_hd || '--'}</b></div>
+                                        <div class="list-group-item px-0 py-1 bg-transparent d-flex justify-content-between"><span>Ngày ký:</span> <b>${formatDate(json.contract?.ngay_ki_hd) || '--'}</b></div>
+                                        <div class="list-group-item px-0 py-1 bg-transparent d-flex justify-content-between"><span>Giá thuê:</span> <b class="text-danger">${typeof json.contract?.gia_thue_co_vat === 'number' ? json.contract.gia_thue_co_vat.toLocaleString() : '--'}</b></div>
+                                        <div class="list-group-item px-0 py-1 bg-transparent d-flex justify-content-between"><span>Thời hạn:</span> <b>${formatDate(json.contract?.ngay_ket_thuc_hd) || '--'}</b></div>
+                                        <div class="list-group-item px-0 py-1 bg-transparent d-flex justify-content-between"><span>Tình trạng:</span> <span class="badge bg-light text-dark border">${json.contract?.tinh_trang_hd || '--'}</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>`;
+                } else if (json.data[t] && json.data[t].length > 0) {
+                    has_content = true;
+                    if (t === 'WIRELESS') {
+                        const item = json.data[t][0];
+                        innerHtml += `
+                            <div class="col-12 mb-3">
+                                <div class="card border-0 shadow-sm">
+                                    <div class="card-body">
+                                        <div class="row align-items-center mb-3">
+                                            <div class="col-auto"><div class="rounded-circle bg-danger text-white p-3 shadow-sm"><i class="fas fa-satellite-dish fa-2x"></i></div></div>
+                                            <div class="col">
+                                                <h5 class="fw-bold mb-0">CELL REGISTRY - QUY HOẠCH VÔ TUYẾN</h5>
+                                                <p class="text-muted small mb-0">Site: ${item.site_id_new} (Mapping: ${item.site_id_old || '--'}) | Khu vực: ${item.zone || '--'}</p>
+                                            </div>
+                                            <div class="col-auto text-end">
+                                                <div class="small fw-bold">Độ cao Anten</div>
+                                                <div class="h5 font-monospace text-danger mb-0 mt-1">${item.antenna_height_display || item.antenna_height || '--'}</div>
+                                            </div>
+                                        </div>
+                                        <div class="table-responsive border rounded bg-white">
+                                            <table class="table table-sm text-center small mb-0 align-middle table-hover">
+                                                <thead class="bg-light fw-bold text-secondary"><tr><th>Cell Name (Mới/Cũ)</th><th>RAN</th><th>Azimuth</th><th>Tilt</th><th>Độ cao</th><th>PCI/PSC</th><th>Thao tác</th></tr></thead>
+                                                <tbody id="wireless_tbody_cells"><tr><td colspan="7" class="p-4 text-muted"><i class="fas fa-spinner fa-spin"></i> Đang tải danh sách cell...</td></tr></tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>`;
+                        setTimeout(() => fetchCellList(item.site_id_new), 100);
+                    } else {
+                        const c = CONFIGS[t] || { title: t, icon: 'fas fa-cube', bg: 'bg-secondary' };
+                        let items_html = json.data[t].map(it => {
+                            const HIDDEN_KEYS = ['id', 'site_id', 'loai', 'extra_data', 'subcategory', 'sync_date', 'nhan_hieu', 'ten_may_lanh', 'loai_cot',
+                                'dai_vt', 'dv_chu_quan', 'đài viễn thông', 'đơn vị chủ quản', 'dai_vien_thong'];
+                            const mainVal = it.nhan_hieu || it.ten_may_lanh || it.loai_cot || 'Thông tin';
+                            const details = Object.keys(it)
+                                .filter(k => !HIDDEN_KEYS.includes(k.toLowerCase()))
+                                .map(k => formatValue(k, it[k]))
+                                .filter(html => html !== null)
+                                .join('');
 
-                        itemHtml += `</ul></div></div></div>`;
-                        groupContent += itemHtml;
-                    });
+                            return `
+                            <div class="list-group-item py-2 border-0 border-bottom">
+                                <div class="fw-bold text-primary border-start border-4 border-primary ps-2 mb-2">${mainVal}</div>
+                                <div class="row g-1">${details || '<div class="col-12 text-muted small fst-italic">Không có thêm thông tin</div>'}</div>
+                            </div>`;
+                        }).join('');
+
+                        innerHtml += `
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100 shadow-sm border-0">
+                                    <div class="card-header ${c.bg} text-white d-flex justify-content-between align-items-center py-1">
+                                        <span class="small fw-bold text-uppercase"><i class="${c.icon} me-1"></i>${c.title}</span>
+                                        <span class="badge bg-white text-dark rounded-pill">${json.data[t].length}</span>
+                                    </div>
+                                    <div class="card-body p-0">
+                                        <div class="list-group list-group-flush">${items_html}</div>
+                                    </div>
+                                </div>
+                            </div>`;
+                    }
                 }
             });
 
-            if (groupHasData) {
-                const activeClass = isFirstTab ? 'active' : '';
-                const showClass = isFirstTab ? 'show active' : '';
-
-                navHtml += `
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link fw-bold ${activeClass}" id="pills-${group.key}-tab" data-bs-toggle="pill" data-bs-target="#pills-${group.key}" type="button" role="tab" aria-controls="pills-${group.key}" aria-selected="${isFirstTab}">
-                            <i class="${group.icon} me-2"></i>${group.title}
-                        </button>
-                    </li>
-                `;
-
-                contentHtml += `
-                    <div class="tab-pane fade ${showClass}" id="pills-${group.key}" role="tabpanel" aria-labelledby="pills-${group.key}-tab">
-                        <div class="row">${groupContent}</div>
-                    </div>
-                `;
-
-                isFirstTab = false;
+            if (has_content) {
+                nav += `<li class="nav-item">
+                    <button class="nav-link small fw-bold border-0 rounded-0 ${first ? 'active' : ''}" data-bs-toggle="pill" data-bs-target="#tp-${g.key}">
+                        ${g.title}
+                    </button></li>`;
+                panes += `<div class="tab-pane fade ${first ? 'show active' : ''}" id="tp-${g.key}"><div class="row">${innerHtml}</div></div>`;
+                first = false;
             }
         });
 
-        navHtml += `</ul>`;
-        contentHtml += `</div>`;
-
-        // Nếu không có dữ liệu nào ở 3 nhóm
-        if (isFirstTab) {
-            container.innerHTML = `<div class="alert alert-info shadow-sm"><i class="fas fa-info-circle me-2"></i> Không có dữ liệu trang thiết bị nào cho trạm này.</div>`;
-        } else {
-            container.innerHTML = navHtml + contentHtml;
-        }
+        nav += `</ul></div></div>`;
+        panes += `</div>`;
+        out.innerHTML = nav + panes;
     }
 
-    // ====================================================================
-    // TAB 2: TRA CỨU HẠNG MỤC TOÀN MẠNG (BẢNG ĐỘNG)
-    // ====================================================================
-
-    async function searchByCategory() {
-        const assetType = document.getElementById('assetTypeSelect').value;
-        if (!assetType) {
-            showCatError("Vui lòng chọn một hạng mục thiết bị.");
-            return;
-        }
-
-        const loading = document.getElementById('catLoading');
-        loading.style.display = 'block';
-        document.getElementById('catErrorMsg').style.display = 'none';
-        document.getElementById('catResultsDashboard').style.display = 'none';
-        document.getElementById('catTableBody').innerHTML = '';
-        document.getElementById('catTableHead').innerHTML = '';
-
+    async function fetchCellList(siteId) {
+        const tb = document.getElementById('wireless_tbody_cells');
         try {
-            const resp = await fetch(`/api/datasite/assets/by_type?type=${assetType}`);
-            const json = await resp.json();
-            loading.style.display = 'none';
-
-            if (json.success) {
-                renderDynamicCategoryTable(assetType, json.data);
+            const r = await fetch(`/api/wireless/cells?site_id=${siteId}`);
+            const d = await r.json();
+            if (d.success && d.cells.length > 0) {
+                tb.innerHTML = d.cells.map(c => `
+                    <tr>
+                        <td><b>${c.cell_id_new}</b><br><small class="text-muted">${c.cell_id_old || ''}</small></td>
+                        <td><span class="fw-bold">${c.ran_type}</span></td>
+                        <td>${c.azimuth ?? '--'}°</td>
+                        <td>${c.tilt ?? '--'}°</td>
+                        <td>${c.antenna_height ?? '--'} m</td>
+                        <td>${c.pci_psc || '--'}</td>
+                        <td class="text-end">
+                            <div class="btn-group">
+                                <button class="btn btn-sm btn-outline-primary border-0" title="Sửa" onclick="onOpenEdit('${c.cell_id_new}', ${c.azimuth ?? 'null'}, ${c.tilt ?? 'null'}, '${c.pci_psc || ''}', ${c.antenna_height ?? 'null'})"><i class="fas fa-edit"></i></button>
+                                <button class="btn btn-sm btn-outline-secondary border-0" title="Lịch sử" onclick="onOpenHist('${c.cell_id_new}')"><i class="fas fa-history"></i></button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
             } else {
-                showCatError(json.message);
+                tb.innerHTML = `<tr><td colspan="7" class="p-3">Không có cell nào trong registry.</td></tr>`;
             }
         } catch (e) {
-            loading.style.display = 'none';
-            showCatError("Lỗi kết nối máy chủ");
+            tb.innerHTML = `<tr><td colspan="7" class="p-3 text-danger">Lỗi kết nối khi tải cells.</td></tr>`;
         }
     }
 
-    function showCatError(msg) {
-        const el = document.getElementById('catErrorMsg');
-        el.innerText = msg;
-        el.style.display = 'block';
+    function onOpenEdit(cid, azi, tilt, pci, height) {
+        ACTIVE_CELL = cid;
+        document.getElementById('edit_cell_id_display').innerText = cid;
+        document.getElementById('edit_azi').value = azi || '';
+        document.getElementById('edit_tilt').value = tilt || '';
+        document.getElementById('edit_pci').value = pci || '';
+        document.getElementById('edit_height').value = height || '';
+        document.getElementById('edit_note').value = '';
+        new bootstrap.Modal(document.getElementById('modalEdit')).show();
     }
 
-    function renderDynamicCategoryTable(assetType, items) {
-        document.getElementById('catResultsDashboard').style.display = 'block';
+    async function saveEdit() {
+        if (!ACTIVE_CELL) return;
+        const body = {
+            azimuth: document.getElementById('edit_azi').value,
+            tilt: document.getElementById('edit_tilt').value,
+            pci_psc: document.getElementById('edit_pci').value,
+            antenna_height: document.getElementById('edit_height').value,
+            note: document.getElementById('edit_note').value
+        };
+        try {
+            const resp = await fetch(`/api/wireless/cell/${encodeURIComponent(ACTIVE_CELL)}/update`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            const res = await resp.json();
+            if (res.success) {
+                bootstrap.Modal.getInstance(document.getElementById('modalEdit')).hide();
+                if (CURRENT_SITE) fetchCellList(CURRENT_SITE);
+                doSearch();
+            } else {
+                alert("Lỗi: " + res.message);
+            }
+        } catch (e) { alert("Lỗi khi lưu thay đổi!"); }
+    }
 
-        const typeConfig = typeConfigs[assetType] || { title: assetType, icon: 'fas fa-box' };
+    async function onOpenHist(cid) {
+        document.getElementById('hist_target').innerText = cid;
+        const box = document.getElementById('hist_content');
+        box.innerHTML = '<div class="p-4 text-center"><div class="spinner-border spinner-border-sm text-primary"></div></div>';
+        new bootstrap.Modal(document.getElementById('modalHist')).show();
+        try {
+            const resp = await fetch(`/api/wireless/cell/${encodeURIComponent(cid)}/history`);
+            const d = await resp.json();
+            if (d.success && d.history && d.history.length > 0) {
+                box.innerHTML = `<div class="list-group list-group-flush">` + d.history.map(h => `
+                    <div class="list-group-item bg-light border-0 mb-1 rounded-3 mx-2 mt-2 py-2">
+                        <div class="d-flex justify-content-between x-small text-muted"><span>${h.parameter}</span><span>${h.changed_at}</span></div>
+                        <div class="fw-bold"><span class="text-danger">${h.old_value || '--'}</span> <i class="fas fa-long-arrow-alt-right mx-2 text-muted"></i> <span class="text-success">${h.new_value}</span></div>
+                        <div class="small text-muted">User: ${h.changed_by || '--'}</div>
+                        ${h.note ? `<div class="bg-white p-2 mt-1 small shadow-sm rounded border-start border-primary border-3">${h.note}</div>` : ''}
+                    </div>
+                `).join('') + `</div>`;
+            } else { box.innerHTML = '<div class="p-5 text-center text-muted">Chưa có lịch sử thay đổi.</div>'; }
+        } catch (e) { box.innerHTML = '<div class="p-5 text-center text-danger">Lỗi khi tải log.</div>'; }
+    }
 
-        // Count broken
-        let brokenCount = 0;
-        items.forEach(it => {
-            const st = (it.trang_thai || it.status || '').toLowerCase();
-            if (st.includes('hỏng') || st.includes('lỗi')) brokenCount++;
-        });
+    async function doStats() {
+        const type = document.getElementById('stat_select_type').value;
+        if (!type) return;
+        const table_box = document.getElementById('stats_container');
+        table_box.style.display = 'block';
+        document.getElementById('stats_tbody').innerHTML = '<tr><td colspan="20" class="p-5 text-center"><i class="fas fa-spinner fa-spin"></i> Đang nạp dữ liệu...</td></tr>';
 
-        document.getElementById('catResultTitle').innerHTML =
-            `<i class="${typeConfig.icon}"></i> ${typeConfig.title}
-            <span class="badge bg-success ms-3 fs-5">Tổng: ${items.length}</span>
-            ${brokenCount > 0 ? `<span class="badge bg-danger ms-2 fs-5">Hỏng: ${brokenCount}</span>` : ''}`;
+        try {
+            const r = await fetch(`/api/datasite/assets/by_type?type=${type}`);
+            const d = await r.json();
+            if (d.success && d.data.length > 0) {
+                document.getElementById('stats_title').innerText = (CONFIGS[type]?.title || type) + " (" + d.data.length + " bản ghi)";
 
-        // Lấy danh sách cột
-        let orderedKeys = [];
-        if (typeConfig.orderedCols && typeConfig.orderedCols.length > 0) {
-            orderedKeys = typeConfig.orderedCols;
-        } else {
-            const allKeys = new Set();
-            items.forEach(item => {
-                Object.keys(item).forEach(k => {
-                    if (!HIDDEN_COLS.includes(k)) allKeys.add(k);
+                const potential_cols = CONFIGS[type]?.cols || Object.keys(d.data[0]);
+                const active_cols = potential_cols.filter(c => {
+                    return d.data.some(row => row[c] !== null && row[c] !== undefined && row[c] !== '' && row[c] !== '--');
                 });
-            });
-            orderedKeys = ['site_id'];
-            allKeys.delete('site_id');
-            allKeys.delete('trang_thai');
-            allKeys.forEach(k => orderedKeys.push(k));
-            orderedKeys.push('trang_thai');
-        }
 
-        // Render Header cho Table
-        let headHtml = '<tr><th class="fw-bold text-dark" style="width:4%">STT</th>';
-        orderedKeys.forEach(k => {
-            const label = COL_LABELS[k] || k;
-            const align = k === 'site_id' ? '' : 'text-start';
-            headHtml += `<th class="fw-bold text-dark ${align}">${label}</th>`;
-        });
-        headHtml += '</tr>';
+                const final_cols = active_cols.length > 0 ? active_cols : (potential_cols.slice(0, 5));
 
-        // Render Rows cho Table
-        let bodyHtml = '';
-        items.forEach((item, index) => {
-            let rowHtml = `<tr><td class="text-muted">${index + 1}</td>`;
+                const header_html = `<tr><th>#</th>` + final_cols.map(c => {
+                    const m = LABEL_MAP[c.toLowerCase()] || LABEL_MAP[c];
+                    const label = m ? m.lab : snakeToTitle(c);
+                    return `<th class="text-nowrap">${label}</th>`;
+                }).join('') + `</tr>`;
 
-            orderedKeys.forEach(k => {
-                let val = item[k];
-                if (val === undefined || val === null || val === '') val = '--';
+                document.getElementById('stats_thead').innerHTML = header_html;
 
-                let cls = 'text-start';
+                // Tối ưu render: Nếu > 500 bản ghi, render theo đợt để tránh treo UI
+                const renderChunk = (start) => {
+                    const chunk = d.data.slice(start, start + 200);
+                    const html = chunk.map((row, idx) => {
+                        const cells = final_cols.map(c => {
+                            let val = row[c];
+                            if (val === null || val === undefined || val === '') return '<td>--</td>';
+                            let display = val;
+                            if (typeof val === 'string' && val.includes(':') && val.includes('-') && val.length > 10) display = val.split(' ')[0];
+                            if (typeof val === 'number') display = val.toLocaleString('vi-VN');
+                            return `<td>${display}</td>`;
+                        }).join('');
+                        return `<tr><td><b>${start + idx + 1}</b></td>${cells}</tr>`;
+                    }).join('');
 
-                if (k === 'site_id') {
-                    cls = '';
-                    val = `<span style="color:#206bc4;font-weight:bold;cursor:pointer;text-decoration:underline;"
-                              onclick="document.getElementById('station-tab').click();document.getElementById('siteIdInput').value='${val}';searchStation();"
-                              title="Bấm để xem chi tiết trạm">${String(val).toUpperCase()}</span>`;
-                } else if (k === 'trang_thai' || k === 'status') {
-                    const lower = String(val).toLowerCase();
-                    if (lower.includes('hỏng') || lower.includes('lỗi'))
-                        val = `<span class="text-danger fw-bold">${val}</span>`;
-                    else if (lower.includes('tốt') || lower.includes('ok'))
-                        val = `<span class="text-success fw-bold">${val}</span>`;
-                    else
-                        val = `<span class="text-secondary fw-bold">${val}</span>`;
-                } else if (k === 'nhan_hieu' || k === 'ten_thiet_bi' || k === 'loai_cot') {
-                    cls = 'text-start fw-bold text-primary';
-                }
+                    if (start === 0) document.getElementById('stats_tbody').innerHTML = html;
+                    else document.getElementById('stats_tbody').insertAdjacentHTML('beforeend', html);
 
-                rowHtml += `<td class="${cls} align-middle" style="max-width:200px;white-space:normal;">${val}</td>`;
-            });
-            rowHtml += `</tr>`;
-            bodyHtml += rowHtml;
-        });
-
-        // Đảm bảo Table luôn hiển thị
-        const container = document.getElementById('catTableContainer');
-        container.innerHTML = `
-            <table class="table table-vcenter table-striped table-hover small text-nowrap text-center mb-0" id="catTable" style="margin-bottom:0 !important; border-collapse: collapse;">
-                <thead class="bg-light" id="catTableHead">
-                    ${headHtml}
-                </thead>
-                <tbody id="catTableBody">
-                    ${bodyHtml}
-                </tbody>
-            </table>
-        `;
-
-        // Kích hoạt tính năng kéo để cuộn bảng (Drag to Scroll)
-        initDragToScroll(container);
-    }
-
-    function initDragToScroll(slider) {
-        let isDown = false;
-        let startX;
-        let startY;
-        let scrollLeft;
-        let scrollTop;
-
-        slider.addEventListener('mousedown', (e) => {
-            isDown = true;
-            slider.style.cursor = 'grabbing';
-            startX = e.pageX - slider.offsetLeft;
-            startY = e.pageY - slider.offsetTop;
-            scrollLeft = slider.scrollLeft;
-            scrollTop = slider.scrollTop;
-        });
-        slider.addEventListener('mouseleave', () => {
-            isDown = false;
-            slider.style.cursor = 'grab';
-        });
-        slider.addEventListener('mouseup', () => {
-            isDown = false;
-            slider.style.cursor = 'grab';
-        });
-        slider.addEventListener('mousemove', (e) => {
-            if (!isDown) return;
-            e.preventDefault();
-            const x = e.pageX - slider.offsetLeft;
-            const y = e.pageY - slider.offsetTop;
-            const walkX = (x - startX) * 1.5; // Tốc độ trượt ngang
-            const walkY = (y - startY) * 1.5; // Tốc độ trượt dọc
-            slider.scrollLeft = scrollLeft - walkX;
-            slider.scrollTop = scrollTop - walkY;
-        });
-    }
-
-    function filterLocalTable(inputEl) {
-        const val = inputEl.value.toLowerCase();
-        const rows = document.getElementById('catTableBody').getElementsByTagName('tr');
-        for (let i = 0; i < rows.length; i++) {
-            const text = rows[i].textContent.toLowerCase();
-            rows[i].style.display = text.includes(val) ? "" : "none";
+                    if (start + 200 < d.data.length) {
+                        setTimeout(() => renderChunk(start + 200), 50);
+                    }
+                };
+                renderChunk(0);
+            } else {
+                document.getElementById('stats_tbody').innerHTML = '<tr><td colspan="20" class="p-5">Không có dữ liệu cho hạng mục này.</td></tr>';
+            }
+        } catch (e) {
+            document.getElementById('stats_tbody').innerHTML = '<tr><td colspan="20" class="p-5 text-danger">Lỗi hệ thống khi tải báo cáo.</td></tr>';
         }
     }
 
-
-
+    function onFilterStats(inp) {
+        const v = inp.value.toLowerCase();
+        document.querySelectorAll('#stats_tbody tr').forEach(r => {
+            r.style.display = r.innerText.toLowerCase().includes(v) ? '' : 'none';
+        });
+    }
 </script>
+<style>
+    .nav-tabs .nav-link.active {
+        border-bottom: 3px solid #0d6efd !important;
+        color: #0d6efd !important;
+        background: transparent;
+    }
+
+    .x-small {
+        font-size: 0.75rem;
+    }
+
+    .bg-teal {
+        background-color: #20c997;
+    }
+
+    .shadow-inner {
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    th {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .font-monospace {
+        font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    }
+
+    .uppercase {
+        text-transform: uppercase;
+    }
+</style>
 {% endblock %}
