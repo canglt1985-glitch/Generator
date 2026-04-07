@@ -1,5 +1,16 @@
 # Changelog
 
+## [2026-04-07]
+### Added
+- Tính năng tính toán hiển thị gộp độ cao Anten theo RAN cho mức Site (DataSite - Vô tuyến)
+- Import hàng loạt thông số thực tế (Tilt, Azimuth, Height) từ file Excel cũ vào DataSite.
+
+### Changed
+- Cải thiện thiết kế Minimalist cho tab Vô Tuyến: gỡ bỏ tô màu cột công nghệ RAN.
+- Tự động đồng bộ cấu hình sửa đổi độ cao Anten trên trình duyệt cho tất cả các Cell cùng loại RAN của Site.
+- Sửa lỗi lệch cột hiển thị thông số PCI/PSC và Độ cao Anten.
+
+
 ## [2026-03-31]
 ### Added
 - **Mobile PWA Upgrade**: Chuyển đổi Web-app thành Progressive Web App (PWA) với đầy đủ `manifest.json`, `sw.js` và bộ icon 5G/Viễn thông mới. Hỗ trợ chế độ Standalone (app-like experience).

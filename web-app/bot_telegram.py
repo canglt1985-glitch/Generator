@@ -6,55 +6,121 @@ import logging
 
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "")
 
-def format_station_info(site_id):
+def format_station_info(query_id):
     """
-    Query the DB for the site_id and format a nice message.
+    Query the DB for the site_id and format a nice message using DataSite v2 Schema.
     """
     from app import app
-    from models import DataSiteAsset
+    from models import (
+        DsSiteRegistry, DsStation, DsInfrastructure, DsEquipment, 
+        DsTelecom, DsTransmission, DsContract, DsCellRegistry
+    )
+    
     with app.app_context():
-        assets = DataSiteAsset.query.filter(DataSiteAsset.site_id.ilike(f'%{site_id}%')).all()
-        if not assets:
-            return f"❌ Không tìm thấy thông tin trên DataSite cho trạm: {site_id}"
-            
-        grouped = {}
-        for a in assets:
-            if a.asset_type not in grouped:
-                 grouped[a.asset_type] = []
-            grouped[a.asset_type].append(a)
-            
-        real_site_id = assets[0].site_id.upper()
+        query_id = query_id.strip()
         
-        lines = [f"🏢 **Trạm: {real_site_id}**", ""]
+        # 1. Resolve IDs (New, Old, Cell)
+        registry_match = DsSiteRegistry.query.filter(
+            (DsSiteRegistry.site_id_new.ilike(f'%{query_id}%')) |
+            (DsSiteRegistry.site_id_old.ilike(f'%{query_id}%'))
+        ).first()
+
+        if not registry_match:
+            cell_match = DsCellRegistry.query.filter(
+                (DsCellRegistry.cell_id_new.ilike(f'%{query_id}%')) |
+                (DsCellRegistry.cell_id_old.ilike(f'%{query_id}%'))
+            ).first()
+            if cell_match:
+                registry_match = DsSiteRegistry.query.filter_by(site_id_new=cell_match.site_id_new).first()
+
+        ids_to_query = [query_id]
+        if registry_match:
+            if registry_match.site_id_new: ids_to_query.append(registry_match.site_id_new)
+            if registry_match.site_id_old: ids_to_query.append(registry_match.site_id_old)
         
-        # Format TU NGUON
-        if 'TU_NGUON' in grouped:
-            for item in grouped['TU_NGUON']:
-                 lines.append(f"⚡ **Tủ Nguồn:** {item.brand} - CS: {item.capacity} ({item.extra_info_1}, {item.extra_info_2})")
-        else:
-            lines.append("⚡ **Tủ Nguồn:** Chưa có dữ liệu")
-            
-        # Format ACCU
-        if 'ACCU' in grouped:
-            for item in grouped['ACCU']:
-                 cap = item.capacity or "N/A"
-                 lines.append(f"🔋 **Accu:** {item.brand} - {cap} (SL: {item.quantity})")
-        else:
-            lines.append("🔋 **Accu:** Chưa có dữ liệu")
-            
-        # Format MAY_PHAT
-        if 'MAY_PHAT' in grouped:
-            for item in grouped['MAY_PHAT']:
-                 lines.append(f"⚙️ **Máy Phát:** {item.brand} - {item.capacity}KVA ({item.extra_info_1})")
-        else:
-            lines.append("⚙️ **Máy Phát:** Chưa có dữ liệu")
-            
-        # Format MAY_LANH
-        if 'MAY_LANH' in grouped:
-            lines.append(f"❄️ **Máy Lạnh:** {len(grouped['MAY_LANH'])} máy")
-            for item in grouped['MAY_LANH']:
-                 lines.append(f"   - {item.brand} ({item.capacity} BTU) - {item.status}")
-                 
+        ids_to_query = list(set(filter(None, ids_to_query)))
+        
+        # 2. Fetch all related data
+        station = DsStation.query.filter(
+            (DsStation.site_id.in_(ids_to_query)) | (DsStation.ten_tram.ilike(f'%{query_id}%'))
+        ).first()
+        
+        # Expand IDs if station found
+        if station and station.site_id not in ids_to_query:
+            ids_to_query.append(station.site_id)
+
+        infras = DsInfrastructure.query.filter(DsInfrastructure.site_id.in_(ids_to_query)).all()
+        equips = DsEquipment.query.filter(DsEquipment.site_id.in_(ids_to_query)).all()
+        telecoms = DsTelecom.query.filter(DsTelecom.site_id.in_(ids_to_query)).all()
+        transmission = DsTransmission.query.filter(DsTransmission.site_id.in_(ids_to_query)).first()
+        contract = DsContract.query.filter(DsContract.site_id.in_(ids_to_query)).first()
+
+        if not any([station, infras, equips, telecoms, transmission, registry_match]):
+            return f"❌ Không tìm thấy thông tin DataSite cho: **{query_id}**"
+
+        # 3. Format Response Message
+        site_display = station.site_id if station else (registry_match.site_id_new if registry_match else query_id)
+        name_display = station.ten_tram if station else "Chưa cập nhật tên"
+        
+        lines = [
+            f"🏢 **TRẠM: {site_display}**",
+            f"📝 {name_display}",
+            f"📍 {station.dia_chi if station else 'Chưa có địa chỉ'}",
+            ""
+        ]
+
+        # Wireless Section
+        if registry_match:
+            lines.append(f"📡 **Quy hoạch Vô tuyến:**")
+            lines.append(f"  - Mã cũ: `{registry_match.site_id_old or '--'}`")
+            lines.append(f"  - Cao anten: `{registry_match.antenna_height or '--'}m`")
+            lines.append(f"  - Khu vực: `{registry_match.zone or '--'}` ({registry_match.team or '--'})")
+
+        # Infrastructure
+        if infras:
+            lines.append("\n🏗️ **Hạ tầng:**")
+            for item in infras:
+                ext = item.extra_data or {}
+                if item.loai == 'COT_ANTEN':
+                    lines.append(f"  - Cột: `{ext.get('loai_cot','--')}` cao `{ext.get('chieu_cao_cot','--')}m`")
+                elif item.loai == 'PHONG_MAY':
+                    lines.append(f"  - Phòng máy: `{ext.get('loai_pm','--')}` ({ext.get('dien_tich','--')}m2)")
+
+        # Equipment (Power/Cooling)
+        if equips:
+            lines.append("\n🔋 **Thiết bị phụ trợ:**")
+            for item in equips:
+                ext = item.extra_data or {}
+                brand = item.nhan_hieu or "--"
+                if item.loai == 'MAY_PHAT':
+                    lines.append(f"  - MPD: `{brand}` `{ext.get('cong_suat','--')}kVA` ({ext.get('nhien_lieu','')})")
+                elif item.loai == 'TU_NGUON':
+                    lines.append(f"  - Tủ nguồn: `{brand}`")
+                elif item.loai == 'ACCU':
+                    lines.append(f"  - Accu: `{brand}` `{ext.get('dung_luong_ah','--')}Ah` (SL: {ext.get('so_luong',1)})")
+                elif item.loai == 'MAY_LANH':
+                    lines.append(f"  - Máy lạnh: `{brand}` `{ext.get('cong_suat_btu','--')}BTU` ({item.trang_thai})")
+
+        # Telecom Section
+        if telecoms:
+            lines.append("\n📶 **Thiết bị viễn thông:**")
+            for item in telecoms:
+                ext = item.extra_data or {}
+                name = ext.get('ten_tb') or ext.get('chung_loai') or item.subcategory or "Thiết bị"
+                lines.append(f"  - {item.loai}: `{name}` ({item.trang_thai})")
+
+        # Transmission Section
+        if transmission:
+            lines.append("\n🔗 **Truyền dẫn:**")
+            lines.append(f"  - `{transmission.loai_ket_noi or '--'}` ({transmission.thiet_bi_td or '--'})")
+            lines.append(f"  - Hướng: `{transmission.huong_ket_noi or '--'}`")
+
+        # Contract Section
+        if contract:
+            lines.append(f"\n📄 **Hợp đồng:** `{contract.so_hd or '--'}`")
+            lines.append(f"  - Chủ nhà: `{contract.chu_the_hop_dong or '--'}`")
+            lines.append(f"  - Hết hạn: `{contract.ngay_ket_thuc_hd or '--'}`")
+
         return "\n".join(lines)
 
 

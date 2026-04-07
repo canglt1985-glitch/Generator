@@ -22,6 +22,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your_secret_key_here')
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
+app.config['TEMPLATES_AUTO_RELOAD'] = True
 
 # Initialize extensions
 from extensions import db
