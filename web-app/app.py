@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from flask_apscheduler import APScheduler
 from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.security import generate_password_hash
+from flask_migrate import Migrate
 
 load_dotenv()
 
@@ -15,18 +16,37 @@ sys.stdout.reconfigure(encoding='utf-8')
 scheduler = APScheduler()
 
 # Database config
-db_url = os.getenv('DATABASE_URL', 'sqlite:///generator_manager.db')
+db_url = os.getenv('DATABASE_URL')
+if not db_url:
+    # Use SQLite as fallback for dev only
+    db_url = 'sqlite:///generator_manager.db'
+    print("⚠️ WARNING: DATABASE_URL not found in ENV. Using SQLite fallback.")
+
 if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your_secret_key_here')
+
+# Security: Ensure SECRET_KEY is set in ENV
+sk = os.getenv('SECRET_KEY')
+if not sk:
+    if app.debug:
+        sk = 'dev_secret_key_fixed'
+        print("⚠️ DEBUG MODE: Using dummy SECRET_KEY.")
+    else:
+        # Generate random key for safety if absolutely missing in production
+        import secrets
+        sk = secrets.token_hex(32)
+        print("🔴 CRITICAL: SECRET_KEY not set in .env! Generated a random transient key for safety.")
+
+app.config['SECRET_KEY'] = sk
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 
 # Initialize extensions
 from extensions import db
 db.init_app(app)
+migrate = Migrate(app, db)
 
 # --- Register Blueprints ---
 from smartw import smartw_bp
@@ -173,14 +193,17 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
         if User.query.count() == 0:
+            initial_password = os.getenv('ADMIN_PASSWORD', 'admin123')
             admin_user = User(
                 username='admin',
-                password_hash=generate_password_hash('admin123'),
+                password_hash=generate_password_hash(initial_password),
                 role='admin'
             )
             db.session.add(admin_user)
             db.session.commit()
-            print("Default admin user created: admin / admin123")
+            print(f"Default admin user created: admin / {initial_password}")
+            if initial_password == 'admin123':
+                print("🔴 CRITICAL: Using default password 'admin123'. Change it in .env immediately!")
 
     # Scheduler config
     app.config['SCHEDULER_API_ENABLED'] = True

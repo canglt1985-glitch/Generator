@@ -50,6 +50,10 @@ data/smartw/
 *.xlsx
 *.xls
 *.csv
+*.png
+*.jpg
+*.jpeg
+*.pdf
 
 # ── Logs ──
 *.log
@@ -65,3 +69,8 @@ logs/
 *.bak
 *.tmp
 *.temp
+tmp/
+instance/
+tmp_datasite_sync/
+downloads/
+ds_exports/

@@ -310,6 +310,10 @@
         'TRUYEN_DAN': {
             title: 'Truyền Dẫn', icon: 'fas fa-network-wired', bg: 'bg-teal text-white',
             cols: ['site_id', 'loai_ket_noi', 'thiet_bi_td', 'huong_ket_noi', 'node_csg', 'chung_loai_csg', 'chu_dau_tu_cap', 'don_vi_van_hanh_cap', 'hang_sx_cwdm', 'chung_loai_cwdm']
+        },
+        'TUYEN_QUANG': {
+            title: 'Tuyến Quang', icon: 'fas fa-project-diagram', bg: 'bg-dark text-white',
+            cols: ['site_id', 'ten_tuyen', 'loai_cap_quang', 'muc_dich', 'chu_dau_tu', 'don_vi_van_hanh', 'trang_thai']
         }
     };
 
@@ -398,7 +402,19 @@
         'cell_id_old': { lab: 'Cell ID Cũ' },
         'antenna_height': { lab: 'Chiều cao anten', unit: 'm' },
         'team': { lab: 'Tổ kỹ thuật' },
-        'zone': { lab: 'Khu vực' }
+        'zone': { lab: 'Khu vực' },
+
+        // --- Thiết bị Viễn thông & Tuyến Quang (Vietnamese labels) ---
+        'loai_thiet_bi': { lab: 'Loại Thiết bị' },
+        'ma_san_pham': { lab: 'Mã sản phẩm' },
+        'nha_cung_cap': { lab: 'Nhà cung cấp' },
+        'ten_thiet_bi': { lab: 'Tên thiết bị' },
+        'trang_thai': { lab: 'Trạng thái' },
+        'loai_cap_quang': { lab: 'Loại cáp quang' },
+        'ten_tuyen': { lab: 'Tên tuyến' },
+        'muc_dich': { lab: 'Mục đích' },
+        'chu_dau_tu': { lab: 'Chủ đầu tư' },
+        'don_vi_van_hanh': { lab: 'Đơn vị vận hành' }
     };
 
     // Chuyển snake_case → Title Case Tiếng Việt khi không có mapping
@@ -478,7 +494,7 @@
             { key: 'G3', title: 'Thiết bị phụ trợ', icon: 'fas fa-plug', types: ['MAY_LANH', 'MAY_PHAT', 'TU_NGUON', 'ACCU'] },
             { key: 'G4', title: 'Thiết bị viễn thông', icon: 'fas fa-broadcast-tower', types: ['BTS_3G', 'BTS_4G', 'THIET_BI_VT'] },
             { key: 'G5', title: 'Vô tuyến', icon: 'fas fa-satellite-dish', types: ['WIRELESS'] },
-            { key: 'G6', title: 'Truyền dẫn', icon: 'fas fa-network-wired', types: ['TRUYEN_DAN'] }
+            { key: 'G6', title: 'Truyền dẫn', icon: 'fas fa-network-wired', types: ['TRUYEN_DAN', 'TUYEN_QUANG'] }
         ];
 
         let nav = `<div class="card shadow-sm border-0 mb-3"><div class="card-body p-2 bg-light"><ul class="nav nav-pills nav-fill" role="tablist">`;
@@ -566,7 +582,10 @@
                         let items_html = json.data[t].map(it => {
                             const HIDDEN_KEYS = ['id', 'site_id', 'loai', 'extra_data', 'subcategory', 'sync_date', 'nhan_hieu', 'ten_may_lanh', 'loai_cot',
                                 'dai_vt', 'dv_chu_quan', 'đài viễn thông', 'đơn vị chủ quản', 'dai_vien_thong'];
-                            const mainVal = it.nhan_hieu || it.ten_may_lanh || it.loai_cot || 'Thông tin';
+
+                            // Sử dụng subcategory (Tên đối tượng) làm tiêu đề thẻ nếu có, nếu không thử các trường nhãn hiệu
+                            const mainVal = it.subcategory || it.nhan_hieu || it.ten_may_lanh || it.loai_cot || 'Thông tin';
+
                             const details = Object.keys(it)
                                 .filter(k => !HIDDEN_KEYS.includes(k.toLowerCase()))
                                 .map(k => formatValue(k, it[k]))
