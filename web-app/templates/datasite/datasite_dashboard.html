@@ -544,7 +544,7 @@
                                             <div class="col-auto"><div class="rounded-circle bg-danger text-white p-3 shadow-sm"><i class="fas fa-satellite-dish fa-2x"></i></div></div>
                                             <div class="col">
                                                 <h5 class="fw-bold mb-0">CELL REGISTRY - QUY HOẠCH VÔ TUYẾN</h5>
-                                                <p class="text-muted small mb-0">Site: ${item.site_id_new} (Mapping: ${item.site_id_old || '--'}) | Khu vực: ${item.zone || '--'}</p>
+                                                <p class="text-muted small mb-0">Site: ${item.site_id_new} (Mapping: ${item.site_id_old || '--'}) | Khu vực: ${item.zone || '--'} | Vùng phủ: ${json.station?.vung_phu || '--'}</p>
                                             </div>
                                             <div class="col-auto text-end">
                                                 <div class="small fw-bold">Độ cao Anten</div>
@@ -553,7 +553,7 @@
                                         </div>
                                         <div class="table-responsive border rounded bg-white">
                                             <table class="table table-sm text-center small mb-0 align-middle table-hover">
-                                                <thead class="bg-light fw-bold text-secondary"><tr><th>Cell Name (Mới/Cũ)</th><th>RAN</th><th>Azimuth</th><th>Tilt</th><th>Độ cao</th><th>PCI/PSC</th><th>Thao tác</th></tr></thead>
+                                                <thead class="bg-light fw-bold text-secondary"><tr><th>Cell Name Mới</th><th>Cell Name Cũ</th><th>RAN</th><th>Azimuth</th><th>Tilt</th><th>Độ cao</th><th>Thao tác</th></tr></thead>
                                                 <tbody id="wireless_tbody_cells"><tr><td colspan="7" class="p-4 text-muted"><i class="fas fa-spinner fa-spin"></i> Đang tải danh sách cell...</td></tr></tbody>
                                             </table>
                                         </div>
@@ -619,12 +619,12 @@
             if (d.success && d.cells.length > 0) {
                 tb.innerHTML = d.cells.map(c => `
                     <tr>
-                        <td><b>${c.cell_id_new}</b><br><small class="text-muted">${c.cell_id_old || ''}</small></td>
+                        <td class="fw-bold text-primary">${c.cell_id_new}</td>
+                        <td><small class="text-muted font-monospace">${c.cell_id_old || '--'}</small></td>
                         <td><span class="fw-bold">${c.ran_type}</span></td>
                         <td>${c.azimuth ?? '--'}°</td>
                         <td>${c.tilt ?? '--'}°</td>
                         <td>${c.antenna_height ?? '--'} m</td>
-                        <td>${c.pci_psc || '--'}</td>
                         <td class="text-end">
                             <div class="btn-group">
                                 <button class="btn btn-sm btn-outline-primary border-0" title="Sửa" onclick="onOpenEdit('${c.cell_id_new}', ${c.azimuth ?? 'null'}, ${c.tilt ?? 'null'}, '${c.pci_psc || ''}', ${c.antenna_height ?? 'null'})"><i class="fas fa-edit"></i></button>
