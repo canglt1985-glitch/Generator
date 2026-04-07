@@ -231,12 +231,15 @@ def ds_search():
         if station.site_id not in ids_to_query:
             ids_to_query.append(station.site_id)
     
-    # 🔍 Bước 2: Tìm dữ liệu con trong DataSite Core Tables dựa trên danh sách IDs
+    # 🔍 Bước 2: Tìm dữ liệu con (Optimized: Get all assets in fewer hits)
+    # Gom các bảng Telecom, Equipment, Infra để xử lý tập trung
+    telecoms = DsTelecom.query.filter(DsTelecom.site_id.in_(ids_to_query)).all()
+    equips = DsEquipment.query.filter(DsEquipment.site_id.in_(ids_to_query)).all()
+    infras = DsInfrastructure.query.filter(DsInfrastructure.site_id.in_(ids_to_query)).all()
+    
+    # Lấy thông tin đơn lẻ
     transmission = DsTransmission.query.filter(DsTransmission.site_id.in_(ids_to_query)).first()
     contract = DsContract.query.filter(DsContract.site_id.in_(ids_to_query)).first()
-    infras = DsInfrastructure.query.filter(DsInfrastructure.site_id.in_(ids_to_query)).all()
-    equips = DsEquipment.query.filter(DsEquipment.site_id.in_(ids_to_query)).all()
-    telecoms = DsTelecom.query.filter(DsTelecom.site_id.in_(ids_to_query)).all()
 
     if not station and not infras and not equips and not telecoms and not transmission and not registry_match:
         # Fallback: tìm trong bảng Legacy
