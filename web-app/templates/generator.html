@@ -1,4 +1,5 @@
 {% extends "layout.html" %}
+{% from 'macros.html' import site_id_badge %}
 
 {% block content %}
 <div class="page-header d-print-none mb-0">
@@ -258,8 +259,8 @@
                     <tbody>
                         {% for log in fuel_logs %}
                         <tr>
-                            <td class="fw-bold" style="overflow:hidden;text-overflow:ellipsis;">{{ log.id_tram if
-                                log.id_tram else 'KHO' }}</td>
+                            <td class="fw-bold" style="overflow:hidden;text-overflow:ellipsis;">{{
+                                site_id_badge(log.id_tram, site_map) if log.id_tram else 'KHO' }}</td>
                             <td>{{ log.ngay.split(' ')[0] if log.ngay else '' }}</td>
                             <td>
                                 {% if log.type == 'DIRECT_BUY' %}

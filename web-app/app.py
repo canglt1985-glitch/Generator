@@ -44,8 +44,9 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 
 # Initialize extensions
-from extensions import db
+from extensions import db, csrf
 db.init_app(app)
+csrf.init_app(app)
 migrate = Migrate(app, db)
 
 # --- Register Blueprints ---
@@ -73,10 +74,28 @@ def inject_global_vars():
     from flask import session
     if 'role' in session and session['role'] == 'admin':
         pending_count = DeletionRequest.query.filter_by(status='Pending').count()
+
+    # Build site ID mapping: {id_cũ → id_mới} và ngược lại
+    site_map = {}
+    site_map_reverse = {}
+    try:
+        from models import DsSiteRegistry
+        rows = DsSiteRegistry.query.with_entities(
+            DsSiteRegistry.site_id_old, DsSiteRegistry.site_id_new
+        ).filter(DsSiteRegistry.site_id_old.isnot(None)).all()
+        for r in rows:
+            if r.site_id_old and r.site_id_new:
+                site_map[r.site_id_old] = r.site_id_new          # cũ → mới
+                site_map_reverse[r.site_id_new] = r.site_id_old  # mới → cũ
+    except Exception:
+        pass  # Fallback: site_map rỗng, template hiển thị bình thường
+
     return dict(
         pending_req_count=pending_count,
         now_date=now.strftime('%Y-%m-%d'),
-        now_dt=now.strftime('%Y-%m-%dT%H:%M')
+        now_dt=now.strftime('%Y-%m-%dT%H:%M'),
+        site_map=site_map,
+        site_map_reverse=site_map_reverse
     )
 
 

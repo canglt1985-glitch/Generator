@@ -51,7 +51,8 @@
                 {% for item in issues %}
                 <tr>
                     <td class="small fw-medium">{{ item.ngay_phat_hien | format_date }}</td>
-                    <td><span class="badge bg-blue-lt fw-bold">{{ item.id_tram }}</span></td>
+                    <td><span class="badge bg-blue-lt fw-bold">{{ site_id_badge(item.id_tram, site_map,
+                            site_map_reverse) }}</span></td>
                     <td>
                         {% set hm_colors = {
                         'Cột anten': 'bg-purple-lt',
