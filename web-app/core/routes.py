@@ -40,7 +40,7 @@ def login():
     return render_template('login.html')
 
 
-@core_bp.route('/logout')
+@core_bp.route('/logout', methods=['GET', 'POST'])
 def logout():
     session.clear()
     flash('Đã đăng xuất!', 'info')

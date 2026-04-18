@@ -1,4 +1,5 @@
 {% extends "layout.html" %}
+{% from 'macros.html' import site_id_badge %}
 
 {% block content %}
 <div class="page-header d-print-none mb-2">
@@ -184,7 +185,7 @@
                     <td class="dw-col-date fw-bold">{{ item.ngay | format_date }}</td>
                     <td class="dw-col-id">
                         <span class="badge bg-blue-lt fw-bold cursor-pointer station-trigger"
-                            data-id="{{ item.id_tram }}">{{ item.id_tram }}</span>
+                            data-id="{{ item.id_tram }}">{{ site_id_badge(item.id_tram, site_map) }}</span>
                     </td>
                     <td class="dw-col-cat text-muted small">
                         <div class="dw-clamp">{{ item.hang_muc }}</div>

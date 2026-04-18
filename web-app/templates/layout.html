@@ -121,7 +121,8 @@
                                 <i class="fas fa-key me-2"></i> Đổi mật khẩu
                             </a>
                             <div class="dropdown-divider"></div>
-                            <a href="{{ url_for('core.logout') }}" class="dropdown-item text-danger">
+                            <a href="#" class="dropdown-item text-danger"
+                                onclick="event.preventDefault(); document.getElementById('logout-form-mobile').submit();">
                                 <i class="fas fa-sign-out-alt me-2"></i> Đăng xuất
                             </a>
                         </div>
@@ -236,7 +237,8 @@
                                 <i class="fas fa-key me-2"></i> Đổi mật khẩu
                             </a>
                             <div class="dropdown-divider"></div>
-                            <a href="{{ url_for('core.logout') }}" class="dropdown-item text-danger">
+                            <a href="#" class="dropdown-item text-danger"
+                                onclick="event.preventDefault(); document.getElementById('logout-form-desktop').submit();">
                                 <i class="fas fa-sign-out-alt me-2"></i> Đăng xuất
                             </a>
                         </div>
@@ -405,8 +407,7 @@
         </div>
     </div>
 
-    <!-- Tabler Core JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Tabler Core JS (Tabler already includes Bootstrap - do NOT add Bootstrap separately) -->
     <script src="https://cdn.jsdelivr.net/npm/@tabler/core@latest/dist/js/tabler.min.js"></script>
     <script>
         // Global Filter Function (supports multiple tables)
@@ -564,6 +565,14 @@
         }
     </script>
     {% block scripts %}{% endblock %}
+
+    <!-- Global Hidden CSRF Forms -->
+    <form id="logout-form-mobile" action="{{ url_for('core.logout') }}" method="POST" style="display: none;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    </form>
+    <form id="logout-form-desktop" action="{{ url_for('core.logout') }}" method="POST" style="display: none;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    </form>
 </body>
 
 </html>

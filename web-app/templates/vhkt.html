@@ -408,6 +408,33 @@
 </div>
 
 <script>
+    // ── Site ID mapping (injected from server) ─────────────────
+    const SITE_MAP = {{ site_map | tojson }};
+    const SITE_MAP_REVERSE = {{ site_map_reverse | tojson }};
+
+    // Helper: render site id với mapping 2 chiều, font bằng nhau chỉ khác màu
+    function siteIdHtml(siteId) {
+        if (!siteId || siteId === '--') return '<span class="fw-semibold font-monospace">--</span>';
+
+        let idNew = '', idOld = siteId;
+
+        // Thử chiều 1: siteId là ID cũ → lấy ID mới
+        if (SITE_MAP[siteId]) {
+            idNew = SITE_MAP[siteId];
+        }
+        // Thử chiều 2: siteId là ID mới → lấy ID cũ
+        else if (SITE_MAP_REVERSE[siteId]) {
+            idNew = siteId;
+            idOld = SITE_MAP_REVERSE[siteId];
+        }
+
+        if (idNew && idOld && idNew !== idOld) {
+            return `<span class="fw-bold text-azure font-monospace" title="ID Mới">${idNew}</span><br>`
+                + `<span class="fw-normal text-muted font-monospace" title="ID Cũ">${idOld}</span>`;
+        }
+        return `<span class="fw-semibold font-monospace">${siteId}</span>`;
+    }
+
     // ── State ───────────────────────────────────────────────
     let currentTab = 'md';
     let tabDataLoaded = { md: false, mpd: false, mll: false, mll_cell: false, vhkt: false };
@@ -830,7 +857,7 @@
 
 
 
-        return `<td class="${trStyle}" style="${colorStyle}" onclick="showFuelModal('${r.id_tram}','${r.thoi_gian_cup_dien || ''}','${r.thoi_gian_co_dien || ''}')">${r.id_tram || '--'}</td>`
+        return `<td class="${trStyle}" style="${colorStyle}" onclick="showFuelModal('${r.id_tram}','${r.thoi_gian_cup_dien || ''}','${r.thoi_gian_co_dien || ''}')">${siteIdHtml(r.id_tram || '--')}</td>`
 
             + `<td>${r.ngay_mat_dien || '--'}${dayBadge}</td>`
 
@@ -858,14 +885,14 @@
         const timeCell = datePart
             ? `<span class="d-none d-md-inline">${datePart} </span>${timePart}`
             : batDau;
-        return `<td class="fw-bold col-site" style="${siteColor}">${siteIcon} ${r.site || '--'}</td><td class="d-none d-md-table-cell small">${r.network || ''}</td><td class="col-canh-bao text-start">${r.alarmName || ''}</td><td class="small">${timeCell}</td><td class="${hoursClass}">${hours}</td>`;
+        return `<td class="fw-bold col-site" style="${siteColor}">${siteIcon} ${siteIdHtml(r.site || '--')}</td><td class="d-none d-md-table-cell small">${r.network || ''}</td><td class="col-canh-bao text-start">${r.alarmName || ''}</td><td class="small">${timeCell}</td><td class="${hoursClass}">${hours}</td>`;
     }
 
     function buildMpdRow(r) {
         const durMins = r.duaration || r.minute || 0;
         const hours = (durMins / 60).toFixed(1);
         const hoursClass = durMins >= 120 ? 'text-danger fw-bold' : (durMins >= 60 ? 'text-warning' : '');
-        return `<td class="fw-bold">${r.site || '--'}</td><td class="d-none d-md-table-cell small">${r.neType || ''}</td><td class="small text-start">${r.alarmName || ''}</td><td class="small">${r.sdateStr || ''}</td><td class="${hoursClass}">${hours}</td>`;
+        return `<td class="fw-bold">${siteIdHtml(r.site || '--')}</td><td class="d-none d-md-table-cell small">${r.neType || ''}</td><td class="small text-start">${r.alarmName || ''}</td><td class="small">${r.sdateStr || ''}</td><td class="${hoursClass}">${hours}</td>`;
     }
 
     function buildMllRow(r) {
@@ -875,7 +902,7 @@
         const durMins = r.duaration || r.minute || 0;
         const hours = (durMins / 60).toFixed(1);
         const hoursClass = durMins >= 120 ? 'text-danger fw-bold' : (durMins >= 60 ? 'text-warning fw-bold' : 'text-success');
-        return `<td class="fw-bold">${r.site || '--'}${flagIcon}</td><td><span class="badge ${mangColor}">${mang}</span></td><td class="small">${r.sdateStr || ''}</td><td class="${hoursClass}">${hours}</td><td class="d-none d-md-table-cell small">${r.vendor || ''}</td>`;
+        return `<td class="fw-bold">${siteIdHtml(r.site || '--')}${flagIcon}</td><td><span class="badge ${mangColor}">${mang}</span></td><td class="small">${r.sdateStr || ''}</td><td class="${hoursClass}">${hours}</td><td class="d-none d-md-table-cell small">${r.vendor || ''}</td>`;
     }
 
     function buildMllCellRow(r) {
@@ -884,7 +911,7 @@
         const hoursClass = durMins >= 120 ? 'text-danger fw-bold' : (durMins >= 60 ? 'text-warning' : '');
         const mang = r.network || '--';
         const mangColor = mang.includes('Mobi') ? 'bg-blue-lt' : (mang.includes('Vina') ? 'bg-red-lt' : (mang.includes('Viettel') ? 'bg-green-lt' : 'bg-azure-lt'));
-        return `<td class="fw-bold">${r.site || '--'}</td>`
+        return `<td class="fw-bold">${siteIdHtml(r.site || '--')}</td>`
             + `<td class="d-none d-md-table-cell small">${r.cellid || ''}</td>`
             + `<td><span class="badge ${mangColor}">${mang}</span></td>`
             + `<td class="small text-start">${r.alarmName || ''}</td>`
@@ -900,7 +927,7 @@
         const mllSla = (r.mll_sla || '').toLowerCase().includes('đạt')
             ? '<span class="badge bg-success-lt">Đạt</span>'
             : (r.mll_sla ? '<span class="badge bg-danger-lt">✗</span>' : '--');
-        return `<td class="fw-bold">${r.tram || '--'}</td><td class="text-center px-1">${r.md_so_lan || 0}</td><td class="text-center px-1">${r.md_phut || 0}</td><td class="text-center px-1">${mdSla}</td><td class="text-center px-1">${r.mpd_so_lan || 0}</td><td class="text-center px-1">${r.mpd_phut || 0}</td><td class="text-center px-1">${r.mll_so_lan || 0}</td><td class="text-center px-1">${r.mll_phut || 0}</td><td class="text-center px-1">${mllSla}</td>`;
+        return `<td class="fw-bold">${siteIdHtml(r.tram || '--')}</td><td class="text-center px-1">${r.md_so_lan || 0}</td><td class="text-center px-1">${r.md_phut || 0}</td><td class="text-center px-1">${mdSla}</td><td class="text-center px-1">${r.mpd_so_lan || 0}</td><td class="text-center px-1">${r.mpd_phut || 0}</td><td class="text-center px-1">${r.mll_so_lan || 0}</td><td class="text-center px-1">${r.mll_phut || 0}</td><td class="text-center px-1">${mllSla}</td>`;
     }
 
     // ── Manual Refresh Trigger ──────────────────────────────

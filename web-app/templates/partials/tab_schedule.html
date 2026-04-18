@@ -1,4 +1,5 @@
 {# Tab Lịch Cúp Điện — Server-side rendered (instant, no JS delay) #}
+{% from 'macros.html' import site_id_badge %}
 
 {# Admin toolbar #}
 <div class="d-flex flex-wrap gap-2 mb-2 align-items-center">
@@ -81,7 +82,7 @@
                     <tr>
                         <td style="color:{{ fuel_color }};font-weight:bold;cursor:pointer"
                             onclick="showFuelModal('{{ s.id_tram }}', {{ ton }}, {{ fs.get('dung_tich', 0) }}, {{ dm }}, '{{ fs.get('may_phat', '') }}', '{{ loai_nl }}', {{ need|round(1) }})">
-                            {{ s.id_tram or '--' }}
+                            {{ site_id_badge(s.id_tram, site_map, site_map_reverse) }}
                         </td>
                         <td>{{ ngay_fmt }}</td>
                         <td class="text-danger">{{ s.thoi_gian_cup_dien or '--' }}</td>

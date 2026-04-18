@@ -1,4 +1,5 @@
 {% extends "layout.html" %}
+{% from 'macros.html' import site_id_badge %}
 
 {% block content %}
 <div class="page-header d-print-none mb-4">
@@ -144,7 +145,8 @@
                         </td>
                         <td><span class="badge bg-{{ 'cyan' if log.loai_nhien_lieu == 'Dầu' else 'yellow' }}-lt">{{
                                 log.loai_nhien_lieu or '--' }}</span></td>
-                        <td>{{ log.id_tram if log.id_tram else 'KHO TỔNG' }}</td>
+                        <td>{{ site_id_badge(log.id_tram, site_map, site_map_reverse) if log.id_tram else 'KHO TỔNG' }}
+                        </td>
                         <td class="fw-bold">
                             {{ "{:,.0f}".format(log.so_luong or 0) }}
                         </td>

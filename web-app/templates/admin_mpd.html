@@ -1,4 +1,5 @@
 {% extends "layout.html" %}
+{% from 'macros.html' import site_id_badge %}
 
 {% block content %}
 <div class="page-header d-print-none mb-4">
@@ -103,7 +104,8 @@
                             <tbody>
                                 {% for row in anomaly_stations %}
                                 <tr>
-                                    <td class="fw-bold"><span class="badge bg-danger-lt">{{ row.id_tram }}</span></td>
+                                    <td class="fw-bold"><span class="badge bg-danger-lt">{{ site_id_badge(row.id_tram,
+                                            site_map) }}</span></td>
                                     <td>{{ row.huyen }}</td>
                                     <td class="text-end">{{ row.run_h }}h</td>
                                     <td class="text-end">{{ "{:,.0f}".format(row.gen_cost) }}</td>
@@ -166,7 +168,8 @@
                         <tbody>
                             {% for row in station_summary %}
                             <tr>
-                                <td class="fw-bold bg-light"><span class="badge bg-info-lt">{{ row.id_tram }}</span>
+                                <td class="fw-bold bg-light"><span class="badge bg-info-lt">{{
+                                        site_id_badge(row.id_tram, site_map) }}</span>
                                 </td>
                                 <td>{{ row.huyen }}</td>
                                 <td class="small">{{ row.may_phat }}</td>
@@ -381,7 +384,7 @@
                             {% for log in logs %}
                             <tr
                                 class="{{ 'table-warning' if log.status == 'pending' else ('opacity-50' if log.status == 'rejected' else '') }}">
-                                <td class="fw-bold">{{ log.id_tram }}</td>
+                                <td class="fw-bold">{{ site_id_badge(log.id_tram, site_map) }}</td>
                                 <td class="d-none d-lg-table-cell">
                                     {% if log.source == 'smartw' %}
                                     <span class="badge bg-cyan-lt">🤖 SW</span>
@@ -491,7 +494,8 @@
                                 <tr>
                                     <td><input type="checkbox" name="ids" value="{{ item.id }}"
                                             class="form-check-input"></td>
-                                    <td><span class="badge bg-info-lt fw-bold">{{ item.id_tram }}</span></td>
+                                    <td><span class="badge bg-info-lt fw-bold">{{ site_id_badge(item.id_tram, site_map)
+                                            }}</span></td>
                                     <td class="small">{{ item.ma_khach_hang or '--' }}</td>
                                     <td>{{ item.huyen or '--' }}</td>
                                     <td class="small">{{ item.quan_ly_tram or '--' }}</td>

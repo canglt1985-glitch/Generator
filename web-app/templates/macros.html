@@ -1,0 +1,69 @@
+{#
+╔═══════════════════════════════════════════════════════════╗
+║ JINJA2 MACROS - Tái sử dụng toàn hệ thống ║
+║ Usage: {% from 'macros.html' import site_id_badge %} ║
+╚═══════════════════════════════════════════════════════════╝
+#}
+
+{#
+Hiển thị Site ID với mapping 2 chiều: ID cũ ↔ ID mới
+- Nếu id_tram là ID CŨ → tra ra ID mới, hiện: Mới(xanh đậm) / Cũ(xám)
+- Nếu id_tram là ID MỚI → tra ra ID cũ, hiện: Mới(xanh đậm) / Cũ(xám)
+- Font 2 dòng bằng nhau, chỉ khác màu
+
+Params:
+id_tram : ID hiện tại (cũ hoặc mới)
+site_map : dict {id_cũ: id_mới}
+site_map_reverse : dict {id_mới: id_cũ}
+badge : bọc trong badge hay không
+link : có gắn link datasite không
+#}
+{% macro site_id_badge(id_tram, site_map={}, site_map_reverse={}, badge=False, link=False) %}
+{# Thử tra theo chiều cũ→mới #}
+{% set id_new = site_map.get(id_tram, '') %}
+{% set id_old = id_tram %}
+
+{# Nếu không tìm được, thử chiều ngược: id_tram có thể là ID mới rồi #}
+{% if not id_new %}
+{% set id_old_found = site_map_reverse.get(id_tram, '') %}
+{% if id_old_found %}
+{% set id_new = id_tram %}
+{% set id_old = id_old_found %}
+{% endif %}
+{% endif %}
+
+{% set has_pair = id_new and id_old and id_new != id_old %}
+
+{% if link %}<a href="/datasite?q={{ id_tram }}" class="text-decoration-none" target="_blank">{% endif %}
+    {% if badge %}<span class="badge bg-primary-lt text-primary px-2 py-1" style="min-width:80px;">{% endif %}
+
+        {% if has_pair %}
+        <span class="fw-bold text-azure font-monospace" title="Site ID Mới">{{ id_new }}</span><br>
+        <span class="fw-normal text-muted font-monospace" title="ID Cũ: {{ id_old }}">{{ id_old }}</span>
+        {% else %}
+        <span class="fw-semibold font-monospace" title="Site ID">{{ id_tram or '--' }}</span>
+        {% endif %}
+
+        {% if badge %}</span>{% endif %}
+    {% if link %}</a>{% endif %}
+{% endmacro %}
+
+
+{#
+Hiển thị Site ID dạng inline (1 dòng).
+#}
+{% macro site_id_inline(id_tram, site_map={}, site_map_reverse={}) %}
+{% set id_new = site_map.get(id_tram, '') %}
+{% set id_old = id_tram %}
+{% if not id_new %}
+{% set id_old_found = site_map_reverse.get(id_tram, '') %}
+{% if id_old_found %}{% set id_new = id_tram %}{% set id_old = id_old_found %}{% endif %}
+{% endif %}
+{% set has_pair = id_new and id_old and id_new != id_old %}
+{% if has_pair %}
+<span class="fw-bold text-azure font-monospace">{{ id_new }}</span>
+<span class="text-muted" style="font-size:0.9em;">(cũ: {{ id_old }})</span>
+{% else %}
+<span class="fw-semibold font-monospace">{{ id_tram or '--' }}</span>
+{% endif %}
+{% endmacro %}
