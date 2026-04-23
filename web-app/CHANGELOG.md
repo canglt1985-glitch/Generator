@@ -1,5 +1,12 @@
 # Changelog - Project VT3-VHKT
 
+## [2026-04-20]
+### Added
+- **Brainstorm: VHKT Enterprise (VEE):** Hoàn thành buổi thảo luận chiến lược về dự án thế hệ mới.
+- **Tài liệu:** Tạo file `docs/VHKT_ENTERPRISE_PLAN.md` quy hoạch chi tiết về MCP, Database (quy mô CB điện/Cáp quang) và tích hợp SmartW.
+### Changed
+- **Quy hoạch:** Thống nhất lộ trình "đập đi xây mới" để chuẩn hóa cho nhiều Tổ Viễn Thông.
+
 ## [2026-04-19]
 ### Fixed
 - **Bảo mật (Security):** Vá lỗi thiếu CSRF Token cho toàn bộ Form trong trang Công Việc Hàng Ngày (bao gồm cả các tab phụ: Tồn tại, Thiết bị, Lịch cúp điện). Fix triệt để lỗi "Bad Request: CSRF token missing".
