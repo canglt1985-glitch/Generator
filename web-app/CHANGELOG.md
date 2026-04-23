@@ -1,5 +1,25 @@
 # Changelog - Project VT3-VHKT
 
+## [2026-04-20]
+### Added
+- **Brainstorm: VHKT Enterprise (VEE):** Hoàn thành buổi thảo luận chiến lược về dự án thế hệ mới.
+- **Tài liệu:** Tạo file `docs/VHKT_ENTERPRISE_PLAN.md` quy hoạch chi tiết về MCP, Database (quy mô CB điện/Cáp quang) và tích hợp SmartW.
+### Changed
+- **Quy hoạch:** Thống nhất lộ trình "đập đi xây mới" để chuẩn hóa cho nhiều Tổ Viễn Thông.
+
+## [2026-04-19]
+### Fixed
+- **Bảo mật (Security):** Vá lỗi thiếu CSRF Token cho toàn bộ Form trong trang Công Việc Hàng Ngày (bao gồm cả các tab phụ: Tồn tại, Thiết bị, Lịch cúp điện). Fix triệt để lỗi "Bad Request: CSRF token missing".
+### Changed
+- **Refactor:** Tách core logic xử lý DataSite từ `app.py` sang `datasite_service.py` để tối ưu hóa mã nguồn.
+- **Git:** Commit và Push 8 file quan trọng (templates, service mới, tài liệu recap) lên GitHub `main`.
+
+## [2026-04-18]
+### Added
+- **Site ID Mapping:** Triển khai cơ chế Mapping 2 chiều (ID cũ ↔ ID mới) trên toàn hệ thống.
+- **UI Improvements:** Tạo macro `site_id_badge` hiển thị song song 2 ID với màu sắc phân biệt (xanh đậm cho ID chính, xám cho ID phụ) giúp kỹ thuật dễ tra cứu.
+- **Logic:** Thêm `site_map_reverse` vào context toàn cục để xử lý dữ liệu từ SmartW API (vốn sử dụng ID mới).
+
 ## [2026-03-07]
 ### Added
 - Dự án: DataSite Auto-Scraper (Playwright-based).
