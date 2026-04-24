@@ -117,7 +117,8 @@
             </div>
             <form action="{{ url_for('daily_work.import_power_schedule') }}" method="POST"
                 enctype="multipart/form-data">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                
                 <div class="modal-body">
                     <input type="file" name="file" class="form-control" accept=".xlsx,.xls,.csv" required>
                     <div class="form-text">Hỗ trợ .xlsx, .xls, .csv</div>

@@ -288,6 +288,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <form action="{{ url_for('core.change_password') }}" method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="modal-body">
                         <div class="mb-3">
                             <label class="form-label">Mật khẩu hiện tại</label>
@@ -568,10 +569,12 @@
 
     <!-- Global Hidden CSRF Forms -->
     <form id="logout-form-mobile" action="{{ url_for('core.logout') }}" method="POST" style="display: none;">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        
     </form>
     <form id="logout-form-desktop" action="{{ url_for('core.logout') }}" method="POST" style="display: none;">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        
     </form>
 </body>
 

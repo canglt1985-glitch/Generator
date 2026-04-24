@@ -15,6 +15,7 @@
     <div class="card-status-top bg-primary"></div>
     <div class="card-body p-5">
         <form action="{{ url_for('generator.edit_general_info', id=item.id) }}" method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="row g-4">
                 <div class="col-md-6">
                     <label class="form-label fw-bold">ID Trạm</label>
