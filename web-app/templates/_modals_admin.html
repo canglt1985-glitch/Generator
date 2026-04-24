@@ -7,7 +7,8 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form action="{{ url_for('generator.add_general_info') }}" method="POST">
-                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        
                 <div class="modal-body">
                     <div class="row g-3">
                         <div class="col-md-6"><label class="form-label">ID Trạm</label><input type="text" name="id_tram"
@@ -46,7 +47,8 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form action="{{ url_for('generator.add_generator_log') }}" method="POST">
-                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        
                 <div class="modal-body">
                     <div class="row g-3">
                         <!-- User inputs: Station, Date, Start, End -->
@@ -109,7 +111,8 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form action="{{ url_for('core.add_user') }}" method="POST">
-                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        
                 <div class="modal-body">
                     <div class="row g-3">
                         <div class="col-12"><label class="form-label">Họ và Tên <span
@@ -154,7 +157,8 @@
                     data-bs-dismiss="modal"></button>
             </div>
             <form action="{{ url_for(url) }}" method="POST" enctype="multipart/form-data">
-                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        
                 <div class="modal-body py-4 text-center">
                     <div class="mb-3"><i class="fas fa-file-excel fa-3x text-green opacity-20"></i></div>
                     <input type="file" name="file" class="form-control" required accept=".xlsx, .xls">
@@ -177,7 +181,8 @@
                     class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form action="{{ url_for('core.reset_password', user_id=user.id) }}" method="POST">
-                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        
                 <div class="modal-body"><label class="form-label">Mật khẩu mới</label><input type="password"
                         name="new_password" class="form-control" required></div>
                 <div class="modal-footer"><button type="submit" class="btn btn-warning w-100">Xác nhận thay đổi</button>
@@ -198,7 +203,8 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form action="{{ url_for('core.edit_user', user_id=user.id) }}" method="POST">
-                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        
                 <div class="modal-body">
                     <div class="row g-3">
                         <div class="col-12">

@@ -74,7 +74,8 @@
                             {% if session.get('role') == 'admin' %}
                             <form method="POST" action="{{ url_for('daily_work.delete_mobile_equipment', id=e.id) }}"
                                 style="display:inline;" onsubmit="return confirm('Xóa {{ e.ma_thiet_bi }}?')">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                
                                 <button type="submit" class="btn btn-sm btn-outline-danger eq-btn" title="Xóa">
                                     <i class="fas fa-trash"></i>
                                 </button>
@@ -214,7 +215,8 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <form id="equipForm" method="POST" action="{{ url_for('daily_work.add_mobile_equipment') }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                
                 <div class="modal-header py-2 bg-indigo-lt">
                     <h5 class="modal-title" id="equipModalTitle">
                         <i class="fas fa-truck-moving me-1"></i>Thêm Thiết Bị
@@ -273,7 +275,8 @@
     <div class="modal-dialog modal-sm modal-dialog-centered">
         <div class="modal-content">
             <form method="POST" action="{{ url_for('daily_work.transfer_equipment') }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                
                 <div class="modal-header py-2 bg-success-lt">
                     <h5 class="modal-title" id="transferTitle">
                         <i class="fas fa-exchange-alt me-1"></i>Điều Chuyển

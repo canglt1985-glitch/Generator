@@ -417,7 +417,8 @@
                                     {% if log.status == 'pending' and session['role'] == 'admin' %}
                                     <form action="{{ url_for('generator.approve_log', id=log.id) }}" method="POST"
                                         class="d-inline">
-                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        
                                         <button class="btn btn-ghost-success btn-icon btn-sm p-0" title="Duyệt"><i
                                                 class="fas fa-check"></i></button>
                                     </form>
@@ -427,14 +428,16 @@
                                     </button>
                                     <form action="{{ url_for('generator.reject_log', id=log.id) }}" method="POST"
                                         class="d-inline" onsubmit="return confirm('Từ chối record {{ log.id_tram }}?')">
-                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        
                                         <button class="btn btn-ghost-danger btn-icon btn-sm p-0" title="Từ chối"><i
                                                 class="fas fa-times"></i></button>
                                     </form>
                                     {% else %}
                                     <form action="{{ url_for('generator.delete_generator_log', id=log.id) }}"
                                         method="POST" class="d-inline" onsubmit="return confirm('Xóa record này?');">
-                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        
                                         <button class="btn btn-ghost-danger btn-icon btn-sm border-0 p-0"><i
                                                 class="fas fa-trash"></i></button>
                                     </form>
@@ -465,7 +468,8 @@
                 </div>
                 <div class="table-responsive">
                     <form method="POST" action="{{ url_for('generator.bulk_delete_general_info') }}">
-                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        
                         <div class="mb-3 d-flex align-items-center gap-2">
                             <input type="checkbox" id="selectAllInfo" class="form-check-input ms-3">
                             <label class="form-check-label small text-muted">Chọn tất cả</label>
@@ -516,7 +520,8 @@
                                             class="btn btn-ghost-primary btn-icon"><i class="fas fa-edit"></i></a>
                                         <form action="{{ url_for('generator.delete_general_info', id=item.id) }}"
                                             method="POST" class="d-inline" onsubmit="return confirm('Xóa?')">
-                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        
                                             <button class="btn btn-ghost-danger btn-icon"><i
                                                     class="fas fa-trash"></i></button>
                                         </form>
@@ -542,7 +547,8 @@
     <div class="modal-dialog modal-sm modal-dialog-centered">
         <div class="modal-content">
             <form id="editLogForm" method="POST">
-                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        
                 <div class="modal-header">
                     <h5 class="modal-title">✏️ Sửa Giờ Chạy Máy</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
