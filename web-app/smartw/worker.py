@@ -54,6 +54,38 @@ def _get_site_label(site_id: str) -> str:
     return site_id
 
 
+def _site_key(alarm: dict) -> str:
+    """Extract a consistent site key from raw alarm fields."""
+    return alarm.get('site_id') or alarm.get('site') or alarm.get('tram') or alarm.get('ne') or 'Unknown'
+
+
+def _norm_net(network: str) -> str:
+    """Normalize network technology strings (2G, 3G, 4G, 5G)."""
+    if not network:
+        return ''
+    n = network.upper()
+    if '5G' in n: return '5G'
+    if '4G' in n or 'LTE' in n: return '4G'
+    if '3G' in n or 'WCDMA' in n: return '3G'
+    if '2G' in n or 'GSM' in n: return '2G'
+    return network
+
+
+def _old_id(site_id: str) -> str:
+    """Look up legacy site ID from site registry."""
+    try:
+        from models import DsSiteRegistry
+        row = DsSiteRegistry.query.filter(
+            (DsSiteRegistry.site_id_new == site_id.upper()) |
+            (DsSiteRegistry.site_id_old == site_id.upper())
+        ).first()
+        if row and row.site_id_old:
+            return row.site_id_old
+    except Exception:
+        pass
+    return site_id
+
+
 def _fmt_sdate(sdate_str: str) -> str:
     """Format sdateStr 'DD/MM/YYYY HH:MM:SS' or ISO -> 'DD/MM HH:MM'."""
     if not sdate_str:
@@ -101,6 +133,19 @@ def _send_viber_report(lines: list):
 
 # Keep backward compat alias
 _send_viber_messages = _send_viber_report
+
+
+def _load_smartw_json(filename: str) -> list:
+    """Helper to load alarm JSON files from DATA_DIR."""
+    path = os.path.join(DATA_DIR, filename)
+    if not os.path.exists(path):
+        return []
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception as e:
+        logger.error(f"Error loading {filename}: {e}")
+        return []
 
 # ── SSE Event System ─────────────────────────────────────────────
 _sse_subscribers: list[queue.Queue] = []
@@ -560,10 +605,7 @@ def run_alarm_poll():
             if all_new or all_cleared:
                 now_str = datetime.now().strftime('%H:%M:%S - %d/%m/%Y')
                 sep = '----------------------------------------------------------'
-                lines = [
-                    "\U0001f514 B\u00c1O C\u00c1O GI\u00c1M S\u00c1T RAN (" + now_str + ")",
-                    sep
-                ]
+                lines = []
 
                 total_active = 0
 
@@ -573,30 +615,6 @@ def run_alarm_poll():
                     for a in all_new.get('mpd', [])
                 )
 
-                def _site_key(alarm):
-                    return alarm.get('site_id') or alarm.get('site') or alarm.get('tram') or alarm.get('ne') or 'Unknown'
-
-                def _norm_net(network):
-                    if not network: return ''
-                    n = network.upper()
-                    if '5G' in n: return '5G'
-                    if '4G' in n or 'LTE' in n: return '4G'
-                    if '3G' in n or 'WCDMA' in n: return '3G'
-                    if '2G' in n or 'GSM' in n: return '2G'
-                    return network
-
-                def _old_id(site_id):
-                    try:
-                        from models import DsSiteRegistry
-                        row = DsSiteRegistry.query.filter(
-                            (DsSiteRegistry.site_id_new == site_id.upper()) |
-                            (DsSiteRegistry.site_id_old == site_id.upper())
-                        ).first()
-                        if row and row.site_id_old:
-                            return row.site_id_old
-                    except Exception:
-                        pass
-                    return site_id
 
                 # ── 1. MẤT ĐIỆN (MAC) ──
                 md_list = all_new.get('md', [])
@@ -621,15 +639,27 @@ def run_alarm_poll():
                         lines.append("  " + label + " - " + t)
                         total_active += 1
 
-                # ── 3. MẤT LIÊN LẠC TRẠM (MLL) ──
+                # ── 3. MẤT LIÊN LẠC TRẠM (MLL) ── (grouped by site, shows [3G, 4G])
                 mll_list = all_new.get('mll', [])
                 if mll_list:
-                    lines.append("📵 MẤT LIÊN LẠC (MLL):")
+                    # Group alarms by site: {site_key: {label, nets: set, t: str}}
+                    mll_groups = {}
                     for alarm in mll_list:
                         site = _site_key(alarm)
-                        label = _get_site_label(site)
+                        net = _norm_net(alarm.get('network') or '')
                         t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '')
-                        lines.append("  " + label + " - " + t)
+                        if site not in mll_groups:
+                            mll_groups[site] = {
+                                'label': _get_site_label(site),
+                                'nets': [],
+                                't': t,
+                            }
+                        if net and net not in mll_groups[site]['nets']:
+                            mll_groups[site]['nets'].append(net)
+                    lines.append("\ud83d\udcf5 M\u1ea4T LI\u00caN L\u1ea0C (MLL):")
+                    for site, grp in mll_groups.items():
+                        net_part = " [" + ", ".join(sorted(grp['nets'])) + "]" if grp['nets'] else ""
+                        lines.append("  " + grp['label'] + net_part + " - " + grp['t'])
                         total_active += 1
 
                 # ── 4. CELLOFF: dedup by cellid, old_id only, normalized network ──
@@ -656,15 +686,62 @@ def run_alarm_poll():
                         lines.append("  " + old + " | " + display_cid + net_part + " - " + t)
                         total_active += 1
 
-                # ── 5. KHÔI PHỤC (CLEARED) ──
+                # ── 5. CLEARED ── (grouped by site for MLL, flat for others, with type sub-headers)
                 if all_cleared:
-                    # lines.append(sep)
-                    lines.append("✅ KHÔI PHỤC:")
+                    # Group everything by ttype
+                    cleared_by_type = {}
                     for (ttype, alarm) in all_cleared:
-                        site = _site_key(alarm)
-                        label = _get_site_label(site)
-                        clear_t = _fmt_sdate(alarm.get('clear_time') or alarm.get('edateStr') or '')
-                        lines.append("  " + label + " - " + clear_t)
+                        if ttype not in cleared_by_type:
+                            cleared_by_type[ttype] = []
+                        cleared_by_type[ttype].append(alarm)
+
+                    lines.append("✅ CLEARED:")
+                    
+                    TYPE_SUB_HEADERS = {
+                        'md': '⚡ CLEARED (MAC):',
+                        'mll': '📵 CLEARED (MLL):',
+                        'mll_cell': '📵 CLEARED (CELLOFF):',
+                        'mpd': '🔋 CLEARED (GEN):'
+                    }
+
+                    for ttype in ['md', 'mpd', 'mll', 'mll_cell']:
+                        alarms = cleared_by_type.get(ttype)
+                        if not alarms: continue
+                        
+                        sub_header = TYPE_SUB_HEADERS.get(ttype, f"CLEARED ({ttype.upper()}):")
+                        lines.append(sub_header)
+                        
+                        if ttype == 'mll':
+                            # Group MLL by site
+                            mll_cl_groups = {}
+                            for alarm in alarms:
+                                site = _site_key(alarm)
+                                net = _norm_net(alarm.get('network') or '')
+                                clear_t = _fmt_sdate(alarm.get('clear_time') or alarm.get('edateStr') or '')
+                                if site not in mll_cl_groups:
+                                    mll_cl_groups[site] = {'label': _get_site_label(site), 'nets': [], 't': clear_t}
+                                if net and net not in mll_cl_groups[site]['nets']:
+                                    mll_cl_groups[site]['nets'].append(net)
+                            for site, grp in mll_cl_groups.items():
+                                net_part = " [" + ", ".join(sorted(grp['nets'])) + "]" if grp['nets'] else ""
+                                lines.append("  " + grp['label'] + net_part + " - " + grp['t'])
+                        
+                        elif ttype == 'mll_cell':
+                            for alarm in alarms:
+                                site = _site_key(alarm)
+                                old = _old_id(site)
+                                net = _norm_net(alarm.get('network') or '')
+                                clear_t = _fmt_sdate(alarm.get('clear_time') or alarm.get('edateStr') or '')
+                                display_cid = str(alarm.get('cellid') or alarm.get('cell_id') or '')
+                                net_part = " [" + net + "]" if net else ''
+                                lines.append("  " + old + " | " + display_cid + net_part + " - " + clear_t)
+                        
+                        else:
+                            for alarm in alarms:
+                                site = _site_key(alarm)
+                                label = _get_site_label(site)
+                                clear_t = _fmt_sdate(alarm.get('clear_time') or alarm.get('edateStr') or '')
+                                lines.append("  " + label + " - " + clear_t)
 
                 # lines.append(sep)
                 # lines.append("📢 Tổng: " + str(total_active) + " cảnh báo đang hoạt động")
@@ -1241,3 +1318,96 @@ def upsert_datasite_rows(object_name: str, rows: list) -> int:
         upserted = 0
 
     return upserted
+
+
+def send_periodic_full_report():
+    """Send a full status report to Viber Channel (Periodic 2-hour Review).
+    Explicitly triggered by scheduler even if no changes occur.
+    """
+    logger.info("SmartW Worker: 🕒 Starting periodic 2-hour review report...")
+    
+    # 1. Load latest active data from disk
+    md_list = _load_smartw_json('md.json')
+    mpd_list = _load_smartw_json('mpd.json')
+    mll_list = _load_smartw_json('mll.json')
+    cell_list = _load_smartw_json('mll_cell.json')
+    
+    # Check if empty
+    if not any([md_list, mpd_list, mll_list, cell_list]):
+        # Optional: send "No active alarms" message? 
+        # User said "dù có thay đổi hay không", so we send it anyway.
+        pass
+
+    now_str = datetime.now().strftime('%H:%M:%S - %d/%m/%Y')
+    lines = [f"🔔 BÁO CÁO TỔNG HỢP (Review 2h)"]
+    lines.append(f"⏰ Thời điểm: {now_str}")
+    lines.append("----------------------------------------------------------")
+    
+    total_active = 0
+    
+    # Setup mpd_sites for MAC marking
+    mpd_sites = {str(r.get('site') or r.get('site_id') or '').upper() for r in mpd_list if r.get('site') or r.get('site_id')}
+
+    # ── Section 1: MẤT ĐIỆN (MAC) ──
+    if md_list:
+        lines.append("⚡ MẤT ĐIỆN (MAC):")
+        for alarm in md_list:
+            site = _site_key(alarm)
+            label = _get_site_label(site)
+            t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '')
+            prefix = '  ✅' if site in mpd_sites else '  '
+            lines.append(prefix + label + " - " + t)
+            total_active += 1
+
+    # ── Section 2: CHẠY MÁY (GEN) ──
+    if mpd_list:
+        lines.append("🔋 CHẠY MÁY (GEN):")
+        for alarm in mpd_list:
+            site = _site_key(alarm)
+            label = _get_site_label(site)
+            t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '')
+            lines.append("  " + label + " - " + t)
+            total_active += 1
+
+    # ── Section 3: MẤT LIÊN LẠC TRẠM (MLL) ──
+    if mll_list:
+        mll_groups = {}
+        for alarm in mll_list:
+            site = _site_key(alarm)
+            net = _norm_net(alarm.get('network') or '')
+            t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '')
+            if site not in mll_groups:
+                mll_groups[site] = {'label': _get_site_label(site), 'nets': [], 't': t}
+            if net and net not in mll_groups[site]['nets']:
+                mll_groups[site]['nets'].append(net)
+        
+        lines.append("\ud83d\udcf5 M\u1ea4T LI\u00caN L\u1ea0C (MLL):")
+        for site, grp in mll_groups.items():
+            net_part = " [" + ", ".join(sorted(grp['nets'])) + "]" if grp['nets'] else ""
+            lines.append("  " + grp['label'] + net_part + " - " + grp['t'])
+            total_active += 1
+
+    # ── Section 4: CELLOFF ──
+    if cell_list:
+        seen_cells = {}
+        for alarm in cell_list:
+            cid = str(alarm.get('cellid') or alarm.get('cell_id') or '').strip().upper()
+            if cid and cid not in seen_cells: seen_cells[cid] = alarm
+            elif not cid: seen_cells[id(alarm)] = alarm
+            
+        lines.append("📵 CELLOFF (" + str(len(seen_cells)) + " cell):")
+        for cid, alarm in seen_cells.items():
+            site = _site_key(alarm)
+            old = _old_id(site)
+            net = _norm_net(alarm.get('network') or '')
+            t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '')
+            net_part = " [" + net + "]" if net else ''
+            display_cid = str(alarm.get('cellid') or alarm.get('cell_id') or cid)
+            lines.append("  " + old + " | " + display_cid + net_part + " - " + t)
+            total_active += 1
+
+    if total_active == 0:
+        lines.append("✅ Hiện tại không có cảnh báo nào đang hoạt động.")
+    
+    _send_viber_report(lines)
+    logger.info(f"SmartW Worker: ✅ Periodic report sent ({total_active} active alarms)")
