@@ -10,6 +10,7 @@ import asyncio
 import logging
 import threading
 import queue
+import requests
 from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
@@ -22,6 +23,74 @@ _is_running = False
 
 # Circuit breaker: stop polling after this many consecutive login failures
 MAX_LOGIN_FAILURES = 10
+
+def _get_site_label(site_id: str) -> str:
+    """Return 'ID_MOI (ID_CU)' label.
+    Tries DsSiteRegistry first (site_id_new / site_id_old).
+    Falls back to GeneralInfo.id_old if available.
+    Returns 'SITE_ID' alone when no mapping found (no duplicate).
+    """
+    try:
+        from models import DsSiteRegistry
+        row = DsSiteRegistry.query.filter(
+            (DsSiteRegistry.site_id_new == site_id.upper()) |
+            (DsSiteRegistry.site_id_old == site_id.upper())
+        ).first()
+        if row and row.site_id_new and row.site_id_old:
+            return f"{row.site_id_new} ({row.site_id_old})"
+    except Exception:
+        pass
+    # Fallback: try GeneralInfo for legacy id_old field
+    try:
+        from models import GeneralInfo
+        info = GeneralInfo.query.filter_by(id_tram=site_id).first()
+        if info:
+            old_id = getattr(info, 'id_old', None)
+            if old_id and old_id != site_id:
+                return f"{site_id} ({old_id})"
+    except Exception:
+        pass
+    # No mapping found - just return the site_id without duplication
+    return site_id
+
+
+def _fmt_sdate(sdate_str: str) -> str:
+    """Format sdateStr 'DD/MM/YYYY HH:MM:SS' -> 'DD/MM/YYYY HH:MM'."""
+    if not sdate_str:
+        return ""
+    # sdateStr is already 'DD/MM/YYYY HH:MM:SS'
+    try:
+        parts = sdate_str.strip().split(" ")
+        if len(parts) >= 2:
+            time_part = ":".join(parts[1].split(":")[:2])  # HH:MM
+            return f"{parts[0]} {time_part}"
+    except Exception:
+        pass
+    return sdate_str
+
+
+def _send_viber_report(lines: list):
+    """Send a formatted report to Viber Channel via pa/post."""
+    if not lines:
+        return
+    text = "\n".join(lines)
+    payload = {
+        "from": "OMu7ptWb9vbA4pvi5QfVjQ==",
+        "type": "text",
+        "text": text
+    }
+    headers = {
+        "X-Viber-Auth-Token": "567370461ff5bfce-6527e240db117ad7-ce130e1ad6041265"
+    }
+    try:
+        req = requests.post("https://chatapi.viber.com/pa/post", headers=headers, json=payload, timeout=10)
+        logger.info(f"Viber Report (Post): {req.status_code} - {req.text}")
+    except Exception as e:
+        logger.error(f"Viber Report Request Failed: {e}")
+
+
+# Keep backward compat alias
+_send_viber_messages = _send_viber_report
 
 # ── SSE Event System ─────────────────────────────────────────────
 _sse_subscribers: list[queue.Queue] = []
@@ -203,6 +272,45 @@ def _detect_cleared(table_type: str) -> list[dict]:
             cleared.append(record)
 
     return cleared
+
+
+def _detect_new(table_type: str) -> list[dict]:
+    """Compare active vs previous JSON to detect NEW alarms for Viber Alert.
+    Returns list of newly fired records.
+    """
+    active_file = os.path.join(DATA_DIR, f'{table_type}.json')
+    previous_file = os.path.join(DATA_DIR, f'{table_type}_previous.json')
+
+    if not os.path.exists(active_file):
+        return []
+
+    try:
+        with open(active_file, 'r', encoding='utf-8') as f:
+            active = json.load(f).get('data', [])
+        
+        # If no previous file, treat all active as new
+        if not os.path.exists(previous_file):
+            return active
+            
+        with open(previous_file, 'r', encoding='utf-8') as f:
+            previous = json.load(f).get('data', [])
+    except (json.JSONDecodeError, IOError):
+        return []
+
+    # Build set of previous site_ids + bat_dau
+    previous_keys = set()
+    for record in previous:
+        key = f"{record.get('site_id', '')}__{record.get('bat_dau', '')}"
+        previous_keys.add(key)
+
+    # Find records in active but not in previous → they are newly fired
+    new_alarms = []
+    for record in active:
+        key = f"{record.get('site_id', '')}__{record.get('bat_dau', '')}"
+        if key not in previous_keys:
+            new_alarms.append(record)
+
+    return new_alarms
 
 
 def _update_cleared_list(table_type: str, new_cleared: list[dict]):
@@ -422,12 +530,136 @@ def run_alarm_poll():
                 if e.get('source') == 'vhkt'  # keep only vhkt errors
             ]
 
-            # Clear detection
+            # ── Collect new alarms & cleared for new Viber format ──
+            all_new = {}   # table_type -> list of new alarms
+            all_cleared = []  # list of (table_type, alarm)
+
             for table_type in ['md', 'mpd', 'mll', 'mll_cell']:
                 cleared = _detect_cleared(table_type)
                 if cleared:
                     _update_cleared_list(table_type, cleared)
                     logger.info(f'SmartW Worker: {len(cleared)} {table_type.upper()} alarm(s) cleared')
+                    for alarm in cleared:
+                        all_cleared.append((table_type, alarm))
+
+                new_alarms = _detect_new(table_type)
+                if new_alarms:
+                    logger.info(f'SmartW Worker: {len(new_alarms)} {table_type.upper()} alarm(s) newly detected')
+                    all_new[table_type] = new_alarms
+
+            if all_new or all_cleared:
+                now_str = datetime.now().strftime('%H:%M:%S - %d/%m/%Y')
+                sep = '----------------------------------------------------------'
+                lines = [
+                    "\U0001f514 B\u00c1O C\u00c1O GI\u00c1M S\u00c1T RAN (" + now_str + ")",
+                    sep
+                ]
+
+                total_active = 0
+
+                # Cross-ref MAC <> GEN sites
+                mpd_sites = set(
+                    (a.get('site_id') or a.get('site') or a.get('tram') or '')
+                    for a in all_new.get('mpd', [])
+                )
+
+                def _site_key(alarm):
+                    return alarm.get('site_id') or alarm.get('site') or alarm.get('tram') or alarm.get('ne') or 'Unknown'
+
+                def _norm_net(network):
+                    if not network: return ''
+                    n = network.upper()
+                    if '5G' in n: return '5G'
+                    if '4G' in n or 'LTE' in n: return '4G'
+                    if '3G' in n or 'WCDMA' in n: return '3G'
+                    if '2G' in n or 'GSM' in n: return '2G'
+                    return network
+
+                def _old_id(site_id):
+                    try:
+                        from models import DsSiteRegistry
+                        row = DsSiteRegistry.query.filter(
+                            (DsSiteRegistry.site_id_new == site_id.upper()) |
+                            (DsSiteRegistry.site_id_old == site_id.upper())
+                        ).first()
+                        if row and row.site_id_old:
+                            return row.site_id_old
+                    except Exception:
+                        pass
+                    return site_id
+
+                # ── 1. MẤT ĐIỆN (MAC) ──
+                md_list = all_new.get('md', [])
+                if md_list:
+                    lines.append("⚡ MẤT ĐIỆN (MAC):")
+                    for alarm in md_list:
+                        site = _site_key(alarm)
+                        label = _get_site_label(site)
+                        t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '')
+                        prefix = '  ✅' if site in mpd_sites else '  '
+                        lines.append(prefix + label + " - " + t)
+                        total_active += 1
+
+                # ── 2. CHẠY MÁY (GEN) ──
+                mpd_list = all_new.get('mpd', [])
+                if mpd_list:
+                    lines.append("🔋 CHẠY MÁY (GEN):")
+                    for alarm in mpd_list:
+                        site = _site_key(alarm)
+                        label = _get_site_label(site)
+                        t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '')
+                        lines.append("  " + label + " - " + t)
+                        total_active += 1
+
+                # ── 3. MẤT LIÊN LẠC TRẠM (MLL) ──
+                mll_list = all_new.get('mll', [])
+                if mll_list:
+                    lines.append("📵 MẤT LIÊN LẠC (MLL):")
+                    for alarm in mll_list:
+                        site = _site_key(alarm)
+                        label = _get_site_label(site)
+                        t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '')
+                        lines.append("  " + label + " - " + t)
+                        total_active += 1
+
+                # ── 4. CELLOFF: dedup by cellid, old_id only, normalized network ──
+                cell_list = all_new.get('mll_cell', [])
+                if cell_list:
+                    seen_cells = {}
+                    for alarm in cell_list:
+                        raw_cid = str(alarm.get('cellid') or alarm.get('cell_id') or '').strip()
+                        key = raw_cid.upper()
+                        if key and key not in seen_cells:
+                            seen_cells[key] = alarm
+                        elif not key:
+                            seen_cells[alarm.get('id', id(alarm))] = alarm
+
+                    lines.append("📵 CELLOFF (" + str(len(seen_cells)) + " cell):")
+                    for normalized_cid, alarm in seen_cells.items():
+                        site = _site_key(alarm)
+                        old = _old_id(site)
+                        net = _norm_net(alarm.get('network') or '')
+                        t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '')
+                        net_part = " [" + net + "]" if net else ''
+                        # Display raw cell_id to preserve case if needed, but we used upper() for key
+                        display_cid = str(alarm.get('cellid') or alarm.get('cell_id') or normalized_cid)
+                        lines.append("  " + old + " | " + display_cid + net_part + " - " + t)
+                        total_active += 1
+
+                # ── 5. KHÔI PHỤC (CLEARED) ──
+                if all_cleared:
+                    lines.append(sep)
+                    lines.append("✅ KHÔI PHỤC:")
+                    for (ttype, alarm) in all_cleared:
+                        site = _site_key(alarm)
+                        label = _get_site_label(site)
+                        clear_t = _fmt_sdate(alarm.get('clear_time') or alarm.get('edateStr') or '')
+                        lines.append("  " + label + " - " + clear_t)
+
+                lines.append(sep)
+                lines.append("📢 Tổng: " + str(total_active) + " cảnh báo đang hoạt động")
+
+                _send_viber_report(lines)
 
         status['last_alarm_poll'] = datetime.now().isoformat()
 
