@@ -244,6 +244,13 @@ if __name__ == '__main__':
                 trigger='interval', seconds=900,
                 max_instances=1
             )
+            from smartw.worker import send_periodic_full_report
+            scheduler.add_job(
+                id='smartw_alarm_periodic_review',
+                func=lambda: app.app_context().push() or send_periodic_full_report(),
+                trigger='interval', seconds=7200,  # 2 hours
+                max_instances=1
+            )
             scheduler.add_job(
                 id='smartw_vhkt_poll',
                 func=lambda: app.app_context().push() or run_vhkt_poll(),
