@@ -55,15 +55,25 @@ def _get_site_label(site_id: str) -> str:
 
 
 def _fmt_sdate(sdate_str: str) -> str:
-    """Format sdateStr 'DD/MM/YYYY HH:MM:SS' -> 'DD/MM/YYYY HH:MM'."""
+    """Format sdateStr 'DD/MM/YYYY HH:MM:SS' or ISO -> 'DD/MM HH:MM'."""
     if not sdate_str:
         return ""
-    # sdateStr is already 'DD/MM/YYYY HH:MM:SS'
     try:
+        # Check if ISO format (e.g., from clear_time)
+        if "T" in sdate_str and "-" in sdate_str:
+            dt = datetime.fromisoformat(sdate_str)
+            return dt.strftime('%d/%m %H:%M')
+            
+        # Standard format: DD/MM/YYYY HH:MM:SS
         parts = sdate_str.strip().split(" ")
         if len(parts) >= 2:
-            time_part = ":".join(parts[1].split(":")[:2])  # HH:MM
-            return f"{parts[0]} {time_part}"
+            date_parts = parts[0].split("/")
+            # day_month = "/".join(date_parts[:2]) # DD/MM
+            # Just use the original date part but we want DD/MM
+            if len(date_parts) >= 2:
+                day_month = f"{date_parts[0]}/{date_parts[1]}"
+                time_part = ":".join(parts[1].split(":")[:2])  # HH:MM
+                return f"{day_month} {time_part}"
     except Exception:
         pass
     return sdate_str
@@ -648,7 +658,7 @@ def run_alarm_poll():
 
                 # ── 5. KHÔI PHỤC (CLEARED) ──
                 if all_cleared:
-                    lines.append(sep)
+                    # lines.append(sep)
                     lines.append("✅ KHÔI PHỤC:")
                     for (ttype, alarm) in all_cleared:
                         site = _site_key(alarm)
@@ -656,8 +666,8 @@ def run_alarm_poll():
                         clear_t = _fmt_sdate(alarm.get('clear_time') or alarm.get('edateStr') or '')
                         lines.append("  " + label + " - " + clear_t)
 
-                lines.append(sep)
-                lines.append("📢 Tổng: " + str(total_active) + " cảnh báo đang hoạt động")
+                # lines.append(sep)
+                # lines.append("📢 Tổng: " + str(total_active) + " cảnh báo đang hoạt động")
 
                 _send_viber_report(lines)
 
