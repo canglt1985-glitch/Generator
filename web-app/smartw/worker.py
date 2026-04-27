@@ -689,9 +689,8 @@ def run_alarm_poll():
                         lines.append("  " + old + " | " + display_cid + net_part + " - " + t)
                         total_active += 1
 
-                # ── 5. KHÔI PHỤC (CLEARED) ── (grouped by site for MLL, flat for others)
+                # ── 5. CLEARED ── (grouped by site for MLL, flat for others)
                 if all_cleared:
-                    # lines.append(sep)
                     # Group cleared by site+ttype
                     cleared_mll = {}
                     cleared_others = []
@@ -711,17 +710,21 @@ def run_alarm_poll():
                         else:
                             cleared_others.append((ttype, alarm))
 
-                    lines.append("✅ KHÔI PHỤC:")
-                    # MLL grouped
+                    lines.append("✅ CLEARED:")
+                    
+                    # 5a. MLL grouped
                     for site, grp in cleared_mll.items():
                         net_part = " [" + ", ".join(sorted(grp['nets'])) + "]" if grp['nets'] else ""
-                        lines.append("  " + grp['label'] + net_part + " - " + grp['t'])
-                    # Others flat
+                        lines.append("  " + grp['label'] + " (MLL)" + net_part + " - " + grp['t'])
+                    
+                    # 5b. Others flat
+                    TYPE_MAP = {'md': 'MAC', 'mpd': 'GEN', 'mll_cell': 'CELLOFF'}
                     for (ttype, alarm) in cleared_others:
                         site = _site_key(alarm)
                         label = _get_site_label(site)
                         clear_t = _fmt_sdate(alarm.get('clear_time') or alarm.get('edateStr') or '')
-                        lines.append("  " + label + " - " + clear_t)
+                        t_label = TYPE_MAP.get(ttype, ttype.upper())
+                        lines.append(f"  {label} ({t_label}) - {clear_t}")
 
                 # lines.append(sep)
                 # lines.append("📢 Tổng: " + str(total_active) + " cảnh báo đang hoạt động")
