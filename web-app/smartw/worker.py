@@ -605,10 +605,7 @@ def run_alarm_poll():
             if all_new or all_cleared:
                 now_str = datetime.now().strftime('%H:%M:%S - %d/%m/%Y')
                 sep = '----------------------------------------------------------'
-                lines = [
-                    "\U0001f514 B\u00c1O C\u00c1O GI\u00c1M S\u00c1T RAN (" + now_str + ")",
-                    sep
-                ]
+                lines = []
 
                 total_active = 0
 
@@ -689,42 +686,62 @@ def run_alarm_poll():
                         lines.append("  " + old + " | " + display_cid + net_part + " - " + t)
                         total_active += 1
 
-                # ── 5. CLEARED ── (grouped by site for MLL, flat for others)
+                # ── 5. CLEARED ── (grouped by site for MLL, flat for others, with type sub-headers)
                 if all_cleared:
-                    # Group cleared by site+ttype
-                    cleared_mll = {}
-                    cleared_others = []
+                    # Group everything by ttype
+                    cleared_by_type = {}
                     for (ttype, alarm) in all_cleared:
-                        if ttype == 'mll':
-                            site = _site_key(alarm)
-                            net = _norm_net(alarm.get('network') or '')
-                            clear_t = _fmt_sdate(alarm.get('clear_time') or alarm.get('edateStr') or '')
-                            if site not in cleared_mll:
-                                cleared_mll[site] = {
-                                    'label': _get_site_label(site),
-                                    'nets': [],
-                                    't': clear_t
-                                }
-                            if net and net not in cleared_mll[site]['nets']:
-                                cleared_mll[site]['nets'].append(net)
-                        else:
-                            cleared_others.append((ttype, alarm))
+                        if ttype not in cleared_by_type:
+                            cleared_by_type[ttype] = []
+                        cleared_by_type[ttype].append(alarm)
 
                     lines.append("✅ CLEARED:")
                     
-                    # 5a. MLL grouped
-                    for site, grp in cleared_mll.items():
-                        net_part = " [" + ", ".join(sorted(grp['nets'])) + "]" if grp['nets'] else ""
-                        lines.append("  " + grp['label'] + " (MLL)" + net_part + " - " + grp['t'])
-                    
-                    # 5b. Others flat
-                    TYPE_MAP = {'md': 'MAC', 'mpd': 'GEN', 'mll_cell': 'CELLOFF'}
-                    for (ttype, alarm) in cleared_others:
-                        site = _site_key(alarm)
-                        label = _get_site_label(site)
-                        clear_t = _fmt_sdate(alarm.get('clear_time') or alarm.get('edateStr') or '')
-                        t_label = TYPE_MAP.get(ttype, ttype.upper())
-                        lines.append(f"  {label} ({t_label}) - {clear_t}")
+                    TYPE_SUB_HEADERS = {
+                        'md': '⚡ CLEARED (MAC):',
+                        'mll': '📵 CLEARED (MLL):',
+                        'mll_cell': '📵 CLEARED (CELLOFF):',
+                        'mpd': '🔋 CLEARED (GEN):'
+                    }
+
+                    for ttype in ['md', 'mpd', 'mll', 'mll_cell']:
+                        alarms = cleared_by_type.get(ttype)
+                        if not alarms: continue
+                        
+                        sub_header = TYPE_SUB_HEADERS.get(ttype, f"CLEARED ({ttype.upper()}):")
+                        lines.append(sub_header)
+                        
+                        if ttype == 'mll':
+                            # Group MLL by site
+                            mll_cl_groups = {}
+                            for alarm in alarms:
+                                site = _site_key(alarm)
+                                net = _norm_net(alarm.get('network') or '')
+                                clear_t = _fmt_sdate(alarm.get('clear_time') or alarm.get('edateStr') or '')
+                                if site not in mll_cl_groups:
+                                    mll_cl_groups[site] = {'label': _get_site_label(site), 'nets': [], 't': clear_t}
+                                if net and net not in mll_cl_groups[site]['nets']:
+                                    mll_cl_groups[site]['nets'].append(net)
+                            for site, grp in mll_cl_groups.items():
+                                net_part = " [" + ", ".join(sorted(grp['nets'])) + "]" if grp['nets'] else ""
+                                lines.append("  " + grp['label'] + net_part + " - " + grp['t'])
+                        
+                        elif ttype == 'mll_cell':
+                            for alarm in alarms:
+                                site = _site_key(alarm)
+                                old = _old_id(site)
+                                net = _norm_net(alarm.get('network') or '')
+                                clear_t = _fmt_sdate(alarm.get('clear_time') or alarm.get('edateStr') or '')
+                                display_cid = str(alarm.get('cellid') or alarm.get('cell_id') or '')
+                                net_part = " [" + net + "]" if net else ''
+                                lines.append("  " + old + " | " + display_cid + net_part + " - " + clear_t)
+                        
+                        else:
+                            for alarm in alarms:
+                                site = _site_key(alarm)
+                                label = _get_site_label(site)
+                                clear_t = _fmt_sdate(alarm.get('clear_time') or alarm.get('edateStr') or '')
+                                lines.append("  " + label + " - " + clear_t)
 
                 # lines.append(sep)
                 # lines.append("📢 Tổng: " + str(total_active) + " cảnh báo đang hoạt động")
