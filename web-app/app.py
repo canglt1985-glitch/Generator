@@ -248,7 +248,7 @@ if __name__ == '__main__':
             scheduler.add_job(
                 id='smartw_alarm_periodic_review',
                 func=lambda: app.app_context().push() or send_periodic_full_report(),
-                trigger='interval', seconds=7200,  # 2 hours
+                trigger='cron', hour='*/2', minute=0,
                 max_instances=1
             )
             scheduler.add_job(

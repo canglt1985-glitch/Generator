@@ -25,10 +25,10 @@ _is_running = False
 MAX_LOGIN_FAILURES = 10
 
 def _get_site_label(site_id: str) -> str:
-    """Return 'ID_MOI (ID_CU)' label.
+    """Return '*ID_MOI* (ID_CU)' label for Viber display.
     Tries DsSiteRegistry first (site_id_new / site_id_old).
     Falls back to GeneralInfo.id_old if available.
-    Returns 'SITE_ID' alone when no mapping found (no duplicate).
+    Returns '*SITE_ID*' alone when no mapping found.
     """
     try:
         from models import DsSiteRegistry
@@ -37,9 +37,12 @@ def _get_site_label(site_id: str) -> str:
             (DsSiteRegistry.site_id_old == site_id.upper())
         ).first()
         if row and row.site_id_new and row.site_id_old:
-            return f"{row.site_id_new} ({row.site_id_old})"
+            return f"*{row.site_id_new}* ({row.site_id_old})"
+        if row and row.site_id_new:
+            return f"*{row.site_id_new}*"
     except Exception:
         pass
+
     # Fallback: try GeneralInfo for legacy id_old field
     try:
         from models import GeneralInfo
@@ -47,11 +50,12 @@ def _get_site_label(site_id: str) -> str:
         if info:
             old_id = getattr(info, 'id_old', None)
             if old_id and old_id != site_id:
-                return f"{site_id} ({old_id})"
+                return f"*{site_id}* ({old_id})"
     except Exception:
         pass
-    # No mapping found - just return the site_id without duplication
-    return site_id
+
+    # No mapping found - just return the site_id bolded
+    return f"*{site_id}*"
 
 
 def _site_key(alarm: dict) -> str:
@@ -86,26 +90,48 @@ def _old_id(site_id: str) -> str:
     return site_id
 
 
-def _fmt_sdate(sdate_str: str) -> str:
-    """Format sdateStr 'DD/MM/YYYY HH:MM:SS' or ISO -> 'DD/MM HH:MM'."""
+def _fmt_sdate(sdate_str: str, full: bool = False) -> str:
+    """Format sdateStr 'DD/MM/YYYY HH:MM:SS' or ISO -> 'DD/MM HH:MM' or 'HH:MM'.
+    Args:
+        sdate_str: Time string to format.
+        full: If True, returns 'DD/MM HH:MM'. If False, returns 'HH:MM'.
+    """
     if not sdate_str:
         return ""
     try:
+        dt = None
         # Check if ISO format (e.g., from clear_time)
         if "T" in sdate_str and "-" in sdate_str:
             dt = datetime.fromisoformat(sdate_str)
-            return dt.strftime('%d/%m %H:%M')
-            
-        # Standard format: DD/MM/YYYY HH:MM:SS
-        parts = sdate_str.strip().split(" ")
-        if len(parts) >= 2:
-            date_parts = parts[0].split("/")
-            # day_month = "/".join(date_parts[:2]) # DD/MM
-            # Just use the original date part but we want DD/MM
-            if len(date_parts) >= 2:
-                day_month = f"{date_parts[0]}/{date_parts[1]}"
-                time_part = ":".join(parts[1].split(":")[:2])  # HH:MM
-                return f"{day_month} {time_part}"
+        else:
+            # Standard format: DD/MM/YYYY HH:MM:SS
+            # Or HH:MM DD/MM/YYYY
+            parts = sdate_str.strip().split(" ")
+            if len(parts) >= 2:
+                # Assuming DD/MM/YYYY HH:MM:SS
+                if "/" in parts[0] and ":" in parts[1]:
+                    dparts = parts[0].split("/") # DD MM YYYY
+                    tparts = parts[1].split(":") # HH MM SS
+                    if len(dparts) >= 3 and len(tparts) >= 2:
+                        dt = datetime(int(dparts[2]), int(dparts[1]), int(dparts[0]),
+                                     int(tparts[0]), int(tparts[1]))
+                # Assuming HH:MM DD/MM/YYYY
+                elif ":" in parts[0] and "/" in parts[1]:
+                    tparts = parts[0].split(":")
+                    dparts = parts[1].split("/")
+                    if len(dparts) >= 3 and len(tparts) >= 2:
+                        dt = datetime(int(dparts[2]), int(dparts[1]), int(dparts[0]),
+                                     int(tparts[0]), int(tparts[1]))
+
+        if dt:
+            if full:
+                return dt.strftime('%d/%m %H:%M')
+            else:
+                # If alarm is from another day, always show full date
+                if dt.date() != datetime.now().date():
+                    return dt.strftime('%d/%m %H:%M')
+                return dt.strftime('%H:%M')
+                
     except Exception:
         pass
     return sdate_str
@@ -603,91 +629,78 @@ def run_alarm_poll():
                     all_new[table_type] = new_alarms
 
             if all_new or all_cleared:
-                now_str = datetime.now().strftime('%H:%M:%S - %d/%m/%Y')
-                sep = '----------------------------------------------------------'
+                sep = '------------'
                 lines = []
+
+                # Group New Alarms
+                lines.append("🚨 *ACTIVE* 🚨")
+                lines.append(sep)
 
                 total_active = 0
 
                 # Cross-ref MAC <> GEN sites
-                mpd_sites = set(
-                    (a.get('site_id') or a.get('site') or a.get('tram') or '')
-                    for a in all_new.get('mpd', [])
-                )
+                mpd_sites = set()
+                if 'mpd' in all_new:
+                    mpd_sites = set(
+                        (a.get('site_id') or a.get('site') or a.get('tram') or '')
+                        for a in all_new['mpd']
+                    )
 
 
-                # ── 1. MẤT ĐIỆN (MAC) ──
+                # ── 1. MAC ──
                 md_list = all_new.get('md', [])
                 if md_list:
-                    lines.append("⚡ MẤT ĐIỆN (MAC):")
+                    lines.append("⚡ *MAC:*")
                     for alarm in md_list:
                         site = _site_key(alarm)
                         label = _get_site_label(site)
-                        t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '')
-                        prefix = '  ✅' if site in mpd_sites else '  '
-                        lines.append(prefix + label + " - " + t)
+                        # HH:MM only for real-time
+                        t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '', full=False)
+                        icon = ' ✅' if site in mpd_sites else ''
+                        lines.append(f"  • {label}{icon} - {t}")
                         total_active += 1
 
-                # ── 2. CHẠY MÁY (GEN) ──
+                # ── 2. GEN ──
                 mpd_list = all_new.get('mpd', [])
                 if mpd_list:
-                    lines.append("🔋 CHẠY MÁY (GEN):")
+                    lines.append("🔋 *GEN:*")
                     for alarm in mpd_list:
                         site = _site_key(alarm)
                         label = _get_site_label(site)
-                        t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '')
-                        lines.append("  " + label + " - " + t)
+                        t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '', full=False)
+                        lines.append(f"  • {label} - {t}")
                         total_active += 1
 
-                # ── 3. MẤT LIÊN LẠC TRẠM (MLL) ── (grouped by site, shows [3G, 4G])
+                # ── 3. MLL ── (grouped by site)
                 mll_list = all_new.get('mll', [])
                 if mll_list:
-                    # Group alarms by site: {site_key: {label, nets: set, t: str}}
                     mll_groups = {}
                     for alarm in mll_list:
                         site = _site_key(alarm)
                         net = _norm_net(alarm.get('network') or '')
-                        t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '')
+                        t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '', full=False)
                         if site not in mll_groups:
-                            mll_groups[site] = {
-                                'label': _get_site_label(site),
-                                'nets': [],
-                                't': t,
-                            }
+                            mll_groups[site] = {'label': _get_site_label(site), 'nets': [], 't': t}
                         if net and net not in mll_groups[site]['nets']:
                             mll_groups[site]['nets'].append(net)
-                    lines.append("\ud83d\udcf5 M\u1ea4T LI\u00caN L\u1ea0C (MLL):")
+                    lines.append("📵 *MLL:*")
                     for site, grp in mll_groups.items():
-                        net_part = " [" + ", ".join(sorted(grp['nets'])) + "]" if grp['nets'] else ""
-                        lines.append("  " + grp['label'] + net_part + " - " + grp['t'])
+                        net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
+                        lines.append(f"  • {grp['label']}{net_part} - {grp['t']}")
                         total_active += 1
 
-                # ── 4. CELLOFF: dedup by cellid, old_id only, normalized network ──
-                cell_list = all_new.get('mll_cell', [])
-                if cell_list:
-                    seen_cells = {}
-                    for alarm in cell_list:
-                        raw_cid = str(alarm.get('cellid') or alarm.get('cell_id') or '').strip()
-                        key = raw_cid.upper()
-                        if key and key not in seen_cells:
-                            seen_cells[key] = alarm
-                        elif not key:
-                            seen_cells[alarm.get('id', id(alarm))] = alarm
+                # Section Divider if we have cleared
+                if all_new and all_cleared:
+                    lines.append(sep)
 
-                    lines.append("📵 CELLOFF (" + str(len(seen_cells)) + " cell):")
-                    for normalized_cid, alarm in seen_cells.items():
-                        site = _site_key(alarm)
-                        old = _old_id(site)
-                        net = _norm_net(alarm.get('network') or '')
-                        t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '')
-                        net_part = " [" + net + "]" if net else ''
-                        # Display raw cell_id to preserve case if needed, but we used upper() for key
-                        display_cid = str(alarm.get('cellid') or alarm.get('cell_id') or normalized_cid)
-                        lines.append("  " + old + " | " + display_cid + net_part + " - " + t)
-                        total_active += 1
+                # ── 4. CELLOFF ── (MOVED TO 2H SUMMARY)
+                # Removed from real-time poll as per user request.
 
-                # ── 5. CLEARED ── (grouped by site for MLL, flat for others, with type sub-headers)
+                # ── 5. CLEARED ──
                 if all_cleared:
+                    lines.append("✅ *CLEARED* ✅")
+                    lines.append(sep)
+
                     # Group everything by ttype
                     cleared_by_type = {}
                     for (ttype, alarm) in all_cleared:
@@ -695,21 +708,19 @@ def run_alarm_poll():
                             cleared_by_type[ttype] = []
                         cleared_by_type[ttype].append(alarm)
 
-                    lines.append("✅ CLEARED:")
-                    
-                    TYPE_SUB_HEADERS = {
-                        'md': '⚡ CLEARED (MAC):',
-                        'mll': '📵 CLEARED (MLL):',
-                        'mll_cell': '📵 CLEARED (CELLOFF):',
-                        'mpd': '🔋 CLEARED (GEN):'
+                    # Sub-headers using short format
+                    headers_map = {
+                        'md': '⚡ *MAC:*',
+                        'mll': '📵 *MLL:*',
+                        'mpd': '🔋 *GEN:*'
+                        # celloff skipped in real-time
                     }
 
-                    for ttype in ['md', 'mpd', 'mll', 'mll_cell']:
+                    for ttype in ['md', 'mpd', 'mll']:
                         alarms = cleared_by_type.get(ttype)
                         if not alarms: continue
-                        
-                        sub_header = TYPE_SUB_HEADERS.get(ttype, f"CLEARED ({ttype.upper()}):")
-                        lines.append(sub_header)
+
+                        lines.append(headers_map.get(ttype, f"*{ttype.upper()}:*"))
                         
                         if ttype == 'mll':
                             # Group MLL by site
@@ -717,31 +728,21 @@ def run_alarm_poll():
                             for alarm in alarms:
                                 site = _site_key(alarm)
                                 net = _norm_net(alarm.get('network') or '')
-                                clear_t = _fmt_sdate(alarm.get('clear_time') or alarm.get('edateStr') or '')
+                                clear_t = _fmt_sdate(alarm.get('clear_time') or alarm.get('edateStr') or '', full=False)
                                 if site not in mll_cl_groups:
                                     mll_cl_groups[site] = {'label': _get_site_label(site), 'nets': [], 't': clear_t}
                                 if net and net not in mll_cl_groups[site]['nets']:
                                     mll_cl_groups[site]['nets'].append(net)
                             for site, grp in mll_cl_groups.items():
-                                net_part = " [" + ", ".join(sorted(grp['nets'])) + "]" if grp['nets'] else ""
-                                lines.append("  " + grp['label'] + net_part + " - " + grp['t'])
-                        
-                        elif ttype == 'mll_cell':
-                            for alarm in alarms:
-                                site = _site_key(alarm)
-                                old = _old_id(site)
-                                net = _norm_net(alarm.get('network') or '')
-                                clear_t = _fmt_sdate(alarm.get('clear_time') or alarm.get('edateStr') or '')
-                                display_cid = str(alarm.get('cellid') or alarm.get('cell_id') or '')
-                                net_part = " [" + net + "]" if net else ''
-                                lines.append("  " + old + " | " + display_cid + net_part + " - " + clear_t)
-                        
+                                net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
+                                lines.append(f"  • {grp['label']}{net_part} - {grp['t']}")
                         else:
+                            # MAC, GEN (Flat list)
                             for alarm in alarms:
                                 site = _site_key(alarm)
                                 label = _get_site_label(site)
-                                clear_t = _fmt_sdate(alarm.get('clear_time') or alarm.get('edateStr') or '')
-                                lines.append("  " + label + " - " + clear_t)
+                                clear_t = _fmt_sdate(alarm.get('clear_time') or alarm.get('edateStr') or '', full=False)
+                                lines.append(f"  • {label} - {clear_t}")
 
                 # lines.append(sep)
                 # lines.append("📢 Tổng: " + str(total_active) + " cảnh báo đang hoạt động")
@@ -1334,57 +1335,55 @@ def send_periodic_full_report():
     
     # Check if empty
     if not any([md_list, mpd_list, mll_list, cell_list]):
-        # Optional: send "No active alarms" message? 
-        # User said "dù có thay đổi hay không", so we send it anyway.
         pass
 
-    now_str = datetime.now().strftime('%H:%M:%S - %d/%m/%Y')
-    lines = [f"🔔 BÁO CÁO TỔNG HỢP (Review 2h)"]
-    lines.append(f"⏰ Thời điểm: {now_str}")
-    lines.append("----------------------------------------------------------")
+    sep = '------------'
+    lines = ["📊 *SUMMARY (2H)* 📊"]
+    lines.append(sep)
     
     total_active = 0
     
     # Setup mpd_sites for MAC marking
     mpd_sites = {str(r.get('site') or r.get('site_id') or '').upper() for r in mpd_list if r.get('site') or r.get('site_id')}
 
-    # ── Section 1: MẤT ĐIỆN (MAC) ──
+    # ── Section 1: MAC ──
     if md_list:
-        lines.append("⚡ MẤT ĐIỆN (MAC):")
+        lines.append("⚡ *MAC:*")
         for alarm in md_list:
             site = _site_key(alarm)
             label = _get_site_label(site)
-            t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '')
-            prefix = '  ✅' if site in mpd_sites else '  '
-            lines.append(prefix + label + " - " + t)
+            # Full format for summary
+            t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '', full=True)
+            icon = ' ✅' if site in mpd_sites else ''
+            lines.append(f"  • {label}{icon} - {t}")
             total_active += 1
 
-    # ── Section 2: CHẠY MÁY (GEN) ──
+    # ── Section 2: GEN ──
     if mpd_list:
-        lines.append("🔋 CHẠY MÁY (GEN):")
+        lines.append("🔋 *GEN:*")
         for alarm in mpd_list:
             site = _site_key(alarm)
             label = _get_site_label(site)
-            t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '')
-            lines.append("  " + label + " - " + t)
+            t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '', full=True)
+            lines.append(f"  • {label} - {t}")
             total_active += 1
 
-    # ── Section 3: MẤT LIÊN LẠC TRẠM (MLL) ──
+    # ── Section 3: MLL ──
     if mll_list:
         mll_groups = {}
         for alarm in mll_list:
             site = _site_key(alarm)
             net = _norm_net(alarm.get('network') or '')
-            t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '')
+            t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '', full=True)
             if site not in mll_groups:
                 mll_groups[site] = {'label': _get_site_label(site), 'nets': [], 't': t}
             if net and net not in mll_groups[site]['nets']:
                 mll_groups[site]['nets'].append(net)
         
-        lines.append("\ud83d\udcf5 M\u1ea4T LI\u00caN L\u1ea0C (MLL):")
+        lines.append("📵 *MLL:*")
         for site, grp in mll_groups.items():
-            net_part = " [" + ", ".join(sorted(grp['nets'])) + "]" if grp['nets'] else ""
-            lines.append("  " + grp['label'] + net_part + " - " + grp['t'])
+            net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
+            lines.append(f"  • {grp['label']}{net_part} - {grp['t']}")
             total_active += 1
 
     # ── Section 4: CELLOFF ──
@@ -1395,19 +1394,19 @@ def send_periodic_full_report():
             if cid and cid not in seen_cells: seen_cells[cid] = alarm
             elif not cid: seen_cells[id(alarm)] = alarm
             
-        lines.append("📵 CELLOFF (" + str(len(seen_cells)) + " cell):")
+        lines.append("📵 *CELLOFF* (" + str(len(seen_cells)) + " cell):")
         for cid, alarm in seen_cells.items():
             site = _site_key(alarm)
-            old = _old_id(site)
+            label = _get_site_label(site)
             net = _norm_net(alarm.get('network') or '')
-            t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '')
-            net_part = " [" + net + "]" if net else ''
+            t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '', full=True)
+            net_part = f" [{net}]" if net else ''
             display_cid = str(alarm.get('cellid') or alarm.get('cell_id') or cid)
-            lines.append("  " + old + " | " + display_cid + net_part + " - " + t)
+            lines.append(f"  • {label} | {display_cid}{net_part} - {t}")
             total_active += 1
 
     if total_active == 0:
-        lines.append("✅ Hiện tại không có cảnh báo nào đang hoạt động.")
+        lines.append("✅ Hiện tại không có cảnh báo nào.")
     
     _send_viber_report(lines)
     logger.info(f"SmartW Worker: ✅ Periodic report sent ({total_active} active alarms)")
