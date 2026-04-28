@@ -630,119 +630,97 @@ def run_alarm_poll():
 
             if all_new or all_cleared:
                 sep = '------------'
+                
+                # Filter for real-time reporting (skip mll_cell)
+                new_md = all_new.get('md', [])
+                new_mpd = all_new.get('mpd', [])
+                new_mll = all_new.get('mll', [])
+                
+                cl_md = [a for (t, a) in all_cleared if t == 'md']
+                cl_mpd = [a for (t, a) in all_cleared if t == 'mpd']
+                cl_mll = [a for (t, a) in all_cleared if t == 'mll']
+
+                if not (new_md or new_mpd or new_mll or cl_md or cl_mpd or cl_mll):
+                    # No real-time updates to report (only celloff changes)
+                    status['last_alarm_poll'] = datetime.now().isoformat()
+                    return
+
                 lines = []
 
-                # Group New Alarms
-                lines.append("🚨 *ACTIVE* 🚨")
-                lines.append(sep)
-
-                total_active = 0
-
-                # Cross-ref MAC <> GEN sites
-                mpd_sites = set()
-                if 'mpd' in all_new:
-                    mpd_sites = set(
-                        (a.get('site_id') or a.get('site') or a.get('tram') or '')
-                        for a in all_new['mpd']
-                    )
-
-
-                # ── 1. MAC ──
-                md_list = all_new.get('md', [])
-                if md_list:
-                    lines.append("⚡ *MAC:*")
-                    for alarm in md_list:
-                        site = _site_key(alarm)
-                        label = _get_site_label(site)
-                        # HH:MM only for real-time
-                        t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '', full=False)
-                        icon = ' ✅' if site in mpd_sites else ''
-                        lines.append(f"  • {label}{icon} - {t}")
-                        total_active += 1
-
-                # ── 2. GEN ──
-                mpd_list = all_new.get('mpd', [])
-                if mpd_list:
-                    lines.append("🔋 *GEN:*")
-                    for alarm in mpd_list:
-                        site = _site_key(alarm)
-                        label = _get_site_label(site)
-                        t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '', full=False)
-                        lines.append(f"  • {label} - {t}")
-                        total_active += 1
-
-                # ── 3. MLL ── (grouped by site)
-                mll_list = all_new.get('mll', [])
-                if mll_list:
-                    mll_groups = {}
-                    for alarm in mll_list:
-                        site = _site_key(alarm)
-                        net = _norm_net(alarm.get('network') or '')
-                        t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '', full=False)
-                        if site not in mll_groups:
-                            mll_groups[site] = {'label': _get_site_label(site), 'nets': [], 't': t}
-                        if net and net not in mll_groups[site]['nets']:
-                            mll_groups[site]['nets'].append(net)
-                    lines.append("📵 *MLL:*")
-                    for site, grp in mll_groups.items():
-                        net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
-                        lines.append(f"  • {grp['label']}{net_part} - {grp['t']}")
-                        total_active += 1
-
-                # Section Divider if we have cleared
-                if all_new and all_cleared:
+                # --- 1. ACTIVE SECTION ---
+                if new_md or new_mpd or new_mll:
+                    lines.append("🚨 *ACTIVE* 🚨")
                     lines.append(sep)
+                    
+                    if new_md:
+                        lines.append("⚡ *MAC:*")
+                        for alarm in new_md:
+                            site = _site_key(alarm)
+                            label = _get_site_label(site)
+                            t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '', full=False)
+                            lines.append(f"  • {label} - {t}")
+                    
+                    if new_mpd:
+                        lines.append("🔋 *GEN:*")
+                        for alarm in new_mpd:
+                            site = _site_key(alarm)
+                            label = _get_site_label(site)
+                            t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '', full=False)
+                            lines.append(f"  • {label} - {t}")
 
-                # ── 4. CELLOFF ── (MOVED TO 2H SUMMARY)
-                # Removed from real-time poll as per user request.
+                    if new_mll:
+                        mll_groups = {}
+                        for alarm in new_mll:
+                            site = _site_key(alarm)
+                            net = _norm_net(alarm.get('network') or '')
+                            t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '', full=False)
+                            if site not in mll_groups:
+                                mll_groups[site] = {'label': _get_site_label(site), 'nets': [], 't': t}
+                            if net and net not in mll_groups[site]['nets']:
+                                mll_groups[site]['nets'].append(net)
+                        
+                        lines.append("📵 *MLL:*")
+                        for site, grp in mll_groups.items():
+                            net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
+                            lines.append(f"  • {grp['label']}{net_part} - {grp['t']}")
 
-                # ── 5. CLEARED ──
-                if all_cleared:
+                # --- 2. CLEARED SECTION ---
+                if cl_md or cl_mpd or cl_mll:
+                    if lines: lines.append(sep) # Separator only if ACTIVE was present
                     lines.append("✅ *CLEARED* ✅")
                     lines.append(sep)
 
-                    # Group everything by ttype
-                    cleared_by_type = {}
-                    for (ttype, alarm) in all_cleared:
-                        if ttype not in cleared_by_type:
-                            cleared_by_type[ttype] = []
-                        cleared_by_type[ttype].append(alarm)
+                    if cl_md:
+                        lines.append("⚡ *MAC:*")
+                        for alarm in cl_md:
+                            site = _site_key(alarm)
+                            label = _get_site_label(site)
+                            clear_t = _fmt_sdate(alarm.get('clear_time') or alarm.get('edateStr') or '', full=False)
+                            lines.append(f"  • {label} - {clear_t}")
 
-                    # Sub-headers using short format
-                    headers_map = {
-                        'md': '⚡ *MAC:*',
-                        'mll': '📵 *MLL:*',
-                        'mpd': '🔋 *GEN:*'
-                        # celloff skipped in real-time
-                    }
+                    if cl_mpd:
+                        lines.append("🔋 *GEN:*")
+                        for alarm in cl_mpd:
+                            site = _site_key(alarm)
+                            label = _get_site_label(site)
+                            clear_t = _fmt_sdate(alarm.get('clear_time') or alarm.get('edateStr') or '', full=False)
+                            lines.append(f"  • {label} - {clear_t}")
 
-                    for ttype in ['md', 'mpd', 'mll']:
-                        alarms = cleared_by_type.get(ttype)
-                        if not alarms: continue
-
-                        lines.append(headers_map.get(ttype, f"*{ttype.upper()}:*"))
+                    if cl_mll:
+                        mll_cl_groups = {}
+                        for alarm in cl_mll:
+                            site = _site_key(alarm)
+                            net = _norm_net(alarm.get('network') or '')
+                            clear_t = _fmt_sdate(alarm.get('clear_time') or alarm.get('edateStr') or '', full=False)
+                            if site not in mll_cl_groups:
+                                mll_cl_groups[site] = {'label': _get_site_label(site), 'nets': [], 't': clear_t}
+                            if net and net not in mll_cl_groups[site]['nets']:
+                                mll_cl_groups[site]['nets'].append(net)
                         
-                        if ttype == 'mll':
-                            # Group MLL by site
-                            mll_cl_groups = {}
-                            for alarm in alarms:
-                                site = _site_key(alarm)
-                                net = _norm_net(alarm.get('network') or '')
-                                clear_t = _fmt_sdate(alarm.get('clear_time') or alarm.get('edateStr') or '', full=False)
-                                if site not in mll_cl_groups:
-                                    mll_cl_groups[site] = {'label': _get_site_label(site), 'nets': [], 't': clear_t}
-                                if net and net not in mll_cl_groups[site]['nets']:
-                                    mll_cl_groups[site]['nets'].append(net)
-                            for site, grp in mll_cl_groups.items():
-                                net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
-                                lines.append(f"  • {grp['label']}{net_part} - {grp['t']}")
-                        else:
-                            # MAC, GEN (Flat list)
-                            for alarm in alarms:
-                                site = _site_key(alarm)
-                                label = _get_site_label(site)
-                                clear_t = _fmt_sdate(alarm.get('clear_time') or alarm.get('edateStr') or '', full=False)
-                                lines.append(f"  • {label} - {clear_t}")
+                        lines.append("📵 *MLL:*")
+                        for site, grp in mll_cl_groups.items():
+                            net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
+                            lines.append(f"  • {grp['label']}{net_part} - {grp['t']}")
 
                 # lines.append(sep)
                 # lines.append("📢 Tổng: " + str(total_active) + " cảnh báo đang hoạt động")
@@ -1354,8 +1332,7 @@ def send_periodic_full_report():
             label = _get_site_label(site)
             # Full format for summary
             t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '', full=True)
-            icon = ' ✅' if site in mpd_sites else ''
-            lines.append(f"  • {label}{icon} - {t}")
+            lines.append(f"  • {label} - {t}")
             total_active += 1
 
     # ── Section 2: GEN ──
