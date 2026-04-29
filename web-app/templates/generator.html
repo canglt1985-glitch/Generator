@@ -706,6 +706,7 @@
                         <select class="form-select form-select-sm fw-bold" name="type" id="fuel_type"
                             onchange="setFuelType(this.value)" required>
                             <option value="DIRECT_BUY" selected>⛽ ĐỔ NL (MUA) — mua đổ thẳng cho trạm</option>
+                            <option value="VEHICLE_FUEL">🚚 ĐỔ DẦU XE — cấp dầu cho ô tô</option>
                             <option value="STOCK_IN">📥 NHẬP KHO — mua dầu về kho</option>
                             <option value="STATION_OUT">📤 XUẤT KHO — lấy từ kho đổ cho trạm</option>
                         </select>
@@ -736,6 +737,15 @@
                                     </div>
                                     <div class="form-text small fw-bold" id="station-stock-hint" style="display:none;">
                                     </div>
+                                </div>
+                                <div class="col-6" id="group-vehicle" style="display:none">
+                                    <label class="form-label small fw-bold mb-1">Chọn Xe Ô tô</label>
+                                    <select class="form-select form-select-sm" id="inp_id_vehicle">
+                                        <option value="">-- Chọn xe --</option>
+                                        <option value="60K-69082">60K-69082</option>
+                                        <option value="60V-7702">60V-7702</option>
+                                        <option value="XE_KHAC">Xe khác...</option>
+                                    </select>
                                 </div>
                                 <div class="col-6">
                                     <label class="form-label small fw-bold mb-1">Loại NL</label>
@@ -812,7 +822,7 @@
         const nlType = document.getElementById('inp_loai_nl');
         const priceInput = document.getElementById('inp_dongia');
         const priceSource = document.getElementById('price-source');
-        const dateInput = document.querySelector('input[name="ngay"]');
+        const dateInput = document.querySelector('#smartFuelModal input[name="ngay"]');
         
         if (!nlType || !priceInput) return;
         
@@ -858,15 +868,18 @@
     function setFuelType(type) {
         document.getElementById('fuel_type').value = type;
         const groupStation = document.getElementById('group-station');
+        const groupVehicle = document.getElementById('group-vehicle');
         const groupPrice = document.getElementById('group-price');
         const groupMoney = document.getElementById('group-money');
         const groupSupplier = document.getElementById('group-supplier');
         const groupActual = document.getElementById('group-actual-stock');
         const nccSelect = document.getElementById('inp_ncc');
         const stationInput = document.getElementById('inp_id_tram');
+        const vehicleSelect = document.getElementById('inp_id_vehicle');
 
         // Reset all fields: visible + enabled
-        [groupStation, groupPrice, groupMoney, groupSupplier, groupActual].forEach(g => {
+        [groupStation, groupVehicle, groupPrice, groupMoney, groupSupplier, groupActual].forEach(g => {
+            if (!g) return;
             g.style.opacity = '1';
             g.style.pointerEvents = 'auto';
             g.style.display = 'block';
@@ -875,29 +888,44 @@
                 el.disabled = false;
             });
         });
+        groupVehicle.style.display = 'none'; // Default vehicle hidden
+
         // Price always readonly
         document.getElementById('inp_dongia').readOnly = true;
         nccSelect.required = true;
         stationInput.required = false;
 
         function dimGroup(group) {
+            if (!group) return;
             group.style.opacity = '0.35';
             group.style.pointerEvents = 'none';
             group.querySelectorAll('input, select').forEach(el => el.disabled = true);
         }
 
         if (type === 'STOCK_IN') {
-            // Nhập kho: cần NCC + giá, KHÔNG cần trạm
             dimGroup(groupStation);
+            dimGroup(groupVehicle);
             dimGroup(groupActual);
             nccSelect.required = true;
         } else if (type === 'STATION_OUT') {
-            // Xuất kho: cần trạm + SL
+            dimGroup(groupVehicle);
             dimGroup(groupSupplier);
             nccSelect.required = false;
             stationInput.required = true;
+        } else if (type === 'VEHICLE_FUEL') {
+            dimGroup(groupStation);
+            dimGroup(groupActual);
+            groupVehicle.style.display = 'block';
+            groupVehicle.style.opacity = '1';
+            groupVehicle.style.pointerEvents = 'auto';
+            groupVehicle.querySelectorAll('select').forEach(el => el.disabled = false);
+            vehicleSelect.required = true;
+            nccSelect.required = true;
+            // Sync vehicle to station ID field
+            vehicleSelect.onchange = function() { stationInput.value = this.value; };
         } else {
-            // Đổ NL (mua): cần tất cả
+            // DIRECT_BUY
+            dimGroup(groupVehicle);
             nccSelect.required = true;
             stationInput.required = true;
         }

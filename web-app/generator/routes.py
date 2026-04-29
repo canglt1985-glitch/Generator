@@ -398,7 +398,7 @@ def calc_payment_amount():
     ).filter(
         FuelLedger.ngay >= p_start,
         FuelLedger.ngay <= den_ngay,
-        FuelLedger.type.in_(['STOCK_IN', 'DIRECT_BUY'])
+        FuelLedger.type.in_(['STOCK_IN', 'DIRECT_BUY', 'VEHICLE_FUEL'])
     ).group_by(FuelLedger.nha_cung_cap).all()
 
     for ncc, amt in fuel_q:
