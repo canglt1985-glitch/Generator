@@ -717,8 +717,8 @@
                         <!-- COMMON FIELDS -->
                         <div class="mb-2">
                             <label class="form-label small fw-bold mb-1">Ngày thực hiện</label>
-                            <input type="date" class="form-control form-control-sm" name="ngay" value="{{ now_date }}"
-                                required>
+                            <input type="date" class="form-control form-control-sm" name="ngay" id="inp_ngay_nhien_lieu"
+                                value="{{ now_date }}" required>
                         </div>
 
                         <!-- DYNAMIC FIELDS AREA -->
@@ -762,8 +762,7 @@
                                         name="so_luong" id="inp_soluong" oninput="calcMoney()">
                                 </div>
                                 <div class="col-6" id="group-price">
-                                    <label class="form-label small fw-bold mb-1">Đơn giá <small
-                                            class="text-muted fw-normal">(Gợi ý PVOil)</small></label>
+                                    <label class="form-label small fw-bold mb-1">Đơn giá</label>
                                     <input type="number" step="1" class="form-control form-control-sm bg-light"
                                         name="don_gia" id="inp_dongia" oninput="calcMoney()">
                                     <small class="text-muted d-block text-end" id="price-source"></small>
@@ -822,7 +821,7 @@
         const nlType = document.getElementById('inp_loai_nl');
         const priceInput = document.getElementById('inp_dongia');
         const priceSource = document.getElementById('price-source');
-        const dateInput = document.querySelector('#smartFuelModal input[name="ngay"]');
+        const dateInput = document.getElementById('inp_ngay_nhien_lieu');
         
         if (!nlType || !priceInput) return;
         
@@ -863,7 +862,7 @@
     const nlSelect = document.getElementById('inp_loai_nl');
     if (nlSelect) nlSelect.addEventListener('change', applyFuelPrice);
     
-    const fuelDateInput = document.querySelector('#smartFuelModal input[name="ngay"]');
+    const fuelDateInput = document.getElementById('inp_ngay_nhien_lieu');
     if (fuelDateInput) fuelDateInput.addEventListener('change', applyFuelPrice);
 
     function setFuelType(type) {
