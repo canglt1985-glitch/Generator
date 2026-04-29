@@ -1467,42 +1467,55 @@
             if (!den_ngay || !group) return;
 
             var daTTInput = document.getElementById('pgDaTT');
-            var hint = document.getElementById('pgCalcHint');
-            if (!hint) {
-                hint = document.createElement('div');
-                hint.id = 'pgCalcHint';
-                hint.className = 'text-muted small mt-1';
-                daTTInput.parentNode.appendChild(hint);
-            }
-            hint.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang tính...';
+            var statusDiv = document.getElementById('pgStatusInfo');
+            var statusText = document.getElementById('pgStatusText');
+
+            statusDiv.style.display = 'block';
+            statusText.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang tính...';
+            statusDiv.querySelector('div').className = 'd-flex align-items-center text-muted small fw-bold';
 
             fetch('{{ url_for("generator.calc_payment_amount") }}?group=' + encodeURIComponent(group) + '&den_ngay=' + encodeURIComponent(den_ngay))
                 .then(function (r) { return r.json(); })
                 .then(function (data) {
-                    if (!data.ok) { hint.innerHTML = ''; return; }
+                    if (!data.ok) { statusDiv.style.display = 'none'; return; }
+                    
+                    statusDiv.querySelector('div').className = 'd-flex align-items-center text-success small fw-bold';
+                    
                     if (data.already_paid) {
-                        hint.innerHTML = '✅ <span class="text-success">Đã thanh toán hết đến ' + data.last_paid_date + '</span>';
+                        statusText.innerHTML = 'Đã thanh toán hết đến ' + data.last_paid_date;
                         return;
                     }
-                    if (data.total <= 0) { hint.innerHTML = 'Không có chi phí trong kỳ này.'; return; }
+                    if (data.total <= 0) {
+                        statusText.innerHTML = 'Không có chi phí trong kỳ này.';
+                        return;
+                    }
+                    
                     var fmtTotal = Math.round(data.total).toLocaleString('vi-VN');
-                    var fmtDaTT = Math.round(data.da_tt).toLocaleString('vi-VN');
-                    var fmtConLai = Math.round(data.con_lai).toLocaleString('vi-VN');
-                    var conLaiVal = Math.round(data.con_lai);
                     var totalVal = Math.round(data.total);
                     
-                    // Gợi ý và tự động điền nếu ô hiện tại đang trống hoặc bằng 0
+                    // Tự động điền nếu ô hiện tại đang trống hoặc bằng 0
                     if (!daTTInput.value || daTTInput.value == "0") {
                         daTTInput.value = totalVal;
-                        hint.innerHTML = '💡 Đã tự động điền TỔNG LŨY KẾ: <strong>' + fmtTotal + ' đ</strong>';
+                        statusText.innerHTML = 'Đã tự động điền LŨY KẾ: ' + fmtTotal + ' đ';
                     } else {
-                        hint.innerHTML = '💡 Tổng CP: <strong>' + fmtTotal + ' đ</strong>'
-                            + (data.da_tt > 0 ? ' − Đã TT: ' + fmtDaTT + ' đ' : '')
-                            + '<br>👉 <strong class="text-danger">Còn lại: ' + fmtConLai + ' đ</strong> '
-                            + '<a href="#" class="text-decoration-none" onclick="document.getElementById(\'pgDaTT\').value=' + totalVal + ';this.closest(\'div\').innerHTML=\'✅ Đã điền tổng mới\';return false;">← Dùng tổng này</a>';
+                        statusText.innerHTML = 'Lũy kế gợi ý: ' + fmtTotal + ' đ '
+                            + '<a href="#" class="text-info ms-2" onclick="document.getElementById(\'pgDaTT\').value=' + totalVal + ';return false;">[Dùng số này]</a>';
                     }
                 })
-                .catch(function () { hint.innerHTML = ''; });
+                .catch(function () { statusDiv.style.display = 'none'; });
+        });
+
+        // Reset status when opening modal
+        modalEl.addEventListener('show.bs.modal', function (event) {
+            document.getElementById('pgStatusInfo').style.display = 'none';
+            var btn = event.relatedTarget;
+            if (btn) {
+                document.getElementById('pgGroup').value = btn.dataset.group || '';
+                document.getElementById('pgLabelDisplay').textContent = btn.dataset.label || '';
+                document.getElementById('pgDenNgay').value = btn.dataset.denNgay || '';
+                document.getElementById('pgDaTT').value = btn.dataset.daTt || '';
+                document.getElementById('pgGhiChu').value = btn.dataset.ghiChu || '';
+            }
         });
     });
 </script>
