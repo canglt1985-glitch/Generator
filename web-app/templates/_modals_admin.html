@@ -246,6 +246,7 @@
 <script>
     // ── Add Log: Auto-fill from station-info API ──
     const logStation = document.getElementById('log_station');
+    const logDate = document.querySelector('input[name="ngay_van_hanh"]');
     const sIn = document.getElementById('start_time');
     const eIn = document.getElementById('end_time');
     const rIn = document.getElementById('log_rate');
@@ -263,12 +264,17 @@
             stationDebounce = setTimeout(fetchStationInfo, 300);
         });
     }
+    if (logDate) {
+        logDate.addEventListener('change', fetchStationInfo);
+    }
 
     function fetchStationInfo() {
         const id = logStation.value.trim();
         if (!id || id.length < 3) return;
+        
+        const dateVal = logDate ? logDate.value : '';
 
-        fetch(`/api/station-info?id=${encodeURIComponent(id)}`)
+        fetch(`/api/station-info?id=${encodeURIComponent(id)}&date=${encodeURIComponent(dateVal)}`)
             .then(r => r.json())
             .then(data => {
                 if (data.error) {

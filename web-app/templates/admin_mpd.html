@@ -263,6 +263,13 @@
                         </form>
                         <button class="btn btn-sm btn-success" data-bs-toggle="modal"
                             data-bs-target="#importLogsModal"><i class="fas fa-file-excel me-1"></i>Import</button>
+                        <form action="{{ url_for('generator.recalculate_generator_logs') }}" method="POST" class="d-inline"
+                            onsubmit="return confirm('Tính lại định mức cho tất cả bản ghi chưa có thành tiền?')">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button class="btn btn-sm btn-warning" type="submit" title="Tính lại định mức, NL tiêu hao cho các bản ghi còn thiếu">
+                                <i class="fas fa-calculator me-1"></i>Tính lại ĐM
+                            </button>
+                        </form>
                         <a href="{{ url_for('generator.export_generator_logs', month=filter_month, year=filter_year) }}"
                             class="btn btn-sm btn-outline-info btn-export"><i class="fas fa-file-export me-1"></i>Xuất
                             T{{ filter_month }}/{{ filter_year }}</a>
@@ -356,10 +363,10 @@
                     <table id="logsTable" class="table table-vcenter table-hover card-table small text-nowrap">
                         <thead>
                             <tr>
-                                <th>Trạm</th>
+                                <th>Site ID cũ</th>
                                 <th class="d-none d-lg-table-cell">Nguồn</th>
                                 <th>Ngày VH</th>
-                                <th class="d-none d-lg-table-cell">Site</th>
+                                <th class="d-none d-lg-table-cell">Site ID mới</th>
                                 <th class="d-none d-lg-table-cell">CS Máy</th>
                                 <th>Giờ BĐ</th>
                                 <th>Giờ KT</th>
@@ -384,7 +391,7 @@
                             {% for log in logs %}
                             <tr
                                 class="{{ 'table-warning' if log.status == 'pending' else ('opacity-50' if log.status == 'rejected' else '') }}">
-                                <td class="fw-bold">{{ site_id_badge(log.id_tram, site_map) }}</td>
+                                <td class="fw-bold font-monospace">{{ log.id_tram or '--' }}</td>
                                 <td class="d-none d-lg-table-cell">
                                     {% if log.source == 'smartw' %}
                                     <span class="badge bg-cyan-lt">🤖 SW</span>
@@ -394,7 +401,7 @@
                                 </td>
                                 <td class="text-muted small">{{ log.ngay_van_hanh.split('-')|reverse|join('/') if
                                     log.ngay_van_hanh else '--' }}</td>
-                                <td class="small d-none d-lg-table-cell">{{ log.site or '' }}</td>
+                                <td class="fw-bold text-azure font-monospace d-none d-lg-table-cell">{{ log.site or '--' }}</td>
                                 <td class="small d-none d-lg-table-cell">{{ log.cong_suat_may or '' }}</td>
                                 <td class="small">{{ log.gio_bat_dau or '--' }}</td>
                                 <td class="small">{{ log.end_datetime_formatted }}</td>

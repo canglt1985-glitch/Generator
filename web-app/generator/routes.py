@@ -510,9 +510,9 @@ def update_log(id):
             dinh_muc = float(log.dinh_muc) if log.dinh_muc else 0
             log.nhien_lieu_tieu_hao = round(diff * dinh_muc, 2)
 
-            # Recalculate cost with current PVOil price
+            # Recalculate cost with historical price
             from generator.mfd_import import get_pretax_price
-            log.don_gia = get_pretax_price(log.nhien_lieu)
+            log.don_gia = get_pretax_price(log.nhien_lieu, log.ngay_van_hanh)
             log.thanh_tien = round(log.nhien_lieu_tieu_hao * log.don_gia)
         except (ValueError, TypeError):
             pass

@@ -29,11 +29,9 @@ PRODUCT_MAP = {
 # Prices are full retail including VAT in VND/liter
 # Sorted oldest to newest — used by get_fuel_price_for_date()
 SEEDED_PRICE_HISTORY = [
-    # Before March 2026: approximate known prices around Feb 2026
     ('2025-01-01', 21000, 20000),  # Baseline fallback
-    ('2026-02-01', 26963, 25500),  # Approx Feb 2026 price (before March changes)
-    ('2026-03-07', 27040, 26000),  # After March 7 adjustment (+4,707 VND base)
-    ('2026-03-11', 29120, 30710),  # After March 11 adjustment (+2,080 VND)
+    ('2026-02-20', 19150, 18520),  # CV1162
+    ('2026-02-26', 20150, 19270),  # GBL mới 26/02/2026
 ]
 
 
@@ -102,51 +100,51 @@ def get_fuel_price_for_date(date_str: str, fuel_type: str = 'Dầu') -> int:
 
 
 def scrape_pvoil_prices():
-    """Scrape current fuel prices from PVOil website."""
+    """Scrape current fuel prices from webtygia.com (Vùng 1)."""
     try:
-        resp = requests.get(PVOIL_URL, timeout=15, headers={
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        url = 'https://webtygia.com/gia-xang-dau.html'
+        resp = requests.get(url, timeout=15, headers={
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
         })
         resp.raise_for_status()
         resp.encoding = 'utf-8'
 
         soup = BeautifulSoup(resp.text, 'html.parser')
 
-        # Find the price table
-        table = soup.find('table', class_='table')
+        # Find the first table which contains the fuel prices
+        table = soup.find('table')
         if not table:
-            print("[FuelPrice] No price table found on PVOil page")
+            print("[FuelPrice] No price table found on webtygia")
             return None
 
         prices = {}
         rows = table.find_all('tr')
         for row in rows:
-            cells = row.find_all('td')
-            if len(cells) >= 3:
-                product_name = cells[1].get_text(strip=True)
-                price_text = cells[2].get_text(strip=True)
+            cells = row.find_all(['th', 'td'])
+            if len(cells) >= 2:
+                product_name = cells[0].get_text(strip=True)
+                price_text = cells[1].get_text(strip=True) # Vùng 1 is column 1
 
-                # Parse price: "20.150 đ" -> 20150
+                # Parse price: "20.150" -> 20150
                 price_clean = price_text.replace('đ', '').replace('.', '').replace(',', '').strip()
                 try:
                     price_val = int(price_clean)
                 except ValueError:
                     continue
 
-                # Exact match: "Xăng RON 95-III" but NOT "E10 RON 95-III" or "E5 RON 92"
-                if 'RON 95' in product_name and 'E10' not in product_name and 'E5' not in product_name:
+                if 'RON 95-III' in product_name and 'E10' not in product_name:
                     prices['xang_ron95'] = price_val
-                elif 'DO 0,05S' in product_name:
+                elif 'DO 0,05S-II' in product_name:
                     prices['dau_do'] = price_val
 
         if not prices.get('xang_ron95') and not prices.get('dau_do'):
-            print("[FuelPrice] Could not parse prices from PVOil table")
+            print("[FuelPrice] Could not parse prices from webtygia table")
             return None
 
         return prices
 
     except Exception as e:
-        print(f"[FuelPrice] Error scraping PVOil: {e}")
+        print(f"[FuelPrice] Error scraping webtygia: {e}")
         return None
 
 

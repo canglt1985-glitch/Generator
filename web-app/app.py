@@ -146,16 +146,25 @@ def scheduled_fuel_price_fetch():
         print(f"❌ [Scheduler] Lỗi scrape giá NL: {e}")
 
 
-# --- API: Fuel Price ---
-from flask import jsonify, request
 
-@app.route('/api/fuel-price')
-def api_fuel_price():
-    from fuel_price import get_fuel_prices
-    return jsonify(get_fuel_prices())
 
 
 # --- API: MFD Import (manual trigger) ---
+@app.route('/api/smartw/report/periodic', methods=['POST'])
+def api_smartw_periodic_report():
+    """Manually trigger the 2-hour periodic summary report. Admin only."""
+    from flask_login import current_user
+    if not current_user.is_authenticated or current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    from smartw.worker import send_periodic_full_report
+    try:
+        send_periodic_full_report()
+        return jsonify({'status': 'success', 'message': 'Periodic report sent to Viber'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/mfd-import', methods=['POST'])
 def api_mfd_import():
     """Manually trigger MFĐ import for a specific date. Admin only."""
@@ -194,7 +203,8 @@ def api_station_info():
     # Get PVOil price before VAT
     from generator.mfd_import import get_pretax_price
     loai_nl = info.loai_nhien_lieu or 'Dầu'
-    don_gia = get_pretax_price(loai_nl)
+    date_str = request.args.get('date', '').strip()
+    don_gia = get_pretax_price(loai_nl, date_str if date_str else None)
 
     return jsonify({
         'id_tram': info.id_tram,
@@ -203,8 +213,30 @@ def api_station_info():
         'may_phat_dien': info.may_phat_dien or '',
         'cong_suat_may': str(info.cong_suat) if info.cong_suat else '',
         'dinh_muc': info.dinh_muc or 0,
-        'nhien_lieu': loai_nl,
-        'don_gia': don_gia,
+        'nhien_lieu': info.loai_nhien_lieu or 'Dầu',
+        'don_gia': don_gia
+    })
+
+
+@app.route('/api/fuel-price')
+def api_fuel_price():
+    """Get historical fuel price by type and date.
+    Query: ?type=Dầu&date=2026-03-26
+    """
+    from flask_login import current_user
+    if not current_user.is_authenticated:
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    fuel_type = request.args.get('type', 'Dầu').strip()
+    date_str = request.args.get('date', '').strip()
+
+    from generator.mfd_import import get_pretax_price
+    price = get_pretax_price(fuel_type, date_str if date_str else None)
+
+    return jsonify({
+        'fuel_type': fuel_type,
+        'date': date_str,
+        'price': price
     })
 
 

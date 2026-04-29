@@ -162,13 +162,14 @@ _send_viber_messages = _send_viber_report
 
 
 def _load_smartw_json(filename: str) -> list:
-    """Helper to load alarm JSON files from DATA_DIR."""
+    """Helper to load alarm JSON files from DATA_DIR. Returns the 'data' list."""
     path = os.path.join(DATA_DIR, filename)
     if not os.path.exists(path):
         return []
     try:
         with open(path, 'r', encoding='utf-8') as f:
-            return json.load(f)
+            payload = json.load(f)
+            return payload.get('data', [])
     except Exception as e:
         logger.error(f"Error loading {filename}: {e}")
         return []
@@ -336,17 +337,17 @@ def _detect_cleared(table_type: str) -> list[dict]:
     except (json.JSONDecodeError, IOError):
         return []
 
-    # Build set of active site_ids + bat_dau for unique identification
+    # Build set of active site keys for unique identification
     active_keys = set()
     for record in active:
-        key = f"{record.get('site_id', '')}__{record.get('bat_dau', '')}"
+        key = f"{_site_key(record)}__{record.get('sdate') or record.get('sdateStr') or ''}"
         active_keys.add(key)
 
     # Find records in previous but not in active → they cleared
     cleared = []
     now = datetime.now().isoformat()
     for record in previous:
-        key = f"{record.get('site_id', '')}__{record.get('bat_dau', '')}"
+        key = f"{_site_key(record)}__{record.get('sdate') or record.get('sdateStr') or ''}"
         if key not in active_keys:
             record['clear_time'] = now
             record['status'] = 'CLEARED'
@@ -378,16 +379,16 @@ def _detect_new(table_type: str) -> list[dict]:
     except (json.JSONDecodeError, IOError):
         return []
 
-    # Build set of previous site_ids + bat_dau
+    # Build set of previous site keys
     previous_keys = set()
     for record in previous:
-        key = f"{record.get('site_id', '')}__{record.get('bat_dau', '')}"
+        key = f"{_site_key(record)}__{record.get('sdate') or record.get('sdateStr') or ''}"
         previous_keys.add(key)
 
     # Find records in active but not in previous → they are newly fired
     new_alarms = []
     for record in active:
-        key = f"{record.get('site_id', '')}__{record.get('bat_dau', '')}"
+        key = f"{_site_key(record)}__{record.get('sdate') or record.get('sdateStr') or ''}"
         if key not in previous_keys:
             new_alarms.append(record)
 
@@ -1382,8 +1383,8 @@ def send_periodic_full_report():
             lines.append(f"  • {label} | {display_cid}{net_part} - {t}")
             total_active += 1
 
-    if total_active == 0:
-        lines.append("✅ Hiện tại không có cảnh báo nào.")
-    
-    _send_viber_report(lines)
-    logger.info(f"SmartW Worker: ✅ Periodic report sent ({total_active} active alarms)")
+    if total_active > 0:
+        _send_viber_report(lines)
+        logger.info(f"SmartW Worker: ✅ Periodic report sent ({total_active} active alarms)")
+    else:
+        logger.info("SmartW Worker: 🏠 No active alarms, skipping periodic report.")
