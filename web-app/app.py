@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, request, jsonify, session, render_template, redirect, url_for, flash, abort
 from datetime import datetime, timedelta
 import os
 import sys
@@ -153,8 +153,8 @@ def scheduled_fuel_price_fetch():
 @app.route('/api/smartw/report/periodic', methods=['POST'])
 def api_smartw_periodic_report():
     """Manually trigger the 2-hour periodic summary report. Admin only."""
-    from flask_login import current_user
-    if not current_user.is_authenticated or current_user.role != 'admin':
+    from flask import session
+    if 'user_id' not in session or session.get('role') != 'admin':
         return jsonify({'error': 'Unauthorized'}), 403
 
     from smartw.worker import send_periodic_full_report
@@ -168,8 +168,8 @@ def api_smartw_periodic_report():
 @app.route('/api/mfd-import', methods=['POST'])
 def api_mfd_import():
     """Manually trigger MFĐ import for a specific date. Admin only."""
-    from flask_login import current_user
-    if not current_user.is_authenticated or current_user.role != 'admin':
+    from flask import session
+    if 'user_id' not in session or session.get('role') != 'admin':
         return jsonify({'error': 'Unauthorized'}), 403
 
     data = request.get_json(silent=True) or {}
@@ -187,8 +187,8 @@ def api_station_info():
     Query: ?id=DNTN28
     Returns: loai_may, dinh_muc, nhien_lieu, don_gia (PVOil trước VAT)
     """
-    from flask_login import current_user
-    if not current_user.is_authenticated:
+    from flask import session
+    if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 403
 
     id_tram = request.args.get('id', '').strip()
@@ -223,8 +223,8 @@ def api_fuel_price():
     """Get historical fuel price by type and date.
     Query: ?type=Dầu&date=2026-03-26
     """
-    from flask_login import current_user
-    if not current_user.is_authenticated:
+    from flask import session
+    if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 403
 
     fuel_type = request.args.get('type', 'Dầu').strip()
