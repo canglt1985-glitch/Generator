@@ -62,7 +62,7 @@ def classify_event(start_dt: datetime, end_dt: datetime, duration_min: int) -> s
 # ── Price Calculation ────────────────────────────────────────────
 
 def get_pretax_price(fuel_type: str, date_str: str = None) -> float:
-    """Get PVOil price for a specific date (or current if no date given).
+    """Get PVOil/webtygia price for a specific date (or current if no date given).
 
     Uses historical price table when date_str is provided, so backfilled
     records get the correct price for their actual run date.
@@ -73,18 +73,19 @@ def get_pretax_price(fuel_type: str, date_str: str = None) -> float:
     Returns:
         Price per liter (trước VAT), rounded to integer.
     """
-    if date_str:
-        from fuel_price import get_fuel_price_for_date
-        raw = get_fuel_price_for_date(date_str, fuel_type)
-    else:
-        from fuel_price import get_fuel_prices
-        prices = get_fuel_prices()
-        if fuel_type and 'Xăng' in fuel_type:
-            raw = prices.get('xang_ron95', 0)
-        else:
-            raw = prices.get('dau_do', 0)
+    from datetime import datetime
+    if not date_str:
+        date_str = datetime.now().strftime('%Y-%m-%d')
 
-    return round(raw / 1.08) if raw else 0
+    from fuel_price import get_fuel_price_for_date
+    raw = get_fuel_price_for_date(date_str, fuel_type)
+
+    if raw:
+        if date_str >= '2026-03-26':
+            return float(raw)  # VAT 0%
+        else:
+            return round(raw / 1.08)  # VAT 8%
+    return 0
 
 
 # ── Station Info Lookup ──────────────────────────────────────────
@@ -92,21 +93,75 @@ def get_pretax_price(fuel_type: str, date_str: str = None) -> float:
 def get_station_info(id_tram: str) -> dict | None:
     """Lookup GeneralInfo for a station.
 
+    Supports both Old and New Site IDs by cross-referencing DsSiteRegistry:
+    1. Try direct lookup in GeneralInfo by id_tram.
+    2. If not found, look up id_tram in DsSiteRegistry (as site_id_old or site_id_new).
+    3. Retry GeneralInfo with the alternate ID found in registry.
+
     Returns dict with: dinh_muc, loai_nhien_lieu, may_phat_dien, loai_may, cong_suat_may
     Or None if station not found.
     """
-    from models import GeneralInfo
-    info = GeneralInfo.query.filter_by(id_tram=id_tram).first()
-    if not info:
-        return None
+    from models import GeneralInfo, DsSiteRegistry
 
-    return {
-        'dinh_muc': info.dinh_muc or 0,
-        'loai_nhien_lieu': info.loai_nhien_lieu or 'Dầu',
-        'may_phat_dien': info.may_phat_dien or 'MLĐ',
-        'loai_may': info.loai_may or '',
-        'cong_suat_may': str(info.cong_suat) if info.cong_suat else '',
-    }
+    def _build_result(info):
+        return {
+            'dinh_muc': info.dinh_muc or 0,
+            'loai_nhien_lieu': info.loai_nhien_lieu or 'Dầu',
+            'may_phat_dien': info.may_phat_dien or 'MLĐ',
+            'loai_may': info.loai_may or '',
+            'cong_suat_may': str(info.cong_suat) if info.cong_suat else '',
+        }
+
+    # 1. Direct lookup
+    info = GeneralInfo.query.filter_by(id_tram=id_tram).first()
+    if info:
+        return _build_result(info)
+
+    # 2. Cross-lookup via DsSiteRegistry (old ↔ new)
+    try:
+        registry = DsSiteRegistry.query.filter(
+            (DsSiteRegistry.site_id_old == id_tram) |
+            (DsSiteRegistry.site_id_new == id_tram)
+        ).first()
+
+        if registry:
+            # Try the alternate ID
+            alternate_id = (
+                registry.site_id_new if registry.site_id_old == id_tram
+                else registry.site_id_old
+            )
+            if alternate_id:
+                info = GeneralInfo.query.filter_by(id_tram=alternate_id).first()
+                if info:
+                    logger.info(f'get_station_info: {id_tram} → mapped to {alternate_id} via DsSiteRegistry')
+                    return _build_result(info)
+    except Exception as e:
+        logger.warning(f'get_station_info: Registry lookup failed for {id_tram}: {e}')
+
+    return None
+
+
+def get_site_id_pair(id_tram: str) -> tuple:
+    """Resolve the (old_id, new_id) pair for a given site ID using DsSiteRegistry.
+
+    Returns:
+        (site_id_old, site_id_new) — if only one direction is known the unknown
+        side falls back to the original id_tram value so the column is never empty.
+    """
+    from models import DsSiteRegistry
+    try:
+        registry = DsSiteRegistry.query.filter(
+            (DsSiteRegistry.site_id_old == id_tram) |
+            (DsSiteRegistry.site_id_new == id_tram)
+        ).first()
+        if registry:
+            old_id = registry.site_id_old or id_tram
+            new_id = registry.site_id_new or id_tram
+            return (old_id, new_id)
+    except Exception as e:
+        logger.warning(f'get_site_id_pair: Registry lookup failed for {id_tram}: {e}')
+    # Fallback: same value in both columns
+    return (id_tram, id_tram)
 
 
 # ── Duplicate Check ──────────────────────────────────────────────
@@ -326,14 +381,26 @@ def import_mfd_data(raw_data: list[dict]) -> dict:
         don_gia = get_pretax_price(loai_nhien_lieu, date_str=ngay)
         thanh_tien = round(nhien_lieu * don_gia)
 
+        # 5b. Resolve old/new Site IDs for proper export columns
+        site_id_old, site_id_new = get_site_id_pair(site)
+        
+        # Chỉ áp dụng Site ID mới từ tháng 4/2026
+        ngay_van_hanh_str = start_dt.strftime('%Y-%m-%d')
+        if ngay_van_hanh_str >= '2026-04-01':
+            final_id_tram = site_id_old
+            final_site = site_id_new
+        else:
+            final_id_tram = site_id_old
+            final_site = site_id_old
+
         # 6. Create GeneratorLog record
         log = GeneratorLog(
-            id_tram=site,
-            site=site,
+            id_tram=final_id_tram,
+            site=final_site,
             cong_suat_may=cong_suat_may,
             loai_may=loai_may,
             dinh_muc=str(dinh_muc) if dinh_muc else '',
-            ngay_van_hanh=start_dt.strftime('%Y-%m-%d'),
+            ngay_van_hanh=ngay_van_hanh_str,
             gio_bat_dau=start_dt.strftime('%H:%M'),
             gio_ket_thuc=end_dt.strftime('%H:%M') if end_dt else '',
             thoi_gian_hoat_dong=hours,

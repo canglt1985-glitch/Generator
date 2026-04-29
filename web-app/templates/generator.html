@@ -808,22 +808,52 @@
     let FUEL_PRICES = {{ fuel_prices | tojson }};
     applyFuelPrice();
 
-    function applyFuelPrice() {
+    async function applyFuelPrice() {
         const nlType = document.getElementById('inp_loai_nl');
         const priceInput = document.getElementById('inp_dongia');
         const priceSource = document.getElementById('price-source');
+        const dateInput = document.querySelector('input[name="ngay"]');
+        
         if (!nlType || !priceInput) return;
-        const price = nlType.value === 'Xăng' ? FUEL_PRICES.xang_ron95 : FUEL_PRICES.dau_do;
-        if (price > 0) {
-            priceInput.value = price;
-            if (priceSource) priceSource.textContent = 'PVOil: ' + price.toLocaleString('vi-VN') + 'đ';
-            calcMoney();
+        
+        const type = nlType.value;
+        const date = dateInput ? dateInput.value : '';
+        
+        // Default UI feedback
+        if (priceSource) priceSource.textContent = 'Đang tra cứu...';
+
+        try {
+            const resp = await fetch(`/api/fuel-price?type=${encodeURIComponent(type)}&date=${encodeURIComponent(date)}`);
+            const data = await resp.json();
+            
+            if (data.price > 0) {
+                priceInput.value = data.price;
+                if (priceSource) {
+                    priceSource.textContent = 'Petrolimex: ' + data.price.toLocaleString('vi-VN') + 'đ';
+                    priceSource.classList.remove('text-muted');
+                    priceSource.classList.add('text-primary', 'fw-bold');
+                }
+                calcMoney();
+            } else {
+                if (priceSource) priceSource.textContent = 'Không có dữ liệu giá ngày này';
+            }
+        } catch (e) {
+            console.error("Fuel price fetch error:", e);
+            // Fallback to initial page load prices if fetch fails
+            const price = type === 'Xăng' ? FUEL_PRICES.xang_ron95 : FUEL_PRICES.dau_do;
+            if (price > 0) {
+                priceInput.value = price;
+                if (priceSource) priceSource.textContent = 'Gợi ý: ' + price.toLocaleString('vi-VN') + 'đ';
+            }
         }
     }
 
-    // Re-apply price when fuel type changes
+    // Re-apply price when fuel type or date changes
     const nlSelect = document.getElementById('inp_loai_nl');
     if (nlSelect) nlSelect.addEventListener('change', applyFuelPrice);
+    
+    const fuelDateInput = document.querySelector('#smartFuelModal input[name="ngay"]');
+    if (fuelDateInput) fuelDateInput.addEventListener('change', applyFuelPrice);
 
     function setFuelType(type) {
         document.getElementById('fuel_type').value = type;
@@ -1317,7 +1347,10 @@
             btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang lưu...';
             fetch('{{ url_for("core.save_payment") }}', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
                 body: JSON.stringify({ key: currentKey, da_tt: da_tt, ghi_chu: ghi_chu })
             })
                 .then(r => r.json())
@@ -1383,7 +1416,10 @@
 
             fetch('{{ url_for("generator.save_payment_group_gen") }}', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
                 body: JSON.stringify({ group: group, da_thanh_toan_den: den_ngay, so_tien_da_tt: da_tt, ghi_chu: ghi_chu })
             })
                 .then(function (r) { return r.json(); })
@@ -1413,7 +1449,9 @@
                         var cardBtn = document.querySelector('.btn-edit-pg[data-group="' + group + '"]');
                         if (cardBtn) { cardBtn.dataset.denNgay = den_ngay; cardBtn.dataset.daTt = da_tt; cardBtn.dataset.ghiChu = ghi_chu; }
 
-                        var bsM = bootstrap.Modal.getInstance(modalEl); if (bsM) bsM.hide();
+                        var bsM = bootstrap.Modal.getInstance(modalEl); 
+                        if (bsM) bsM.hide();
+                        alert('✅ Đã cập nhật thanh toán cho nhóm: ' + (group === 'mua_ngoai' ? 'Mua Ngoài' : 'CX222'));
                     } else {
                         alert('L\u1ed7i: ' + (data.msg || 'Kh\u00f4ng l\u01b0u \u0111\u01b0\u1ee3c'));
                     }
@@ -1451,10 +1489,18 @@
                     var fmtDaTT = Math.round(data.da_tt).toLocaleString('vi-VN');
                     var fmtConLai = Math.round(data.con_lai).toLocaleString('vi-VN');
                     var conLaiVal = Math.round(data.con_lai);
-                    hint.innerHTML = '💡 Tổng CP: <strong>' + fmtTotal + ' đ</strong>'
-                        + (data.da_tt > 0 ? ' − Đã TT: ' + fmtDaTT + ' đ' : '')
-                        + '<br>👉 <strong class="text-danger">Còn lại: ' + fmtConLai + ' đ</strong> '
-                        + '<a href="#" class="text-decoration-none" onclick="document.getElementById(\'pgDaTT\').value=' + conLaiVal + ';this.closest(\'div\').innerHTML=\'✅ Đã điền\';return false;">← Dùng số này</a>';
+                    var totalVal = Math.round(data.total);
+                    
+                    // Gợi ý và tự động điền nếu ô hiện tại đang trống hoặc bằng 0
+                    if (!daTTInput.value || daTTInput.value == "0") {
+                        daTTInput.value = totalVal;
+                        hint.innerHTML = '💡 Đã tự động điền TỔNG LŨY KẾ: <strong>' + fmtTotal + ' đ</strong>';
+                    } else {
+                        hint.innerHTML = '💡 Tổng CP: <strong>' + fmtTotal + ' đ</strong>'
+                            + (data.da_tt > 0 ? ' − Đã TT: ' + fmtDaTT + ' đ' : '')
+                            + '<br>👉 <strong class="text-danger">Còn lại: ' + fmtConLai + ' đ</strong> '
+                            + '<a href="#" class="text-decoration-none" onclick="document.getElementById(\'pgDaTT\').value=' + totalVal + ';this.closest(\'div\').innerHTML=\'✅ Đã điền tổng mới\';return false;">← Dùng tổng này</a>';
+                    }
                 })
                 .catch(function () { hint.innerHTML = ''; });
         });

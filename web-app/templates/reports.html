@@ -315,9 +315,10 @@
                         {% endif %}
                     </div>
                     <div class="card-footer text-end">
-                        <button class="btn btn-warning btn-sm btn-edit-payment-group" data-group="mua_ngoai"
-                            data-label="Chi Phí Mua Ngoài" data-den-ngay="{{ mn.da_thanh_toan_den }}"
-                            data-da-tt="{{ mn_da_tt }}" data-ghi-chu="{{ mn.ghi_chu }}">
+                        <button class="btn btn-warning btn-sm btn-edit-pg" data-bs-toggle="modal"
+                            data-bs-target="#paymentGroupModal" data-group="mua_ngoai" data-label="Chi Phí Mua Ngoài"
+                            data-den-ngay="{{ mn.da_thanh_toan_den }}" data-da-tt="{{ mn_da_tt }}"
+                            data-ghi-chu="{{ mn.ghi_chu }}">
                             <i class="fas fa-pen me-1"></i>Cập nhật
                         </button>
                     </div>
@@ -391,9 +392,10 @@
                         {% endif %}
                     </div>
                     <div class="card-footer text-end">
-                        <button class="btn btn-primary btn-sm btn-edit-payment-group" data-group="cx222"
-                            data-label="Chi Phí CX222" data-den-ngay="{{ cx.da_thanh_toan_den }}"
-                            data-da-tt="{{ cx_da_tt }}" data-ghi-chu="{{ cx.ghi_chu }}">
+                        <button class="btn btn-primary btn-sm btn-edit-pg" data-bs-toggle="modal"
+                            data-bs-target="#paymentGroupModal" data-group="cx222" data-label="Chi Phí CX222"
+                            data-den-ngay="{{ cx.da_thanh_toan_den }}" data-da-tt="{{ cx_da_tt }}"
+                            data-ghi-chu="{{ cx.ghi_chu }}">
                             <i class="fas fa-pen me-1"></i>Cập nhật
                         </button>
                     </div>
@@ -403,133 +405,5 @@
         </div>{# end row #}
     </div>
 </div>
-
-{# --- Modal Cập Nhật Thanh Toán Nhóm --- #}
-<div class="modal modal-blur fade" id="paymentGroupModal" tabindex="-1" role="dialog">
-    <div class="modal-dialog modal-sm" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="fas fa-pen me-2"></i>Cập Nhật Thanh Toán</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <input type="hidden" id="pgGroup">
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Nhóm chi phí:</label>
-                    <div id="pgLabelDisplay" class="text-primary fw-bold"></div>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Đã thanh toán đến ngày</label>
-                    <input type="date" id="pgDenNgay" class="form-control">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Số tiền đã thanh toán (đ)</label>
-                    <input type="number" id="pgDaTT" class="form-control" placeholder="0" min="0" step="1000">
-                </div>
-                <div class="mb-2">
-                    <label class="form-label">Ghi chú <span class="text-muted">(số CK, ngày...)</span></label>
-                    <input type="text" id="pgGhiChu" class="form-control" placeholder="VD: CK 500M ngày 15/02">
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Huỷ</button>
-                <button type="button" class="btn btn-primary" id="pgSaveBtn">
-                    <i class="fas fa-save me-1"></i>Lưu
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-    (function () {
-        const fmt = v => v > 0 ? Math.round(v).toLocaleString('vi-VN') : '—';
-
-        // Mở modal khi bấm nút Cập nhật
-        document.addEventListener('click', function (e) {
-            const btn = e.target.closest('.btn-edit-payment-group');
-            if (!btn) return;
-
-            document.getElementById('pgGroup').value = btn.dataset.group;
-            document.getElementById('pgLabelDisplay').textContent = btn.dataset.label;
-            document.getElementById('pgDenNgay').value = btn.dataset.denNgay || '';
-            document.getElementById('pgDaTT').value = parseFloat(btn.dataset.daTt) || '';
-            document.getElementById('pgGhiChu').value = btn.dataset.ghiChu || '';
-
-            const modal = new bootstrap.Modal(document.getElementById('paymentGroupModal'));
-            modal.show();
-        });
-
-        // Lưu dữ liệu
-        document.getElementById('pgSaveBtn').addEventListener('click', function () {
-            const group = document.getElementById('pgGroup').value;
-            const den_ngay = document.getElementById('pgDenNgay').value.trim();
-            const da_tt = parseFloat(document.getElementById('pgDaTT').value) || 0;
-            const ghi_chu = document.getElementById('pgGhiChu').value.trim();
-
-            const btn = this;
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang lưu...';
-
-            fetch('{{ url_for("core.save_payment_group") }}', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    group: group,
-                    da_thanh_toan_den: den_ngay,
-                    so_tien_da_tt: da_tt,
-                    ghi_chu: ghi_chu
-                })
-            })
-                .then(r => r.json())
-                .then(data => {
-                    if (data.ok) {
-                        // Cập nhật card live mà không cần reload
-                        const prefix = group === 'mua_ngoai' ? 'mn' : 'cx';
-                        const totalEl = document.getElementById(prefix + '-tong-ps');
-                        const total = totalEl ? parseFloat(totalEl.textContent.replace(/[^0-9]/g, '')) || 0 : 0;
-                        const conLai = total - da_tt;
-
-                        // Đã TT đến ngày
-                        const denNgayEl = document.getElementById(prefix + '-den-ngay');
-                        if (denNgayEl) denNgayEl.innerHTML = den_ngay
-                            ? `<span class="badge bg-blue-lt">${den_ngay}</span>`
-                            : '<span class="text-muted">—</span>';
-
-                        // Đã TT
-                        const daTTEl = document.getElementById(prefix + '-da-tt');
-                        if (daTTEl) daTTEl.textContent = fmt(da_tt) + ' đ';
-
-                        // Còn lại
-                        const conLaiEl = document.getElementById(prefix + '-con-lai');
-                        if (conLaiEl) conLaiEl.innerHTML = conLai > 0
-                            ? `<span class="text-danger">${Math.round(conLai).toLocaleString('vi-VN')} đ 🔴</span>`
-                            : '<span class="text-success">✅ Đã TT hết</span>';
-
-                        // Ghi chú
-                        const ghiChuEl = document.getElementById(prefix + '-ghi-chu');
-                        if (ghiChuEl) ghiChuEl.textContent = ghi_chu || '';
-
-                        // Cập nhật data trên button để lần sau mở đúng
-                        const editBtn = document.querySelector(`.btn-edit-payment-group[data-group="${group}"]`);
-                        if (editBtn) {
-                            editBtn.dataset.denNgay = den_ngay;
-                            editBtn.dataset.daTt = da_tt;
-                            editBtn.dataset.ghiChu = ghi_chu;
-                        }
-
-                        bootstrap.Modal.getInstance(document.getElementById('paymentGroupModal')).hide();
-                    } else {
-                        alert('Lỗi: ' + (data.msg || 'Không lưu được'));
-                    }
-                })
-                .catch(() => alert('Lỗi kết nối máy chủ'))
-                .finally(() => {
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="fas fa-save me-1"></i>Lưu';
-                });
-        });
-    })();
-</script>
 {% endif %}
 {% endblock %}

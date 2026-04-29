@@ -158,7 +158,7 @@ def reset_general_info():
 def import_general_info():
     from generator.routes_import import generic_import
     col_map = {
-        'id_tram': ['ID Trạm', 'Mã Trạm', 'Tram ID', 'Site ID', 'Mã nhà trạm'],
+        'id_tram': ['ID Trạm', 'Mã Trạm', 'Tram ID', 'Site ID', 'Mã nhà trạm', 'Site ID cũ', 'Site ID mới', 'ID Trạm cũ', 'ID Trạm mới'],
         'ma_khach_hang': ['Mã khách hàng', 'Mã KH', 'Cust Code', 'Mã KH Điện lực'],
         'huyen': ['Huyện', 'Quận/Huyện', 'District', 'Quận'],
         'quan_ly_tram': ['Quản lý trạm', 'QL Trạm', 'Đội quản lý', 'Tổ quản lý', 'Đơn vị quản lý'],
@@ -274,8 +274,8 @@ def export_generator_logs():
 
     data = query.order_by(GeneratorLog.ngay_van_hanh.desc()).all()
     col_map = {
-        'id_tram': 'ID Trạm',
-        'site': 'Site',
+        'id_tram': 'Site ID cũ',
+        'site': 'Site ID mới',
         'cong_suat_may': 'Công suất máy (KVA)',
         'loai_may': 'Loại máy',
         'dinh_muc': 'Định mức (Lít/Giờ)',
@@ -298,8 +298,8 @@ def export_generator_logs():
 @admin_required
 def template_generator_logs():
     col_map = {
-        'id_tram': 'ID Trạm',
-        'site': 'Site',
+        'id_tram': 'Site ID cũ',
+        'site': 'Site ID mới',
         'cong_suat_may': 'Công suất máy (KVA)',
         'loai_may': 'Loại máy',
         'dinh_muc': 'Định mức (Lít/Giờ)',
@@ -336,8 +336,8 @@ def reset_generator_logs():
 def import_generator_log():
     from generator.routes_import import generic_import
     col_map = {
-        'id_tram': ['ID Trạm', 'Mã Trạm', 'Site ID', 'Mã nhà trạm', 'Trạm'],
-        'site': ['Site', 'Tên Trạm', 'Site Name', 'Name'],
+        'id_tram': ['ID Trạm', 'Mã Trạm', 'Site ID', 'Mã nhà trạm', 'Trạm', 'Site ID cũ', 'ID Trạm cũ'],
+        'site': ['Site', 'Tên Trạm', 'Site Name', 'Name', 'Site ID mới', 'ID Trạm mới'],
         'ngay_van_hanh': ['Ngày vận hành', 'Ngày chạy', 'Date', 'Ngày'],
         'cong_suat_may': ['Công suất máy (KVA)', 'Công suất máy', 'Công suất', 'Capacity', 'KVA'],
         'loai_may': ['Loại máy', 'Model', 'Nhãn hiệu', 'Máy phát'],
@@ -368,6 +368,18 @@ def import_generator_log():
     return result
 
 
+@generator_bp.route('/generator-logs/recalculate', methods=['POST'])
+@login_required
+@admin_required
+def recalculate_generator_logs():
+    """Tính lại định mức, nhiên liệu, thành tiền cho các bản ghi còn thiếu thông tin."""
+    try:
+        _auto_fill_generator_logs()
+    except Exception as e:
+        flash(f'Lỗi khi tính lại: {str(e)}', 'danger')
+    return redirect(url_for('core.admin_mpd', tab='logs'))
+
+
 def _auto_fill_generator_logs():
     """Fill missing fields in GeneratorLog: duration, fuel, cost.
     Only fills records where thanh_tien is 0 or empty (not yet calculated).
@@ -377,7 +389,8 @@ def _auto_fill_generator_logs():
     logs = GeneratorLog.query.filter(
         (GeneratorLog.thanh_tien == None) |
         (GeneratorLog.thanh_tien == 0) |
-        (GeneratorLog.thanh_tien == 0.0)
+        (GeneratorLog.thanh_tien == 0.0) |
+        (GeneratorLog.id_tram == GeneratorLog.site)  # Ép tính lại nếu 2 ID đang bị trùng nhau
     ).filter(
         GeneratorLog.id_tram != None,
         GeneratorLog.id_tram != ''
@@ -406,10 +419,25 @@ def _auto_fill_generator_logs():
         # 2. Lookup station info (dinh_muc, loai_nhien_lieu)
         station = get_station_info(log.id_tram)
         if station:
-            # Fill site if empty
-            if not log.site:
-                log.site = log.id_tram
+            # Fill site ID mới / ID cũ via Registry (2-way mapping)
+            from generator.mfd_import import get_site_id_pair
+            site_id_old, site_id_new = get_site_id_pair(log.id_tram)
+            
+            # Kiểm tra ngày tháng: chỉ lấy ID mới từ tháng 4/2026
+            if log.ngay_van_hanh and log.ngay_van_hanh >= '2026-04-01':
+                final_id_tram = site_id_old
+                final_site = site_id_new
+            else:
+                final_id_tram = site_id_old
+                final_site = site_id_old
+                
+            if log.id_tram != final_id_tram:
+                log.id_tram = final_id_tram
                 changed = True
+            if not log.site or log.site != final_site:
+                log.site = final_site
+                changed = True
+                
             # Fill dinh_muc if empty
             if not log.dinh_muc or log.dinh_muc in ('', '0', '0.0'):
                 log.dinh_muc = str(station['dinh_muc'])
@@ -442,7 +470,7 @@ def _auto_fill_generator_logs():
         # 4. Get don_gia from PVOil
         if (not log.don_gia or log.don_gia == 0):
             fuel_type = log.nhien_lieu or 'Dầu'
-            log.don_gia = get_pretax_price(fuel_type)
+            log.don_gia = get_pretax_price(fuel_type, log.ngay_van_hanh)
             changed = True
 
         # 5. Calculate thanh_tien
