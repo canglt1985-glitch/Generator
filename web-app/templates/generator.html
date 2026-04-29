@@ -834,12 +834,21 @@
         try {
             const resp = await fetch(`/api/fuel-price?type=${encodeURIComponent(type)}&date=${encodeURIComponent(date)}`);
             const data = await resp.json();
+            console.log("Fuel price data:", data); // Debugging
             
-            // data format is now { price: 12345 }
-            if (data.price > 0) {
-                priceInput.value = data.price;
+            let price = 0;
+            if (data.price !== undefined && data.price > 0) {
+                price = data.price;
+            } else if (type === 'Xăng' && data.xang_ron95) {
+                price = data.xang_ron95;
+            } else if (type === 'Dầu' && data.dau_do) {
+                price = data.dau_do;
+            }
+
+            if (price > 0) {
+                priceInput.value = price;
                 if (priceSource) {
-                    priceSource.textContent = 'Petrolimex: ' + data.price.toLocaleString('vi-VN') + 'đ';
+                    priceSource.textContent = 'Petrolimex: ' + price.toLocaleString('vi-VN') + 'đ';
                     priceSource.classList.remove('text-muted');
                     priceSource.classList.add('text-primary', 'fw-bold');
                 }
