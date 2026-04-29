@@ -230,8 +230,9 @@ def api_fuel_price():
     fuel_type = request.args.get('type', 'Dầu').strip()
     date_str = request.args.get('date', '').strip()
 
-    from generator.mfd_import import get_pretax_price
-    price = get_pretax_price(fuel_type, date_str if date_str else None)
+    from fuel_price import get_fuel_price_for_date
+    # Get full retail price (sau thuế) for Fuel Ledger
+    price = get_fuel_price_for_date(date_str if date_str else datetime.now().strftime('%Y-%m-%d'), fuel_type)
 
     return jsonify({
         'fuel_type': fuel_type,

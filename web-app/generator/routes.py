@@ -212,7 +212,7 @@ def generator():
             FuelLedger.nha_cung_cap, fn.sum(FuelLedger.thanh_tien)
         ).filter(
             FuelLedger.ngay >= p_start, FuelLedger.ngay < p_end,
-            FuelLedger.type.in_(['STOCK_IN', 'DIRECT_BUY'])
+            FuelLedger.type.in_(['STOCK_IN', 'DIRECT_BUY', 'VEHICLE_FUEL'])
         ).group_by(FuelLedger.nha_cung_cap).all()
 
         for ncc, amt in fuel_grp_q:
@@ -239,7 +239,7 @@ def generator():
                         FuelLedger.nha_cung_cap, fn.sum(FuelLedger.thanh_tien)
                     ).filter(
                         FuelLedger.ngay > cutoff, FuelLedger.ngay <= today_str2,
-                        FuelLedger.type.in_(['STOCK_IN', 'DIRECT_BUY'])
+                        FuelLedger.type.in_(['STOCK_IN', 'DIRECT_BUY', 'VEHICLE_FUEL'])
                     ).group_by(FuelLedger.nha_cung_cap).all():
                         ncc_u = (ncc2 or '').strip().upper()
                         if 'CX' in ncc_u or 'CÂY XĂNG' in ncc_u or 'CX222' in ncc_u:
@@ -251,7 +251,7 @@ def generator():
                         FuelLedger.nha_cung_cap, fn.sum(FuelLedger.thanh_tien)
                     ).filter(
                         FuelLedger.ngay > cutoff, FuelLedger.ngay <= today_str2,
-                        FuelLedger.type.in_(['STOCK_IN', 'DIRECT_BUY'])
+                        FuelLedger.type.in_(['STOCK_IN', 'DIRECT_BUY', 'VEHICLE_FUEL'])
                     ).group_by(FuelLedger.nha_cung_cap).all():
                         ncc_u = (ncc2 or '').strip().upper()
                         if 'CX' not in ncc_u and 'CÂY XĂNG' not in ncc_u and 'CX222' not in ncc_u:
