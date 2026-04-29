@@ -20,6 +20,46 @@ STATUS_FILE = os.path.join(DATA_DIR, 'scrape_status.json')
 
 # Track if a scrape is currently running (simple lock)
 _is_running = False
+LOCK_FILE = os.path.join(DATA_DIR, 'worker.lock')
+
+def _acquire_lock():
+    """Try to acquire a cross-process file lock. Returns True if successful."""
+    global _is_running
+    if _is_running:
+        return False
+
+    if os.path.exists(LOCK_FILE):
+        # Stale lock check (>30 mins)
+        try:
+            mtime = os.path.getmtime(LOCK_FILE)
+            if (datetime.now().timestamp() - mtime) < 1800:
+                logger.info('SmartW Worker: Lock file exists, another process is likely polling.')
+                return False
+            else:
+                logger.warning('SmartW Worker: Stale lock file detected (>30m), overriding.')
+                os.remove(LOCK_FILE)
+        except Exception:
+            pass
+
+    try:
+        os.makedirs(DATA_DIR, exist_ok=True)
+        with open(LOCK_FILE, 'w') as f:
+            f.write(str(os.getpid()))
+        _is_running = True
+        return True
+    except Exception as e:
+        logger.error(f'SmartW Worker: Failed to create lock file: {e}')
+        return False
+
+def _release_lock():
+    """Release the cross-process file lock."""
+    global _is_running
+    _is_running = False
+    try:
+        if os.path.exists(LOCK_FILE):
+            os.remove(LOCK_FILE)
+    except Exception as e:
+        logger.error(f'SmartW Worker: Failed to remove lock file: {e}')
 
 # Circuit breaker: stop polling after this many consecutive login failures
 MAX_LOGIN_FAILURES = 10
@@ -497,9 +537,7 @@ def run_alarm_poll():
     Called by APScheduler every 15 minutes.
     Uses persistent session — logs in only once, reuses for subsequent polls.
     """
-    global _is_running
-    if _is_running:
-        logger.info('SmartW Worker: Already running, skipping this round')
+    if not _acquire_lock():
         return
 
     from .config import load_smartw_config
@@ -739,9 +777,8 @@ def run_alarm_poll():
         })
         status['errors'] = status['errors'][-10:]
     finally:
-        _is_running = False
         _save_status(status)
-
+        _release_lock()
         # Broadcast to all connected browsers via SSE
         from .scraper import load_cached_data
         md_raw = load_cached_data('md')
@@ -766,9 +803,7 @@ def run_vhkt_poll():
     Called by APScheduler once at 5:00 AM.
     Uses persistent session — logs in only once, reuses for subsequent polls.
     """
-    global _is_running
-    if _is_running:
-        logger.info('SmartW Worker: Already running, skipping VHKT poll')
+    if not _acquire_lock():
         return
 
     from .config import load_smartw_config
@@ -878,9 +913,7 @@ def run_mfd_import_poll(target_date: str = None):
     Args:
         target_date: Optional date string (DD/MM/YYYY). Default: yesterday.
     """
-    global _is_running
-    if _is_running:
-        logger.info('SmartW Worker: Already running, skipping MFĐ import')
+    if not _acquire_lock():
         return {'error': 'Worker busy'}
 
     from .config import load_smartw_config
