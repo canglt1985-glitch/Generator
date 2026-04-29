@@ -129,8 +129,9 @@ def add_fuel_ledger():
                 except (ValueError, TypeError):
                     pass
             else:
-                # Cộng delta vào tồn hiện tại
-                _update_station_stock(id_tram, so_luong)
+                # Cộng delta vào tồn hiện tại (Trừ loại VEHICLE_FUEL vì xe không có tồn kho cố định)
+                if trans_type != 'VEHICLE_FUEL':
+                    _update_station_stock(id_tram, so_luong)
 
         db.session.commit()
 
