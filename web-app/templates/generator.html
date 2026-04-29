@@ -836,6 +836,7 @@
             const resp = await fetch(`/api/fuel-price?type=${encodeURIComponent(type)}&date=${encodeURIComponent(date)}`);
             const data = await resp.json();
             
+            // data format is now { price: 12345 }
             if (data.price > 0) {
                 priceInput.value = data.price;
                 if (priceSource) {
@@ -913,7 +914,8 @@
             nccSelect.required = false;
             stationInput.required = true;
         } else if (type === 'VEHICLE_FUEL') {
-            dimGroup(groupStation);
+            // Hide station, show vehicle
+            groupStation.style.display = 'none'; 
             dimGroup(groupActual);
             groupVehicle.style.display = 'block';
             groupVehicle.style.opacity = '1';
