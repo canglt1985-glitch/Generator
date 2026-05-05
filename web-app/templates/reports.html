@@ -251,7 +251,9 @@
             {# --- Card 1: Chi phí Mua Ngoài --- #}
             {% set mn = payment_groups.mua_ngoai %}
             {% set mn_da_tt = mn.so_tien_da_tt | float %}
-            {% set mn_con_lai = mua_ngoai_total - mn_da_tt %}
+            {% set mn_tong_quy = mn.tong_tien_nhan | float if mn.tong_tien_nhan else 0 %}
+            {% set mn_con_lai = mua_ngoai_accum - mn_da_tt %}
+            {% set mn_so_du = mn_tong_quy - mn_da_tt %}
             <div class="col-md-6" id="card-mua-ngoai">
                 <div class="card border-warning h-100">
                     <div class="card-header bg-warning-lt">
@@ -262,7 +264,11 @@
                     </div>
                     <div class="card-body">
                         <div class="row mb-2">
-                            <div class="col-6 text-muted small">Tổng phát sinh (kỳ):</div>
+                            <div class="col-6 text-muted small">Tổng tiền đã tạm ứng:</div>
+                            <div class="col-6 text-end fw-bold text-primary">{{ "{:,.0f}".format(mn_tong_quy) }} đ</div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-6 text-muted small">Phát sinh trong kỳ:</div>
                             <div class="col-6 text-end fw-bold" id="mn-tong-ps">{{ "{:,.0f}".format(mua_ngoai_total) }}
                                 đ</div>
                         </div>
@@ -285,6 +291,12 @@
                             <div class="col-6 text-muted small">Phát sinh mới (sau TT):</div>
                             <div class="col-6 text-end text-orange fw-semibold" id="mn-ps-moi">
                                 {% if mua_ngoai_new > 0 %}+{{ "{:,.0f}".format(mua_ngoai_new) }} đ{% else %}—{% endif %}
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-6 text-muted small">Số dư quỹ (Thái):</div>
+                            <div class="col-6 text-end fw-bold {{ 'text-success' if mn_so_du >= 0 else 'text-danger' }}">
+                                {{ "{:,.0f}".format(mn_so_du) }} đ
                             </div>
                         </div>
                         <hr class="my-2">
@@ -318,6 +330,7 @@
                         <button class="btn btn-warning btn-sm btn-edit-pg" data-bs-toggle="modal"
                             data-bs-target="#paymentGroupModal" data-group="mua_ngoai" data-label="Chi Phí Mua Ngoài"
                             data-den-ngay="{{ mn.da_thanh_toan_den }}" data-da-tt="{{ mn_da_tt }}"
+                            data-tong-quy="{{ mn_tong_quy }}"
                             data-ghi-chu="{{ mn.ghi_chu }}">
                             <i class="fas fa-pen me-1"></i>Cập nhật
                         </button>
@@ -328,7 +341,9 @@
             {# --- Card 2: Chi phí CX222 --- #}
             {% set cx = payment_groups.cx222 %}
             {% set cx_da_tt = cx.so_tien_da_tt | float %}
-            {% set cx_con_lai = cx222_total - cx_da_tt %}
+            {% set cx_tong_quy = cx.tong_tien_nhan | float if cx.tong_tien_nhan else 0 %}
+            {% set cx_con_lai = cx222_accum - cx_da_tt %}
+            {% set cx_so_du = cx_tong_quy - cx_da_tt %}
             <div class="col-md-6" id="card-cx222">
                 <div class="card border-primary h-100">
                     <div class="card-header bg-primary-lt">
@@ -339,7 +354,11 @@
                     </div>
                     <div class="card-body">
                         <div class="row mb-2">
-                            <div class="col-6 text-muted small">Tổng phát sinh (kỳ):</div>
+                            <div class="col-6 text-muted small">Tổng tiền đã tạm ứng:</div>
+                            <div class="col-6 text-end fw-bold text-primary">{{ "{:,.0f}".format(cx_tong_quy) }} đ</div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-6 text-muted small">Phát sinh trong kỳ:</div>
                             <div class="col-6 text-end fw-bold" id="cx-tong-ps">{{ "{:,.0f}".format(cx222_total) }} đ
                             </div>
                         </div>
@@ -362,6 +381,12 @@
                             <div class="col-6 text-muted small">Phát sinh mới (sau TT):</div>
                             <div class="col-6 text-end text-orange fw-semibold" id="cx-ps-moi">
                                 {% if cx222_new > 0 %}+{{ "{:,.0f}".format(cx222_new) }} đ{% else %}—{% endif %}
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-6 text-muted small">Số dư quỹ:</div>
+                            <div class="col-6 text-end fw-bold {{ 'text-success' if cx_so_du >= 0 else 'text-danger' }}">
+                                {{ "{:,.0f}".format(cx_so_du) }} đ
                             </div>
                         </div>
                         <hr class="my-2">
@@ -395,6 +420,7 @@
                         <button class="btn btn-primary btn-sm btn-edit-pg" data-bs-toggle="modal"
                             data-bs-target="#paymentGroupModal" data-group="cx222" data-label="Chi Phí CX222"
                             data-den-ngay="{{ cx.da_thanh_toan_den }}" data-da-tt="{{ cx_da_tt }}"
+                            data-tong-quy="{{ cx_tong_quy }}"
                             data-ghi-chu="{{ cx.ghi_chu }}">
                             <i class="fas fa-pen me-1"></i>Cập nhật
                         </button>

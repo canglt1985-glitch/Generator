@@ -417,8 +417,8 @@ def save_payment_records(data):
 def load_payment_groups():
     """Load payment group records (mua_ngoai, cx222) from JSON file."""
     default = {
-        'mua_ngoai': {'da_thanh_toan_den': '', 'so_tien_da_tt': 0, 'ghi_chu': '', 'updated_at': '', 'updated_by': ''},
-        'cx222':     {'da_thanh_toan_den': '', 'so_tien_da_tt': 0, 'ghi_chu': '', 'updated_at': '', 'updated_by': ''}
+        'mua_ngoai': {'da_thanh_toan_den': '', 'so_tien_da_tt': 0, 'tong_tien_nhan': 0, 'ghi_chu': '', 'updated_at': '', 'updated_by': ''},
+        'cx222':     {'da_thanh_toan_den': '', 'so_tien_da_tt': 0, 'tong_tien_nhan': 0, 'ghi_chu': '', 'updated_at': '', 'updated_by': ''}
     }
     try:
         if os.path.exists(PAYMENT_GROUPS_FILE):
@@ -550,6 +550,29 @@ def admin_reports():
     ).scalar() or 0
     mua_ngoai_total += oe_total
 
+    # --- CALCULATE CUMULATIVE TOTALS (LŨY KẾ) FOR CARDS ---
+    accum_start = "2025-01-01"
+    fuel_accum_q = db.session.query(
+        FuelLedger.nha_cung_cap, _fn.sum(FuelLedger.thanh_tien)
+    ).filter(
+        FuelLedger.ngay >= accum_start,
+        FuelLedger.type.in_(['STOCK_IN', 'DIRECT_BUY', 'VEHICLE_FUEL'])
+    ).group_by(FuelLedger.nha_cung_cap).all()
+    
+    mua_ngoai_accum = 0
+    cx222_accum = 0
+    for ncc_a, amt_a in fuel_accum_q:
+        ncc_up_a = (ncc_a or '').strip().upper()
+        if 'CX' in ncc_up_a or 'CÂY XĂNG' in ncc_up_a or 'CX222' in ncc_up_a:
+            cx222_accum += (amt_a or 0)
+        else:
+            mua_ngoai_accum += (amt_a or 0)
+    
+    oe_accum = db.session.query(_fn.sum(OtherExpense.so_tien)).filter(
+        OtherExpense.ngay_su_dung >= accum_start
+    ).scalar() or 0
+    mua_ngoai_accum += oe_accum
+
     # Tính phát sinh MỚI sau ngày đã thanh toán
     def _calc_new_since(group_key, cutoff_date_str):
         """Tính phát sinh sau ngày cutoff đến hôm nay."""
@@ -612,6 +635,8 @@ def admin_reports():
                            payment_groups=payment_groups,
                            mua_ngoai_total=mua_ngoai_total,
                            cx222_total=cx222_total,
+                           mua_ngoai_accum=mua_ngoai_accum,
+                           cx222_accum=cx222_accum,
                            mua_ngoai_new=mua_ngoai_new,
                            cx222_new=cx222_new)
 
@@ -654,19 +679,23 @@ def save_payment_group():
     group = data.get('group', '').strip()   # 'mua_ngoai' or 'cx222'
     da_thanh_toan_den = data.get('da_thanh_toan_den', '').strip()  # YYYY-MM-DD
     so_tien_da_tt = data.get('so_tien_da_tt', 0)
+    tong_tien_nhan = data.get('tong_tien_nhan')
     ghi_chu = data.get('ghi_chu', '').strip()
 
     if group not in ('mua_ngoai', 'cx222'):
         return jsonify({'ok': False, 'msg': 'Nhóm không hợp lệ'}), 400
 
     records = load_payment_groups()
-    records[group] = {
+    if tong_tien_nhan is not None:
+        records[group]['tong_tien_nhan'] = float(tong_tien_nhan)
+        
+    records[group].update({
         'da_thanh_toan_den': da_thanh_toan_den,
         'so_tien_da_tt': float(so_tien_da_tt),
         'ghi_chu': ghi_chu,
         'updated_at': datetime.now().strftime('%Y-%m-%d %H:%M'),
         'updated_by': session.get('username', '')
-    }
+    })
     try:
         save_payment_groups(records)
     except Exception as e:
