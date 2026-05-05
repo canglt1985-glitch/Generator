@@ -269,32 +269,36 @@ if __name__ == '__main__':
         scheduler.add_job(id='fuel_price_daily_0h', func=scheduled_fuel_price_fetch, trigger='cron', hour=0, minute=0)
 
         from smartw.config import is_smartw_configured
+        
+        # Helper to properly manage app context for scheduler jobs
+        def run_with_context(func, *args, **kwargs):
+            with app.app_context():
+                return func(*args, **kwargs)
+
         if is_smartw_configured():
-            from smartw.worker import run_alarm_poll, run_vhkt_poll
+            from smartw.worker import run_alarm_poll, run_vhkt_poll, send_periodic_full_report, run_mfd_import_poll
             scheduler.add_job(
                 id='smartw_alarm_poll',
-                func=lambda: app.app_context().push() or run_alarm_poll(),
+                func=lambda: run_with_context(run_alarm_poll),
                 trigger='interval', seconds=900,
                 max_instances=1
             )
-            from smartw.worker import send_periodic_full_report
             scheduler.add_job(
                 id='smartw_alarm_periodic_review',
-                func=lambda: app.app_context().push() or send_periodic_full_report(),
+                func=lambda: run_with_context(send_periodic_full_report),
                 trigger='cron', hour='*/2', minute=0,
                 max_instances=1
             )
             scheduler.add_job(
                 id='smartw_vhkt_poll',
-                func=lambda: app.app_context().push() or run_vhkt_poll(),
+                func=lambda: run_with_context(run_vhkt_poll),
                 trigger='cron', hour=5, minute=0,
                 max_instances=1
             )
             # MFD daily import: 6 AM (scrape yesterday's generator runtime)
-            from smartw.worker import run_mfd_import_poll
             scheduler.add_job(
                 id='mfd_import_daily',
-                func=lambda: app.app_context().push() or run_mfd_import_poll(),
+                func=lambda: run_with_context(run_mfd_import_poll),
                 trigger='cron', hour=6, minute=0,
                 max_instances=1
             )
@@ -304,7 +308,7 @@ if __name__ == '__main__':
         from datasite_scraper import perform_datasite_sync_real
         scheduler.add_job(
             id='datasite_sync_weekly',
-            func=lambda: app.app_context().push() or perform_datasite_sync_real(),
+            func=lambda: run_with_context(perform_datasite_sync_real),
             trigger='cron', day_of_week='sun', hour=2, minute=0,
             max_instances=1
         )
