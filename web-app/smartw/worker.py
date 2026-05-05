@@ -80,7 +80,8 @@ def _get_site_label(site_id: str) -> str:
             return f"*{row.site_id_new}* ({row.site_id_old})"
         if row and row.site_id_new:
             return f"*{row.site_id_new}*"
-    except Exception:
+    except Exception as e:
+        logger.error(f'SmartW _get_site_label Registry error for {site_id}: {e}')
         pass
 
     # Fallback: try GeneralInfo for legacy id_old field
@@ -91,7 +92,8 @@ def _get_site_label(site_id: str) -> str:
             old_id = getattr(info, 'id_old', None)
             if old_id and old_id != site_id:
                 return f"*{site_id}* ({old_id})"
-    except Exception:
+    except Exception as e:
+        logger.error(f'SmartW _get_site_label GeneralInfo error for {site_id}: {e}')
         pass
 
     # No mapping found - just return the site_id bolded
@@ -705,16 +707,20 @@ def run_alarm_poll():
                         for alarm in new_md:
                             site = _site_key(alarm)
                             label = _get_site_label(site)
+                            net = _norm_net(alarm.get('network') or '')
+                            net_part = f" [{net}]" if net else ""
                             t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '', full=False)
-                            lines.append(f"  • {label} - {t}")
+                            lines.append(f"  • {label}{net_part} - {t}")
                     
                     if new_mpd:
                         lines.append("🔋 *GEN:*")
                         for alarm in new_mpd:
                             site = _site_key(alarm)
                             label = _get_site_label(site)
+                            net = _norm_net(alarm.get('network') or '')
+                            net_part = f" [{net}]" if net else ""
                             t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '', full=False)
-                            lines.append(f"  • {label} - {t}")
+                            lines.append(f"  • {label}{net_part} - {t}")
 
                     if new_mll:
                         mll_groups = {}
@@ -743,16 +749,20 @@ def run_alarm_poll():
                         for alarm in cl_md:
                             site = _site_key(alarm)
                             label = _get_site_label(site)
+                            net = _norm_net(alarm.get('network') or '')
+                            net_part = f" [{net}]" if net else ""
                             clear_t = _fmt_sdate(alarm.get('clear_time') or alarm.get('edateStr') or '', full=False)
-                            lines.append(f"  • {label} - {clear_t}")
+                            lines.append(f"  • {label}{net_part} - {clear_t}")
 
                     if cl_mpd:
                         lines.append("🔋 *GEN:*")
                         for alarm in cl_mpd:
                             site = _site_key(alarm)
                             label = _get_site_label(site)
+                            net = _norm_net(alarm.get('network') or '')
+                            net_part = f" [{net}]" if net else ""
                             clear_t = _fmt_sdate(alarm.get('clear_time') or alarm.get('edateStr') or '', full=False)
-                            lines.append(f"  • {label} - {clear_t}")
+                            lines.append(f"  • {label}{net_part} - {clear_t}")
 
                     if cl_mll:
                         mll_cl_groups = {}
@@ -1373,9 +1383,11 @@ def send_periodic_full_report():
         for alarm in md_list:
             site = _site_key(alarm)
             label = _get_site_label(site)
+            net = _norm_net(alarm.get('network') or '')
+            net_part = f" [{net}]" if net else ""
             # Full format for summary
             t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '', full=True)
-            lines.append(f"  • {label} - {t}")
+            lines.append(f"  • {label}{net_part} - {t}")
             total_active += 1
 
     # ── Section 2: GEN ──
@@ -1384,8 +1396,10 @@ def send_periodic_full_report():
         for alarm in mpd_list:
             site = _site_key(alarm)
             label = _get_site_label(site)
+            net = _norm_net(alarm.get('network') or '')
+            net_part = f" [{net}]" if net else ""
             t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '', full=True)
-            lines.append(f"  • {label} - {t}")
+            lines.append(f"  • {label}{net_part} - {t}")
             total_active += 1
 
     # ── Section 3: MLL ──
@@ -1417,12 +1431,13 @@ def send_periodic_full_report():
         lines.append("📵 *CELLOFF* (" + str(len(seen_cells)) + " cell):")
         for cid, alarm in seen_cells.items():
             site = _site_key(alarm)
-            label = _get_site_label(site)
+            old_id = _old_id(site)
+            old_part = f" ({old_id})" if old_id and old_id != site else ""
             net = _norm_net(alarm.get('network') or '')
             t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '', full=True)
             net_part = f" [{net}]" if net else ''
             display_cid = str(alarm.get('cellid') or alarm.get('cell_id') or cid)
-            lines.append(f"  • {label} | {display_cid}{net_part} - {t}")
+            lines.append(f"  • {display_cid}{old_part}{net_part} - {t}")
             total_active += 1
 
     if total_active > 0:
