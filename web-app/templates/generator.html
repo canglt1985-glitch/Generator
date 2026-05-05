@@ -464,8 +464,12 @@
         {% set cx = payment_groups.cx222 %}
         {% set mn_da_tt = mn.so_tien_da_tt | float %}
         {% set cx_da_tt = cx.so_tien_da_tt | float %}
-        {% set mn_con_lai = mua_ngoai_total - mn_da_tt %}
-        {% set cx_con_lai = cx222_total - cx_da_tt %}
+        {% set mn_tong_quy = mn.tong_tien_nhan | float if mn.tong_tien_nhan else 0 %}
+        {% set cx_tong_quy = cx.tong_tien_nhan | float if cx.tong_tien_nhan else 0 %}
+        {% set mn_con_lai = mua_ngoai_accum - mn_da_tt %}
+        {% set cx_con_lai = cx222_accum - cx_da_tt %}
+        {% set mn_so_du = mn_tong_quy - mn_da_tt %}
+        {% set cx_so_du = cx_tong_quy - cx_da_tt %}
         <div class="row g-3 mb-3">
             {# Card 1: Chi phí Mua Ngoài #}
             <div class="{{ 'col-md-6' if session['role'] == 'admin' else 'col-12' }}" id="card-mua-ngoai">
@@ -478,9 +482,12 @@
                     </div>
                     <div class="card-body py-2">
                         <div class="row mb-2">
-                            <div class="col-6 text-muted small">Tổng phát sinh (kỳ):</div>
-                            <div class="col-6 text-end fw-bold" id="mn-tong-ps">{{ "{:,.0f}".format(mua_ngoai_total) }}
-                                đ</div>
+                            <div class="col-6 text-muted small">Tổng tiền đã tạm ứng:</div>
+                            <div class="col-6 text-end fw-bold text-primary" id="mn-tong-quy">{{ "{:,.0f}".format(mn_tong_quy) }} đ</div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-6 text-muted small">Lũy kế phát sinh (tất cả):</div>
+                            <div class="col-6 text-end fw-bold" id="mn-tong-ps">{{ "{:,.0f}".format(mua_ngoai_accum) }} đ</div>
                         </div>
                         <div class="row mb-2">
                             <div class="col-6 text-muted small">Đã TT đến ngày:</div>
@@ -499,6 +506,12 @@
                             <div class="col-6 text-muted small">Phát sinh mới (sau TT):</div>
                             <div class="col-6 text-end text-orange fw-semibold" id="mn-ps-moi">
                                 {% if mua_ngoai_new > 0 %}+{{ "{:,.0f}".format(mua_ngoai_new) }} đ{% else %}—{% endif %}
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-6 text-muted small">Số dư quỹ (Thái):</div>
+                            <div class="col-6 text-end fw-bold {{ 'text-success' if mn_so_du >= 0 else 'text-danger' }}" id="mn-so-du">
+                                {{ "{:,.0f}".format(mn_so_du) }} đ
                             </div>
                         </div>
                         <hr class="my-2">
@@ -530,6 +543,7 @@
                         <button class="btn btn-warning btn-sm btn-edit-pg" data-bs-toggle="modal"
                             data-bs-target="#paymentGroupModal" data-group="mua_ngoai" data-label="Chi Phí Mua Ngoài"
                             data-den-ngay="{{ mn.da_thanh_toan_den }}" data-da-tt="{{ mn_da_tt }}"
+                            data-tong-quy="{{ mn_tong_quy }}"
                             data-ghi-chu="{{ mn.ghi_chu }}">
                             <i class="fas fa-pen me-1"></i>Cập nhật
                         </button>
@@ -548,9 +562,12 @@
                     </div>
                     <div class="card-body py-2">
                         <div class="row mb-2">
-                            <div class="col-6 text-muted small">Tổng phát sinh (kỳ):</div>
-                            <div class="col-6 text-end fw-bold" id="cx-tong-ps">{{ "{:,.0f}".format(cx222_total) }} đ
-                            </div>
+                            <div class="col-6 text-muted small">Tổng tiền đã tạm ứng:</div>
+                            <div class="col-6 text-end fw-bold text-primary" id="cx-tong-quy">{{ "{:,.0f}".format(cx_tong_quy) }} đ</div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-6 text-muted small">Lũy kế phát sinh (tất cả):</div>
+                            <div class="col-6 text-end fw-bold" id="cx-tong-ps">{{ "{:,.0f}".format(cx222_accum) }} đ</div>
                         </div>
                         <div class="row mb-2">
                             <div class="col-6 text-muted small">Đã TT đến ngày:</div>
@@ -569,6 +586,12 @@
                             <div class="col-6 text-muted small">Phát sinh mới (sau TT):</div>
                             <div class="col-6 text-end text-orange fw-semibold" id="cx-ps-moi">
                                 {% if cx222_new > 0 %}+{{ "{:,.0f}".format(cx222_new) }} đ{% else %}—{% endif %}
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-6 text-muted small">Số dư quỹ:</div>
+                            <div class="col-6 text-end fw-bold {{ 'text-success' if cx_so_du >= 0 else 'text-danger' }}" id="cx-so-du">
+                                {{ "{:,.0f}".format(cx_so_du) }} đ
                             </div>
                         </div>
                         <hr class="my-2">
@@ -600,6 +623,7 @@
                         <button class="btn btn-primary btn-sm btn-edit-pg" data-bs-toggle="modal"
                             data-bs-target="#paymentGroupModal" data-group="cx222" data-label="Chi Phí CX222"
                             data-den-ngay="{{ cx.da_thanh_toan_den }}" data-da-tt="{{ cx_da_tt }}"
+                            data-tong-quy="{{ cx_tong_quy }}"
                             data-ghi-chu="{{ cx.ghi_chu }}">
                             <i class="fas fa-pen me-1"></i>Cập nhật
                         </button>
@@ -1436,6 +1460,8 @@
             document.getElementById('pgDenNgay').value = btn.dataset.denNgay || '';
             var daTtVal = parseFloat(btn.dataset.daTt);
             document.getElementById('pgDaTT').value = (!isNaN(daTtVal) && daTtVal > 0) ? daTtVal : '';
+            var tongQuyVal = parseFloat(btn.dataset.tongQuy);
+            document.getElementById('pgTongTienNhan').value = (!isNaN(tongQuyVal) && tongQuyVal > 0) ? tongQuyVal : '';
             document.getElementById('pgGhiChu').value = btn.dataset.ghiChu || '';
         });
 
@@ -1447,6 +1473,7 @@
             var group = document.getElementById('pgGroup').value;
             var den_ngay = document.getElementById('pgDenNgay').value.trim();
             var da_tt = parseFloat(document.getElementById('pgDaTT').value) || 0;
+            var tong_quy = parseFloat(document.getElementById('pgTongTienNhan').value) || 0;
             var ghi_chu = document.getElementById('pgGhiChu').value.trim();
 
             saveBtn.disabled = true;
@@ -1458,7 +1485,13 @@
                     'Content-Type': 'application/json',
                     'X-CSRFToken': '{{ csrf_token() }}'
                 },
-                body: JSON.stringify({ group: group, da_thanh_toan_den: den_ngay, so_tien_da_tt: da_tt, ghi_chu: ghi_chu })
+                body: JSON.stringify({ 
+                    group: group, 
+                    da_thanh_toan_den: den_ngay, 
+                    so_tien_da_tt: da_tt, 
+                    tong_tien_nhan: tong_quy,
+                    ghi_chu: ghi_chu 
+                })
             })
                 .then(function (r) { return r.json(); })
                 .then(function (data) {
@@ -1467,6 +1500,10 @@
                         var totalEl = document.getElementById(pfx + '-tong-ps');
                         var total = totalEl ? parseFloat(totalEl.textContent.replace(/[^0-9]/g, '')) || 0 : 0;
                         var conLai = total - da_tt;
+                        var soDu = tong_quy - da_tt;
+
+                        var tongQuyEl = document.getElementById(pfx + '-tong-quy');
+                        if (tongQuyEl) tongQuyEl.textContent = (tong_quy > 0 ? Math.round(tong_quy).toLocaleString('vi-VN') : '0') + ' đ';
 
                         var denNgayEl = document.getElementById(pfx + '-den-ngay');
                         if (denNgayEl) denNgayEl.innerHTML = den_ngay
@@ -1476,16 +1513,31 @@
                         var daTTEl = document.getElementById(pfx + '-da-tt');
                         if (daTTEl) daTTEl.textContent = (da_tt > 0 ? Math.round(da_tt).toLocaleString('vi-VN') : '0') + ' \u0111';
 
-                        var conLaiEl = document.getElementById(pfx + '-con-lai');
-                        if (conLaiEl) conLaiEl.innerHTML = conLai > 0
-                            ? '<span class="text-danger">' + Math.round(conLai).toLocaleString('vi-VN') + ' \u0111 \ud83d\udd34</span>'
-                            : '<span class="text-success">\u2705 \u0110\u00e3 TT h\u1ebft</span>';
+                        var soDuEl = document.getElementById(pfx + '-so-du');
+                        if (soDuEl) {
+                            soDuEl.textContent = Math.round(soDu).toLocaleString('vi-VN') + ' đ';
+                            soDuEl.className = 'col-6 text-end fw-bold ' + (soDu >= 0 ? 'text-success' : 'text-danger');
+                        }
 
+                        var conLaiEl = document.getElementById(pfx + '-con-lai');
+                        if (conLaiEl) {
+                            if (conLai > 0) {
+                                conLaiEl.innerHTML = '<span class="text-danger">' + Math.round(conLai).toLocaleString('vi-VN') + ' đ 🔴</span>';
+                            } else {
+                                conLaiEl.innerHTML = '<span class="text-success">✅ Đã TT hết</span>';
+                            }
+                        }
+                        
+                        // Update the button data attributes so modal opens with new values next time
+                        var btn = document.querySelector('.btn-edit-pg[data-group="' + group + '"]');
+                        if (btn) {
+                            btn.dataset.denNgay = den_ngay;
+                            btn.dataset.daTt = da_tt;
+                            btn.dataset.tongQuy = tong_quy;
+                            btn.dataset.ghiChu = ghi_chu;
+                        }
                         var ghiChuEl = document.getElementById(pfx + '-ghi-chu');
                         if (ghiChuEl) ghiChuEl.textContent = ghi_chu || '';
-
-                        var cardBtn = document.querySelector('.btn-edit-pg[data-group="' + group + '"]');
-                        if (cardBtn) { cardBtn.dataset.denNgay = den_ngay; cardBtn.dataset.daTt = da_tt; cardBtn.dataset.ghiChu = ghi_chu; }
 
                         var bsM = bootstrap.Modal.getInstance(modalEl); 
                         if (bsM) bsM.hide();

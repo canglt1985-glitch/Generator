@@ -99,17 +99,81 @@ def generator():
     exp_years = list(range(2025, now.year + 1))
     payment_data = {}
     payment_records = {}
-    payment_groups = {
-        'mua_ngoai': {'so_tien_da_tt': 0, 'da_thanh_toan_den': '', 'ghi_chu': '', 'updated_at': '', 'updated_by': ''},
-        'cx222': {'so_tien_da_tt': 0, 'da_thanh_toan_den': '', 'ghi_chu': '', 'updated_at': '', 'updated_by': ''}
-    }
     pay_month = None
     pay_year = now.year
     pay_years = list(range(2025, now.year + 1))
     mua_ngoai_total = 0
     cx222_total = 0
+    mua_ngoai_accum = 0
+    cx222_accum = 0
     mua_ngoai_new = 0
     cx222_new = 0
+
+    from core.routes import load_payment_groups
+    payment_groups = load_payment_groups()
+
+    # --- CALCULATE CUMULATIVE TOTALS (LŨY KẾ) FOR CARDS (GLOBAL) ---
+    accum_start = "2025-01-01"
+    from sqlalchemy import func as fn
+    
+    # Cumulative Fuel
+    fuel_accum_q = db.session.query(
+        FuelLedger.nha_cung_cap, fn.sum(FuelLedger.thanh_tien)
+    ).filter(
+        FuelLedger.ngay >= accum_start,
+        FuelLedger.type.in_(['STOCK_IN', 'DIRECT_BUY', 'VEHICLE_FUEL'])
+    ).group_by(FuelLedger.nha_cung_cap).all()
+    
+    for ncc_a, amt_a in fuel_accum_q:
+        ncc_up_a = (ncc_a or '').strip().upper()
+        if 'CX' in ncc_up_a or 'CÂY XĂNG' in ncc_up_a or 'CX222' in ncc_up_a:
+            cx222_accum += (amt_a or 0)
+        else:
+            mua_ngoai_accum += (amt_a or 0)
+    
+    # Cumulative Other Expenses
+    oe_accum = db.session.query(fn.sum(OtherExpense.so_tien)).filter(
+        OtherExpense.ngay_su_dung >= accum_start
+    ).scalar() or 0
+    mua_ngoai_accum += oe_accum
+
+    # New expenses since last payment
+    today_str2 = now.strftime('%Y-%m-%d')
+    def _calc_new(group_key, cutoff):
+        if not cutoff: return 0
+        try:
+            if group_key == 'cx222':
+                result = 0
+                for ncc2, amt2 in db.session.query(
+                    FuelLedger.nha_cung_cap, fn.sum(FuelLedger.thanh_tien)
+                ).filter(
+                    FuelLedger.ngay > cutoff, FuelLedger.ngay <= today_str2,
+                    FuelLedger.type.in_(['STOCK_IN', 'DIRECT_BUY', 'VEHICLE_FUEL'])
+                ).group_by(FuelLedger.nha_cung_cap).all():
+                    ncc_u = (ncc2 or '').strip().upper()
+                    if 'CX' in ncc_u or 'CÂY XĂNG' in ncc_u or 'CX222' in ncc_u:
+                        result += (amt2 or 0)
+                return result
+            else:
+                result = 0
+                for ncc2, amt2 in db.session.query(
+                    FuelLedger.nha_cung_cap, fn.sum(FuelLedger.thanh_tien)
+                ).filter(
+                    FuelLedger.ngay > cutoff, FuelLedger.ngay <= today_str2,
+                    FuelLedger.type.in_(['STOCK_IN', 'DIRECT_BUY', 'VEHICLE_FUEL'])
+                ).group_by(FuelLedger.nha_cung_cap).all():
+                    ncc_u = (ncc2 or '').strip().upper()
+                    if 'CX' not in ncc_u and 'CÂY XĂNG' not in ncc_u and 'CX222' not in ncc_u:
+                        result += (amt2 or 0)
+                result += db.session.query(fn.sum(OtherExpense.so_tien)).filter(
+                    OtherExpense.ngay_su_dung > cutoff,
+                    OtherExpense.ngay_su_dung <= today_str2
+                ).scalar() or 0
+                return result
+        except Exception: return 0
+
+    mua_ngoai_new = _calc_new('mua_ngoai', payment_groups['mua_ngoai'].get('da_thanh_toan_den', ''))
+    cx222_new = _calc_new('cx222', payment_groups['cx222'].get('da_thanh_toan_den', ''))
 
 
 
@@ -147,9 +211,9 @@ def generator():
 
     elif active_tab == 'payment':
         # Payment aggregation (heaviest query — only when needed)
-        from core.routes import load_payment_records, load_payment_groups
+        from core.routes import load_payment_records
         payment_records = load_payment_records()
-        payment_groups = load_payment_groups()
+        # payment_groups already loaded globally above
 
         pay_year = request.args.get('pay_year', type=int, default=now.year)
         pay_month_raw = request.args.get('pay_month', '')
@@ -227,46 +291,6 @@ def generator():
         ).scalar() or 0
         mua_ngoai_total += oe_total
 
-        # New expenses since last payment
-        today_str2 = now.strftime('%Y-%m-%d')
-        def _calc_new(group_key, cutoff):
-            if not cutoff:
-                return 0
-            try:
-                if group_key == 'cx222':
-                    result = 0
-                    for ncc2, amt2 in db.session.query(
-                        FuelLedger.nha_cung_cap, fn.sum(FuelLedger.thanh_tien)
-                    ).filter(
-                        FuelLedger.ngay > cutoff, FuelLedger.ngay <= today_str2,
-                        FuelLedger.type.in_(['STOCK_IN', 'DIRECT_BUY', 'VEHICLE_FUEL'])
-                    ).group_by(FuelLedger.nha_cung_cap).all():
-                        ncc_u = (ncc2 or '').strip().upper()
-                        if 'CX' in ncc_u or 'CÂY XĂNG' in ncc_u or 'CX222' in ncc_u:
-                            result += (amt2 or 0)
-                    return result
-                else:
-                    result = 0
-                    for ncc2, amt2 in db.session.query(
-                        FuelLedger.nha_cung_cap, fn.sum(FuelLedger.thanh_tien)
-                    ).filter(
-                        FuelLedger.ngay > cutoff, FuelLedger.ngay <= today_str2,
-                        FuelLedger.type.in_(['STOCK_IN', 'DIRECT_BUY', 'VEHICLE_FUEL'])
-                    ).group_by(FuelLedger.nha_cung_cap).all():
-                        ncc_u = (ncc2 or '').strip().upper()
-                        if 'CX' not in ncc_u and 'CÂY XĂNG' not in ncc_u and 'CX222' not in ncc_u:
-                            result += (amt2 or 0)
-                    result += db.session.query(fn.sum(OtherExpense.so_tien)).filter(
-                        OtherExpense.ngay_su_dung > cutoff,
-                        OtherExpense.ngay_su_dung <= today_str2
-                    ).scalar() or 0
-                    return result
-            except Exception:
-                return 0
-
-        mua_ngoai_new = _calc_new('mua_ngoai', payment_groups['mua_ngoai'].get('da_thanh_toan_den', ''))
-        cx222_new = _calc_new('cx222', payment_groups['cx222'].get('da_thanh_toan_den', ''))
-
 
 
     # ── Pre-compute fuel prices + fuel stock for instant rendering ──
@@ -314,6 +338,8 @@ def generator():
                            payment_groups=payment_groups,
                            mua_ngoai_total=mua_ngoai_total,
                            cx222_total=cx222_total,
+                           mua_ngoai_accum=mua_ngoai_accum,
+                           cx222_accum=cx222_accum,
                            mua_ngoai_new=mua_ngoai_new,
                            cx222_new=cx222_new,
                            fuel_prices=fuel_prices,
@@ -338,19 +364,23 @@ def save_payment_group_gen():
     group = data.get('group', '').strip()
     da_thanh_toan_den = data.get('da_thanh_toan_den', '').strip()
     so_tien_da_tt = data.get('so_tien_da_tt', 0)
+    tong_tien_nhan = data.get('tong_tien_nhan') # New field
     ghi_chu = data.get('ghi_chu', '').strip()
 
     if group not in ('mua_ngoai', 'cx222'):
         return jsonify({'ok': False, 'msg': 'Nhóm không hợp lệ'}), 400
 
     records = load_payment_groups()
-    records[group] = {
+    if tong_tien_nhan is not None:
+        records[group]['tong_tien_nhan'] = float(tong_tien_nhan)
+        
+    records[group].update({
         'da_thanh_toan_den': da_thanh_toan_den,
         'so_tien_da_tt': float(so_tien_da_tt),
         'ghi_chu': ghi_chu,
         'updated_at': datetime.now().strftime('%Y-%m-%d %H:%M'),
         'updated_by': session.get('username', '')
-    }
+    })
     try:
         save_payment_groups(records)
     except Exception as e:
