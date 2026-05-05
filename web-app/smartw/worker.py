@@ -527,7 +527,12 @@ def _run_async(coro_func):
         loop = asyncio.get_running_loop()
         with concurrent.futures.ThreadPoolExecutor() as executor:
             future = executor.submit(asyncio.run, coro_func())
-            return future.result(timeout=1200)
+            try:
+                return future.result(timeout=1200)
+            except (concurrent.futures.TimeoutError, TimeoutError):
+                logger.error(f"SmartW Worker: ⏱️ Async task timed out after 1200s")
+                # We can't easily kill the thread, but we can stop waiting for it
+                return {'error': 'Hệ thống phản hồi chậm (Timeout 20m)'}
     except RuntimeError:
         return asyncio.run(coro_func())
 
@@ -619,7 +624,11 @@ def run_alarm_poll():
         for table_type in ['md', 'mpd', 'mll', 'mll_cell']:
             _backup_active(table_type)
 
-        result = _run_async(_do_alarm_poll)
+        result = _run_async(_do_alarm_poll) or {}
+        
+        # If result is None or empty, ensure it's a dict
+        if not isinstance(result, dict):
+            result = {'error': 'Kết quả trả về không hợp lệ'}
 
         if result.get('error'):
             logger.error(f'SmartW Worker: ❌ {result["error"]}')
@@ -901,8 +910,8 @@ def run_vhkt_poll():
         })
         status['errors'] = status['errors'][-10:]
     finally:
-        _is_running = False
         _save_status(status)
+        _release_lock()
 
 
 def run_mfd_import_poll(target_date: str = None):
@@ -1063,8 +1072,8 @@ def run_mfd_import_poll(target_date: str = None):
         })
         status['errors'] = status['errors'][-10:]
     finally:
-        _is_running = False
         _save_status(status)
+        _release_lock()
 
     return import_result
 

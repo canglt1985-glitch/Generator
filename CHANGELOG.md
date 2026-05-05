@@ -1,5 +1,27 @@
 # Changelog
 
+## [2026-04-29]
+### Added
+- **Web App Windows Service (Persistence)**: Tích hợp công cụ **WinSW** và script cài đặt `install_webapp_service.ps1`. Web App giờ đây có thể chạy như một Windows Service thực thụ (`VH_WebApp`), tự động khởi động cùng Windows và tự phục hồi khi gặp sự cố.
+- **Maintenance Scripts**: Bổ sung bộ công cụ trong `web-app/scratch/` để kiểm tra và tính toán lại giá nhiên liệu (`recalc_prices.py`, `verify_prices.py`, `test_price_api.py`).
+
+### Changed
+- **Git Sync Strategy**: Đồng bộ thành công hơn 30 file mã nguồn từ repository chính (cập nhật templates, logic worker và routes).
+- **Generator UI**: Cập nhật đáng kể giao diện quản lý máy phát điện (`generator.html`) với các cải tiến về bảng biểu và logic hiển thị.
+- **SmartW Worker**: Nâng cấp logic cào dữ liệu và xử lý đồng bộ trong `worker.py`.
+
+### Fixed
+- **Fuel Price Scraping**: Cập nhật logic cào giá xăng dầu PVOil để vượt qua lỗi 403 Forbidden, tự động cập nhật giá mới nhất khi khởi động.
+
+
+## [2026-04-27]
+### Added
+- **Viber Alert System (Git Sync)**: Cập nhật mã nguồn và tài liệu thiết kế (`docs/VIBER_DESIGN.md`) cho hệ thống cảnh báo qua Viber.
+- **Persistent Cloudflared Tunnel Service**: Cài đặt thành công Windows Service `Cloudflared_Tunnel` chạy tự động với cấu hình riêng biệt, khắc phục hoàn toàn lỗi phân quyền `systemprofile`.
+
+### Changed
+- **App Restart**: Khởi động lại Web App (Port 5005) để áp dụng các thay đổi mới nhất từ mã nguồn.
+
 ## [2026-04-07]
 ### Added
 - Tính năng tính toán hiển thị gộp độ cao Anten theo RAN cho mức Site (DataSite - Vô tuyến)

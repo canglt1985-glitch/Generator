@@ -523,17 +523,10 @@
                                 {% else %}<span class="text-success">✅ Đã TT hết</span>{% endif %}
                             </div>
                         </div>
-                        {% if mn.ghi_chu %}
-                        <div class="row mt-1">
+                        <div class="row mt-1" id="mn-ghi-chu-row" {% if not mn.ghi_chu %}style="display:none"{% endif %}>
                             <div class="col-5 text-muted small">Ghi chú:</div>
-                            <div class="col-7 text-end small text-muted" id="mn-ghi-chu">{{ mn.ghi_chu }}</div>
+                            <div class="col-7 text-end small text-muted" id="mn-ghi-chu-val">{{ mn.ghi_chu or '' }}</div>
                         </div>
-                        {% else %}
-                        <div class="row mt-1" id="mn-ghi-chu-row" style="display:none">
-                            <div class="col-5 text-muted small">Ghi chú:</div>
-                            <div class="col-7 text-end small text-muted" id="mn-ghi-chu"></div>
-                        </div>
-                        {% endif %}
                         {% if mn.updated_at %}
                         <div class="text-muted mt-1" style="font-size:11px">Cập nhật: {{ mn.updated_at }} bởi {{
                             mn.updated_by }}</div>
@@ -603,17 +596,10 @@
                                 {% else %}<span class="text-success">✅ Đã TT hết</span>{% endif %}
                             </div>
                         </div>
-                        {% if cx.ghi_chu %}
-                        <div class="row mt-1">
+                        <div class="row mt-1" id="cx-ghi-chu-row" {% if not cx.ghi_chu %}style="display:none"{% endif %}>
                             <div class="col-5 text-muted small">Ghi chú:</div>
-                            <div class="col-7 text-end small text-muted" id="cx-ghi-chu">{{ cx.ghi_chu }}</div>
+                            <div class="col-7 text-end small text-muted" id="cx-ghi-chu-val">{{ cx.ghi_chu or '' }}</div>
                         </div>
-                        {% else %}
-                        <div class="row mt-1" id="cx-ghi-chu-row" style="display:none">
-                            <div class="col-5 text-muted small">Ghi chú:</div>
-                            <div class="col-7 text-end small text-muted" id="cx-ghi-chu"></div>
-                        </div>
-                        {% endif %}
                         {% if cx.updated_at %}
                         <div class="text-muted mt-1" style="font-size:11px">Cập nhật: {{ cx.updated_at }} bởi {{
                             cx.updated_by }}</div>
@@ -1451,13 +1437,23 @@
         var modalEl = document.getElementById('paymentGroupModal');
         if (!modalEl) { return; }
 
+        // Lưu tổng lũy kế tính từ API (khi user chọn ngày)
+        var _pgApiTotal = 0;
+
         // Populate form when modal is about to show
         modalEl.addEventListener('show.bs.modal', function (event) {
             var btn = event.relatedTarget;  // the button that triggered the modal
             if (!btn || !btn.classList.contains('btn-edit-pg')) return;
+            
+            // Reset state
+            _pgApiTotal = 0;
+            document.getElementById('pgStatusInfo').style.display = 'none';
+            
+            // Populate data
             document.getElementById('pgGroup').value = btn.dataset.group || '';
             document.getElementById('pgLabelDisplay').textContent = btn.dataset.label || '';
             document.getElementById('pgDenNgay').value = btn.dataset.denNgay || '';
+            
             var daTtVal = parseFloat(btn.dataset.daTt);
             document.getElementById('pgDaTT').value = (!isNaN(daTtVal) && daTtVal > 0) ? daTtVal : '';
             var tongQuyVal = parseFloat(btn.dataset.tongQuy);
@@ -1497,9 +1493,14 @@
                 .then(function (data) {
                     if (data.ok) {
                         var pfx = group === 'mua_ngoai' ? 'mn' : 'cx';
+                        // Dùng tổng từ API (đến ngày đã chọn), không dùng tổng hiển thị trên card
+                        // Nếu user không chọn ngày mới (mở modal và lưu luôn), fallback về số trên card
+                        var apiTotal = _pgApiTotal || 0;
                         var totalEl = document.getElementById(pfx + '-tong-ps');
                         var total = totalEl ? parseFloat(totalEl.textContent.replace(/[^0-9]/g, '')) || 0 : 0;
-                        var conLai = total - da_tt;
+                        var currentTotal = (apiTotal > 0) ? apiTotal : total;
+                        
+                        var conLai = currentTotal - da_tt;
                         var soDu = tong_quy - da_tt;
 
                         var tongQuyEl = document.getElementById(pfx + '-tong-quy');
@@ -1536,18 +1537,32 @@
                             btn.dataset.tongQuy = tong_quy;
                             btn.dataset.ghiChu = ghi_chu;
                         }
-                        var ghiChuEl = document.getElementById(pfx + '-ghi-chu');
+                        var ghiChuEl = document.getElementById(pfx + '-ghi-chu-val');
                         if (ghiChuEl) ghiChuEl.textContent = ghi_chu || '';
+                        var ghiChuRow = document.getElementById(pfx + '-ghi-chu-row');
+                        if (ghiChuRow) ghiChuRow.style.display = ghi_chu ? 'flex' : 'none';
 
-                        var bsM = bootstrap.Modal.getInstance(modalEl); 
-                        if (bsM) bsM.hide();
-                        alert('✅ Đã cập nhật thanh toán cho nhóm: ' + (group === 'mua_ngoai' ? 'Mua Ngoài' : 'CX222'));
+                        _pgApiTotal = 0; 
+                        try {
+                            var bsM = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                            if (bsM) bsM.hide();
+                        } catch(e) { console.log("Modal hide error", e); }
+                        
+                        setTimeout(function() {
+                            alert('✅ Đã cập nhật thanh toán cho nhóm: ' + (group === 'mua_ngoai' ? 'Mua Ngoài' : 'CX222'));
+                        }, 300);
                     } else {
-                        alert('L\u1ed7i: ' + (data.msg || 'Kh\u00f4ng l\u01b0u \u0111\u01b0\u1ee3c'));
+                        alert('Lỗi từ máy chủ: ' + (data.msg || 'Không rõ nguyên nhân'));
                     }
                 })
-                .catch(function () { alert('L\u1ed7i k\u1ebft n\u1ed1i m\u00e1y ch\u1ee7'); })
-                .finally(function () { saveBtn.disabled = false; saveBtn.innerHTML = '<i class="fas fa-save me-1"></i>L\u01b0u'; });
+                .catch(function (err) { 
+                    console.error(err);
+                    alert('Lỗi hệ thống: ' + (err.message || 'Kết nối bị gián đoạn')); 
+                })
+                .finally(function () { 
+                    saveBtn.disabled = false; 
+                    saveBtn.innerHTML = '<i class="fas fa-save me-1"></i>Lưu'; 
+                });
         });
 
         // Auto-calc: khi chọn ngày → gợi ý số tiền phải trả
@@ -1560,6 +1575,7 @@
             var statusDiv = document.getElementById('pgStatusInfo');
             var statusText = document.getElementById('pgStatusText');
 
+            _pgApiTotal = 0; // Reset khi chọn ngày mới
             statusDiv.style.display = 'block';
             statusText.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang tính...';
             statusDiv.querySelector('div').className = 'd-flex align-items-center text-muted small fw-bold';
@@ -1573,40 +1589,32 @@
                     
                     if (data.already_paid) {
                         statusText.innerHTML = 'Đã thanh toán hết đến ' + data.last_paid_date;
+                        _pgApiTotal = 0;
                         return;
                     }
                     if (data.total <= 0) {
                         statusText.innerHTML = 'Không có chi phí trong kỳ này.';
+                        _pgApiTotal = 0;
                         return;
                     }
                     
                     var fmtTotal = Math.round(data.total).toLocaleString('vi-VN');
                     var totalVal = Math.round(data.total);
-                    
+                    _pgApiTotal = totalVal; // ← Lưu lại tổng lũy kế đúng theo ngày
+
                     // Tự động điền nếu ô hiện tại đang trống hoặc bằng 0
                     if (!daTTInput.value || daTTInput.value == "0") {
                         daTTInput.value = totalVal;
-                        statusText.innerHTML = 'Đã tự động điền LŨY KẾ: ' + fmtTotal + ' đ';
+                        statusText.innerHTML = 'Đã tự động điền LŨY KẾ đến ' + den_ngay + ': ' + fmtTotal + ' đ';
                     } else {
-                        statusText.innerHTML = 'Lũy kế gợi ý: ' + fmtTotal + ' đ '
+                        statusText.innerHTML = 'Lũy kế đến ' + den_ngay + ': ' + fmtTotal + ' đ '
                             + '<a href="#" class="text-info ms-2" onclick="document.getElementById(\'pgDaTT\').value=' + totalVal + ';return false;">[Dùng số này]</a>';
                     }
                 })
                 .catch(function () { statusDiv.style.display = 'none'; });
         });
 
-        // Reset status when opening modal
-        modalEl.addEventListener('show.bs.modal', function (event) {
-            document.getElementById('pgStatusInfo').style.display = 'none';
-            var btn = event.relatedTarget;
-            if (btn) {
-                document.getElementById('pgGroup').value = btn.dataset.group || '';
-                document.getElementById('pgLabelDisplay').textContent = btn.dataset.label || '';
-                document.getElementById('pgDenNgay').value = btn.dataset.denNgay || '';
-                document.getElementById('pgDaTT').value = btn.dataset.daTt || '';
-                document.getElementById('pgGhiChu').value = btn.dataset.ghiChu || '';
-            }
-        });
+
     });
 </script>
 

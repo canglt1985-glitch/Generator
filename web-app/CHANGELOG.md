@@ -15,6 +15,19 @@
 ### Changed
 - **Logic:** Chuyển mốc tính toán Lũy kế về ngày 01/01/2025 để đảm bảo tính lịch sử.
 
+## [2026-04-23]
+### Added
+- Thêm kế hoạch nâng cấp [VHKT_ENTERPRISE_PLAN.md](file:///d:/download/VH%20may%20phat%20dien/docs/VHKT_ENTERPRISE_PLAN.md).
+- Giao diện Admin mới: `_modals_admin.html`.
+- Tài liệu `read_excel.txt`.
+
+### Changed
+- Cập nhật giao diện quản lý máy phát điện Admin (`admin_mpd.html`).
+- Cấu hình Cloudflared chạy dưới dạng tiến trình ẩn (Manual Process) để đảm bảo ổn định.
+
+### Fixed
+- Lỗi kết nối Tunnel do thiếu file cấu hình trong System Profile (xử lý bằng cách chạy thủ công với config của user).
+
 ## [2026-04-20]
 ### Added
 - **Brainstorm: VHKT Enterprise (VEE):** Hoàn thành buổi thảo luận chiến lược về dự án thế hệ mới.
