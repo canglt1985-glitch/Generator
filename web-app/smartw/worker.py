@@ -704,23 +704,33 @@ def run_alarm_poll():
                     
                     if new_md:
                         lines.append("⚡ *MAC:*")
+                        mac_groups = {}
                         for alarm in new_md:
                             site = _site_key(alarm)
-                            label = _get_site_label(site)
                             net = _norm_net(alarm.get('network') or '')
-                            net_part = f" [{net}]" if net else ""
                             t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '', full=False)
-                            lines.append(f"  • {label}{net_part} - {t}")
+                            if site not in mac_groups:
+                                mac_groups[site] = {'label': _get_site_label(site), 'nets': [], 't': t}
+                            if net and net not in mac_groups[site]['nets']:
+                                mac_groups[site]['nets'].append(net)
+                        for site, grp in mac_groups.items():
+                            net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
+                            lines.append(f"  • {grp['label']}{net_part} - {grp['t']}")
                     
                     if new_mpd:
                         lines.append("🔋 *GEN:*")
+                        mpd_groups = {}
                         for alarm in new_mpd:
                             site = _site_key(alarm)
-                            label = _get_site_label(site)
                             net = _norm_net(alarm.get('network') or '')
-                            net_part = f" [{net}]" if net else ""
                             t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '', full=False)
-                            lines.append(f"  • {label}{net_part} - {t}")
+                            if site not in mpd_groups:
+                                mpd_groups[site] = {'label': _get_site_label(site), 'nets': [], 't': t}
+                            if net and net not in mpd_groups[site]['nets']:
+                                mpd_groups[site]['nets'].append(net)
+                        for site, grp in mpd_groups.items():
+                            net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
+                            lines.append(f"  • {grp['label']}{net_part} - {grp['t']}")
 
                     if new_mll:
                         mll_groups = {}
@@ -746,23 +756,33 @@ def run_alarm_poll():
 
                     if cl_md:
                         lines.append("⚡ *MAC:*")
+                        cl_mac_groups = {}
                         for alarm in cl_md:
                             site = _site_key(alarm)
-                            label = _get_site_label(site)
                             net = _norm_net(alarm.get('network') or '')
-                            net_part = f" [{net}]" if net else ""
                             clear_t = _fmt_sdate(alarm.get('clear_time') or alarm.get('edateStr') or '', full=False)
-                            lines.append(f"  • {label}{net_part} - {clear_t}")
+                            if site not in cl_mac_groups:
+                                cl_mac_groups[site] = {'label': _get_site_label(site), 'nets': [], 't': clear_t}
+                            if net and net not in cl_mac_groups[site]['nets']:
+                                cl_mac_groups[site]['nets'].append(net)
+                        for site, grp in cl_mac_groups.items():
+                            net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
+                            lines.append(f"  • {grp['label']}{net_part} - {grp['t']}")
 
                     if cl_mpd:
                         lines.append("🔋 *GEN:*")
+                        cl_mpd_groups = {}
                         for alarm in cl_mpd:
                             site = _site_key(alarm)
-                            label = _get_site_label(site)
                             net = _norm_net(alarm.get('network') or '')
-                            net_part = f" [{net}]" if net else ""
                             clear_t = _fmt_sdate(alarm.get('clear_time') or alarm.get('edateStr') or '', full=False)
-                            lines.append(f"  • {label}{net_part} - {clear_t}")
+                            if site not in cl_mpd_groups:
+                                cl_mpd_groups[site] = {'label': _get_site_label(site), 'nets': [], 't': clear_t}
+                            if net and net not in cl_mpd_groups[site]['nets']:
+                                cl_mpd_groups[site]['nets'].append(net)
+                        for site, grp in cl_mpd_groups.items():
+                            net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
+                            lines.append(f"  • {grp['label']}{net_part} - {grp['t']}")
 
                     if cl_mll:
                         mll_cl_groups = {}
@@ -1380,26 +1400,35 @@ def send_periodic_full_report():
     # ── Section 1: MAC ──
     if md_list:
         lines.append("⚡ *MAC:*")
+        mac_groups = {}
         for alarm in md_list:
             site = _site_key(alarm)
-            label = _get_site_label(site)
             net = _norm_net(alarm.get('network') or '')
-            net_part = f" [{net}]" if net else ""
-            # Full format for summary
             t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '', full=True)
-            lines.append(f"  • {label}{net_part} - {t}")
+            if site not in mac_groups:
+                mac_groups[site] = {'label': _get_site_label(site), 'nets': [], 't': t}
+            if net and net not in mac_groups[site]['nets']:
+                mac_groups[site]['nets'].append(net)
+        for site, grp in mac_groups.items():
+            net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
+            lines.append(f"  • {grp['label']}{net_part} - {grp['t']}")
             total_active += 1
 
     # ── Section 2: GEN ──
     if mpd_list:
         lines.append("🔋 *GEN:*")
+        mpd_groups = {}
         for alarm in mpd_list:
             site = _site_key(alarm)
-            label = _get_site_label(site)
             net = _norm_net(alarm.get('network') or '')
-            net_part = f" [{net}]" if net else ""
             t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '', full=True)
-            lines.append(f"  • {label}{net_part} - {t}")
+            if site not in mpd_groups:
+                mpd_groups[site] = {'label': _get_site_label(site), 'nets': [], 't': t}
+            if net and net not in mpd_groups[site]['nets']:
+                mpd_groups[site]['nets'].append(net)
+        for site, grp in mpd_groups.items():
+            net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
+            lines.append(f"  • {grp['label']}{net_part} - {grp['t']}")
             total_active += 1
 
     # ── Section 3: MLL ──
