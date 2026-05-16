@@ -93,6 +93,26 @@ def add_mobile_equipment():
     return redirect(url_for('daily_work.daily_work', tab='equipment'))
 
 
+@daily_work_bp.route('/mobile-equipment/edit/<int:id>', methods=['POST'])
+@login_required
+def edit_mobile_equipment(id):
+    try:
+        equip = MobileEquipment.query.get_or_404(id)
+        equip.ma_thiet_bi = request.form['ma_thiet_bi'].strip()
+        equip.loai = request.form.get('loai', 'MPĐ')
+        equip.thong_so = request.form.get('thong_so', '').strip()
+        equip.trang_thai = request.form.get('trang_thai', 'Tốt')
+        equip.nl_ton = float(request.form.get('nl_ton', 0) or 0)
+        equip.ghi_chu = request.form.get('ghi_chu', '').strip()
+        db.session.commit()
+        flash(f'✅ Đã cập nhật {equip.ma_thiet_bi}', 'success')
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f'Edit equipment error: {e}')
+        flash('Có lỗi xảy ra khi cập nhật thiết bị.', 'danger')
+    return redirect(url_for('daily_work.daily_work', tab='equipment'))
+
+
 @daily_work_bp.route('/mobile-equipment/delete/<int:id>', methods=['POST'])
 @login_required
 @admin_required

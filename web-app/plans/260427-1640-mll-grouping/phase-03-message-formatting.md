@@ -1,4 +1,4 @@
-# Phase 03: Message Formatting
+ # Phase 03: Message Formatting
 
 ## Objective
 Tạo dòng text hiển thị cho mỗi trạm MLL đã được gom nhóm.
