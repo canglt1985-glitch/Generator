@@ -1,6 +1,13 @@
 # Changelog - Project VT3-VHKT
 
+## [2026-05-19]
+### Added
+- **Tính năng Xuất Excel Tồn Tại:** Thêm nút "Xuất Excel" trên tab Tồn Tại trong trang Công Việc Hàng Ngày. File xuất ra gồm: STT, Tên trạm, Lat, Long, Địa chỉ, Đánh giá tình trạng hư hỏng.
+- **API mới:** `GET /issues/export` (blueprint `daily_work`) — tự động JOIN StationIssue với DsStation để lấy tọa độ và địa chỉ.
+- **Thư viện:** `openpyxl` được sử dụng để sinh file `.xlsx` dạng BytesIO, trả về trực tiếp cho trình duyệt download.
+
 ## [2026-04-29]
+
 ### Added
 - **Tính năng:** Triển khai Hệ thống quản lý Quỹ tạm ứng cho anh Thái (Fund Management).
 - **Cấu trúc:** Bổ sung trường `tong_tien_nhan` vào `payment_groups.json` để theo dõi tiền tạm ứng lũy kế.
