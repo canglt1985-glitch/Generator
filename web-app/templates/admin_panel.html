@@ -98,7 +98,7 @@
                                             class="fas fa-key"></i></button>
                                     <form action="{{ url_for('core.delete_user', user_id=user.id) }}" method="POST"
                                         class="d-inline" onsubmit="return confirm('Xóa?')">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                         <button class="btn btn-ghost-danger btn-icon" title="Xóa"><i
                                                 class="fas fa-trash-alt"></i></button>
                                     </form>
@@ -138,12 +138,12 @@
                                 <td class="text-end">
                                     <form action="{{ url_for('core.approve_deletion', req_id=req.id) }}" method="POST"
                                         class="d-inline">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                         <button class="btn btn-success btn-sm me-1 px-3">Duyệt</button>
                                     </form>
                                     <form action="{{ url_for('core.reject_deletion', req_id=req.id) }}" method="POST"
                                         class="d-inline">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                         <button class="btn btn-outline-danger btn-sm px-3">Hủy</button>
                                     </form>
                                 </td>
@@ -181,7 +181,7 @@
                             </div>
                             <div class="card-body">
                                 <form action="{{ url_for('smartw.save_config') }}" method="POST">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <div class="mb-3">
                                         <label class="form-label">Username SmartW</label>
                                         <input type="text" name="smartw_username" class="form-control"
@@ -242,7 +242,7 @@
                                 <div class="d-flex gap-2 flex-wrap">
                                     <form action="{{ url_for('smartw.manual_trigger') }}" method="POST"
                                         class="d-inline">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                         <input type="hidden" name="trigger_type" value="alarm">
                                         <button class="btn btn-outline-primary btn-sm">
                                             <i class="fas fa-sync me-1"></i>Scrape MĐ/MPĐ/MLL
@@ -250,7 +250,7 @@
                                     </form>
                                     <form action="{{ url_for('smartw.manual_trigger') }}" method="POST"
                                         class="d-inline">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                         <input type="hidden" name="trigger_type" value="vhkt">
                                         <button class="btn btn-outline-info btn-sm">
                                             <i class="fas fa-chart-bar me-1"></i>Scrape VHKT
@@ -284,7 +284,7 @@
                             </div>
                             <div class="card-body">
                                 <form action="{{ url_for('datasite.save_config') }}" method="POST">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <div class="mb-3">
                                         <label class="form-label">Username</label>
                                         <input type="text" name="datasite_username" class="form-control"
@@ -610,7 +610,14 @@
         });
 
         try {
-            const r = await fetch('/api/datasite/sync/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ objects: sel }) });
+            const r = await fetch('/api/datasite/sync/start', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({ objects: sel })
+            });
             const j = await r.json();
             if (!j.success) {
                 appendSyncLog('❌ Khởi động thất bại: ' + (j.error || ''), '#ff6b6b');
@@ -639,7 +646,12 @@
         if (!confirm('Bạn có muốn dùng chung tài khoản SSO của SmartW cho DataSite không?')) return;
 
         try {
-            const resp = await fetch('/api/datasite/sync_from_smartw', { method: 'POST' });
+            const resp = await fetch('/api/datasite/sync_from_smartw', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                }
+            });
             const result = await resp.json();
             if (result.success) {
                 alert('Đã đồng bộ tài khoản từ SmartW thành công!');

@@ -946,7 +946,10 @@
 
         fetch('/api/smartw/trigger', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}'
+            },
             body: JSON.stringify({ type: 'alarm' })
         })
             .then(r => r.json())
