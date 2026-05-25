@@ -132,9 +132,9 @@ def scrape_pvoil_prices():
                 except ValueError:
                     continue
 
-                if 'RON 95-III' in product_name and 'E10' not in product_name:
+                if product_name == 'RON 95-III':
                     prices['xang_ron95'] = price_val
-                elif 'DO 0,05S-II' in product_name:
+                elif product_name == 'DO 0,05S-II':
                     prices['dau_do'] = price_val
 
         if not prices.get('xang_ron95') and not prices.get('dau_do'):
@@ -146,6 +146,42 @@ def scrape_pvoil_prices():
     except Exception as e:
         print(f"[FuelPrice] Error scraping webtygia: {e}")
         return None
+
+
+def recalculate_fuel_ledger_prices(start_date='2026-02-01'):
+    """Recalculate FuelLedger entries based on historical prices."""
+    from extensions import db
+    from models import FuelLedger
+    
+    history = _load_price_history()
+    # Sort history by date descending
+    history = sorted(history, key=lambda x: x['effective_date'], reverse=True)
+    
+    def get_gross_price(fuel_type, date_str):
+        for entry in history:
+            if entry['effective_date'] <= date_str:
+                return float(entry['xang_ron95'] if 'xăng' in fuel_type.lower() else entry['dau_do'])
+        return None
+
+    logs = FuelLedger.query.filter(FuelLedger.ngay >= start_date).all()
+    updated_count = 0
+    for log in logs:
+        if log.type in ['DIRECT_BUY', 'STOCK_IN']:
+            date_str = log.ngay.split(' ')[0]
+            new_price = get_gross_price(log.loai_nhien_lieu or 'Dầu', date_str)
+            if new_price and abs((log.don_gia or 0) - new_price) > 1:
+                log.don_gia = new_price
+                log.thanh_tien = round((log.so_luong or 0) * new_price)
+                updated_count += 1
+                
+    try:
+        db.session.commit()
+        return updated_count
+    except Exception as e:
+        db.session.rollback()
+        print(f"[FuelPrice] Failed to commit recalculate: {e}")
+        return 0
+
 
 
 def save_fuel_prices(prices):

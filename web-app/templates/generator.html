@@ -27,6 +27,13 @@
                     <a class="dropdown-item" href="{{ url_for('generator.export_fuel_ledger') }}">
                         <i class="fas fa-file-export me-2"></i>Xuất sổ cái nhiên liệu
                     </a>
+                    <a class="dropdown-item text-primary fw-bold" href="#" onclick="triggerFuelSync(event)">
+                        <i class="fas fa-sync me-2 text-primary"></i>Đồng bộ đơn giá PVOil
+                    </a>
+                    <form id="fuelSyncForm" action="{{ url_for('generator.recalculate_fuel_ledger_route') }}"
+                        method="POST" style="display:none;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    </form>
                     {% elif active_tab == 'expense' %}
                     <a class="dropdown-item" href="{{ url_for('generator.export_expenses') }}">
                         <i class="fas fa-file-export me-2"></i>Xuất chi phí khác
@@ -311,7 +318,7 @@
                                 </button>
                                 <form action="{{ url_for('generator.delete_fuel_ledger', id=log.id) }}" method="POST"
                                     class="d-inline" onsubmit="return confirm('Xóa?')">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <button type="submit" class="btn btn-icon btn-ghost-danger btn-sm"><i
                                             class="fas fa-trash-alt"></i></button>
                                 </form>
@@ -407,7 +414,7 @@
                                 </button>
                                 <form action="{{ url_for('generator.delete_other_expense', id=item.id) }}" method="POST"
                                     class="d-inline" onsubmit="return confirm('Xóa chi phí này?');">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <button type="submit" class="btn btn-icon btn-ghost-danger btn-sm"><i
                                             class="fas fa-trash-alt"></i></button>
                                 </form>
@@ -483,11 +490,13 @@
                     <div class="card-body py-2">
                         <div class="row mb-2">
                             <div class="col-6 text-muted small">Tổng tiền đã tạm ứng:</div>
-                            <div class="col-6 text-end fw-bold text-primary" id="mn-tong-quy">{{ "{:,.0f}".format(mn_tong_quy) }} đ</div>
+                            <div class="col-6 text-end fw-bold text-primary" id="mn-tong-quy">{{
+                                "{:,.0f}".format(mn_tong_quy) }} đ</div>
                         </div>
                         <div class="row mb-2">
                             <div class="col-6 text-muted small">Lũy kế phát sinh (tất cả):</div>
-                            <div class="col-6 text-end fw-bold" id="mn-tong-ps">{{ "{:,.0f}".format(mua_ngoai_accum) }} đ</div>
+                            <div class="col-6 text-end fw-bold" id="mn-tong-ps">{{ "{:,.0f}".format(mua_ngoai_accum) }}
+                                đ</div>
                         </div>
                         <div class="row mb-2">
                             <div class="col-6 text-muted small">Đã TT đến ngày:</div>
@@ -510,7 +519,8 @@
                         </div>
                         <div class="row mb-2">
                             <div class="col-6 text-muted small">Số dư quỹ (Thái):</div>
-                            <div class="col-6 text-end fw-bold {{ 'text-success' if mn_so_du >= 0 else 'text-danger' }}" id="mn-so-du">
+                            <div class="col-6 text-end fw-bold {{ 'text-success' if mn_so_du >= 0 else 'text-danger' }}"
+                                id="mn-so-du">
                                 {{ "{:,.0f}".format(mn_so_du) }} đ
                             </div>
                         </div>
@@ -536,8 +546,7 @@
                         <button class="btn btn-warning btn-sm btn-edit-pg" data-bs-toggle="modal"
                             data-bs-target="#paymentGroupModal" data-group="mua_ngoai" data-label="Chi Phí Mua Ngoài"
                             data-den-ngay="{{ mn.da_thanh_toan_den }}" data-da-tt="{{ mn_da_tt }}"
-                            data-tong-quy="{{ mn_tong_quy }}"
-                            data-ghi-chu="{{ mn.ghi_chu }}">
+                            data-tong-quy="{{ mn_tong_quy }}" data-ghi-chu="{{ mn.ghi_chu }}">
                             <i class="fas fa-pen me-1"></i>Cập nhật
                         </button>
                     </div>
@@ -556,11 +565,13 @@
                     <div class="card-body py-2">
                         <div class="row mb-2">
                             <div class="col-6 text-muted small">Tổng tiền đã tạm ứng:</div>
-                            <div class="col-6 text-end fw-bold text-primary" id="cx-tong-quy">{{ "{:,.0f}".format(cx_tong_quy) }} đ</div>
+                            <div class="col-6 text-end fw-bold text-primary" id="cx-tong-quy">{{
+                                "{:,.0f}".format(cx_tong_quy) }} đ</div>
                         </div>
                         <div class="row mb-2">
                             <div class="col-6 text-muted small">Lũy kế phát sinh (tất cả):</div>
-                            <div class="col-6 text-end fw-bold" id="cx-tong-ps">{{ "{:,.0f}".format(cx222_accum) }} đ</div>
+                            <div class="col-6 text-end fw-bold" id="cx-tong-ps">{{ "{:,.0f}".format(cx222_accum) }} đ
+                            </div>
                         </div>
                         <div class="row mb-2">
                             <div class="col-6 text-muted small">Đã TT đến ngày:</div>
@@ -583,7 +594,8 @@
                         </div>
                         <div class="row mb-2">
                             <div class="col-6 text-muted small">Số dư quỹ:</div>
-                            <div class="col-6 text-end fw-bold {{ 'text-success' if cx_so_du >= 0 else 'text-danger' }}" id="cx-so-du">
+                            <div class="col-6 text-end fw-bold {{ 'text-success' if cx_so_du >= 0 else 'text-danger' }}"
+                                id="cx-so-du">
                                 {{ "{:,.0f}".format(cx_so_du) }} đ
                             </div>
                         </div>
@@ -609,8 +621,7 @@
                         <button class="btn btn-primary btn-sm btn-edit-pg" data-bs-toggle="modal"
                             data-bs-target="#paymentGroupModal" data-group="cx222" data-label="Chi Phí CX222"
                             data-den-ngay="{{ cx.da_thanh_toan_den }}" data-da-tt="{{ cx_da_tt }}"
-                            data-tong-quy="{{ cx_tong_quy }}"
-                            data-ghi-chu="{{ cx.ghi_chu }}">
+                            data-tong-quy="{{ cx_tong_quy }}" data-ghi-chu="{{ cx.ghi_chu }}">
                             <i class="fas fa-pen me-1"></i>Cập nhật
                         </button>
                     </div>
@@ -708,7 +719,7 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form action="{{ url_for('generator.add_fuel_ledger') }}" method="POST">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <!-- Loại giao dịch -->
                     <div class="px-3 pt-3 pb-2">
@@ -832,12 +843,12 @@
         const priceInput = document.getElementById('inp_dongia');
         const priceSource = document.getElementById('price-source');
         const dateInput = document.getElementById('inp_ngay_nhien_lieu');
-        
+
         if (!nlType || !priceInput) return;
-        
+
         const type = nlType.value;
         const date = dateInput ? dateInput.value : '';
-        
+
         // Default UI feedback
         if (priceSource) priceSource.textContent = 'Đang tra cứu...';
 
@@ -845,7 +856,7 @@
             const resp = await fetch(`/api/fuel-price?type=${encodeURIComponent(type)}&date=${encodeURIComponent(date)}`);
             const data = await resp.json();
             console.log("Fuel price data:", data); // Debugging
-            
+
             let price = 0;
             if (data.price !== undefined && data.price > 0) {
                 price = data.price;
@@ -880,7 +891,7 @@
     // Re-apply price when fuel type or date changes
     const nlSelect = document.getElementById('inp_loai_nl');
     if (nlSelect) nlSelect.addEventListener('change', applyFuelPrice);
-    
+
     const fuelDateInput = document.getElementById('inp_ngay_nhien_lieu');
     if (fuelDateInput) fuelDateInput.addEventListener('change', applyFuelPrice);
 
@@ -933,7 +944,7 @@
             stationInput.required = true;
         } else if (type === 'VEHICLE_FUEL') {
             // Hide station, show vehicle
-            groupStation.style.display = 'none'; 
+            groupStation.style.display = 'none';
             dimGroup(groupActual);
             groupVehicle.style.display = 'block';
             groupVehicle.style.opacity = '1';
@@ -942,7 +953,7 @@
             vehicleSelect.required = true;
             nccSelect.required = true;
             // Sync vehicle to station ID field
-            vehicleSelect.onchange = function() { stationInput.value = this.value; };
+            vehicleSelect.onchange = function () { stationInput.value = this.value; };
         } else {
             // DIRECT_BUY
             dimGroup(groupVehicle);
@@ -1150,7 +1161,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form action="{{ url_for('generator.add_other_expense') }}" method="POST">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">Ngày chi</label>
@@ -1191,7 +1202,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="editForm" method="POST">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">ID Trạm</label>
@@ -1324,6 +1335,13 @@
     }
 </style>
 <script>
+    function triggerFuelSync(event) {
+        event.preventDefault();
+        if (confirm("Hệ thống sẽ rà soát từ ngày 01/02/2026 và tự động cập nhật đơn giá theo lịch sử thị trường PVOil. Bạn có chắc chắn muốn thực hiện?")) {
+            document.getElementById('fuelSyncForm').submit();
+        }
+    }
+
     // Switch generatoa nav-cards
     function switchGenTab(tabName) {
         // ALL tabs need server-side data loading (conditional queries)
@@ -1395,7 +1413,7 @@
             btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang lưu...';
             fetch('{{ url_for("core.save_payment") }}', {
                 method: 'POST',
-                headers: { 
+                headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': '{{ csrf_token() }}'
                 },
@@ -1477,16 +1495,16 @@
 
             fetch('{{ url_for("generator.save_payment_group_gen") }}', {
                 method: 'POST',
-                headers: { 
+                headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': '{{ csrf_token() }}'
                 },
-                body: JSON.stringify({ 
-                    group: group, 
-                    da_thanh_toan_den: den_ngay, 
-                    so_tien_da_tt: da_tt, 
+                body: JSON.stringify({
+                    group: group,
+                    da_thanh_toan_den: den_ngay,
+                    so_tien_da_tt: da_tt,
                     tong_tien_nhan: tong_quy,
-                    ghi_chu: ghi_chu 
+                    ghi_chu: ghi_chu
                 })
             })
                 .then(function (r) { return r.json(); })
@@ -1528,7 +1546,7 @@
                                 conLaiEl.innerHTML = '<span class="text-success">✅ Đã TT hết</span>';
                             }
                         }
-                        
+
                         // Update the button data attributes so modal opens with new values next time
                         var btn = document.querySelector('.btn-edit-pg[data-group="' + group + '"]');
                         if (btn) {
@@ -1584,9 +1602,9 @@
                 .then(function (r) { return r.json(); })
                 .then(function (data) {
                     if (!data.ok) { statusDiv.style.display = 'none'; return; }
-                    
+
                     statusDiv.querySelector('div').className = 'd-flex align-items-center text-success small fw-bold';
-                    
+
                     if (data.already_paid) {
                         statusText.innerHTML = 'Đã thanh toán hết đến ' + data.last_paid_date;
                         _pgApiTotal = 0;
@@ -1597,7 +1615,7 @@
                         _pgApiTotal = 0;
                         return;
                     }
-                    
+
                     var fmtTotal = Math.round(data.total).toLocaleString('vi-VN');
                     var totalVal = Math.round(data.total);
                     _pgApiTotal = totalVal; // ← Lưu lại tổng lũy kế đúng theo ngày

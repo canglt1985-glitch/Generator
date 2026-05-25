@@ -670,3 +670,13 @@ def get_station_info(station_id):
             'total_purchased': round(total_purchased, 2)
         }
     }
+
+
+@generator_bp.route('/fuel-ledger/recalculate', methods=['POST'])
+@login_required
+@admin_required
+def recalculate_fuel_ledger_route():
+    from fuel_price import recalculate_fuel_ledger_prices
+    updated = recalculate_fuel_ledger_prices()
+    flash(f"Đã đồng bộ đơn giá thành công! Đã rà soát và cập nhật {updated} giao dịch nhập kho/mua nhiên liệu.", "success")
+    return redirect(url_for('generator.generator', tab='fuel'))
