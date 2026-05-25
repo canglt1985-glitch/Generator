@@ -1,0 +1,123 @@
+import React, { useMemo } from 'react';
+import { Eye, Edit, Trash2 } from 'lucide-react';
+import { getContractFlags, checkPriceFrame } from '../../utils/contractChecks';
+
+export default function ContractTable({ contracts, onSelect }) {
+  const formatDate = (dateString) => {
+    if (!dateString || dateString === 'N/A') return 'N/A';
+    try {
+      const d = new Date(dateString);
+      if (isNaN(d.getTime())) return dateString;
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      return `${day}/${month}/${year}`;
+    } catch (e) {
+      return dateString;
+    }
+  };
+
+  const sortedContracts = useMemo(() => {
+    if (!contracts) return [];
+    return [...contracts].sort((a, b) => {
+      const dateA = a.dates?.ngay_ket_thuc_hd ? new Date(a.dates.ngay_ket_thuc_hd).getTime() : Infinity;
+      const dateB = b.dates?.ngay_ket_thuc_hd ? new Date(b.dates.ngay_ket_thuc_hd).getTime() : Infinity;
+      return dateA - dateB;
+    });
+  }, [contracts]);
+
+  if (!contracts || contracts.length === 0) {
+    return (
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 text-center text-slate-500">
+        Không có dữ liệu hợp đồng.
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-sm text-slate-600">
+          <thead className="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
+            <tr>
+              <th className="py-3 px-3 whitespace-nowrap text-center">Tình trạng</th>
+              <th className="py-3 px-3 whitespace-nowrap">Site ID</th>
+              <th className="py-3 px-3 min-w-[180px]">Chủ Thể</th>
+              <th className="py-3 px-3 whitespace-nowrap">Hết Hạn</th>
+              <th className="py-3 px-3 whitespace-nowrap text-right">Giá Thuê</th>
+              <th className="py-3 px-3 whitespace-nowrap text-right">Chênh Lệch</th>
+              <th className="py-3 px-3 whitespace-nowrap text-center">Chu kỳ TT</th>
+              <th className="py-3 px-3 whitespace-nowrap text-center">Đã TT Đến</th>
+              <th className="py-3 px-3 whitespace-nowrap text-center">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {sortedContracts.map((contract) => {
+              const flags = getContractFlags(contract);
+              const priceCheck = checkPriceFrame(contract);
+              const siteId = contract.site_id || 'N/A';
+              const landlordName = contract.contractor_info?.chu_the_hop_dong || 'N/A';
+              const price = contract.financials?.gia_thue_co_vat 
+                ? (contract.financials.gia_thue_co_vat / 1000000).toFixed(1) + 'tr'
+                : '-';
+                
+              const diffText = priceCheck.diff > 0 
+                ? '+' + new Intl.NumberFormat('vi-VN').format(priceCheck.diff) 
+                : 'OK';
+                
+              const paymentCycle = contract.financials?.chu_ky_thanh_toan || '-';
+              const endDate = formatDate(contract.dates?.ngay_ket_thuc_hd);
+              const paidUntil = formatDate(contract.financials?.da_thanh_toan_den);
+
+              // Render badges
+              const renderBadges = () => {
+                return (
+                  <div className="flex items-center justify-center gap-1">
+                    {flags.includes('can_gia_han') && <span className="text-amber-500" title="Cần gia hạn">⚠️</span>}
+                    {flags.includes('ngoai_khung_gia') && <span className="text-orange-500" title="Ngoài khung giá">💰</span>}
+                    {flags.includes('lech_tai_khoan') && <span className="text-purple-500" title="Lệch tài khoản">🏦</span>}
+                    {flags.includes('chua_thanh_toan') && <span className="text-red-500" title="Chưa thanh toán">💳</span>}
+                    {flags.length === 0 && <span className="text-emerald-500" title="Tốt">✅</span>}
+                  </div>
+                );
+              };
+
+              return (
+                <tr key={contract.contract_id} className="hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => onSelect && onSelect(contract)}>
+                  <td className="py-3 px-3">{renderBadges()}</td>
+                  <td className="py-3 px-3 font-medium text-blue-700">
+                    <div>{siteId}</div>
+                    {contract.datasites?.site_id_old && <div className="text-xs text-slate-400">{contract.datasites.site_id_old}</div>}
+                  </td>
+                  <td className="py-3 px-3 truncate max-w-[200px]" title={landlordName}>{landlordName}</td>
+                  <td className={`py-3 px-3 font-medium ${flags.includes('can_gia_han') ? 'text-amber-600' : 'text-slate-600'}`}>
+                    {endDate}
+                  </td>
+                  <td className="py-3 px-3 text-right font-medium text-rose-600">{price}</td>
+                  <td className={`py-3 px-3 text-right font-medium ${priceCheck.diff > 0 ? 'text-orange-600' : 'text-emerald-600'}`}>
+                    {diffText}
+                  </td>
+                  <td className="py-3 px-3 text-center text-slate-600">{paymentCycle}</td>
+                  <td className={`py-3 px-3 text-center font-medium ${flags.includes('chua_thanh_toan') ? 'text-red-500' : 'text-emerald-600'}`}>
+                    {paidUntil}
+                  </td>
+                  <td className="py-3 px-3">
+                    <div className="flex items-center justify-center">
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); onSelect && onSelect(contract); }}
+                        className="p-1.5 text-slate-400 hover:text-blue-600 rounded-md hover:bg-blue-50 transition-colors"
+                        title="Xem chi tiết"
+                      >
+                        <Eye size={18} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
