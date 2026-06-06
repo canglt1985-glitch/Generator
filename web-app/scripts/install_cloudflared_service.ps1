@@ -1,4 +1,4 @@
-# install_cloudflared_service.ps1
+﻿# install_cloudflared_service.ps1
 # Requires PowerShell run as Administrator
 
 $ErrorActionPreference = "Stop"

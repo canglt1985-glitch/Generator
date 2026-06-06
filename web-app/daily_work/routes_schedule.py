@@ -166,10 +166,11 @@ def import_power_schedule():
 def manual_fetch_outages():
     try:
         script_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'fetch_outages.py')
-        python_path = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
-            '.venv', 'bin', 'python'
-        )
+        python_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), '.venv', 'bin', 'python')
+        if not os.path.exists(python_path):
+            # Try Windows path
+            python_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), '.venv_win', 'Scripts', 'python.exe')
+        
         if not os.path.exists(python_path):
             python_path = 'python'
 

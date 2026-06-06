@@ -70,31 +70,33 @@ def _get_site_label(site_id: str) -> str:
     Falls back to GeneralInfo.id_old if available.
     Returns '*SITE_ID*' alone when no mapping found.
     """
-    try:
-        from models import DsSiteRegistry
-        row = DsSiteRegistry.query.filter(
-            (DsSiteRegistry.site_id_new == site_id.upper()) |
-            (DsSiteRegistry.site_id_old == site_id.upper())
-        ).first()
-        if row and row.site_id_new and row.site_id_old:
-            return f"*{row.site_id_new}* ({row.site_id_old})"
-        if row and row.site_id_new:
-            return f"*{row.site_id_new}*"
-    except Exception as e:
-        logger.error(f'SmartW _get_site_label Registry error for {site_id}: {e}')
-        pass
+    from app import app
+    with app.app_context():
+        try:
+            from models import DsSiteRegistry
+            row = DsSiteRegistry.query.filter(
+                (DsSiteRegistry.site_id_new == site_id.upper()) |
+                (DsSiteRegistry.site_id_old == site_id.upper())
+            ).first()
+            if row and row.site_id_new and row.site_id_old:
+                return f"*{row.site_id_new}* ({row.site_id_old})"
+            if row and row.site_id_new:
+                return f"*{row.site_id_new}*"
+        except Exception as e:
+            logger.error(f'SmartW _get_site_label Registry error for {site_id}: {e}')
+            pass
 
-    # Fallback: try GeneralInfo for legacy id_old field
-    try:
-        from models import GeneralInfo
-        info = GeneralInfo.query.filter_by(id_tram=site_id).first()
-        if info:
-            old_id = getattr(info, 'id_old', None)
-            if old_id and old_id != site_id:
-                return f"*{site_id}* ({old_id})"
-    except Exception as e:
-        logger.error(f'SmartW _get_site_label GeneralInfo error for {site_id}: {e}')
-        pass
+        # Fallback: try GeneralInfo for legacy id_old field
+        try:
+            from models import GeneralInfo
+            info = GeneralInfo.query.filter_by(id_tram=site_id).first()
+            if info:
+                old_id = getattr(info, 'id_old', None)
+                if old_id and old_id != site_id:
+                    return f"*{site_id}* ({old_id})"
+        except Exception as e:
+            logger.error(f'SmartW _get_site_label GeneralInfo error for {site_id}: {e}')
+            pass
 
     # No mapping found - just return the site_id bolded
     return f"*{site_id}*"
@@ -119,16 +121,18 @@ def _norm_net(network: str) -> str:
 
 def _old_id(site_id: str) -> str:
     """Look up legacy site ID from site registry."""
-    try:
-        from models import DsSiteRegistry
-        row = DsSiteRegistry.query.filter(
-            (DsSiteRegistry.site_id_new == site_id.upper()) |
-            (DsSiteRegistry.site_id_old == site_id.upper())
-        ).first()
-        if row and row.site_id_old:
-            return row.site_id_old
-    except Exception:
-        pass
+    from app import app
+    with app.app_context():
+        try:
+            from models import DsSiteRegistry
+            row = DsSiteRegistry.query.filter(
+                (DsSiteRegistry.site_id_new == site_id.upper()) |
+                (DsSiteRegistry.site_id_old == site_id.upper())
+            ).first()
+            if row and row.site_id_old:
+                return row.site_id_old
+        except Exception:
+            pass
     return site_id
 
 
@@ -288,6 +292,8 @@ def _load_status() -> dict:
                 # Ensure login_fail_count exists (migration)
                 if 'login_fail_count' not in data:
                     data['login_fail_count'] = 0
+                if 'viber_sso_error_sent' not in data:
+                    data['viber_sso_error_sent'] = False
                 return data
         except (json.JSONDecodeError, IOError):
             pass
@@ -297,7 +303,8 @@ def _load_status() -> dict:
         'errors': [],
         'is_running': False,
         'scheduler_enabled': False,
-        'login_fail_count': 0
+        'login_fail_count': 0,
+        'viber_sso_error_sent': False
     }
 
 
@@ -306,6 +313,34 @@ def _save_status(status: dict):
     os.makedirs(DATA_DIR, exist_ok=True)
     with open(STATUS_FILE, 'w', encoding='utf-8') as f:
         json.dump(status, f, ensure_ascii=False, indent=2)
+
+
+VIBER_LOGIN_FAIL_THRESHOLD = MAX_LOGIN_FAILURES
+
+def _record_login_failure(status: dict, source: str):
+    """Increment login failure count and send a notification to Viber if threshold is reached."""
+    status['login_fail_count'] = status.get('login_fail_count', 0) + 1
+    fail_count = status['login_fail_count']
+    logger.warning(f'SmartW Worker ({source}): Login failure #{fail_count}/{MAX_LOGIN_FAILURES}')
+    
+    # Notify Viber if threshold reached and notification not sent yet
+    if fail_count >= VIBER_LOGIN_FAIL_THRESHOLD:
+        if not status.get('viber_sso_error_sent'):
+            msg = [
+                "⚠️ *CẢNH BÁO: LỖI ĐĂNG NHẬP SSO SMARTW*",
+                "------------",
+                f"Hệ thống gặp lỗi đăng nhập SSO SmartW liên tiếp {fail_count} lần.",
+                "Tác vụ tự động quét SmartW tạm thời không thể lấy dữ liệu mới.",
+                "Tạm ngưng gửi các bản tin cảnh báo SmartW lên group Viber.",
+                "------------",
+                "👉 Vui lòng kiểm tra lại kết nối VPN Mobifone hoặc tài khoản/mật khẩu trong trang quản trị."
+            ]
+            try:
+                _send_viber_report(msg)
+                status['viber_sso_error_sent'] = True
+                logger.info("SmartW Worker: Sent SSO login failure warning to Viber")
+            except Exception as ve:
+                logger.error(f"Failed to send SSO failure alert to Viber: {ve}")
 
 
 def get_scrape_status() -> dict:
@@ -348,6 +383,7 @@ def reset_login_failures():
     """Reset login failure counter + destroy scraper. Called when credentials are updated."""
     status = _load_status()
     status['login_fail_count'] = 0
+    status['viber_sso_error_sent'] = False
     # Clear login-related errors
     status['errors'] = [
         e for e in status['errors']
@@ -643,8 +679,7 @@ def run_alarm_poll():
             # Increment login failure counter for login errors
             err_lower = result['error'].lower()
             if any(kw in err_lower for kw in ['login', 'đăng nhập', 'cooldown', 'credentials']):
-                status['login_fail_count'] = status.get('login_fail_count', 0) + 1
-                logger.warning(f'SmartW Worker: Login failure #{status["login_fail_count"]}/{MAX_LOGIN_FAILURES}')
+                _record_login_failure(status, 'alarm')
         else:
             logger.info(f'SmartW Worker: ✅ Alarm poll done — '
                         f'MĐ: {len(result.get("md", []))}, '
@@ -654,6 +689,7 @@ def run_alarm_poll():
 
             # Login succeeded → reset failure counter
             status['login_fail_count'] = 0
+            status['viber_sso_error_sent'] = False
 
             # Clear stale alarm errors on success
             status['errors'] = [
@@ -915,13 +951,13 @@ def run_vhkt_poll():
             status['errors'] = status['errors'][-10:]
             err_lower_v = result.get('error', '').lower()
             if any(kw in err_lower_v for kw in ['login', 'đăng nhập', 'cooldown', 'credentials']):
-                status['login_fail_count'] = status.get('login_fail_count', 0) + 1
-                logger.warning(f'SmartW Worker: Login failure #{status["login_fail_count"]}/{MAX_LOGIN_FAILURES}')
+                _record_login_failure(status, 'vhkt')
         else:
             logger.info(f'SmartW Worker: ✅ VHKT poll done — {len(result.get("vhkt", []))} records')
 
             # Login succeeded → reset failure counter
             status['login_fail_count'] = 0
+            status['viber_sso_error_sent'] = False
 
             # Clear stale VHKT errors on success
             status['errors'] = [
@@ -1026,10 +1062,11 @@ def run_mfd_import_poll(target_date: str = None):
             status['errors'] = status['errors'][-10:]
             err_lower = scrape_result['error'].lower()
             if any(kw in err_lower for kw in ['login', 'credentials']):
-                status['login_fail_count'] = status.get('login_fail_count', 0) + 1
+                _record_login_failure(status, 'mfd_import')
         else:
             # Scrape OK → run import logic (needs Flask app context)
             status['login_fail_count'] = 0
+            status['viber_sso_error_sent'] = False
             raw_data = scrape_result.get('data', [])
 
             if raw_data:
@@ -1376,6 +1413,12 @@ def send_periodic_full_report():
     """Send a full status report to Viber Channel (Periodic 2-hour Review).
     Explicitly triggered by scheduler even if no changes occur.
     """
+    status = _load_status()
+    fail_count = status.get('login_fail_count', 0)
+    if fail_count >= MAX_LOGIN_FAILURES:
+        logger.warning(f"SmartW Worker: 🕒 Periodic report skipped — login is paused due to {fail_count} consecutive failures.")
+        return
+
     logger.info("SmartW Worker: 🕒 Starting periodic 2-hour review report...")
     
     # 1. Load latest active data from disk

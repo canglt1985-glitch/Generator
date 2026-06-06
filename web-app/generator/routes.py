@@ -192,7 +192,7 @@ def generator():
             f_end = f"{fuel_year+1}-01-01"
         fuel_logs = FuelLedger.query.filter(
             FuelLedger.ngay >= f_start, FuelLedger.ngay < f_end
-        ).order_by(FuelLedger.ngay.desc()).limit(30).all()
+        ).order_by(FuelLedger.ngay.desc()).all()
 
     elif active_tab == 'expense':
         # Chi phí khác: lọc tháng/năm, default tháng hiện tại
@@ -207,7 +207,7 @@ def generator():
             e_end = f"{exp_year+1}-01-01"
         expenses = OtherExpense.query.filter(
             OtherExpense.ngay_su_dung >= e_start, OtherExpense.ngay_su_dung < e_end
-        ).order_by(OtherExpense.ngay_su_dung.desc()).limit(30).all()
+        ).order_by(OtherExpense.ngay_su_dung.desc()).all()
 
     elif active_tab == 'payment':
         # Payment aggregation (heaviest query — only when needed)

@@ -132,11 +132,18 @@ def scrape_pvoil_prices():
                 except ValueError:
                     continue
 
-                if product_name == 'RON 95-III':
-                    prices['xang_ron95'] = price_val
-                elif product_name == 'DO 0,05S-II':
-                    prices['dau_do'] = price_val
+                if product_name in ('E10 RON 95-III', 'Xăng E10 RON 95-III'):
+                    if not prices.get('_found_e10'):
+                        prices['xang_ron95'] = price_val
+                        prices['_found_e10'] = True
+                elif product_name in ('RON 95-III', 'Xăng RON 95-III') and not prices.get('_found_e10'):
+                    if 'xang_ron95' not in prices:
+                        prices['xang_ron95'] = price_val
+                elif product_name in ('DO 0,05S-II', 'Dầu DO 0,05S-II'):
+                    if 'dau_do' not in prices:
+                        prices['dau_do'] = price_val
 
+        prices.pop('_found_e10', None)
         if not prices.get('xang_ron95') and not prices.get('dau_do'):
             print("[FuelPrice] Could not parse prices from webtygia table")
             return None
