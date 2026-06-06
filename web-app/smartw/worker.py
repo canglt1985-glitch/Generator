@@ -1413,12 +1413,6 @@ def send_periodic_full_report():
     """Send a full status report to Viber Channel (Periodic 2-hour Review).
     Explicitly triggered by scheduler even if no changes occur.
     """
-    status = _load_status()
-    fail_count = status.get('login_fail_count', 0)
-    if fail_count >= MAX_LOGIN_FAILURES:
-        logger.warning(f"SmartW Worker: 🕒 Periodic report skipped — login is paused due to {fail_count} consecutive failures.")
-        return
-
     logger.info("SmartW Worker: 🕒 Starting periodic 2-hour review report...")
     
     # 1. Load latest active data from disk
@@ -1513,29 +1507,7 @@ def send_periodic_full_report():
             total_active += 1
 
     if total_active > 0:
-        report_text = "\n".join(lines)
-        
-        # Check if the report content has changed since the last sent summary
-        last_summary_file = os.path.join(DATA_DIR, 'last_summary.txt')
-        has_changed = True
-        if os.path.exists(last_summary_file):
-            try:
-                with open(last_summary_file, 'r', encoding='utf-8') as f:
-                    last_content = f.read()
-                if last_content.strip() == report_text.strip():
-                    has_changed = False
-            except Exception as e:
-                logger.error(f"Error reading last_summary.txt: {e}")
-                
-        if has_changed:
-            _send_viber_report(lines)
-            logger.info(f"SmartW Worker: ✅ Periodic report sent ({total_active} active alarms)")
-            try:
-                with open(last_summary_file, 'w', encoding='utf-8') as f:
-                    f.write(report_text)
-            except Exception as e:
-                logger.error(f"Error writing last_summary.txt: {e}")
-        else:
-            logger.info("SmartW Worker: 🕒 Periodic report skipped — content has not changed since last report.")
+        _send_viber_report(lines)
+        logger.info(f"SmartW Worker: ✅ Periodic report sent ({total_active} active alarms)")
     else:
         logger.info("SmartW Worker: 🏠 No active alarms, skipping periodic report.")
