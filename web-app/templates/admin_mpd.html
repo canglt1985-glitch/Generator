@@ -283,7 +283,7 @@
                                 class="fas fa-plus me-1"></i>Thêm</button>
                     </div>
                 </div>
-                {% set ns = namespace(total=0, hours=0, fuel_xang=0, fuel_dau=0) %}
+                {% set ns = namespace(total=0, hours=0, fuel_xang=0, fuel_dau=0, vat=0) %}
                 {% for log in logs %}
                 {% set ns.total = ns.total + (log.thanh_tien or 0) %}
                 {% set ns.hours = ns.hours + (log.thoi_gian_hoat_dong or 0) %}
@@ -292,9 +292,14 @@
                 {% else %}
                 {% set ns.fuel_dau = ns.fuel_dau + (log.nhien_lieu_tieu_hao or 0) %}
                 {% endif %}
+                {% if log.ngay_van_hanh and log.ngay_van_hanh >= '2026-03-26' %}
+                {# VAT 0% #}
+                {% else %}
+                {% set ns.vat = ns.vat + ((log.thanh_tien or 0) * 0.08)|round(0)|int %}
+                {% endif %}
                 {% endfor %}
                 {% set total_thanh_tien = ns.total %}
-                {% set total_vat = (total_thanh_tien * 0.08)|round(0)|int %}
+                {% set total_vat = ns.vat %}
                 {% set total_cong = (total_thanh_tien + total_vat)|int %}
                 <div class="row g-2 mb-3">
                     <div class="col-auto">
@@ -340,7 +345,7 @@
                     <div class="col-auto">
                         <div class="card card-sm bg-yellow-lt">
                             <div class="card-body py-2 px-3">
-                                <div class="text-muted small">VAT 8%</div>
+                                <div class="text-muted small">VAT</div>
                                 <div class="fw-bold text-warning">{{ "{:,.0f}".format(total_vat) }}đ</div>
                             </div>
                         </div>
