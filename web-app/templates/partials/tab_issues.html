@@ -13,6 +13,10 @@
             class="btn {{ 'btn-success' if request.args.get('status') == 'Đã XL' else 'btn-outline-success' }} rounded-pill-end">🟢
             Đã XL</a>
     </div>
+    <a href="{{ url_for('daily_work.export_issues', status=request.args.get('status', 'Chưa XL')) }}"
+        class="btn btn-sm btn-success ms-auto shadow-sm">
+        <i class="fas fa-file-excel me-1"></i> Xuất Excel
+    </a>
 </div>
 
 {# Issues Table #}
@@ -73,8 +77,8 @@
                     <td>
                         <form action="{{ url_for('daily_work.toggle_issue', id=item.id) }}" method="POST"
                             style="display:inline">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
                             {% if item.trang_thai == 'Chưa XL' %}
                             <button type="submit" class="badge bg-red-lt border-0 cursor-pointer"
                                 title="Click để đánh dấu Đã XL">🔴 Chưa XL</button>
@@ -88,8 +92,8 @@
                     <td class="text-end">
                         <form action="{{ url_for('daily_work.delete_issue', id=item.id) }}" method="POST"
                             style="display:inline" onsubmit="return confirm('Xóa tồn tại này?')">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
                             <button type="submit" class="btn btn-sm btn-ghost-danger p-1">
                                 <i class="fas fa-trash-alt"></i>
                             </button>
@@ -121,8 +125,8 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form action="{{ url_for('daily_work.add_issue') }}" method="POST">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
                 <div class="modal-body">
                     <div class="row g-2 mb-3">
                         <div class="col-6">

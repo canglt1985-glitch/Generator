@@ -1,13 +1,13 @@
 # System Architecture — Quản Lý Vận Hành Trạm VT3
 
-**Cập nhật:** 13/02/2026  
-**Version:** 2.0
+**Cập nhật:** 13/03/2026  
+**Version:** 4.0
 
 ---
 
 ## 1. TỔNG QUAN
 
-Web Application nội bộ phục vụ **Tổ Viễn Thông 3 — MobiFone Đồng Nai**. Hệ thống giúp nhân viên quản lý toàn bộ hoạt động vận hành trạm viễn thông qua 3 chức năng chính.
+Web Application nội bộ phục vụ **Tổ Viễn Thông 3 — MobiFone Đồng Nai**. Hệ thống giúp nhân viên quản lý toàn bộ hoạt động vận hành trạm viễn thông qua 4 chức năng chính.
 
 ```mermaid
 graph TB
@@ -16,10 +16,12 @@ graph TB
         A[🏠 Dashboard] --> F1
         A --> F2
         A --> F3
+        A --> F4
 
         F1["📋 Feature 1<br/>Nhật Ký Công Việc"]
         F2["⛽ Feature 2<br/>Vận Hành Máy Phát Điện"]
         F3["📡 Feature 3<br/>Vận Hành SmartW (VHKT)"]
+        F4["🏗️ Feature 4<br/>DataSite Deep Sync"]
     end
 
     subgraph "💾 Data Layer"
@@ -30,14 +32,20 @@ graph TB
     subgraph "🤖 Background Jobs"
         SCH[APScheduler]
         EVNSPC["fetch_outages.py<br/>Lịch cúp điện EVNSPC"]
-        SW["smartw/worker.py<br/>Scrape SmartW"]
+        SW["smartw/worker.py<br/>Scrape SmartW + MFD"]
+        FP["fuel_price.py<br/>Giá PVOil"]
+        DS["datasite_scraper.py<br/>DataSite Sync"]
+        TG["bot_telegram.py<br/>Telegram Bot"]
     end
 
     F1 --> DB
     F2 --> DB
     F3 --> JSON
+    F4 --> DB
     SCH --> EVNSPC --> DB
     SCH --> SW --> JSON
+    SCH --> FP --> DB
+    SCH --> DS --> DB
 ```
 
 ---
@@ -81,6 +89,18 @@ graph TB
 | Users | NV hiện trường (mobile), Admin (cấu hình) |
 | Status | ✅ Core hoạt động. 🔧 MLL auto-refresh flicker cần fix |
 
+### Feature 4: DataSite Deep Sync — ✅ IMPLEMENTED
+
+| Mục đích | Sync tài sản trạm từ DataSite Excel (15 loại đối tượng → 5 nhóm DB) |
+|----------|----------------------------------------------|
+| Module | `datasite_sync_config.py`, `datasite_scraper.py`, `datasite_routes.py` |
+| DB Models | `DsStation`, `DsContract`, `DsInfrastructure`, `DsEquipment`, `DsTelecom`, `DataSiteAnomaly` |
+| Templates | `datasite/datasite_dashboard.html` |
+| Routes | `/datasite/*` |
+| Background | Weekly auto-sync Sunday 2 AM |
+| Config | `EXPORT_OBJECT_MAP` — 15 export types with column mapping |
+| Status | ✅ Deep Sync hoạt động. Legacy `DataSiteAsset` chờ xóa |
+
 ---
 
 ## 3. TECH STACK
@@ -113,30 +133,38 @@ VH may phat dien/
 │   └── 260213-1219-smartw-vhkt/   # Plan SmartW (7 phases)
 │
 ├── web-app/                       # 🌐 Source code chính
-│   ├── app.py                     # Routes chính (~2300 lines)
-│   ├── models.py                  # DB Models (9 models)
+│   ├── app.py                     # App entry + blueprint registration
+│   ├── models.py                  # DB Models (18 models, 5 DataSite groups)
 │   ├── helpers.py                 # Business logic (stock, audit, KPI)
 │   ├── extensions.py              # Flask extensions (db, scheduler)
 │   ├── fetch_outages.py           # EVNSPC crawler
+│   ├── fuel_price.py              # PVOil price scraper
+│   ├── bot_telegram.py            # Telegram Bot polling
+│   ├── datasite_scraper.py        # DataSite Excel scraper
+│   ├── datasite_sync_config.py    # EXPORT_OBJECT_MAP (15 types → 5 groups)
+│   ├── datasite_routes.py         # DataSite API routes
 │   │
 │   ├── smartw/                    # 📡 SmartW module (Blueprint)
-│   │   ├── __init__.py
 │   │   ├── scraper.py             # Playwright SSO login + 4 table scrapers
-│   │   ├── worker.py              # Poll + clear detection
+│   │   ├── worker.py              # Poll + MFD import + clear detection
 │   │   ├── routes.py              # API endpoints + admin controls
 │   │   ├── config.py              # Fernet encryption
 │   │   └── mll_validator.py       # MLL cause validation
 │   │
-│   ├── templates/                 # 🎨 Jinja2 Templates (15 files)
+│   ├── generator/                 # ⛽ Generator module (Blueprint)
+│   │   ├── routes.py              # CRUD + import/export
+│   │   └── mfd_import.py          # MFD SmartW auto-import + overnight
+│   │
+│   ├── daily_work/                # 📋 Daily Work module (Blueprint)
+│   ├── core/                      # 🔧 Core routes (Blueprint)
+│   │
+│   ├── templates/                 # 🎨 Jinja2 Templates (20+ files)
 │   │   ├── layout.html            # Base template + nav
-│   │   ├── index.html             # Dashboard
 │   │   ├── daily_work.html
-│   │   ├── generator_log.html
-│   │   ├── power_schedule.html
-│   │   ├── general_info.html
-│   │   ├── reports.html
 │   │   ├── vhkt.html              # SmartW monitoring
 │   │   ├── admin_panel.html
+│   │   ├── datasite/              # DataSite dashboard
+│   │   ├── partials/              # Tab components
 │   │   └── ...
 │   │
 │   ├── data/smartw/               # JSON cache (gitignored)
@@ -147,6 +175,8 @@ VH may phat dien/
 
 ## 5. DATABASE SCHEMA
 
+### 5.1. Core Models
+
 ```mermaid
 erDiagram
     User {
@@ -155,7 +185,6 @@ erDiagram
         string password_hash
         string role
         string full_name
-        string phone_number
     }
 
     GeneralInfo {
@@ -174,8 +203,6 @@ erDiagram
         string id_tram
         string nhan_vien
         text noi_dung
-        text ton_tai_vhkt
-        text ton_tai_csht
     }
 
     GeneratorLog {
@@ -184,7 +211,8 @@ erDiagram
         string ngay_van_hanh
         float thoi_gian_hoat_dong
         float nhien_lieu_tieu_hao
-        float thanh_tien
+        string status
+        string source
     }
 
     FuelLedger {
@@ -192,10 +220,8 @@ erDiagram
         string type
         string ngay
         string id_tram
-        string loai_nhien_lieu
         float so_luong
         float don_gia
-        string nha_cung_cap
     }
 
     PowerSchedule {
@@ -204,7 +230,6 @@ erDiagram
         string ngay_mat_dien
         string thoi_gian_cup_dien
         string thoi_gian_co_dien
-        string ly_do
     }
 
     GeneralInfo ||--o{ GeneratorLog : "id_tram"
@@ -212,6 +237,17 @@ erDiagram
     GeneralInfo ||--o{ DailyWork : "id_tram"
     GeneralInfo ||--o{ PowerSchedule : "id_tram"
 ```
+
+### 5.2. DataSite Models (5 Nhóm - v2)
+
+| Nhóm | Model | Table | Mô tả |
+|------|-------|-------|---------|
+| 1. Thông Tin Chung | `DsStation` | `ds_stations` | Thông tin trạm |
+| 1. Thông Tin Chung | `DsContract` | `ds_contracts` | Hợp đồng thuê trạm nhà dân |
+| 2. Cơ Sở Hạ Tầng | `DsInfrastructure` | `ds_infrastructure` | Cột Anten, Phòng Máy, Nhà Trạm |
+| 3. Phụ Trợ | `DsEquipment` | `ds_equipments` | MPĐ, Rectifier, Accu, Solar, Quạt, PCCC, SPD |
+| 4. Kỹ Thuật | `DsTelecom` | `ds_telecom` | BTS 2G/3G/4G/5G, Truyền dẫn, Repeater |
+| 5. Cross-Check | `DataSiteAnomaly` | `datasite_anomalies` | Bắt lỗi dữ liệu |
 
 ---
 
@@ -229,8 +265,12 @@ erDiagram
 | Job | Trigger | Nguồn | Output |
 |-----|---------|-------|--------|
 | Lịch cúp điện EVNSPC | Cron 5:00 AM | `fetch_outages.py` | DB `PowerSchedule` |
-| SmartW Alarm Poll | Interval 5 min | `smartw/worker.py` | `data/smartw/*_active.json` |
-| SmartW VHKT Poll | Cron 7:00 AM | `smartw/worker.py` | `data/smartw/vhkt_daily.json` |
+| SmartW Alarm Poll | Interval 15 min | `smartw/worker.py` | `data/smartw/*_active.json` |
+| SmartW VHKT Poll | Cron 5:00 AM | `smartw/worker.py` | `data/smartw/vhkt_daily.json` |
+| MFD Auto-Import | Cron 6:00 AM | `generator/mfd_import.py` | DB `GeneratorLog` |
+| Fuel Price Scrape | Cron 4:00 PM | `fuel_price.py` | DB giá PVOil |
+| DataSite Sync | Cron Sun 2:00 AM | `datasite_scraper.py` | DB DataSite 5 nhóm |
+| Telegram Bot | Thread (startup) | `bot_telegram.py` | Telegram notifications |
 
 ---
 

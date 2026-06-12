@@ -27,6 +27,13 @@
                     <a class="dropdown-item" href="{{ url_for('generator.export_fuel_ledger') }}">
                         <i class="fas fa-file-export me-2"></i>Xuất sổ cái nhiên liệu
                     </a>
+                    <a class="dropdown-item text-primary fw-bold" href="#" onclick="triggerFuelSync(event)">
+                        <i class="fas fa-sync me-2 text-primary"></i>Đồng bộ đơn giá PVOil
+                    </a>
+                    <form id="fuelSyncForm" action="{{ url_for('generator.recalculate_fuel_ledger_route') }}"
+                        method="POST" style="display:none;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    </form>
                     {% elif active_tab == 'expense' %}
                     <a class="dropdown-item" href="{{ url_for('generator.export_expenses') }}">
                         <i class="fas fa-file-export me-2"></i>Xuất chi phí khác
@@ -137,6 +144,18 @@
             </div>
         </div>
     </div>
+    {% if session.get('role') in ['admin', 'nhanvien'] %}
+    <div class="col">
+        <div class="card shadow-sm ps-nav-card {{ 'active' if active_tab == 'invoice' else '' }}"
+            onclick="switchGenTab('invoice')"
+            style="border-left: 3px solid var(--tblr-warning); --arrow-color: var(--tblr-warning);">
+            <div class="ps-nav-body">
+                <div class="ps-nav-icon text-warning">🧾</div>
+                <div class="ps-nav-label">Hóa Đơn</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
     {% endif %}
 </div>
 
@@ -150,6 +169,10 @@
             data-bs-toggle="tab" data-bs-target="#expense-content" type="button" role="tab"></button></li>
     <li class="nav-item"><button class="nav-link {{ 'active' if active_tab == 'payment' else '' }}" id="payment-tab"
             data-bs-toggle="tab" data-bs-target="#payment-content" type="button" role="tab"></button></li>
+    {% if session.get('role') in ['admin', 'nhanvien'] %}
+    <li class="nav-item"><button class="nav-link {{ 'active' if active_tab == 'invoice' else '' }}" id="invoice-tab"
+            data-bs-toggle="tab" data-bs-target="#invoice-content" type="button" role="tab"></button></li>
+    {% endif %}
 </ul>
 </div>
 
@@ -311,7 +334,7 @@
                                 </button>
                                 <form action="{{ url_for('generator.delete_fuel_ledger', id=log.id) }}" method="POST"
                                     class="d-inline" onsubmit="return confirm('Xóa?')">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <button type="submit" class="btn btn-icon btn-ghost-danger btn-sm"><i
                                             class="fas fa-trash-alt"></i></button>
                                 </form>
@@ -407,7 +430,7 @@
                                 </button>
                                 <form action="{{ url_for('generator.delete_other_expense', id=item.id) }}" method="POST"
                                     class="d-inline" onsubmit="return confirm('Xóa chi phí này?');">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <button type="submit" class="btn btn-icon btn-ghost-danger btn-sm"><i
                                             class="fas fa-trash-alt"></i></button>
                                 </form>
@@ -432,9 +455,9 @@
             <div class="col-12">
                 <div class="card border-0 shadow-sm rounded-3">
                     <div class="card-body p-3">
-                        <div class="d-flex flex-wrap gap-2 align-items-end">
+                        <div class="d-flex flex-wrap gap-2 align-items-center w-100">
                             <form action="{{ url_for('generator.generator') }}" method="GET"
-                                class="d-flex gap-2 align-items-end">
+                                class="d-flex gap-2 align-items-center w-100">
                                 <input type="hidden" name="tab" value="payment">
                                 <select name="pay_month" class="form-select form-select-sm rounded-pill"
                                     style="width:auto; min-width:90px; font-size:0.75rem; padding-right:1.5rem; background-size:10px;"
@@ -452,6 +475,10 @@
                                     <option value="{{ y }}" {% if pay_year==y %}selected{% endif %}>{{ y }}</option>
                                     {% endfor %}
                                 </select>
+                                <div class="ms-auto d-flex align-items-center gap-2">
+                                    <label class="small text-muted mb-0" style="white-space:nowrap; font-weight: 500;"><i class="fas fa-calendar-day me-1"></i>Tính toán đến ngày:</label>
+                                    <input type="date" name="calc_up_to" class="form-control form-control-sm rounded-pill" style="width:auto; font-size:0.75rem;" value="{{ calc_up_to }}" onchange="this.form.submit()">
+                                </div>
                             </form>
                         </div>
                     </div>
@@ -464,8 +491,14 @@
         {% set cx = payment_groups.cx222 %}
         {% set mn_da_tt = mn.so_tien_da_tt | float %}
         {% set cx_da_tt = cx.so_tien_da_tt | float %}
-        {% set mn_con_lai = mua_ngoai_total - mn_da_tt %}
-        {% set cx_con_lai = cx222_total - cx_da_tt %}
+        {% set mn_tong_quy = mn.tong_tien_nhan | float if mn.tong_tien_nhan else 0 %}
+        {% set cx_tong_quy = cx.tong_tien_nhan | float if cx.tong_tien_nhan else 0 %}
+        {% set mn_con_lai = mua_ngoai_accum - mn_da_tt %}
+        {% set cx_con_lai = cx222_accum - cx_da_tt %}
+        {% set mn_so_du = mn_tong_quy - mn_da_tt %}
+        {% set cx_so_du = cx_tong_quy - cx_da_tt %}
+        {% set mn_can_ck_them = mua_ngoai_accum - mn_tong_quy %}
+        {% set cx_can_ck_them = cx222_accum - cx_tong_quy %}
         <div class="row g-3 mb-3">
             {# Card 1: Chi phí Mua Ngoài #}
             <div class="{{ 'col-md-6' if session['role'] == 'admin' else 'col-12' }}" id="card-mua-ngoai">
@@ -478,8 +511,13 @@
                     </div>
                     <div class="card-body py-2">
                         <div class="row mb-2">
-                            <div class="col-6 text-muted small">Tổng phát sinh (kỳ):</div>
-                            <div class="col-6 text-end fw-bold" id="mn-tong-ps">{{ "{:,.0f}".format(mua_ngoai_total) }}
+                            <div class="col-6 text-muted small">Tổng tiền đã tạm ứng:</div>
+                            <div class="col-6 text-end fw-bold text-primary" id="mn-tong-quy">{{
+                                "{:,.0f}".format(mn_tong_quy) }} đ</div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-6 text-muted small">Lũy kế phát sinh (tất cả):</div>
+                            <div class="col-6 text-end fw-bold" id="mn-tong-ps">{{ "{:,.0f}".format(mua_ngoai_accum) }}
                                 đ</div>
                         </div>
                         <div class="row mb-2">
@@ -501,6 +539,19 @@
                                 {% if mua_ngoai_new > 0 %}+{{ "{:,.0f}".format(mua_ngoai_new) }} đ{% else %}—{% endif %}
                             </div>
                         </div>
+                        <div class="row mb-2">
+                            <div class="col-6 text-muted small">Số dư quỹ (Thái):</div>
+                            <div class="col-6 text-end fw-bold {{ 'text-success' if mn_so_du >= 0 else 'text-danger' }}"
+                                id="mn-so-du">
+                                {{ "{:,.0f}".format(mn_so_du) }} đ
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-6 text-muted small">Cần CK thêm (Phát sinh - Tạm ứng):</div>
+                            <div class="col-6 text-end fw-bold {% if mn_can_ck_them > 0 %}text-danger{% else %}text-success{% endif %}" id="mn-can-ck-them">
+                                {% if mn_can_ck_them > 0 %}{{ "{:,.0f}".format(mn_can_ck_them) }} đ 🔴{% else %}0 đ (Đã đủ tạm ứng) ✅{% endif %}
+                            </div>
+                        </div>
                         <hr class="my-2">
                         <div class="row mb-1">
                             <div class="col-6 small fw-bold">Còn phải trả:</div>
@@ -510,17 +561,10 @@
                                 {% else %}<span class="text-success">✅ Đã TT hết</span>{% endif %}
                             </div>
                         </div>
-                        {% if mn.ghi_chu %}
-                        <div class="row mt-1">
+                        <div class="row mt-1" id="mn-ghi-chu-row" {% if not mn.ghi_chu %}style="display:none"{% endif %}>
                             <div class="col-5 text-muted small">Ghi chú:</div>
-                            <div class="col-7 text-end small text-muted" id="mn-ghi-chu">{{ mn.ghi_chu }}</div>
+                            <div class="col-7 text-end small text-muted" id="mn-ghi-chu-val">{{ mn.ghi_chu or '' }}</div>
                         </div>
-                        {% else %}
-                        <div class="row mt-1" id="mn-ghi-chu-row" style="display:none">
-                            <div class="col-5 text-muted small">Ghi chú:</div>
-                            <div class="col-7 text-end small text-muted" id="mn-ghi-chu"></div>
-                        </div>
-                        {% endif %}
                         {% if mn.updated_at %}
                         <div class="text-muted mt-1" style="font-size:11px">Cập nhật: {{ mn.updated_at }} bởi {{
                             mn.updated_by }}</div>
@@ -530,7 +574,7 @@
                         <button class="btn btn-warning btn-sm btn-edit-pg" data-bs-toggle="modal"
                             data-bs-target="#paymentGroupModal" data-group="mua_ngoai" data-label="Chi Phí Mua Ngoài"
                             data-den-ngay="{{ mn.da_thanh_toan_den }}" data-da-tt="{{ mn_da_tt }}"
-                            data-ghi-chu="{{ mn.ghi_chu }}">
+                            data-tong-quy="{{ mn_tong_quy }}" data-ghi-chu="{{ mn.ghi_chu }}">
                             <i class="fas fa-pen me-1"></i>Cập nhật
                         </button>
                     </div>
@@ -548,8 +592,13 @@
                     </div>
                     <div class="card-body py-2">
                         <div class="row mb-2">
-                            <div class="col-6 text-muted small">Tổng phát sinh (kỳ):</div>
-                            <div class="col-6 text-end fw-bold" id="cx-tong-ps">{{ "{:,.0f}".format(cx222_total) }} đ
+                            <div class="col-6 text-muted small">Tổng tiền đã tạm ứng:</div>
+                            <div class="col-6 text-end fw-bold text-primary" id="cx-tong-quy">{{
+                                "{:,.0f}".format(cx_tong_quy) }} đ</div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-6 text-muted small">Lũy kế phát sinh (tất cả):</div>
+                            <div class="col-6 text-end fw-bold" id="cx-tong-ps">{{ "{:,.0f}".format(cx222_accum) }} đ
                             </div>
                         </div>
                         <div class="row mb-2">
@@ -571,6 +620,19 @@
                                 {% if cx222_new > 0 %}+{{ "{:,.0f}".format(cx222_new) }} đ{% else %}—{% endif %}
                             </div>
                         </div>
+                        <div class="row mb-2">
+                            <div class="col-6 text-muted small">Số dư quỹ:</div>
+                            <div class="col-6 text-end fw-bold {{ 'text-success' if cx_so_du >= 0 else 'text-danger' }}"
+                                id="cx-so-du">
+                                {{ "{:,.0f}".format(cx_so_du) }} đ
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-6 text-muted small">Cần CK thêm (Phát sinh - Tạm ứng):</div>
+                            <div class="col-6 text-end fw-bold {% if cx_can_ck_them > 0 %}text-danger{% else %}text-success{% endif %}" id="cx-can-ck-them">
+                                {% if cx_can_ck_them > 0 %}{{ "{:,.0f}".format(cx_can_ck_them) }} đ 🔴{% else %}0 đ (Đã đủ tạm ứng) ✅{% endif %}
+                            </div>
+                        </div>
                         <hr class="my-2">
                         <div class="row mb-1">
                             <div class="col-6 small fw-bold">Còn phải trả:</div>
@@ -580,17 +642,10 @@
                                 {% else %}<span class="text-success">✅ Đã TT hết</span>{% endif %}
                             </div>
                         </div>
-                        {% if cx.ghi_chu %}
-                        <div class="row mt-1">
+                        <div class="row mt-1" id="cx-ghi-chu-row" {% if not cx.ghi_chu %}style="display:none"{% endif %}>
                             <div class="col-5 text-muted small">Ghi chú:</div>
-                            <div class="col-7 text-end small text-muted" id="cx-ghi-chu">{{ cx.ghi_chu }}</div>
+                            <div class="col-7 text-end small text-muted" id="cx-ghi-chu-val">{{ cx.ghi_chu or '' }}</div>
                         </div>
-                        {% else %}
-                        <div class="row mt-1" id="cx-ghi-chu-row" style="display:none">
-                            <div class="col-5 text-muted small">Ghi chú:</div>
-                            <div class="col-7 text-end small text-muted" id="cx-ghi-chu"></div>
-                        </div>
-                        {% endif %}
                         {% if cx.updated_at %}
                         <div class="text-muted mt-1" style="font-size:11px">Cập nhật: {{ cx.updated_at }} bởi {{
                             cx.updated_by }}</div>
@@ -600,7 +655,7 @@
                         <button class="btn btn-primary btn-sm btn-edit-pg" data-bs-toggle="modal"
                             data-bs-target="#paymentGroupModal" data-group="cx222" data-label="Chi Phí CX222"
                             data-den-ngay="{{ cx.da_thanh_toan_den }}" data-da-tt="{{ cx_da_tt }}"
-                            data-ghi-chu="{{ cx.ghi_chu }}">
+                            data-tong-quy="{{ cx_tong_quy }}" data-ghi-chu="{{ cx.ghi_chu }}">
                             <i class="fas fa-pen me-1"></i>Cập nhật
                         </button>
                     </div>
@@ -684,6 +739,245 @@
 {% endif %}
 
 
+
+    <!-- TAB 5: GMAIL & XML INVOICES -->
+    {% if active_tab == 'invoice' and session.get('role') in ['admin', 'nhanvien'] %}
+    <div class="tab-pane fade show active" id="invoice-content" role="tabpanel">
+        <!-- Header control area -->
+        <div class="card bg-warning-lt border-0 shadow-sm mb-3">
+            <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-2 p-3">
+                <div class="d-flex align-items-center gap-3">
+                    <span style="font-size: 2rem;">🧾</span>
+                    <div>
+                        <h3 class="card-title mb-0">Hóa Đơn Điện Tử XML</h3>
+                        <p class="text-muted small mb-0">
+                            Gmail kết nối: <strong>{{ gmail_user if gmail_user else 'Chưa cấu hình' }}</strong>
+                            {% if gmail_user %}
+                            <button type="button" class="btn btn-xs btn-link p-0 ms-2" onclick="testGmailConnection(event)">
+                                <i class="fas fa-plug me-1"></i>Kiểm tra kết nối
+                            </button>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-sm btn-outline-warning rounded-pill" data-bs-toggle="modal" data-bs-target="#gmailConfigModal">
+                        <i class="fas fa-cog me-1"></i>Cài đặt Gmail
+                    </button>
+                    <form action="{{ url_for('generator.scan_invoice_emails') }}" method="POST" class="d-inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-sm btn-warning rounded-pill" {% if not gmail_user %}disabled{% endif %}>
+                            <i class="fas fa-sync me-1"></i>Quét Gmail
+                        </button>
+                    </form>
+                    <button type="button" class="btn btn-sm btn-primary rounded-pill" onclick="document.getElementById('manualUploadInput').click()">
+                        <i class="fas fa-file-upload me-1"></i>Tải lên XML
+                    </button>
+                    <form id="manualUploadForm" action="{{ url_for('generator.upload_invoice_xml') }}" method="POST" enctype="multipart/form-data" style="display:none;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="file" id="manualUploadInput" name="invoice_files" accept=".xml,.zip" multiple onchange="document.getElementById('manualUploadForm').submit()">
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alert connection status -->
+        <div id="connectionAlert" class="alert d-none mb-3" role="alert"></div>
+
+        <!-- Filter + Date range title -->
+        <div class="row align-items-center mb-3">
+            <div class="col">
+                <form action="{{ url_for('generator.generator') }}" method="GET" class="d-flex gap-2 align-items-center">
+                    <input type="hidden" name="tab" value="invoice">
+                    <select name="invoice_month" class="form-select form-select-sm rounded-pill" style="width:auto; min-width:110px;" onchange="this.form.submit()">
+                        <option value="">Cả năm</option>
+                        {% for m in range(1, 13) %}
+                        <option value="{{ m }}" {% if invoice_month == m %}selected{% endif %}>Tháng {{ m }}</option>
+                        {% endfor %}
+                    </select>
+                    <select name="invoice_year" class="form-select form-select-sm rounded-pill" style="width:auto; min-width:90px;" onchange="this.form.submit()">
+                        {% for y in invoice_years %}
+                        <option value="{{ y }}" {% if invoice_year == y %}selected{% endif %}>Năm {{ y }}</option>
+                        {% endfor %}
+                    </select>
+                </form>
+            </div>
+            <div class="col-auto">
+                <a href="{{ url_for('generator.export_invoices', month=invoice_month, year=invoice_year) }}"
+                   class="btn btn-sm btn-outline-success rounded-pill fw-bold">
+                    <i class="fas fa-file-excel me-1"></i>Xuất Excel
+                </a>
+            </div>
+        </div>
+
+        <!-- Warnings for >5M dates -->
+        {% set warning_dates = [] %}
+        {% for date, total in daily_totals.items() %}
+            {% if total > 5000000 %}
+                {% set _ = warning_dates.append((date, total)) %}
+            {% endif %}
+        {% endfor %}
+
+        {% if warning_dates %}
+        <div class="alert alert-important alert-danger shadow-sm border-0 mb-3">
+            <div class="d-flex align-items-start">
+                <span class="me-3" style="font-size: 1.5rem; line-height: 1;">⚠️</span>
+                <div>
+                    <h4 class="alert-title fw-bold mb-1">CẢNH BÁO THANH TOÁN (TỔNG NGÀY VƯỢT QUÁ 5 TRIỆU ĐỒNG)</h4>
+                    <div class="small text-white-50">Các ngày sau đây có tổng cộng hóa đơn vượt quá 5,000,000đ. Vui lòng thực hiện <strong>chuyển khoản</strong> (không dùng tiền mặt) để đảm bảo điều kiện khấu trừ thuế:</div>
+                    <ul class="mb-0 mt-2 small ps-3">
+                    {% for date, total in warning_dates | sort %}
+                        <li>Ngày <strong>{{ date | format_date }}</strong>: Tổng cộng <strong>{{ "{:,.0f}".format(total) }} đ</strong></li>
+                    {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% set date_range_str = "" %}
+        {% if invoices %}
+            {% set dates = [] %}
+            {% for inv in invoices %}
+                {% set _ = dates.append(inv.ngay_lap) %}
+            {% endfor %}
+            {% set min_date = dates | min | format_date %}
+            {% set max_date = dates | max | format_date %}
+            {% set date_range_str = "(" ~ min_date ~ " - " ~ max_date ~ ")" %}
+
+        <!-- BẢNG KÊ NHIÊN LIỆU -->
+        <div class="card shadow-sm border-0">
+            <div class="card-header py-3 bg-light d-flex justify-content-between align-items-center">
+                <h3 class="card-title fw-bold text-uppercase text-dark mb-0">
+                    BẢNG KÊ NHIÊN LIỆU {% if invoice_month %}{{ "{:02d}".format(invoice_month) }}{% else %}CẢ NĂM{% endif %}/{{ invoice_year }} {{ date_range_str }}
+                </h3>
+            </div>
+            <div class="table-responsive" style="max-height: 600px; overflow: auto;">
+                <table class="table table-vcenter card-table table-hover table-bordered text-nowrap" style="font-size: 0.8rem;">
+                    <thead class="bg-dark text-white text-center">
+                        <tr>
+                            <th rowspan="2" class="align-middle text-white bg-dark">STT</th>
+                            <th rowspan="2" class="align-middle text-white bg-dark">Cửa hàng xăng dầu</th>
+                            <th rowspan="2" class="align-middle text-white bg-dark">Link tra cứu</th>
+                            <th rowspan="2" class="align-middle text-white bg-dark">Số Hóa đơn</th>
+                            <th rowspan="2" class="align-middle text-white bg-dark">Ngày tháng</th>
+                            <th colspan="3" class="text-white bg-teal py-1">Nhiên liệu Dầu (D)</th>
+                            <th colspan="3" class="text-white bg-purple py-1">Nhiên liệu Xăng (X)</th>
+                            <th rowspan="2" class="align-middle text-white bg-dark">Cộng chưa VAT</th>
+                            <th rowspan="2" class="align-middle text-white bg-dark">Thuế VAT</th>
+                            <th rowspan="2" class="align-middle text-white bg-dark">Tổng tiền</th>
+                            <th rowspan="2" class="align-middle text-white bg-dark">Note</th>
+                        </tr>
+                        <tr>
+                            <th class="bg-teal-lt text-teal fw-bold py-1">Số lượng D (lít)</th>
+                            <th class="bg-teal-lt text-teal fw-bold py-1">Đơn giá D</th>
+                            <th class="bg-teal-lt text-teal fw-bold py-1">Thành tiền D</th>
+                            <th class="bg-purple-lt text-purple fw-bold py-1">Số lượng X (lít)</th>
+                            <th class="bg-purple-lt text-purple fw-bold py-1">Đơn giá X</th>
+                            <th class="bg-purple-lt text-purple fw-bold py-1">Thành tiền X</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% set total_qty_d = namespace(val=0.0) %}
+                        {% set total_amt_d = namespace(val=0.0) %}
+                        {% set total_qty_x = namespace(val=0.0) %}
+                        {% set total_amt_x = namespace(val=0.0) %}
+                        {% set total_sub = namespace(val=0.0) %}
+                        {% set total_vat = namespace(val=0.0) %}
+                        {% set total_grand = namespace(val=0.0) %}
+
+                        {% for inv in invoices %}
+                            {% set fd = inv.fuel_details %}
+                            {% set total_qty_d.val = total_qty_d.val + (fd.qty_d or 0.0) %}
+                            {% set total_amt_d.val = total_amt_d.val + (fd.amount_d or 0.0) %}
+                            {% set total_qty_x.val = total_qty_x.val + (fd.qty_x or 0.0) %}
+                            {% set total_amt_x.val = total_amt_x.val + (fd.amount_x or 0.0) %}
+                            {% set total_sub.val = total_sub.val + (inv.sub_total or inv.tong_tien or 0.0) %}
+                            {% set total_vat.val = total_vat.val + (inv.vat_amount or 0.0) %}
+                            {% set total_grand.val = total_grand.val + (inv.tong_tien or 0.0) %}
+                            
+                            {% set is_warn_day = daily_totals[inv.ngay_lap] > 5000000 %}
+
+                            <tr class="{% if is_warn_day %}bg-danger-lt{% endif %}">
+                                <td class="text-center">{{ loop.index }}</td>
+                                <td class="fw-bold" style="white-space: normal; max-width: 180px; word-wrap: break-word;">{{ inv.seller_name }}</td>
+                                <td class="text-center">
+                                    {% if inv.invoice_url %}
+                                    <a href="{{ inv.invoice_url }}" target="_blank" class="btn btn-xs btn-outline-info py-0 px-2">Link</a>
+                                    {% else %}
+                                    —
+                                    {% endif %}
+                                </td>
+                                <td class="font-monospace fw-bold text-azure text-center">{{ inv.so_hd }}</td>
+                                <td>
+                                    {{ inv.ngay_lap | format_date }}
+                                    {% if is_warn_day %}
+                                    <span class="badge bg-danger text-white ms-1" title="Tổng ngày > 5 triệu: Cần CK">⚠️ Cần CK</span>
+                                    {% endif %}
+                                </td>
+                                
+                                <!-- Dầu -->
+                                <td class="text-end text-teal fw-bold">{% if fd.qty_d > 0 %}{{ "{:,.1f}".format(fd.qty_d) }}{% else %}—{% endif %}</td>
+                                <td class="text-end text-teal">{% if fd.qty_d > 0 and fd.price_d > 0 %}{{ "{:,.0f}".format(fd.price_d) }}{% else %}—{% endif %}</td>
+                                <td class="text-end text-teal fw-bold">{% if fd.amount_d > 0 %}{{ "{:,.0f}".format(fd.amount_d) }}{% else %}—{% endif %}</td>
+                                
+                                <!-- Xăng -->
+                                <td class="text-end text-purple fw-bold">{% if fd.qty_x > 0 %}{{ "{:,.1f}".format(fd.qty_x) }}{% else %}—{% endif %}</td>
+                                <td class="text-end text-purple">{% if fd.qty_x > 0 and fd.price_x > 0 %}{{ "{:,.0f}".format(fd.price_x) }}{% else %}—{% endif %}</td>
+                                <td class="text-end text-purple fw-bold">{% if fd.amount_x > 0 %}{{ "{:,.0f}".format(fd.amount_x) }}{% else %}—{% endif %}</td>
+                                
+                                <!-- Thống kê tiền -->
+                                <td class="text-end text-blue fw-bold">{{ "{:,.0f}".format(inv.sub_total or inv.tong_tien or 0) }}</td>
+                                <td class="text-end text-muted">{{ "{:,.0f}".format(inv.vat_amount or 0) }}</td>
+                                <td class="text-end text-success fw-bold">{{ "{:,.0f}".format(inv.tong_tien or 0) }}</td>
+                                
+                                <td>
+                                    <div class="d-flex align-items-center justify-content-between gap-2">
+                                        <div class="d-flex flex-column text-start">
+                                            {% if is_warn_day %}
+                                            <span class="text-danger fw-bold small" style="white-space: nowrap;">*Cần chuyển khoản*</span>
+                                            {% endif %}
+                                            <span class="text-muted small" style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; font-size: 0.7rem;" title="{{ inv.source }}">{{ inv.source }}</span>
+                                        </div>
+                                        <form action="{{ url_for('generator.discard_parsed_invoice', id=inv.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Bạn có chắc muốn ẩn hóa đơn này khỏi bảng kê?')">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <button type="submit" class="btn btn-xs btn-link text-danger p-0 ms-1" title="Ẩn hóa đơn">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        
+                        <!-- Dòng Tổng cộng -->
+                        <tr class="fw-bold bg-dark-lt" style="border-top: 2px solid #333;">
+                            <td colspan="5" class="text-center text-dark">TỔNG CỘNG</td>
+                            <td class="text-end text-teal fw-bold">{% if total_qty_d.val > 0 %}{{ "{:,.1f}".format(total_qty_d.val) }} L{% else %}—{% endif %}</td>
+                            <td>—</td>
+                            <td class="text-end text-teal fw-bold">{% if total_amt_d.val > 0 %}{{ "{:,.0f}".format(total_amt_d.val) }}{% else %}—{% endif %}</td>
+                            <td class="text-end text-purple fw-bold">{% if total_qty_x.val > 0 %}{{ "{:,.1f}".format(total_qty_x.val) }} L{% else %}—{% endif %}</td>
+                            <td>—</td>
+                            <td class="text-end text-purple fw-bold">{% if total_amt_x.val > 0 %}{{ "{:,.0f}".format(total_amt_x.val) }}{% else %}—{% endif %}</td>
+                            <td class="text-end text-blue fw-bold">{{ "{:,.0f}".format(total_sub.val) }}</td>
+                            <td class="text-end text-muted fw-bold">{{ "{:,.0f}".format(total_vat.val) }}</td>
+                            <td class="text-end text-success fw-bold" style="font-size: 0.9rem;">{{ "{:,.0f}".format(total_grand.val) }} đ</td>
+                            <td class="bg-light"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% else %}
+        <div class="card shadow-sm border-0 py-5 text-center text-muted">
+            <div class="mb-2" style="font-size: 2rem;">📭</div>
+            Không có hóa đơn nhiên liệu nào trong khoảng thời gian này.<br>
+            Hãy kết nối Gmail hoặc tải lên trực tiếp file XML để bắt đầu.
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
 </div> <!-- Close mainTabContent -->
 
 
@@ -698,7 +992,7 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form action="{{ url_for('generator.add_fuel_ledger') }}" method="POST">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <!-- Loại giao dịch -->
                     <div class="px-3 pt-3 pb-2">
@@ -822,12 +1116,12 @@
         const priceInput = document.getElementById('inp_dongia');
         const priceSource = document.getElementById('price-source');
         const dateInput = document.getElementById('inp_ngay_nhien_lieu');
-        
+
         if (!nlType || !priceInput) return;
-        
+
         const type = nlType.value;
         const date = dateInput ? dateInput.value : '';
-        
+
         // Default UI feedback
         if (priceSource) priceSource.textContent = 'Đang tra cứu...';
 
@@ -835,7 +1129,7 @@
             const resp = await fetch(`/api/fuel-price?type=${encodeURIComponent(type)}&date=${encodeURIComponent(date)}`);
             const data = await resp.json();
             console.log("Fuel price data:", data); // Debugging
-            
+
             let price = 0;
             if (data.price !== undefined && data.price > 0) {
                 price = data.price;
@@ -870,7 +1164,7 @@
     // Re-apply price when fuel type or date changes
     const nlSelect = document.getElementById('inp_loai_nl');
     if (nlSelect) nlSelect.addEventListener('change', applyFuelPrice);
-    
+
     const fuelDateInput = document.getElementById('inp_ngay_nhien_lieu');
     if (fuelDateInput) fuelDateInput.addEventListener('change', applyFuelPrice);
 
@@ -923,7 +1217,7 @@
             stationInput.required = true;
         } else if (type === 'VEHICLE_FUEL') {
             // Hide station, show vehicle
-            groupStation.style.display = 'none'; 
+            groupStation.style.display = 'none';
             dimGroup(groupActual);
             groupVehicle.style.display = 'block';
             groupVehicle.style.opacity = '1';
@@ -932,7 +1226,7 @@
             vehicleSelect.required = true;
             nccSelect.required = true;
             // Sync vehicle to station ID field
-            vehicleSelect.onchange = function() { stationInput.value = this.value; };
+            vehicleSelect.onchange = function () { stationInput.value = this.value; };
         } else {
             // DIRECT_BUY
             dimGroup(groupVehicle);
@@ -1140,7 +1434,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form action="{{ url_for('generator.add_other_expense') }}" method="POST">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">Ngày chi</label>
@@ -1181,7 +1475,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="editForm" method="POST">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">ID Trạm</label>
@@ -1314,6 +1608,13 @@
     }
 </style>
 <script>
+    function triggerFuelSync(event) {
+        event.preventDefault();
+        if (confirm("Hệ thống sẽ rà soát từ ngày 01/02/2026 và tự động cập nhật đơn giá theo lịch sử thị trường PVOil. Bạn có chắc chắn muốn thực hiện?")) {
+            document.getElementById('fuelSyncForm').submit();
+        }
+    }
+
     // Switch generatoa nav-cards
     function switchGenTab(tabName) {
         // ALL tabs need server-side data loading (conditional queries)
@@ -1385,7 +1686,7 @@
             btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang lưu...';
             fetch('{{ url_for("core.save_payment") }}', {
                 method: 'POST',
-                headers: { 
+                headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': '{{ csrf_token() }}'
                 },
@@ -1422,141 +1723,7 @@
 {% endif %}
 </div>
 
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        var modalEl = document.getElementById('paymentGroupModal');
-        if (!modalEl) { return; }
 
-        // Populate form when modal is about to show
-        modalEl.addEventListener('show.bs.modal', function (event) {
-            var btn = event.relatedTarget;  // the button that triggered the modal
-            if (!btn || !btn.classList.contains('btn-edit-pg')) return;
-            document.getElementById('pgGroup').value = btn.dataset.group || '';
-            document.getElementById('pgLabelDisplay').textContent = btn.dataset.label || '';
-            document.getElementById('pgDenNgay').value = btn.dataset.denNgay || '';
-            var daTtVal = parseFloat(btn.dataset.daTt);
-            document.getElementById('pgDaTT').value = (!isNaN(daTtVal) && daTtVal > 0) ? daTtVal : '';
-            document.getElementById('pgGhiChu').value = btn.dataset.ghiChu || '';
-        });
-
-        // Save button
-        document.addEventListener('click', function (e) {
-            var saveBtn = e.target.closest('#pgSaveBtn');
-            if (!saveBtn) return;
-
-            var group = document.getElementById('pgGroup').value;
-            var den_ngay = document.getElementById('pgDenNgay').value.trim();
-            var da_tt = parseFloat(document.getElementById('pgDaTT').value) || 0;
-            var ghi_chu = document.getElementById('pgGhiChu').value.trim();
-
-            saveBtn.disabled = true;
-            saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Dang luu...';
-
-            fetch('{{ url_for("generator.save_payment_group_gen") }}', {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': '{{ csrf_token() }}'
-                },
-                body: JSON.stringify({ group: group, da_thanh_toan_den: den_ngay, so_tien_da_tt: da_tt, ghi_chu: ghi_chu })
-            })
-                .then(function (r) { return r.json(); })
-                .then(function (data) {
-                    if (data.ok) {
-                        var pfx = group === 'mua_ngoai' ? 'mn' : 'cx';
-                        var totalEl = document.getElementById(pfx + '-tong-ps');
-                        var total = totalEl ? parseFloat(totalEl.textContent.replace(/[^0-9]/g, '')) || 0 : 0;
-                        var conLai = total - da_tt;
-
-                        var denNgayEl = document.getElementById(pfx + '-den-ngay');
-                        if (denNgayEl) denNgayEl.innerHTML = den_ngay
-                            ? '<span class="badge bg-blue-lt">' + den_ngay + '</span>'
-                            : '<span class="text-muted">\u2014</span>';
-
-                        var daTTEl = document.getElementById(pfx + '-da-tt');
-                        if (daTTEl) daTTEl.textContent = (da_tt > 0 ? Math.round(da_tt).toLocaleString('vi-VN') : '0') + ' \u0111';
-
-                        var conLaiEl = document.getElementById(pfx + '-con-lai');
-                        if (conLaiEl) conLaiEl.innerHTML = conLai > 0
-                            ? '<span class="text-danger">' + Math.round(conLai).toLocaleString('vi-VN') + ' \u0111 \ud83d\udd34</span>'
-                            : '<span class="text-success">\u2705 \u0110\u00e3 TT h\u1ebft</span>';
-
-                        var ghiChuEl = document.getElementById(pfx + '-ghi-chu');
-                        if (ghiChuEl) ghiChuEl.textContent = ghi_chu || '';
-
-                        var cardBtn = document.querySelector('.btn-edit-pg[data-group="' + group + '"]');
-                        if (cardBtn) { cardBtn.dataset.denNgay = den_ngay; cardBtn.dataset.daTt = da_tt; cardBtn.dataset.ghiChu = ghi_chu; }
-
-                        var bsM = bootstrap.Modal.getInstance(modalEl); 
-                        if (bsM) bsM.hide();
-                        alert('✅ Đã cập nhật thanh toán cho nhóm: ' + (group === 'mua_ngoai' ? 'Mua Ngoài' : 'CX222'));
-                    } else {
-                        alert('L\u1ed7i: ' + (data.msg || 'Kh\u00f4ng l\u01b0u \u0111\u01b0\u1ee3c'));
-                    }
-                })
-                .catch(function () { alert('L\u1ed7i k\u1ebft n\u1ed1i m\u00e1y ch\u1ee7'); })
-                .finally(function () { saveBtn.disabled = false; saveBtn.innerHTML = '<i class="fas fa-save me-1"></i>L\u01b0u'; });
-        });
-
-        // Auto-calc: khi chọn ngày → gợi ý số tiền phải trả
-        document.getElementById('pgDenNgay').addEventListener('change', function () {
-            var den_ngay = this.value;
-            var group = document.getElementById('pgGroup').value;
-            if (!den_ngay || !group) return;
-
-            var daTTInput = document.getElementById('pgDaTT');
-            var statusDiv = document.getElementById('pgStatusInfo');
-            var statusText = document.getElementById('pgStatusText');
-
-            statusDiv.style.display = 'block';
-            statusText.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang tính...';
-            statusDiv.querySelector('div').className = 'd-flex align-items-center text-muted small fw-bold';
-
-            fetch('{{ url_for("generator.calc_payment_amount") }}?group=' + encodeURIComponent(group) + '&den_ngay=' + encodeURIComponent(den_ngay))
-                .then(function (r) { return r.json(); })
-                .then(function (data) {
-                    if (!data.ok) { statusDiv.style.display = 'none'; return; }
-                    
-                    statusDiv.querySelector('div').className = 'd-flex align-items-center text-success small fw-bold';
-                    
-                    if (data.already_paid) {
-                        statusText.innerHTML = 'Đã thanh toán hết đến ' + data.last_paid_date;
-                        return;
-                    }
-                    if (data.total <= 0) {
-                        statusText.innerHTML = 'Không có chi phí trong kỳ này.';
-                        return;
-                    }
-                    
-                    var fmtTotal = Math.round(data.total).toLocaleString('vi-VN');
-                    var totalVal = Math.round(data.total);
-                    
-                    // Tự động điền nếu ô hiện tại đang trống hoặc bằng 0
-                    if (!daTTInput.value || daTTInput.value == "0") {
-                        daTTInput.value = totalVal;
-                        statusText.innerHTML = 'Đã tự động điền LŨY KẾ: ' + fmtTotal + ' đ';
-                    } else {
-                        statusText.innerHTML = 'Lũy kế gợi ý: ' + fmtTotal + ' đ '
-                            + '<a href="#" class="text-info ms-2" onclick="document.getElementById(\'pgDaTT\').value=' + totalVal + ';return false;">[Dùng số này]</a>';
-                    }
-                })
-                .catch(function () { statusDiv.style.display = 'none'; });
-        });
-
-        // Reset status when opening modal
-        modalEl.addEventListener('show.bs.modal', function (event) {
-            document.getElementById('pgStatusInfo').style.display = 'none';
-            var btn = event.relatedTarget;
-            if (btn) {
-                document.getElementById('pgGroup').value = btn.dataset.group || '';
-                document.getElementById('pgLabelDisplay').textContent = btn.dataset.label || '';
-                document.getElementById('pgDenNgay').value = btn.dataset.denNgay || '';
-                document.getElementById('pgDaTT').value = btn.dataset.daTt || '';
-                document.getElementById('pgGhiChu').value = btn.dataset.ghiChu || '';
-            }
-        });
-    });
-</script>
 
 <script>
     // ── NL Tồn per-station (server-side injected — instant) ──
@@ -1582,5 +1749,228 @@
     });
     }) ();
 </script>
+
+
+{% if session.get('role') == 'admin' %}
+<!-- GMAIL CONFIG MODAL -->
+<div class="modal modal-blur fade" id="gmailConfigModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content shadow border-0">
+            <form action="{{ url_for('generator.save_invoice_settings') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header bg-warning-lt border-0">
+                    <h5 class="modal-title fw-bold text-warning"><i class="fas fa-envelope me-2"></i>Cài đặt Kết nối Gmail</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label required fw-bold">Địa chỉ Gmail</label>
+                        <input type="email" class="form-control" name="gmail_user" value="{{ gmail_user }}" required placeholder="vi_du@gmail.com">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label required fw-bold">Mật khẩu ứng dụng (App Password)</label>
+                        <input type="password" class="form-control" name="gmail_app_password" placeholder="Nhập 16 ký tự mật khẩu ứng dụng">
+                        <small class="form-hint text-muted mt-1">
+                            Lưu ý: Mật khẩu này được tạo trong trang <strong>Quản lý Tài khoản Google -> Bảo mật -> Xác minh 2 bước -> Mật khẩu ứng dụng</strong>. KHÔNG sử dụng mật khẩu Gmail chính.
+                        </small>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label fw-bold">Bộ lọc Tiêu đề Email</label>
+                        <input type="text" class="form-control" name="gmail_subject_filter" value="{{ gmail_subject_filter }}" placeholder="Hóa đơn;hoadon;invoice;hddt">
+                        <small class="form-hint text-muted mt-1">Các từ khóa tìm kiếm trong tiêu đề email, phân cách bằng dấu chấm phẩy (;).</small>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-3 bg-light d-flex justify-content-between">
+                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" onclick="testGmailConnectionInline(this)">
+                        <i class="fas fa-plug me-1"></i>Kiểm tra kết nối
+                    </button>
+                    <button type="submit" class="btn btn-sm btn-warning rounded-pill px-4">Lưu cấu hình</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- APPROVE INVOICE MODAL -->
+<div class="modal modal-blur fade" id="approveInvoiceModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content shadow border-0">
+            <form id="approveInvoiceForm" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header bg-success-lt border-0">
+                    <h5 class="modal-title fw-bold text-success"><i class="fas fa-clipboard-check me-2"></i>Ghi nhận Hóa đơn vào Sổ Sách</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-bold small">Ngày hóa đơn</label>
+                            <input type="date" class="form-control form-control-sm" name="ngay_lap" id="app_ngay_lap" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-bold small">Phân loại chi phí</label>
+                            <select class="form-select form-select-sm" name="loai_chi_phi" id="app_loai_chi_phi" onchange="toggleApproveFields()">
+                                <option value="Mua dầu">⛽ Mua nhiên liệu (Dầu)</option>
+                                <option value="Chi phí khác">💳 Chi phí khác</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small">Đơn vị bán / Đối tác</label>
+                        <input type="text" class="form-control form-control-sm bg-light" id="app_seller_name" readonly>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small">Tổng số tiền duyệt (đ)</label>
+                        <input type="number" class="form-control form-control-sm fw-bold text-purple" name="tong_tien" id="app_tong_tien" required>
+                    </div>
+
+                    <!-- Mua dầu specific fields -->
+                    <div id="approveFuelFields" class="border p-3 rounded bg-light mb-3">
+                        <div class="mb-2">
+                            <label class="form-label fw-bold small">Hình thức giao dịch</label>
+                            <select class="form-select form-select-sm" name="type" id="app_trans_type" onchange="toggleApproveStation()">
+                                <option value="DIRECT_BUY" selected>Đổ trực tiếp về trạm (DIRECT_BUY)</option>
+                                <option value="STOCK_IN">Nhập kho tổng trung tâm (STOCK_IN)</option>
+                            </select>
+                        </div>
+                        <div class="mb-2" id="approveStationField">
+                            <label class="form-label fw-bold small">Trạm thụ hưởng</label>
+                            <select class="form-select form-select-sm" name="id_tram">
+                                <option value="">-- Chọn trạm --</option>
+                                {% for st in stations %}
+                                <option value="{{ st.id_tram }}">{{ st.id_tram }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <label class="form-label fw-bold small">Số lượng (Lít)</label>
+                                <input type="number" class="form-control form-control-sm" name="fuel_qty" id="app_fuel_qty" step="0.01" min="0">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label fw-bold small">Đơn giá (đ/Lít)</label>
+                                <input type="number" class="form-control form-control-sm" name="fuel_price" id="app_fuel_price" step="1" min="0">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-0">
+                        <label class="form-label fw-bold small">Ghi chú bổ sung</label>
+                        <textarea class="form-control form-control-sm" name="ghi_chu" id="app_ghi_chu" rows="2" placeholder="Ví dụ: số tài khoản chuyển, ngày..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-3 bg-light">
+                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" data-bs-dismiss="modal">Đóng</button>
+                    <button type="submit" class="btn btn-sm btn-success rounded-pill px-4">Xác nhận Lưu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if session.get('role') == 'admin' %}
+<script>
+    function testGmailConnection(event) {
+        const btn = event ? event.currentTarget : null;
+        if (btn) btn.disabled = true;
+        const alertBox = document.getElementById('connectionAlert');
+        alertBox.className = 'alert alert-info py-2 mb-3';
+        alertBox.style.display = 'block';
+        alertBox.classList.remove('d-none');
+        alertBox.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Đang kiểm tra kết nối tới Gmail, vui lòng đợi...';
+        
+        fetch('/invoice/test-connection')
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alertBox.className = 'alert alert-success py-2 mb-3';
+                    alertBox.innerHTML = '<i class="fas fa-check-circle me-2"></i>' + data.message;
+                } else {
+                    alertBox.className = 'alert alert-danger py-2 mb-3';
+                    alertBox.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>' + data.error;
+                }
+            })
+            .catch(err => {
+                alertBox.className = 'alert alert-danger py-2 mb-3';
+                alertBox.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>Lỗi kết nối API.';
+            })
+            .finally(() => {
+                if (btn) btn.disabled = false;
+            });
+    }
+
+    function testGmailConnectionInline(btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Đang kết nối...';
+        
+        fetch('/invoice/test-connection')
+            .then(res => res.json())
+            .then(data => {
+                alert(data.message || data.error);
+            })
+            .catch(() => alert('Lỗi kết nối api'))
+            .finally(() => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-plug me-1"></i>Kiểm tra kết nối';
+            });
+    }
+
+    function toggleApproveFields() {
+        const type = document.getElementById('app_loai_chi_phi').value;
+        const fuelFields = document.getElementById('approveFuelFields');
+        if (type === 'Mua dầu') {
+            fuelFields.style.display = 'block';
+        } else {
+            fuelFields.style.display = 'none';
+        }
+    }
+
+    function toggleApproveStation() {
+        const transType = document.getElementById('app_trans_type').value;
+        const stationField = document.getElementById('approveStationField');
+        if (transType === 'STOCK_IN') {
+            stationField.style.display = 'none';
+        } else {
+            stationField.style.display = 'block';
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const approveButtons = document.querySelectorAll('.btn-approve-inv');
+        approveButtons.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const id = this.dataset.id;
+                const ngay = this.dataset.ngay;
+                const sohd = this.dataset.sohd;
+                const seller = this.dataset.seller;
+                const tongtien = this.dataset.tongtien;
+                const loaichiphi = this.dataset.loaichiphi;
+                const fuelqty = this.dataset.fuelqty;
+                const fuelprice = this.dataset.fuelprice;
+
+                const form = document.getElementById('approveInvoiceForm');
+                form.action = '/invoice/approve/' + id;
+
+                document.getElementById('app_ngay_lap').value = ngay;
+                document.getElementById('app_loai_chi_phi').value = loaichiphi;
+                document.getElementById('app_seller_name').value = seller;
+                document.getElementById('app_tong_tien').value = Math.round(tongtien);
+                document.getElementById('app_fuel_qty').value = fuelqty;
+                document.getElementById('app_fuel_price').value = Math.round(fuelprice);
+                document.getElementById('app_ghi_chu').value = '';
+
+                toggleApproveFields();
+                toggleApproveStation();
+
+                const modal = new bootstrap.Modal(document.getElementById('approveInvoiceModal'));
+                modal.show();
+            });
+        });
+    });
+</script>
+{% endif %}
 
 {% endblock %}

@@ -13,6 +13,16 @@ load_dotenv()
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 sys.stdout.reconfigure(encoding='utf-8')
+
+# Configure logging to write both INFO and above to stderr for service tracking
+import logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s %(name)s: %(message)s',
+    handlers=[logging.StreamHandler(sys.stderr)]
+)
+logger = logging.getLogger(__name__)
+
 scheduler = APScheduler()
 
 # Database config
@@ -146,6 +156,20 @@ def scheduled_fuel_price_fetch():
         print(f"❌ [Scheduler] Lỗi scrape giá NL: {e}")
 
 
+def scheduled_invoice_gmail_scan():
+    print(f"⏰ [Scheduler] Bắt đầu quét hóa đơn Gmail tự động: {datetime.now()}")
+    try:
+        from generator.routes_invoice import scan_and_save_invoice_emails_core
+        res = scan_and_save_invoice_emails_core()
+        if isinstance(res, dict) and "error" in res:
+            print(f"❌ [Scheduler] Quét hóa đơn lỗi: {res['error']}")
+        else:
+            print(f"✅ [Scheduler] Quét hóa đơn hoàn tất: phát hiện {res.get('scanned_count', 0)} tệp XML, nhận mới {res.get('new_invoices_count', 0)} hóa đơn.")
+    except Exception as e:
+        print(f"❌ [Scheduler] Lỗi quét hóa đơn: {e}")
+
+
+
 
 
 
@@ -241,6 +265,12 @@ def api_fuel_price():
     })
 
 
+@app.route('/viber/webhook', methods=['POST'])
+@csrf.exempt
+def viber_webhook():
+    return jsonify({"status": 0, "status_message": "ok"})
+
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
@@ -259,58 +289,100 @@ if __name__ == '__main__':
 
     # Scheduler config
     app.config['SCHEDULER_API_ENABLED'] = True
+    app.config['SCHEDULER_TIMEZONE'] = 'Asia/Ho_Chi_Minh'
     scheduler.init_app(app)
 
     if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
-        scheduler.add_job(id='fetch_outages_task', func=scheduled_outage_fetch, trigger='cron', hour=5, minute=0)
+        scheduler.add_job(
+            id='fetch_outages_task', 
+            func=scheduled_outage_fetch, 
+            trigger='cron', hour=5, minute=0,
+            misfire_grace_time=3600
+        )
 
         # Fuel price: 2x/day (4PM after PVOil updates, and 0AM as fallback)
-        scheduler.add_job(id='fuel_price_daily_16h', func=scheduled_fuel_price_fetch, trigger='cron', hour=16, minute=0)
-        scheduler.add_job(id='fuel_price_daily_0h', func=scheduled_fuel_price_fetch, trigger='cron', hour=0, minute=0)
+        scheduler.add_job(
+            id='fuel_price_daily_16h', 
+            func=scheduled_fuel_price_fetch, 
+            trigger='cron', hour=16, minute=0,
+            misfire_grace_time=3600
+        )
+        scheduler.add_job(
+            id='fuel_price_daily_0h', 
+            func=scheduled_fuel_price_fetch, 
+            trigger='cron', hour=0, minute=0,
+            misfire_grace_time=3600
+        )
 
         from smartw.config import is_smartw_configured
+        
+        # Helper to properly manage app context for scheduler jobs
+        def run_with_context(func, *args, **kwargs):
+            with app.app_context():
+                return func(*args, **kwargs)
+
+        # Gmail Invoice Scan: 1x/day at 3 AM (low traffic, off-peak)
+        scheduler.add_job(
+            id='invoice_gmail_scan_daily',
+            func=lambda: run_with_context(scheduled_invoice_gmail_scan),
+            trigger='cron', hour=3, minute=0,
+            max_instances=1,
+            misfire_grace_time=3600
+        )
+
         if is_smartw_configured():
-            from smartw.worker import run_alarm_poll, run_vhkt_poll
+            from smartw.worker import run_alarm_poll, run_vhkt_poll, send_periodic_full_report, run_mfd_import_poll
             scheduler.add_job(
                 id='smartw_alarm_poll',
-                func=lambda: app.app_context().push() or run_alarm_poll(),
+                func=lambda: run_with_context(run_alarm_poll),
                 trigger='interval', seconds=900,
-                max_instances=1
+                max_instances=1,
+                misfire_grace_time=900
             )
-            from smartw.worker import send_periodic_full_report
             scheduler.add_job(
                 id='smartw_alarm_periodic_review',
-                func=lambda: app.app_context().push() or send_periodic_full_report(),
+                func=lambda: run_with_context(send_periodic_full_report),
                 trigger='cron', hour='*/2', minute=0,
-                max_instances=1
+                max_instances=1,
+                misfire_grace_time=3600
             )
             scheduler.add_job(
                 id='smartw_vhkt_poll',
-                func=lambda: app.app_context().push() or run_vhkt_poll(),
+                func=lambda: run_with_context(run_vhkt_poll),
                 trigger='cron', hour=5, minute=0,
-                max_instances=1
+                max_instances=1,
+                misfire_grace_time=3600
             )
-            # MFD daily import: 6 AM (scrape yesterday's generator runtime)
-            from smartw.worker import run_mfd_import_poll
+            def run_mfd_import_and_send_report():
+                run_mfd_import_poll()
+                try:
+                    from daily_report import send_daily_report
+                    send_daily_report()
+                except Exception as ex:
+                    print(f"❌ [Scheduler] Error sending daily report: {ex}")
+
+            # MFD daily import: 7 AM (scrape yesterday's generator runtime + send daily report)
             scheduler.add_job(
                 id='mfd_import_daily',
-                func=lambda: app.app_context().push() or run_mfd_import_poll(),
-                trigger='cron', hour=6, minute=0,
-                max_instances=1
+                func=lambda: run_with_context(run_mfd_import_and_send_report),
+                trigger='cron', hour=7, minute=0,
+                max_instances=1,
+                misfire_grace_time=3600
             )
-            print("SmartW Scheduler: Alarm poll 15p + VHKT 5AM + MFD import 6AM")
+            print("SmartW Scheduler: Alarm poll 15p + VHKT 5AM + MFD import & Report 7AM")
 
         # DataSite Auto-Sync: Weekly on Sunday at 2 AM
         from datasite_scraper import perform_datasite_sync_real
         scheduler.add_job(
             id='datasite_sync_weekly',
-            func=lambda: app.app_context().push() or perform_datasite_sync_real(),
+            func=lambda: run_with_context(perform_datasite_sync_real),
             trigger='cron', day_of_week='sun', hour=2, minute=0,
-            max_instances=1
+            max_instances=1,
+            misfire_grace_time=3600
         )
 
         scheduler.start()
-        print("Scheduler: Lich cup 5AM + Gia NL 4PM + MFD 6AM + DataSite Sun 2AM")
+        print("Scheduler: Lich cup 5AM + Gia NL 4PM + MFD 7AM + DataSite Sun 2AM")
 
         # Initial fuel price fetch on startup
         scheduled_fuel_price_fetch()
@@ -319,4 +391,6 @@ if __name__ == '__main__':
         from bot_telegram import start_bot_thread
         start_bot_thread()
 
-    app.run(host='0.0.0.0', port=5005, debug=False)
+    from waitress import serve
+    print("Starting production WSGI server (Waitress) on port 5005...")
+    serve(app, host='0.0.0.0', port=5005, threads=8)

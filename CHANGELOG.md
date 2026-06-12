@@ -1,5 +1,27 @@
 # Changelog
 
+## [2026-04-29]
+### Added
+- **Web App Windows Service (Persistence)**: Tích hợp công cụ **WinSW** và script cài đặt `install_webapp_service.ps1`. Web App giờ đây có thể chạy như một Windows Service thực thụ (`VH_WebApp`), tự động khởi động cùng Windows và tự phục hồi khi gặp sự cố.
+- **Maintenance Scripts**: Bổ sung bộ công cụ trong `web-app/scratch/` để kiểm tra và tính toán lại giá nhiên liệu (`recalc_prices.py`, `verify_prices.py`, `test_price_api.py`).
+
+### Changed
+- **Git Sync Strategy**: Đồng bộ thành công hơn 30 file mã nguồn từ repository chính (cập nhật templates, logic worker và routes).
+- **Generator UI**: Cập nhật đáng kể giao diện quản lý máy phát điện (`generator.html`) với các cải tiến về bảng biểu và logic hiển thị.
+- **SmartW Worker**: Nâng cấp logic cào dữ liệu và xử lý đồng bộ trong `worker.py`.
+
+### Fixed
+- **Fuel Price Scraping**: Cập nhật logic cào giá xăng dầu PVOil để vượt qua lỗi 403 Forbidden, tự động cập nhật giá mới nhất khi khởi động.
+
+
+## [2026-04-27]
+### Added
+- **Viber Alert System (Git Sync)**: Cập nhật mã nguồn và tài liệu thiết kế (`docs/VIBER_DESIGN.md`) cho hệ thống cảnh báo qua Viber.
+- **Persistent Cloudflared Tunnel Service**: Cài đặt thành công Windows Service `Cloudflared_Tunnel` chạy tự động với cấu hình riêng biệt, khắc phục hoàn toàn lỗi phân quyền `systemprofile`.
+
+### Changed
+- **App Restart**: Khởi động lại Web App (Port 5005) để áp dụng các thay đổi mới nhất từ mã nguồn.
+
 ## [2026-04-07]
 ### Added
 - Tính năng tính toán hiển thị gộp độ cao Anten theo RAN cho mức Site (DataSite - Vô tuyến)
@@ -13,9 +35,14 @@
 
 ## [2026-03-31]
 ### Added
-- **Mobile PWA Upgrade**: Chuyển đổi Web-app thành Progressive Web App (PWA) với đầy đủ `manifest.json`, `sw.js` và bộ icon 5G/Viễn thông mới.
-- **Standalone Mode**: Hỗ trợ chạy ứng dụng ở chế độ Standalone (mất thanh địa chỉ browser) khi "Thêm vào màn hình chính", mang lại trải nghiệm như app native.
-- **Persistent Sessions**: Cấu hình `PERMANENT_SESSION_LIFETIME = 30 ngày` và tự động duy trì đăng nhập (`session.permanent = True`), khắc phục triệt để lỗi thỉnh thoảng bị văng login trên điện thoại.
+- **Mobile PWA Upgrade**: Chuyển đổi Web-app thành Progressive Web App (PWA) với đầy đủ `manifest.json`, `sw.js` và bộ icon 5G/Viễn thông mới. Hỗ trợ chế độ Standalone (app-like experience).
+- **Persistent Sessions**: Cấu hình `PERMANENT_SESSION_LIFETIME = 30 ngày` và tự động duy trì đăng nhập, khắc phục triệt để lỗi bị văng login trên điện thoại.
+- **Cloudflared Windows Service**: Chuyển đổi Tunnel sang dạng Windows Service chạy ngầm tự động. Cung cấp script PowerShell để tự động sửa lỗi và phục hồi khi service bị treo.
+- **DataSite Transmission Import**: Hỗ trợ import dữ liệu truyền dẫn từ DataSite Excel, mở rộng khả năng quản lý hạ tầng đồng bộ.
+
+### Changed
+- **layout.html**: Tích hợp PWA meta tags và logic đăng ký Service Worker.
+- **app.py**: Cấu hình global cho session lifetime và proxy fix.
 
 ## [2026-03-15]
 ### Added
@@ -36,6 +63,15 @@
 ### Fixed
 - **Duplicate Button Server-side**: Giải quyết triệt để lỗi lặp nút "Thêm" trên môi trường production bằng logic Jinja2 `if` blocks riêng biệt và `trim`.
 - **UI Consistency**: Đồng bộ hiển thị badge ngày tháng chuẩn VN (DD/MM/YYYY) trên header Daily Work và cải thiện hiển thị mobile.
+
+## [2026-03-11]
+### Added
+- **SmartW MFD Overnight Reconciliation**: Tự động cập nhật giờ kết thúc cho các sự kiện máy phát chạy qua đêm (overnight events).
+- **D-2 Retroactive Scrape**: SmartW Worker quét lùi về 2 ngày trước để đảm bảo không bỏ sót dữ liệu.
+
+### Changed
+- **Auto-Approve Logic**: Tự động duyệt các lượt chạy máy phát ≤ 8 giờ.
+- **Robust Duplicate Detection**: Cải tiến bộ lọc so khớp trùng lặp [Trạm + Ngày + Giờ Bắt Đầu].
 
 ## [2026-03-09]
 ### Added

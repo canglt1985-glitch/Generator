@@ -16,9 +16,9 @@ Dự án tập trung vào hai cải tiến chính để tăng tính bảo mật 
 
 | Phase | Name | Status | Progress |
 |-------|------|--------|----------|
-| 01 | Cloudflared Windows Service | ⬜ Pending | 0% |
-| 02 | Flask Persistent Session | ⬜ Pending | 0% |
-| 03 | PWA Manifest & Icons | ⬜ Pending | 0% |
+| 01 | Cloudflared Windows Service | ✅ Complete | 100% |
+| 02 | Flask Persistent Session | ✅ Complete | 100% |
+| 03 | PWA Manifest & Icons | ✅ Complete | 100% |
 | 04 | Testing (Mobile + Shutdown) | ⬜ Pending | 0% |
 
 ## Quick Commands

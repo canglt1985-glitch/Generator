@@ -35,7 +35,17 @@ logs/
 .vscode/
 .idea/
 
-# ── Secrets ──
+# Secrets
 .env
 .env.*
 !.env.example
+
+# ── Playwright Browsers ──
+playwright-browsers/
+
+# ── Windows Service files ──
+web-app/scripts/VH_WebApp_Service.exe
+web-app/scripts/VH_WebApp_Service.xml
+web-app/scripts/*.log
+web-app/scripts/*.log.old
+

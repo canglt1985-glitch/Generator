@@ -13,11 +13,11 @@ sys.stdout.reconfigure(encoding="utf-8")
 # 1. Cấu hình Môi trường & Database
 load_dotenv()
 
-
 # Sử dụng chung cấu hình với app.py
 db_url = os.getenv('DATABASE_URL', 'sqlite:///instance/generator_manager.db')
 if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
+
 # SQLite path adjustment for script running in web-app
 if 'sqlite' in db_url and not os.path.exists(db_url.replace('sqlite:///', '')):
     # Try dynamic path

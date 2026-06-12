@@ -683,7 +683,7 @@
         try {
             const resp = await fetch(`/api/wireless/cell/${encodeURIComponent(ACTIVE_CELL)}/update`, {
                 method: 'POST',
-                headers: { 
+                headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': '{{ csrf_token() }}'
                 },

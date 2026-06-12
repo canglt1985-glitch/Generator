@@ -1,5 +1,40 @@
 # Changelog - Project VT3-VHKT
 
+## [2026-05-19]
+### Added
+- **Tính năng Xuất Excel Tồn Tại:** Thêm nút "Xuất Excel" trên tab Tồn Tại trong trang Công Việc Hàng Ngày. File xuất ra gồm: STT, Tên trạm, Lat, Long, Địa chỉ, Đánh giá tình trạng hư hỏng.
+- **API mới:** `GET /issues/export` (blueprint `daily_work`) — tự động JOIN StationIssue với DsStation để lấy tọa độ và địa chỉ.
+- **Thư viện:** `openpyxl` được sử dụng để sinh file `.xlsx` dạng BytesIO, trả về trực tiếp cho trình duyệt download.
+
+## [2026-04-29]
+
+### Added
+- **Tính năng:** Triển khai Hệ thống quản lý Quỹ tạm ứng cho anh Thái (Fund Management).
+- **Cấu trúc:** Bổ sung trường `tong_tien_nhan` vào `payment_groups.json` để theo dõi tiền tạm ứng lũy kế.
+- **Giao diện:** Thêm các Card hiển thị Số dư quỹ, Lũy kế phát sinh và Phát sinh mới trên cả trang Chi phí và Báo cáo.
+- **Tính toán:** Tự động hóa việc tính toán Số dư = (Tiền tạm ứng - Tiền đã thanh toán toàn thời gian).
+
+### Fixed
+- **Lỗi hệ thống:** Sửa lỗi `UnboundLocalError` và `NameError` khi truy cập trang Chi phí bằng cách khởi tạo biến toàn cục.
+- **UI/UX:** Đồng bộ hóa giao diện Card thanh toán giữa trang Chi phí và trang Tổng hợp.
+- **Label:** Cập nhật các nhãn hiển thị sang "Tổng tiền đã tạm ứng" theo yêu cầu người dùng.
+
+### Changed
+- **Logic:** Chuyển mốc tính toán Lũy kế về ngày 01/01/2025 để đảm bảo tính lịch sử.
+
+## [2026-04-23]
+### Added
+- Thêm kế hoạch nâng cấp [VHKT_ENTERPRISE_PLAN.md](file:///d:/download/VH%20may%20phat%20dien/docs/VHKT_ENTERPRISE_PLAN.md).
+- Giao diện Admin mới: `_modals_admin.html`.
+- Tài liệu `read_excel.txt`.
+
+### Changed
+- Cập nhật giao diện quản lý máy phát điện Admin (`admin_mpd.html`).
+- Cấu hình Cloudflared chạy dưới dạng tiến trình ẩn (Manual Process) để đảm bảo ổn định.
+
+### Fixed
+- Lỗi kết nối Tunnel do thiếu file cấu hình trong System Profile (xử lý bằng cách chạy thủ công với config của user).
+
 ## [2026-04-20]
 ### Added
 - **Brainstorm: VHKT Enterprise (VEE):** Hoàn thành buổi thảo luận chiến lược về dự án thế hệ mới.

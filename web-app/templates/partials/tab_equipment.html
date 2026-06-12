@@ -2,8 +2,8 @@
 <div class="tab-pane fade {{ 'show active' if active_tab == 'equipment' else '' }}" id="equipment-content"
     role="tabpanel">
 
-    <!-- Header - Info only -->
-    <div class="d-flex align-items-center mb-2">
+    <!-- Header -->
+    <div class="d-flex align-items-center justify-content-between mb-2">
         <div class="text-muted small">
             <span class="badge bg-blue-lt me-1">{{ mobile_equipments|length }}</span> thiết bị
         </div>
@@ -71,11 +71,17 @@
                                 <i class="fas fa-arrow-left"></i>
                             </button>
                             {% endif %}
+                            <button class="btn btn-sm btn-outline-info eq-btn" data-bs-toggle="modal"
+                                data-bs-target="#equipModal"
+                                onclick="editEquipment({{ e.id }}, '{{ e.ma_thiet_bi }}', '{{ e.loai }}', '{{ e.thong_so or '' }}', '{{ e.trang_thai }}', {{ e.nl_ton or 0 }}, '{{ e.ghi_chu or '' }}')"
+                                title="Sửa thông tin">
+                                <i class="fas fa-edit"></i>
+                            </button>
                             {% if session.get('role') == 'admin' %}
                             <form method="POST" action="{{ url_for('daily_work.delete_mobile_equipment', id=e.id) }}"
                                 style="display:inline;" onsubmit="return confirm('Xóa {{ e.ma_thiet_bi }}?')">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
                                 <button type="submit" class="btn btn-sm btn-outline-danger eq-btn" title="Xóa">
                                     <i class="fas fa-trash"></i>
                                 </button>
@@ -215,8 +221,8 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <form id="equipForm" method="POST" action="{{ url_for('daily_work.add_mobile_equipment') }}">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
                 <div class="modal-header py-2 bg-indigo-lt">
                     <h5 class="modal-title" id="equipModalTitle">
                         <i class="fas fa-truck-moving me-1"></i>Thêm Thiết Bị
@@ -275,8 +281,8 @@
     <div class="modal-dialog modal-sm modal-dialog-centered">
         <div class="modal-content">
             <form method="POST" action="{{ url_for('daily_work.transfer_equipment') }}">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
                 <div class="modal-header py-2 bg-success-lt">
                     <h5 class="modal-title" id="transferTitle">
                         <i class="fas fa-exchange-alt me-1"></i>Điều Chuyển
@@ -330,6 +336,18 @@
         document.getElementById('equipModalTitle').innerHTML = '<i class="fas fa-truck-moving me-1"></i>Thêm Thiết Bị';
         document.getElementById('equipForm').action = "{{ url_for('daily_work.add_mobile_equipment') }}";
         document.getElementById('equipForm').reset();
+    }
+
+    function editEquipment(id, ma, loai, thongso, trangthai, nlton, ghichu) {
+        document.getElementById('equipModalTitle').innerHTML = '<i class="fas fa-edit me-1"></i>Sửa Thiết Bị';
+        let baseUrl = "{{ url_for('daily_work.edit_mobile_equipment', id=0) }}";
+        document.getElementById('equipForm').action = baseUrl.replace('0', id);
+        document.getElementById('eq_ma').value = ma;
+        document.getElementById('eq_loai').value = loai;
+        document.getElementById('eq_thongso').value = thongso;
+        document.getElementById('eq_trangthai').value = trangthai;
+        document.getElementById('eq_nlton').value = nlton;
+        document.getElementById('eq_ghichu').value = ghichu;
     }
 
     function prepareTransfer(id, name, from, mode) {

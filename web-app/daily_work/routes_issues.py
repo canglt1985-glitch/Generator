@@ -87,3 +87,51 @@ def delete_issue(id):
         logging.error(f'Delete issue error: {e}')
         flash('Có lỗi xảy ra.', 'danger')
     return redirect(url_for('daily_work.daily_work', tab='issues'))
+
+
+@daily_work_bp.route('/issues/export', methods=['GET'])
+@login_required
+def export_issues():
+    import io
+    import openpyxl
+    from flask import send_file
+    from models import StationIssue, DsStation
+    from datetime import datetime
+    
+    status_filter = request.args.get('status', 'Chưa XL')
+    query = StationIssue.query
+    if status_filter and status_filter != 'Tất cả':
+        query = query.filter_by(trang_thai=status_filter)
+    issues = query.all()
+    
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "TonTai"
+    
+    headers = ["STT", "Tên trạm", "Lat", "Long", "Địa chỉ", "Đánh giá tình trạng hư hỏng"]
+    ws.append(headers)
+    
+    for i, issue in enumerate(issues, start=1):
+        station = DsStation.query.filter_by(site_id=issue.id_tram).first()
+        if station:
+            ten_tram = station.ten_tram or issue.id_tram
+            lat = station.vi_do or ""
+            lon = station.kinh_do or ""
+            dia_chi = station.dia_chi or ""
+        else:
+            ten_tram, lat, lon, dia_chi = issue.id_tram, "", "", ""
+            
+        ws.append([i, ten_tram, lat, lon, dia_chi, issue.mo_ta])
+        
+    out = io.BytesIO()
+    wb.save(out)
+    out.seek(0)
+    
+    filename = f'BaoCao_TonTai_{datetime.now().strftime("%Y%m%d_%H%M")}.xlsx'
+    return send_file(
+        out, 
+        as_attachment=True, 
+        download_name=filename, 
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+

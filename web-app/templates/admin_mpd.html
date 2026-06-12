@@ -29,6 +29,12 @@
                 </a>
             </li>
             <li class="nav-item">
+                <a href="{{ url_for('core.admin_mpd', tab='invoice', filter_month=filter_month, filter_year=filter_year) }}"
+                    class="nav-link {{ 'active' if active_tab == 'invoice' else '' }} fw-bold">
+                    <i class="fas fa-file-invoice-dollar me-2"></i>Hóa Đơn
+                </a>
+            </li>
+            <li class="nav-item">
                 <a href="{{ url_for('core.admin_mpd', tab='infos') }}"
                     class="nav-link {{ 'active' if active_tab == 'infos' else '' }} fw-bold">
                     <i class="fas fa-broadcast-tower me-2"></i>Thông Tin MPĐ
@@ -277,7 +283,7 @@
                                 class="fas fa-plus me-1"></i>Thêm</button>
                     </div>
                 </div>
-                {% set ns = namespace(total=0, hours=0, fuel_xang=0, fuel_dau=0) %}
+                {% set ns = namespace(total=0, hours=0, fuel_xang=0, fuel_dau=0, vat=0) %}
                 {% for log in logs %}
                 {% set ns.total = ns.total + (log.thanh_tien or 0) %}
                 {% set ns.hours = ns.hours + (log.thoi_gian_hoat_dong or 0) %}
@@ -286,9 +292,14 @@
                 {% else %}
                 {% set ns.fuel_dau = ns.fuel_dau + (log.nhien_lieu_tieu_hao or 0) %}
                 {% endif %}
+                {% if log.ngay_van_hanh and log.ngay_van_hanh >= '2026-03-26' %}
+                {# VAT 0% #}
+                {% else %}
+                {% set ns.vat = ns.vat + ((log.thanh_tien or 0) * 0.08)|round(0)|int %}
+                {% endif %}
                 {% endfor %}
                 {% set total_thanh_tien = ns.total %}
-                {% set total_vat = (total_thanh_tien * 0.08)|round(0)|int %}
+                {% set total_vat = ns.vat %}
                 {% set total_cong = (total_thanh_tien + total_vat)|int %}
                 <div class="row g-2 mb-3">
                     <div class="col-auto">
@@ -334,7 +345,7 @@
                     <div class="col-auto">
                         <div class="card card-sm bg-yellow-lt">
                             <div class="card-body py-2 px-3">
-                                <div class="text-muted small">VAT 8%</div>
+                                <div class="text-muted small">VAT</div>
                                 <div class="fw-bold text-warning">{{ "{:,.0f}".format(total_vat) }}đ</div>
                             </div>
                         </div>
@@ -458,6 +469,325 @@
             </div>
             {% endif %}
 
+            {% if active_tab == 'invoice' %}
+            <!-- Tab: Hóa Đơn -->
+            <div class="tab-pane fade show active" id="invoice">
+                <!-- Gmail Scan & Upload Controls -->
+                <div class="card bg-light-lt border border-warning-lt mb-4 shadow-sm">
+                    <div class="card-body py-3">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <span style="font-size: 2rem;">🧾</span>
+                                <div>
+                                    <h3 class="card-title mb-0">Hóa Đơn Điện Tử XML</h3>
+                                    <p class="text-muted small mb-0">
+                                        Gmail kết nối: <strong>{{ gmail_user if gmail_user else 'Chưa cấu hình' }}</strong>
+                                        {% if gmail_user %}
+                                        <button type="button" class="btn btn-xs btn-link p-0 ms-2 text-warning" onclick="testGmailConnection(event)">
+                                            <i class="fas fa-plug me-1"></i>Kiểm tra kết nối
+                                        </button>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-sm btn-outline-warning rounded-pill" data-bs-toggle="modal" data-bs-target="#gmailConfigModal">
+                                    <i class="fas fa-cog me-1"></i>Cài đặt Gmail
+                                </button>
+                                <form action="{{ url_for('generator.scan_invoice_emails') }}" method="POST" class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-sm btn-warning rounded-pill" {% if not gmail_user %}disabled{% endif %}>
+                                        <i class="fas fa-sync me-1"></i>Quét Gmail
+                                    </button>
+                                </form>
+                                <button type="button" class="btn btn-sm btn-primary rounded-pill" onclick="document.getElementById('manualUploadInput').click()">
+                                    <i class="fas fa-file-upload me-1"></i>Tải lên XML
+                                </button>
+                                <form id="manualUploadForm" action="{{ url_for('generator.upload_invoice_xml') }}" method="POST" enctype="multipart/form-data" style="display:none;">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="file" id="manualUploadInput" name="invoice_files" accept=".xml,.zip" multiple onchange="document.getElementById('manualUploadForm').submit()">
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Alert connection status -->
+                <div id="connectionAlert" class="alert d-none mb-3" role="alert"></div>
+
+                <!-- Filter + Date range title -->
+                <div class="row align-items-center mb-3">
+                    <div class="col">
+                        <form action="{{ url_for('core.admin_mpd') }}" method="GET" class="d-flex gap-2 align-items-center">
+                            <input type="hidden" name="tab" value="invoice">
+                            <select name="filter_month" class="form-select form-select-sm rounded-pill" style="width:auto; min-width:110px;" onchange="this.form.submit()">
+                                <option value="">Cả năm</option>
+                                {% for m in range(1, 13) %}
+                                <option value="{{ m }}" {% if filter_month == m %}selected{% endif %}>Tháng {{ m }}</option>
+                                {% endfor %}
+                            </select>
+                            <select name="filter_year" class="form-select form-select-sm rounded-pill" style="width:auto; min-width:90px;" onchange="this.form.submit()">
+                                {% for y in available_years %}
+                                <option value="{{ y }}" {% if filter_year == y %}selected{% endif %}>Năm {{ y }}</option>
+                                {% endfor %}
+                            </select>
+                        </form>
+                    </div>
+                    <div class="col-auto">
+                        <a href="{{ url_for('generator.export_invoices', month=filter_month, year=filter_year) }}"
+                           class="btn btn-sm btn-outline-success rounded-pill fw-bold">
+                            <i class="fas fa-file-excel me-1"></i>Xuất Excel
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Warnings for >5M dates -->
+                {% set warning_dates = [] %}
+                {% for date, total in daily_totals.items() %}
+                    {% if total > 5000000 %}
+                        {% set _ = warning_dates.append((date, total)) %}
+                    {% endif %}
+                {% endfor %}
+
+                {% if warning_dates %}
+                <div class="alert alert-important alert-danger shadow-sm border-0 mb-3">
+                    <div class="d-flex align-items-start">
+                        <span class="me-3" style="font-size: 1.5rem; line-height: 1;">⚠️</span>
+                        <div>
+                            <h4 class="alert-title fw-bold mb-1">CẢNH BÁO THANH TOÁN (TỔNG NGÀY VƯỢT QUÁ 5 TRIỆU ĐỒNG)</h4>
+                            <div class="small text-white-50">Các ngày sau đây có tổng cộng hóa đơn vượt quá 5,000,000đ. Vui lòng thực hiện <strong>chuyển khoản</strong> (không dùng tiền mặt) để đảm bảo điều kiện khấu trừ thuế:</div>
+                            <ul class="mb-0 mt-2 small ps-3">
+                            {% for date, total in warning_dates | sort %}
+                                <li>Ngày <strong>{{ date | format_date }}</strong>: Tổng cộng <strong>{{ "{:,.0f}".format(total) }} đ</strong></li>
+                            {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                {# Pre-calculate totals for summary cards #}
+                {% set ns2 = namespace(qty_d=0.0, amt_d=0.0, qty_x=0.0, amt_x=0.0, sub=0.0, vat=0.0, grand=0.0) %}
+                {% for inv in invoices %}
+                    {% set fd2 = inv.fuel_details %}
+                    {% set ns2.qty_d = ns2.qty_d + (fd2.qty_d or 0.0) %}
+                    {% set ns2.amt_d = ns2.amt_d + (fd2.amount_d or 0.0) %}
+                    {% set ns2.qty_x = ns2.qty_x + (fd2.qty_x or 0.0) %}
+                    {% set ns2.amt_x = ns2.amt_x + (fd2.amount_x or 0.0) %}
+                    {% set ns2.sub   = ns2.sub   + (inv.sub_total or inv.tong_tien or 0.0) %}
+                    {% set ns2.vat   = ns2.vat   + (inv.vat_amount or 0.0) %}
+                    {% set ns2.grand = ns2.grand + (inv.tong_tien or 0.0) %}
+                {% endfor %}
+
+                {# Summary cards — giống tab Chạy Máy #}
+                <div class="row g-2 mb-3">
+                    <div class="col-auto">
+                        <div class="card card-sm bg-primary-lt">
+                            <div class="card-body py-2 px-3">
+                                <div class="text-muted small">🧾 Số HĐ</div>
+                                <div class="fw-bold">{{ invoices|length }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% if ns2.qty_d > 0 %}
+                    <div class="col-auto">
+                        <div class="card card-sm bg-orange-lt">
+                            <div class="card-body py-2 px-3">
+                                <div class="text-muted small">🛢 Dầu D</div>
+                                <div class="fw-bold text-orange">{{ "{:,.1f}".format(ns2.qty_d) }} L</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if ns2.qty_x > 0 %}
+                    <div class="col-auto">
+                        <div class="card card-sm bg-red-lt">
+                            <div class="card-body py-2 px-3">
+                                <div class="text-muted small">⛽ Xăng X</div>
+                                <div class="fw-bold text-red">{{ "{:,.1f}".format(ns2.qty_x) }} L</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    <div class="col-auto">
+                        <div class="card card-sm bg-blue-lt">
+                            <div class="card-body py-2 px-3">
+                                <div class="text-muted small">💰 Cộng chưa VAT</div>
+                                <div class="fw-bold text-primary">{{ "{:,.0f}".format(ns2.sub) }}đ</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <div class="card card-sm bg-yellow-lt">
+                            <div class="card-body py-2 px-3">
+                                <div class="text-muted small">VAT</div>
+                                <div class="fw-bold text-warning">{{ "{:,.0f}".format(ns2.vat) }}đ</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <div class="card card-sm bg-green-lt">
+                            <div class="card-body py-2 px-3">
+                                <div class="text-muted small">🏆 Tổng tiền</div>
+                                <div class="fw-bold text-success fs-5">{{ "{:,.0f}".format(ns2.grand) }}đ</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% if warning_dates %}
+                    <div class="col-auto">
+                        <div class="card card-sm bg-danger-lt border border-danger">
+                            <div class="card-body py-2 px-3">
+                                <div class="text-muted small">⚠️ Cần CK</div>
+                                <div class="fw-bold text-danger fs-5">{{ warning_dates|length }} ngày</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                {% set date_range_str = "" %}
+                {% if invoices %}
+                    {% set dates = [] %}
+                    {% for inv in invoices %}
+                        {% set _ = dates.append(inv.ngay_lap) %}
+                    {% endfor %}
+                    {% set min_date = dates | min | format_date %}
+                    {% set max_date = dates | max | format_date %}
+                    {% set date_range_str = "(" ~ min_date ~ " - " ~ max_date ~ ")" %}
+
+                <!-- BẢNG KÊ NHIÊN LIỆU -->
+                <div class="card shadow-sm border-0">
+                    <div class="card-header py-3 bg-light d-flex justify-content-between align-items-center">
+                        <h3 class="card-title fw-bold text-uppercase text-dark mb-0">
+                            BẢNG KÊ NHIÊN LIỆU {% if filter_month %}{{ "{:02d}".format(filter_month) }}{% else %}CẢ NĂM{% endif %}/{{ filter_year }} {{ date_range_str }}
+                        </h3>
+                    </div>
+                    <div class="table-responsive" style="max-height: 600px; overflow: auto;">
+                        <table class="table table-vcenter card-table table-hover table-bordered text-nowrap" style="font-size: 0.8rem;">
+                            <thead class="bg-dark text-white text-center">
+                                <tr>
+                                    <th rowspan="2" class="align-middle text-white bg-dark">STT</th>
+                                    <th rowspan="2" class="align-middle text-white bg-dark">Cửa hàng xăng dầu</th>
+                                    <th rowspan="2" class="align-middle text-white bg-dark">Link tra cứu</th>
+                                    <th rowspan="2" class="align-middle text-white bg-dark">Số Hóa đơn</th>
+                                    <th rowspan="2" class="align-middle text-white bg-dark">Ngày tháng</th>
+                                    <th colspan="3" class="text-white bg-teal py-1">Nhiên liệu Dầu (D)</th>
+                                    <th colspan="3" class="text-white bg-purple py-1">Nhiên liệu Xăng (X)</th>
+                                    <th rowspan="2" class="align-middle text-white bg-dark">Cộng chưa VAT</th>
+                                    <th rowspan="2" class="align-middle text-white bg-dark">Thuế VAT</th>
+                                    <th rowspan="2" class="align-middle text-white bg-dark">Tổng tiền</th>
+                                    <th rowspan="2" class="align-middle text-white bg-dark">Note</th>
+                                </tr>
+                                <tr>
+                                    <th class="bg-teal-lt text-teal fw-bold py-1">Số lượng D (lít)</th>
+                                    <th class="bg-teal-lt text-teal fw-bold py-1">Đơn giá D</th>
+                                    <th class="bg-teal-lt text-teal fw-bold py-1">Thành tiền D</th>
+                                    <th class="bg-purple-lt text-purple fw-bold py-1">Số lượng X (lít)</th>
+                                    <th class="bg-purple-lt text-purple fw-bold py-1">Đơn giá X</th>
+                                    <th class="bg-purple-lt text-purple fw-bold py-1">Thành tiền X</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% set total_qty_d = namespace(val=0.0) %}
+                                {% set total_amt_d = namespace(val=0.0) %}
+                                {% set total_qty_x = namespace(val=0.0) %}
+                                {% set total_amt_x = namespace(val=0.0) %}
+                                {% set total_sub = namespace(val=0.0) %}
+                                {% set total_vat = namespace(val=0.0) %}
+                                {% set total_grand = namespace(val=0.0) %}
+
+                                {% for inv in invoices %}
+                                    {% set fd = inv.fuel_details %}
+                                    {% set total_qty_d.val = total_qty_d.val + (fd.qty_d or 0.0) %}
+                                    {% set total_amt_d.val = total_amt_d.val + (fd.amount_d or 0.0) %}
+                                    {% set total_qty_x.val = total_qty_x.val + (fd.qty_x or 0.0) %}
+                                    {% set total_amt_x.val = total_amt_x.val + (fd.amount_x or 0.0) %}
+                                    {% set total_sub.val = total_sub.val + (inv.sub_total or inv.tong_tien or 0.0) %}
+                                    {% set total_vat.val = total_vat.val + (inv.vat_amount or 0.0) %}
+                                    {% set total_grand.val = total_grand.val + (inv.tong_tien or 0.0) %}
+                                    
+                                    {% set is_warn_day = daily_totals[inv.ngay_lap] > 5000000 %}
+
+                                    <tr class="{% if is_warn_day %}bg-danger-lt{% endif %}">
+                                        <td class="text-center">{{ loop.index }}</td>
+                                        <td class="fw-bold" style="white-space: normal; max-width: 180px; word-wrap: break-word;">{{ inv.seller_name }}</td>
+                                        <td class="text-center">
+                                            {% if inv.invoice_url %}
+                                            <a href="{{ inv.invoice_url }}" target="_blank" class="btn btn-xs btn-outline-info py-0 px-2">Link</a>
+                                            {% else %}
+                                            —
+                                            {% endif %}
+                                        </td>
+                                        <td class="font-monospace fw-bold text-azure text-center">{{ inv.so_hd }}</td>
+                                        <td>
+                                            {{ inv.ngay_lap | format_date }}
+                                            {% if is_warn_day %}
+                                            <span class="badge bg-danger text-white ms-1" title="Tổng ngày > 5 triệu: Cần CK">⚠️ Cần CK</span>
+                                            {% endif %}
+                                        </td>
+                                        
+                                        <!-- Dầu -->
+                                        <td class="text-end text-teal fw-bold">{% if fd.qty_d > 0 %}{{ "{:,.1f}".format(fd.qty_d) }}{% else %}—{% endif %}</td>
+                                        <td class="text-end text-teal">{% if fd.qty_d > 0 and fd.price_d > 0 %}{{ "{:,.0f}".format(fd.price_d) }}{% else %}—{% endif %}</td>
+                                        <td class="text-end text-teal fw-bold">{% if fd.amount_d > 0 %}{{ "{:,.0f}".format(fd.amount_d) }}{% else %}—{% endif %}</td>
+                                        
+                                        <!-- Xăng -->
+                                        <td class="text-end text-purple fw-bold">{% if fd.qty_x > 0 %}{{ "{:,.1f}".format(fd.qty_x) }}{% else %}—{% endif %}</td>
+                                        <td class="text-end text-purple">{% if fd.qty_x > 0 and fd.price_x > 0 %}{{ "{:,.0f}".format(fd.price_x) }}{% else %}—{% endif %}</td>
+                                        <td class="text-end text-purple fw-bold">{% if fd.amount_x > 0 %}{{ "{:,.0f}".format(fd.amount_x) }}{% else %}—{% endif %}</td>
+                                        
+                                        <!-- Thống kê tiền -->
+                                        <td class="text-end text-blue fw-bold">{{ "{:,.0f}".format(inv.sub_total or inv.tong_tien or 0) }}</td>
+                                        <td class="text-end text-muted">{{ "{:,.0f}".format(inv.vat_amount or 0) }}</td>
+                                        <td class="text-end text-success fw-bold">{{ "{:,.0f}".format(inv.tong_tien or 0) }}</td>
+                                        
+                                        <td>
+                                            <div class="d-flex align-items-center justify-content-between gap-2">
+                                                <div class="d-flex flex-column text-start">
+                                                    {% if is_warn_day %}
+                                                    <span class="text-danger fw-bold small" style="white-space: nowrap;">*Cần chuyển khoản*</span>
+                                                    {% endif %}
+                                                    <span class="text-muted small" style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; font-size: 0.7rem;" title="{{ inv.source }}">{{ inv.source }}</span>
+                                                </div>
+                                                <form action="{{ url_for('generator.discard_parsed_invoice', id=inv.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Bạn có chắc muốn ẩn hóa đơn này khỏi bảng kê?')">
+                                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                    <button type="submit" class="btn btn-xs btn-link text-danger p-0 ms-1" title="Ẩn hóa đơn">
+                                                        <i class="fas fa-trash-alt"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                                
+                                <!-- Dòng Tổng cộng -->
+                                <tr class="fw-bold bg-dark-lt" style="border-top: 2px solid #333;">
+                                    <td colspan="5" class="text-center text-dark">TỔNG CỘNG</td>
+                                    <td class="text-end text-teal fw-bold">{% if total_qty_d.val > 0 %}{{ "{:,.1f}".format(total_qty_d.val) }} L{% else %}—{% endif %}</td>
+                                    <td>—</td>
+                                    <td class="text-end text-teal fw-bold">{% if total_amt_d.val > 0 %}{{ "{:,.0f}".format(total_amt_d.val) }}{% else %}—{% endif %}</td>
+                                    <td class="text-end text-purple fw-bold">{% if total_qty_x.val > 0 %}{{ "{:,.1f}".format(total_qty_x.val) }} L{% else %}—{% endif %}</td>
+                                    <td>—</td>
+                                    <td class="text-end text-purple fw-bold">{% if total_amt_x.val > 0 %}{{ "{:,.0f}".format(total_amt_x.val) }}{% else %}—{% endif %}</td>
+                                    <td class="text-end text-blue fw-bold">{{ "{:,.0f}".format(total_sub.val) }}</td>
+                                    <td class="text-end text-muted fw-bold">{{ "{:,.0f}".format(total_vat.val) }}</td>
+                                    <td class="text-end text-success fw-bold" style="font-size: 0.9rem;">{{ "{:,.0f}".format(total_grand.val) }} đ</td>
+                                    <td class="bg-light"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% else %}
+                <div class="card shadow-sm border-0 py-5 text-center text-muted">
+                    <div class="mb-2" style="font-size: 2rem;">📭</div>
+                    Không có hóa đơn nhiên liệu nào trong khoảng thời gian này.<br>
+                    Hãy kết nối Gmail hoặc tải lên trực tiếp file XML để bắt đầu.
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
             {% if active_tab == 'infos' %}
             <!-- Tab: Thông Tin MPĐ -->
             <div class="tab-pane fade show active" id="infos">
@@ -549,6 +879,45 @@
 <!-- Modals -->
 {% include "_modals_admin.html" %}
 
+<!-- Modal: Gmail Settings inside Admin Panel -->
+<div class="modal modal-blur fade" id="gmailConfigModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content shadow border-0">
+            <form action="{{ url_for('generator.save_invoice_settings') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header bg-warning-lt border-0">
+                    <h5 class="modal-title fw-bold text-warning"><i class="fas fa-envelope me-2"></i>Cài đặt Kết nối Gmail</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label required fw-bold">Địa chỉ Gmail</label>
+                        <input type="email" class="form-control" name="gmail_user" value="{{ gmail_user }}" required placeholder="vi_du@gmail.com">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label required fw-bold">Mật khẩu ứng dụng (App Password)</label>
+                        <input type="password" class="form-control" name="gmail_app_password" placeholder="Nhập 16 ký tự mật khẩu ứng dụng">
+                        <small class="form-hint text-muted mt-1">
+                            Lưu ý: Mật khẩu này được tạo trong trang <strong>Quản lý Tài khoản Google -> Bảo mật -> Xác minh 2 bước -> Mật khẩu ứng dụng</strong>. KHÔNG sử dụng mật khẩu Gmail chính.
+                        </small>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label fw-bold">Bộ lọc Tiêu đề Email</label>
+                        <input type="text" class="form-control" name="gmail_subject_filter" value="{{ gmail_subject_filter }}" placeholder="Hóa đơn;hoadon;invoice;hddt">
+                        <small class="form-hint text-muted mt-1">Các từ khóa tìm kiếm trong tiêu đề email, phân cách bằng dấu chấm phẩy (;).</small>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-3 bg-light d-flex justify-content-between">
+                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" onclick="testGmailConnectionInline(this)">
+                        <i class="fas fa-plug me-1"></i>Kiểm tra kết nối
+                    </button>
+                    <button type="submit" class="btn btn-sm btn-warning rounded-pill px-4">Lưu cấu hình</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- Modal: Edit Generator Log (sửa giờ pending records) -->
 <div class="modal modal-blur fade" id="editLogModal" tabindex="-1">
     <div class="modal-dialog modal-sm modal-dialog-centered">
@@ -622,6 +991,52 @@
         document.getElementById('editLogGioKT').value = gioKT;
         const _bs = (typeof bootstrap !== 'undefined') ? bootstrap : (typeof tabler !== 'undefined' ? tabler.bootstrap : null);
         if (_bs) new _bs.Modal(document.getElementById('editLogModal')).show();
+    }
+
+    // Gmail connection functions for invoice tab
+    function testGmailConnection(event) {
+        const btn = event ? event.currentTarget : null;
+        if (btn) btn.disabled = true;
+        const alertBox = document.getElementById('connectionAlert');
+        alertBox.className = 'alert alert-info py-2 mb-3';
+        alertBox.style.display = 'block';
+        alertBox.classList.remove('d-none');
+        alertBox.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Đang kiểm tra kết nối tới Gmail, vui lòng đợi...';
+        
+        fetch('/invoice/test-connection')
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alertBox.className = 'alert alert-success py-2 mb-3';
+                    alertBox.innerHTML = '<i class="fas fa-check-circle me-2"></i>' + data.message;
+                } else {
+                    alertBox.className = 'alert alert-danger py-2 mb-3';
+                    alertBox.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>' + data.error;
+                }
+            })
+            .catch(err => {
+                alertBox.className = 'alert alert-danger py-2 mb-3';
+                alertBox.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>Lỗi kết nối API.';
+            })
+            .finally(() => {
+                if (btn) btn.disabled = false;
+            });
+    }
+
+    function testGmailConnectionInline(btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Đang kết nối...';
+        
+        fetch('/invoice/test-connection')
+            .then(res => res.json())
+            .then(data => {
+                alert(data.message || data.error);
+            })
+            .catch(() => alert('Lỗi kết nối api'))
+            .finally(() => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-plug me-1"></i>Kiểm tra kết nối';
+            });
     }
 </script>
 {% endblock %}

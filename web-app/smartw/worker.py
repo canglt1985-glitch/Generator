@@ -70,29 +70,33 @@ def _get_site_label(site_id: str) -> str:
     Falls back to GeneralInfo.id_old if available.
     Returns '*SITE_ID*' alone when no mapping found.
     """
-    try:
-        from models import DsSiteRegistry
-        row = DsSiteRegistry.query.filter(
-            (DsSiteRegistry.site_id_new == site_id.upper()) |
-            (DsSiteRegistry.site_id_old == site_id.upper())
-        ).first()
-        if row and row.site_id_new and row.site_id_old:
-            return f"*{row.site_id_new}* ({row.site_id_old})"
-        if row and row.site_id_new:
-            return f"*{row.site_id_new}*"
-    except Exception:
-        pass
+    from app import app
+    with app.app_context():
+        try:
+            from models import DsSiteRegistry
+            row = DsSiteRegistry.query.filter(
+                (DsSiteRegistry.site_id_new == site_id.upper()) |
+                (DsSiteRegistry.site_id_old == site_id.upper())
+            ).first()
+            if row and row.site_id_new and row.site_id_old:
+                return f"*{row.site_id_new}* ({row.site_id_old})"
+            if row and row.site_id_new:
+                return f"*{row.site_id_new}*"
+        except Exception as e:
+            logger.error(f'SmartW _get_site_label Registry error for {site_id}: {e}')
+            pass
 
-    # Fallback: try GeneralInfo for legacy id_old field
-    try:
-        from models import GeneralInfo
-        info = GeneralInfo.query.filter_by(id_tram=site_id).first()
-        if info:
-            old_id = getattr(info, 'id_old', None)
-            if old_id and old_id != site_id:
-                return f"*{site_id}* ({old_id})"
-    except Exception:
-        pass
+        # Fallback: try GeneralInfo for legacy id_old field
+        try:
+            from models import GeneralInfo
+            info = GeneralInfo.query.filter_by(id_tram=site_id).first()
+            if info:
+                old_id = getattr(info, 'id_old', None)
+                if old_id and old_id != site_id:
+                    return f"*{site_id}* ({old_id})"
+        except Exception as e:
+            logger.error(f'SmartW _get_site_label GeneralInfo error for {site_id}: {e}')
+            pass
 
     # No mapping found - just return the site_id bolded
     return f"*{site_id}*"
@@ -117,16 +121,18 @@ def _norm_net(network: str) -> str:
 
 def _old_id(site_id: str) -> str:
     """Look up legacy site ID from site registry."""
-    try:
-        from models import DsSiteRegistry
-        row = DsSiteRegistry.query.filter(
-            (DsSiteRegistry.site_id_new == site_id.upper()) |
-            (DsSiteRegistry.site_id_old == site_id.upper())
-        ).first()
-        if row and row.site_id_old:
-            return row.site_id_old
-    except Exception:
-        pass
+    from app import app
+    with app.app_context():
+        try:
+            from models import DsSiteRegistry
+            row = DsSiteRegistry.query.filter(
+                (DsSiteRegistry.site_id_new == site_id.upper()) |
+                (DsSiteRegistry.site_id_old == site_id.upper())
+            ).first()
+            if row and row.site_id_old:
+                return row.site_id_old
+        except Exception:
+            pass
     return site_id
 
 
@@ -286,6 +292,8 @@ def _load_status() -> dict:
                 # Ensure login_fail_count exists (migration)
                 if 'login_fail_count' not in data:
                     data['login_fail_count'] = 0
+                if 'viber_sso_error_sent' not in data:
+                    data['viber_sso_error_sent'] = False
                 return data
         except (json.JSONDecodeError, IOError):
             pass
@@ -295,7 +303,8 @@ def _load_status() -> dict:
         'errors': [],
         'is_running': False,
         'scheduler_enabled': False,
-        'login_fail_count': 0
+        'login_fail_count': 0,
+        'viber_sso_error_sent': False
     }
 
 
@@ -304,6 +313,34 @@ def _save_status(status: dict):
     os.makedirs(DATA_DIR, exist_ok=True)
     with open(STATUS_FILE, 'w', encoding='utf-8') as f:
         json.dump(status, f, ensure_ascii=False, indent=2)
+
+
+VIBER_LOGIN_FAIL_THRESHOLD = MAX_LOGIN_FAILURES
+
+def _record_login_failure(status: dict, source: str):
+    """Increment login failure count and send a notification to Viber if threshold is reached."""
+    status['login_fail_count'] = status.get('login_fail_count', 0) + 1
+    fail_count = status['login_fail_count']
+    logger.warning(f'SmartW Worker ({source}): Login failure #{fail_count}/{MAX_LOGIN_FAILURES}')
+    
+    # Notify Viber if threshold reached and notification not sent yet
+    if fail_count >= VIBER_LOGIN_FAIL_THRESHOLD:
+        if not status.get('viber_sso_error_sent'):
+            msg = [
+                "⚠️ *CẢNH BÁO: LỖI ĐĂNG NHẬP SSO SMARTW*",
+                "------------",
+                f"Hệ thống gặp lỗi đăng nhập SSO SmartW liên tiếp {fail_count} lần.",
+                "Tác vụ tự động quét SmartW tạm thời không thể lấy dữ liệu mới.",
+                "Tạm ngưng gửi các bản tin cảnh báo SmartW lên group Viber.",
+                "------------",
+                "👉 Vui lòng kiểm tra lại kết nối VPN Mobifone hoặc tài khoản/mật khẩu trong trang quản trị."
+            ]
+            try:
+                _send_viber_report(msg)
+                status['viber_sso_error_sent'] = True
+                logger.info("SmartW Worker: Sent SSO login failure warning to Viber")
+            except Exception as ve:
+                logger.error(f"Failed to send SSO failure alert to Viber: {ve}")
 
 
 def get_scrape_status() -> dict:
@@ -346,6 +383,7 @@ def reset_login_failures():
     """Reset login failure counter + destroy scraper. Called when credentials are updated."""
     status = _load_status()
     status['login_fail_count'] = 0
+    status['viber_sso_error_sent'] = False
     # Clear login-related errors
     status['errors'] = [
         e for e in status['errors']
@@ -527,7 +565,12 @@ def _run_async(coro_func):
         loop = asyncio.get_running_loop()
         with concurrent.futures.ThreadPoolExecutor() as executor:
             future = executor.submit(asyncio.run, coro_func())
-            return future.result(timeout=1200)
+            try:
+                return future.result(timeout=1200)
+            except (concurrent.futures.TimeoutError, TimeoutError):
+                logger.error(f"SmartW Worker: ⏱️ Async task timed out after 1200s")
+                # We can't easily kill the thread, but we can stop waiting for it
+                return {'error': 'Hệ thống phản hồi chậm (Timeout 20m)'}
     except RuntimeError:
         return asyncio.run(coro_func())
 
@@ -619,7 +662,11 @@ def run_alarm_poll():
         for table_type in ['md', 'mpd', 'mll', 'mll_cell']:
             _backup_active(table_type)
 
-        result = _run_async(_do_alarm_poll)
+        result = _run_async(_do_alarm_poll) or {}
+        
+        # If result is None or empty, ensure it's a dict
+        if not isinstance(result, dict):
+            result = {'error': 'Kết quả trả về không hợp lệ'}
 
         if result.get('error'):
             logger.error(f'SmartW Worker: ❌ {result["error"]}')
@@ -632,8 +679,7 @@ def run_alarm_poll():
             # Increment login failure counter for login errors
             err_lower = result['error'].lower()
             if any(kw in err_lower for kw in ['login', 'đăng nhập', 'cooldown', 'credentials']):
-                status['login_fail_count'] = status.get('login_fail_count', 0) + 1
-                logger.warning(f'SmartW Worker: Login failure #{status["login_fail_count"]}/{MAX_LOGIN_FAILURES}')
+                _record_login_failure(status, 'alarm')
         else:
             logger.info(f'SmartW Worker: ✅ Alarm poll done — '
                         f'MĐ: {len(result.get("md", []))}, '
@@ -643,6 +689,7 @@ def run_alarm_poll():
 
             # Login succeeded → reset failure counter
             status['login_fail_count'] = 0
+            status['viber_sso_error_sent'] = False
 
             # Clear stale alarm errors on success
             status['errors'] = [
@@ -693,19 +740,33 @@ def run_alarm_poll():
                     
                     if new_md:
                         lines.append("⚡ *MAC:*")
+                        mac_groups = {}
                         for alarm in new_md:
                             site = _site_key(alarm)
-                            label = _get_site_label(site)
+                            net = _norm_net(alarm.get('network') or '')
                             t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '', full=False)
-                            lines.append(f"  • {label} - {t}")
+                            if site not in mac_groups:
+                                mac_groups[site] = {'label': _get_site_label(site), 'nets': [], 't': t}
+                            if net and net not in mac_groups[site]['nets']:
+                                mac_groups[site]['nets'].append(net)
+                        for site, grp in mac_groups.items():
+                            net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
+                            lines.append(f"  • {grp['label']}{net_part} - {grp['t']}")
                     
                     if new_mpd:
                         lines.append("🔋 *GEN:*")
+                        mpd_groups = {}
                         for alarm in new_mpd:
                             site = _site_key(alarm)
-                            label = _get_site_label(site)
+                            net = _norm_net(alarm.get('network') or '')
                             t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '', full=False)
-                            lines.append(f"  • {label} - {t}")
+                            if site not in mpd_groups:
+                                mpd_groups[site] = {'label': _get_site_label(site), 'nets': [], 't': t}
+                            if net and net not in mpd_groups[site]['nets']:
+                                mpd_groups[site]['nets'].append(net)
+                        for site, grp in mpd_groups.items():
+                            net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
+                            lines.append(f"  • {grp['label']}{net_part} - {grp['t']}")
 
                     if new_mll:
                         mll_groups = {}
@@ -731,19 +792,33 @@ def run_alarm_poll():
 
                     if cl_md:
                         lines.append("⚡ *MAC:*")
+                        cl_mac_groups = {}
                         for alarm in cl_md:
                             site = _site_key(alarm)
-                            label = _get_site_label(site)
+                            net = _norm_net(alarm.get('network') or '')
                             clear_t = _fmt_sdate(alarm.get('clear_time') or alarm.get('edateStr') or '', full=False)
-                            lines.append(f"  • {label} - {clear_t}")
+                            if site not in cl_mac_groups:
+                                cl_mac_groups[site] = {'label': _get_site_label(site), 'nets': [], 't': clear_t}
+                            if net and net not in cl_mac_groups[site]['nets']:
+                                cl_mac_groups[site]['nets'].append(net)
+                        for site, grp in cl_mac_groups.items():
+                            net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
+                            lines.append(f"  • {grp['label']}{net_part} - {grp['t']}")
 
                     if cl_mpd:
                         lines.append("🔋 *GEN:*")
+                        cl_mpd_groups = {}
                         for alarm in cl_mpd:
                             site = _site_key(alarm)
-                            label = _get_site_label(site)
+                            net = _norm_net(alarm.get('network') or '')
                             clear_t = _fmt_sdate(alarm.get('clear_time') or alarm.get('edateStr') or '', full=False)
-                            lines.append(f"  • {label} - {clear_t}")
+                            if site not in cl_mpd_groups:
+                                cl_mpd_groups[site] = {'label': _get_site_label(site), 'nets': [], 't': clear_t}
+                            if net and net not in cl_mpd_groups[site]['nets']:
+                                cl_mpd_groups[site]['nets'].append(net)
+                        for site, grp in cl_mpd_groups.items():
+                            net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
+                            lines.append(f"  • {grp['label']}{net_part} - {grp['t']}")
 
                     if cl_mll:
                         mll_cl_groups = {}
@@ -876,13 +951,13 @@ def run_vhkt_poll():
             status['errors'] = status['errors'][-10:]
             err_lower_v = result.get('error', '').lower()
             if any(kw in err_lower_v for kw in ['login', 'đăng nhập', 'cooldown', 'credentials']):
-                status['login_fail_count'] = status.get('login_fail_count', 0) + 1
-                logger.warning(f'SmartW Worker: Login failure #{status["login_fail_count"]}/{MAX_LOGIN_FAILURES}')
+                _record_login_failure(status, 'vhkt')
         else:
             logger.info(f'SmartW Worker: ✅ VHKT poll done — {len(result.get("vhkt", []))} records')
 
             # Login succeeded → reset failure counter
             status['login_fail_count'] = 0
+            status['viber_sso_error_sent'] = False
 
             # Clear stale VHKT errors on success
             status['errors'] = [
@@ -901,8 +976,8 @@ def run_vhkt_poll():
         })
         status['errors'] = status['errors'][-10:]
     finally:
-        _is_running = False
         _save_status(status)
+        _release_lock()
 
 
 def run_mfd_import_poll(target_date: str = None):
@@ -987,10 +1062,11 @@ def run_mfd_import_poll(target_date: str = None):
             status['errors'] = status['errors'][-10:]
             err_lower = scrape_result['error'].lower()
             if any(kw in err_lower for kw in ['login', 'credentials']):
-                status['login_fail_count'] = status.get('login_fail_count', 0) + 1
+                _record_login_failure(status, 'mfd_import')
         else:
             # Scrape OK → run import logic (needs Flask app context)
             status['login_fail_count'] = 0
+            status['viber_sso_error_sent'] = False
             raw_data = scrape_result.get('data', [])
 
             if raw_data:
@@ -1063,8 +1139,8 @@ def run_mfd_import_poll(target_date: str = None):
         })
         status['errors'] = status['errors'][-10:]
     finally:
-        _is_running = False
         _save_status(status)
+        _release_lock()
 
     return import_result
 
@@ -1361,22 +1437,35 @@ def send_periodic_full_report():
     # ── Section 1: MAC ──
     if md_list:
         lines.append("⚡ *MAC:*")
+        mac_groups = {}
         for alarm in md_list:
             site = _site_key(alarm)
-            label = _get_site_label(site)
-            # Full format for summary
+            net = _norm_net(alarm.get('network') or '')
             t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '', full=True)
-            lines.append(f"  • {label} - {t}")
+            if site not in mac_groups:
+                mac_groups[site] = {'label': _get_site_label(site), 'nets': [], 't': t}
+            if net and net not in mac_groups[site]['nets']:
+                mac_groups[site]['nets'].append(net)
+        for site, grp in mac_groups.items():
+            net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
+            lines.append(f"  • {grp['label']}{net_part} - {grp['t']}")
             total_active += 1
 
     # ── Section 2: GEN ──
     if mpd_list:
         lines.append("🔋 *GEN:*")
+        mpd_groups = {}
         for alarm in mpd_list:
             site = _site_key(alarm)
-            label = _get_site_label(site)
+            net = _norm_net(alarm.get('network') or '')
             t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '', full=True)
-            lines.append(f"  • {label} - {t}")
+            if site not in mpd_groups:
+                mpd_groups[site] = {'label': _get_site_label(site), 'nets': [], 't': t}
+            if net and net not in mpd_groups[site]['nets']:
+                mpd_groups[site]['nets'].append(net)
+        for site, grp in mpd_groups.items():
+            net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
+            lines.append(f"  • {grp['label']}{net_part} - {grp['t']}")
             total_active += 1
 
     # ── Section 3: MLL ──
@@ -1408,12 +1497,13 @@ def send_periodic_full_report():
         lines.append("📵 *CELLOFF* (" + str(len(seen_cells)) + " cell):")
         for cid, alarm in seen_cells.items():
             site = _site_key(alarm)
-            label = _get_site_label(site)
+            old_id = _old_id(site)
+            old_part = f" ({old_id})" if old_id and old_id != site else ""
             net = _norm_net(alarm.get('network') or '')
             t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '', full=True)
             net_part = f" [{net}]" if net else ''
             display_cid = str(alarm.get('cellid') or alarm.get('cell_id') or cid)
-            lines.append(f"  • {label} | {display_cid}{net_part} - {t}")
+            lines.append(f"  • {display_cid}{old_part}{net_part} - {t}")
             total_active += 1
 
     if total_active > 0:
