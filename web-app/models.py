@@ -519,3 +519,135 @@ class DsWirelessHistory(db.Model):
     def to_dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
+
+class ParsedInvoice(db.Model):
+    __tablename__ = 'parsed_invoice'
+    id = db.Column(db.Integer, primary_key=True)
+    ngay_lap = db.Column(db.String(20))
+    so_hd = db.Column(db.String(50))
+    seller_name = db.Column(db.String(255))
+    seller_mst = db.Column(db.String(50))
+    buyer_name = db.Column(db.String(255))
+    buyer_mst = db.Column(db.String(50))
+    tong_tien = db.Column(db.Float)
+    loai_chi_phi = db.Column(db.String(50))  # 'Mua dầu' hoặc 'Chi phí khác'
+    items_json = db.Column(db.JSON)         # Chi tiết các mặt hàng
+    source = db.Column(db.String(100))       # e.g., 'Gmail: abc@gmail.com' hoặc 'Tải lên thủ công'
+    status = db.Column(db.String(20), default='Pending') # Pending / Approved / Discarded
+    fuel_qty = db.Column(db.Float)
+    fuel_price = db.Column(db.Float)
+    fuel_item_name = db.Column(db.String(255))
+    invoice_url = db.Column(db.String(500))
+    kh_hd = db.Column(db.String(50))
+    ma_tra_cuu = db.Column(db.String(50))
+    sub_total = db.Column(db.Float)
+    vat_amount = db.Column(db.Float)
+    created_at = db.Column(db.String(20), default=lambda: datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+
+    @property
+    def fuel_details(self):
+        import re
+        import json
+        
+        def safe_float(val):
+            try:
+                if val is None:
+                    return 0.0
+                val_str = str(val).replace(',', '').strip()
+                return float(val_str)
+            except:
+                return 0.0
+
+        items = self.items_json or []
+        if isinstance(items, str):
+            try:
+                items = json.loads(items)
+            except:
+                items = []
+        if not isinstance(items, list):
+            items = []
+            
+        qty_d = 0.0
+        price_d = 0.0
+        amount_d = 0.0
+        qty_x = 0.0
+        price_x = 0.0
+        amount_x = 0.0
+        
+        prices_d = []
+        prices_x = []
+        
+        for it in items:
+            if not isinstance(it, dict):
+                continue
+            ten = (it.get("ten") or "").strip()
+            ten_lower = ten.lower()
+            qty = safe_float(it.get("sl"))
+            price = safe_float(it.get("dg"))
+            amount = safe_float(it.get("tt"))
+            
+            is_dau = any(k in ten_lower for k in ["dầu", "dau", "diesel", "điêzen", "diezen"]) or (re.search(r'\bdo\b', ten_lower) is not None)
+            is_xang = any(k in ten_lower for k in ["xăng", "xang", "ron", "e5", "a95", "95", "92"])
+            
+            if is_dau:
+                qty_d += qty
+                amount_d += amount
+                if price > 0:
+                    prices_d.append(price)
+            elif is_xang:
+                qty_x += qty
+                amount_x += amount
+                if price > 0:
+                    prices_x.append(price)
+                    
+        # Fallback to general fuel fields if no items parsed yet or totals are zero
+        if qty_d == 0.0 and qty_x == 0.0:
+            fuel_name = (self.fuel_item_name or "").lower()
+            qty = safe_float(self.fuel_qty)
+            price = safe_float(self.fuel_price)
+            amount = safe_float(self.sub_total or self.tong_tien)
+            
+            if fuel_name:
+                if any(k in fuel_name for k in ["xăng", "xang", "ron", "e5", "95", "92"]):
+                    qty_x = qty
+                    price_x = price
+                    amount_x = amount
+                else:
+                    qty_d = qty
+                    price_d = price
+                    amount_d = amount
+            else:
+                # If there's fuel qty/price in database, assume Dầu as default
+                if qty > 0:
+                    qty_d = qty
+                    price_d = price
+                    amount_d = amount
+
+        # Get first price or fallback
+        price_d = prices_d[0] if prices_d else (price_d or (safe_float(self.fuel_price) if qty_d > 0 else 0.0))
+        price_x = prices_x[0] if prices_x else (price_x or (safe_float(self.fuel_price) if qty_x > 0 else 0.0))
+        
+        # Determine fuel type string
+        if qty_d > 0 and qty_x > 0:
+            loai_nl = "Dầu + Xăng"
+        elif qty_d > 0:
+            loai_nl = "Dầu"
+        elif qty_x > 0:
+            loai_nl = "Xăng"
+        else:
+            loai_nl = "Khác"
+            
+        return {
+            "qty_d": qty_d,
+            "price_d": price_d,
+            "amount_d": amount_d,
+            "qty_x": qty_x,
+            "price_x": price_x,
+            "amount_x": amount_x,
+            "loai_nl": loai_nl
+        }
+
+    def to_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+
+

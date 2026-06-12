@@ -272,6 +272,10 @@ def admin_mpd():
     huyen_filter = None
     gen_logs = []
     infos = []
+    invoices = []
+    daily_totals = {}
+    gmail_user = ""
+    gmail_subject_filter = ""
 
     if active_tab == 'reports':
         huyen_filter = request.args.get('huyen')
@@ -335,6 +339,24 @@ def admin_mpd():
             GeneratorLog.ngay_van_hanh < month_end
         ).order_by(GeneratorLog.ngay_van_hanh.desc()).all()
 
+    elif active_tab == 'invoice':
+        from models import ParsedInvoice, SystemConfig
+        invoices = ParsedInvoice.query.filter(
+            ParsedInvoice.ngay_lap >= month_start,
+            ParsedInvoice.ngay_lap < month_end,
+            ParsedInvoice.status != 'Discarded'
+        ).order_by(ParsedInvoice.ngay_lap.asc(), ParsedInvoice.id.asc()).all()
+
+        daily_totals = {}
+        for inv in invoices:
+            date_str = inv.ngay_lap
+            daily_totals[date_str] = daily_totals.get(date_str, 0.0) + inv.tong_tien
+
+        g_user = SystemConfig.query.filter_by(key='gmail_user').first()
+        gmail_user = g_user.value if g_user else ""
+        g_filter = SystemConfig.query.filter_by(key='gmail_subject_filter').first()
+        gmail_subject_filter = g_filter.value if g_filter else "Hóa đơn;hoadon;invoice;hddt"
+
     elif active_tab == 'infos':
         infos = GeneralInfo.query.order_by(GeneralInfo.id_tram).all()
 
@@ -355,7 +377,11 @@ def admin_mpd():
                            infos=infos,
                            now_date=now.strftime('%Y-%m-%d'),
                            stations=stations,
-                           users=users)
+                           users=users,
+                           invoices=invoices,
+                           daily_totals=daily_totals,
+                           gmail_user=gmail_user,
+                           gmail_subject_filter=gmail_subject_filter)
 
 
 @core_bp.route('/admin/requests/approve/<int:req_id>', methods=['POST'])
@@ -415,30 +441,46 @@ def save_payment_records(data):
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 def load_payment_groups():
-    """Load payment group records (mua_ngoai, cx222) from JSON file."""
+    """Load payment group records (mua_ngoai, cx222) from OtherExpense table."""
     default = {
         'mua_ngoai': {'da_thanh_toan_den': '', 'so_tien_da_tt': 0, 'tong_tien_nhan': 0, 'ghi_chu': '', 'updated_at': '', 'updated_by': ''},
         'cx222':     {'da_thanh_toan_den': '', 'so_tien_da_tt': 0, 'tong_tien_nhan': 0, 'ghi_chu': '', 'updated_at': '', 'updated_by': ''}
     }
     try:
-        if os.path.exists(PAYMENT_GROUPS_FILE):
-            with open(PAYMENT_GROUPS_FILE, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                # Merge với default để đảm bảo đủ keys
-                for group in default:
-                    if group not in data:
-                        data[group] = default[group]
-                return data
+        rows = OtherExpense.query.filter(OtherExpense.noi_dung.like('SYSTEM_PAYMENT_GROUP_%')).all()
+        for row in rows:
+            group_name = row.noi_dung.replace('SYSTEM_PAYMENT_GROUP_', '')
+            if group_name in default:
+                try:
+                    loaded = json.loads(row.ghi_chu)
+                    default[group_name].update(loaded)
+                except Exception:
+                    pass
     except Exception:
         pass
     return default
 
 def save_payment_groups(data):
-    """Save payment group records atomically."""
-    tmp = PAYMENT_GROUPS_FILE + '.tmp'
-    with open(tmp, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-    os.replace(tmp, PAYMENT_GROUPS_FILE)
+    """Save payment group records to OtherExpense table."""
+    for group_name, group_data in data.items():
+        noi_dung = f"SYSTEM_PAYMENT_GROUP_{group_name}"
+        row = OtherExpense.query.filter_by(noi_dung=noi_dung).first()
+        if not row:
+            row = OtherExpense(
+                noi_dung=noi_dung,
+                so_tien=0.0,
+                du_an='SYSTEM',
+                nguoi_tam_ung='SYSTEM',
+                ngay_su_dung=group_data.get('da_thanh_toan_den', '') or datetime.now().strftime('%Y-%m-%d'),
+                ghi_chu=json.dumps(group_data, ensure_ascii=False),
+                ngay_cap_nhat=datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            )
+            db.session.add(row)
+        else:
+            row.ngay_su_dung = group_data.get('da_thanh_toan_den', '') or datetime.now().strftime('%Y-%m-%d')
+            row.ghi_chu = json.dumps(group_data, ensure_ascii=False)
+            row.ngay_cap_nhat = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    db.session.commit()
 
 
 # --- REPORTS ROUTE ---
@@ -551,11 +593,15 @@ def admin_reports():
     mua_ngoai_total += oe_total
 
     # --- CALCULATE CUMULATIVE TOTALS (LŨY KẾ) FOR CARDS ---
-    accum_start = "2025-01-01"
+    accum_start = "2026-02-16"
+    calc_up_to = request.args.get('calc_up_to', '').strip()
+    if not calc_up_to:
+        calc_up_to = datetime.now().strftime('%Y-%m-%d')
     fuel_accum_q = db.session.query(
         FuelLedger.nha_cung_cap, _fn.sum(FuelLedger.thanh_tien)
     ).filter(
         FuelLedger.ngay >= accum_start,
+        FuelLedger.ngay <= calc_up_to,
         FuelLedger.type.in_(['STOCK_IN', 'DIRECT_BUY', 'VEHICLE_FUEL'])
     ).group_by(FuelLedger.nha_cung_cap).all()
     
@@ -569,7 +615,9 @@ def admin_reports():
             mua_ngoai_accum += (amt_a or 0)
     
     oe_accum = db.session.query(_fn.sum(OtherExpense.so_tien)).filter(
-        OtherExpense.ngay_su_dung >= accum_start
+        OtherExpense.ngay_su_dung >= accum_start,
+        OtherExpense.ngay_su_dung <= calc_up_to,
+        ~OtherExpense.noi_dung.like('SYSTEM_PAYMENT_GROUP_%')
     ).scalar() or 0
     mua_ngoai_accum += oe_accum
 
@@ -581,7 +629,7 @@ def admin_reports():
         try:
             # cutoff phải là YYYY-MM-DD
             cutoff = cutoff_date_str
-            today = datetime.now().strftime('%Y-%m-%d')
+            today = calc_up_to
             if group_key == 'cx222':
                 q = db.session.query(_fn.sum(FuelLedger.thanh_tien)).filter(
                     FuelLedger.ngay > cutoff,
@@ -638,7 +686,8 @@ def admin_reports():
                            mua_ngoai_accum=mua_ngoai_accum,
                            cx222_accum=cx222_accum,
                            mua_ngoai_new=mua_ngoai_new,
-                           cx222_new=cx222_new)
+                           cx222_new=cx222_new,
+                           calc_up_to=calc_up_to)
 
 
 @core_bp.route('/admin/save-payment', methods=['POST'])
