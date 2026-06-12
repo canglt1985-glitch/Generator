@@ -34,7 +34,7 @@ export default function PaymentSchedulePanel({ contract, overridePrice }) {
         }
 
         const paidUntilDateStr = contract.financials.da_thanh_toan_den;
-        const endContractStr = contract.dates?.ngay_het_han_thue;
+        const endContractStr = contract.dates?.ngay_ket_thuc_hd;
 
         return { ...generatePaymentSchedule(paidUntilDateStr, endContractStr, oldPrice, newPrice), newPrice };
     }, [contract, overridePrice]);

@@ -46,10 +46,12 @@ export default function ContractDetailPanel({ contract, onClose }) {
     const newStatus = e.target.value;
     setIsUpdatingStatus(true);
     try {
+      // Cập nhật status bên trong trường contract_info JSONB của bảng datasites
+      const updatedContractInfo = { ...contract._raw_contract_info || {}, status: newStatus || null };
       const { error } = await supabase
-        .from('contracts')
-        .update({ status: newStatus || null })
-        .eq('contract_id', contract.contract_id);
+        .from('datasites')
+        .update({ contract_info: updatedContractInfo })
+        .eq('site_id', contract.site_id);
         
       if (error) throw error;
       

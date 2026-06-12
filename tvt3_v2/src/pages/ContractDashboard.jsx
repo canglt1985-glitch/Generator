@@ -26,32 +26,38 @@ export default function ContractDashboard() {
   const fetchContracts = async () => {
     setIsLoading(true);
     try {
+      // Query từ bảng datasites (đã gộp contracts vào)
       const { data, error } = await supabase
-        .from('contracts')
-        .select(`
-          contract_id,
-          site_id,
-          contract_number,
-          contractor_info,
-          financials,
-          dates,
-          erp_info,
-          bank_info,
-          cost_details,
-          status,
-          datasites (
-            site_id_old,
-            name,
-            location_info,
-            classification,
-            status
-          )
-        `);
+        .from('datasites')
+        .select('site_id, site_id_old, name, status, location_info, classification, contract_number, contract_info')
+        .not('contract_number', 'is', null);
 
       if (error) {
         console.error("Error fetching contracts:", error);
       } else {
-        setContracts(data || []);
+        // Map sang cấu trúc contract cũ để tương thích ngược với UI components
+        const mapped = (data || []).map(site => ({
+          contract_id: site.site_id, // Dùng site_id làm key duy nhất
+          site_id: site.site_id,
+          contract_number: site.contract_number,
+          contractor_info: site.contract_info?.contractor_info || {},
+          financials: site.contract_info?.financials || {},
+          dates: site.contract_info?.dates || {},
+          erp_info: site.contract_info?.erp_info || {},
+          bank_info: site.contract_info?.bank_info || {},
+          cost_details: site.contract_info?.cost_details || {},
+          status: site.contract_info?.status || null,
+          _raw_contract_info: site.contract_info || {}, // Giữ nguyên JSONB gốc cho update
+          // Tái tạo trường datasites con để tương thích ngược
+          datasites: {
+            site_id_old: site.site_id_old,
+            name: site.name,
+            location_info: site.location_info,
+            classification: site.classification,
+            status: site.status
+          }
+        }));
+        setContracts(mapped);
       }
     } catch (err) {
       console.error("Unexpected error:", err);

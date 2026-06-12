@@ -5,22 +5,23 @@ import { generateWordDocument } from '../../utils/wordGenerator';
 import { generatePaymentSchedule } from '../../utils/contractCalculations';
 
 const TEMPLATES = {
-    M: { id: 'hd_moi_mat_bang', label: 'Hợp đồng mới Mặt Bằng', file: 'HOP_DONG_MOI_MAT_BANG.docx', type: 'MBF' },
-    CSHT: { id: 'hd_moi_csht', label: 'Hợp đồng mới CSHT', file: 'HOP_DONG_MOI_CSHT.docx', type: 'CSHT' },
+    M: { id: 'hd_moi_mat_bang', label: '1. Hợp đồng mới Mặt Bằng', file: 'HOP_DONG_MOI_MAT_BANG.docx', type: 'MBF' },
+    CSHT: { id: 'hd_moi_csht', label: '1. Hợp đồng mới CSHT', file: 'HOP_DONG_MOI_CSHT.docx', type: 'CSHT' },
     OTHERS: [
-        { id: 'pl_chuyen_chu_the', label: 'Phụ lục Chuyển Chủ Thể', file: 'PHU_LUC_CHUYEN_CHU_THE.docx', type: 'ALL' },
-        { id: 'pl_giam_gia_csht', label: 'Phụ lục Giảm Giá CSHT', file: 'PHU_LUC_GIAM_GIA_CSHT.docx', type: 'CSHT' },
-        { id: 'pl_giam_gia_mat_bang', label: 'Phụ lục Giảm Giá Mặt Bằng', file: 'PHU_LUC_GIAM_GIA_MAT_BANG.docx', type: 'MBF' },
-        { id: 'tl_ky_lai_csht', label: 'Thanh lý Ký Lại CSHT', file: 'THANH_LY_KY_LAI_CSHT.docx', type: 'CSHT' },
-        { id: 'tl_ky_lai_mat_bang', label: 'Thanh lý Ký Lại Mặt Bằng', file: 'THANH_LY_KY_LAI_MAT_BANG.docx', type: 'MBF' },
-        { id: 'tl_ky_moi_csht', label: 'Thanh lý Ký Mới CSHT', file: 'THANH_LY_KY_MOI_CSHT.docx', type: 'CSHT' },
-        { id: 'tl_ky_moi_mat_bang', label: 'Thanh lý Ký Mới Mặt Bằng', file: 'THANH_LY_KY_MOI_MAT_BANG.docx', type: 'MBF' },
+        { id: 'pl_giam_gia_csht', label: '2. Phụ lục Giảm Giá CSHT', file: 'PHU_LUC_GIAM_GIA_CSHT.docx', type: 'CSHT' },
+        { id: 'pl_giam_gia_mat_bang', label: '3. Phụ lục Giảm Giá Mặt Bằng', file: 'PHU_LUC_GIAM_GIA_MAT_BANG.docx', type: 'MBF' },
+        { id: 'pl_chuyen_chu_the_ben_a', label: '4. Phụ lục Chuyển Chủ Thể Bên A (Chủ đất)', file: 'PHU_LUC_CHUYEN_CHU_THE_BEN_A.docx', type: 'ALL' },
+        { id: 'pl_chuyen_chu_the_ben_b', label: '5. Phụ lục Chuyển Chủ Thể Bên B (MobiFone)', file: 'PHU_LUC_CHUYEN_CHU_THE_BEN_B.docx', type: 'ALL' },
+        { id: 'tl_ky_lai_csht', label: '6. Thanh lý Ký Lại CSHT', file: 'THANH_LY_KY_LAI_CSHT.docx', type: 'CSHT' },
+        { id: 'tl_ky_lai_mat_bang', label: '7. Thanh lý Ký Lại Mặt Bằng', file: 'THANH_LY_KY_LAI_MAT_BANG.docx', type: 'MBF' },
+        { id: 'tl_ky_moi_csht', label: '8. Thanh lý Ký Mới CSHT', file: 'THANH_LY_KY_MOI_CSHT.docx', type: 'CSHT' },
+        { id: 'tl_ky_moi_mat_bang', label: '9. Thanh lý Ký Mới Mặt Bằng', file: 'THANH_LY_KY_MOI_MAT_BANG.docx', type: 'MBF' },
     ]
 };
 
 const PREVIEW_TABS = [
     { id: 'tram', label: 'Trạm', icon: Server, keys: ['SITE_ID', 'SITE_NAME', 'ADDRESS'] },
-    { id: 'hopdong', label: 'Hợp Đồng', icon: FileText, keys: ['CONTRACT_NO', 'CONTRACT_DATE', 'END_DATE', 'OWNER_NAME', 'ADDRESS_OLD', 'ADDRESS_NEW', 'PHONE'] },
+    { id: 'hopdong', label: 'Hợp Đồng', icon: FileText, keys: ['CONTRACT_NO', 'CONTRACT_DATE', 'END_DATE', 'OWNER_NAME', 'ADDRESS_OLD', 'ADDRESS_NEW', 'PHONE', 'KICH_BAN_TEXT'] },
     { id: 'taichinh', label: 'Tài Chính', icon: Wallet, keys: ['RENT_FEE', 'OLD_PRICE', 'NEW_PRICE'] },
     { id: 'nganhang', label: 'Ngân Hàng', icon: CreditCard, keys: ['ACCOUNT_OWNER', 'ACCOUNT_NO', 'BANK_NAME', 'BRANCH'] },
     { id: 'giamgia', label: 'Giảm Giá', icon: Wallet, keys: ['MB_QĐ02', 'P_MB', 'TL_MB', 'MFĐ_1245', 'P_MFD', 'TL_MFD', 'COT_1245', 'GIAM_TRU', 'COT_CHOT', 'TL_COT', 'PM_1245', 'P_PM', 'TL_PM', 'TONG_QD', 'TONG_CHOT', 'TL_TONG'] },
@@ -29,10 +30,12 @@ const PREVIEW_TABS = [
 export default function ContractExportButton({ site, contract, overridePrice }) {
     // Step: null | 'pick' | 'preview'
     const [step, setStep] = useState(null);
-    const [isGenerating, setIsGenerating] = useState(false);
+    const [isGeneratingMain, setIsGeneratingMain] = useState(false);
+    const [isGeneratingBBLV, setIsGeneratingBBLV] = useState(false);
     const [selectedTemplate, setSelectedTemplate] = useState(null);
     const [masterData, setMasterData] = useState(null);
     const [activeTab, setActiveTab] = useState('tram');
+    const [options, setOptions] = useState({ giamGia: true, giaHan: false });
 
     const formatCurrency = (v) => {
         if (!v || isNaN(v)) return '0';
@@ -54,7 +57,7 @@ export default function ContractExportButton({ site, contract, overridePrice }) 
         t.type === 'ALL' || (isMobifone ? t.type === 'MBF' : t.type === 'CSHT')
     );
 
-    const buildMasterData = (template) => {
+    const buildMasterData = (template, opts = { giamGia: true, giaHan: false }) => {
         const maTramMoi = site?.site_id || '';
         const maTramCu = site?.site_id_old || '';
         const hienThiMaTram = maTramCu ? `${maTramCu} (${maTramMoi})` : maTramMoi;
@@ -81,7 +84,7 @@ export default function ContractExportButton({ site, contract, overridePrice }) 
 
         const oldPrice = Number(contract?.financials?.gia_thue_co_vat) || 0;
         const paidUntilDateStr = contract?.financials?.da_thanh_toan_den;
-        const endContractStr = contract?.dates?.ngay_het_han_thue;
+        const endContractStr = contract?.dates?.ngay_ket_thuc_hd;
         const scheduleData = generatePaymentSchedule(paidUntilDateStr, endContractStr, oldPrice, tong_chot);
 
         const payRowText = scheduleData.periods?.map(p =>
@@ -116,6 +119,18 @@ export default function ContractExportButton({ site, contract, overridePrice }) 
             NEW_PRICE: formatCurrency(tong_chot),
             NEW_PRICE_TEXT: 'Bằng chữ ghi ở đây',
             LY_DO: 'Thực hiện phương án đàm phán giảm giá thuê vị trí đặt trạm BTS',
+            IS_GIAM_GIA: opts.giamGia ? 1 : 0,
+            IS_GIA_HAN: opts.giaHan ? 1 : 0,
+            IS_BOTH: (opts.giamGia && opts.giaHan) ? 1 : 0,
+            KICH_BAN_TEXT: template?.id?.startsWith('pl_giam_gia')
+                ? ((opts.giamGia && opts.giaHan)
+                    ? 'giảm giá và gia hạn thời hạn thuê'
+                    : (opts.giamGia ? 'giảm giá thuê' : 'gia hạn thời hạn thuê'))
+                : (template?.id?.startsWith('pl_chuyen_chu_the')
+                    ? (opts.giaHan
+                        ? 'chuyển đổi chủ thể ký hợp đồng và gia hạn hợp đồng'
+                        : 'chuyển đổi chủ thể ký hợp đồng')
+                    : ''),
             PAY_ROW: payRowText,
             DEDUCTION_TEXT: deductionText,
             MB_QĐ02: formatCurrency(mat_bang),
@@ -138,30 +153,59 @@ export default function ContractExportButton({ site, contract, overridePrice }) 
     };
 
     const handlePickTemplate = (template) => {
-        const data = buildMasterData(template);
+        let defaultOpts = { giamGia: true, giaHan: false };
+        if (template.id?.startsWith('pl_chuyen_chu_the')) {
+            defaultOpts = { giamGia: false, giaHan: false };
+        }
+        setOptions(defaultOpts);
+        const data = buildMasterData(template, defaultOpts);
         setSelectedTemplate(template);
         setMasterData(data);
         setActiveTab('tram');
         setStep('preview');
     };
 
-    const handleDownload = async () => {
+    const handleToggleOption = (key) => {
+        const nextOpts = { ...options, [key]: !options[key] };
+        setOptions(nextOpts);
+        const data = buildMasterData(selectedTemplate, nextOpts);
+        setMasterData(data);
+    };
+
+    const handleDownloadMain = async () => {
         if (!selectedTemplate || !masterData) return;
-        setIsGenerating(true);
+        setIsGeneratingMain(true);
         try {
             const path = `/templates/${selectedTemplate.file}`;
             const prefix = site.site_id_old || site.site_id;
-            const outName = `${prefix}_${selectedTemplate.label}.docx`;
+            const cleanLabel = selectedTemplate.label.replace(/^\d+\.\s*/, '').replace(/\s+/g, '_');
+            const outName = `${prefix}_${cleanLabel}.docx`;
             const result = await generateWordDocument(path, masterData, outName);
             if (!result.success) {
-                alert('Có lỗi xảy ra khi xuất file:\n' + result.error);
-            } else {
-                setStep(null);
+                alert('Có lỗi xảy ra khi xuất Tài liệu chính:\n' + result.error);
             }
         } catch (err) {
             alert('Có lỗi: ' + err.message);
         } finally {
-            setIsGenerating(false);
+            setIsGeneratingMain(false);
+        }
+    };
+
+    const handleDownloadBBLV = async () => {
+        if (!masterData) return;
+        setIsGeneratingBBLV(true);
+        try {
+            const path = '/templates/BBLV.docx';
+            const prefix = site.site_id_old || site.site_id;
+            const outName = `${prefix}_Bien_Ban_Lam_Viec.docx`;
+            const result = await generateWordDocument(path, masterData, outName);
+            if (!result.success) {
+                alert('Có lỗi xảy ra khi xuất Biên bản làm việc:\n' + result.error);
+            }
+        } catch (err) {
+            alert('Có lỗi: ' + err.message);
+        } finally {
+            setIsGeneratingBBLV(false);
         }
     };
 
@@ -185,10 +229,10 @@ export default function ContractExportButton({ site, contract, overridePrice }) 
             <button
                 ref={btnRef}
                 onClick={() => setStep(step === 'pick' ? null : 'pick')}
-                disabled={isGenerating}
+                disabled={isGeneratingMain || isGeneratingBBLV}
                 className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg shadow-sm transition-colors disabled:opacity-60"
             >
-                {isGenerating ? <Loader2 size={15} className="animate-spin" /> : <FileDown size={15} />}
+                {(isGeneratingMain || isGeneratingBBLV) ? <Loader2 size={15} className="animate-spin" /> : <FileDown size={15} />}
                 In Hợp Đồng
             </button>
 
@@ -259,6 +303,37 @@ export default function ContractExportButton({ site, contract, overridePrice }) 
                             </button>
                         </div>
 
+                        {/* Option Selectors */}
+                        {selectedTemplate && (selectedTemplate.id?.startsWith('pl_giam_gia') || selectedTemplate.id?.startsWith('pl_chuyen_chu_the')) && (
+                            <div className="px-5 py-3.5 bg-slate-50 border-b border-slate-200 flex items-center gap-6 shrink-0">
+                                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Kịch bản áp dụng:</span>
+                                <div className="flex items-center gap-5">
+                                    {selectedTemplate.id?.startsWith('pl_giam_gia') && (
+                                        <label className="inline-flex items-center gap-2 cursor-pointer text-sm font-semibold text-slate-700">
+                                            <input
+                                                type="checkbox"
+                                                checked={options.giamGia}
+                                                onChange={() => handleToggleOption('giamGia')}
+                                                className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+                                            />
+                                            Giảm giá
+                                        </label>
+                                    )}
+                                    {(selectedTemplate.id?.startsWith('pl_giam_gia') || selectedTemplate.id === 'pl_chuyen_chu_the_ben_a') && (
+                                        <label className="inline-flex items-center gap-2 cursor-pointer text-sm font-semibold text-slate-700">
+                                            <input
+                                                type="checkbox"
+                                                checked={options.giaHan}
+                                                onChange={() => handleToggleOption('giaHan')}
+                                                className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+                                            />
+                                            Gia hạn
+                                        </label>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
                         {/* Tab Bar */}
                         <div className="flex overflow-x-auto border-b border-slate-200 shrink-0 bg-white">
                             {PREVIEW_TABS.map(tab => {
@@ -311,21 +386,31 @@ export default function ContractExportButton({ site, contract, overridePrice }) 
                         </div>
 
                         {/* Footer */}
-                        <div className="px-5 py-4 border-t border-slate-200 bg-white flex items-center gap-3 shrink-0">
+                        <div className="px-5 py-4 border-t border-slate-200 bg-white flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
                             <button
                                 onClick={() => setStep('pick')}
-                                className="flex-1 py-2.5 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
+                                className="sm:w-32 py-2.5 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
                             >
                                 ← Chọn lại
                             </button>
-                            <button
-                                onClick={handleDownload}
-                                disabled={isGenerating}
-                                className="flex-[2] flex items-center justify-center gap-2 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl shadow-sm transition-colors disabled:opacity-60"
-                            >
-                                {isGenerating ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
-                                {isGenerating ? 'Đang tạo...' : 'Tải xuống File Word'}
-                            </button>
+                            <div className="flex-1 flex flex-col sm:flex-row gap-2">
+                                <button
+                                    onClick={handleDownloadMain}
+                                    disabled={isGeneratingMain || isGeneratingBBLV}
+                                    className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl shadow-sm transition-colors disabled:opacity-60"
+                                >
+                                    {isGeneratingMain ? <Loader2 size={16} className="animate-spin" /> : <FileDown size={16} />}
+                                    {isGeneratingMain ? 'Đang tạo...' : 'Tải Tài liệu chính'}
+                                </button>
+                                <button
+                                    onClick={handleDownloadBBLV}
+                                    disabled={isGeneratingMain || isGeneratingBBLV}
+                                    className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl shadow-sm transition-colors disabled:opacity-60"
+                                >
+                                    {isGeneratingBBLV ? <Loader2 size={16} className="animate-spin" /> : <FileDown size={16} />}
+                                    {isGeneratingBBLV ? 'Đang tạo...' : 'Tải Biên bản làm việc'}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>,

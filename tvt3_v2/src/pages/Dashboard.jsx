@@ -62,22 +62,37 @@ export default function Dashboard() {
           .from('datasites')
           .select('*', { count: 'exact', head: true });
 
-        // Đếm tổng hợp đồng
+        // Đếm tổng hợp đồng (trạm có contract_number)
         const { count: contractCount } = await supabase
-          .from('contracts')
-          .select('*', { count: 'exact', head: true });
+          .from('datasites')
+          .select('*', { count: 'exact', head: true })
+          .not('contract_number', 'is', null);
 
-        // Lấy toàn bộ danh sách hợp đồng
-        const { data: allContracts } = await supabase
-          .from('contracts')
-          .select('*, datasites(name, site_id_old)');
+        // Lấy toàn bộ trạm có hợp đồng
+        const { data: allSites } = await supabase
+          .from('datasites')
+          .select('site_id, site_id_old, name, contract_info')
+          .not('contract_number', 'is', null);
 
         const now = new Date();
         let expiring90 = 0;
         let actionRequiredCount = 0;
         const upcoming = [];
 
-        (allContracts || []).forEach(c => {
+        // Map sang cấu trúc contract cũ để tương thích
+        const allContracts = (allSites || []).map(site => ({
+          site_id: site.site_id,
+          contract_number: site.contract_number,
+          financials: site.contract_info?.financials || {},
+          dates: site.contract_info?.dates || {},
+          contractor_info: site.contract_info?.contractor_info || {},
+          bank_info: site.contract_info?.bank_info || {},
+          cost_details: site.contract_info?.cost_details || {},
+          status: site.contract_info?.status || null,
+          datasites: { name: site.name, site_id_old: site.site_id_old }
+        }));
+
+        allContracts.forEach(c => {
           const endDate = c.dates?.ngay_ket_thuc_hd;
           const days = daysUntil(endDate);
           

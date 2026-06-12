@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Search, Filter, MapPin, Radio, Building2, FileDown, X, Navigation, ChevronDown, Upload, List, BarChart2, Eye, Database } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import DatasiteDetailFullscreen from '../components/datasites/DatasiteDetailFullscreen';
+import * as XLSX from 'xlsx';
 export default function Datasites() {
   const formatDate = (dateString) => {
     if (!dateString || dateString === 'N/A') return 'N/A';
@@ -15,6 +16,11 @@ export default function Datasites() {
     } catch (e) {
       return dateString;
     }
+  };
+
+  const getCommuneName = (commune) => {
+    if (!commune) return 'Chưa cập nhật';
+    return commune.replace(/,?\s*Đồng\s*Nai/gi, '').trim();
   };
 
   const [data, setData] = useState([]);
@@ -76,6 +82,372 @@ export default function Datasites() {
       return searchTerms.every(term => searchableString.includes(term));
     });
   }, [data, searchQuery]);
+
+  const statusBadge = (status) => {
+    if (!status) return null;
+    const s = status.toUpperCase();
+    const isGood = s.includes('TỐT') || s.includes('HOẠT ĐỘNG');
+    const isBad = s.includes('HỎNG');
+    return (
+      <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+        isGood ? 'bg-emerald-100 text-emerald-700' : 
+        isBad ? 'bg-red-100 text-red-600' : 
+        'bg-amber-100 text-amber-700'
+      }`}>
+        {status}
+      </span>
+    );
+  };
+
+  const getDetailedData = (category) => {
+    const result = [];
+    if (!category) return result;
+
+    data.forEach(site => {
+      const infra = site.infrastructure_info || {};
+      const site_id = site.site_id;
+      const site_id_old = site.site_id_old;
+      const site_name = site.name;
+
+      if (category === 'mpd') {
+        const list = infra.may_phat_dien?.mpd || [];
+        list.forEach((item, index) => {
+          result.push({
+            site_id,
+            site_id_old,
+            site_name,
+            id: `${site_id}-mpd-${index}`,
+            ten: item.ten || 'Máy phát điện',
+            nhan_hieu: item.nhan_hieu || 'N/A',
+            cong_suat: item.cong_suat || 'N/A',
+            nhien_lieu: item.nhien_lieu || 'N/A',
+            serial: item.serial || 'N/A',
+            ngay_su_dung: item.ngay_su_dung || 'N/A',
+            tinh_trang: item.tinh_trang || 'N/A',
+            ma_tai_san: item.ma_tai_san || 'N/A',
+          });
+        });
+      } else if (category === 'accu_de') {
+        const mpdList = infra.may_phat_dien?.mpd || [];
+        mpdList.forEach((mpd) => {
+          const list = mpd.accu_de || [];
+          list.forEach((item, index) => {
+            result.push({
+              site_id,
+              site_id_old,
+              site_name,
+              id: `${site_id}-accu-${index}-${mpd.ten || 'MPD'}`,
+              ten: item.ten || 'Accu đề',
+              nhan_hieu: item.nhan_hieu || 'N/A',
+              loai: item.loai || 'N/A',
+              dung_luong: item.dung_luong || 'N/A',
+              ngay_su_dung: item.ngay_su_dung || 'N/A',
+              tinh_trang: item.tinh_trang || 'N/A',
+              bao_hanh: item.bao_hanh || 'N/A',
+              ten_cha: mpd.ten || 'MÁY PHÁT ĐIỆN (1)'
+            });
+          });
+        });
+      } else if (category === 'ats') {
+        const mpdList = infra.may_phat_dien?.mpd || [];
+        mpdList.forEach((mpd) => {
+          const list = mpd.ats || [];
+          list.forEach((item, index) => {
+            result.push({
+              site_id,
+              site_id_old,
+              site_name,
+              id: `${site_id}-ats-${index}-${mpd.ten || 'MPD'}`,
+              ten: item.ten || 'ATS',
+              nhan_hieu: item.nhan_hieu || 'N/A',
+              serial: item.serial || 'N/A',
+              ngay_su_dung: item.ngay_su_dung || 'N/A',
+              tinh_trang: item.tinh_trang || 'N/A',
+              bao_hanh: item.bao_hanh || 'N/A',
+              ten_cha: mpd.ten || 'MÁY PHÁT ĐIỆN (1)'
+            });
+          });
+        });
+      } else if (category === 'may_lanh') {
+        const list = infra.may_lanh || [];
+        list.forEach((item, index) => {
+          result.push({
+            site_id,
+            site_id_old,
+            site_name,
+            id: `${site_id}-ml-${index}`,
+            ten: item.ten || 'Máy lạnh',
+            nhan_hieu: item.nhan_hieu || 'N/A',
+            cong_suat: item.cong_suat || 'N/A',
+            loai: item.loai || 'N/A',
+            product_code: item.product_code || 'N/A',
+            serial: item.serial || 'N/A',
+            ngay_su_dung: item.ngay_su_dung || 'N/A',
+            tinh_trang: item.tinh_trang || 'N/A',
+            bao_hanh: item.bao_hanh || 'N/A',
+          });
+        });
+      } else if (category === 'tu_nguon') {
+        const list = infra.nguon_dien?.tu_nguon || [];
+        list.forEach((item, index) => {
+          result.push({
+            site_id,
+            site_id_old,
+            site_name,
+            id: `${site_id}-tn-${index}`,
+            ten: item.ten || 'Tủ nguồn DC',
+            nhan_hieu: item.nhan_hieu || 'N/A',
+            so_luong_rectifier: item.so_luong_rectifier || 'N/A',
+            so_khe_rectifier: item.so_khe_rectifier || 'N/A',
+            cong_suat_rectifier: item.cong_suat_rectifier || 'N/A',
+            thoi_gian_backup: item.thoi_gian_backup || 'N/A',
+            dong_tai: item.dong_tai || 'N/A',
+            serial: item.serial || 'N/A',
+            product_code: item.product_code || 'N/A',
+            ngay_su_dung: item.ngay_su_dung || 'N/A',
+            tinh_trang: item.tinh_trang || 'N/A',
+          });
+        });
+      } else if (category === 'to_accu') {
+        const tnList = infra.nguon_dien?.tu_nguon || [];
+        tnList.forEach((tn) => {
+          const list = tn.to_accu || [];
+          list.forEach((item, index) => {
+            result.push({
+              site_id,
+              site_id_old,
+              site_name,
+              id: `${site_id}-toaccu-${index}-${tn.ten || 'TN'}`,
+              ten: item.ten || 'Tổ accu DC',
+              nhan_hieu: item.nhan_hieu || 'N/A',
+              loai: item.loai || 'N/A',
+              dung_luong: item.dung_luong || 'N/A',
+              so_luong_binh: item.so_luong_binh || 'N/A',
+              ngay_su_dung: item.ngay_su_dung || 'N/A',
+              tinh_trang: item.tinh_trang || 'N/A',
+              bao_hanh: item.bao_hanh || 'N/A',
+              ten_cha: tn.ten || 'TỦ NGUỒN (1)'
+            });
+          });
+        });
+      } else if (category === 'cwdm') {
+        const list = infra.cwdm || [];
+        list.forEach((item, index) => {
+          result.push({
+            site_id,
+            site_id_old,
+            site_name,
+            id: `${site_id}-cwdm-${index}`,
+            ten: item.ten || 'CWDM',
+            ten_thiet_bi: item.ten_thiet_bi || 'N/A',
+            loai: item.loai || 'N/A',
+            hang_sx: item.hang_sx || 'N/A',
+            ma_thiet_bi: item.ma_thiet_bi || 'N/A',
+            serial: item.serial || 'N/A',
+            tinh_trang: item.tinh_trang || 'N/A',
+            ghi_chu: item.ghi_chu || 'N/A',
+          });
+        });
+      } else if (category === 'nlmt') {
+        const item = infra.nang_luong_mat_troi;
+        if (item && Object.keys(item).length > 0) {
+          result.push({
+            site_id,
+            site_id_old,
+            site_name,
+            id: `${site_id}-nlmt`,
+            cong_suat: item.cong_suat || 'N/A',
+            loai_he_thong: item.loai_he_thong || 'N/A',
+            ma_tai_san: item.ma_tai_san || 'N/A',
+            ngay_su_dung: item.ngay_su_dung || 'N/A',
+            sim_giam_sat: item.sim_giam_sat || 'N/A',
+            tinh_trang: item.tinh_trang || 'N/A',
+            inverter_nhan_hieu: item.inverter?.nhan_hieu || 'N/A',
+            inverter_power: item.inverter?.cong_suat || 'N/A',
+            tam_pin_nhan_hieu: item.tam_pin?.nhan_hieu || 'N/A',
+            tam_pin_qty: item.tam_pin?.so_luong || 'N/A',
+          });
+        }
+      } else if (category === 'hop_dong') {
+        if (site.contract_number || site.contract_info) {
+          const c = site.contract_info || {};
+          result.push({
+            site_id,
+            site_id_old,
+            site_name,
+            id: `${site_id}-contract`,
+            contract_number: site.contract_number || 'N/A',
+            chu_the_hop_dong: c.contractor_info?.chu_the_hop_dong || 'N/A',
+            sdt_chu_nha: c.contractor_info?.sdt_chu_nha || 'N/A',
+            dia_chi_lien_he: c.contractor_info?.dia_chi_lien_he || 'N/A',
+            gia_thue_co_vat: c.financials?.gia_thue_co_vat || 0,
+            ngay_ky_hd: c.dates?.ngay_ky_hd || 'N/A',
+            ngay_ket_thuc_hd: c.dates?.ngay_ket_thuc_hd || 'N/A',
+            ngay_da_thanh_toan_den: c.dates?.ngay_da_thanh_toan_den || 'N/A',
+          });
+        }
+      }
+    });
+
+    return result;
+  };
+
+  const handleExportCategoryExcel = (category, categoryName) => {
+    const items = getDetailedData(category);
+    if (items.length === 0) {
+      alert("Không có dữ liệu hạng mục này để xuất Excel.");
+      return;
+    }
+
+    let dataForExcel = [];
+    if (category === 'mpd') {
+      dataForExcel = items.map((x, idx) => ({
+        'STT': idx + 1,
+        'Site ID': x.site_id,
+        'Mã trạm cũ': x.site_id_old,
+        'Tên thiết bị': x.ten,
+        'Nhãn hiệu': x.nhan_hieu,
+        'Công suất (KVA)': x.cong_suat,
+        'Nhiên liệu': x.nhien_lieu,
+        'Số Serial': x.serial,
+        'Ngày sử dụng': x.ngay_su_dung,
+        'Tình trạng': x.tinh_trang,
+        'Mã tài sản': x.ma_tai_san
+      }));
+    } else if (category === 'accu_de') {
+      dataForExcel = items.map((x, idx) => ({
+        'STT': idx + 1,
+        'Site ID': x.site_id,
+        'Mã trạm cũ': x.site_id_old,
+        'Máy phát điện cha': x.ten_cha,
+        'Tên thiết bị': x.ten,
+        'Nhãn hiệu': x.nhan_hieu,
+        'Loại accu': x.loai,
+        'Dung lượng/Thông số': x.dung_luong,
+        'Ngày sử dụng': x.ngay_su_dung,
+        'Tình trạng': x.tinh_trang,
+        'Bảo hành': x.bao_hanh
+      }));
+    } else if (category === 'ats') {
+      dataForExcel = items.map((x, idx) => ({
+        'STT': idx + 1,
+        'Site ID': x.site_id,
+        'Mã trạm cũ': x.site_id_old,
+        'Máy phát điện cha': x.ten_cha,
+        'Tên thiết bị': x.ten,
+        'Nhãn hiệu': x.nhan_hieu,
+        'Ngày sử dụng': x.ngay_su_dung,
+        'Tình trạng': x.tinh_trang,
+        'Bảo hành': x.bao_hanh
+      }));
+    } else if (category === 'may_lanh') {
+      dataForExcel = items.map((x, idx) => ({
+        'STT': idx + 1,
+        'Site ID': x.site_id,
+        'Mã trạm cũ': x.site_id_old,
+        'Tên máy lạnh': x.ten,
+        'Nhãn hiệu': x.nhan_hieu,
+        'Công suất (BTU)': x.cong_suat,
+        'Loại máy': x.loai,
+        'Model': x.product_code,
+        'Số Serial': x.serial,
+        'Ngày sử dụng': x.ngay_su_dung,
+        'Tình trạng': x.tinh_trang,
+        'Bảo hành': x.bao_hanh
+      }));
+    } else if (category === 'tu_nguon') {
+      dataForExcel = items.map((x, idx) => ({
+        'STT': idx + 1,
+        'Site ID': x.site_id,
+        'Mã trạm cũ': x.site_id_old,
+        'Tên tủ nguồn': x.ten,
+        'Nhãn hiệu': x.nhan_hieu,
+        'Số Rectifier': x.so_luong_rectifier,
+        'Số khe cắm': x.so_khe_rectifier,
+        'Công suất Rectifier (W)': x.cong_suat_rectifier,
+        'T.gian Backup (phút)': x.thoi_gian_backup,
+        'Dòng tải tối đa (A)': x.dong_tai,
+        'Số Serial': x.serial,
+        'Model': x.product_code,
+        'Ngày sử dụng': x.ngay_su_dung,
+        'Tình trạng': x.tinh_trang
+      }));
+    } else if (category === 'to_accu') {
+      dataForExcel = items.map((x, idx) => ({
+        'STT': idx + 1,
+        'Site ID': x.site_id,
+        'Mã trạm cũ': x.site_id_old,
+        'Tủ nguồn cha': x.ten_cha,
+        'Tên tổ accu': x.ten,
+        'Nhãn hiệu': x.nhan_hieu,
+        'Loại': x.loai,
+        'Dung lượng': x.dung_luong,
+        'Số lượng bình': x.so_luong_binh,
+        'Ngày sử dụng': x.ngay_su_dung,
+        'Tình trạng': x.tinh_trang,
+        'Bảo hành': x.bao_hanh
+      }));
+    } else if (category === 'cwdm') {
+      dataForExcel = items.map((x, idx) => ({
+        'STT': idx + 1,
+        'Site ID': x.site_id,
+        'Mã trạm cũ': x.site_id_old,
+        'Tên thiết bị': x.ten,
+        'Tên thiết bị chi tiết': x.ten_thiet_bi,
+        'Loại': x.loai,
+        'Hãng sản xuất': x.hang_sx,
+        'Mã thiết bị': x.ma_thiet_bi,
+        'Số Serial': x.serial,
+        'Tình trạng': x.tinh_trang,
+        'Ghi chú': x.ghi_chu
+      }));
+    } else if (category === 'nlmt') {
+      dataForExcel = items.map((x, idx) => ({
+        'STT': idx + 1,
+        'Site ID': x.site_id,
+        'Mã trạm cũ': x.site_id_old,
+        'Công suất (W)': x.cong_suat,
+        'Loại hệ thống': x.loai_he_thong,
+        'Mã tài sản': x.ma_tai_san,
+        'Ngày đưa vào SD': x.ngay_su_dung,
+        'SIM giám sát': x.sim_giam_sat,
+        'Tình trạng chung': x.tinh_trang,
+        'Inverter Nhãn hiệu': x.inverter_nhan_hieu,
+        'Inverter Công suất': x.inverter_power,
+        'Tấm pin Nhãn hiệu': x.tam_pin_nhan_hieu,
+        'Tấm pin Số lượng': x.tam_pin_qty
+      }));
+    } else if (category === 'hop_dong') {
+      dataForExcel = items.map((x, idx) => ({
+        'STT': idx + 1,
+        'Site ID': x.site_id,
+        'Mã trạm cũ': x.site_id_old,
+        'Số hợp đồng': x.contract_number,
+        'Chủ thể hợp đồng': x.chu_the_hop_dong,
+        'Số điện thoại': x.sdt_chu_nha,
+        'Địa chỉ liên hệ': x.dia_chi_lien_he,
+        'Giá thuê (gồm VAT)': x.gia_thue_co_vat,
+        'Ngày ký': x.ngay_ky_hd,
+        'Ngày hết hạn': x.ngay_ket_thuc_hd,
+        'Thanh toán đến': x.ngay_da_thanh_toan_den
+      }));
+    }
+
+    const worksheet = XLSX.utils.json_to_sheet(dataForExcel);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, categoryName.substring(0, 31));
+
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const fileName = `Thong_Ke_${category.toUpperCase()}_${dateStr}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+  };
+
+  const handleRowClick = (siteId) => {
+    const site = data.find(s => s.site_id === siteId);
+    if (site) {
+      setSelectedSite(site);
+    }
+  };
 
   return (
     <div className="space-y-5 animate-in fade-in duration-500 relative">
@@ -196,8 +568,8 @@ export default function Datasites() {
                 <th scope="col" className="px-3 py-2.5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
                   Site ID Cũ
                 </th>
-                <th scope="col" className="px-3 py-2.5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider min-w-[150px]">
-                  Thông tin địa chỉ mới
+                <th scope="col" className="px-3 py-2.5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                  Phường/Xã mới
                 </th>
                 <th scope="col" className="px-3 py-2.5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
                   Tọa độ (Vĩ độ, Kinh độ)
@@ -222,10 +594,8 @@ export default function Datasites() {
             <tbody className="bg-white divide-y divide-gray-100">
               {loading ? (
                 <tr>
-                  <td colSpan="9" className="px-6 py-12 text-center">
-                    <div className="inline-flex items-center px-4 py-2 font-semibold leading-6 text-sm text-blue-600">
-                      Đang tải dữ liệu từ Cloud...
-                    </div>
+                  <td colSpan="9" className="px-6 py-12 text-center text-gray-400">
+                    Đang tải danh sách trạm...
                   </td>
                 </tr>
               ) : filteredData.length === 0 ? (
@@ -245,9 +615,9 @@ export default function Datasites() {
                         {site.site_id_old || 'N/A'}
                       </div>
                     </td>
-                    <td className="px-3 py-2">
-                      <div className="text-[13px] text-gray-600 line-clamp-1" title={[site.location_info?.xa_moi, site.location_info?.thanh_pho].filter(Boolean).join(', ')}>
-                        {[site.location_info?.xa_moi, site.location_info?.thanh_pho].filter(Boolean).join(', ') || 'Chưa cập nhật'}
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      <div className="text-[13px] text-gray-700 font-medium">
+                        {getCommuneName(site.location_info?.xa_moi)}
                       </div>
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap">
@@ -266,7 +636,7 @@ export default function Datasites() {
                       </div>
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap">
-                      <div className="text-[13px] text-gray-600 truncate max-w-[120px]" title={site.classification?.hinh_thuc_dau_tu || 'N/A'}>
+                      <div className="text-[13px] text-gray-600 truncate max-w-[150px]" title={site.classification?.hinh_thuc_dau_tu || 'N/A'}>
                         {site.classification?.hinh_thuc_dau_tu || 'N/A'}
                       </div>
                     </td>
@@ -320,8 +690,8 @@ export default function Datasites() {
                 
                 <div className="space-y-2 mb-4 bg-slate-50 p-3 rounded-lg border border-slate-100">
                   <div className="text-[13px] text-gray-700">
-                    <span className="text-gray-500 font-medium mr-1">Đ/c:</span> 
-                    {[site.location_info?.xa_moi, site.location_info?.thanh_pho].filter(Boolean).join(', ') || 'Chưa cập nhật'}
+                    <span className="text-gray-500 font-medium mr-1">Phường/Xã mới:</span> 
+                    {getCommuneName(site.location_info?.xa_moi)}
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-[13px] pt-2 border-t border-slate-100/60 mt-2">
                     <div>
@@ -353,50 +723,586 @@ export default function Datasites() {
       </div>
         </>
       ) : (
-        <div className="bg-white p-6 rounded-xl md:rounded-2xl border border-gray-200 shadow-sm min-h-[500px]">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-gray-50 p-4 rounded-lg border border-gray-200">
-            <span className="text-gray-700 font-medium whitespace-nowrap">Chọn hạng mục:</span>
-            <select 
-              className="block w-full sm:w-80 py-2.5 px-3 text-sm border border-blue-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm font-medium"
-              value={statCategory}
-              onChange={(e) => setStatCategory(e.target.value)}
-            >
-              <option value="">-- Chọn --</option>
-              <optgroup label="Cơ bản">
-                <option value="danh-sach">📍 Danh sách trạm</option>
-                <option value="registry">📶 Registry Vô tuyến (Site)</option>
-                <option value="datacell">📡 Chi tiết Cell (Datacell)</option>
-                <option value="hop-dong">📄 Hợp đồng thuê</option>
-                <option value="truyen-dan">🔗 Truyền dẫn</option>
-              </optgroup>
-              <optgroup label="Tài sản hạ tầng">
-                <option value="cot-anten">🗼 Cột Anten</option>
-                <option value="may-lanh">❄️ Máy Lạnh</option>
-                <option value="may-phat">⚡ Máy Phát Điện</option>
-                <option value="tu-nguon">🔌 Tủ Nguồn DC</option>
-                <option value="to-accu">🔋 Tổ Accu</option>
-                <option value="bts-4g">📡 BTS 4G</option>
-              </optgroup>
-            </select>
-            <button className="w-full sm:w-auto inline-flex items-center justify-center px-6 py-2.5 bg-[#22c55e] hover:bg-[#16a34a] text-white font-bold rounded-lg shadow-sm transition-colors">
-              <Eye className="w-4 h-4 mr-2" /> Xem kết quả
-            </button>
-          </div>
-          
-          <div className="mt-16 flex flex-col items-center justify-center text-gray-400 space-y-4">
-            {statCategory ? (
-              <div className="text-center animate-in fade-in zoom-in duration-300">
-                <BarChart2 className="w-20 h-20 mx-auto text-blue-200 mb-4" />
-                <p className="text-xl text-gray-700 font-bold">Đang xây dựng báo cáo...</p>
-                <p className="text-md mt-2 text-gray-500">Dữ liệu sẽ được tổng hợp từ toàn mạng lưới theo hạng mục đã chọn.</p>
-              </div>
-            ) : (
-              <div className="text-center animate-in fade-in duration-300">
-                <BarChart2 className="w-20 h-20 mx-auto text-gray-200 mb-4" />
-                <p className="text-lg text-gray-500 font-medium">Vui lòng chọn một hạng mục thống kê ở trên</p>
-              </div>
-            )}
-          </div>
+        <div className="space-y-5">
+          {(() => {
+            // Tính toán thống kê từ dữ liệu đã load
+            const stats = data.reduce((acc, site) => {
+              const infra = site.infrastructure_info || {};
+              const mpd = infra.may_phat_dien || {};
+              const nguon = infra.nguon_dien || {};
+
+              // MPĐ
+              const mpdList = mpd.mpd || [];
+              acc.mpd_total += mpdList.length;
+              acc.mpd_ok += mpdList.filter(m => m.tinh_trang?.toUpperCase().includes('TỐT')).length;
+              acc.mpd_bad += mpdList.filter(m => m.tinh_trang?.toUpperCase().includes('HỎNG')).length;
+              if (mpdList.length > 0) acc.mpd_sites++;
+
+              // Accu đề & ATS con lồng bên trong MPĐ
+              mpdList.forEach(m => {
+                const accuDe = m.accu_de || [];
+                acc.accu_de_total += accuDe.length;
+                acc.accu_de_ok += accuDe.filter(a => a.tinh_trang?.toUpperCase().includes('TỐT')).length;
+                acc.accu_de_bad += accuDe.filter(a => a.tinh_trang?.toUpperCase().includes('HỎNG')).length;
+
+                const ats = m.ats || [];
+                acc.ats_total += ats.length;
+              });
+
+              // Tủ nguồn
+              const tn = nguon.tu_nguon || [];
+              acc.tunguon_total += tn.length;
+              acc.tunguon_ok += tn.filter(t => t.tinh_trang?.toUpperCase().includes('TỐT')).length;
+              if (tn.length > 0) acc.tunguon_sites++;
+
+              // Tổ accu con lồng bên trong Tủ nguồn
+              tn.forEach(t => {
+                const ta = t.to_accu || [];
+                acc.toaccu_total += ta.length;
+                acc.toaccu_ok += ta.filter(x => x.tinh_trang?.toUpperCase().includes('TỐT')).length;
+                acc.toaccu_bad += ta.filter(x => x.tinh_trang?.toUpperCase().includes('HỎNG')).length;
+              });
+
+              // Máy lạnh
+              const ml = infra.may_lanh || [];
+              acc.ml_total += ml.length;
+              acc.ml_ok += ml.filter(m => m.tinh_trang?.toUpperCase().includes('TỐT')).length;
+              acc.ml_bad += ml.filter(m => m.tinh_trang?.toUpperCase().includes('HỎNG')).length;
+              if (ml.length > 0) acc.ml_sites++;
+
+              // CWDM
+              const cw = infra.cwdm || [];
+              acc.cwdm_total += cw.length;
+              if (cw.length > 0) acc.cwdm_sites++;
+
+              // NLMT
+              if (infra.nang_luong_mat_troi) {
+                acc.nlmt_total++;
+              }
+
+              // Hợp đồng
+              if (site.contract_number) acc.contract_total++;
+
+              return acc;
+            }, {
+              mpd_total: 0, mpd_ok: 0, mpd_bad: 0, mpd_sites: 0,
+              accu_de_total: 0, accu_de_ok: 0, accu_de_bad: 0,
+              ats_total: 0,
+              tunguon_total: 0, tunguon_ok: 0, tunguon_sites: 0,
+              toaccu_total: 0, toaccu_ok: 0, toaccu_bad: 0,
+              ml_total: 0, ml_ok: 0, ml_bad: 0, ml_sites: 0,
+              cwdm_total: 0, cwdm_sites: 0,
+              nlmt_total: 0,
+              contract_total: 0,
+            });
+
+            const cards = [
+              {
+                icon: '⚡', title: 'Máy phát điện', color: 'orange',
+                bg: 'from-orange-50 to-amber-50', border: 'border-orange-200',
+                items: [
+                  { label: 'Tổng MPĐ', value: stats.mpd_total, bold: true },
+                  { label: 'Hoạt động tốt', value: stats.mpd_ok, color: 'text-emerald-600' },
+                  { label: 'Hỏng', value: stats.mpd_bad, color: 'text-red-500' },
+                  { label: 'Accu đề', value: `${stats.accu_de_total} (${stats.accu_de_bad} hỏng)` },
+                  { label: 'ATS', value: stats.ats_total },
+                  { label: 'Trạm có MPĐ', value: `${stats.mpd_sites}/${data.length}` },
+                ]
+              },
+              {
+                icon: '🔌', title: 'Nguồn điện DC', color: 'blue',
+                bg: 'from-blue-50 to-indigo-50', border: 'border-blue-200',
+                items: [
+                  { label: 'Tổng tủ nguồn', value: stats.tunguon_total, bold: true },
+                  { label: 'Hoạt động tốt', value: stats.tunguon_ok, color: 'text-emerald-600' },
+                  { label: 'Tổ accu', value: stats.toaccu_total },
+                  { label: 'Accu tốt', value: stats.toaccu_ok, color: 'text-emerald-600' },
+                  { label: 'Accu hỏng', value: stats.toaccu_bad, color: 'text-red-500' },
+                  { label: 'Trạm có TN', value: `${stats.tunguon_sites}/${data.length}` },
+                ]
+              },
+              {
+                icon: '❄️', title: 'Máy lạnh', color: 'cyan',
+                bg: 'from-cyan-50 to-sky-50', border: 'border-cyan-200',
+                items: [
+                  { label: 'Tổng máy lạnh', value: stats.ml_total, bold: true },
+                  { label: 'Hoạt động tốt', value: stats.ml_ok, color: 'text-emerald-600' },
+                  { label: 'Hỏng', value: stats.ml_bad, color: 'text-red-500' },
+                  { label: 'TB/trạm', value: stats.ml_sites > 0 ? (stats.ml_total / stats.ml_sites).toFixed(1) : '0' },
+                  { label: 'Trạm có ML', value: `${stats.ml_sites}/${data.length}` },
+                ]
+              },
+              {
+                icon: '📡', title: 'CWDM', color: 'purple',
+                bg: 'from-violet-50 to-fuchsia-50', border: 'border-purple-200',
+                items: [
+                  { label: 'Tổng bộ CWDM', value: stats.cwdm_total, bold: true },
+                  { label: 'Trạm có CWDM', value: `${stats.cwdm_sites}/${data.length}` },
+                ]
+              },
+              {
+                icon: '☀️', title: 'Năng lượng mặt trời', color: 'yellow',
+                bg: 'from-yellow-50 to-orange-50', border: 'border-yellow-200',
+                items: [
+                  { label: 'Trạm có NLMT', value: stats.nlmt_total, bold: true },
+                  { label: 'Tỷ lệ', value: `${((stats.nlmt_total / data.length) * 100).toFixed(1)}%` },
+                ]
+              },
+              {
+                icon: '📄', title: 'Hợp đồng thuê', color: 'emerald',
+                bg: 'from-emerald-50 to-green-50', border: 'border-emerald-200',
+                items: [
+                  { label: 'Có hợp đồng', value: stats.contract_total, bold: true },
+                  { label: 'Chưa có HĐ', value: data.length - stats.contract_total, color: 'text-amber-600' },
+                ]
+              },
+            ];
+
+            return (
+              <>
+                {/* Summary bar */}
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex items-center gap-3 flex-wrap">
+                  <div className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold text-sm">
+                    Tổng: {data.length} trạm
+                  </div>
+                  <div className="text-sm text-slate-500">
+                    Dữ liệu hạ tầng cập nhật từ <span className="font-semibold text-slate-700">datasite.xlsx</span> · {new Date().toLocaleDateString('vi-VN')}
+                  </div>
+                </div>
+
+                {/* Stats Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {cards.map((card) => (
+                    <div key={card.title} className={`bg-gradient-to-br ${card.bg} rounded-xl border ${card.border} shadow-sm overflow-hidden`}>
+                      <div className="px-4 py-3 flex items-center gap-2 border-b border-slate-100/50">
+                        <span className="text-xl">{card.icon}</span>
+                        <h3 className="font-bold text-slate-800 text-sm">{card.title}</h3>
+                      </div>
+                      <div className="px-4 py-3 space-y-1.5">
+                        {card.items.map((item, idx) => (
+                          <div key={idx} className="flex justify-between items-center">
+                            <span className="text-[13px] text-slate-500">{item.label}</span>
+                            <span className={`text-[13px] font-semibold ${item.color || 'text-slate-800'} ${item.bold ? 'text-base' : ''}`}>
+                              {item.value}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Bộ chọn hạng mục chi tiết */}
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">📊</span>
+                      <h3 className="font-bold text-slate-800 text-sm">Xem chi tiết & Xuất dữ liệu theo hạng mục</h3>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <select
+                        value={statCategory}
+                        onChange={(e) => setStatCategory(e.target.value)}
+                        className="block w-64 px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500 cursor-pointer text-slate-700 font-medium"
+                      >
+                        <option value="">-- Chọn hạng mục để xem --</option>
+                        <option value="mpd">⚡ Máy phát điện (MPĐ)</option>
+                        <option value="accu_de">🔋 Accu đề khởi động</option>
+                        <option value="ats">🔄 Bộ chuyển nguồn ATS</option>
+                        <option value="may_lanh">❄️ Máy lạnh</option>
+                        <option value="tu_nguon">🔌 Tủ nguồn DC</option>
+                        <option value="to_accu">🔋 Tổ accu DC</option>
+                        <option value="cwdm">📡 Thiết bị CWDM</option>
+                        <option value="nlmt">☀️ Năng lượng mặt trời</option>
+                        <option value="hop_dong">📄 Hợp đồng thuê trạm</option>
+                      </select>
+
+                      {statCategory && (
+                        <button
+                          onClick={() => {
+                            const catNames = {
+                              mpd: 'May_Phat_Dien',
+                              accu_de: 'Accu_De',
+                              ats: 'ATS',
+                              may_lanh: 'May_Lanh',
+                              tu_nguon: 'Tu_Nguon_DC',
+                              to_accu: 'To_Accu_DC',
+                              cwdm: 'CWDM',
+                              nlmt: 'Nang_Luong_Mat_Troi',
+                              hop_dong: 'Hop_Dong_Thue'
+                            };
+                            handleExportCategoryExcel(statCategory, catNames[statCategory] || 'Hang_Muc');
+                          }}
+                          className="inline-flex items-center justify-center px-3 py-2 border border-transparent text-[13px] font-medium rounded-lg text-white bg-emerald-600 hover:bg-emerald-700 transition-colors shadow-sm cursor-pointer"
+                        >
+                          <FileDown className="h-4 w-4 mr-1.5" />
+                          Xuất Excel hạng mục
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {statCategory ? (
+                    <div className="overflow-x-auto w-full relative">
+                      {(() => {
+                        const listData = getDetailedData(statCategory);
+                        if (listData.length === 0) {
+                          return (
+                            <div className="text-center py-8 text-slate-400 text-sm">
+                              Không có dữ liệu cho hạng mục này.
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div className="max-h-[500px] overflow-y-auto w-full">
+                            <table className="min-w-full divide-y divide-slate-200 text-xs md:text-sm text-left">
+                              <thead className="bg-slate-50 text-slate-600 uppercase font-semibold text-[11px] tracking-wider sticky top-0 z-10 shadow-sm">
+                                {statCategory === 'mpd' && (
+                                  <tr>
+                                    <th className="px-3 py-2 font-bold">Site ID</th>
+                                    <th className="px-3 py-2 font-bold">Site ID Cũ</th>
+                                    <th className="px-3 py-2 font-bold">Tên thiết bị</th>
+                                    <th className="px-3 py-2 font-bold">Nhãn hiệu</th>
+                                    <th className="px-3 py-2 font-bold">Công suất</th>
+                                    <th className="px-3 py-2 font-bold">Nhiên liệu</th>
+                                    <th className="px-3 py-2 font-bold">Số Serial</th>
+                                    <th className="px-3 py-2 font-bold">Ngày sử dụng</th>
+                                    <th className="px-3 py-2 font-bold">Tình trạng</th>
+                                    <th className="px-3 py-2 font-bold">Mã tài sản</th>
+                                  </tr>
+                                )}
+                                {statCategory === 'accu_de' && (
+                                  <tr>
+                                    <th className="px-3 py-2 font-bold">Site ID</th>
+                                    <th className="px-3 py-2 font-bold">Site ID Cũ</th>
+                                    <th className="px-3 py-2 font-bold">Máy phát điện cha</th>
+                                    <th className="px-3 py-2 font-bold">Tên thiết bị</th>
+                                    <th className="px-3 py-2 font-bold">Nhãn hiệu</th>
+                                    <th className="px-3 py-2 font-bold">Loại accu</th>
+                                    <th className="px-3 py-2 font-bold">Thông số</th>
+                                    <th className="px-3 py-2 font-bold">Ngày sử dụng</th>
+                                    <th className="px-3 py-2 font-bold">Tình trạng</th>
+                                    <th className="px-3 py-2 font-bold">Bảo hành</th>
+                                  </tr>
+                                )}
+                                {statCategory === 'ats' && (
+                                  <tr>
+                                    <th className="px-3 py-2 font-bold">Site ID</th>
+                                    <th className="px-3 py-2 font-bold">Site ID Cũ</th>
+                                    <th className="px-3 py-2 font-bold">Máy phát điện cha</th>
+                                    <th className="px-3 py-2 font-bold">Tên thiết bị</th>
+                                    <th className="px-3 py-2 font-bold">Nhãn hiệu</th>
+                                    <th className="px-3 py-2 font-bold">Ngày sử dụng</th>
+                                    <th className="px-3 py-2 font-bold">Tình trạng</th>
+                                    <th className="px-3 py-2 font-bold">Bảo hành</th>
+                                  </tr>
+                                )}
+                                {statCategory === 'may_lanh' && (
+                                  <tr>
+                                    <th className="px-3 py-2 font-bold">Site ID</th>
+                                    <th className="px-3 py-2 font-bold">Site ID Cũ</th>
+                                    <th className="px-3 py-2 font-bold">Tên máy lạnh</th>
+                                    <th className="px-3 py-2 font-bold">Nhãn hiệu</th>
+                                    <th className="px-3 py-2 font-bold">Công suất</th>
+                                    <th className="px-3 py-2 font-bold">Loại máy</th>
+                                    <th className="px-3 py-2 font-bold">Model</th>
+                                    <th className="px-3 py-2 font-bold">Số Serial</th>
+                                    <th className="px-3 py-2 font-bold">Ngày sử dụng</th>
+                                    <th className="px-3 py-2 font-bold">Tình trạng</th>
+                                  </tr>
+                                )}
+                                {statCategory === 'tu_nguon' && (
+                                  <tr>
+                                    <th className="px-3 py-2 font-bold">Site ID</th>
+                                    <th className="px-3 py-2 font-bold">Site ID Cũ</th>
+                                    <th className="px-3 py-2 font-bold">Tên tủ nguồn</th>
+                                    <th className="px-3 py-2 font-bold">Nhãn hiệu</th>
+                                    <th className="px-3 py-2 font-bold">Rectifier</th>
+                                    <th className="px-3 py-2 font-bold">Backup (phút)</th>
+                                    <th className="px-3 py-2 font-bold">Dòng tải (A)</th>
+                                    <th className="px-3 py-2 font-bold">Số Serial</th>
+                                    <th className="px-3 py-2 font-bold">Model</th>
+                                    <th className="px-3 py-2 font-bold">Ngày sử dụng</th>
+                                    <th className="px-3 py-2 font-bold">Tình trạng</th>
+                                  </tr>
+                                )}
+                                {statCategory === 'to_accu' && (
+                                  <tr>
+                                    <th className="px-3 py-2 font-bold">Site ID</th>
+                                    <th className="px-3 py-2 font-bold">Site ID Cũ</th>
+                                    <th className="px-3 py-2 font-bold">Tủ nguồn cha</th>
+                                    <th className="px-3 py-2 font-bold">Tên tổ accu</th>
+                                    <th className="px-3 py-2 font-bold">Nhãn hiệu</th>
+                                    <th className="px-3 py-2 font-bold">Loại</th>
+                                    <th className="px-3 py-2 font-bold">Dung lượng</th>
+                                    <th className="px-3 py-2 font-bold">Số lượng bình</th>
+                                    <th className="px-3 py-2 font-bold">Ngày sử dụng</th>
+                                    <th className="px-3 py-2 font-bold">Tình trạng</th>
+                                  </tr>
+                                )}
+                                {statCategory === 'cwdm' && (
+                                  <tr>
+                                    <th className="px-3 py-2 font-bold">Site ID</th>
+                                    <th className="px-3 py-2 font-bold">Site ID Cũ</th>
+                                    <th className="px-3 py-2 font-bold">Tên thiết bị</th>
+                                    <th className="px-3 py-2 font-bold">Tên chi tiết</th>
+                                    <th className="px-3 py-2 font-bold">Loại</th>
+                                    <th className="px-3 py-2 font-bold">Hãng SX</th>
+                                    <th className="px-3 py-2 font-bold">Mã thiết bị</th>
+                                    <th className="px-3 py-2 font-bold">Số Serial</th>
+                                    <th className="px-3 py-2 font-bold">Tình trạng</th>
+                                  </tr>
+                                )}
+                                {statCategory === 'nlmt' && (
+                                  <tr>
+                                    <th className="px-3 py-2 font-bold">Site ID</th>
+                                    <th className="px-3 py-2 font-bold">Site ID Cũ</th>
+                                    <th className="px-3 py-2 font-bold">Công suất</th>
+                                    <th className="px-3 py-2 font-bold">Loại hệ thống</th>
+                                    <th className="px-3 py-2 font-bold">Mã tài sản</th>
+                                    <th className="px-3 py-2 font-bold">Ngày sử dụng</th>
+                                    <th className="px-3 py-2 font-bold">SIM giám sát</th>
+                                    <th className="px-3 py-2 font-bold">Tình trạng chung</th>
+                                    <th className="px-3 py-2 font-bold">Inverter</th>
+                                    <th className="px-3 py-2 font-bold">Tấm pin</th>
+                                  </tr>
+                                )}
+                                {statCategory === 'hop_dong' && (
+                                  <tr>
+                                    <th className="px-3 py-2 font-bold">Site ID</th>
+                                    <th className="px-3 py-2 font-bold">Site ID Cũ</th>
+                                    <th className="px-3 py-2 font-bold">Số hợp đồng</th>
+                                    <th className="px-3 py-2 font-bold">Chủ thể HĐ</th>
+                                    <th className="px-3 py-2 font-bold">Số điện thoại</th>
+                                    <th className="px-3 py-2 font-bold">Giá thuê (có VAT)</th>
+                                    <th className="px-3 py-2 font-bold">Ngày ký</th>
+                                    <th className="px-3 py-2 font-bold">Ngày hết hạn</th>
+                                    <th className="px-3 py-2 font-bold">Thanh toán đến</th>
+                                  </tr>
+                                )}
+                              </thead>
+                              <tbody className="divide-y divide-slate-100 bg-white">
+                                {listData.map((row) => (
+                                  <tr
+                                    key={row.id}
+                                    className="hover:bg-blue-50/40 transition-colors cursor-pointer group"
+                                    onClick={() => handleRowClick(row.site_id)}
+                                  >
+                                    <td className="px-3 py-2 font-bold text-blue-700 group-hover:underline">
+                                      {row.site_id}
+                                    </td>
+                                    <td className="px-3 py-2 text-slate-500 font-medium">
+                                      {row.site_id_old || '-'}
+                                    </td>
+                                    {statCategory === 'mpd' && (
+                                      <>
+                                        <td className="px-3 py-2 text-slate-700 font-semibold">{row.ten}</td>
+                                        <td className="px-3 py-2 text-slate-600">{row.nhan_hieu}</td>
+                                        <td className="px-3 py-2 text-slate-600 font-medium">{row.cong_suat}</td>
+                                        <td className="px-3 py-2 text-slate-600">{row.nhien_lieu}</td>
+                                        <td className="px-3 py-2 font-mono text-slate-500 text-[12px]">{row.serial}</td>
+                                        <td className="px-3 py-2 text-slate-600">{row.ngay_su_dung}</td>
+                                        <td className="px-3 py-2">{statusBadge(row.tinh_trang)}</td>
+                                        <td className="px-3 py-2 text-slate-500 font-mono text-[12px]">{row.ma_tai_san}</td>
+                                      </>
+                                    )}
+                                    {statCategory === 'accu_de' && (
+                                      <>
+                                        <td className="px-3 py-2 text-slate-500 font-medium">{row.ten_cha}</td>
+                                        <td className="px-3 py-2 text-slate-700 font-semibold">{row.ten}</td>
+                                        <td className="px-3 py-2 text-slate-600">{row.nhan_hieu}</td>
+                                        <td className="px-3 py-2 text-slate-600">{row.loai}</td>
+                                        <td className="px-3 py-2 text-slate-600 font-medium">{row.dung_luong}</td>
+                                        <td className="px-3 py-2 text-slate-600">{row.ngay_su_dung}</td>
+                                        <td className="px-3 py-2">{statusBadge(row.tinh_trang)}</td>
+                                        <td className="px-3 py-2 text-slate-600">{row.bao_hanh}</td>
+                                      </>
+                                    )}
+                                    {statCategory === 'ats' && (
+                                      <>
+                                        <td className="px-3 py-2 text-slate-500 font-medium">{row.ten_cha}</td>
+                                        <td className="px-3 py-2 text-slate-700 font-semibold">{row.ten}</td>
+                                        <td className="px-3 py-2 text-slate-600">{row.nhan_hieu}</td>
+                                        <td className="px-3 py-2 text-slate-600">{row.ngay_su_dung}</td>
+                                        <td className="px-3 py-2">{statusBadge(row.tinh_trang)}</td>
+                                        <td className="px-3 py-2 text-slate-600">{row.bao_hanh}</td>
+                                      </>
+                                    )}
+                                    {statCategory === 'may_lanh' && (
+                                      <>
+                                        <td className="px-3 py-2 text-slate-700 font-semibold">{row.ten}</td>
+                                        <td className="px-3 py-2 text-slate-600">{row.nhan_hieu}</td>
+                                        <td className="px-3 py-2 text-slate-600 font-medium">{row.cong_suat}</td>
+                                        <td className="px-3 py-2 text-slate-600">{row.loai}</td>
+                                        <td className="px-3 py-2 text-slate-600">{row.product_code}</td>
+                                        <td className="px-3 py-2 font-mono text-slate-500 text-[12px]">{row.serial}</td>
+                                        <td className="px-3 py-2 text-slate-600">{row.ngay_su_dung}</td>
+                                        <td className="px-3 py-2">{statusBadge(row.tinh_trang)}</td>
+                                      </>
+                                    )}
+                                    {statCategory === 'tu_nguon' && (
+                                      <>
+                                        <td className="px-3 py-2 text-slate-700 font-semibold">{row.ten}</td>
+                                        <td className="px-3 py-2 text-slate-600">{row.nhan_hieu}</td>
+                                        <td className="px-3 py-2 text-slate-600 font-medium">
+                                          {row.so_luong_rectifier !== 'N/A' && row.so_khe_rectifier !== 'N/A' ? `${row.so_luong_rectifier}/${row.so_khe_rectifier} × ${row.cong_suat_rectifier}W` : 'N/A'}
+                                        </td>
+                                        <td className="px-3 py-2 text-slate-600">{row.thoi_gian_backup}</td>
+                                        <td className="px-3 py-2 text-slate-600 font-medium">{row.dong_tai !== 'N/A' ? `${row.dong_tai}A` : 'N/A'}</td>
+                                        <td className="px-3 py-2 font-mono text-slate-500 text-[12px]">{row.serial}</td>
+                                        <td className="px-3 py-2 text-slate-600">{row.product_code}</td>
+                                        <td className="px-3 py-2 text-slate-600">{row.ngay_su_dung}</td>
+                                        <td className="px-3 py-2">{statusBadge(row.tinh_trang)}</td>
+                                      </>
+                                    )}
+                                    {statCategory === 'to_accu' && (
+                                      <>
+                                        <td className="px-3 py-2 text-slate-500 font-medium">{row.ten_cha}</td>
+                                        <td className="px-3 py-2 text-slate-700 font-semibold">{row.ten}</td>
+                                        <td className="px-3 py-2 text-slate-600">{row.nhan_hieu}</td>
+                                        <td className="px-3 py-2 text-slate-600">{row.loai}</td>
+                                        <td className="px-3 py-2 text-slate-600 font-medium">{row.dung_luong}</td>
+                                        <td className="px-3 py-2 text-slate-600">{row.so_luong_binh}</td>
+                                        <td className="px-3 py-2 text-slate-600">{row.ngay_su_dung}</td>
+                                        <td className="px-3 py-2">{statusBadge(row.tinh_trang)}</td>
+                                      </>
+                                    )}
+                                    {statCategory === 'cwdm' && (
+                                      <>
+                                        <td className="px-3 py-2 text-slate-700 font-semibold">{row.ten}</td>
+                                        <td className="px-3 py-2 text-slate-600">{row.ten_thiet_bi}</td>
+                                        <td className="px-3 py-2 text-slate-600">{row.loai}</td>
+                                        <td className="px-3 py-2 text-slate-600">{row.hang_sx}</td>
+                                        <td className="px-3 py-2 text-slate-600">{row.ma_thiet_bi}</td>
+                                        <td className="px-3 py-2 font-mono text-slate-500 text-[12px]">{row.serial}</td>
+                                        <td className="px-3 py-2">{statusBadge(row.tinh_trang)}</td>
+                                      </>
+                                    )}
+                                    {statCategory === 'nlmt' && (
+                                      <>
+                                        <td className="px-3 py-2 text-slate-600 font-semibold">{row.cong_suat}W</td>
+                                        <td className="px-3 py-2 text-slate-600">{row.loai_he_thong}</td>
+                                        <td className="px-3 py-2 text-slate-500 font-mono text-[12px]">{row.ma_tai_san}</td>
+                                        <td className="px-3 py-2 text-slate-600">{row.ngay_su_dung}</td>
+                                        <td className="px-3 py-2 text-slate-600">{row.sim_giam_sat}</td>
+                                        <td className="px-3 py-2">{statusBadge(row.tinh_trang)}</td>
+                                        <td className="px-3 py-2 text-slate-600 text-xs" title={row.inverter_nhan_hieu}>
+                                          {row.inverter_nhan_hieu !== 'N/A' ? `${row.inverter_nhan_hieu} (${row.inverter_power}W)` : 'N/A'}
+                                        </td>
+                                        <td className="px-3 py-2 text-slate-600 text-xs" title={row.tam_pin_nhan_hieu}>
+                                          {row.tam_pin_nhan_hieu !== 'N/A' ? `${row.tam_pin_nhan_hieu} (${row.tam_pin_qty})` : 'N/A'}
+                                        </td>
+                                      </>
+                                    )}
+                                    {statCategory === 'hop_dong' && (
+                                      <>
+                                        <td className="px-3 py-2 text-blue-600 font-semibold">{row.contract_number}</td>
+                                        <td className="px-3 py-2 text-slate-700 font-semibold">{row.chu_the_hop_dong}</td>
+                                        <td className="px-3 py-2 text-slate-600">{row.sdt_chu_nha}</td>
+                                        <td className="px-3 py-2 font-bold text-slate-800">
+                                          {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(row.gia_thue_co_vat)}
+                                        </td>
+                                        <td className="px-3 py-2 text-slate-600">{row.ngay_ky_hd}</td>
+                                        <td className="px-3 py-2 text-slate-600">{row.ngay_ket_thuc_hd}</td>
+                                        <td className="px-3 py-2 text-slate-600">{row.ngay_da_thanh_toan_den}</td>
+                                      </>
+                                    )}
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  ) : (
+                    <>
+                      {/* Bảng thiết bị hỏng hiển thị khi chưa chọn hạng mục */}
+                      {(() => {
+                        const brokenItems = [];
+                        data.forEach(site => {
+                          const infra = site.infrastructure_info || {};
+                          const mpdList = infra.may_phat_dien?.mpd || [];
+                          const ml = infra.may_lanh || [];
+                          const tnList = infra.nguon_dien?.tu_nguon || [];
+
+                          const accuDeList = [];
+                          const atsList = [];
+                          mpdList.forEach(m => {
+                            if (m.accu_de) accuDeList.push(...m.accu_de);
+                            if (m.ats) atsList.push(...m.ats);
+                          });
+
+                          const toAccuList = [];
+                          tnList.forEach(t => {
+                            if (t.to_accu) toAccuList.push(...t.to_accu);
+                          });
+
+                          [...mpdList, ...ml, ...accuDeList, ...atsList, ...toAccuList].forEach(item => {
+                            if (item.tinh_trang?.toUpperCase().includes('HỎNG')) {
+                              brokenItems.push({
+                                site_id: site.site_id,
+                                site_id_old: site.site_id_old,
+                                ten: item.ten || 'N/A',
+                                nhan_hieu: item.nhan_hieu || '',
+                                tinh_trang: item.tinh_trang,
+                              });
+                            }
+                          });
+                        });
+
+                        if (brokenItems.length === 0) {
+                          return (
+                            <div className="text-center py-6 text-slate-500 text-sm">
+                              💡 Mọi thiết bị trên hệ thống đang hoạt động bình thường. Vui lòng chọn một hạng mục ở phía trên để xem chi tiết.
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div className="bg-red-50/30 rounded-xl border border-red-200 overflow-hidden">
+                            <div className="bg-red-50 px-4 py-3 border-b border-red-100 flex items-center gap-2">
+                              <span className="text-lg">🚨</span>
+                              <h3 className="font-bold text-red-800 text-sm">Thiết bị cần thay thế / sửa chữa</h3>
+                              <span className="text-xs text-red-400 ml-auto">{brokenItems.length} thiết bị</span>
+                            </div>
+                            <div className="overflow-x-auto max-h-[300px] overflow-y-auto">
+                              <table className="w-full text-sm text-left">
+                                <thead className="bg-red-50/50 text-red-700 sticky top-0">
+                                  <tr>
+                                    <th className="px-3 py-2 font-semibold">Site ID</th>
+                                    <th className="px-3 py-2 font-semibold">Mã cũ</th>
+                                    <th className="px-3 py-2 font-semibold">Thiết bị</th>
+                                    <th className="px-3 py-2 font-semibold">Nhãn hiệu</th>
+                                    <th className="px-3 py-2 font-semibold">Trạng thái</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-red-50 bg-white">
+                                  {brokenItems.map((item, i) => (
+                                    <tr key={i} className="hover:bg-red-50/30 cursor-pointer" onClick={() => handleRowClick(item.site_id)}>
+                                      <td className="px-3 py-2 font-bold text-blue-700">{item.site_id}</td>
+                                      <td className="px-3 py-2 text-slate-500">{item.site_id_old}</td>
+                                      <td className="px-3 py-2 text-slate-700">{item.ten}</td>
+                                      <td className="px-3 py-2 text-slate-600">{item.nhan_hieu}</td>
+                                      <td className="px-3 py-2">
+                                        <span className="bg-red-100 text-red-600 text-[11px] font-bold px-2 py-0.5 rounded-full">{item.tinh_trang}</span>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </>
+                  )}
+                </div>
+              </>
+            );
+          })()}
         </div>
       )}
 
