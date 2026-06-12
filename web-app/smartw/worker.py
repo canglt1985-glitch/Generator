@@ -1413,12 +1413,6 @@ def send_periodic_full_report():
     """Send a full status report to Viber Channel (Periodic 2-hour Review).
     Explicitly triggered by scheduler even if no changes occur.
     """
-    status = _load_status()
-    fail_count = status.get('login_fail_count', 0)
-    if fail_count >= MAX_LOGIN_FAILURES:
-        logger.warning(f"SmartW Worker: 🕒 Periodic report skipped — login is paused due to {fail_count} consecutive failures.")
-        return
-
     logger.info("SmartW Worker: 🕒 Starting periodic 2-hour review report...")
     
     # 1. Load latest active data from disk
