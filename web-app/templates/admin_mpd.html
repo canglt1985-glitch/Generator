@@ -561,6 +561,85 @@
                 </div>
                 {% endif %}
 
+                {# Pre-calculate totals for summary cards #}
+                {% set ns2 = namespace(qty_d=0.0, amt_d=0.0, qty_x=0.0, amt_x=0.0, sub=0.0, vat=0.0, grand=0.0) %}
+                {% for inv in invoices %}
+                    {% set fd2 = inv.fuel_details %}
+                    {% set ns2.qty_d = ns2.qty_d + (fd2.qty_d or 0.0) %}
+                    {% set ns2.amt_d = ns2.amt_d + (fd2.amount_d or 0.0) %}
+                    {% set ns2.qty_x = ns2.qty_x + (fd2.qty_x or 0.0) %}
+                    {% set ns2.amt_x = ns2.amt_x + (fd2.amount_x or 0.0) %}
+                    {% set ns2.sub   = ns2.sub   + (inv.sub_total or inv.tong_tien or 0.0) %}
+                    {% set ns2.vat   = ns2.vat   + (inv.vat_amount or 0.0) %}
+                    {% set ns2.grand = ns2.grand + (inv.tong_tien or 0.0) %}
+                {% endfor %}
+
+                {# Summary cards — giống tab Chạy Máy #}
+                <div class="row g-2 mb-3">
+                    <div class="col-auto">
+                        <div class="card card-sm bg-primary-lt">
+                            <div class="card-body py-2 px-3">
+                                <div class="text-muted small">🧾 Số HĐ</div>
+                                <div class="fw-bold">{{ invoices|length }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% if ns2.qty_d > 0 %}
+                    <div class="col-auto">
+                        <div class="card card-sm bg-orange-lt">
+                            <div class="card-body py-2 px-3">
+                                <div class="text-muted small">🛢 Dầu D</div>
+                                <div class="fw-bold text-orange">{{ "{:,.1f}".format(ns2.qty_d) }} L</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if ns2.qty_x > 0 %}
+                    <div class="col-auto">
+                        <div class="card card-sm bg-red-lt">
+                            <div class="card-body py-2 px-3">
+                                <div class="text-muted small">⛽ Xăng X</div>
+                                <div class="fw-bold text-red">{{ "{:,.1f}".format(ns2.qty_x) }} L</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    <div class="col-auto">
+                        <div class="card card-sm bg-blue-lt">
+                            <div class="card-body py-2 px-3">
+                                <div class="text-muted small">💰 Cộng chưa VAT</div>
+                                <div class="fw-bold text-primary">{{ "{:,.0f}".format(ns2.sub) }}đ</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <div class="card card-sm bg-yellow-lt">
+                            <div class="card-body py-2 px-3">
+                                <div class="text-muted small">VAT</div>
+                                <div class="fw-bold text-warning">{{ "{:,.0f}".format(ns2.vat) }}đ</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <div class="card card-sm bg-green-lt">
+                            <div class="card-body py-2 px-3">
+                                <div class="text-muted small">🏆 Tổng tiền</div>
+                                <div class="fw-bold text-success fs-5">{{ "{:,.0f}".format(ns2.grand) }}đ</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% if warning_dates %}
+                    <div class="col-auto">
+                        <div class="card card-sm bg-danger-lt border border-danger">
+                            <div class="card-body py-2 px-3">
+                                <div class="text-muted small">⚠️ Cần CK</div>
+                                <div class="fw-bold text-danger fs-5">{{ warning_dates|length }} ngày</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
                 {% set date_range_str = "" %}
                 {% if invoices %}
                     {% set dates = [] %}

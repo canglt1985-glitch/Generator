@@ -1010,3 +1010,58 @@ def export_invoices():
     month_str = f"T{month}" if month else "CaNam"
     filename = f"Bang_ke_hoa_don_nhien_lieu_{month_str}_{year}.xlsx"
     return send_file(output, download_name=filename, as_attachment=True)
+
+
+@generator_bp.route('/api/invoice/summary')
+@login_required
+def invoice_summary_api():
+    """API trả tổng kê nhiên liệu tháng hiện tại để hiển thị trên dashboard."""
+    now = datetime.now()
+    year = request.args.get('year', type=int, default=now.year)
+    month_raw = request.args.get('month', str(now.month))
+    try:
+        month = int(month_raw) if month_raw.strip() else now.month
+    except (ValueError, TypeError):
+        month = now.month
+
+    start_date = f"{year}-{month:02d}-01"
+    end_date = f"{year}-{month+1:02d}-01" if month < 12 else f"{year+1}-01-01"
+
+    invoices = ParsedInvoice.query.filter(
+        ParsedInvoice.ngay_lap >= start_date,
+        ParsedInvoice.ngay_lap < end_date,
+        ParsedInvoice.status != 'Discarded'
+    ).all()
+
+    total_qty_d = 0.0
+    total_qty_x = 0.0
+    total_sub = 0.0
+    total_vat = 0.0
+    total_grand = 0.0
+    daily_totals = {}
+
+    for inv in invoices:
+        fd = inv.fuel_details
+        total_qty_d += fd.get('qty_d', 0.0) or 0.0
+        total_qty_x += fd.get('qty_x', 0.0) or 0.0
+        total_sub += inv.sub_total or inv.tong_tien or 0.0
+        total_vat += inv.vat_amount or 0.0
+        total_grand += inv.tong_tien or 0.0
+        date_str = inv.ngay_lap or ''
+        if date_str:
+            daily_totals[date_str] = daily_totals.get(date_str, 0.0) + (inv.tong_tien or 0.0)
+
+    warn_days = [d for d, t in daily_totals.items() if t > 5_000_000]
+
+    return jsonify({
+        'month': month,
+        'year': year,
+        'invoice_count': len(invoices),
+        'qty_d': round(total_qty_d, 1),
+        'qty_x': round(total_qty_x, 1),
+        'sub_total': round(total_sub, 0),
+        'vat_amount': round(total_vat, 0),
+        'grand_total': round(total_grand, 0),
+        'warn_days': sorted(warn_days),
+        'warn_count': len(warn_days)
+    })
