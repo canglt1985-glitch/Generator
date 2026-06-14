@@ -232,13 +232,28 @@ def update_incomplete_records(raw_data: list[dict]) -> int:
         gio_bd = start_dt.strftime('%H:%M')
         gio_kt = end_dt.strftime('%H:%M')
 
-        # Find existing record with missing end time for this site+date+start
-        existing = GeneratorLog.query.filter_by(
-            id_tram=site, ngay_van_hanh=ngay, gio_bat_dau=gio_bd
-        ).filter(
-            (GeneratorLog.gio_ket_thuc == None) |
-            (GeneratorLog.gio_ket_thuc == '')
-        ).first()
+        # Try finding by smartw_alarm_id first (most reliable)
+        alarm_id = build_alarm_id(record)
+        existing = None
+        if alarm_id:
+            existing = GeneratorLog.query.filter_by(smartw_alarm_id=alarm_id).filter(
+                (GeneratorLog.gio_ket_thuc == None) |
+                (GeneratorLog.gio_ket_thuc == '') |
+                (GeneratorLog.gio_ket_thuc == '--')
+            ).first()
+
+        # Fallback to site ID matching (with registry resolution)
+        if not existing:
+            site_id_old, site_id_new = get_site_id_pair(site)
+            existing = GeneratorLog.query.filter(
+                (GeneratorLog.id_tram.in_([site_id_old, site_id_new])) &
+                (GeneratorLog.ngay_van_hanh == ngay) &
+                (GeneratorLog.gio_bat_dau == gio_bd)
+            ).filter(
+                (GeneratorLog.gio_ket_thuc == None) |
+                (GeneratorLog.gio_ket_thuc == '') |
+                (GeneratorLog.gio_ket_thuc == '--')
+            ).first()
 
         if not existing:
             continue
@@ -309,6 +324,7 @@ def import_mfd_data(raw_data: list[dict]) -> dict:
         'errors': [],
         'details': [],
     }
+    pending_alerts_to_send = []
 
     # Internal batch dedup: remove exact duplicates from raw_data before processing
     seen_in_batch = set()
@@ -426,6 +442,7 @@ def import_mfd_data(raw_data: list[dict]) -> dict:
             result['imported'] += 1
         else:
             result['pending'] += 1
+            pending_alerts_to_send.append(log)
 
     # Commit all at once
     try:
@@ -434,6 +451,23 @@ def import_mfd_data(raw_data: list[dict]) -> dict:
         resolve_overlapping_logs(raw_data)
         logger.info(f'MFD Import: {result["imported"]} imported, {result["pending"]} pending, '
                      f'{result["skipped"]} skipped, {result["duplicates"]} duplicates')
+        
+        # Send Telegram Alerts after commit!
+        try:
+            from bot_telegram import send_pending_log_alert
+            for log in pending_alerts_to_send:
+                send_pending_log_alert(
+                    log_id=log.id,
+                    site=log.site,
+                    duration=log.thoi_gian_hoat_dong,
+                    fuel=log.nhien_lieu_tieu_hao,
+                    cost=log.thanh_tien,
+                    start_t=log.gio_bat_dau,
+                    end_t=log.gio_ket_thuc,
+                    date=log.ngay_van_hanh
+                )
+        except Exception as alert_err:
+            logger.error(f'MFD Import: Failed to send pending log alerts: {alert_err}')
     except Exception as e:
         db.session.rollback()
         logger.error(f'MFD Import: DB commit failed: {e}')

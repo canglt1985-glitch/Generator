@@ -432,12 +432,17 @@ def fetch_gmail_emails(gmail_user, gmail_app_pass, subject_filter="Hóa đơn", 
         mail.login(gmail_user, gmail_app_pass)
         mail.select("inbox")
 
-        status, data = mail.uid('search', None, "ALL")
+        # Only search for emails since yesterday to optimize performance
+        from datetime import datetime, timedelta
+        yesterday = datetime.now() - timedelta(days=1)
+        yesterday_str = yesterday.strftime("%d-%b-%Y") # e.g. 12-Jun-2026
+        
+        status, data = mail.uid('search', None, f'SINCE {yesterday_str}')
         if status != 'OK' or not data[0]:
             return []
 
         email_ids = data[0].split()
-        recent_uids = email_ids[-50:] # scan last 50 emails
+        recent_uids = email_ids
         recent_uids.reverse()
 
         scanned_emails = []
@@ -457,6 +462,21 @@ def fetch_gmail_emails(gmail_user, gmail_app_pass, subject_filter="Hóa đơn", 
             raw_email = msg_data[0][1]
             msg = email.message_from_bytes(raw_email)
             
+            # Date
+            email_date = msg.get("Date") or ""
+            is_yesterday = False
+            if email_date:
+                try:
+                    from email.utils import parsedate_to_datetime
+                    email_dt = parsedate_to_datetime(email_date)
+                    if email_dt.astimezone().date() == yesterday.date():
+                        is_yesterday = True
+                except Exception as ex:
+                    print(f"Error parsing email date {email_date}: {ex}")
+            
+            if not is_yesterday:
+                continue
+
             # Subject
             subject = ""
             raw_subject = msg.get("Subject")
@@ -482,9 +502,6 @@ def fetch_gmail_emails(gmail_user, gmail_app_pass, subject_filter="Hóa đơn", 
                         sender += part.decode(encoding or "utf-8", errors="ignore")
                     else:
                         sender += part
-
-            # Date
-            email_date = msg.get("Date") or ""
 
             # Fetch full message
             status, full_msg_data = mail.uid('fetch', uid, '(BODY.PEEK[])')

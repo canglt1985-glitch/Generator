@@ -382,6 +382,10 @@
                         <label class="form-label fw-bold small mb-1">Nhóm chi phí:</label>
                         <div id="pgLabelDisplay" class="text-primary fw-bold small"></div>
                     </div>
+                    <div class="mb-2">
+                        <label class="form-label small mb-1 text-success fw-bold"><i class="fas fa-plus-circle me-1"></i>Số tiền tạm ứng lần này (VNĐ)</label>
+                        <input type="number" id="pgTamUngMoi" class="form-control form-control-sm border-success fw-bold" placeholder="Nhập số tiền để cộng vào lũy kế..." min="0" step="1000">
+                    </div>
                     <div class="mb-2" id="pgTongTienContainer">
                         <label class="form-label small mb-1 text-primary"><i class="fas fa-wallet me-1"></i>Tổng tiền đã tạm ứng <span class="text-muted">(Lũy kế - VNĐ)</span></label>
                         <input type="number" id="pgTongTienNhan" class="form-control form-control-sm border-primary" placeholder="0" min="0" step="1000">
@@ -575,6 +579,219 @@
             });
         }
     </script>
+    <!-- Payment Group Modal Handler -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var modalEl = document.getElementById('paymentGroupModal');
+            if (!modalEl) { return; }
+
+            var _pgApiTotal = 0;
+            var originalTongQuy = 0;
+
+            // Populate form when modal is about to show
+            modalEl.addEventListener('show.bs.modal', function (event) {
+                var btn = event.relatedTarget;  // the button that triggered the modal
+                if (!btn || !btn.classList.contains('btn-edit-pg')) return;
+                
+                // Reset state
+                _pgApiTotal = 0;
+                document.getElementById('pgStatusInfo').style.display = 'none';
+                document.getElementById('pgTamUngMoi').value = '';
+                
+                // Populate data
+                document.getElementById('pgGroup').value = btn.dataset.group || '';
+                document.getElementById('pgLabelDisplay').textContent = btn.dataset.label || '';
+                document.getElementById('pgDenNgay').value = btn.dataset.denNgay || '';
+                
+                var daTtVal = parseFloat(btn.dataset.daTt);
+                document.getElementById('pgDaTT').value = (!isNaN(daTtVal) && daTtVal > 0) ? daTtVal : '';
+                var tongQuyVal = parseFloat(btn.dataset.tongQuy);
+                originalTongQuy = (!isNaN(tongQuyVal) && tongQuyVal > 0) ? tongQuyVal : 0;
+                document.getElementById('pgTongTienNhan').value = originalTongQuy > 0 ? originalTongQuy : '';
+                document.getElementById('pgGhiChu').value = btn.dataset.ghiChu || '';
+            });
+
+            // Auto-accumulate as user types new advance amount
+            document.getElementById('pgTamUngMoi').addEventListener('input', function () {
+                var addedVal = parseFloat(this.value) || 0;
+                var baseVal = parseFloat(document.getElementById('pgDaTT').value) || originalTongQuy;
+                var newTotal = baseVal + addedVal;
+                document.getElementById('pgTongTienNhan').value = newTotal > 0 ? Math.round(newTotal) : '';
+            });
+
+            // Auto-calculate payment and update fields on date change
+            document.getElementById('pgDenNgay').addEventListener('change', function () {
+                var den_ngay = this.value;
+                var group = document.getElementById('pgGroup').value;
+                if (!den_ngay || !group) return;
+
+                fetch('/payment-group/calc?group=' + group + '&den_ngay=' + den_ngay)
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        if (data.ok) {
+                            var totalCost = Math.round(data.total);
+                            document.getElementById('pgDaTT').value = totalCost;
+
+                            // Auto calculate new Tổng tiền tạm ứng as: Số tiền đã TT + Số tiền tạm ứng mới
+                            var tamUngMoi = parseFloat(document.getElementById('pgTamUngMoi').value) || 0;
+                            document.getElementById('pgTongTienNhan').value = Math.round(totalCost + tamUngMoi);
+                        }
+                    });
+            });
+
+            // Save button handler
+            document.addEventListener('click', function (e) {
+                var saveBtn = e.target.closest('#pgSaveBtn');
+                if (!saveBtn) return;
+
+                var group = document.getElementById('pgGroup').value;
+                var den_ngay = document.getElementById('pgDenNgay').value.trim();
+                var da_tt = parseFloat(document.getElementById('pgDaTT').value) || 0;
+                var tong_quy = parseFloat(document.getElementById('pgTongTienNhan').value) || 0;
+                var ghi_chu = document.getElementById('pgGhiChu').value.trim();
+
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang lưu...';
+
+                fetch('{{ url_for("generator.save_payment_group_gen") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({
+                        group: group,
+                        da_thanh_toan_den: den_ngay,
+                        so_tien_da_tt: da_tt,
+                        tong_tien_nhan: tong_quy,
+                        ghi_chu: ghi_chu
+                    })
+                })
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        if (data.ok) {
+                            var pfx = group === 'mua_ngoai' ? 'mn' : 'cx';
+                            var apiTotal = _pgApiTotal || 0;
+                            var totalEl = document.getElementById(pfx + '-tong-ps');
+                            var total = totalEl ? parseFloat(totalEl.textContent.replace(/[^0-9]/g, '')) || 0 : 0;
+                            var currentTotal = (apiTotal > 0) ? apiTotal : total;
+                            
+                            var conLai = currentTotal - da_tt;
+                            var soDu = tong_quy - da_tt;
+
+                            var tongQuyEl = document.getElementById(pfx + '-tong-quy');
+                            if (tongQuyEl) tongQuyEl.textContent = (tong_quy > 0 ? Math.round(tong_quy).toLocaleString('vi-VN') : '0') + ' đ';
+
+                            var denNgayEl = document.getElementById(pfx + '-den-ngay');
+                            if (denNgayEl) denNgayEl.innerHTML = den_ngay
+                                ? '<span class="badge bg-blue-lt">' + den_ngay + '</span>'
+                                : '<span class="text-muted">\u2014</span>';
+
+                            var daTTEl = document.getElementById(pfx + '-da-tt');
+                            if (daTTEl) daTTEl.textContent = (da_tt > 0 ? Math.round(da_tt).toLocaleString('vi-VN') : '0') + ' đ';
+
+                            var soDuEl = document.getElementById(pfx + '-so-du');
+                            if (soDuEl) {
+                                soDuEl.textContent = Math.round(soDu).toLocaleString('vi-VN') + ' đ';
+                                soDuEl.className = 'col-6 text-end fw-bold ' + (soDu >= 0 ? 'text-success' : 'text-danger');
+                            }
+
+                            var conLaiEl = document.getElementById(pfx + '-con-lai');
+                            if (conLaiEl) {
+                                if (conLai > 0) {
+                                    conLaiEl.innerHTML = '<span class="text-danger">' + Math.round(conLai).toLocaleString('vi-VN') + ' đ 🔴</span>';
+                                } else {
+                                    conLaiEl.innerHTML = '<span class="text-success">✅ Đã TT hết</span>';
+                                }
+                            }
+
+                            // Update the button data attributes so modal opens with new values next time
+                            var btn = document.querySelector('.btn-edit-pg[data-group="' + group + '"]');
+                            if (btn) {
+                                btn.dataset.denNgay = den_ngay;
+                                btn.dataset.daTt = da_tt;
+                                btn.dataset.tongQuy = tong_quy;
+                                btn.dataset.ghiChu = ghi_chu;
+                            }
+                            var ghiChuEl = document.getElementById(pfx + '-ghi-chu-val');
+                            if (ghiChuEl) ghiChuEl.textContent = ghi_chu || '';
+                            var ghiChuRow = document.getElementById(pfx + '-ghi-chu-row');
+                            if (ghiChuRow) ghiChuRow.style.display = ghi_chu ? 'flex' : 'none';
+
+                            _pgApiTotal = 0; 
+                            try {
+                                var bsM = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                                if (bsM) bsM.hide();
+                            } catch(e) { console.log("Modal hide error", e); }
+                            
+                            setTimeout(function() {
+                                alert('✅ Đã cập nhật thanh toán cho nhóm: ' + (group === 'mua_ngoai' ? 'Mua Ngoài' : 'CX222'));
+                            }, 300);
+                        } else {
+                            alert('Lỗi từ máy chủ: ' + (data.msg || 'Không rõ nguyên nhân'));
+                        }
+                    })
+                    .catch(function (err) { 
+                        console.error(err);
+                        alert('Lỗi hệ thống: ' + (err.message || 'Kết nối bị gián đoạn')); 
+                    })
+                    .finally(function () { 
+                        saveBtn.disabled = false; 
+                        saveBtn.innerHTML = '<i class="fas fa-save me-1"></i>Lưu'; 
+                    });
+            });
+
+            // Auto-calc: khi chọn ngày → gợi ý số tiền phải trả
+            document.getElementById('pgDenNgay').addEventListener('change', function () {
+                var den_ngay = this.value;
+                var group = document.getElementById('pgGroup').value;
+                if (!den_ngay || !group) return;
+
+                var daTTInput = document.getElementById('pgDaTT');
+                var statusDiv = document.getElementById('pgStatusInfo');
+                var statusText = document.getElementById('pgStatusText');
+
+                _pgApiTotal = 0; // Reset khi chọn ngày mới
+                statusDiv.style.display = 'block';
+                statusText.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang tính...';
+                statusDiv.querySelector('div').className = 'd-flex align-items-center text-muted small fw-bold';
+
+                fetch('{{ url_for("generator.calc_payment_amount") }}?group=' + encodeURIComponent(group) + '&den_ngay=' + encodeURIComponent(den_ngay))
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        if (!data.ok) { statusDiv.style.display = 'none'; return; }
+
+                        statusDiv.querySelector('div').className = 'd-flex align-items-center text-success small fw-bold';
+
+                        if (data.already_paid) {
+                            statusText.innerHTML = 'Đã thanh toán hết đến ' + data.last_paid_date;
+                            _pgApiTotal = 0;
+                            return;
+                        }
+                        if (data.total <= 0) {
+                            statusText.innerHTML = 'Không có chi phí trong kỳ này.';
+                            _pgApiTotal = 0;
+                            return;
+                        }
+
+                        var fmtTotal = Math.round(data.total).toLocaleString('vi-VN');
+                        var totalVal = Math.round(data.total);
+                        _pgApiTotal = totalVal; // ← Lưu lại tổng lũy kế đúng theo ngày
+
+                        // Tự động điền nếu ô hiện tại đang trống hoặc bằng 0
+                        if (!daTTInput.value || daTTInput.value == "0") {
+                            daTTInput.value = totalVal;
+                            statusText.innerHTML = 'Đã tự động điền LŨY KẾ đến ' + den_ngay + ': ' + fmtTotal + ' đ';
+                        } else {
+                            statusText.innerHTML = 'Lũy kế đến ' + den_ngay + ': ' + fmtTotal + ' đ '
+                                + '<a href="#" class="text-info ms-2" onclick="document.getElementById(\'pgDaTT\').value=' + totalVal + ';return false;">[Dùng số này]</a>';
+                        }
+                    })
+                    .catch(function () { statusDiv.style.display = 'none'; });
+            });
+        });
+    </script>
+
     {% block scripts %}{% endblock %}
 
     <!-- Global Hidden CSRF Forms -->

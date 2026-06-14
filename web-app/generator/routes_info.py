@@ -496,7 +496,7 @@ def _auto_fill_generator_logs():
 @login_required
 @cost_access_required
 def other_expenses():
-    expenses = OtherExpense.query.order_by(OtherExpense.ngay_su_dung.desc()).all()
+    expenses = OtherExpense.query.filter(~OtherExpense.noi_dung.like('SYSTEM_PAYMENT_GROUP_%')).order_by(OtherExpense.ngay_su_dung.desc()).all()
     return render_template('expense_tracking.html', expenses=expenses)
 
 
@@ -557,7 +557,7 @@ def delete_other_expense(id):
 def export_other_expenses():
     start_date = request.args.get('start_date')
     end_date = request.args.get('end_date')
-    query = OtherExpense.query
+    query = OtherExpense.query.filter(~OtherExpense.noi_dung.like('SYSTEM_PAYMENT_GROUP_%'))
     if start_date:
         query = query.filter(OtherExpense.ngay_su_dung >= start_date)
     if end_date:
@@ -628,7 +628,7 @@ def export_expenses():
                 end_date = f"{fy+1}-01-01"
         except (ValueError, TypeError):
             pass
-    query = OtherExpense.query
+    query = OtherExpense.query.filter(~OtherExpense.noi_dung.like('SYSTEM_PAYMENT_GROUP_%'))
     if start_date:
         query = query.filter(OtherExpense.ngay_su_dung >= start_date)
     if end_date:
