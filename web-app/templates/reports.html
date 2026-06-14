@@ -12,6 +12,80 @@
         </div>
     </div>
 </div>
+{# --- Anomaly Reports (Tiêu Hao Bất Thường & Thiếu Log Chạy Máy) --- #}
+{% set anomaly_stations = station_summary|selectattr('chenh_lech','lt', 0)|list %}
+{% if anomaly_stations or missing_logs_recommendations %}
+<div class="row row-cards mb-4">
+    {% if anomaly_stations %}
+    <div class="col-md-6">
+        <div class="card border border-danger shadow-sm h-100">
+            <div class="card-header py-2 bg-danger-lt">
+                <h3 class="card-title mb-0 text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Trạm Tiêu Hao Bất Thường ({{ anomaly_stations|length }} trạm)</h3>
+            </div>
+            <div class="table-responsive" style="max-height: 250px; overflow-y: auto;">
+                <table class="table table-vcenter table-hover card-table small text-nowrap mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID Trạm</th>
+                            <th>Huyện</th>
+                            <th class="text-end">Giờ chạy</th>
+                            <th class="text-end fw-bold text-danger">Chênh lệch</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in anomaly_stations %}
+                        <tr>
+                            <td class="fw-bold">
+                                <span class="badge bg-danger-lt">{{ site_id_badge(row.id_tram, site_map, site_map_reverse) }}</span>
+                            </td>
+                            <td>{{ row.huyen }}</td>
+                            <td class="text-end">{{ row.run_h }}h</td>
+                            <td class="text-end fw-bold text-danger">{{ "{:,.0f}".format(row.chenh_lech) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if missing_logs_recommendations %}
+    <div class="col-md-6">
+        <div class="card border border-warning shadow-sm h-100">
+            <div class="card-header py-2 bg-warning-lt d-flex justify-content-between align-items-center">
+                <h3 class="card-title mb-0 text-warning-dark"><i class="fas fa-exclamation-circle me-2"></i>Thiếu log chạy máy ({{ missing_logs_recommendations|length }} lượt)</h3>
+                <span class="text-muted small fw-semibold">Cần nhắc nhân viên bổ sung</span>
+            </div>
+            <div class="table-responsive" style="max-height: 250px; overflow-y: auto;">
+                <table class="table table-vcenter table-hover card-table small mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID Trạm</th>
+                            <th>Ngày cúp điện</th>
+                            <th>Thời lượng</th>
+                            <th>Lượng đổ dầu</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for rec in missing_logs_recommendations %}
+                        <tr>
+                            <td class="fw-bold">
+                                <span class="badge bg-warning-lt">{{ site_id_badge(rec.id_tram, site_map, site_map_reverse) }}</span>
+                            </td>
+                            <td>{{ rec.ngay_mat_dien }}</td>
+                            <td>{{ rec.hours }}h</td>
+                            <td>{{ rec.refuel_amount }}L ({{ rec.refuel_date }})</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
 
 <!-- Station Summary -->
 <div class="card shadow-sm mb-4">

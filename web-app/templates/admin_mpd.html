@@ -126,6 +126,41 @@
                 </div>
                 {% endif %}
 
+                {% if missing_logs_recommendations %}
+                <div class="card border border-warning mb-4">
+                    <div class="card-header py-2 bg-warning-lt d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0 text-warning-dark"><i class="fas fa-exclamation-circle me-2"></i>Lịch cúp điện & đổ dầu chưa có log chạy máy ({{ missing_logs_recommendations|length }} lượt)</h5>
+                        <span class="text-muted small">Cần nhắc nhân viên bổ sung</span>
+                    </div>
+                    <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                        <table class="table table-vcenter table-hover card-table small mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>ID Trạm</th>
+                                    <th>Ngày cúp điện</th>
+                                    <th>Thời lượng</th>
+                                    <th>Lượng đổ dầu</th>
+                                    <th>Ngày đổ dầu</th>
+                                    <th>Lý do cúp điện</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for rec in missing_logs_recommendations %}
+                                <tr>
+                                    <td class="fw-bold"><span class="badge bg-warning-lt">{{ site_id_badge(rec.id_tram, site_map) }}</span></td>
+                                    <td>{{ rec.ngay_mat_dien }}</td>
+                                    <td>{{ rec.hours }}h</td>
+                                    <td>{{ rec.refuel_amount }}L</td>
+                                    <td>{{ rec.refuel_date }}</td>
+                                    <td class="text-muted">{{ rec.ly_do }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% endif %}
+
                 <!-- Station Summary Table -->
                 <h5 class="mb-3"><i class="fas fa-broadcast-tower me-2 text-info"></i>Tổng Hợp Theo Trạm (có biến động
                     NL)</h5>

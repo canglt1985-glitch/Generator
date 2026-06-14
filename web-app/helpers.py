@@ -310,3 +310,127 @@ def get_audit_data(huyen_filter=None, start_date=None, end_date=None):
                 'outages_cnt': out_cnt, 'chenh_lech': round(chenh_lech, 0),
             })
     return audit_data
+
+
+def get_missing_logs_recommendations(huyen_filter=None, start_date=None, end_date=None):
+    from datetime import datetime, timedelta
+    
+    # 1. Query PowerSchedules in period
+    p_query = PowerSchedule.query
+    if start_date:
+        p_query = p_query.filter(PowerSchedule.ngay_mat_dien >= start_date)
+    if end_date:
+        p_query = p_query.filter(PowerSchedule.ngay_mat_dien <= end_date)
+    
+    if huyen_filter:
+        p_query = p_query.join(GeneralInfo, GeneralInfo.id_tram == PowerSchedule.id_tram).filter(GeneralInfo.huyen == huyen_filter)
+        
+    schedules = p_query.order_by(PowerSchedule.ngay_mat_dien.asc()).all()
+    if not schedules:
+        return []
+        
+    # 2. Query GeneratorLogs
+    logs_query = GeneratorLog.query
+    if start_date:
+        s_dt = datetime.strptime(start_date, '%Y-%m-%d') - timedelta(days=5)
+        logs_query = logs_query.filter(GeneratorLog.ngay_van_hanh >= s_dt.strftime('%Y-%m-%d'))
+    if end_date:
+        e_dt = datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=5)
+        logs_query = logs_query.filter(GeneratorLog.ngay_van_hanh <= e_dt.strftime('%Y-%m-%d'))
+    logs = logs_query.all()
+    
+    # 3. Query FuelLedger
+    ledger_query = FuelLedger.query.filter(FuelLedger.so_luong > 0, FuelLedger.is_approved == True)
+    if start_date:
+        s_dt = datetime.strptime(start_date, '%Y-%m-%d') - timedelta(days=10)
+        ledger_query = ledger_query.filter(FuelLedger.ngay >= s_dt.strftime('%Y-%m-%d'))
+    if end_date:
+        e_dt = datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=10)
+        ledger_query = ledger_query.filter(FuelLedger.ngay <= e_dt.strftime('%Y-%m-%d'))
+    ledger_items = ledger_query.all()
+
+    # Pre-process for fast matching
+    logs_by_station = defaultdict(list)
+    for l in logs:
+        if l.id_tram:
+            logs_by_station[l.id_tram.strip().upper()].append(l)
+            
+    refuels_by_station = defaultdict(list)
+    for r in ledger_items:
+        if r.id_tram:
+            refuels_by_station[r.id_tram.strip().upper()].append(r)
+            
+    # Calculate duration helper
+    def calc_hours(s_t, e_t):
+        try:
+            t1 = datetime.strptime(s_t.strip(), "%H:%M")
+            t2 = datetime.strptime(e_t.strip(), "%H:%M")
+            diff = (t2 + timedelta(days=1) - t1).total_seconds() if t2 < t1 else (t2 - t1).total_seconds()
+            return round(diff / 3600.0, 1)
+        except:
+            return 0.0
+
+    recommendations = []
+    for o in schedules:
+        station = (o.id_tram or '').strip().upper()
+        if not station:
+            continue
+            
+        try:
+            outage_date = datetime.strptime(o.ngay_mat_dien, "%Y-%m-%d").date()
+        except:
+            continue
+
+        # Skip recent outages to allow 1-2 days for manual logging
+        if (datetime.now().date() - outage_date).days <= 2:
+            continue
+            
+        hours = calc_hours(o.thoi_gian_cup_dien or '', o.thoi_gian_co_dien or '')
+        if hours <= 0:
+            continue
+            
+        # Check if there is any generator run logged within +/- 1 day of outage_date
+        station_logs = logs_by_station.get(station, [])
+        has_log = False
+        for log in station_logs:
+            if log.ngay_van_hanh:
+                try:
+                    log_date = datetime.strptime(log.ngay_van_hanh, "%Y-%m-%d").date()
+                    if abs((log_date - outage_date).days) <= 1:
+                        has_log = True
+                        break
+                except:
+                    pass
+                    
+        if not has_log:
+            # Check if there was a refueling transaction within +/- 5 days of outage_date
+            station_refuels = refuels_by_station.get(station, [])
+            has_refuel = False
+            refuel_amount = 0.0
+            refuel_date_str = ""
+            for ref in station_refuels:
+                if ref.ngay:
+                    try:
+                        ref_date = datetime.strptime(ref.ngay, "%Y-%m-%d").date()
+                        if abs((ref_date - outage_date).days) <= 5:
+                            has_refuel = True
+                            refuel_amount = ref.so_luong
+                            refuel_date_str = ref.ngay
+                            break
+                    except:
+                        pass
+                        
+            if has_refuel:
+                ngay_dmy = outage_date.strftime("%d/%m/%Y")
+                recommendations.append({
+                    'id_tram': o.id_tram.strip().upper(),
+                    'ngay_mat_dien': ngay_dmy,
+                    'hours': hours,
+                    'refuel_amount': refuel_amount,
+                    'refuel_date': refuel_date_str,
+                    'ly_do': o.ly_do or 'Bảo trì lưới điện',
+                    'msg': f"Cần yêu cầu nhân viên nhập bổ sung log chạy máy phát điện cho đợt cúp điện ngày {ngay_dmy} (chạy khoảng {hours} tiếng tại trạm {o.id_tram.strip().upper()})."
+                })
+                
+    return recommendations
+
