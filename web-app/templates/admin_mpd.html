@@ -150,8 +150,8 @@
                                     <td class="fw-bold"><span class="badge bg-warning-lt">{{ site_id_badge(rec.id_tram, site_map) }}</span></td>
                                     <td>{{ rec.ngay_mat_dien }}</td>
                                     <td>{{ rec.hours }}h</td>
-                                    <td>{{ rec.refuel_amount }}L</td>
-                                    <td>{{ rec.refuel_date }}</td>
+                                    <td>{% if rec.refuel_amount and rec.refuel_amount > 0 %}{{ rec.refuel_amount }}L{% else %}—{% endif %}</td>
+                                    <td>{{ rec.refuel_date or '—' }}</td>
                                     <td class="text-muted">{{ rec.ly_do }}</td>
                                 </tr>
                                 {% endfor %}

@@ -130,12 +130,40 @@ def send_pending_log_alert(log_id, site, duration, fuel, cost, start_t, end_t, d
     
     # Get chat_id
     from app import app
-    from models import SystemConfig
+    from models import SystemConfig, DsSiteRegistry, PowerSchedule
     chat_id = None
+    site_old = None
+    outage_info = "Không có ❌"
+    
     with app.app_context():
         cfg = SystemConfig.query.filter_by(key='telegram_report_chat_id').first()
         if cfg:
             chat_id = cfg.value
+            
+        # 1. Tìm mã trạm cũ từ DsSiteRegistry
+        try:
+            reg = DsSiteRegistry.query.filter_by(site_id_new=site).first()
+            if reg and reg.site_id_old:
+                site_old = reg.site_id_old
+        except Exception as e:
+            logging.warning(f"Error querying DsSiteRegistry in alert: {e}")
+            
+        # 2. Tìm lịch cúp điện để đối chiếu
+        try:
+            station_upper = site.strip().upper()
+            search_sites = [station_upper]
+            if site_old:
+                search_sites.append(site_old.strip().upper())
+                
+            p_sched = PowerSchedule.query.filter(
+                PowerSchedule.id_tram.in_(search_sites),
+                PowerSchedule.ngay_mat_dien == date
+            ).first()
+            
+            if p_sched:
+                outage_info = f"`{p_sched.thoi_gian_cup_dien or '--'} - {p_sched.thoi_gian_co_dien or '--'}` ({p_sched.ly_do or 'Cúp điện'}) ✅"
+        except Exception as e:
+            logging.warning(f"Error querying PowerSchedule in alert: {e}")
             
     if not chat_id:
         chat_id = os.getenv('TELEGRAM_CHAT_ID')
@@ -144,12 +172,17 @@ def send_pending_log_alert(log_id, site, duration, fuel, cost, start_t, end_t, d
         logging.warning("No telegram chat ID registered for approvals.")
         return False
         
+    site_display = site
+    if site_old:
+        site_display = f"{site} (Mã cũ: {site_old})"
+        
     api_url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}"
     text = (
-        f"⚡ **[PHÊ DUYỆT LOG CHẠY MÁY]**\n"
-        f"• Trạm: `{site}`\n"
+        f"⚡ *[PHÊ DUYỆT LOG CHẠY MÁY]*\n"
+        f"• Trạm: `{site_display}`\n"
         f"• Ngày: `{date}`\n"
-        f"• Thời gian: `{start_t} - {end_t}` (`{duration}` giờ)\n"
+        f"• Lịch cúp điện: {outage_info}\n"
+        f"• Thời gian chạy: `{start_t} - {end_t}` (`{duration}` giờ)\n"
         f"• Nhiên liệu tiêu hao: `{fuel}` lít\n"
         f"• Chi phí dự tính: `{cost:,.0f}` VND\n"
         f"• Trạng thái: Chờ duyệt ⏳"
@@ -240,11 +273,11 @@ def poll_telegram_updates():
                                     if is_approve:
                                         g_log.status = 'approved'
                                         ans_text = f"✅ Đã DUYỆT log trạm {g_log.site}"
-                                        new_msg_text += f"\n\n👉 **Kết quả: ĐÃ DUYỆT ✅**"
+                                        new_msg_text += f"\n\n👉 *Kết quả: ĐÃ DUYỆT ✅*"
                                     else:
                                         g_log.status = 'rejected'
                                         ans_text = f"❌ Đã TỪ CHỐI log trạm {g_log.site}"
-                                        new_msg_text += f"\n\n👉 **Kết quả: ĐÃ TỪ CHỐI ❌**"
+                                        new_msg_text += f"\n\n👉 *Kết quả: ĐÃ TỪ CHỐI ❌*"
                                     db.session.commit()
                                 else:
                                     ans_text = "Không tìm thấy log này trong DB."

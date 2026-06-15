@@ -403,6 +403,25 @@ def generate_daily_report_data(target_date_str=None):
         except Exception as inv_err:
             print(f"⚠️ Error querying pending invoices for report: {inv_err}")
             report_data['pending_invoices'] = 0
+
+        # 7. Danh sách trạm thiếu log chạy máy cho sự cố cúp điện (Cúp >= 3h) trong 30 ngày qua
+        try:
+            from helpers import get_missing_logs_recommendations
+            from app import app
+            target_dt = datetime.strptime(target_date_str, '%Y-%m-%d').date()
+            start_date_scan = (target_dt - timedelta(days=2)).strftime('%Y-%m-%d')
+            ref_date = target_dt + timedelta(days=1)
+            with app.app_context():
+                missing_logs = get_missing_logs_recommendations(
+                    start_date=start_date_scan,
+                    end_date=target_date_str,
+                    grace_days=0,  # Nhắc vào ngày hôm sau luôn
+                    current_date=ref_date
+                )
+            report_data['missing_logs'] = missing_logs
+        except Exception as missing_logs_err:
+            print(f"⚠️ Error querying missing logs for daily report: {missing_logs_err}")
+            report_data['missing_logs'] = []
  
     except Exception as e:
         print(f"❌ Error compiling daily report statistics: {e}")
@@ -416,9 +435,9 @@ def format_daily_report_message(data):
     Format statistics as Markdown message.
     """
     lines = [
-        f"📊 **BÁO CÁO VẬN HÀNH & CHI PHÍ - Ngày {data['date']}**",
+        f"📊 *BÁO CÁO VẬN HÀNH & CHI PHÍ - Ngày {data['date']}*",
         "=====================================",
-        "🚀 **TIÊU THỤ & CHẠY MÁY TRONG NGÀY:**",
+        "🚀 *TIÊU THỤ & CHẠY MÁY TRONG NGÀY:*",
         f"• Tổng lượt chạy máy: `{data['runs_count']}` lượt (`{round(data['total_hours'], 1)}` giờ)",
         f"• Nhiên liệu tiêu hao: `{round(data['total_fuel'], 1)}` lít",
         f"• Số tiền chạy máy: `{data['run_revenue']:,.0f}` VND",
@@ -429,7 +448,7 @@ def format_daily_report_message(data):
         
     lines.extend([
         "",
-        "💰 **CHI PHÍ MUA NHIÊN LIỆU TRONG NGÀY:**",
+        "💰 *CHI PHÍ MUA NHIÊN LIỆU TRONG NGÀY:*",
     ])
     
     has_daily_purchase = False
@@ -477,45 +496,67 @@ def format_daily_report_message(data):
     )
 
     lines.extend([
-        f"➡️ **Tổng chi mua phát sinh trong ngày:** `{data['total_purchase_cost']:,.0f}` VND",
+        f"➡️ *Tổng chi mua phát sinh trong ngày:* `{data['total_purchase_cost']:,.0f}` VND",
         "",
-        "📈 **LŨY KẾ THÁNG NÀY (MTD):**",
-        f"• Số lượt chạy máy: `{data['mtd']['runs_count']}` lượt (`{round(data['mtd']['run_hours'], 1)}` giờ)",
-        f"• Tiêu hao chạy máy: Dầu `{round(data['mtd']['consumed_dau_qty'], 1)}`L | Xăng `{round(data['mtd']['consumed_xang_qty'], 1)}`L",
-        f"• Số tiền chạy máy: `{data['mtd']['run_revenue']:,.0f}` VND",
-        "• Nhiên liệu mua từ CX222:",
-        f"  - Dầu: `{round(data['mtd']['purchased_cx222_dau_qty'], 1)}`L (`{data['mtd']['purchased_cx222_dau_cost']:,.0f}` VND)",
-        f"  - Xăng: `{round(data['mtd']['purchased_cx222_xang_qty'], 1)}`L (`{data['mtd']['purchased_cx222_xang_cost']:,.0f}` VND)",
-        "• Nhiên liệu mua từ VNPT/VTL:",
-        f"  - Dầu: `{round(data['mtd']['purchased_vnpt_vtl_dau_qty'], 1)}`L (`{data['mtd']['purchased_vnpt_vtl_dau_cost']:,.0f}` VND)",
-        f"  - Xăng: `{round(data['mtd']['purchased_vnpt_vtl_xang_qty'], 1)}`L (`{data['mtd']['purchased_vnpt_vtl_xang_cost']:,.0f}` VND)",
-        "• Nhiên liệu mua lẻ:",
-        f"  - Dầu: `{round(data['mtd']['purchased_mua_le_dau_qty'], 1)}`L (`{data['mtd']['purchased_mua_le_dau_cost']:,.0f}` VND)",
-        f"  - Xăng: `{round(data['mtd']['purchased_mua_le_xang_qty'], 1)}`L (`{data['mtd']['purchased_mua_le_xang_cost']:,.0f}` VND)",
-        f"• Chi phí khác: `{data['mtd']['other_expense_cost']:,.0f}` VND",
-        f"➡️ **Tổng chi mua lũy kế tháng:** `{data['mtd']['total_purchase_cost']:,.0f}` VND",
-        "• Hóa đơn điện tử (Parsed Invoices):",
-        f"  - Số lượng hóa đơn: `{data['mtd']['invoice_count']}` HĐ",
-        f"  - Dầu: `{round(data['mtd']['invoice_dau_qty'], 1)}`L",
-        f"  - Xăng: `{round(data['mtd']['invoice_xang_qty'], 1)}`L",
-        f"  - Tổng tiền HĐ: `{data['mtd']['invoice_total_cost']:,.0f}` VND",
-        "",
-        "📊 **ĐỐI CHIẾU LŨY KẾ THÁNG (MTD):**",
+        "📊 *ĐỐI CHIẾU LŨY KẾ THÁNG (MTD):*",
         f"• Tổng tiêu hao: Dầu `{round(data['mtd']['consumed_dau_qty'], 1)}`L | Xăng `{round(data['mtd']['consumed_xang_qty'], 1)}`L",
         f"• Tổng mua (Ledger): Dầu `{round(mtd_purchase_dau, 1)}`L | Xăng `{round(mtd_purchase_xang, 1)}`L",
         f"• Tổng hóa đơn: Dầu `{round(data['mtd']['invoice_dau_qty'], 1)}`L | Xăng `{round(data['mtd']['invoice_xang_qty'], 1)}`L",
         "",
-        "⏳ **YÊU CẦU CHỜ PHÊ DUYỆT:**",
+        "⏳ *YÊU CẦU CHỜ PHÊ DUYỆT:*",
         f"• Log chạy máy cần duyệt: `{data['pending_approvals']}` dòng",
-        f"• Hóa đơn điện tử mới nhận: `{data['pending_invoices']}` hóa đơn",
-        "====================================="
+        f"• Hóa đơn điện tử mới nhận: `{data['pending_invoices']}` hóa đơn"
     ])
+
+    lines.append("=====================================")
     
+    return "\n".join(lines)
+
+def format_missing_logs_message(data):
+    """
+    Format missing logs recommendations as a separate Markdown message.
+    """
+    if not data.get('missing_logs'):
+        return None
+        
+    def format_num(val):
+        try:
+            val_f = float(val)
+            if val_f == int(val_f):
+                return str(int(val_f))
+            return str(val_f)
+        except:
+            return str(val)
+            
+    lines = [
+        "⚠️ *DANH SÁCH KHÔNG CÓ LOG CHẠY MÁY (Cúp ≥ 3h):*",
+        "====================================="
+    ]
+    
+    for rec in data['missing_logs']:
+        h_str = format_num(rec['hours'])
+        refuel_val = rec.get('refuel_amount', 0.0)
+        try:
+            refuel_f = float(refuel_val)
+            if refuel_f > 0:
+                refuel_str = f", đã đổ {format_num(refuel_f)}L"
+            else:
+                ton_val = rec.get('nl_ton', 0.0)
+                refuel_str = f", tồn {format_num(ton_val)}L"
+        except:
+            refuel_str = ""
+            
+        parts = rec['ngay_mat_dien'].split('/')
+        date_display = "/".join(parts[:2]) if len(parts) >= 2 else rec['ngay_mat_dien']
+        lines.append(f"• Trạm `{rec['id_tram']}`: Cúp ngày `{date_display}` (~{h_str}h){refuel_str}")
+        
+    lines.append("=====================================")
     return "\n".join(lines)
 
 def send_daily_report(target_date_str=None):
     """
     Build daily report and send to Telegram chat.
+    Also sends a separate alert for missing generator logs if any.
     """
     session = get_db_session()
     chat_id = get_report_chat_id(session)
@@ -540,16 +581,36 @@ def send_daily_report(target_date_str=None):
         "parse_mode": "Markdown"
     }
     
+    daily_sent = False
     try:
         import requests
         r = requests.post(url, json=payload, timeout=10)
         print(f"Telegram Daily Report status: {r.status_code} - {r.text}")
-        return r.status_code == 200
+        daily_sent = (r.status_code == 200)
     except Exception as e:
         print(f"❌ Failed to send Telegram daily report: {e}")
-        return False
+        
+    # Gửi tin nhắn cảnh báo thiếu log chạy máy riêng biệt nếu có
+    if report_data.get('missing_logs'):
+        missing_msg = format_missing_logs_message(report_data)
+        if missing_msg:
+            missing_payload = {
+                "chat_id": chat_id,
+                "text": missing_msg,
+                "parse_mode": "Markdown"
+            }
+            try:
+                r_missing = requests.post(url, json=missing_payload, timeout=10)
+                print(f"Telegram Missing Logs Report status: {r_missing.status_code} - {r_missing.text}")
+            except Exception as e:
+                print(f"❌ Failed to send Telegram missing logs report: {e}")
+                
+    return daily_sent
 
 if __name__ == "__main__":
-    # Test sending report
+    # Reconfigure stdout to utf-8 for windows terminal
+    sys.stdout.reconfigure(encoding='utf-8')
     print("Testing Daily Report calculation and send...")
-    send_daily_report()
+    from app import app
+    with app.app_context():
+        send_daily_report()

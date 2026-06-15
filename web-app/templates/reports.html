@@ -75,7 +75,13 @@
                             </td>
                             <td>{{ rec.ngay_mat_dien }}</td>
                             <td>{{ rec.hours }}h</td>
-                            <td>{{ rec.refuel_amount }}L ({{ rec.refuel_date }})</td>
+                            <td>
+                                {% if rec.refuel_amount and rec.refuel_amount > 0 %}
+                                    {{ rec.refuel_amount }}L {% if rec.refuel_date %}({{ rec.refuel_date }}){% endif %}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
