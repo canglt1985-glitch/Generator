@@ -1,5 +1,25 @@
 # Changelog - Project VT3-VHKT
 
+## [2026-06-15]
+### Fixed
+- **Khắc phục lỗi gửi trùng báo cáo Telegram:** Phát hiện các tiến trình Python mồ côi (orphaned processes) chạy ngầm dưới quyền SYSTEM từ các lần chạy trước bị kẹt lại dẫn đến nhiều instance Scheduler chạy song song.
+- **Tạo script dọn dẹp hệ thống:** Viết file [cleanup.ps1](file:///c:/Users/PC/.gemini/antigravity-ide/scratch/van-hanh-may-phat-dien/web-app/scripts/cleanup.ps1) và file batch [cleanup.bat](file:///c:/Users/PC/.gemini/antigravity-ide/scratch/van-hanh-may-phat-dien/web-app/scripts/cleanup.bat) (Run as administrator) giúp dừng service, terminate an toàn các tiến trình python thuộc web-app và khởi động lại service.
+- **Xác định lỗi DNS NXDOMAIN:** Xác minh bản ghi DNS `mobi-local.aodaimon.com` không thể phân giải do thiếu bản ghi CNAME public trỏ về Cloudflare Tunnel ID (`9f8ccaf7-7a22-43b9-a3d1-347ba16bbbdc`) sau khi xóa cache DNS Client.
+
+## [2026-06-14]
+### Added
+- **Báo cáo Tuần (Weekly Report) mới:** Triển khai gửi báo cáo tuần (`weekly_report.py`) riêng biệt, tách thành 2 tin nhắn (MTD/Đối chiếu & Danh sách Cảnh báo bất thường). Tích hợp 4 nhóm cảnh báo dài hạn bao gồm trạm không hoạt động trên 90 ngày, lệch tiêu hao nhiên liệu theo quý, đổ dầu nhiều lần không chạy máy, và thiếu log cúp điện đầu tháng đến nay.
+- **Nâng cấp tin nhắn phê duyệt Telegram:** Tích hợp tự động tra cứu mã trạm cũ từ `DsSiteRegistry` và đối chiếu lịch cúp điện thực tế từ bảng `PowerSchedule` trực tiếp trên tin nhắn phê duyệt.
+- **Hiển thị dầu tồn (nl_ton):** Bổ sung hiển thị lượng dầu tồn thực tế `, tồn Y L` trong các báo cáo thiếu log khi trạm không phát sinh giao dịch nạp dầu.
+
+### Changed
+- **Chuẩn hóa định dạng ngày:** Định dạng ngày mất điện trong danh sách trạm thiếu log chạy máy (ở cả Daily và Weekly Report) được rút ngắn từ `DD/MM/YYYY` thành `DD/MM` (ví dụ: `15/05/2026` -> `15/05`) giúp tin nhắn gọn gàng hơn.
+- **Chuẩn hóa Markdown Telegram:** Thay đổi toàn bộ định dạng bôi đậm trong tin nhắn Telegram từ `**` thành `*` để tương thích 100% với Markdown V1, tránh lỗi parse (`Bad Request: can't parse entities`).
+
+### Fixed
+- **Sửa lỗi Flask Application Context:** Khắc phục lỗi `Working outside of application context` khi chạy báo cáo từ CLI/Cron/Test bằng cách bao bọc lệnh gọi `get_missing_logs_recommendations` trong khối `with app.app_context():`.
+- **Tối ưu hóa hiệu năng (N+1 queries):** Chuyển đổi logic truy vấn trạm không hoạt động và lệch tiêu hao trong `helpers.py` từ truy vấn vòng lặp đơn lẻ sang truy vấn gom nhóm (`db.func.sum` và `group_by`). Giảm thời gian chạy Weekly Report từ hơn 1.5 phút xuống dưới 10 giây.
+
 ## [2026-05-19]
 ### Added
 - **Tính năng Xuất Excel Tồn Tại:** Thêm nút "Xuất Excel" trên tab Tồn Tại trong trang Công Việc Hàng Ngày. File xuất ra gồm: STT, Tên trạm, Lat, Long, Địa chỉ, Đánh giá tình trạng hư hỏng.

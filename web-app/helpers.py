@@ -312,9 +312,17 @@ def get_audit_data(huyen_filter=None, start_date=None, end_date=None):
     return audit_data
 
 
-def get_missing_logs_recommendations(huyen_filter=None, start_date=None, end_date=None):
+def get_missing_logs_recommendations(huyen_filter=None, start_date=None, end_date=None, grace_days=2, current_date=None):
     from datetime import datetime, timedelta
     
+    if current_date is None:
+        current_date = datetime.now().date()
+    elif isinstance(current_date, str):
+        try:
+            current_date = datetime.strptime(current_date, '%Y-%m-%d').date()
+        except:
+            current_date = datetime.now().date()
+            
     # 1. Query PowerSchedules in period
     p_query = PowerSchedule.query
     if start_date:
@@ -335,7 +343,7 @@ def get_missing_logs_recommendations(huyen_filter=None, start_date=None, end_dat
         s_dt = datetime.strptime(start_date, '%Y-%m-%d') - timedelta(days=5)
         logs_query = logs_query.filter(GeneratorLog.ngay_van_hanh >= s_dt.strftime('%Y-%m-%d'))
     if end_date:
-        e_dt = datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=5)
+        e_dt = datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=10)
         logs_query = logs_query.filter(GeneratorLog.ngay_van_hanh <= e_dt.strftime('%Y-%m-%d'))
     logs = logs_query.all()
     
@@ -350,6 +358,9 @@ def get_missing_logs_recommendations(huyen_filter=None, start_date=None, end_dat
     ledger_items = ledger_query.all()
 
     # Pre-process for fast matching
+    g_info_list = GeneralInfo.query.all()
+    ton_by_station = {g.id_tram.strip().upper(): (g.nl_ton or 0.0) for g in g_info_list if g.id_tram}
+
     logs_by_station = defaultdict(list)
     for l in logs:
         if l.id_tram:
@@ -381,22 +392,22 @@ def get_missing_logs_recommendations(huyen_filter=None, start_date=None, end_dat
         except:
             continue
 
-        # Skip recent outages to allow 1-2 days for manual logging
-        if (datetime.now().date() - outage_date).days <= 2:
+        # Skip recent outages to allow grace period for manual logging
+        if (current_date - outage_date).days <= grace_days:
             continue
             
         hours = calc_hours(o.thoi_gian_cup_dien or '', o.thoi_gian_co_dien or '')
-        if hours <= 0:
+        if hours < 3.0:  # Ngưỡng cúp điện ≥ 3.0 giờ
             continue
             
-        # Check if there is any generator run logged within +/- 1 day of outage_date
+        # Check if there is any generator run logged within 0 to 7 days after outage_date
         station_logs = logs_by_station.get(station, [])
         has_log = False
         for log in station_logs:
             if log.ngay_van_hanh:
                 try:
                     log_date = datetime.strptime(log.ngay_van_hanh, "%Y-%m-%d").date()
-                    if abs((log_date - outage_date).days) <= 1:
+                    if 0 <= (log_date - outage_date).days <= 7:
                         has_log = True
                         break
                 except:
@@ -420,17 +431,220 @@ def get_missing_logs_recommendations(huyen_filter=None, start_date=None, end_dat
                     except:
                         pass
                         
-            if has_refuel:
-                ngay_dmy = outage_date.strftime("%d/%m/%Y")
-                recommendations.append({
-                    'id_tram': o.id_tram.strip().upper(),
-                    'ngay_mat_dien': ngay_dmy,
-                    'hours': hours,
-                    'refuel_amount': refuel_amount,
-                    'refuel_date': refuel_date_str,
-                    'ly_do': o.ly_do or 'Bảo trì lưới điện',
-                    'msg': f"Cần yêu cầu nhân viên nhập bổ sung log chạy máy phát điện cho đợt cúp điện ngày {ngay_dmy} (chạy khoảng {hours} tiếng tại trạm {o.id_tram.strip().upper()})."
-                })
+            ngay_dmy = outage_date.strftime("%d/%m/%Y")
+            nl_ton_val = ton_by_station.get(o.id_tram.strip().upper(), 0.0)
+            recommendations.append({
+                'id_tram': o.id_tram.strip().upper(),
+                'ngay_mat_dien': ngay_dmy,
+                'hours': hours,
+                'refuel_amount': refuel_amount if has_refuel else 0.0,
+                'refuel_date': refuel_date_str if has_refuel else "",
+                'nl_ton': nl_ton_val,
+                'ly_do': o.ly_do or 'Bảo trì lưới điện',
+                'msg': f"Cần yêu cầu nhân viên nhập bổ sung log chạy máy phát điện cho đợt cúp điện ngày {ngay_dmy} (chạy khoảng {hours} tiếng tại trạm {o.id_tram.strip().upper()})."
+            })
                 
     return recommendations
+
+
+def get_inactive_generators(huyen_filter=None, days=90):
+    from datetime import datetime, timedelta
+    limit_date = (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d')
+    
+    # Query active diesel generators (dinh_muc > 0, loai_nhien_lieu = Dầu or empty)
+    g_query = GeneralInfo.query.filter(
+        GeneralInfo.dinh_muc > 0,
+        (GeneralInfo.loai_nhien_lieu.ilike('%dầu%')) | 
+        (GeneralInfo.loai_nhien_lieu.ilike('%dau%')) | 
+        (GeneralInfo.loai_nhien_lieu == None) | 
+        (GeneralInfo.loai_nhien_lieu == '')
+    )
+    if huyen_filter:
+        g_query = g_query.filter(GeneralInfo.huyen == huyen_filter)
+        
+    generators = g_query.all()
+    if not generators:
+        return []
+        
+    # Tối ưu hóa: Query ngày chạy máy cuối cùng của tất cả các trạm bằng 1 câu query duy nhất
+    last_runs = db.session.query(
+        GeneratorLog.id_tram,
+        db.func.max(GeneratorLog.ngay_van_hanh).label('last_run')
+    ).filter(
+        GeneratorLog.status == 'approved'
+    ).group_by(GeneratorLog.id_tram).all()
+    
+    last_run_by_station = {}
+    for r in last_runs:
+        if r[0]:
+            last_run_by_station[r[0].strip().upper()] = r[1]
+        
+    inactive_list = []
+    today = datetime.now().date()
+    
+    for g in generators:
+        station = (g.id_tram or '').strip().upper()
+        if not station:
+            continue
+            
+        last_run_str = last_run_by_station.get(station)
+        
+        # Nếu trạm có log chạy máy trong vòng 90 ngày qua (last_run >= limit_date), bỏ qua
+        if last_run_str and last_run_str >= limit_date:
+            continue
+            
+        days_inactive = "Chưa từng chạy"
+        last_run_date = "—"
+        if last_run_str:
+            try:
+                lr_dt = datetime.strptime(last_run_str, '%Y-%m-%d').date()
+                days_inactive = f"{(today - lr_dt).days} ngày"
+                last_run_date = lr_dt.strftime('%d/%m/%Y')
+            except:
+                pass
+                
+        inactive_list.append({
+            'id_tram': g.id_tram.strip().upper(),
+            'huyen': g.huyen or '—',
+            'may_phat_dien': g.may_phat_dien or 'Máy nổ cố định',
+            'loai_nl': g.loai_nhien_lieu or 'Dầu',
+            'dinh_muc': g.dinh_muc or 0.0,
+            'last_run': last_run_date,
+            'days_inactive': days_inactive,
+            'nl_ton': g.nl_ton or 0.0,
+            'dung_tich': g.dung_tich or 0.0
+        })
+        
+    def sort_key(item):
+        if item['days_inactive'] == "Chưa từng chạy":
+            return 999999
+        try:
+            return int(item['days_inactive'].split(' ')[0])
+        except:
+            return 0
+            
+    inactive_list.sort(key=sort_key, reverse=True)
+    return inactive_list
+
+
+def get_weekly_anomaly_report(huyen_filter=None, days_scan=7):
+    from datetime import datetime, timedelta
+    
+    # Quét STOCK_IN trong 30 ngày qua
+    scan_start = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+    
+    ledger_query = FuelLedger.query.filter(
+        FuelLedger.type == 'STOCK_IN',
+        FuelLedger.is_approved == True,
+        FuelLedger.ngay >= scan_start
+    )
+    if huyen_filter:
+        ledger_query = ledger_query.join(GeneralInfo, GeneralInfo.id_tram == FuelLedger.id_tram).filter(GeneralInfo.huyen == huyen_filter)
+        
+    transactions = ledger_query.order_by(FuelLedger.ngay.asc()).all()
+    
+    refuels_by_station = defaultdict(list)
+    for tx in transactions:
+        if tx.id_tram:
+            refuels_by_station[tx.id_tram.strip().upper()].append(tx)
+            
+    anomalies = []
+    
+    for station, txs in refuels_by_station.items():
+        if len(txs) < 2:
+            continue
+            
+        for i in range(len(txs) - 1):
+            try:
+                d1 = datetime.strptime(txs[i].ngay, '%Y-%m-%d').date()
+                d2 = datetime.strptime(txs[i+1].ngay, '%Y-%m-%d').date()
+            except:
+                continue
+                
+            if (d2 - d1).days <= days_scan:
+                check_end = d2 + timedelta(days=7)
+                has_run = GeneratorLog.query.filter(
+                    GeneratorLog.id_tram == station,
+                    GeneratorLog.ngay_van_hanh >= d2.strftime('%Y-%m-%d'),
+                    GeneratorLog.ngay_van_hanh <= check_end.strftime('%Y-%m-%d'),
+                    GeneratorLog.status == 'approved'
+                ).first() is not None
+                
+                if not has_run:
+                    total_qty = txs[i].so_luong + txs[i+1].so_luong
+                    anomalies.append({
+                        'id_tram': station,
+                        'date_range': f"{d1.strftime('%d/%m')} - {d2.strftime('%d/%m')}",
+                        'refuel_count': 2,
+                        'total_qty': total_qty,
+                        'msg': f"Đổ dầu 2 lần liên tiếp ({total_qty}L từ {d1.strftime('%d/%m')} đến {d2.strftime('%d/%m')}) nhưng không chạy máy phát trong 7 ngày tiếp theo."
+                    })
+                    break
+                    
+    return anomalies
+
+
+def get_quarterly_fuel_anomalies(huyen_filter=None):
+    from datetime import datetime, timedelta
+    start_date = (datetime.now() - timedelta(days=90)).strftime('%Y-%m-%d')
+    
+    g_query = GeneralInfo.query
+    if huyen_filter:
+        g_query = g_query.filter(GeneralInfo.huyen == huyen_filter)
+    stations = g_query.all()
+    if not stations:
+        return []
+        
+    # Tối ưu hóa: Query sum fuel ledger (STOCK_IN) của tất cả các trạm
+    refuels = db.session.query(
+        FuelLedger.id_tram,
+        db.func.sum(FuelLedger.so_luong)
+    ).filter(
+        FuelLedger.type == 'STOCK_IN',
+        FuelLedger.is_approved == True,
+        FuelLedger.ngay >= start_date
+    ).group_by(FuelLedger.id_tram).all()
+    
+    refuel_by_station = {}
+    for r in refuels:
+        if r[0]:
+            refuel_by_station[r[0].strip().upper()] = r[1] or 0.0
+            
+    # Tối ưu hóa: Query sum tiêu hao trong log chạy máy của tất cả các trạm
+    consumes = db.session.query(
+        GeneratorLog.id_tram,
+        db.func.sum(GeneratorLog.nhien_lieu_tieu_hao)
+    ).filter(
+        GeneratorLog.status == 'approved',
+        GeneratorLog.ngay_van_hanh >= start_date
+    ).group_by(GeneratorLog.id_tram).all()
+    
+    consume_by_station = {}
+    for c in consumes:
+        if c[0]:
+            consume_by_station[c[0].strip().upper()] = c[1] or 0.0
+            
+    anomalies = []
+    
+    for g in stations:
+        station = (g.id_tram or '').strip().upper()
+        if not station:
+            continue
+            
+        refuel_sum = refuel_by_station.get(station, 0.0)
+        consume_sum = consume_by_station.get(station, 0.0)
+        
+        diff = consume_sum - refuel_sum
+        
+        if refuel_sum > 0 and diff < -50.0:
+            anomalies.append({
+                'id_tram': station,
+                'refuel_qty': round(refuel_sum, 1),
+                'consume_qty': round(consume_sum, 1),
+                'diff': round(diff, 1),
+                'msg': f"Đổ dầu {refuel_sum}L nhưng tiêu hao log chỉ {consume_sum}L trong 3 tháng qua (hụt {abs(diff)}L)."
+            })
+            
+    anomalies.sort(key=lambda x: x['diff'])
+    return anomalies
 
