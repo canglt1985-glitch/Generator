@@ -1,4 +1,4 @@
-import { Bell, Search, User, Menu, Home, Database, FileText, Settings, Activity, Zap, X } from 'lucide-react';
+import { Bell, Search, User, Menu, Home, Database, FileText, Settings, Activity, Zap, Coins, X } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useState } from 'react';
 
@@ -6,8 +6,9 @@ const navigation = [
   { name: 'Dashboard', href: '/', icon: Home },
   { name: 'Danh sách Trạm', href: '/datasites', icon: Database },
   { name: 'Hợp đồng', href: '/contracts', icon: FileText, desktopOnly: true },
-  { name: 'Vận hành', href: '/operations', icon: Zap },
+  { name: 'Máy phát điện', href: '/generator', icon: Zap },
   { name: 'Công việc hàng ngày', href: '/daily-work', icon: Activity },
+  { name: 'Quản lý chi phí', href: '/expenses', icon: Coins },
   { name: 'Cài đặt', href: '/settings', icon: Settings },
 ];
 
