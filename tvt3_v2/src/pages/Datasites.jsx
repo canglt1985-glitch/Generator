@@ -563,10 +563,10 @@ export default function Datasites() {
             <thead className="bg-gray-50 sticky top-0 z-10">
               <tr>
                 <th scope="col" className="px-3 py-2.5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
-                  Mã Trạm
+                  Site ID Cũ
                 </th>
                 <th scope="col" className="px-3 py-2.5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
-                  Site ID Cũ
+                  Mã Trạm
                 </th>
                 <th scope="col" className="px-3 py-2.5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
                   Phường/Xã mới
@@ -608,12 +608,12 @@ export default function Datasites() {
                 filteredData.map((site) => (
                   <tr key={site.site_id} className="hover:bg-blue-50/50 transition-colors group cursor-pointer" onClick={() => setSelectedSite(site)}>
                     <td className="px-3 py-2 whitespace-nowrap">
-                      <div className="text-sm font-bold text-gray-900 group-hover:text-blue-600 transition-colors">{site.site_id}</div>
-                    </td>
-                    <td className="px-3 py-2 whitespace-nowrap">
                       <div className="text-[13px] font-medium text-slate-700 bg-slate-100 inline-block px-2 py-0.5 rounded-full border border-slate-200">
                         {site.site_id_old || 'N/A'}
                       </div>
+                    </td>
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      <div className="text-sm font-bold text-gray-900 group-hover:text-blue-600 transition-colors">{site.site_id}</div>
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap">
                       <div className="text-[13px] text-gray-700 font-medium">

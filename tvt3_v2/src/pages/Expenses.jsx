@@ -98,6 +98,20 @@ export default function Expenses() {
     return siteId;
   };
 
+  const getSiteIds = (siteId) => {
+    if (!siteId) return { oldId: '—', newId: 'KHO' };
+    const sId = siteId.trim().toUpperCase();
+    if (sId === 'KHO') return { oldId: '—', newId: 'KHO' };
+    const st = stations.find(s => s.site_id === sId || (s.site_id_old && s.site_id_old.trim().toUpperCase() === sId));
+    if (st) {
+      return {
+        oldId: st.site_id_old || '—',
+        newId: st.site_id || '—'
+      };
+    }
+    return { oldId: '—', newId: siteId };
+  };
+
   // Tính toán tồn kho dầu & xăng hiện tại
   const stockBalance = useMemo(() => {
     let dau = 0;
@@ -517,7 +531,8 @@ export default function Expenses() {
                           <th scope="col" className="px-4 py-3">Ngày</th>
                           <th scope="col" className="px-4 py-3">Loại GD</th>
                           <th scope="col" className="px-4 py-3">Nhiên Liệu</th>
-                          <th scope="col" className="px-4 py-3">Vị Trí / Trạm</th>
+                          <th scope="col" className="px-4 py-3">Site ID cũ</th>
+                          <th scope="col" className="px-4 py-3">Site ID mới</th>
                           <th scope="col" className="px-4 py-3">Số lượng (L)</th>
                           <th scope="col" className="px-4 py-3">Đơn giá</th>
                           <th scope="col" className="px-4 py-3">Thành tiền</th>
@@ -527,48 +542,52 @@ export default function Expenses() {
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-100 text-[13px] text-gray-700">
-                        {filteredFuelTxs.map((t) => (
-                          <tr key={t.record_id} className="hover:bg-slate-50/50 transition-colors">
-                            <td className="px-4 py-3 whitespace-nowrap font-medium text-slate-900">
-                              {t.date}
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap">
-                              {getTxTypeBadge(t.fuel_tracking.type)}
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap font-semibold">
-                              {t.fuel_tracking.fuel_type || 'Dầu'}
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap">
-                              <span className="font-semibold text-slate-700">
-                                {getSiteLabel(t.site_id)}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap font-bold text-blue-600">
-                              {t.fuel_tracking.quantity}L
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-slate-500 font-mono">
-                              {t.fuel_tracking.unit_price ? formatCurrency(t.fuel_tracking.unit_price) : '0đ'}
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap font-bold text-slate-900 font-mono">
-                              {t.fuel_tracking.total_amount || t.fuel_tracking.thanh_tien ? formatCurrency(t.fuel_tracking.total_amount || t.fuel_tracking.thanh_tien) : '0đ'}
-                            </td>
-                            <td className="px-4 py-3 max-w-xs truncate text-slate-500">
-                              {t.fuel_tracking.vendor || t.fuel_tracking.notes || '—'}
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-slate-600 font-semibold">
-                              {t.fuel_tracking.operator || '—'}
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-right text-xs">
-                              <button 
-                                onClick={() => handleDelete(t.record_id)}
-                                className="text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 p-1.5 rounded transition-colors inline-flex items-center cursor-pointer"
-                                title="Xóa"
-                              >
-                                <Trash size={14} />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
+                        {filteredFuelTxs.map((t) => {
+                          const siteIds = getSiteIds(t.site_id);
+                          return (
+                            <tr key={t.record_id} className="hover:bg-slate-50/50 transition-colors">
+                              <td className="px-4 py-3 whitespace-nowrap font-medium text-slate-900">
+                                {t.date}
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap">
+                                {getTxTypeBadge(t.fuel_tracking.type)}
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap font-semibold">
+                                {t.fuel_tracking.fuel_type || 'Dầu'}
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap text-slate-600 font-medium">
+                                {siteIds.oldId}
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap font-bold text-blue-700">
+                                {siteIds.newId}
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap font-bold text-blue-600">
+                                {t.fuel_tracking.quantity}L
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap text-slate-500 font-mono">
+                                {t.fuel_tracking.unit_price ? formatCurrency(t.fuel_tracking.unit_price) : '0đ'}
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap font-bold text-slate-900 font-mono">
+                                {t.fuel_tracking.total_amount || t.fuel_tracking.thanh_tien ? formatCurrency(t.fuel_tracking.total_amount || t.fuel_tracking.thanh_tien) : '0đ'}
+                              </td>
+                              <td className="px-4 py-3 max-w-xs truncate text-slate-500">
+                                {t.fuel_tracking.vendor || t.fuel_tracking.notes || '—'}
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap text-slate-600 font-semibold">
+                                {t.fuel_tracking.operator || '—'}
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap text-right text-xs">
+                                <button 
+                                  onClick={() => handleDelete(t.record_id)}
+                                  className="text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 p-1.5 rounded transition-colors inline-flex items-center cursor-pointer"
+                                  title="Xóa"
+                                >
+                                  <Trash size={14} />
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   )}

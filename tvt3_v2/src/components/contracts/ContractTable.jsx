@@ -41,7 +41,8 @@ export default function ContractTable({ contracts, onSelect }) {
           <thead className="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
             <tr>
               <th className="py-3 px-3 whitespace-nowrap text-center">Tình trạng</th>
-              <th className="py-3 px-3 whitespace-nowrap">Site ID</th>
+              <th className="py-3 px-3 whitespace-nowrap">Site ID cũ</th>
+              <th className="py-3 px-3 whitespace-nowrap">Site ID mới</th>
               <th className="py-3 px-3 min-w-[180px]">Chủ Thể</th>
               <th className="py-3 px-3 whitespace-nowrap">Hết Hạn</th>
               <th className="py-3 px-3 whitespace-nowrap text-right">Giá Thuê</th>
@@ -85,9 +86,11 @@ export default function ContractTable({ contracts, onSelect }) {
               return (
                 <tr key={contract.contract_id} className="hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => onSelect && onSelect(contract)}>
                   <td className="py-3 px-3">{renderBadges()}</td>
-                  <td className="py-3 px-3 font-medium text-blue-700">
-                    <div>{siteId}</div>
-                    {contract.datasites?.site_id_old && <div className="text-xs text-slate-400">{contract.datasites.site_id_old}</div>}
+                  <td className="py-3 px-3 text-slate-600 font-medium whitespace-nowrap">
+                    {contract.datasites?.site_id_old || '—'}
+                  </td>
+                  <td className="py-3 px-3 font-bold text-blue-700 whitespace-nowrap">
+                    {siteId}
                   </td>
                   <td className="py-3 px-3 truncate max-w-[200px]" title={landlordName}>{landlordName}</td>
                   <td className={`py-3 px-3 font-medium ${flags.includes('can_gia_han') ? 'text-amber-600' : 'text-slate-600'}`}>

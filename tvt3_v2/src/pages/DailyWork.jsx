@@ -575,7 +575,8 @@ export default function DailyWork() {
                       <thead className="bg-gray-50 sticky top-0 z-10 text-xs font-bold text-gray-500 uppercase tracking-wider">
                         <tr>
                           <th scope="col" className="px-4 py-3">Ngày</th>
-                          <th scope="col" className="px-4 py-3">Mã Trạm</th>
+                          <th scope="col" className="px-4 py-3">Site ID cũ</th>
+                          <th scope="col" className="px-4 py-3">Site ID mới</th>
                           <th scope="col" className="px-4 py-3">Nhân Viên</th>
                           <th scope="col" className="px-4 py-3">Hạng Mục</th>
                           <th scope="col" className="px-4 py-3">Nội Dung Thực Hiện</th>
@@ -584,33 +585,38 @@ export default function DailyWork() {
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-100 text-[13px] text-gray-700">
-                        {filteredDailyLogs.map((log) => (
-                          <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
-                            <td className="px-4 py-3 whitespace-nowrap font-medium text-slate-900">
-                              {log.ngay}
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap">
-                              <button
-                                onClick={() => handleOpenSiteDetail(log.id_tram, 'general')}
-                                className="bg-blue-50 text-blue-700 font-bold px-2 py-0.5 rounded border border-blue-100 text-xs hover:bg-blue-100 transition-colors cursor-pointer flex items-center gap-1"
-                                title="Xem chi tiết trạm"
-                              >
-                                {getSiteLabel(log.id_tram)}
-                                <ExternalLink size={10} className="opacity-60" />
-                              </button>
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-slate-800 font-semibold">
-                              {log.nhan_vien}
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-slate-600 font-medium">
-                              {log.hang_muc}
-                            </td>
-                            <td className="px-4 py-3 max-w-sm truncate" title={log.noi_dung}>
-                              {log.noi_dung}
-                            </td>
-                            <td className="px-4 py-3 max-w-xs truncate text-slate-500" title={log.ghi_chu}>
-                              {log.ghi_chu || <span className="text-slate-300 italic">Không có</span>}
-                            </td>
+                        {filteredDailyLogs.map((log) => {
+                          const siteIds = getSiteIds(log.id_tram);
+                          return (
+                            <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
+                              <td className="px-4 py-3 whitespace-nowrap font-medium text-slate-900">
+                                {log.ngay}
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap font-bold text-slate-900">
+                                {siteIds.oldId}
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap">
+                                <button
+                                  onClick={() => handleOpenSiteDetail(log.id_tram, 'general')}
+                                  className="bg-blue-50 text-blue-700 font-bold px-2 py-0.5 rounded border border-blue-100 text-xs hover:bg-blue-100 transition-colors cursor-pointer flex items-center gap-1"
+                                  title="Xem chi tiết trạm"
+                                >
+                                  {siteIds.newId}
+                                  <ExternalLink size={10} className="opacity-60" />
+                                </button>
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap text-slate-800 font-semibold">
+                                {log.nhan_vien}
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap text-slate-600 font-medium">
+                                {log.hang_muc}
+                              </td>
+                              <td className="px-4 py-3 max-w-sm truncate" title={log.noi_dung}>
+                                {log.noi_dung}
+                              </td>
+                              <td className="px-4 py-3 max-w-xs truncate text-slate-500" title={log.ghi_chu}>
+                                {log.ghi_chu || <span className="text-slate-300 italic">Không có</span>}
+                              </td>
                             <td className="px-4 py-3 whitespace-nowrap text-right text-xs">
                               <button 
                                 onClick={() => handleEditLog(log)}
@@ -628,7 +634,8 @@ export default function DailyWork() {
                               </button>
                             </td>
                           </tr>
-                        ))}
+                          );
+                        })}
                       </tbody>
                     </table>
                   )}
@@ -645,7 +652,8 @@ export default function DailyWork() {
                       <thead className="bg-gray-50 sticky top-0 z-10 text-xs font-bold text-gray-500 uppercase tracking-wider">
                         <tr>
                           <th scope="col" className="px-4 py-3">Ngày cúp điện</th>
-                          <th scope="col" className="px-4 py-3">Mã Trạm</th>
+                          <th scope="col" className="px-4 py-3">Site ID cũ</th>
+                          <th scope="col" className="px-4 py-3">Site ID mới</th>
                           <th scope="col" className="px-4 py-3">Khu Vực</th>
                           <th scope="col" className="px-4 py-3">Thời Gian</th>
                           <th scope="col" className="px-4 py-3">Lý Do</th>
@@ -654,38 +662,44 @@ export default function DailyWork() {
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-100 text-[13px] text-gray-700">
-                        {filteredPowerSchedules.map((sch) => (
-                          <tr key={sch.id} className="hover:bg-slate-50/50 transition-colors">
-                            <td className="px-4 py-3 whitespace-nowrap font-medium text-slate-900">
-                              {sch.ngay_mat_dien}
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap">
-                              <button
-                                onClick={() => handleOpenSiteDetail(sch.id_tram, 'general')}
-                                className="bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded border border-emerald-100 text-xs hover:bg-emerald-100 transition-colors cursor-pointer flex items-center gap-1"
-                                title="Xem chi tiết trạm"
-                              >
-                                {getSiteLabel(sch.id_tram)}
-                                <ExternalLink size={10} className="opacity-60" />
-                              </button>
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-slate-800">
-                              {sch.khu_vuc || 'N/A'}
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-amber-700 font-semibold font-mono">
-                              ⏳ {sch.thoi_gian_cup_dien || '--'} &rarr; {sch.thoi_gian_co_dien || '--'}
-                            </td>
-                            <td className="px-4 py-3 max-w-sm truncate" title={sch.ly_do}>
-                              {sch.ly_do || 'N/A'}
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-slate-500">
-                              {sch.quan_ly_tram || 'N/A'}
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-slate-500 text-xs">
-                              {sch.doi_quan_ly_dien || 'N/A'}
-                            </td>
-                          </tr>
-                        ))}
+                        {filteredPowerSchedules.map((sch) => {
+                          const siteIds = getSiteIds(sch.id_tram);
+                          return (
+                            <tr key={sch.id} className="hover:bg-slate-50/50 transition-colors">
+                              <td className="px-4 py-3 whitespace-nowrap font-medium text-slate-900">
+                                {sch.ngay_mat_dien}
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap font-bold text-slate-900">
+                                {siteIds.oldId}
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap">
+                                <button
+                                  onClick={() => handleOpenSiteDetail(sch.id_tram, 'general')}
+                                  className="bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded border border-emerald-100 text-xs hover:bg-emerald-100 transition-colors cursor-pointer flex items-center gap-1"
+                                  title="Xem chi tiết trạm"
+                                >
+                                  {siteIds.newId}
+                                  <ExternalLink size={10} className="opacity-60" />
+                                </button>
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap text-slate-800">
+                                {sch.khu_vuc || 'N/A'}
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap text-amber-700 font-semibold font-mono">
+                                ⏳ {sch.thoi_gian_cup_dien || '--'} &rarr; {sch.thoi_gian_co_dien || '--'}
+                              </td>
+                              <td className="px-4 py-3 max-w-sm truncate" title={sch.ly_do}>
+                                {sch.ly_do || 'N/A'}
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap text-slate-500">
+                                {sch.quan_ly_tram || 'N/A'}
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap text-slate-500 text-xs">
+                                {sch.doi_quan_ly_dien || 'N/A'}
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   )}
@@ -702,6 +716,7 @@ export default function DailyWork() {
                       const dataDetail = issue.existing_issues || {};
                       const solutions = issue.proposed_solutions || {};
                       const isResolved = dataDetail.status === "Đã XL";
+                      const siteIds = getSiteIds(issue.site_id);
                       return (
                         <div 
                           key={issue.log_id} 
@@ -718,7 +733,7 @@ export default function DailyWork() {
                                 className="bg-red-50 hover:bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded text-xs transition-colors cursor-pointer flex items-center gap-1"
                                 title="Xem và cập nhật thiết bị phụ trợ trạm này"
                               >
-                                {getSiteLabel(issue.site_id)}
+                                {siteIds.oldId} &rarr; {siteIds.newId}
                                 <ExternalLink size={10} className="opacity-60" />
                               </button>
                               <button
@@ -790,7 +805,7 @@ export default function DailyWork() {
                                 <div>
                                   <span className="text-slate-400 font-semibold">Vị trí hiện tại:</span>{' '}
                                   <span className={`font-bold px-2 py-0.5 rounded ${atKho ? 'bg-blue-50 text-blue-700 border border-blue-100' : 'bg-orange-50 text-orange-700 border border-orange-100'}`}>
-                                    {getSiteLabel(eq.current_location)}
+                                    {eq.current_location === 'KHO' ? 'KHO' : `${getSiteIds(eq.current_location).oldId} (${getSiteIds(eq.current_location).newId})`}
                                   </span>
                                 </div>
                                 {eq.notes && <div className="text-slate-400 text-xs mt-2 italic">"{eq.notes}"</div>}
@@ -839,8 +854,12 @@ export default function DailyWork() {
                                 <tr key={tr.id} className="hover:bg-slate-50/50">
                                   <td className="px-4 py-3 whitespace-nowrap font-medium">{new Date(tr.transfer_date).toLocaleString('vi-VN')}</td>
                                   <td className="px-4 py-3 whitespace-nowrap font-bold text-blue-700">{eq ? eq.equipment_code : '—'}</td>
-                                  <td className="px-4 py-3 whitespace-nowrap">{getSiteLabel(tr.from_location)}</td>
-                                  <td className="px-4 py-3 whitespace-nowrap font-bold text-slate-900">{getSiteLabel(tr.to_location)}</td>
+                                  <td className="px-4 py-3 whitespace-nowrap">
+                                    {tr.from_location === 'KHO' ? 'KHO' : `${getSiteIds(tr.from_location).oldId} (${getSiteIds(tr.from_location).newId})`}
+                                  </td>
+                                  <td className="px-4 py-3 whitespace-nowrap font-bold text-slate-900">
+                                    {tr.to_location === 'KHO' ? 'KHO' : `${getSiteIds(tr.to_location).oldId} (${getSiteIds(tr.to_location).newId})`}
+                                  </td>
                                   <td className="px-4 py-3 whitespace-nowrap text-slate-600 font-semibold">{tr.operator || '—'}</td>
                                   <td className="px-4 py-3 text-slate-400">{tr.notes || '—'}</td>
                                 </tr>
