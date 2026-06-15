@@ -2,8 +2,9 @@ import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../supabaseClient';
 import { 
   ClipboardList, Calendar, AlertTriangle, Search, Plus, Edit, Trash, 
-  MapPin, User, Clock, CheckCircle2, AlertCircle, Eye, X, Filter 
+  MapPin, User, Clock, CheckCircle2, AlertCircle, Eye, X, Filter, ExternalLink
 } from 'lucide-react';
+import DatasiteDetailFullscreen from '../components/datasites/DatasiteDetailFullscreen';
 
 export default function DailyWork() {
   const [activeTab, setActiveTab] = useState('daily'); // daily, power, issues
@@ -12,13 +13,15 @@ export default function DailyWork() {
   const [dailyLogs, setDailyLogs] = useState([]);
   const [powerSchedules, setPowerSchedules] = useState([]);
   const [defectsLogs, setDefectsLogs] = useState([]);
-  const [stations, setStations] = useState([]); // Phục vụ Autocomplete/Dropdown trạm
+  const [stations, setStations] = useState([]); // Phục vụ Dropdown & Mapping ID mới -> cũ
   
   // Loading & UI States
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddLogModal, setShowAddLogModal] = useState(false);
   const [showAddIssueModal, setShowAddIssueModal] = useState(false);
+  const [selectedSite, setSelectedSite] = useState(null); // Trạm được chọn để mở Slide-over chi tiết
+  const [siteDetailTab, setSiteDetailTab] = useState('general'); // Tab mặc định khi mở Slide-over
   
   // Editing state
   const [editingLog, setEditingLog] = useState(null);
@@ -28,17 +31,26 @@ export default function DailyWork() {
   const [logSiteId, setLogSiteId] = useState('');
   const [logStaff, setLogStaff] = useState('');
   const [logContent, setLogContent] = useState('');
-  const [logCategory, setLogCategory] = useState('Vận hành máy phát điện');
-  const [logIssueVHKT, setLogIssueVHKT] = useState('');
-  const [logIssueCSHT, setLogIssueCSHT] = useState('');
+  const [logCategory, setLogCategory] = useState('Máy phát điện');
   const [logNote, setLogNote] = useState('');
 
   // Form states - Issue/Defect
   const [issueSiteId, setIssueSiteId] = useState('');
   const [issueDate, setIssueDate] = useState(new Date().toISOString().split('T')[0]);
-  const [issueCategory, setIssueCategory] = useState('Thiết bị phụ trợ');
+  const [issueCategory, setIssueCategory] = useState('Máy phát điện');
   const [issueDescription, setIssueDescription] = useState('');
   const [issueReporter, setIssueReporter] = useState('');
+
+  // Danh mục hạng mục chuẩn V2
+  const categoriesV2 = [
+    'Máy phát điện',
+    'Tủ nguồn DC & Accu',
+    'Máy lạnh',
+    'CWDM',
+    'Năng lượng mặt trời',
+    'Cơ sở hạ tầng (Cột, Nhà trạm)',
+    'Khác'
+  ];
 
   useEffect(() => {
     fetchData();
@@ -47,11 +59,11 @@ export default function DailyWork() {
   async function fetchData() {
     setLoading(true);
     try {
-      // Load danh sách trạm phục vụ dropdown
+      // Load danh sách trạm phục vụ mapping và dropdown
       if (stations.length === 0) {
         const { data: sites, error: sitesErr } = await supabase
           .from('datasites')
-          .select('site_id, name')
+          .select('site_id, site_id_old, name')
           .order('site_id', { ascending: true });
         if (!sitesErr) setStations(sites || []);
       }
@@ -84,6 +96,42 @@ export default function DailyWork() {
       console.error("Lỗi khi tải dữ liệu:", err);
     } finally {
       setLoading(false);
+    }
+  }
+
+  // Helper mapping: Site_ID -> Site_ID (Site_ID_Old)
+  const getSiteLabel = (siteId) => {
+    if (!siteId) return 'N/A';
+    const sId = siteId.trim().toUpperCase();
+    const st = stations.find(s => s.site_id === sId || (s.site_id_old && s.site_id_old.trim().toUpperCase() === sId));
+    if (st) {
+      return st.site_id_old ? `${st.site_id} (${st.site_id_old})` : st.site_id;
+    }
+    return siteId;
+  };
+
+  // Helper mở chi tiết trạm với tab chỉ định
+  async function handleOpenSiteDetail(siteId, defaultTab = 'general') {
+    if (!siteId) return;
+    try {
+      // Tìm theo site_id (ID mới) hoặc site_id_old (ID cũ) để đảm bảo tính tương thích ngược
+      const cleanId = siteId.trim().toUpperCase();
+      const st = stations.find(s => s.site_id === cleanId || (s.site_id_old && s.site_id_old.trim().toUpperCase() === cleanId));
+      
+      const targetId = st ? st.site_id : cleanId;
+      
+      const { data, error } = await supabase
+        .from('datasites')
+        .select('*')
+        .eq('site_id', targetId)
+        .single();
+        
+      if (error) throw error;
+      setSelectedSite(data);
+      setSiteDetailTab(defaultTab);
+    } catch (err) {
+      console.error("Lỗi tải chi tiết trạm:", err);
+      alert("Không tìm thấy thông tin chi tiết của trạm này!");
     }
   }
 
@@ -137,15 +185,12 @@ export default function DailyWork() {
       nhan_vien: logStaff.trim(),
       noi_dung: logContent.trim(),
       hang_muc: logCategory,
-      ton_tai_vhkt: logIssueVHKT.trim() || null,
-      ton_tai_csht: logIssueCSHT.trim() || null,
       ghi_chu: logNote.trim() || null,
       ngay_cap_nhat: new Date().toISOString().replace('T', ' ').slice(0, 19)
     };
 
     try {
       if (editingLog) {
-        // Update
         const { error } = await supabase
           .from('daily_work')
           .update(payload)
@@ -153,12 +198,11 @@ export default function DailyWork() {
         if (error) throw error;
         alert("Cập nhật nhật ký thành công!");
       } else {
-        // Insert
         const { error } = await supabase
           .from('daily_work')
           .insert([payload]);
         if (error) throw error;
-        alert("Thêm nhật ký đi tuyến thành công!");
+        alert("Thêm nhật ký thành công!");
       }
       resetLogForm();
       setShowAddLogModal(false);
@@ -175,9 +219,7 @@ export default function DailyWork() {
     setLogSiteId(log.id_tram || '');
     setLogStaff(log.nhan_vien || '');
     setLogContent(log.noi_dung || '');
-    setLogCategory(log.hang_muc || 'Vận hành máy phát điện');
-    setLogIssueVHKT(log.ton_tai_vhkt || '');
-    setLogIssueCSHT(log.ton_tai_csht || '');
+    setLogCategory(log.hang_muc || 'Máy phát điện');
     setLogNote(log.ghi_chu || '');
     setShowAddLogModal(true);
   }
@@ -204,9 +246,7 @@ export default function DailyWork() {
     setLogSiteId('');
     setLogStaff('');
     setLogContent('');
-    setLogCategory('Vận hành máy phát điện');
-    setLogIssueVHKT('');
-    setLogIssueCSHT('');
+    setLogCategory('Máy phát điện');
     setLogNote('');
   }
 
@@ -280,15 +320,15 @@ export default function DailyWork() {
   function resetIssueForm() {
     setIssueSiteId('');
     setIssueDate(new Date().toISOString().split('T')[0]);
-    setIssueCategory('Thiết bị phụ trợ');
+    setIssueCategory('Máy phát điện');
     setIssueDescription('');
     setIssueReporter('');
   }
 
   const tabs = [
-    { id: 'daily', label: 'Nhật ký đi tuyến', icon: ClipboardList },
+    { id: 'daily', label: 'Nhật ký', icon: ClipboardList },
     { id: 'power', label: 'Lịch cúp điện', icon: Calendar },
-    { id: 'issues', label: 'Tồn tại & Sự cố', icon: AlertTriangle },
+    { id: 'issues', label: 'Tồn tại', icon: AlertTriangle },
   ];
 
   return (
@@ -296,11 +336,11 @@ export default function DailyWork() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
         <div>
-          <h1 className="text-lg md:text-xl font-bold text-slate-800">Nhật ký & Sự cố vận hành</h1>
+          <h1 className="text-lg md:text-xl font-bold text-slate-800">Công việc hàng ngày</h1>
           <p className="text-[13px] text-slate-500">
             {activeTab === 'daily' && `Hiển thị ${filteredDailyLogs.length} dòng nhật ký`}
             {activeTab === 'power' && `Hiển thị ${filteredPowerSchedules.length} lịch cúp điện`}
-            {activeTab === 'issues' && `Có ${filteredDefectsLogs.length} sự cố vận hành`}
+            {activeTab === 'issues' && `Có ${filteredDefectsLogs.length} tồn tại đang theo dõi`}
           </p>
         </div>
 
@@ -310,7 +350,7 @@ export default function DailyWork() {
               onClick={() => { resetLogForm(); setShowAddLogModal(true); }}
               className="inline-flex items-center justify-center px-4 py-2 text-[13px] font-bold rounded-lg text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors cursor-pointer"
             >
-              <Plus className="h-4 w-4 mr-1.5" /> Ghi Nhật Ký Tuyến
+              <Plus className="h-4 w-4 mr-1.5" /> Ghi nhật ký
             </button>
           )}
           {activeTab === 'issues' && (
@@ -318,7 +358,7 @@ export default function DailyWork() {
               onClick={() => { resetIssueForm(); setShowAddIssueModal(true); }}
               className="inline-flex items-center justify-center px-4 py-2 text-[13px] font-bold rounded-lg text-white bg-red-600 hover:bg-red-700 shadow-sm transition-colors cursor-pointer"
             >
-              <Plus className="h-4 w-4 mr-1.5" /> Báo Cáo Sự Cố
+              <Plus className="h-4 w-4 mr-1.5" /> Cập nhật tồn tại
             </button>
           )}
         </div>
@@ -358,7 +398,7 @@ export default function DailyWork() {
               placeholder={
                 activeTab === 'daily' ? "Tìm theo mã trạm, nội dung, nhân viên..." :
                 activeTab === 'power' ? "Tìm lịch mất điện theo mã trạm, khu vực..." :
-                "Tìm sự cố theo trạm, mô tả, người báo cáo..."
+                "Tìm tồn tại theo trạm, mô tả, người báo cáo..."
               }
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -381,7 +421,7 @@ export default function DailyWork() {
               {activeTab === 'daily' && (
                 <div className="min-w-full divide-y divide-gray-200">
                   {filteredDailyLogs.length === 0 ? (
-                    <div className="text-center py-20 text-slate-400">Không tìm thấy nhật ký đi tuyến nào.</div>
+                    <div className="text-center py-20 text-slate-400">Không tìm thấy dòng nhật ký nào.</div>
                   ) : (
                     <table className="min-w-full divide-y divide-gray-200 text-left">
                       <thead className="bg-gray-50 sticky top-0 z-10 text-xs font-bold text-gray-500 uppercase tracking-wider">
@@ -391,7 +431,7 @@ export default function DailyWork() {
                           <th scope="col" className="px-4 py-3">Nhân Viên</th>
                           <th scope="col" className="px-4 py-3">Hạng Mục</th>
                           <th scope="col" className="px-4 py-3">Nội Dung Thực Hiện</th>
-                          <th scope="col" className="px-4 py-3">Tồn Tại VHKT/CSHT</th>
+                          <th scope="col" className="px-4 py-3">Ghi chú</th>
                           <th scope="col" className="px-4 py-3 text-right">Thao Tác</th>
                         </tr>
                       </thead>
@@ -402,9 +442,14 @@ export default function DailyWork() {
                               {log.ngay}
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap">
-                              <span className="bg-blue-50 text-blue-700 font-bold px-2 py-0.5 rounded border border-blue-100 text-xs">
-                                {log.id_tram}
-                              </span>
+                              <button
+                                onClick={() => handleOpenSiteDetail(log.id_tram, 'general')}
+                                className="bg-blue-50 text-blue-700 font-bold px-2 py-0.5 rounded border border-blue-100 text-xs hover:bg-blue-100 transition-colors cursor-pointer flex items-center gap-1"
+                                title="Xem chi tiết trạm"
+                              >
+                                {getSiteLabel(log.id_tram)}
+                                <ExternalLink size={10} className="opacity-60" />
+                              </button>
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap text-slate-800 font-semibold">
                               {log.nhan_vien}
@@ -415,18 +460,8 @@ export default function DailyWork() {
                             <td className="px-4 py-3 max-w-sm truncate" title={log.noi_dung}>
                               {log.noi_dung}
                             </td>
-                            <td className="px-4 py-3 max-w-xs text-xs space-y-0.5">
-                              {log.ton_tai_vhkt && (
-                                <div className="text-amber-700 font-medium bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100 flex items-center gap-1">
-                                  <AlertCircle size={10} /> VHKT: {log.ton_tai_vhkt}
-                                </div>
-                              )}
-                              {log.ton_tai_csht && (
-                                <div className="text-red-700 font-medium bg-red-50 px-1.5 py-0.5 rounded border border-red-100 flex items-center gap-1">
-                                  <AlertTriangle size={10} /> CSHT: {log.ton_tai_csht}
-                                </div>
-                              )}
-                              {!log.ton_tai_vhkt && !log.ton_tai_csht && <span className="text-slate-400 italic">Không có</span>}
+                            <td className="px-4 py-3 max-w-xs truncate text-slate-500" title={log.ghi_chu}>
+                              {log.ghi_chu || <span className="text-slate-300 italic">Không có</span>}
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap text-right text-xs">
                               <button 
@@ -477,9 +512,14 @@ export default function DailyWork() {
                               {sch.ngay_mat_dien}
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap">
-                              <span className="bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded border border-emerald-100 text-xs">
-                                {sch.id_tram || 'N/A'}
-                              </span>
+                              <button
+                                onClick={() => handleOpenSiteDetail(sch.id_tram, 'general')}
+                                className="bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded border border-emerald-100 text-xs hover:bg-emerald-100 transition-colors cursor-pointer flex items-center gap-1"
+                                title="Xem chi tiết trạm"
+                              >
+                                {getSiteLabel(sch.id_tram)}
+                                <ExternalLink size={10} className="opacity-60" />
+                              </button>
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap text-slate-800">
                               {sch.khu_vuc || 'N/A'}
@@ -508,7 +548,7 @@ export default function DailyWork() {
               {activeTab === 'issues' && (
                 <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {filteredDefectsLogs.length === 0 ? (
-                    <div className="col-span-full text-center py-20 text-slate-400">Không tìm thấy sự cố tồn tại trạm nào.</div>
+                    <div className="col-span-full text-center py-20 text-slate-400">Không tìm thấy tồn tại nào.</div>
                   ) : (
                     filteredDefectsLogs.map((issue) => {
                       const dataDetail = issue.existing_issues || {};
@@ -519,15 +559,20 @@ export default function DailyWork() {
                           key={issue.log_id} 
                           className={`rounded-xl border p-4 shadow-sm transition-all hover:shadow-md flex flex-col justify-between ${
                             isResolved 
-                              ? 'bg-emerald-50/20 border-emerald-100' 
+                              ? 'bg-emerald-50/20 border-emerald-100/70' 
                               : 'bg-white border-slate-200'
                           }`}
                         >
                           <div>
                             <div className="flex justify-between items-start mb-3">
-                              <span className="bg-red-50 text-red-700 font-bold px-2 py-0.5 rounded text-xs">
-                                {issue.site_id}
-                              </span>
+                              <button
+                                onClick={() => handleOpenSiteDetail(issue.site_id, 'infrastructure')}
+                                className="bg-red-50 hover:bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded text-xs transition-colors cursor-pointer flex items-center gap-1"
+                                title="Xem và cập nhật thiết bị phụ trợ trạm này"
+                              >
+                                {getSiteLabel(issue.site_id)}
+                                <ExternalLink size={10} className="opacity-60" />
+                              </button>
                               <button
                                 onClick={() => handleToggleIssueStatus(issue)}
                                 className={`text-[11px] font-bold px-2 py-1 rounded-full cursor-pointer flex items-center gap-1 transition-all ${
@@ -542,7 +587,7 @@ export default function DailyWork() {
                             </div>
 
                             <div className="space-y-2">
-                              <div className="text-[13px] text-slate-500 uppercase tracking-wider font-bold">
+                              <div className="text-[13px] text-slate-400 uppercase tracking-wider font-bold">
                                 {dataDetail.category || 'Chưa phân loại'}
                               </div>
                               <p className="text-sm font-semibold text-slate-800 leading-snug line-clamp-3" title={dataDetail.description}>
@@ -582,7 +627,7 @@ export default function DailyWork() {
             <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 flex items-center justify-between text-white">
               <h2 className="font-bold text-lg flex items-center gap-2">
                 <ClipboardList size={20} />
-                {editingLog ? "Cập Nhật Nhật Ký Tuyến" : "Ghi Nhật Ký Đi Tuyến Mới"}
+                {editingLog ? "Cập nhật nhật ký" : "Ghi nhật ký mới"}
               </h2>
               <button 
                 onClick={() => { resetLogForm(); setShowAddLogModal(false); }}
@@ -595,7 +640,7 @@ export default function DailyWork() {
             <form onSubmit={handleSaveLog} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Ngày đi tuyến</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Ngày thực hiện</label>
                   <input 
                     type="date" 
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
@@ -605,13 +650,18 @@ export default function DailyWork() {
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Mã Trạm (Site ID)</label>
-                  <input 
-                    type="text" 
-                    placeholder="VD: DNCMS1"
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 uppercase"
+                  <select 
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white"
                     value={logSiteId}
                     onChange={(e) => setLogSiteId(e.target.value)}
-                  />
+                  >
+                    <option value="">-- Chọn Trạm --</option>
+                    {stations.map(st => (
+                      <option key={st.site_id} value={st.site_id}>
+                        {st.site_id} {st.site_id_old ? `(${st.site_id_old})` : ''} - {st.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
@@ -627,19 +677,15 @@ export default function DailyWork() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Hạng mục chính</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Hạng mục</label>
                   <select 
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white"
                     value={logCategory}
                     onChange={(e) => setLogCategory(e.target.value)}
                   >
-                    <option value="Vận hành máy phát điện">Vận hành máy phát điện</option>
-                    <option value="Bảo dưỡng thiết bị phụ trợ">Bảo dưỡng thiết bị phụ trợ</option>
-                    <option value="Ứng cứu thông tin">Ứng cứu thông tin</option>
-                    <option value="Kiểm tra CSHT trạm">Kiểm tra CSHT trạm</option>
-                    <option value="Xử lý sự cố truyền dẫn">Xử lý sự cố truyền dẫn</option>
-                    <option value="Bảo trì máy lạnh">Bảo trì máy lạnh</option>
-                    <option value="Khác">Khác...</option>
+                    {categoriesV2.map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -647,35 +693,12 @@ export default function DailyWork() {
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Nội dung công việc chi tiết</label>
                 <textarea 
-                  rows="3" 
+                  rows="4" 
                   placeholder="Ghi rõ chi tiết công việc đã thực hiện tại trạm..."
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                   value={logContent}
                   onChange={(e) => setLogContent(e.target.value)}
                 />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
-                <div>
-                  <label className="block text-xs font-bold text-amber-600 uppercase tracking-wider mb-1">Tồn tại kỹ thuật (VHKT)</label>
-                  <input 
-                    type="text" 
-                    placeholder="Mô tả lỗi VHKT nếu có..."
-                    className="w-full px-3 py-2 border border-amber-200 bg-amber-50/20 rounded-lg text-sm focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
-                    value={logIssueVHKT}
-                    onChange={(e) => setLogIssueVHKT(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-red-600 uppercase tracking-wider mb-1">Tồn tại cơ sở hạ tầng (CSHT)</label>
-                  <input 
-                    type="text" 
-                    placeholder="Mô tả lỗi CSHT nếu có..."
-                    className="w-full px-3 py-2 border border-red-200 bg-red-50/20 rounded-lg text-sm focus:ring-1 focus:ring-red-500 focus:border-red-500"
-                    value={logIssueCSHT}
-                    onChange={(e) => setLogIssueCSHT(e.target.value)}
-                  />
-                </div>
               </div>
 
               <div>
@@ -709,13 +732,13 @@ export default function DailyWork() {
         </div>
       )}
 
-      {/* MODAL 2: ADD ISSUE */}
+      {/* MODAL 2: ADD ISSUE (CẬP NHẬT TỒN TẠI) */}
       {showAddIssueModal && (
         <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
             <div className="bg-gradient-to-r from-red-600 to-rose-600 px-6 py-4 flex items-center justify-between text-white">
               <h2 className="font-bold text-lg flex items-center gap-2">
-                <AlertTriangle size={20} /> Báo Cáo Sự Cố Trạm Mới
+                <AlertTriangle size={20} /> Cập nhật tồn tại trạm mới
               </h2>
               <button 
                 onClick={() => { resetIssueForm(); setShowAddIssueModal(false); }}
@@ -729,13 +752,18 @@ export default function DailyWork() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Mã Trạm (Site ID)</label>
-                  <input 
-                    type="text" 
-                    placeholder="VD: DNLK19"
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-red-500 focus:border-red-500 uppercase"
+                  <select 
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-red-500 focus:border-red-500 bg-white"
                     value={issueSiteId}
                     onChange={(e) => setIssueSiteId(e.target.value)}
-                  />
+                  >
+                    <option value="">-- Chọn Trạm --</option>
+                    {stations.map(st => (
+                      <option key={st.site_id} value={st.site_id}>
+                        {st.site_id} {st.site_id_old ? `(${st.site_id_old})` : ''} - {st.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Ngày phát hiện</label>
@@ -750,20 +778,15 @@ export default function DailyWork() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Phân loại hạng mục lỗi</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Hạng mục tồn tại</label>
                   <select 
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-red-500 focus:border-red-500 bg-white"
                     value={issueCategory}
                     onChange={(e) => setIssueCategory(e.target.value)}
                   >
-                    <option value="Máy phát điện">Máy phát điện</option>
-                    <option value="Thiết bị phụ trợ">Thiết bị phụ trợ</option>
-                    <option value="Tủ nguồn DC & Accu">Tủ nguồn DC & Accu</option>
-                    <option value="Hệ thống cơ điện trạm">Hệ thống cơ điện trạm</option>
-                    <option value="Cột anten & Tiếp địa">Cột anten & Tiếp địa</option>
-                    <option value="Máy lạnh phòng máy">Máy lạnh phòng máy</option>
-                    <option value="Vỏ trạm & Nhà che">Vỏ trạm & Nhà che</option>
-                    <option value="Khác">Khác...</option>
+                    {categoriesV2.map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
                   </select>
                 </div>
                 <div>
@@ -779,7 +802,7 @@ export default function DailyWork() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Mô tả chi tiết sự cố</label>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Mô tả chi tiết tồn tại</label>
                 <textarea 
                   rows="4" 
                   placeholder="Mô tả cụ thể sự cố cần xử lý..."
@@ -807,6 +830,15 @@ export default function DailyWork() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* FULLSCREEN DETAIL MODAL (LINKED SLIDE-OVER TO INFRASTRUCTURE) */}
+      {selectedSite && (
+        <DatasiteDetailFullscreen 
+          site={selectedSite} 
+          defaultTab={siteDetailTab} 
+          onClose={() => { setSelectedSite(null); setSiteDetailTab('general'); }} 
+        />
       )}
     </div>
   );

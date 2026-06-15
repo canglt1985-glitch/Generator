@@ -8,8 +8,8 @@ import { supabase } from '../../supabaseClient';
 import ContractExportButton from './ContractExportButton';
 import PaymentSchedulePanel from './PaymentSchedulePanel';
 
-export default function DatasiteDetailFullscreen({ site, onClose }) {
-  const [activeTab, setActiveTab] = useState('general');
+export default function DatasiteDetailFullscreen({ site, onClose, defaultTab }) {
+  const [activeTab, setActiveTab] = useState(defaultTab || 'general');
 
   // Đọc thông tin hợp đồng trực tiếp từ site.contract_info (không cần query thêm)
   const contracts = useMemo(() => {

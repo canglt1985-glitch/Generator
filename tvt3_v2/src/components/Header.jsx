@@ -7,7 +7,7 @@ const navigation = [
   { name: 'Danh sách Trạm', href: '/datasites', icon: Database },
   { name: 'Hợp đồng', href: '/contracts', icon: FileText, desktopOnly: true },
   { name: 'Vận hành', href: '/operations', icon: Zap },
-  { name: 'Nhật ký & Sự cố', href: '/daily-work', icon: Activity },
+  { name: 'Công việc hàng ngày', href: '/daily-work', icon: Activity },
   { name: 'Cài đặt', href: '/settings', icon: Settings },
 ];
 
