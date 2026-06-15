@@ -15,7 +15,7 @@ from models import (
     FuelPurchaseLog, FuelLedger, OtherExpense, User,
     DeletionRequest
 )
-from helpers import get_central_stock, get_dashboard_stats, detect_fuel_anomalies, get_upcoming_outages, get_audit_data
+from helpers import get_central_stock, get_dashboard_stats, detect_fuel_anomalies, get_upcoming_outages, get_audit_data, get_missing_logs_recommendations
 from auth import login_required, admin_required, cost_access_required
 from core import core_bp
 
@@ -276,6 +276,7 @@ def admin_mpd():
     daily_totals = {}
     gmail_user = ""
     gmail_subject_filter = ""
+    missing_logs_recommendations = []
 
     if active_tab == 'reports':
         huyen_filter = request.args.get('huyen')
@@ -286,6 +287,7 @@ def admin_mpd():
             [s for s in station_summary_all if s.get('gen_count', 0) > 0 or s.get('total_refill', 0) > 0],
             key=lambda x: x.get('ton_real', 0), reverse=True
         )
+        missing_logs_recommendations = get_missing_logs_recommendations(huyen_filter, month_start, month_end)
 
         # Payment aggregation
         from sqlalchemy import func as fn
@@ -378,6 +380,7 @@ def admin_mpd():
                            now_date=now.strftime('%Y-%m-%d'),
                            stations=stations,
                            users=users,
+                           missing_logs_recommendations=missing_logs_recommendations,
                            invoices=invoices,
                            daily_totals=daily_totals,
                            gmail_user=gmail_user,
@@ -558,6 +561,7 @@ def admin_reports():
     
     available_years = list(range(2025, now.year + 1))
     station_summary = get_audit_data(huyen_filter, start_date, end_date)
+    missing_logs_recommendations = get_missing_logs_recommendations(huyen_filter, start_date, end_date)
 
     # Load payment records (legacy)
     payment_records = load_payment_records()
@@ -687,7 +691,8 @@ def admin_reports():
                            cx222_accum=cx222_accum,
                            mua_ngoai_new=mua_ngoai_new,
                            cx222_new=cx222_new,
-                           calc_up_to=calc_up_to)
+                           calc_up_to=calc_up_to,
+                           missing_logs_recommendations=missing_logs_recommendations)
 
 
 @core_bp.route('/admin/save-payment', methods=['POST'])

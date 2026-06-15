@@ -26,8 +26,19 @@ if 'sqlite' in db_url and not os.path.exists(db_url.replace('sqlite:///', '')):
     if os.path.exists(db_path):
         db_url = f'sqlite:///{db_path}'
 
+# Force stdout to flush after every print to prevent log buffering in long-running services
+import builtins
+def print_flush(*args, **kwargs):
+    kwargs.setdefault('flush', True)
+    builtins.print(*args, **kwargs)
+print = print_flush
+
 print(f"Đang kết nối tới Database: {db_url.split('@')[-1] if '@' in db_url else db_url}")
-engine = create_engine(db_url)
+engine = create_engine(
+    db_url,
+    pool_pre_ping=True,
+    pool_recycle=1800
+)
 Session = sessionmaker(bind=engine)
 session = Session()
 
@@ -40,6 +51,92 @@ def parse_date(dmy):
         return datetime.strptime(dmy, "%d/%m/%Y").strftime("%Y-%m-%d")
     except:
         return None
+
+def get_new_site_id(old_id):
+    try:
+        res = session.execute(sqlalchemy.text(
+            "SELECT site_id_new FROM ds_site_registry WHERE site_id_old = :old_id LIMIT 1"
+        ), {"old_id": old_id}).fetchone()
+        if res and res[0]:
+            return res[0]
+    except Exception as e:
+        print(f"⚠️ get_new_site_id error: {e}")
+    return old_id
+
+def calculate_duration(start_time, end_time):
+    try:
+        t1 = datetime.strptime(start_time, "%H:%M")
+        t2 = datetime.strptime(end_time, "%H:%M")
+        if t2 < t1:
+            diff = (t2 + timedelta(days=1) - t1).total_seconds()
+        else:
+            diff = (t2 - t1).total_seconds()
+        hours = round(diff / 3600.0, 1)
+        if hours.is_integer():
+            return int(hours)
+        return hours
+    except:
+        return "?"
+
+def send_to_viber(new_outages):
+    # Lọc lịch cúp điện từ ngày hôm nay trở đi (YYYY-MM-DD)
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    filtered_outages = [ot for ot in new_outages if ot.get("ngay") and ot["ngay"] >= today_str]
+    
+    if not filtered_outages:
+        print("📢 Không có lịch cúp điện mới từ ngày hôm nay trở đi để gửi Viber.")
+        return
+    
+    new_outages = filtered_outages
+        
+    # Group by date
+    grouped = {}
+    for ot in new_outages:
+        ngay_val = ot["ngay"]
+        ngay_dmy = ngay_val
+        if ngay_val:
+            try:
+                ngay_dmy = datetime.strptime(ngay_val, "%Y-%m-%d").strftime("%d/%m/%Y")
+            except:
+                pass
+        
+        if ngay_dmy not in grouped:
+            grouped[ngay_dmy] = []
+        grouped[ngay_dmy].append(ot)
+        
+    lines = []
+    
+    def parse_dmy(date_str):
+        try:
+            return datetime.strptime(date_str, "%d/%m/%Y")
+        except:
+            return datetime.max
+            
+    sorted_dates = sorted(grouped.keys(), key=parse_dmy)
+    
+    for date_str in sorted_dates:
+        lines.append(f"📅 Ngày {date_str}:")
+        for ot in grouped[date_str]:
+            old_id = ot["id_tram"]
+            new_id = get_new_site_id(old_id)
+            dur = calculate_duration(ot["start"], ot["end"])
+            lines.append(f"  • {old_id}: {ot['start']}-{ot['end']} ({dur}h)")
+            
+    text = "\n".join(lines)
+    payload = {
+        "from": "1B+9xBdRnqEQJXfWFZr4Dg==",
+        "type": "text",
+        "text": text
+    }
+    headers = {
+        "X-Viber-Auth-Token": "56a990b99bf464bd-d406c456f5380df0-770d03e18af041d0",
+        "Content-Type": "application/json"
+    }
+    try:
+        r = requests.post("https://chatapi.viber.com/pa/post", headers=headers, json=payload, timeout=15)
+        print(f"Viber send status: {r.status_code} - {r.text}")
+    except Exception as e:
+        print(f"❌ Failed to send Viber report: {e}")
 
 # 3. Crawler Logic
 def fetch_for_customer(ma_khach_hang):
@@ -106,6 +203,13 @@ def fetch_for_customer(ma_khach_hang):
 
 # 4. Main Process
 def main():
+    global session
+    try:
+        session.close()
+    except:
+        pass
+    session = Session()
+    
     print("🚀 Bắt đầu quét lịch cúp điện...")
     
     # 1. Lấy danh sách mã khách hàng từ GeneralInfo (loại bỏ 'khoán điện')
@@ -122,6 +226,7 @@ def main():
 
     new_records_count = 0
     total_detected = 0
+    new_outages = []
     
     # Sửa lỗi Sequence ID cho Postgres (Supabase)
     if "postgresql" in db_url:
@@ -135,7 +240,7 @@ def main():
     batch_size = 30
     for i in range(0, total_customers, batch_size):
         batch = customers[i:i + batch_size]
-        print(f"� Đang xử lý Batch {i//batch_size + 1}/{(total_customers-1)//batch_size + 1} ({len(batch)} mã)...")
+        print(f"📡 Đang xử lý Batch {i//batch_size + 1}/{(total_customers-1)//batch_size + 1} ({len(batch)} mã)...")
         
         for station in batch:
             id_tram, ma_kh, huyen, quan_ly = station
@@ -163,9 +268,43 @@ def main():
                 })
                 if result.rowcount > 0:
                     new_records_count += 1
+                    new_outages.append({
+                        "id_tram": id_tram,
+                        "ngay": ot['ngay_mat_dien'],
+                        "start": ot['thoi_gian_cup_dien'],
+                        "end": ot['thoi_gian_co_dien']
+                    })
                     
         session.commit()
         print(f"✅ Đã xong Batch. Lũy kế mới: {new_records_count}")
+
+    # Lấy tất cả lịch cúp điện từ ngày hôm nay trở đi từ Database để gửi Viber
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    try:
+        query_upcoming = (
+            "SELECT id_tram, ngay_mat_dien, thoi_gian_cup_dien, thoi_gian_co_dien "
+            "FROM power_schedule "
+            "WHERE ngay_mat_dien >= :today "
+            "ORDER BY ngay_mat_dien ASC, thoi_gian_cup_dien ASC"
+        )
+        db_outages = session.execute(sqlalchemy.text(query_upcoming), {"today": today_str}).fetchall()
+        upcoming_outages = []
+        for row in db_outages:
+            upcoming_outages.append({
+                "id_tram": row[0],
+                "ngay": row[1],
+                "start": row[2],
+                "end": row[3]
+            })
+    except Exception as e:
+        print(f"❌ Lỗi khi truy vấn lịch cúp điện từ DB: {e}")
+        upcoming_outages = []
+
+    if upcoming_outages:
+        print(f"📤 Gửi {len(upcoming_outages)} lịch cúp điện sắp tới lên Viber...")
+        send_to_viber(upcoming_outages)
+    else:
+        print("📢 Không có lịch cúp điện sắp tới nào để thông báo.")
 
     summary = f"Tổng cộng: Phát hiện {total_detected} lịch, import mới thành công {new_records_count} dòng."
     print(f"\n🎉 HOÀN THÀNH! {summary}")

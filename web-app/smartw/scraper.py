@@ -97,6 +97,12 @@ class SmartWScraper:
 
     async def start(self):
         """Launch browser and create a persistent context."""
+        import os
+        # Configure Playwright to use a shared browser path inside the project
+        # This prevents missing browser issues when running as a SYSTEM service
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        os.environ["PLAYWRIGHT_BROWSERS_PATH"] = os.path.join(project_root, 'ms-playwright')
+
         from playwright.async_api import async_playwright
         self._pw = await async_playwright().start()
         self._browser = await self._pw.chromium.launch(headless=True)

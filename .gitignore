@@ -42,6 +42,12 @@ logs/
 
 # ── Playwright Browsers ──
 playwright-browsers/
+web-app/ms-playwright/
+web-app/embedded_invoice.html
+web-app/invoice_page_details.html
+web-app/scratch/audit_output.txt
+web-app/scratch/audit_output_utf8.txt
+web-app/scratch/search_results*.txt
 
 # ── Windows Service files ──
 web-app/scripts/VH_WebApp_Service.exe

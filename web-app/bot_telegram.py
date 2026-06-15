@@ -124,10 +124,63 @@ def format_station_info(query_id):
         return "\n".join(lines)
 
 
+def send_pending_log_alert(log_id, site, duration, fuel, cost, start_t, end_t, date):
+    if not TELEGRAM_TOKEN or TELEGRAM_TOKEN == "YOUR_TELEGRAM_BOT_TOKEN":
+        return False
+    
+    # Get chat_id
+    from app import app
+    from models import SystemConfig
+    chat_id = None
+    with app.app_context():
+        cfg = SystemConfig.query.filter_by(key='telegram_report_chat_id').first()
+        if cfg:
+            chat_id = cfg.value
+            
+    if not chat_id:
+        chat_id = os.getenv('TELEGRAM_CHAT_ID')
+        
+    if not chat_id:
+        logging.warning("No telegram chat ID registered for approvals.")
+        return False
+        
+    api_url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}"
+    text = (
+        f"⚡ **[PHÊ DUYỆT LOG CHẠY MÁY]**\n"
+        f"• Trạm: `{site}`\n"
+        f"• Ngày: `{date}`\n"
+        f"• Thời gian: `{start_t} - {end_t}` (`{duration}` giờ)\n"
+        f"• Nhiên liệu tiêu hao: `{fuel}` lít\n"
+        f"• Chi phí dự tính: `{cost:,.0f}` VND\n"
+        f"• Trạng thái: Chờ duyệt ⏳"
+    )
+    
+    payload = {
+        "chat_id": chat_id,
+        "text": text,
+        "parse_mode": "Markdown",
+        "reply_markup": {
+            "inline_keyboard": [
+                [
+                    {"text": "Duyệt ✅", "callback_data": f"approve_log_{log_id}"},
+                    {"text": "Từ chối ❌", "callback_data": f"reject_log_{log_id}"}
+                ]
+            ]
+        }
+    }
+    
+    try:
+        r = requests.post(f"{api_url}/sendMessage", json=payload, timeout=10)
+        return r.status_code == 200
+    except Exception as e:
+        logging.error(f"Failed to send pending log alert: {e}")
+        return False
+
+
 def poll_telegram_updates():
     """
-    Background worker that uses long-polling to get Telegram unread messages
-    and reply to commands like '/tram <site_id>'
+    Background worker that uses long-polling to get Telegram unread messages,
+    replies to commands like '/tram <site_id>', '/register', and processes callback queries for approvals.
     """
     if not TELEGRAM_TOKEN or TELEGRAM_TOKEN == "YOUR_TELEGRAM_BOT_TOKEN":
         logging.info("Telegram bot token not configured. Skipping bot polling.")
@@ -151,7 +204,68 @@ def poll_telegram_updates():
                 for item in data["result"]:
                     offset = item["update_id"] + 1
                     
-                    if "message" in item and "text" in item["message"]:
+                    # Handle Callback Queries (nút bấm Duyệt/Từ chối)
+                    if "callback_query" in item:
+                        callback_query = item["callback_query"]
+                        cb_id = callback_query["id"]
+                        cb_data = callback_query["data"]
+                        cb_message = callback_query["message"]
+                        cb_chat_id = cb_message["chat"]["id"]
+                        cb_msg_id = cb_message["message_id"]
+                        
+                        # Security Check: only allow authorized chat id to click buttons
+                        authorized_chat_id = os.getenv('TELEGRAM_CHAT_ID')
+                        if authorized_chat_id and str(cb_chat_id) != str(authorized_chat_id):
+                            requests.post(f"{api_url}/answerCallbackQuery", json={
+                                "callback_query_id": cb_id,
+                                "text": "❌ Bạn không có quyền phê duyệt log này!",
+                                "show_alert": True
+                            })
+                            continue
+                        
+                        from app import app
+                        from models import GeneratorLog
+                        from extensions import db
+                        
+                        ans_text = "Đã xảy ra lỗi"
+                        new_msg_text = cb_message.get("text", "")
+                        
+                        if cb_data.startswith("approve_log_") or cb_data.startswith("reject_log_"):
+                            is_approve = cb_data.startswith("approve_log_")
+                            log_id = int(cb_data.split("_")[-1])
+                            
+                            with app.app_context():
+                                g_log = GeneratorLog.query.get(log_id)
+                                if g_log:
+                                    if is_approve:
+                                        g_log.status = 'approved'
+                                        ans_text = f"✅ Đã DUYỆT log trạm {g_log.site}"
+                                        new_msg_text += f"\n\n👉 **Kết quả: ĐÃ DUYỆT ✅**"
+                                    else:
+                                        g_log.status = 'rejected'
+                                        ans_text = f"❌ Đã TỪ CHỐI log trạm {g_log.site}"
+                                        new_msg_text += f"\n\n👉 **Kết quả: ĐÃ TỪ CHỐI ❌**"
+                                    db.session.commit()
+                                else:
+                                    ans_text = "Không tìm thấy log này trong DB."
+                                    
+                            # Answer Callback Query so spinner stops
+                            requests.post(f"{api_url}/answerCallbackQuery", json={
+                                "callback_query_id": cb_id,
+                                "text": ans_text
+                            })
+                            
+                            # Edit original message to remove buttons and show decision
+                            requests.post(f"{api_url}/editMessageText", json={
+                                "chat_id": cb_chat_id,
+                                "message_id": cb_msg_id,
+                                "text": new_msg_text,
+                                "parse_mode": "Markdown",
+                                "reply_markup": {"inline_keyboard": []}
+                            })
+                    
+                    # Handle normal messages
+                    elif "message" in item and "text" in item["message"]:
                         chat_id = item["message"]["chat"]["id"]
                         text = item["message"]["text"].strip()
                         
@@ -159,17 +273,58 @@ def poll_telegram_updates():
                             parts = text.split(" ")
                             if len(parts) > 1:
                                 site_id = parts[1]
-                                
-                                # Process the query
                                 reply_text = format_station_info(site_id)
-                                
-                                # Send reply
-                                send_url = f"{api_url}/sendMessage"
-                                requests.post(send_url, json={
+                                requests.post(f"{api_url}/sendMessage", json={
                                     "chat_id": chat_id,
                                     "text": reply_text,
                                     "parse_mode": "Markdown"
                                 })
+                                
+                        elif text.lower().startswith("/register"):
+                            authorized_chat_id = os.getenv('TELEGRAM_CHAT_ID')
+                            if authorized_chat_id and str(chat_id) != str(authorized_chat_id):
+                                requests.post(f"{api_url}/sendMessage", json={
+                                    "chat_id": chat_id,
+                                    "text": "❌ Bạn không có quyền đăng ký nhận báo cáo!",
+                                    "parse_mode": "Markdown"
+                                })
+                                continue
+                                
+                            from app import app
+                            from models import SystemConfig
+                            from extensions import db
+                            with app.app_context():
+                                cfg = SystemConfig.query.filter_by(key='telegram_report_chat_id').first()
+                                if not cfg:
+                                    cfg = SystemConfig(
+                                        key='telegram_report_chat_id', 
+                                        value=str(chat_id), 
+                                        description='Telegram Chat ID for Daily Reports & Approvals'
+                                    )
+                                    db.session.add(cfg)
+                                else:
+                                    cfg.value = str(chat_id)
+                                db.session.commit()
+                                
+                            requests.post(f"{api_url}/sendMessage", json={
+                                "chat_id": chat_id,
+                                "text": f"✅ Đã đăng ký nhận báo cáo và duyệt log chạy máy tại Chat ID: `{chat_id}`",
+                                "parse_mode": "Markdown"
+                            })
+                            
+                        elif text.lower().startswith("/start"):
+                            help_text = (
+                                "👋 Chào mừng bạn đến với **VHKT RAN Generator Bot**!\n\n"
+                                "Các lệnh khả dụng:\n"
+                                "• `/tram <site_id>` : Xem thông tin kỹ thuật, thiết bị trạm\n"
+                                "• `/register` : Đăng ký chat group/channel hiện tại nhận báo cáo ngày & duyệt log\n"
+                                "• `/start` : Hiện tin nhắn hướng dẫn này"
+                            )
+                            requests.post(f"{api_url}/sendMessage", json={
+                                "chat_id": chat_id,
+                                "text": help_text,
+                                "parse_mode": "Markdown"
+                            })
                                 
         except requests.exceptions.Timeout:
             continue

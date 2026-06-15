@@ -4,6 +4,7 @@ Extracted from app.py for cleaner code organization.
 """
 from datetime import datetime
 from extensions import db
+from sqlalchemy.orm import validates
 
 
 class GeneralInfo(db.Model):
@@ -24,6 +25,12 @@ class GeneralInfo(db.Model):
     nl_ton = db.Column(db.Float, default=0)        # NL tồn thực tế tại trạm (nhập tay khi kiểm kê)
     ngay_cap_nhat = db.Column(db.String(20), default=lambda: datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
+    @validates('id_tram')
+    def validate_id_tram(self, key, value):
+        if value:
+            return str(value).strip().upper()
+        return value
+
 
 class PowerSchedule(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -36,6 +43,12 @@ class PowerSchedule(db.Model):
     ly_do = db.Column(db.String(500))
     doi_quan_ly_dien = db.Column(db.String(200))
     quan_ly_tram = db.Column(db.String(200))
+
+    @validates('id_tram')
+    def validate_id_tram(self, key, value):
+        if value:
+            return str(value).strip().upper()
+        return value
 
     def to_dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
@@ -62,6 +75,12 @@ class GeneratorLog(db.Model):
     status = db.Column(db.String(20), default='approved')   # approved / pending / rejected
     source = db.Column(db.String(20), default='manual')      # manual / smartw
     smartw_alarm_id = db.Column(db.String(100))               # Unique alarm ID (chống duplicate)
+
+    @validates('id_tram')
+    def validate_id_tram(self, key, value):
+        if value:
+            return str(value).strip().upper()
+        return value
 
     @property
     def end_datetime_formatted(self):
@@ -101,6 +120,12 @@ class FuelLedger(db.Model):
     ghi_chu = db.Column(db.String(500))
     ton_sau_gd = db.Column(db.Float)               # NL tồn snapshot sau giao dịch (auto-calc, user có thể override)
     ngay_cap_nhat = db.Column(db.String(20), default=lambda: datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+
+    @validates('id_tram')
+    def validate_id_tram(self, key, value):
+        if value:
+            return str(value).strip().upper()
+        return value
 
     def to_dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
@@ -151,6 +176,12 @@ class DailyWork(db.Model):
     ghi_chu = db.Column(db.Text)
     ngay_cap_nhat = db.Column(db.String(20), default=lambda: datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
+    @validates('id_tram')
+    def validate_id_tram(self, key, value):
+        if value:
+            return str(value).strip().upper()
+        return value
+
 
 class StationIssue(db.Model):
     """Tồn tại kỹ thuật tại trạm BTS."""
@@ -162,6 +193,12 @@ class StationIssue(db.Model):
     trang_thai = db.Column(db.String(30), default='Chưa XL')  # Chưa XL / Đã XL
     nguoi_bao_cao = db.Column(db.String(100))
     ngay_cap_nhat = db.Column(db.String(20), default=lambda: datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+
+    @validates('id_tram')
+    def validate_id_tram(self, key, value):
+        if value:
+            return str(value).strip().upper()
+        return value
 
 
 # ============================================================================

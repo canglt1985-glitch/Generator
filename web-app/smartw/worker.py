@@ -64,36 +64,84 @@ def _release_lock():
 # Circuit breaker: stop polling after this many consecutive login failures
 MAX_LOGIN_FAILURES = 10
 
+def _parse_site_suffix(site_id: str) -> tuple[str, str]:
+    """Split site_id into (base_site_id, cell_suffix).
+    Example: 'DNIXTC06_1' -> ('DNIXTC06', '_1')
+    """
+    if not site_id:
+        return "", ""
+    s = site_id.strip()
+    for delimiter in ['_', '-']:
+        if delimiter in s:
+            parts = s.split(delimiter)
+            if parts[0]:
+                base = parts[0]
+                suffix = delimiter + delimiter.join(parts[1:])
+                return base, suffix
+    return s, ""
+
 def _get_site_label(site_id: str) -> str:
     """Return '*ID_MOI* (ID_CU)' label for Viber display.
-    Tries DsSiteRegistry first (site_id_new / site_id_old).
+    Tries DsCellRegistry first, then DsSiteRegistry.
     Falls back to GeneralInfo.id_old if available.
     Returns '*SITE_ID*' alone when no mapping found.
+    Handles cell ID suffixes (e.g. DNIXTC06_1 -> *DNIXTC06* (DNXL57)_1).
     """
+    site_upper = site_id.strip().upper()
+
     from app import app
     with app.app_context():
         try:
-            from models import DsSiteRegistry
-            row = DsSiteRegistry.query.filter(
-                (DsSiteRegistry.site_id_new == site_id.upper()) |
-                (DsSiteRegistry.site_id_old == site_id.upper())
+            from models import DsCellRegistry, DsSiteRegistry
+            
+            # 1. Try Cell Registry first
+            cell_row = DsCellRegistry.query.filter(
+                (DsCellRegistry.cell_id_new == site_upper) |
+                (DsCellRegistry.cell_id_old == site_upper)
             ).first()
-            if row and row.site_id_new and row.site_id_old:
-                return f"*{row.site_id_new}* ({row.site_id_old})"
-            if row and row.site_id_new:
-                return f"*{row.site_id_new}*"
+            if cell_row and cell_row.cell_id_new and cell_row.cell_id_old:
+                return f"*{cell_row.cell_id_new}* ({cell_row.cell_id_old})"
+            if cell_row and cell_row.cell_id_new:
+                return f"*{cell_row.cell_id_new}*"
+
+            # 2. Try Site Registry directly
+            site_row = DsSiteRegistry.query.filter(
+                (DsSiteRegistry.site_id_new == site_upper) |
+                (DsSiteRegistry.site_id_old == site_upper)
+            ).first()
+            if site_row and site_row.site_id_new and site_row.site_id_old:
+                return f"*{site_row.site_id_new}* ({site_row.site_id_old})"
+            if site_row and site_row.site_id_new:
+                return f"*{site_row.site_id_new}*"
         except Exception as e:
-            logger.error(f'SmartW _get_site_label Registry error for {site_id}: {e}')
+            logger.error(f'SmartW _get_site_label registry/cell query error: {e}')
             pass
 
-        # Fallback: try GeneralInfo for legacy id_old field
+        # 3. Fallback: Parse suffix if it has _ or - and query Site Registry
+        base_id, suffix = _parse_site_suffix(site_id)
+        base_upper = base_id.upper()
+        try:
+            from models import DsSiteRegistry
+            row = DsSiteRegistry.query.filter(
+                (DsSiteRegistry.site_id_new == base_upper) |
+                (DsSiteRegistry.site_id_old == base_upper)
+            ).first()
+            if row and row.site_id_new and row.site_id_old:
+                return f"*{row.site_id_new}* ({row.site_id_old}){suffix}"
+            if row and row.site_id_new:
+                return f"*{row.site_id_new}*{suffix}"
+        except Exception as e:
+            logger.error(f'SmartW _get_site_label fallback registry query error: {e}')
+            pass
+
+        # Fallback 4: try GeneralInfo for legacy id_old field
         try:
             from models import GeneralInfo
-            info = GeneralInfo.query.filter_by(id_tram=site_id).first()
+            info = GeneralInfo.query.filter_by(id_tram=base_id).first()
             if info:
                 old_id = getattr(info, 'id_old', None)
-                if old_id and old_id != site_id:
-                    return f"*{site_id}* ({old_id})"
+                if old_id and old_id != base_id:
+                    return f"*{base_id}* ({old_id}){suffix}"
         except Exception as e:
             logger.error(f'SmartW _get_site_label GeneralInfo error for {site_id}: {e}')
             pass
@@ -120,19 +168,49 @@ def _norm_net(network: str) -> str:
 
 
 def _old_id(site_id: str) -> str:
-    """Look up legacy site ID from site registry."""
+    """Look up legacy site ID from registry.
+    Tries DsCellRegistry first, then DsSiteRegistry.
+    Handles cell ID suffixes as fallback.
+    """
+    site_upper = site_id.strip().upper()
+
     from app import app
     with app.app_context():
         try:
-            from models import DsSiteRegistry
-            row = DsSiteRegistry.query.filter(
-                (DsSiteRegistry.site_id_new == site_id.upper()) |
-                (DsSiteRegistry.site_id_old == site_id.upper())
+            from models import DsCellRegistry, DsSiteRegistry
+            
+            # 1. Try Cell Registry first
+            cell_row = DsCellRegistry.query.filter(
+                (DsCellRegistry.cell_id_new == site_upper) |
+                (DsCellRegistry.cell_id_old == site_upper)
             ).first()
-            if row and row.site_id_old:
-                return row.site_id_old
+            if cell_row and cell_row.cell_id_old:
+                return cell_row.cell_id_old
+
+            # 2. Try Site Registry directly
+            site_row = DsSiteRegistry.query.filter(
+                (DsSiteRegistry.site_id_new == site_upper) |
+                (DsSiteRegistry.site_id_old == site_upper)
+            ).first()
+            if site_row and site_row.site_id_old:
+                return site_row.site_id_old
         except Exception:
             pass
+
+        # 3. Fallback: Parse suffix if it has _ or -
+        base_id, suffix = _parse_site_suffix(site_id)
+        base_upper = base_id.upper()
+        try:
+            from models import DsSiteRegistry
+            row = DsSiteRegistry.query.filter(
+                (DsSiteRegistry.site_id_new == base_upper) |
+                (DsSiteRegistry.site_id_old == base_upper)
+            ).first()
+            if row and row.site_id_old:
+                return row.site_id_old + suffix
+        except Exception:
+            pass
+            
     return site_id
 
 

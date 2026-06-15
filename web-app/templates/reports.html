@@ -12,6 +12,80 @@
         </div>
     </div>
 </div>
+{# --- Anomaly Reports (Tiêu Hao Bất Thường & Thiếu Log Chạy Máy) --- #}
+{% set anomaly_stations = station_summary|selectattr('chenh_lech','lt', 0)|list %}
+{% if anomaly_stations or missing_logs_recommendations %}
+<div class="row row-cards mb-4">
+    {% if anomaly_stations %}
+    <div class="col-md-6">
+        <div class="card border border-danger shadow-sm h-100">
+            <div class="card-header py-2 bg-danger-lt">
+                <h3 class="card-title mb-0 text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Trạm Tiêu Hao Bất Thường ({{ anomaly_stations|length }} trạm)</h3>
+            </div>
+            <div class="table-responsive" style="max-height: 250px; overflow-y: auto;">
+                <table class="table table-vcenter table-hover card-table small text-nowrap mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID Trạm</th>
+                            <th>Huyện</th>
+                            <th class="text-end">Giờ chạy</th>
+                            <th class="text-end fw-bold text-danger">Chênh lệch</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in anomaly_stations %}
+                        <tr>
+                            <td class="fw-bold">
+                                <span class="badge bg-danger-lt">{{ site_id_badge(row.id_tram, site_map, site_map_reverse) }}</span>
+                            </td>
+                            <td>{{ row.huyen }}</td>
+                            <td class="text-end">{{ row.run_h }}h</td>
+                            <td class="text-end fw-bold text-danger">{{ "{:,.0f}".format(row.chenh_lech) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if missing_logs_recommendations %}
+    <div class="col-md-6">
+        <div class="card border border-warning shadow-sm h-100">
+            <div class="card-header py-2 bg-warning-lt d-flex justify-content-between align-items-center">
+                <h3 class="card-title mb-0 text-warning-dark"><i class="fas fa-exclamation-circle me-2"></i>Thiếu log chạy máy ({{ missing_logs_recommendations|length }} lượt)</h3>
+                <span class="text-muted small fw-semibold">Cần nhắc nhân viên bổ sung</span>
+            </div>
+            <div class="table-responsive" style="max-height: 250px; overflow-y: auto;">
+                <table class="table table-vcenter table-hover card-table small mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID Trạm</th>
+                            <th>Ngày cúp điện</th>
+                            <th>Thời lượng</th>
+                            <th>Lượng đổ dầu</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for rec in missing_logs_recommendations %}
+                        <tr>
+                            <td class="fw-bold">
+                                <span class="badge bg-warning-lt">{{ site_id_badge(rec.id_tram, site_map, site_map_reverse) }}</span>
+                            </td>
+                            <td>{{ rec.ngay_mat_dien }}</td>
+                            <td>{{ rec.hours }}h</td>
+                            <td>{{ rec.refuel_amount }}L ({{ rec.refuel_date }})</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
 
 <!-- Station Summary -->
 <div class="card shadow-sm mb-4">
@@ -241,8 +315,15 @@
 <div class="card shadow-sm mb-4 mt-4">
     <div class="card-header">
         <h3 class="card-title mb-0"><i class="fas fa-credit-card me-2 text-primary"></i>Theo Dõi Thanh Toán</h3>
-        <div class="card-options">
+        <div class="card-options d-flex align-items-center gap-2">
             <span class="text-muted small">Dữ liệu theo kỳ lọc đã chọn</span>
+            <form action="{{ url_for('core.admin_reports') }}" method="GET" class="d-flex align-items-center gap-2 m-0">
+                <input type="hidden" name="huyen" value="{{ selected_huyen or '' }}">
+                <input type="hidden" name="year" value="{{ filter_year or '' }}">
+                <input type="hidden" name="month" value="{{ filter_month or '' }}">
+                <label class="small text-muted mb-0" style="white-space:nowrap; font-weight: 500;"><i class="fas fa-calendar-day me-1"></i>Tính toán đến ngày:</label>
+                <input type="date" name="calc_up_to" class="form-control form-control-sm rounded-pill" style="width:auto; font-size:0.75rem;" value="{{ calc_up_to }}" onchange="this.form.submit()">
+            </form>
         </div>
     </div>
     <div class="card-body">
@@ -254,6 +335,7 @@
             {% set mn_tong_quy = mn.tong_tien_nhan | float if mn.tong_tien_nhan else 0 %}
             {% set mn_con_lai = mua_ngoai_accum - mn_da_tt %}
             {% set mn_so_du = mn_tong_quy - mn_da_tt %}
+            {% set mn_can_ck_them = mua_ngoai_accum - mn_tong_quy %}
             <div class="col-md-6" id="card-mua-ngoai">
                 <div class="card border-warning h-100">
                     <div class="card-header bg-warning-lt">
@@ -297,6 +379,12 @@
                             <div class="col-6 text-muted small">Số dư quỹ (Thái):</div>
                             <div class="col-6 text-end fw-bold {{ 'text-success' if mn_so_du >= 0 else 'text-danger' }}">
                                 {{ "{:,.0f}".format(mn_so_du) }} đ
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-6 text-muted small">Cần CK thêm (Phát sinh - Tạm ứng):</div>
+                            <div class="col-6 text-end fw-bold {% if mn_can_ck_them > 0 %}text-danger{% else %}text-success{% endif %}" id="mn-can-ck-them">
+                                {% if mn_can_ck_them > 0 %}{{ "{:,.0f}".format(mn_can_ck_them) }} đ 🔴{% else %}0 đ (Đã đủ tạm ứng) ✅{% endif %}
                             </div>
                         </div>
                         <hr class="my-2">
@@ -344,6 +432,7 @@
             {% set cx_tong_quy = cx.tong_tien_nhan | float if cx.tong_tien_nhan else 0 %}
             {% set cx_con_lai = cx222_accum - cx_da_tt %}
             {% set cx_so_du = cx_tong_quy - cx_da_tt %}
+            {% set cx_can_ck_them = cx222_accum - cx_tong_quy %}
             <div class="col-md-6" id="card-cx222">
                 <div class="card border-primary h-100">
                     <div class="card-header bg-primary-lt">
@@ -387,6 +476,12 @@
                             <div class="col-6 text-muted small">Số dư quỹ:</div>
                             <div class="col-6 text-end fw-bold {{ 'text-success' if cx_so_du >= 0 else 'text-danger' }}">
                                 {{ "{:,.0f}".format(cx_so_du) }} đ
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-6 text-muted small">Cần CK thêm (Phát sinh - Tạm ứng):</div>
+                            <div class="col-6 text-end fw-bold {% if cx_can_ck_them > 0 %}text-danger{% else %}text-success{% endif %}" id="cx-can-ck-them">
+                                {% if cx_can_ck_them > 0 %}{{ "{:,.0f}".format(cx_can_ck_them) }} đ 🔴{% else %}0 đ (Đã đủ tạm ứng) ✅{% endif %}
                             </div>
                         </div>
                         <hr class="my-2">
