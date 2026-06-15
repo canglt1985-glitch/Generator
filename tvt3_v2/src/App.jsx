@@ -3,6 +3,7 @@ import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Datasites from './pages/Datasites';
 import ContractDashboard from './pages/ContractDashboard';
+import DailyWork from './pages/DailyWork';
 
 function App() {
   return (
@@ -12,6 +13,7 @@ function App() {
           <Route index element={<Dashboard />} />
           <Route path="datasites" element={<Datasites />} />
           <Route path="contracts" element={<ContractDashboard />} />
+          <Route path="daily-work" element={<DailyWork />} />
           <Route path="*" element={
             <div className="flex flex-col items-center justify-center h-full py-20 text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="bg-gray-50 rounded-full p-6 mb-6 border border-gray-100 shadow-sm">
