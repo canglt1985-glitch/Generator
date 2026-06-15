@@ -138,6 +138,19 @@ export default function DailyWork() {
     }
     return siteId;
   };
+  const getSiteIds = (siteId) => {
+    if (!siteId) return { oldId: '—', newId: 'KHO' };
+    const sId = siteId.trim().toUpperCase();
+    if (sId === 'KHO') return { oldId: '—', newId: 'KHO' };
+    const st = stations.find(s => s.site_id === sId || (s.site_id_old && s.site_id_old.trim().toUpperCase() === sId));
+    if (st) {
+      return {
+        oldId: st.site_id_old || '—',
+        newId: st.site_id || '—'
+      };
+    }
+    return { oldId: '—', newId: siteId };
+  };
 
   // Helper mở chi tiết trạm với tab chỉ định
   async function handleOpenSiteDetail(siteId, defaultTab = 'general') {
