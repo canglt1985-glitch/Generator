@@ -46,29 +46,49 @@ export default function DailyWork() {
   // Editing state
   const [editingLog, setEditingLog] = useState(null);
 
+  // Suggestions state
+  const [showLogSiteSuggestions, setShowLogSiteSuggestions] = useState(false);
+  const [showIssueSiteSuggestions, setShowIssueSiteSuggestions] = useState(false);
+
   // Form states - Daily Log
   const [logDate, setLogDate] = useState(new Date().toISOString().split('T')[0]);
   const [logSiteId, setLogSiteId] = useState('');
-  const [logStaff, setLogStaff] = useState('');
+  const [logStaff, setLogStaff] = useState(localStorage.getItem('username') || 'admin');
   const [logContent, setLogContent] = useState('');
-  const [logCategory, setLogCategory] = useState('Máy phát điện');
+  const [logCategory, setLogCategory] = useState('C2-Kiểm tra nhà trạm');
   const [logNote, setLogNote] = useState('');
 
   // Form states - Issue/Defect
   const [issueSiteId, setIssueSiteId] = useState('');
   const [issueDate, setIssueDate] = useState(new Date().toISOString().split('T')[0]);
-  const [issueCategory, setIssueCategory] = useState('Máy phát điện');
+  const [issueCategory, setIssueCategory] = useState('Cột anten');
   const [issueDescription, setIssueDescription] = useState('');
-  const [issueReporter, setIssueReporter] = useState('');
+  const [issueReporter, setIssueReporter] = useState(localStorage.getItem('username') || 'admin');
 
-  // Danh mục hạng mục chuẩn V2
-  const categoriesV2 = [
+  // Danh mục hạng mục công việc chuẩn V1 cho Nhật ký
+  const categoriesWorkV1 = [
+    'A1-Hiệu chỉnh mạng lưới',
+    'A2-Hiệu chỉnh truyền dẫn',
+    'A3-Xử lý cảnh báo theo yêu cầu',
+    'A4-Xử lý Cell Off theo yêu cầu',
+    'A5-Xử lý feedback theo PAKH',
+    'B1-Giám sát công việc tại trạm',
+    'C2-Kiểm tra nhà trạm',
+    'Công việc khác',
+    'Ứng cứu thông tin'
+  ];
+
+  // Danh mục hạng mục tồn tại chuẩn V1
+  const categoriesDefectsV1 = [
+    'Cột anten',
+    'Nhà trạm',
     'Máy phát điện',
-    'Tủ nguồn DC & Accu',
     'Máy lạnh',
-    'CWDM',
-    'Năng lượng mặt trời',
-    'Cơ sở hạ tầng (Cột, Nhà trạm)',
+    'Hệ thống điện',
+    'Hệ thống tiếp đất',
+    'Hệ thống PCCC',
+    'Thiết bị truyền dẫn',
+    'Thiết bị vô tuyến',
     'Khác'
   ];
 
@@ -213,17 +233,54 @@ export default function DailyWork() {
     });
   }, [defectsLogs, searchQuery]);
 
+  // Autocomplete site suggestions for Daily Log form
+  const logSiteSuggestions = useMemo(() => {
+    const q = logSiteId.trim().toLowerCase();
+    if (!q) return [];
+    return stations.filter(st => 
+      st.site_id.toLowerCase().includes(q) || 
+      (st.site_id_old && st.site_id_old.toLowerCase().includes(q)) ||
+      st.name.toLowerCase().includes(q)
+    ).slice(0, 8);
+  }, [stations, logSiteId]);
+
+  // Autocomplete site suggestions for Issue form
+  const issueSiteSuggestions = useMemo(() => {
+    const q = issueSiteId.trim().toLowerCase();
+    if (!q) return [];
+    return stations.filter(st => 
+      st.site_id.toLowerCase().includes(q) || 
+      (st.site_id_old && st.site_id_old.toLowerCase().includes(q)) ||
+      st.name.toLowerCase().includes(q)
+    ).slice(0, 8);
+  }, [stations, issueSiteId]);
+
+
   // Handle Log Save/Update
   async function handleSaveLog(e) {
     e.preventDefault();
-    if (!logSiteId.trim() || !logStaff.trim() || !logContent.trim()) {
+    const enteredSite = logSiteId.trim().toUpperCase();
+    if (!enteredSite || !logStaff.trim() || !logContent.trim()) {
       alert("Vui lòng nhập đầy đủ mã trạm, nhân viên và nội dung!");
       return;
     }
 
+    // Validate Site ID
+    const matchingSite = stations.find(s => 
+      s.site_id.trim().toUpperCase() === enteredSite || 
+      (s.site_id_old && s.site_id_old.trim().toUpperCase() === enteredSite)
+    );
+
+    if (!matchingSite) {
+      alert("Mã trạm không tồn tại trong hệ thống! Vui lòng nhập đúng mã trạm cũ hoặc mới.");
+      return;
+    }
+
+    const canonicalSiteId = matchingSite.site_id;
+
     const payload = {
       ngay: logDate,
-      id_tram: logSiteId.trim().toUpperCase(),
+      id_tram: canonicalSiteId,
       nhan_vien: logStaff.trim(),
       noi_dung: logContent.trim(),
       hang_muc: logCategory,
@@ -259,10 +316,11 @@ export default function DailyWork() {
     setEditingLog(log);
     setLogDate(log.ngay || new Date().toISOString().split('T')[0]);
     setLogSiteId(log.id_tram || '');
-    setLogStaff(log.nhan_vien || '');
+    setLogStaff(log.nhan_vien || localStorage.getItem('username') || 'admin');
     setLogContent(log.noi_dung || '');
-    setLogCategory(log.hang_muc || 'Máy phát điện');
+    setLogCategory(log.hang_muc || 'C2-Kiểm tra nhà trạm');
     setLogNote(log.ghi_chu || '');
+    setShowLogSiteSuggestions(false);
     setShowAddLogModal(true);
   }
 
@@ -286,22 +344,37 @@ export default function DailyWork() {
     setEditingLog(null);
     setLogDate(new Date().toISOString().split('T')[0]);
     setLogSiteId('');
-    setLogStaff('');
+    setLogStaff(localStorage.getItem('username') || 'admin');
     setLogContent('');
-    setLogCategory('Máy phát điện');
+    setLogCategory('C2-Kiểm tra nhà trạm');
     setLogNote('');
+    setShowLogSiteSuggestions(false);
   }
 
   // Handle Save Issue
   async function handleSaveIssue(e) {
     e.preventDefault();
-    if (!issueSiteId.trim() || !issueDescription.trim() || !issueReporter.trim()) {
+    const enteredSite = issueSiteId.trim().toUpperCase();
+    if (!enteredSite || !issueDescription.trim() || !issueReporter.trim()) {
       alert("Vui lòng điền đầy đủ thông tin sự cố!");
       return;
     }
 
+    // Validate Site ID
+    const matchingSite = stations.find(s => 
+      s.site_id.trim().toUpperCase() === enteredSite || 
+      (s.site_id_old && s.site_id_old.trim().toUpperCase() === enteredSite)
+    );
+
+    if (!matchingSite) {
+      alert("Mã trạm không tồn tại trong hệ thống! Vui lòng nhập đúng mã trạm cũ hoặc mới.");
+      return;
+    }
+
+    const canonicalSiteId = matchingSite.site_id;
+
     const payload = {
-      site_id: issueSiteId.trim().toUpperCase(),
+      site_id: canonicalSiteId,
       date: issueDate,
       existing_issues: {
         category: issueCategory,
@@ -362,9 +435,10 @@ export default function DailyWork() {
   function resetIssueForm() {
     setIssueSiteId('');
     setIssueDate(new Date().toISOString().split('T')[0]);
-    setIssueCategory('Máy phát điện');
+    setIssueCategory('Cột anten');
     setIssueDescription('');
-    setIssueReporter('');
+    setIssueReporter(localStorage.getItem('username') || 'admin');
+    setShowIssueSiteSuggestions(false);
   }
 
   // Filtered list - Mobile Equipment
@@ -721,73 +795,139 @@ export default function DailyWork() {
 
               {/* TAB 3: STATION DEFECTS / ISSUES */}
               {activeTab === 'issues' && (
-                <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="p-4">
                   {filteredDefectsLogs.length === 0 ? (
-                    <div className="col-span-full text-center py-20 text-slate-400">Không tìm thấy tồn tại nào.</div>
+                    <div className="text-center py-20 text-slate-400">Không tìm thấy tồn tại nào.</div>
                   ) : (
-                    filteredDefectsLogs.map((issue) => {
-                      const dataDetail = issue.existing_issues || {};
-                      const solutions = issue.proposed_solutions || {};
-                      const isResolved = dataDetail.status === "Đã XL";
-                      const siteIds = getSiteIds(issue.site_id);
-                      return (
-                        <div 
-                          key={issue.log_id} 
-                          className={`rounded-xl border p-4 shadow-sm transition-all hover:shadow-md flex flex-col justify-between ${
-                            isResolved 
-                              ? 'bg-emerald-50/20 border-emerald-100/70' 
-                              : 'bg-white border-slate-200'
-                          }`}
-                        >
-                          <div>
-                            <div className="flex justify-between items-start mb-3">
-                              <button
-                                onClick={() => handleOpenSiteDetail(issue.site_id, 'infrastructure')}
-                                className="bg-red-50 hover:bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded text-xs transition-colors cursor-pointer flex items-center gap-1"
-                                title="Xem và cập nhật thiết bị phụ trợ trạm này"
-                              >
-                                {siteIds.oldId} &rarr; {siteIds.newId}
-                                <ExternalLink size={10} className="opacity-60" />
-                              </button>
-                              <button
-                                onClick={() => handleToggleIssueStatus(issue)}
-                                className={`text-[11px] font-bold px-2 py-1 rounded-full cursor-pointer flex items-center gap-1 transition-all ${
-                                  isResolved 
-                                    ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' 
-                                    : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
-                                }`}
-                              >
-                                {isResolved ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
-                                {dataDetail.status || 'Chưa XL'}
-                              </button>
-                            </div>
+                    <>
+                      {/* Desktop View Table */}
+                      <div className="hidden lg:block w-full overflow-x-auto border border-slate-100 rounded-xl">
+                        <table className="min-w-full divide-y divide-gray-200 text-left">
+                          <thead className="bg-slate-50 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                            <tr>
+                              <th scope="col" className="px-4 py-3">Ngày phát hiện</th>
+                              <th scope="col" className="px-4 py-3">Site ID cũ</th>
+                              <th scope="col" className="px-4 py-3">Site ID mới</th>
+                              <th scope="col" className="px-4 py-3">Hạng mục</th>
+                              <th scope="col" className="px-4 py-3">Mô tả tồn tại</th>
+                              <th scope="col" className="px-4 py-3">Người báo cáo</th>
+                              <th scope="col" className="px-4 py-3">Trạng thái</th>
+                              <th scope="col" className="px-4 py-3">Ngày xử lý</th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-100 text-[13px] text-gray-700">
+                            {filteredDefectsLogs.map((issue) => {
+                              const dataDetail = issue.existing_issues || {};
+                              const solutions = issue.proposed_solutions || {};
+                              const isResolved = dataDetail.status === "Đã XL";
+                              const siteIds = getSiteIds(issue.site_id);
+                              return (
+                                <tr key={issue.log_id} className={`hover:bg-slate-50/50 transition-colors ${isResolved ? 'bg-emerald-50/10' : ''}`}>
+                                  <td className="px-4 py-3 whitespace-nowrap text-slate-500 font-mono">{issue.date}</td>
+                                  <td className="px-4 py-3 whitespace-nowrap font-bold text-slate-900">{siteIds.oldId}</td>
+                                  <td className="px-4 py-3 whitespace-nowrap">
+                                    <button
+                                      onClick={() => handleOpenSiteDetail(issue.site_id, 'infrastructure')}
+                                      className="bg-red-50 hover:bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded border border-red-100 text-xs hover:text-red-800 transition-colors cursor-pointer flex items-center gap-1"
+                                      title="Xem và cập nhật thiết bị phụ trợ trạm này"
+                                    >
+                                      {siteIds.newId}
+                                      <ExternalLink size={10} className="opacity-60" />
+                                    </button>
+                                  </td>
+                                  <td className="px-4 py-3 whitespace-nowrap font-semibold text-slate-600">{dataDetail.category || '—'}</td>
+                                  <td className="px-4 py-3 max-w-md truncate font-medium text-slate-800" title={dataDetail.description}>{dataDetail.description}</td>
+                                  <td className="px-4 py-3 whitespace-nowrap text-slate-500">{dataDetail.reporter || '—'}</td>
+                                  <td className="px-4 py-3 whitespace-nowrap">
+                                    <button
+                                      onClick={() => handleToggleIssueStatus(issue)}
+                                      className={`text-[11px] font-bold px-2.5 py-1 rounded-full cursor-pointer flex items-center gap-1 transition-all ${
+                                        isResolved 
+                                          ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' 
+                                          : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
+                                      }`}
+                                    >
+                                      {isResolved ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
+                                      {dataDetail.status || 'Chưa XL'}
+                                    </button>
+                                  </td>
+                                  <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-500 font-mono">
+                                    {isResolved && solutions.resolved_at ? `✅ ${solutions.resolved_at}` : '—'}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
 
-                            <div className="space-y-2">
-                              <div className="text-[13px] text-slate-400 uppercase tracking-wider font-bold">
-                                {dataDetail.category || 'Chưa phân loại'}
+                      {/* Mobile View Card Grid */}
+                      <div className="lg:hidden grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {filteredDefectsLogs.map((issue) => {
+                          const dataDetail = issue.existing_issues || {};
+                          const solutions = issue.proposed_solutions || {};
+                          const isResolved = dataDetail.status === "Đã XL";
+                          const siteIds = getSiteIds(issue.site_id);
+                          return (
+                            <div 
+                              key={issue.log_id} 
+                              className={`rounded-xl border p-4 shadow-sm transition-all hover:shadow-md flex flex-col justify-between ${
+                                isResolved 
+                                  ? 'bg-emerald-50/20 border-emerald-100/70' 
+                                  : 'bg-white border-slate-200'
+                              }`}
+                            >
+                              <div>
+                                <div className="flex justify-between items-start mb-3">
+                                  <button
+                                    onClick={() => handleOpenSiteDetail(issue.site_id, 'infrastructure')}
+                                    className="bg-red-50 hover:bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded text-xs transition-colors cursor-pointer flex items-center gap-1"
+                                    title="Xem và cập nhật thiết bị phụ trợ trạm này"
+                                  >
+                                    {siteIds.oldId} &rarr; {siteIds.newId}
+                                    <ExternalLink size={10} className="opacity-60" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleToggleIssueStatus(issue)}
+                                    className={`text-[11px] font-bold px-2 py-1 rounded-full cursor-pointer flex items-center gap-1 transition-all ${
+                                      isResolved 
+                                        ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' 
+                                        : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
+                                    }`}
+                                  >
+                                    {isResolved ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
+                                    {dataDetail.status || 'Chưa XL'}
+                                  </button>
+                                </div>
+
+                                <div className="space-y-2">
+                                  <div className="text-[13px] text-slate-400 uppercase tracking-wider font-bold">
+                                    {dataDetail.category || 'Chưa phân loại'}
+                                  </div>
+                                  <p className="text-sm font-semibold text-slate-800 leading-snug line-clamp-3" title={dataDetail.description}>
+                                    {dataDetail.description}
+                                  </p>
+                                </div>
                               </div>
-                              <p className="text-sm font-semibold text-slate-800 leading-snug line-clamp-3" title={dataDetail.description}>
-                                {dataDetail.description}
-                              </p>
-                            </div>
-                          </div>
 
-                          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-                            <span className="flex items-center gap-1">
-                              <User size={13} className="text-slate-400" /> {dataDetail.reporter || 'N/A'}
-                            </span>
-                            <span className="flex items-center gap-1 font-medium font-mono text-slate-600">
-                              <Calendar size={13} className="text-slate-400" /> {issue.date}
-                            </span>
-                          </div>
-                          {isResolved && solutions.resolved_at && (
-                            <div className="mt-2 text-[11px] font-medium text-emerald-600 bg-emerald-100/40 px-2 py-1 rounded border border-emerald-200/50 text-center flex items-center justify-center gap-1">
-                              ✅ Đã xử lý xong vào: {solutions.resolved_at}
+                              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                                <span className="flex items-center gap-1">
+                                  <User size={13} className="text-slate-400" /> {dataDetail.reporter || 'N/A'}
+                                </span>
+                                <span className="flex items-center gap-1 font-medium font-mono text-slate-600">
+                                  <Calendar size={13} className="text-slate-400" /> {issue.date}
+                                </span>
+                              </div>
+                              {isResolved && solutions.resolved_at && (
+                                <div className="mt-2 text-[11px] font-medium text-emerald-600 bg-emerald-100/40 px-2 py-1 rounded border border-emerald-200/50 text-center flex items-center justify-center gap-1">
+                                  ✅ Đã xử lý xong vào: {solutions.resolved_at}
+                                </div>
+                              )}
                             </div>
-                          )}
-                        </div>
-                      );
-                    })
+                          );
+                        })}
+                      </div>
+                    </>
                   )}
                 </div>
               )}
@@ -795,48 +935,100 @@ export default function DailyWork() {
               {/* TAB 4: MOBILE EQUIPMENT */}
               {activeTab === 'mobile' && (
                 <div className="p-4 space-y-6">
-                  {/* Grid danh sách thiết bị di động */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {filteredEquip.length === 0 ? (
-                      <div className="col-span-full text-center py-10 text-slate-400">Không tìm thấy thiết bị lưu động nào.</div>
-                    ) : (
-                      filteredEquip.map((eq) => {
-                        const isGood = eq.status === 'Tốt';
-                        const atKho = eq.current_location === 'KHO';
-                        return (
-                          <div key={eq.id} className={`rounded-xl border p-4 shadow-sm flex flex-col justify-between transition-all hover:shadow-md bg-white ${isGood ? 'border-slate-200' : 'border-red-100 bg-red-50/10'}`}>
-                            <div>
-                              <div className="flex justify-between items-start mb-2">
-                                <span className="font-extrabold text-slate-800 text-sm">{eq.equipment_code}</span>
-                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isGood ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
-                                  {eq.status}
-                                </span>
-                              </div>
-                              <div className="space-y-1 text-[13px]">
-                                <div><span className="text-slate-400 font-semibold">Loại:</span> <span className="font-semibold">{eq.type}</span></div>
-                                <div><span className="text-slate-400 font-semibold">Thông số:</span> <span>{eq.specifications || '—'}</span></div>
-                                <div>
-                                  <span className="text-slate-400 font-semibold">Vị trí hiện tại:</span>{' '}
-                                  <span className={`font-bold px-2 py-0.5 rounded ${atKho ? 'bg-blue-50 text-blue-700 border border-blue-100' : 'bg-orange-50 text-orange-700 border border-orange-100'}`}>
-                                    {eq.current_location === 'KHO' ? 'KHO' : `${getSiteIds(eq.current_location).oldId} (${getSiteIds(eq.current_location).newId})`}
+                  {/* Grid/Table danh sách thiết bị di động */}
+                  {filteredEquip.length === 0 ? (
+                    <div className="text-center py-10 text-slate-400">Không tìm thấy thiết bị lưu động nào.</div>
+                  ) : (
+                    <>
+                      {/* Desktop View Table */}
+                      <div className="hidden lg:block w-full overflow-x-auto border border-slate-100 rounded-xl bg-white shadow-sm">
+                        <table className="min-w-full divide-y divide-gray-200 text-left">
+                          <thead className="bg-slate-50 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                            <tr>
+                              <th scope="col" className="px-4 py-3">Mã thiết bị</th>
+                              <th scope="col" className="px-4 py-3">Loại</th>
+                              <th scope="col" className="px-4 py-3">Thông số kỹ thuật</th>
+                              <th scope="col" className="px-4 py-3">Trạng thái</th>
+                              <th scope="col" className="px-4 py-3">Vị trí hiện tại</th>
+                              <th scope="col" className="px-4 py-3">Ghi chú</th>
+                              <th scope="col" className="px-4 py-3 text-right">Thao tác</th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-100 text-[13px] text-gray-700">
+                            {filteredEquip.map((eq) => {
+                              const isGood = eq.status === 'Tốt';
+                              const atKho = eq.current_location === 'KHO';
+                              return (
+                                <tr key={eq.id} className={`hover:bg-slate-50/50 transition-colors ${!isGood ? 'bg-red-50/10' : ''}`}>
+                                  <td className="px-4 py-3 whitespace-nowrap font-extrabold text-slate-800">{eq.equipment_code}</td>
+                                  <td className="px-4 py-3 whitespace-nowrap font-medium text-slate-600">{eq.type}</td>
+                                  <td className="px-4 py-3 max-w-xs truncate text-slate-600" title={eq.specifications}>{eq.specifications || '—'}</td>
+                                  <td className="px-4 py-3 whitespace-nowrap">
+                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isGood ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                                      {eq.status}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-3 whitespace-nowrap">
+                                    <span className={`font-bold px-2 py-0.5 rounded text-[11px] ${atKho ? 'bg-blue-50 text-blue-700 border border-blue-100' : 'bg-orange-50 text-orange-700 border border-orange-100'}`}>
+                                      {eq.current_location === 'KHO' ? 'KHO' : `${getSiteIds(eq.current_location).oldId} (${getSiteIds(eq.current_location).newId})`}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-3 max-w-xs truncate text-slate-500 italic" title={eq.notes}>{eq.notes || '—'}</td>
+                                  <td className="px-4 py-3 whitespace-nowrap text-right">
+                                    <button
+                                      onClick={() => handleStartTransfer(eq)}
+                                      className="text-[12px] font-bold px-3 py-1 rounded-lg text-white bg-blue-600 hover:bg-blue-700 cursor-pointer shadow-sm transition-colors"
+                                    >
+                                      Điều chuyển
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Mobile View Card Grid */}
+                      <div className="lg:hidden grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {filteredEquip.map((eq) => {
+                          const isGood = eq.status === 'Tốt';
+                          const atKho = eq.current_location === 'KHO';
+                          return (
+                            <div key={eq.id} className={`rounded-xl border p-4 shadow-sm flex flex-col justify-between transition-all hover:shadow-md bg-white ${isGood ? 'border-slate-200' : 'border-red-100 bg-red-50/10'}`}>
+                              <div>
+                                <div className="flex justify-between items-start mb-2">
+                                  <span className="font-extrabold text-slate-800 text-sm">{eq.equipment_code}</span>
+                                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isGood ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                                    {eq.status}
                                   </span>
                                 </div>
-                                {eq.notes && <div className="text-slate-400 text-xs mt-2 italic">"{eq.notes}"</div>}
+                                <div className="space-y-1 text-[13px]">
+                                  <div><span className="text-slate-400 font-semibold">Loại:</span> <span className="font-semibold">{eq.type}</span></div>
+                                  <div><span className="text-slate-400 font-semibold">Thông số:</span> <span>{eq.specifications || '—'}</span></div>
+                                  <div>
+                                    <span className="text-slate-400 font-semibold">Vị trí hiện tại:</span>{' '}
+                                    <span className={`font-bold px-2 py-0.5 rounded ${atKho ? 'bg-blue-50 text-blue-700 border border-blue-100' : 'bg-orange-50 text-orange-700 border border-orange-100'}`}>
+                                      {eq.current_location === 'KHO' ? 'KHO' : `${getSiteIds(eq.current_location).oldId} (${getSiteIds(eq.current_location).newId})`}
+                                    </span>
+                                  </div>
+                                  {eq.notes && <div className="text-slate-400 text-xs mt-2 italic">"{eq.notes}"</div>}
+                                </div>
+                              </div>
+                              <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end">
+                                <button
+                                  onClick={() => handleStartTransfer(eq)}
+                                  className="text-[12px] font-bold px-3 py-1.5 rounded-lg text-white bg-blue-600 hover:bg-blue-700 cursor-pointer shadow-sm transition-colors animate-in"
+                                >
+                                  Điều chuyển
+                                </button>
                               </div>
                             </div>
-                            <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end">
-                              <button
-                                onClick={() => handleStartTransfer(eq)}
-                                className="text-[12px] font-bold px-3 py-1.5 rounded-lg text-white bg-blue-600 hover:bg-blue-700 cursor-pointer shadow-sm transition-colors animate-in"
-                              >
-                                Điều chuyển
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
 
                   {/* Bảng lịch sử điều chuyển */}
                   <div className="space-y-3 pt-4">
@@ -918,20 +1110,40 @@ export default function DailyWork() {
                     onChange={(e) => setLogDate(e.target.value)}
                   />
                 </div>
-                <div>
+                <div className="relative">
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Mã Trạm (Site ID)</label>
-                  <select 
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                  <input 
+                    type="text" 
+                    placeholder="Nhập mã cũ hoặc mới..."
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                     value={logSiteId}
-                    onChange={(e) => setLogSiteId(e.target.value)}
-                  >
-                    <option value="">-- Chọn Trạm --</option>
-                    {stations.map(st => (
-                      <option key={st.site_id} value={st.site_id}>
-                        {st.site_id} {st.site_id_old ? `(${st.site_id_old})` : ''} - {st.name}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(e) => {
+                      setLogSiteId(e.target.value);
+                      setShowLogSiteSuggestions(true);
+                    }}
+                    onFocus={() => setShowLogSiteSuggestions(true)}
+                    onBlur={() => setTimeout(() => setShowLogSiteSuggestions(false), 200)}
+                  />
+                  {showLogSiteSuggestions && logSiteSuggestions.length > 0 && (
+                    <div className="absolute z-[110] left-0 right-0 mt-1 max-h-48 overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-lg">
+                      {logSiteSuggestions.map(st => (
+                        <button
+                          key={st.site_id}
+                          type="button"
+                          onClick={() => {
+                            setLogSiteId(st.site_id);
+                            setShowLogSiteSuggestions(false);
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 border-b border-slate-100 last:border-0 flex flex-col cursor-pointer"
+                        >
+                          <span className="font-bold text-slate-800">
+                            {st.site_id} {st.site_id_old ? `(${st.site_id_old})` : ''}
+                          </span>
+                          <span className="text-xs text-slate-500 truncate">{st.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -940,10 +1152,9 @@ export default function DailyWork() {
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Nhân viên thực hiện</label>
                   <input 
                     type="text" 
-                    placeholder="Tên nhân viên..."
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                    readOnly
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 text-slate-500 cursor-not-allowed font-medium"
                     value={logStaff}
-                    onChange={(e) => setLogStaff(e.target.value)}
                   />
                 </div>
                 <div>
@@ -953,7 +1164,7 @@ export default function DailyWork() {
                     value={logCategory}
                     onChange={(e) => setLogCategory(e.target.value)}
                   >
-                    {categoriesV2.map(cat => (
+                    {categoriesWorkV1.map(cat => (
                       <option key={cat} value={cat}>{cat}</option>
                     ))}
                   </select>
@@ -1020,20 +1231,40 @@ export default function DailyWork() {
 
             <form onSubmit={handleSaveIssue} className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div>
+                <div className="relative">
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Mã Trạm (Site ID)</label>
-                  <select 
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-red-500 focus:border-red-500 bg-white"
+                  <input 
+                    type="text" 
+                    placeholder="Nhập mã cũ hoặc mới..."
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-red-500 focus:border-red-500"
                     value={issueSiteId}
-                    onChange={(e) => setIssueSiteId(e.target.value)}
-                  >
-                    <option value="">-- Chọn Trạm --</option>
-                    {stations.map(st => (
-                      <option key={st.site_id} value={st.site_id}>
-                        {st.site_id} {st.site_id_old ? `(${st.site_id_old})` : ''} - {st.name}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(e) => {
+                      setIssueSiteId(e.target.value);
+                      setShowIssueSiteSuggestions(true);
+                    }}
+                    onFocus={() => setShowIssueSiteSuggestions(true)}
+                    onBlur={() => setTimeout(() => setShowIssueSiteSuggestions(false), 200)}
+                  />
+                  {showIssueSiteSuggestions && issueSiteSuggestions.length > 0 && (
+                    <div className="absolute z-[110] left-0 right-0 mt-1 max-h-48 overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-lg">
+                      {issueSiteSuggestions.map(st => (
+                        <button
+                          key={st.site_id}
+                          type="button"
+                          onClick={() => {
+                            setIssueSiteId(st.site_id);
+                            setShowIssueSiteSuggestions(false);
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 border-b border-slate-100 last:border-0 flex flex-col cursor-pointer"
+                        >
+                          <span className="font-bold text-slate-800">
+                            {st.site_id} {st.site_id_old ? `(${st.site_id_old})` : ''}
+                          </span>
+                          <span className="text-xs text-slate-500 truncate">{st.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Ngày phát hiện</label>
@@ -1054,7 +1285,7 @@ export default function DailyWork() {
                     value={issueCategory}
                     onChange={(e) => setIssueCategory(e.target.value)}
                   >
-                    {categoriesV2.map(cat => (
+                    {categoriesDefectsV1.map(cat => (
                       <option key={cat} value={cat}>{cat}</option>
                     ))}
                   </select>
@@ -1063,10 +1294,9 @@ export default function DailyWork() {
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Người báo cáo</label>
                   <input 
                     type="text" 
-                    placeholder="Nhập tên..."
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-red-500 focus:border-red-500"
+                    readOnly
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 text-slate-500 cursor-not-allowed font-medium"
                     value={issueReporter}
-                    onChange={(e) => setIssueReporter(e.target.value)}
                   />
                 </div>
               </div>

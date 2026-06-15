@@ -1005,52 +1005,104 @@ export default function Generator() {
 
               {/* TAB 2: ANOMALY REPORTS */}
               {activeTab === 'anomalies' && (
-                <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="p-4">
                   {anomaliesList.length === 0 ? (
-                    <div className="col-span-full text-center py-20 text-slate-400">🎉 Tuyệt vời! Không phát hiện chạy máy bất thường nào trong 90 ngày qua.</div>
+                    <div className="text-center py-20 text-slate-400">🎉 Tuyệt vời! Không phát hiện chạy máy bất thường nào trong 90 ngày qua.</div>
                   ) : (
-                    anomaliesList.map((anom, idx) => {
-                      const isHigh = anom.severity === 'high';
-                      return (
-                        <div 
-                          key={idx} 
-                          className={`rounded-xl border p-4 shadow-sm flex flex-col justify-between transition-all hover:shadow-md ${
-                            isHigh ? 'bg-red-50/20 border-red-100' : 'bg-amber-50/10 border-amber-100'
-                          }`}
-                        >
-                          <div>
-                            <div className="flex justify-between items-start mb-3">
-                              <span className="font-bold text-slate-800 text-sm flex items-center gap-1">
-                                {getSiteLabel(anom.site_id)}
-                              </span>
-                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${
-                                isHigh ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-800'
-                              }`}>
-                                <AlertTriangle size={10} />
-                                {isHigh ? 'Cảnh báo Đỏ' : 'Cảnh báo Vàng'}
-                              </span>
-                            </div>
+                    <>
+                      {/* Desktop View Table */}
+                      <div className="hidden lg:block w-full overflow-x-auto border border-slate-100 rounded-xl bg-white shadow-sm">
+                        <table className="min-w-full divide-y divide-gray-200 text-left">
+                          <thead className="bg-slate-50 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                            <tr>
+                              <th scope="col" className="px-4 py-3">Trạm</th>
+                              <th scope="col" className="px-4 py-3">Mức độ</th>
+                              <th scope="col" className="px-4 py-3">Loại cảnh báo</th>
+                              <th scope="col" className="px-4 py-3">Tiêu đề</th>
+                              <th scope="col" className="px-4 py-3">Chi tiết bất thường</th>
+                              <th scope="col" className="px-4 py-3">Ngày phát hiện</th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-100 text-[13px] text-gray-700">
+                            {anomaliesList.map((anom, idx) => {
+                              const isHigh = anom.severity === 'high';
+                              return (
+                                <tr key={idx} className={`hover:bg-slate-50/50 transition-colors ${isHigh ? 'bg-red-50/5' : ''}`}>
+                                  <td className="px-4 py-3 whitespace-nowrap font-bold text-slate-900">
+                                    {getSiteLabel(anom.site_id)}
+                                  </td>
+                                  <td className="px-4 py-3 whitespace-nowrap">
+                                    <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 w-max ${
+                                      isHigh ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-800'
+                                    }`}>
+                                      <AlertTriangle size={10} />
+                                      {isHigh ? 'Đỏ (Nguy cơ cao)' : 'Vàng (Cần lưu ý)'}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-3 whitespace-nowrap font-semibold text-blue-700 text-xs">
+                                    {anom.type === 'MISSING_LOG' && 'Thiếu log chạy máy'}
+                                    {anom.type === 'CONSECUTIVE_REFILL' && 'Đổ dầu không chạy'}
+                                    {anom.type === 'QUARTERLY_DISCREPANCY' && 'Lệch nhiên liệu quý'}
+                                    {anom.type === 'INACTIVE_GEN' && 'Máy phát ngủ quên'}
+                                  </td>
+                                  <td className="px-4 py-3 whitespace-nowrap font-bold text-slate-800">{anom.title}</td>
+                                  <td className="px-4 py-3 max-w-sm truncate text-slate-500" title={anom.desc}>{anom.desc}</td>
+                                  <td className="px-4 py-3 whitespace-nowrap font-mono text-xs text-slate-500">
+                                    {anom.date !== 'Chưa từng chạy' ? anom.date : 'Chưa từng chạy'}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
 
-                            <div className="space-y-1.5">
-                              <div className="text-[13px] font-extrabold text-slate-700">{anom.title}</div>
-                              <p className="text-[12px] text-slate-500 leading-relaxed">{anom.desc}</p>
-                            </div>
-                          </div>
+                      {/* Mobile View Card Grid */}
+                      <div className="lg:hidden grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {anomaliesList.map((anom, idx) => {
+                          const isHigh = anom.severity === 'high';
+                          return (
+                            <div 
+                              key={idx} 
+                              className={`rounded-xl border p-4 shadow-sm flex flex-col justify-between transition-all hover:shadow-md ${
+                                isHigh ? 'bg-red-50/20 border-red-100' : 'bg-amber-50/10 border-amber-100'
+                              }`}
+                            >
+                              <div>
+                                <div className="flex justify-between items-start mb-3">
+                                  <span className="font-bold text-slate-800 text-sm flex items-center gap-1">
+                                    {getSiteLabel(anom.site_id)}
+                                  </span>
+                                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${
+                                    isHigh ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-800'
+                                  }`}>
+                                    <AlertTriangle size={10} />
+                                    {isHigh ? 'Cảnh báo Đỏ' : 'Cảnh báo Vàng'}
+                                  </span>
+                                </div>
 
-                          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
-                            <span className="flex items-center gap-1 font-mono text-[11px]">
-                              {anom.date !== 'Chưa từng chạy' ? `Phát hiện: ${anom.date}` : 'Lịch sử: Chưa từng chạy'}
-                            </span>
-                            <span className="text-[11px] font-bold text-blue-600 flex items-center gap-0.5">
-                              {anom.type === 'MISSING_LOG' && 'Yêu cầu bổ sung'}
-                              {anom.type === 'CONSECUTIVE_REFILL' && 'Kiểm tra thất thoát'}
-                              {anom.type === 'QUARTERLY_DISCREPANCY' && 'Đối soát lệch kho'}
-                              {anom.type === 'INACTIVE_GEN' && 'Cần bảo dưỡng máy'}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })
+                                <div className="space-y-1.5">
+                                  <div className="text-[13px] font-extrabold text-slate-700">{anom.title}</div>
+                                  <p className="text-[12px] text-slate-500 leading-relaxed">{anom.desc}</p>
+                                </div>
+                              </div>
+
+                              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
+                                <span className="flex items-center gap-1 font-mono text-[11px]">
+                                  {anom.date !== 'Chưa từng chạy' ? `Phát hiện: ${anom.date}` : 'Lịch sử: Chưa từng chạy'}
+                                </span>
+                                <span className="text-[11px] font-bold text-blue-600 flex items-center gap-0.5">
+                                  {anom.type === 'MISSING_LOG' && 'Yêu cầu bổ sung'}
+                                  {anom.type === 'CONSECUTIVE_REFILL' && 'Kiểm tra thất thoát'}
+                                  {anom.type === 'QUARTERLY_DISCREPANCY' && 'Đối soát lệch kho'}
+                                  {anom.type === 'INACTIVE_GEN' && 'Cần bảo dưỡng máy'}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
                   )}
                 </div>
               )}
