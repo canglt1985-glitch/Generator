@@ -4,6 +4,7 @@ import {
   Zap, Calendar, AlertTriangle, FileText, Search, Plus, Trash, 
   Edit, Eye, Clock, CheckCircle2, AlertCircle, X, ExternalLink, Filter
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 export default function Generator() {
   const [activeTab, setActiveTab] = useState('logs'); // logs, anomalies, invoices
@@ -21,6 +22,12 @@ export default function Generator() {
   const [showAddLogModal, setShowAddLogModal] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState(null); // Để xem chi tiết hóa đơn
   
+  // Date & Column Filters for Logs
+  const [filterMonth, setFilterMonth] = useState(new Date().getMonth() + 1); // 1-12
+  const [filterYear, setFilterYear] = useState(new Date().getFullYear());
+  const [searchSite, setSearchSite] = useState('');
+  const [searchDate, setSearchDate] = useState('');
+  
   // Form states - Generator Log
   const [logDate, setLogDate] = useState(new Date().toISOString().split('T')[0]);
   const [logSiteId, setLogSiteId] = useState('');
@@ -33,7 +40,7 @@ export default function Generator() {
 
   useEffect(() => {
     fetchData();
-  }, [activeTab]);
+  }, [activeTab, filterMonth, filterYear]);
 
   async function fetchData() {
     setLoading(true);
@@ -46,11 +53,21 @@ export default function Generator() {
       if (!sitesErr) setStations(sites || []);
 
       if (activeTab === 'logs') {
-        const { data, error } = await supabase
-          .from('generator_logs')
-          .select('*')
-          .order('date', { ascending: false })
-          .limit(1000);
+        let query = supabase.from('generator_logs').select('*');
+        
+        if (filterYear) {
+          if (filterMonth) {
+            const startStr = `${filterYear}-${String(filterMonth).padStart(2, '0')}-01`;
+            const lastDay = new Date(filterYear, filterMonth, 0).getDate();
+            const endStr = `${filterYear}-${String(filterMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+            query = query.gte('date', startStr).lte('date', endStr);
+          } else {
+            // Cả năm
+            query = query.gte('date', `${filterYear}-01-01`).lte('date', `${filterYear}-12-31`);
+          }
+        }
+        
+        const { data, error } = await query.order('date', { ascending: false });
         if (error) throw error;
         setGenLogs(data || []);
       } else if (activeTab === 'anomalies') {
@@ -148,16 +165,213 @@ export default function Generator() {
     }
   }, [logSiteId, logRuntime]);
 
-  // Search Filter - Logs
+  // Search Filter - Logs (refined with inline filters)
   const filteredLogs = useMemo(() => {
-    if (!searchQuery.trim()) return genLogs;
-    const q = searchQuery.toLowerCase();
-    return genLogs.filter(log => 
-      (log.site_id || '').toLowerCase().includes(q) ||
-      (log.run_details.loai_may || '').toLowerCase().includes(q) ||
-      (log.run_details.ghi_chu || '').toLowerCase().includes(q)
-    );
-  }, [genLogs, searchQuery]);
+    return genLogs.filter(log => {
+      const stationObj = stations.find(s => s.site_id === log.site_id);
+      const siteIdOld = (stationObj?.site_id_old || '').toLowerCase();
+      const siteIdNew = (log.site_id || '').toLowerCase();
+      
+      // 1. Filter by Site (checks both Old and New Site IDs)
+      if (searchSite.trim()) {
+        const q = searchSite.toLowerCase();
+        if (!siteIdOld.includes(q) && !siteIdNew.includes(q)) {
+          return false;
+        }
+      }
+      
+      // 2. Filter by Date
+      if (searchDate) {
+        if (log.date !== searchDate) {
+          return false;
+        }
+      }
+      
+      return true;
+    });
+  }, [genLogs, searchSite, searchDate, stations]);
+
+  // Statistics calculation for filtered logs
+  const stats = useMemo(() => {
+    let hours = 0;
+    let fuelXang = 0;
+    let fuelDau = 0;
+    let totalThanhTien = 0;
+    let totalVat = 0;
+    let pendingCount = 0;
+
+    filteredLogs.forEach(log => {
+      const runtime = parseFloat(log.run_details?.thoi_gian_hoat_dong) || 0;
+      const fuel = parseFloat(log.run_details?.nhien_lieu_tieu_hao) || 0;
+      const thanhTien = parseFloat(log.run_details?.thanh_tien) || 0;
+      const fuelType = log.run_details?.nhien_lieu_loai || log.run_details?.nhien_lieu || 'Dầu';
+      const status = log.run_details?.status || 'approved';
+
+      hours += runtime;
+      if (fuelType.includes('Xăng')) {
+        fuelXang += fuel;
+      } else {
+        fuelDau += fuel;
+      }
+      totalThanhTien += thanhTien;
+
+      // VAT logic: if date >= '2026-03-26' -> VAT is 0%, else 8%
+      if (log.date && log.date >= '2026-03-26') {
+        // VAT 0%
+      } else {
+        totalVat += Math.round(thanhTien * 0.08);
+      }
+
+      if (status === 'pending') {
+        pendingCount++;
+      }
+    });
+
+    return {
+      records: filteredLogs.length,
+      hours: parseFloat(hours.toFixed(1)),
+      fuelXang: parseFloat(fuelXang.toFixed(1)),
+      fuelDau: parseFloat(fuelDau.toFixed(1)),
+      totalThanhTien,
+      totalVat,
+      totalCong: totalThanhTien + totalVat,
+      pendingCount
+    };
+  }, [filteredLogs]);
+
+  // Export to Excel
+  const exportToExcel = () => {
+    const dataForExcel = filteredLogs.map(log => {
+      const stationObj = stations.find(s => s.site_id === log.site_id);
+      const siteIdOld = stationObj ? (stationObj.site_id_old || '') : '';
+      
+      return {
+        'Site ID cũ': siteIdOld,
+        'Site ID mới': log.site_id || '',
+        'Công suất máy (KVA)': log.run_details?.cong_suat_may || '',
+        'Loại máy': log.run_details?.loai_may || '',
+        'Định mức (Lít/Giờ)': log.run_details?.dinh_muc || '',
+        'Ngày vận hành': log.date || '',
+        'Giờ bắt đầu': log.run_details?.gio_bat_dau || '',
+        'Giờ kết thúc': log.run_details?.gio_ket_thuc || '',
+        'Thời gian chạy máy (Giờ)': log.run_details?.thoi_gian_hoat_dong || 0,
+        'Nhiên liệu tiêu hao (Lít)': log.run_details?.nhien_lieu_tieu_hao || 0,
+        'Đơn giá': log.run_details?.don_gia || 0,
+        'Thành tiền': log.run_details?.thanh_tien || 0,
+        'Kết quả đối soát': log.run_details?.ket_qua_doi_soat || '',
+        'Nhiên liệu': log.run_details?.nhien_lieu_loai || log.run_details?.nhien_lieu || 'Dầu',
+        'Ghi chú': log.run_details?.ghi_chu || ''
+      };
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(dataForExcel);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
+    
+    const monthStr = filterMonth ? `T${filterMonth}` : 'Ca_Nam';
+    const fileName = `Thoi_gian_chay_may_${monthStr}_${filterYear}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+  };
+
+  // Recalculate generator logs
+  async function handleRecalculate() {
+    if (!confirm('Tính lại định mức, nhiên liệu và chi phí cho tất cả bản ghi chưa có thành tiền?')) return;
+    
+    setLoading(true);
+    try {
+      let updatedCount = 0;
+      
+      for (const log of genLogs) {
+        const currentThanhTien = parseFloat(log.run_details?.thanh_tien) || 0;
+        if (currentThanhTien === 0) {
+          const runDetails = { ...log.run_details };
+          let changed = false;
+          
+          let hours = parseFloat(runDetails.thoi_gian_hoat_dong) || 0;
+          if (hours === 0 && runDetails.gio_bat_dau && runDetails.gio_ket_thuc) {
+            const [h1, m1] = runDetails.gio_bat_dau.split(':').map(Number);
+            const [h2, m2] = runDetails.gio_ket_thuc.split(':').map(Number);
+            let diff = (h2 * 60 + m2) - (h1 * 60 + m1);
+            if (diff < 0) diff += 1440;
+            hours = parseFloat((diff / 60).toFixed(2));
+            runDetails.thoi_gian_hoat_dong = hours;
+            changed = true;
+          }
+          
+          const specs = getStationSpecs(log.site_id);
+          const limitRate = specs ? parseFloat(specs.dinh_muc_thuc_te) : 0;
+          const fuelType = specs ? specs.loai_nhien_lieu : 'Dầu';
+          const capacity = specs ? specs.cong_suat : '';
+          const model = specs ? specs.nhan_hieu : '';
+          
+          if (specs) {
+            if (!runDetails.dinh_muc) {
+              runDetails.dinh_muc = String(limitRate);
+              changed = true;
+            }
+            if (!runDetails.nhien_lieu_loai) {
+              runDetails.nhien_lieu_loai = fuelType;
+              changed = true;
+            }
+            if (!runDetails.cong_suat_may) {
+              runDetails.cong_suat_may = String(capacity);
+              changed = true;
+            }
+            if (!runDetails.loai_may) {
+              runDetails.loai_may = model;
+              changed = true;
+            }
+          }
+          
+          let fuel = parseFloat(runDetails.nhien_lieu_tieu_hao) || 0;
+          if (fuel === 0 && hours > 0 && limitRate > 0) {
+            fuel = parseFloat((hours * limitRate).toFixed(2));
+            runDetails.nhien_lieu_tieu_hao = fuel;
+            changed = true;
+          }
+          
+          let price = parseFloat(runDetails.don_gia) || 0;
+          if (price === 0) {
+            const isXang = fuelType && fuelType.includes('Xăng');
+            if (log.date >= '2026-04-29') {
+              price = isXang ? 23040 : 27850;
+            } else if (log.date >= '2026-02-26') {
+              price = isXang ? 20150 : 19270;
+            } else {
+              price = isXang ? 21000 : 20000;
+            }
+            if (log.date < '2026-03-26') {
+              price = Math.round(price / 1.08);
+            }
+            runDetails.don_gia = price;
+            changed = true;
+          }
+          
+          if (fuel > 0 && price > 0) {
+            runDetails.thanh_tien = Math.round(fuel * price);
+            changed = true;
+          }
+          
+          if (changed) {
+            const { error } = await supabase
+              .from('generator_logs')
+              .update({ run_details: runDetails })
+              .eq('gen_log_id', log.gen_log_id);
+            if (!error) {
+              updatedCount++;
+            }
+          }
+        }
+      }
+      
+      alert(`Tính lại định mức thành công! Đã cập nhật ${updatedCount} bản ghi.`);
+      fetchData();
+    } catch (err) {
+      alert("Lỗi khi tính lại định mức: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   // Search Filter - Invoices
   const filteredInvoices = useMemo(() => {
@@ -418,6 +632,25 @@ export default function Generator() {
     }
   }
 
+  // Approve or reject generator log
+  async function handleApproveLog(logId, nextStatus) {
+    const logObj = genLogs.find(l => l.gen_log_id === logId);
+    if (!logObj) return;
+    
+    const runDetails = { ...logObj.run_details, status: nextStatus };
+    try {
+      const { error } = await supabase
+        .from('generator_logs')
+        .update({ run_details: runDetails })
+        .eq('gen_log_id', logId);
+      if (error) throw error;
+      alert(`Đã cập nhật trạng thái bản ghi sang: ${nextStatus === 'approved' ? 'Đã duyệt' : 'Từ chối'}`);
+      fetchData();
+    } catch (err) {
+      alert("Lỗi duyệt bản ghi: " + err.message);
+    }
+  }
+
   // Delete Log
   async function handleDeleteLog(id) {
     if (!confirm("Bạn có chắc chắn muốn xóa nhật ký chạy máy này không?")) return;
@@ -450,7 +683,11 @@ export default function Generator() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
         <div>
-          <h1 className="text-lg md:text-xl font-bold text-slate-800">Quản lý Vận hành Máy phát điện</h1>
+          <h1 className="text-lg md:text-xl font-bold text-slate-800">
+            {activeTab === 'logs' ? 'Dữ liệu chạy máy phát' : 
+             activeTab === 'anomalies' ? 'Báo cáo chạy máy bất thường' : 
+             'Quản lý hóa đơn'}
+          </h1>
           <p className="text-[13px] text-slate-500">
             {activeTab === 'logs' && `Hiển thị ${filteredLogs.length} dòng nhật ký`}
             {activeTab === 'anomalies' && `Phát hiện ${anomaliesList.length} bất thường cần lưu ý`}
@@ -458,16 +695,59 @@ export default function Generator() {
           </p>
         </div>
 
-        <div>
-          {activeTab === 'logs' && (
+        {activeTab === 'logs' && (
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Month select */}
+            <select
+              value={filterMonth}
+              onChange={(e) => setFilterMonth(e.target.value === "" ? "" : Number(e.target.value))}
+              className="bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+            >
+              <option value="">-- Cả năm --</option>
+              {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                <option key={m} value={m}>Tháng {m}</option>
+              ))}
+            </select>
+            {/* Year select */}
+            <select
+              value={filterYear}
+              onChange={(e) => setFilterYear(Number(e.target.value))}
+              className="bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+            >
+              {[2024, 2025, 2026, 2027].map(y => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+            {/* Import Excel */}
+            <button
+              onClick={() => alert("Chức năng import đang được phát triển. Vui lòng quét SmartW hoặc nhập thủ công.")}
+              className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg text-white bg-emerald-600 hover:bg-emerald-700 shadow-sm transition-colors cursor-pointer"
+            >
+              <FileText className="h-3.5 w-3.5 mr-1" /> Import
+            </button>
+            {/* Recalculate */}
+            <button
+              onClick={handleRecalculate}
+              className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg text-white bg-amber-500 hover:bg-amber-600 shadow-sm transition-colors cursor-pointer"
+            >
+              <Zap className="h-3.5 w-3.5 mr-1" /> Tính lại ĐM
+            </button>
+            {/* Export */}
+            <button
+              onClick={exportToExcel}
+              className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg text-blue-600 border border-blue-200 bg-white hover:bg-slate-50 shadow-sm transition-colors cursor-pointer"
+            >
+              <ExternalLink className="h-3.5 w-3.5 mr-1" /> Xuất {filterMonth ? `T${filterMonth}/${filterYear}` : `${filterYear}`}
+            </button>
+            {/* Add manual log */}
             <button 
               onClick={() => { resetLogForm(); setShowAddLogModal(true); }}
-              className="inline-flex items-center justify-center px-4 py-2 text-[13px] font-bold rounded-lg text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors cursor-pointer"
+              className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors cursor-pointer"
             >
-              <Plus className="h-4 w-4 mr-1.5" /> Ghi nhận chạy máy
+              <Plus className="h-3.5 w-3.5 mr-1" /> Thêm
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Tabs Menu */}
@@ -499,8 +779,8 @@ export default function Generator() {
           </button>
         </div>
 
-        {/* Search Input */}
-        {activeTab !== 'anomalies' && (
+        {/* Global Search Input for invoices */}
+        {activeTab === 'invoices' && (
           <div className="p-3 md:p-4">
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -509,10 +789,7 @@ export default function Generator() {
               <input
                 type="text"
                 className="block w-full pl-10 pr-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-slate-50/50 placeholder-slate-400 transition-colors hover:bg-white"
-                placeholder={
-                  activeTab === 'logs' ? "Tìm theo mã trạm, hiệu máy, ghi chú..." :
-                  "Tìm theo số hóa đơn, tên nhà cung cấp, MST..."
-                }
+                placeholder="Tìm theo số hóa đơn, tên nhà cung cấp, MST..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -520,6 +797,54 @@ export default function Generator() {
           </div>
         )}
       </div>
+
+      {/* Statistics Row for Logs tab */}
+      {activeTab === 'logs' && (
+        <div className="flex flex-wrap gap-2 animate-in fade-in slide-in-from-top-2 duration-300">
+          {/* Records */}
+          <div className="bg-blue-50 border border-blue-100 rounded-xl p-2 px-3 min-w-[70px] shadow-sm">
+            <div className="text-slate-500 text-[10px] font-semibold uppercase">Records</div>
+            <div className="font-extrabold text-blue-700 text-sm">{stats.records}</div>
+          </div>
+          {/* Giờ chạy */}
+          <div className="bg-sky-50 border border-sky-100 rounded-xl p-2 px-3 min-w-[90px] shadow-sm">
+            <div className="text-slate-500 text-[10px] font-semibold uppercase">⏱ Giờ chạy</div>
+            <div className="font-extrabold text-sky-700 text-sm">{stats.hours}h</div>
+          </div>
+          {/* Xăng */}
+          <div className="bg-red-50 border border-red-100 rounded-xl p-2 px-3 min-w-[80px] shadow-sm">
+            <div className="text-slate-500 text-[10px] font-semibold uppercase">⛽ Xăng</div>
+            <div className="font-extrabold text-red-600 text-sm">{stats.fuelXang}L</div>
+          </div>
+          {/* Dầu */}
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-2 px-3 min-w-[80px] shadow-sm">
+            <div className="text-slate-500 text-[10px] font-semibold uppercase">🛢 Dầu</div>
+            <div className="font-extrabold text-slate-700 text-sm">{stats.fuelDau}L</div>
+          </div>
+          {/* Thành tiền */}
+          <div className="bg-amber-50/50 border border-amber-100 rounded-xl p-2 px-3 min-w-[110px] shadow-sm">
+            <div className="text-slate-500 text-[10px] font-semibold uppercase">💰 Thành tiền</div>
+            <div className="font-extrabold text-amber-700 text-sm">{formatCurrency(stats.totalThanhTien)}</div>
+          </div>
+          {/* VAT */}
+          <div className="bg-orange-50 border border-orange-100 rounded-xl p-2 px-3 min-w-[95px] shadow-sm">
+            <div className="text-slate-500 text-[10px] font-semibold uppercase">VAT</div>
+            <div className="font-extrabold text-orange-600 text-sm">{formatCurrency(stats.totalVat)}</div>
+          </div>
+          {/* Tổng cộng */}
+          <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-2 px-4 min-w-[120px] shadow-sm">
+            <div className="text-slate-500 text-[10px] font-semibold uppercase">🏆 Tổng cộng</div>
+            <div className="font-extrabold text-emerald-700 text-sm">{formatCurrency(stats.totalCong)}</div>
+          </div>
+          {/* Chờ duyệt */}
+          {stats.pendingCount > 0 && (
+            <div className="bg-yellow-50 border border-yellow-300 rounded-xl p-2 px-3 min-w-[85px] shadow-sm">
+              <div className="text-amber-800 text-[10px] font-semibold uppercase">⏳ Chờ duyệt</div>
+              <div className="font-extrabold text-amber-800 text-sm">{stats.pendingCount}</div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Main Table Card */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col h-[calc(100vh-270px)] w-full relative">
@@ -538,61 +863,135 @@ export default function Generator() {
                     <div className="text-center py-20 text-slate-400">Không tìm thấy nhật ký chạy máy nào.</div>
                   ) : (
                     <table className="min-w-full divide-y divide-gray-200 text-left">
-                      <thead className="bg-gray-50 sticky top-0 z-10 text-xs font-bold text-gray-500 uppercase tracking-wider">
-                        <tr>
-                          <th scope="col" className="px-4 py-3">Ngày</th>
-                          <th scope="col" className="px-4 py-3">Mã Trạm</th>
-                          <th scope="col" className="px-4 py-3">Tên Trạm</th>
-                          <th scope="col" className="px-4 py-3">Thời Gian</th>
-                          <th scope="col" className="px-4 py-3">Giờ chạy (h)</th>
-                          <th scope="col" className="px-4 py-3">Dầu tiêu hao</th>
-                          <th scope="col" className="px-4 py-3">Định mức thực tế</th>
-                          <th scope="col" className="px-4 py-3">Nguồn</th>
-                          <th scope="col" className="px-4 py-3">Người vận hành / Ghi chú</th>
-                          <th scope="col" className="px-4 py-3 text-right">Thao Tác</th>
+                      <thead className="bg-gray-50 sticky top-0 z-10 text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-slate-200">
+                        <tr className="border-b border-slate-100">
+                          <th scope="col" className="px-3 py-2.5">Site ID cũ</th>
+                          <th scope="col" className="px-3 py-2.5">Site ID mới</th>
+                          <th scope="col" className="px-3 py-2.5">Nguồn</th>
+                          <th scope="col" className="px-3 py-2.5">Ngày VH</th>
+                          <th scope="col" className="px-3 py-2.5">CS Máy</th>
+                          <th scope="col" className="px-3 py-2.5">Giờ BĐ</th>
+                          <th scope="col" className="px-3 py-2.5">Giờ KT</th>
+                          <th scope="col" className="px-3 py-2.5">TG (h)</th>
+                          <th scope="col" className="px-3 py-2.5 text-right">NL Hao</th>
+                          <th scope="col" className="px-3 py-2.5 text-right">Đơn giá</th>
+                          <th scope="col" className="px-3 py-2.5 text-right">Thành tiền</th>
+                          <th scope="col" className="px-3 py-2.5">Ghi chú</th>
+                          <th scope="col" className="px-3 py-2.5">Status</th>
+                          <th scope="col" className="px-3 py-2.5 text-right">Thao tác</th>
+                        </tr>
+                        <tr className="bg-slate-50/50">
+                          <th className="px-2 py-1.5">
+                            <div className="relative">
+                              <Search className="absolute left-1.5 top-2.5 h-3 w-3 text-slate-400" />
+                              <input 
+                                type="text" 
+                                placeholder="Trạm" 
+                                className="w-full pl-5.5 pr-1 py-0.5 border border-slate-200 rounded text-[11px] font-normal focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                                value={searchSite}
+                                onChange={(e) => setSearchSite(e.target.value)}
+                              />
+                            </div>
+                          </th>
+                          <th className="px-2 py-1.5"></th>
+                          <th className="px-2 py-1.5"></th>
+                          <th className="px-2 py-1.5">
+                            <input 
+                              type="date" 
+                              className="w-full px-1 py-0.5 border border-slate-200 rounded text-[11px] font-normal focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                              value={searchDate}
+                              onChange={(e) => setSearchDate(e.target.value)}
+                            />
+                          </th>
+                          <th className="px-2 py-1.5"></th>
+                          <th className="px-2 py-1.5"></th>
+                          <th className="px-2 py-1.5"></th>
+                          <th className="px-2 py-1.5"></th>
+                          <th className="px-2 py-1.5"></th>
+                          <th className="px-2 py-1.5"></th>
+                          <th className="px-2 py-1.5"></th>
+                          <th className="px-2 py-1.5"></th>
+                          <th className="px-2 py-1.5"></th>
+                          <th className="px-2 py-1.5"></th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-100 text-[13px] text-gray-700">
                         {filteredLogs.map((log) => {
-                          const runtime = parseFloat(log.run_details.thoi_gian_hoat_dong) || 0;
-                          const fuel = parseFloat(log.run_details.nhien_lieu_tieu_hao) || 0;
-                          const actRate = runtime > 0 ? (fuel / runtime).toFixed(2) : '0';
-                          const specs = getStationSpecs(log.site_id);
-                          const limitRate = specs ? specs.dinh_muc_thuc_te : 0;
-                          const isOver = limitRate > 0 && parseFloat(actRate) > limitRate * 1.1;
+                          const runtime = parseFloat(log.run_details?.thoi_gian_hoat_dong) || 0;
+                          const fuel = parseFloat(log.run_details?.nhien_lieu_tieu_hao) || 0;
+                          const donGia = parseFloat(log.run_details?.don_gia) || 0;
+                          const thanhTien = parseFloat(log.run_details?.thanh_tien) || 0;
+                          const status = log.run_details?.status || 'approved';
+                          const source = log.run_details?.source || 'manual';
+                          const ghiChu = log.run_details?.ghi_chu || '';
+                          const operator = log.run_details?.operator || '';
+                          const congSuat = log.run_details?.cong_suat_may || '—';
+                          
+                          const stationObj = stations.find(s => s.site_id === log.site_id);
+                          const siteIdOld = stationObj ? (stationObj.site_id_old || '—') : '—';
+                          const siteIdNew = log.site_id || '—';
+
+                          const displayDate = log.date ? log.date.split('-').reverse().join('/') : '—';
 
                           return (
-                            <tr key={log.gen_log_id} className="hover:bg-slate-50/50 transition-colors">
-                              <td className="px-4 py-3 whitespace-nowrap font-medium text-slate-900">{log.date}</td>
-                              <td className="px-4 py-3 whitespace-nowrap font-bold text-blue-700">{getSiteLabel(log.site_id)}</td>
-                              <td className="px-4 py-3 whitespace-nowrap text-slate-500">{getSiteName(log.site_id)}</td>
-                              <td className="px-4 py-3 whitespace-nowrap font-mono text-slate-600">
-                                {log.run_details.gio_bat_dau || '—'} &rarr; {log.run_details.gio_ket_thuc || '—'}
-                              </td>
-                              <td className="px-4 py-3 whitespace-nowrap font-bold text-slate-800">{runtime}h</td>
-                              <td className="px-4 py-3 whitespace-nowrap font-bold text-blue-600">{fuel}L</td>
-                              <td className="px-4 py-3 whitespace-nowrap">
-                                <span className={`font-semibold px-2 py-0.5 rounded ${isOver ? 'bg-red-50 text-red-700 border border-red-100' : 'text-slate-700'}`}>
-                                  {actRate} L/h {limitRate > 0 && `(ĐM: ${limitRate}L/h)`}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3 whitespace-nowrap">
-                                {log.run_details.source === 'smartw' ? (
+                            <tr 
+                              key={log.gen_log_id} 
+                              className={`hover:bg-slate-50/50 transition-colors ${status === 'pending' ? 'bg-amber-50/30 font-semibold text-amber-900' : ''}`}
+                            >
+                              <td className="px-3 py-2.5 whitespace-nowrap font-bold text-slate-900">{siteIdOld}</td>
+                              <td className="px-3 py-2.5 whitespace-nowrap font-bold text-blue-700">{siteIdNew}</td>
+                              <td className="px-3 py-2.5 whitespace-nowrap">
+                                {source === 'smartw' ? (
                                   <span className="bg-cyan-50 text-cyan-700 border border-cyan-100 text-[10px] font-bold px-1.5 py-0.5 rounded">SmartW</span>
                                 ) : (
                                   <span className="bg-slate-50 text-slate-600 border border-slate-200 text-[10px] font-bold px-1.5 py-0.5 rounded">Nhập tay</span>
                                 )}
                               </td>
-                              <td className="px-4 py-3 max-w-xs truncate text-slate-500" title={log.run_details.ghi_chu}>
-                                {log.run_details.operator ? `[${log.run_details.operator}] ` : ''}{log.run_details.ghi_chu || '—'}
+                              <td className="px-3 py-2.5 whitespace-nowrap text-slate-600 font-medium">{displayDate}</td>
+                              <td className="px-3 py-2.5 whitespace-nowrap text-slate-600">{congSuat}</td>
+                              <td className="px-3 py-2.5 whitespace-nowrap font-mono text-slate-600">{log.run_details?.gio_bat_dau || '—'}</td>
+                              <td className="px-3 py-2.5 whitespace-nowrap font-mono text-slate-600">{log.run_details?.gio_ket_thuc || '—'}</td>
+                              <td className="px-3 py-2.5 whitespace-nowrap font-bold text-slate-800">{runtime}h</td>
+                              <td className="px-3 py-2.5 whitespace-nowrap font-bold text-blue-600 text-right">{fuel}L</td>
+                              <td className="px-3 py-2.5 whitespace-nowrap font-mono text-slate-600 text-right">{donGia ? formatCurrency(donGia).replace(' ₫', '') : '—'}</td>
+                              <td className="px-3 py-2.5 whitespace-nowrap font-bold text-slate-900 text-right">{thanhTien ? formatCurrency(thanhTien).replace(' ₫', '') + 'đ' : '—'}</td>
+                              <td className="px-3 py-2.5 max-w-xs truncate text-slate-500" title={ghiChu}>
+                                {operator ? `[${operator}] ` : ''}{ghiChu || '—'}
                               </td>
-                              <td className="px-4 py-3 whitespace-nowrap text-right text-xs">
+                              <td className="px-3 py-2.5 whitespace-nowrap">
+                                {status === 'approved' ? (
+                                  <span className="bg-emerald-50 text-emerald-700 border border-emerald-100 text-[10px] font-bold px-1.5 py-0.5 rounded">Đã duyệt</span>
+                                ) : status === 'rejected' ? (
+                                  <span className="bg-red-50 text-red-700 border border-red-100 text-[10px] font-bold px-1.5 py-0.5 rounded">Từ chối</span>
+                                ) : (
+                                  <span className="bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold px-1.5 py-0.5 rounded">Chờ duyệt</span>
+                                )}
+                              </td>
+                              <td className="px-3 py-2.5 whitespace-nowrap text-right text-xs space-x-1">
+                                {status === 'pending' && (
+                                  <>
+                                    <button 
+                                      onClick={() => handleApproveLog(log.gen_log_id, 'approved')}
+                                      className="text-emerald-600 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 p-1.5 rounded transition-colors inline-flex items-center cursor-pointer"
+                                      title="Duyệt"
+                                    >
+                                      <CheckCircle2 size={13} />
+                                    </button>
+                                    <button 
+                                      onClick={() => handleApproveLog(log.gen_log_id, 'rejected')}
+                                      className="text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 p-1.5 rounded transition-colors inline-flex items-center cursor-pointer"
+                                      title="Từ chối"
+                                    >
+                                      <X size={13} />
+                                    </button>
+                                  </>
+                                )}
                                 <button 
                                   onClick={() => handleDeleteLog(log.gen_log_id)}
                                   className="text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 p-1.5 rounded transition-colors inline-flex items-center cursor-pointer"
                                   title="Xóa"
                                 >
-                                  <Trash size={14} />
+                                  <Trash size={13} />
                                 </button>
                               </td>
                             </tr>
