@@ -462,7 +462,7 @@ export default function Generator() {
               });
 
               if (matchingRefill) {
-                anomalies.append({
+                anomalies.push({
                   type: 'MISSING_LOG',
                   severity: 'high',
                   site_id: site.site_id,
