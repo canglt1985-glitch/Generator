@@ -191,9 +191,32 @@ export default function VhktRan() {
     return `${hours}:${minutes}`;
   }
 
+  // Helper to determine if an error is still active
+  const getIsActiveError = (err) => {
+    if (!err) return false;
+    const errTime = new Date(err.time).getTime();
+    if (isNaN(errTime)) return false;
+    
+    const sourcePollMap = {
+      alarm: status.last_alarm_poll,
+      pakh: status.last_pakh_poll,
+      vhkt: status.last_vhkt_poll,
+      mfd: status.last_mfd_poll,
+    };
+    
+    const lastPollStr = sourcePollMap[err.source];
+    if (!lastPollStr) return true;
+    
+    const lastPollTime = new Date(lastPollStr).getTime();
+    if (isNaN(lastPollTime)) return true;
+    
+    return errTime > lastPollTime;
+  };
+
   // Render Status Alert Banner
   const loginPaused = status.login_fail_count >= 10;
   const recentError = status.errors && status.errors.length > 0 ? status.errors[status.errors.length - 1] : null;
+  const activeError = getIsActiveError(recentError) ? recentError : null;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300 text-slate-800">
@@ -214,6 +237,7 @@ export default function VhktRan() {
           onClick={() => {
             fetchAlarms();
             fetchStatus();
+            fetchPakh();
           }}
           className="flex items-center gap-1.5 px-4 py-2 border border-blue-600 text-blue-600 rounded-lg font-semibold text-sm hover:bg-blue-50 transition-colors shadow-sm"
         >
@@ -236,13 +260,13 @@ export default function VhktRan() {
         </div>
       )}
 
-      {recentError && !loginPaused && (
+      {activeError && !loginPaused && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3 text-amber-700 text-xs leading-relaxed">
           <AlertCircle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
           <div>
             <h4 className="font-bold text-amber-800">Cảnh báo lỗi vận hành gần nhất</h4>
             <p className="mt-1 font-mono text-[11px] bg-white p-2 rounded border border-gray-200 mt-1.5">
-              Lỗi: {recentError.error} ({formatDateTime(recentError.time)})
+              Lỗi: {activeError.error} ({formatDateTime(activeError.time)})
             </p>
           </div>
         </div>
@@ -318,7 +342,7 @@ export default function VhktRan() {
               <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse"></span>
               TẠM DỪNG
             </span>
-          ) : recentError ? (
+          ) : activeError ? (
             <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-semibold text-xs border border-amber-200">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-600 animate-pulse"></span>
               LỖI KẾT NỐI
