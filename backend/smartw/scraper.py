@@ -1143,6 +1143,120 @@ class SmartWScraper:
             logger.warning('SmartW Scrape VHKT: ⚠️ 0 records — keeping existing vhkt.json')
         return all_rows
 
+    async def scrape_pakh(self) -> list[dict]:
+        """Scrape PAKH (Phản Ánh Khách Hàng) from feedback/list.htm."""
+        await self._ensure_login()
+        url = (
+            'https://smartw.mobifone.vn/smartw/feedback/list.htm?'
+            'tab=xuly&id=&startDate=&caTruc=&tinhThanhPho=&xaPhuong=&is_ticket=&phong=&endDate=&'
+            'dept_xuly=&dept=&is_dongpa=&ttTicket=&to=MBF_MN_DONG_NAI_PVT_TVT3&loaiThueBao=&'
+            'nhomPa=&loaiPa=&fo_bo='
+        )
+        logger.info(f'SmartW Scrape PAKH: {url}')
+
+        await self._page.goto(url, wait_until='domcontentloaded', timeout=90000)
+        try:
+            await self._page.wait_for_load_state('networkidle', timeout=15000)
+        except Exception:
+            pass
+        await self._handle_session_expired()
+
+        # Click search if search button is present
+        try:
+            search_btn = self._page.locator('button:has-text("Tìm kiếm"), input[value="Tìm kiếm"]')
+            if await search_btn.count() > 0:
+                await search_btn.first.click(timeout=5000)
+                await self._page.wait_for_timeout(3000)
+                await self._page.wait_for_load_state('networkidle', timeout=15000)
+        except Exception as e:
+            logger.warning(f'SmartW PAKH: Search click failed or not needed: {e}')
+
+        # Set page size to 1000 to display all entries
+        try:
+            await self._page.evaluate('''() => {
+                if (typeof $ !== 'undefined' && $('#jqxgrid').length) {
+                    $('#jqxgrid').jqxGrid({ pagesize: 1000 });
+                }
+            }''')
+            await self._page.wait_for_timeout(3000)
+        except Exception as e:
+            logger.warning(f'SmartW PAKH: Could not set pagesize: {e}')
+
+        # Wait for grid rows to render
+        try:
+            await self._page.wait_for_selector('#contenttablejqxgrid div[role="row"]', timeout=15000)
+        except Exception as e:
+            logger.error(f'SmartW PAKH: jqxGrid rows not found: {e}')
+            return []
+
+        # Parse using jqxGrid API or DOM
+        table_data = await self._page.evaluate('''() => {
+            if (typeof $ !== 'undefined' && $('#jqxgrid').length) {
+                try {
+                    const rows = $('#jqxgrid').jqxGrid('getrows');
+                    if (rows && rows.length > 0) {
+                        return { api: true, rows: rows };
+                    }
+                } catch(e) {}
+            }
+
+            const headerEls = document.querySelectorAll('#columntablejqxgrid div[role="columnheader"]');
+            const headers = [];
+            for (const hdr of headerEls) {
+                const span = hdr.querySelector('span');
+                if (span) {
+                    const text = span.textContent.trim();
+                    if (text) headers.push(text);
+                }
+            }
+
+            const contentTable = document.getElementById('contenttablejqxgrid');
+            if (!contentTable) return { api: false, headers, rows: [] };
+
+            const rowEls = contentTable.querySelectorAll('div[role="row"]');
+            const dataRows = [];
+            for (const row of rowEls) {
+                const cells = row.querySelectorAll('div[role="gridcell"]');
+                const cellTexts = [];
+                for (const cell of cells) {
+                    const innerDiv = cell.querySelector('div');
+                    cellTexts.push(innerDiv ? innerDiv.textContent.trim() : cell.textContent.trim());
+                }
+                if (cellTexts.length > 0) dataRows.push(cellTexts);
+            }
+            return { api: false, headers, rows: dataRows };
+        }''')
+
+        if not table_data:
+            return []
+
+        rows = []
+        if table_data.get('api'):
+            rows = table_data['rows']
+            logger.info(f'SmartW PAKH Scrape: parsed {len(rows)} rows via jqxGrid API')
+        else:
+            headers = table_data.get('headers', [])
+            raw_rows = table_data.get('rows', [])
+            logger.info(f'SmartW PAKH Scrape: parsed {len(raw_rows)} rows via DOM. Headers: {headers}')
+            
+            for r in raw_rows:
+                row_dict = {}
+                for idx, val in enumerate(r):
+                    if idx < len(headers):
+                        row_dict[headers[idx]] = val
+                rows.append(row_dict)
+
+        # Convert any datetime objects in rows to ISO string format (Playwright python auto-converts JS Dates)
+        from datetime import datetime as datetime_class
+        for r in rows:
+            if isinstance(r, dict):
+                for k, v in list(r.items()):
+                    if isinstance(v, datetime_class):
+                        r[k] = v.isoformat()
+
+        self._save_json(rows, 'pakh.json')
+        return rows
+
     # ── Helpers ────────────────────────────────────────────────────
 
     @staticmethod

@@ -30,21 +30,15 @@ logger.info("==================================================")
 logger.info("🚀 Starting TVT3 V2 Backend Workers Daemon Manager")
 logger.info("==================================================")
 
-# 2. Tracks last execution times of scheduled jobs
-# Initialize with a past datetime so they run immediately on bootstrap to verify integration.
-bootstrap_time = datetime.now() - timedelta(days=1)
+# 2. Tracks last execution times/keys of scheduled jobs
+last_run = {}
 
-last_run = {
-    "smartw_alarm": bootstrap_time,
-    "smartw_report": bootstrap_time,
-    "invoice_scanner": bootstrap_time,
-    "evn_outages": bootstrap_time,
-    "fuel_price": bootstrap_time,
-    "smartw_vhkt": None,  # Special handler by day date string
-    "smartw_mfd": bootstrap_time,
-    "config_sync": bootstrap_time,
-    "daily_report": None,  # Special handler by day date string
-    "weekly_report": None  # Special handler by day date string
+# Staggered startup sequence configuration
+startup_time = datetime.now()
+startup_triggered = {
+    "alarm": False,
+    "pakh": False,
+    "invoice": False
 }
 
 # Long-running subprocess reference
@@ -150,84 +144,89 @@ def main():
 
             # 1. Maintain Telegram Bot
             maintain_telegram_bot()
-
-            # 2. Check and trigger scheduled jobs
             
-            # Job A: SmartW Alarm Poller (Every 15 minutes)
-            if (now - last_run["smartw_alarm"]).total_seconds() >= 15 * 60:
-                last_run["smartw_alarm"] = now
-                run_job(
-                    "smartw_alarm", 
-                    [python_exe, os.path.join(current_dir, "smartw_worker.py"), "--job", "alarm"]
-                )
+            # --- STAGGERED STARTUP SEQUENCE ---
+            time_since_start = (now - startup_time).total_seconds()
+            
+            # Staggered startup run for testing/validation (runs once within first 2 minutes of daemon boot)
+            if not startup_triggered["alarm"] and time_since_start >= 5:
+                startup_triggered["alarm"] = True
+                # Set initial schedule key to avoid double running in the same hour
+                current_quarter = (now.minute // 15) * 15
+                last_run["smartw_alarm_key"] = f"{today_str}_{now.hour}_{current_quarter}"
+                run_job("smartw_alarm", [python_exe, os.path.join(current_dir, "smartw_worker.py"), "--job", "alarm"])
+                
+            if not startup_triggered["pakh"] and time_since_start >= 60:
+                startup_triggered["pakh"] = True
+                last_run["smartw_pakh_key"] = f"{today_str}_{now.hour}"
+                run_job("smartw_pakh", [python_exe, os.path.join(current_dir, "smartw_worker.py"), "--job", "pakh"])
 
-            # Job B: Gmail Invoice Scanner (Every 1 hour)
-            if (now - last_run["invoice_scanner"]).total_seconds() >= 60 * 60:
-                last_run["invoice_scanner"] = now
-                run_job(
-                    "invoice_scanner", 
-                    [python_exe, os.path.join(current_dir, "invoice_worker.py")]
-                )
+            if not startup_triggered["invoice"] and time_since_start >= 120:
+                startup_triggered["invoice"] = True
+                last_run["invoice_scanner_key"] = f"{today_str}_{now.hour}"
+                run_job("invoice_scanner", [python_exe, os.path.join(current_dir, "invoice_worker.py")])
 
-            # Job C: SmartW Periodic 2-Hour Report Review (Every 2 hours)
-            if (now - last_run["smartw_report"]).total_seconds() >= 2 * 60 * 60:
-                last_run["smartw_report"] = now
-                run_job(
-                    "smartw_report", 
-                    [python_exe, os.path.join(current_dir, "smartw_worker.py"), "--job", "report"]
-                )
+            # --- MINUTE-BASED NON-OVERLAPPING CRON SCHEDULE ---
 
-            # Job D: EVN Outages Scraper (Every 6 hours)
-            if (now - last_run["evn_outages"]).total_seconds() >= 6 * 60 * 60:
-                last_run["evn_outages"] = now
-                run_job(
-                    "evn_outages", 
-                    [python_exe, os.path.join(current_dir, "fetch_outages.py")]
-                )
+            # Job A: SmartW Alarm Poller (Every 15 minutes at :00, :15, :30, :45)
+            current_quarter = (now.minute // 15) * 15
+            alarm_key = f"{today_str}_{now.hour}_{current_quarter}"
+            if now.minute in [0, 15, 30, 45] and last_run.get("smartw_alarm_key") != alarm_key:
+                last_run["smartw_alarm_key"] = alarm_key
+                run_job("smartw_alarm", [python_exe, os.path.join(current_dir, "smartw_worker.py"), "--job", "alarm"])
 
-            # Job E: Fuel Price Scraper (Every 12 hours)
-            if (now - last_run["fuel_price"]).total_seconds() >= 12 * 60 * 60:
-                last_run["fuel_price"] = now
-                run_job(
-                    "fuel_price", 
-                    [python_exe, os.path.join(current_dir, "fuel_price.py")]
-                )
+            # Job B: SmartW PAKH Poller (Every 1 hour at minute :05)
+            pakh_key = f"{today_str}_{now.hour}"
+            if now.minute == 5 and last_run.get("smartw_pakh_key") != pakh_key:
+                last_run["smartw_pakh_key"] = pakh_key
+                run_job("smartw_pakh", [python_exe, os.path.join(current_dir, "smartw_worker.py"), "--job", "pakh"])
 
-            # Job F: SmartW VHKT Morning Poll (Once daily at 07:05 AM)
-            if now.hour >= 7 and last_run["smartw_vhkt"] != today_str:
-                last_run["smartw_vhkt"] = today_str
-                run_job(
-                    "smartw_vhkt", 
-                    [python_exe, os.path.join(current_dir, "smartw_worker.py"), "--job", "vhkt"]
-                )
+            # Job C: SmartW MFD Oil Import (Once daily at 07:10 AM)
+            if now.hour == 7 and now.minute == 10 and last_run.get("smartw_mfd_key") != today_str:
+                last_run["smartw_mfd_key"] = today_str
+                run_job("smartw_mfd", [python_exe, os.path.join(current_dir, "smartw_worker.py"), "--job", "mfd"])
 
-            # Job G: SmartW MFD Oil Import (Every 4 hours)
-            if (now - last_run["smartw_mfd"]).total_seconds() >= 4 * 60 * 60:
-                last_run["smartw_mfd"] = now
-                run_job(
-                    "smartw_mfd", 
-                    [python_exe, os.path.join(current_dir, "smartw_worker.py"), "--job", "mfd"]
-                )
+            # Job D: SmartW VHKT Morning Poll (Once daily at 07:20 AM)
+            if now.hour == 7 and now.minute == 20 and last_run.get("smartw_vhkt_key") != today_str:
+                last_run["smartw_vhkt_key"] = today_str
+                run_job("smartw_vhkt", [python_exe, os.path.join(current_dir, "smartw_worker.py"), "--job", "vhkt"])
 
-            # Job I: Telegram Daily Report (Once daily at 07:15 AM)
-            if (now.hour > 7 or (now.hour == 7 and now.minute >= 15)) and last_run["daily_report"] != today_str:
-                last_run["daily_report"] = today_str
-                run_job(
-                    "daily_report", 
-                    [python_exe, os.path.join(current_dir, "daily_report.py")]
-                )
+            # Job E: SmartW Periodic 2-Hour Report Review (Every 2 hours at minute :25 of even hours)
+            report_key = f"{today_str}_{now.hour}"
+            if now.hour % 2 == 0 and now.minute == 25 and last_run.get("smartw_report_key") != report_key:
+                last_run["smartw_report_key"] = report_key
+                run_job("smartw_report", [python_exe, os.path.join(current_dir, "smartw_worker.py"), "--job", "report"])
 
-            # Job J: Telegram Weekly Report (Once weekly on Mondays at 07:30 AM)
-            if now.weekday() == 0 and (now.hour > 7 or (now.hour == 7 and now.minute >= 30)) and last_run["weekly_report"] != today_str:
-                last_run["weekly_report"] = today_str
-                run_job(
-                    "weekly_report", 
-                    [python_exe, os.path.join(current_dir, "weekly_report.py")]
-                )
+            # Job F: EVN Outages Scraper (Every 6 hours at minute :30 of hours 5, 11, 17, 23)
+            outage_key = f"{today_str}_{now.hour}"
+            if now.hour in [5, 11, 17, 23] and now.minute == 30 and last_run.get("evn_outages_key") != outage_key:
+                last_run["evn_outages_key"] = outage_key
+                run_job("evn_outages", [python_exe, os.path.join(current_dir, "fetch_outages.py")])
+
+            # Job G: Fuel Price Scraper (Every 12 hours at minute :30 of hours 0 and 16)
+            fuel_key = f"{today_str}_{now.hour}"
+            if now.hour in [0, 16] and now.minute == 30 and last_run.get("fuel_price_key") != fuel_key:
+                last_run["fuel_price_key"] = fuel_key
+                run_job("fuel_price", [python_exe, os.path.join(current_dir, "fuel_price.py")])
+
+            # Job H: Telegram Daily Report (Once daily at 07:35 AM)
+            if now.hour == 7 and now.minute == 35 and last_run.get("daily_report_key") != today_str:
+                last_run["daily_report_key"] = today_str
+                run_job("daily_report", [python_exe, os.path.join(current_dir, "daily_report.py")])
+
+            # Job I: Telegram Weekly Report (Once weekly on Mondays at 07:50 AM)
+            if now.weekday() == 0 and now.hour == 7 and now.minute == 50 and last_run.get("weekly_report_key") != today_str:
+                last_run["weekly_report_key"] = today_str
+                run_job("weekly_report", [python_exe, os.path.join(current_dir, "weekly_report.py")])
+
+            # Job J: Gmail Invoice Scanner (Once daily at 03:00 AM)
+            if now.hour == 3 and now.minute == 0 and last_run.get("invoice_scanner_key") != today_str:
+                last_run["invoice_scanner_key"] = today_str
+                run_job("invoice_scanner", [python_exe, os.path.join(current_dir, "invoice_worker.py")])
 
             # Job H: Sync configs from Supabase (Every 2 minutes)
-            if (now - last_run["config_sync"]).total_seconds() >= 2 * 60:
-                last_run["config_sync"] = now
+            if (now - last_run.get("config_sync_time", datetime.min)).total_seconds() >= 2 * 60:
+                last_run["config_sync_time"] = now
                 logger.info("🔄 Syncing system config from Supabase...")
                 try:
                     from sync_config import sync_configs

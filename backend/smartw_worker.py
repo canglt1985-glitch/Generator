@@ -191,7 +191,7 @@ def _fmt_sdate(sdate_str: str, full: bool = False) -> str:
     return sdate_str
 
 
-def _send_viber_report(lines: list):
+def _send_viber_report(lines: list, token: str = None):
     """Send a formatted report to Viber Channel via pa/post."""
     if not lines:
         return
@@ -201,15 +201,16 @@ def _send_viber_report(lines: list):
         "type": "text",
         "text": text
     }
-    viber_token = None
-    config_path = os.path.join(current_dir, 'data', 'system_config.json')
-    if os.path.exists(config_path):
-        try:
-            with open(config_path, 'r', encoding='utf-8') as f:
-                cfg = json.load(f)
-                viber_token = cfg.get('viber_bot_token_alarms')
-        except:
-            pass
+    viber_token = token
+    if not viber_token:
+        config_path = os.path.join(current_dir, 'data', 'system_config.json')
+        if os.path.exists(config_path):
+            try:
+                with open(config_path, 'r', encoding='utf-8') as f:
+                    cfg = json.load(f)
+                    viber_token = cfg.get('viber_bot_token_alarms')
+            except:
+                pass
     if not viber_token:
         viber_token = "567370461ff5bfce-6527e240db117ad7-ce130e1ad6041265"
         
@@ -624,55 +625,312 @@ def sync_alarms_to_supabase(result: dict):
             logger.error(f"Supabase Sync Error: Failed to upsert alarms: {e}")
 
 
-def sync_vhkt_to_supabase(vhkt_raw: dict):
-    """Upsert daily VHKT SLA records into Supabase."""
-    if not supabase or not vhkt_raw or not vhkt_raw.get('data'):
+def save_vhkt_to_local_json(vhkt_raw: dict):
+    """Save daily VHKT SLA records into a local JSON file."""
+    if not vhkt_raw or not vhkt_raw.get('data'):
         return
 
-    import uuid
-    from datetime import datetime
+    local_path = os.path.join(DATA_DIR, 'vhkt_sla.json')
+    try:
+        with open(local_path, 'w', encoding='utf-8') as f:
+            json.dump(vhkt_raw, f, ensure_ascii=False, indent=2)
+        logger.info(f"Local Storage: Saved {len(vhkt_raw.get('data', []))} SLA records to vhkt_sla.json")
+    except Exception as e:
+        logger.error(f"Local Storage Error: Failed to save SLA records to file: {e}")
 
-    all_rows = []
-    for row in vhkt_raw.get('data', []):
-        tram = (row.get('tram') or '').strip()
-        ngay_str = (row.get('ngay') or '').strip()
-        if not tram or not ngay_str:
+
+def _get_val(row: dict, keys: list) -> str:
+    for k in keys:
+        if k in row:
+            return str(row[k]).strip()
+        for rk in row.keys():
+            if rk.lower().strip() == k.lower().strip():
+                return str(row[rk]).strip()
+    return ""
+
+
+def format_pakh_message(row: dict) -> str:
+    pakh = _get_val(row, ['pakh', 'ma_pa', 'maPa', 'mã pa', 'id', 'ticket_id', 'ticketId', 'soPhanAnh', 'sđt', 'sdt', 'soThueBao'])
+    loai_tb = _get_val(row, ['loai_thue_bao', 'loaiThueBao', 'loaiTb', 'loại thuê bao', 'loại tb', 'loai_tb'])
+    tg_nhan = _get_val(row, ['tg_nhan', 'thoiGianNhan', 'ngayNhan', 'ngay_nhan', 'thời gian nhận', 'ngày nhận', 'sdate', 'sdateStr', 'created_at'])
+    tinh = _get_val(row, ['tinh', 'tinhThanhPho', 'tinh_thanh_pho', 'tỉnh', 'tỉnh/tp'])
+    huyen = _get_val(row, ['quanHuyen', 'quan_huyen', 'huyen', 'district', 'quận/huyện', 'quận', 'huyện'])
+    xa = _get_val(row, ['xaPhuong', 'xa_phuong', 'xa', 'phuong_xa', 'phường/xã', 'phường', 'xã'])
+    noi_dung = _get_val(row, ['noiDung', 'noiDungPa', 'noi_dung_pa', 'noi_dung', 'nội dung pa', 'nội dung phản ánh', 'nội dung'])
+    loai_cv = _get_val(row, ['loaiCongViec', 'loai_cong_viec', 'loaiCv', 'loại công việc', 'loại cv', 'loai_cv']) or 'XU_LY_PAKH'
+    priority = _get_val(row, ['priority', 'uuTien', 'uu_tien', 'mức độ ưu tiên', 'độ ưu tiên', 'ưu tiên', 'severity']) or 'THAP'
+    tg_bd = _get_val(row, ['tg_bd', 'thoiGianBatDau', 'ngayBatDau', 'tg_bat_dau', 'thời gian bắt đầu', 'ngày bắt đầu'])
+    tg_kt = _get_val(row, ['tg_kt', 'thoiGianKetThuc', 'ngayKetThuc', 'deadline', 'thời gian kết thúc', 'ngày kết thúc', 'hạn xử lý', 'edate', 'edateStr'])
+
+    msg = f"""- PAKH: {pakh}
+- Loại thuê bao: {loai_tb}
+- Thời gian nhận: {tg_nhan}
+- Tỉnh: {tinh}
+- Quận/huyện: {huyen}
+- Phường/xã: {xa}
+Bạn nhận được yêu cầu xử lý công việc sau: 
+ Nội dung công việc: {noi_dung}
+,
+ Loại công việc: {loai_cv},
+ Mức độ ưu tiên: {priority},
+ Thời gian bắt đầu: {tg_bd},
+ Thời gian kết thúc: {tg_kt}"""
+    return msg
+
+
+def process_pakh_alerts(pakh_list: list):
+    """Process scraped PAKH list: detect new tickets and expiring tickets, and alert to Viber."""
+    state_file = os.path.join(DATA_DIR, 'pakh_sent_alerts.json')
+    pakh_token = "56b57ae5bbb11e4f-b8084d4fec7bf6ee-e681b83f2f40f110"
+    
+    # Load state
+    state = {"alerted_new": [], "alerted_expiring": []}
+    if os.path.exists(state_file):
+        try:
+            with open(state_file, 'r', encoding='utf-8') as f:
+                state = json.load(f)
+                if "alerted_new" not in state: state["alerted_new"] = []
+                if "alerted_expiring" not in state: state["alerted_expiring"] = []
+        except Exception:
+            pass
+
+    changed = False
+
+    def parse_dt(dt_str):
+        if not dt_str:
+            return None
+        for fmt in ['%d/%m/%Y %H:%M:%S', '%d/%m/%Y %H:%M', '%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M', '%Y-%m-%dT%H:%M:%S']:
+            try:
+                return datetime.strptime(dt_str.strip(), fmt)
+            except ValueError:
+                continue
+        return None
+
+    for row in pakh_list:
+        pakh_id = _get_val(row, ['pakh', 'ma_pa', 'maPa', 'mã pa', 'id', 'ticket_id', 'ticketId', 'soPhanAnh', 'sđt', 'sdt', 'soThueBao'])
+        if not pakh_id:
             continue
 
+        # 1. Alert for NEW tickets
+        if pakh_id not in state["alerted_new"]:
+            msg = format_pakh_message(row)
+            _send_viber_report(msg.split('\n'), token=pakh_token)
+            state["alerted_new"].append(pakh_id)
+            changed = True
+
+        # 2. Alert for expiring tickets (less than 12 hours remaining)
+        tg_kt_str = _get_val(row, ['tg_kt', 'thoiGianKetThuc', 'ngayKetThuc', 'deadline', 'thời gian kết thúc', 'ngày kết thúc', 'hạn xử lý', 'edate', 'edateStr'])
+        if tg_kt_str and pakh_id not in state["alerted_expiring"]:
+            kt_dt = parse_dt(tg_kt_str)
+            if kt_dt:
+                now = datetime.now()
+                remaining = (kt_dt - now).total_seconds()
+                if 0 < remaining <= 12 * 3600:
+                    msg = "⏰ *CẢNH BÁO: PAKH SẮP HẾT HẠN (DEADLINE CLOCK)*\n\n" + format_pakh_message(row)
+                    _send_viber_report(msg.split('\n'), token=pakh_token)
+                    state["alerted_expiring"].append(pakh_id)
+                    changed = True
+
+    # Limit state size to prevent infinite growth (keep last 500 records)
+    if len(state["alerted_new"]) > 500:
+        state["alerted_new"] = state["alerted_new"][-500:]
+        changed = True
+    if len(state["alerted_expiring"]) > 500:
+        state["alerted_expiring"] = state["alerted_expiring"][-500:]
+        changed = True
+
+    if changed:
         try:
-            dt = datetime.strptime(ngay_str, '%d/%m/%Y')
-            ngay_iso = dt.strftime('%Y-%m-%d')
-        except ValueError:
-            logger.warning(f"SLA Sync: Invalid date format: {ngay_str}")
-            continue
-
-        val_str = f"vhkt_{tram}_{ngay_iso}"
-        rec_id = str(uuid.uuid5(uuid.NAMESPACE_OID, val_str))
-
-        all_rows.append({
-            "id": rec_id,
-            "tram": tram,
-            "ngay": ngay_iso,
-            "to_vt": row.get('to_vt'),
-            "md_so_lan": int(row.get('md_so_lan') or 0),
-            "md_phut": int(row.get('md_phut') or 0),
-            "md_sla": row.get('md_sla'),
-            "mpd_so_lan": int(row.get('mpd_so_lan') or 0),
-            "mpd_phut": int(row.get('mpd_phut') or 0),
-            "mll_so_lan": int(row.get('mll_so_lan') or 0),
-            "mll_phut": int(row.get('mll_phut') or 0),
-            "mll_sla": row.get('mll_sla')
-        })
-
-    if all_rows:
-        try:
-            chunk_size = 100
-            for i in range(0, len(all_rows), chunk_size):
-                chunk = all_rows[i:i+chunk_size]
-                supabase.table("smartw_vhkt_sla").upsert(chunk).execute()
-            logger.info(f"Supabase Sync: Upserted {len(all_rows)} daily SLA records.")
+            with open(state_file, 'w', encoding='utf-8') as f:
+                json.dump(state, f, ensure_ascii=False, indent=2)
         except Exception as e:
-            logger.error(f"Supabase Sync Error: Failed to upsert SLA records: {e}")
+            logger.error(f"Failed to save PAKH alerts state: {e}")
+
+
+def run_pakh_poll():
+    """Poll PAKH reports and send Viber alerts for new or near-expiration tickets."""
+    if not _acquire_lock():
+        return
+
+    from smartw.config import load_smartw_config
+    config = load_smartw_config()
+    if not config:
+        logger.warning('SmartW Worker: Not configured, skipping PAKH poll')
+        return
+
+    # Circuit breaker
+    status = _load_status()
+    fail_count = status.get('login_fail_count', 0)
+    if fail_count >= MAX_LOGIN_FAILURES:
+        logger.warning(f'SmartW Worker: PAKH polling PAUSED — {fail_count} login failures.')
+        return
+
+    _is_running = True
+
+    async def _do_pakh_poll():
+        scraper = await _get_or_create_scraper(config['username'], config['password'])
+        if not scraper:
+            return {'error': 'Login thất bại'}
+
+        results = {}
+        try:
+            await scraper._ensure_login()
+            results['pakh'] = await scraper.scrape_pakh()
+            results['status'] = 'success'
+            results['scraped_at'] = datetime.now().isoformat()
+        except Exception as e:
+            err_str = str(e)
+            logger.error(f'SmartW PAKH Scrape Error: {err_str}')
+
+            # Retry once on browser crash
+            crash_keywords = ['NoneType', 'send', 'closed', 'Target page']
+            if any(kw in err_str for kw in crash_keywords):
+                logger.info('SmartW Worker: PAKH browser crash — retrying...')
+                await _destroy_scraper()
+                try:
+                    scraper = await _get_or_create_scraper(config['username'], config['password'])
+                    if scraper:
+                        await scraper._ensure_login()
+                        results['pakh'] = await scraper.scrape_pakh()
+                        results['status'] = 'success'
+                        results['scraped_at'] = datetime.now().isoformat()
+                    else:
+                        results['error'] = 'Login thất bại (retry)'
+                except Exception as retry_err:
+                    results['error'] = str(retry_err)
+                    await _destroy_scraper()
+            else:
+                results['error'] = err_str
+                await _destroy_scraper()
+        return results
+
+    try:
+        logger.info(f'⏰ SmartW Worker: Starting PAKH poll at {datetime.now()}')
+        result = _run_async(_do_pakh_poll) or {}
+
+        if result.get('error'):
+            logger.error(f'SmartW Worker: ❌ PAKH: {result["error"]}')
+            status['errors'].append({
+                'time': datetime.now().isoformat(),
+                'error': f'PAKH: {result["error"]}',
+                'source': 'pakh'
+            })
+            status['errors'] = status['errors'][-10:]
+            err_lower = result['error'].lower()
+            if any(kw in err_lower for kw in ['login', 'credentials']):
+                _record_login_failure(status, 'pakh')
+        else:
+            status['login_fail_count'] = 0
+            status['viber_sso_error_sent'] = False
+
+            # Clear stale errors on success
+            status['errors'] = [
+                e for e in status['errors']
+                if e.get('source') != 'pakh'
+            ]
+
+            pakh_list = result.get('pakh', [])
+            process_pakh_alerts(pakh_list)
+
+        status['last_pakh_poll'] = datetime.now().isoformat()
+
+    except Exception as e:
+        logger.error(f'SmartW Worker: ❌ PAKH unexpected error: {e}')
+        status['errors'].append({
+            'time': datetime.now().isoformat(),
+            'error': str(e),
+            'source': 'pakh'
+        })
+        status['errors'] = status['errors'][-10:]
+    finally:
+        _save_status(status)
+        _release_lock()
+        sync_status_to_supabase(status)
+
+
+def check_and_alert_flapping(all_new_alarms: dict):
+    """
+    Check if any site is experiencing flapping alarms (firing multiple times a day).
+    Only checks for: 'md' (Mất AC), 'mll' (Mất liên lạc), and 'mpd' (Chạy máy phát).
+    Threshold: 3 or more times a day.
+    Saves state locally in data/smartw/alarm_history_today.json.
+    """
+    history_file = os.path.join(DATA_DIR, 'alarm_history_today.json')
+    today_str = datetime.now().strftime('%Y-%m-%d')
+    
+    # Load existing history
+    history_data = {"date": today_str, "history": [], "alerted": {}}
+    if os.path.exists(history_file):
+        try:
+            with open(history_file, 'r', encoding='utf-8') as f:
+                loaded = json.load(f)
+                if loaded.get("date") == today_str:
+                    history_data = loaded
+                    if "alerted" not in history_data:
+                        history_data["alerted"] = {}
+        except Exception as e:
+            logger.error(f"Failed to load alarm history: {e}")
+
+    changed = False
+    flapping_alerts = []
+
+    # Map table_type to human-readable name
+    type_names = {
+        'md': 'Mất điện lưới (AC Fail)',
+        'mll': 'Mất liên lạc (MLL)',
+        'mpd': 'Chạy máy phát điện (MPD)'
+    }
+
+    # Process newly fired alarms
+    for ttype in ['md', 'mll', 'mpd']:
+        new_list = all_new_alarms.get(ttype, [])
+        for alarm in new_list:
+            site = _site_key(alarm)
+            if site == 'Unknown':
+                continue
+                
+            event_time = datetime.now().isoformat()
+            history_data["history"].append({
+                "site": site,
+                "type": ttype,
+                "time": event_time
+            })
+            changed = True
+
+            # Count occurrences today
+            count = sum(1 for item in history_data["history"] if item["site"] == site and item["type"] == ttype)
+            
+            # Check threshold (>= 3 times)
+            if count >= 3:
+                # We alert on the 3rd time, 4th time, etc. but only once per count landmark
+                alert_key = f"{site}_{ttype}_{count}"
+                if alert_key not in history_data["alerted"]:
+                    site_label = _get_site_label(site)
+                    alarm_name = type_names.get(ttype, ttype)
+                    
+                    message = [
+                        "⚠️ *CẢNH BÁO CHẬP CHỜN (FLAPPING ALARM)*",
+                        "------------",
+                        f"Trạm {site_label} đang có hiện tượng chập chờn cảnh báo:",
+                        f"• **Loại cảnh báo:** `{alarm_name}`",
+                        f"• **Số lần xuất hiện hôm nay:** `{count} lần`",
+                        "------------",
+                        "📢 Vui lòng kiểm tra tiếp xúc nguồn, cáp quang hoặc thiết bị tại trạm!"
+                    ]
+                    flapping_alerts.append(message)
+                    history_data["alerted"][alert_key] = True
+
+    if changed:
+        try:
+            with open(history_file, 'w', encoding='utf-8') as f:
+                json.dump(history_data, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            logger.error(f"Failed to save alarm history: {e}")
+
+    # Send alerts if any
+    for msg in flapping_alerts:
+        _send_viber_report(msg)
+
 
 
 def sync_status_to_supabase(status: dict):
@@ -828,6 +1086,9 @@ def run_alarm_poll():
                 if new_alarms:
                     logger.info(f'SmartW Worker: {len(new_alarms)} {table_type.upper()} alarm(s) newly detected')
                     all_new[table_type] = new_alarms
+
+            if all_new:
+                check_and_alert_flapping(all_new)
 
             if all_new or all_cleared:
                 sep = '------------'
@@ -1105,7 +1366,7 @@ def run_vhkt_poll():
         _release_lock()
         from smartw.scraper import load_cached_data
         vhkt_raw = load_cached_data('vhkt')
-        sync_vhkt_to_supabase(vhkt_raw)
+        save_vhkt_to_local_json(vhkt_raw)
         sync_status_to_supabase(status)
 
 
@@ -1406,8 +1667,8 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     
     parser = argparse.ArgumentParser(description="SmartW Worker")
-    parser.add_argument('--job', type=str, default='alarm', choices=['alarm', 'vhkt', 'mfd', 'report'],
-                        help="Job to run (alarm, vhkt, mfd, report)")
+    parser.add_argument('--job', type=str, default='alarm', choices=['alarm', 'vhkt', 'mfd', 'report', 'pakh'],
+                        help="Job to run (alarm, vhkt, mfd, report, pakh)")
     parser.add_argument('--date', type=str, default=None,
                         help="Target date for mfd job (YYYY-MM-DD)")
     args = parser.parse_args()
@@ -1424,3 +1685,6 @@ if __name__ == '__main__':
     elif args.job == 'report':
         logger.info("Executing periodic report job...")
         send_periodic_full_report()
+    elif args.job == 'pakh':
+        logger.info("Executing PAKH poll job...")
+        run_pakh_poll()

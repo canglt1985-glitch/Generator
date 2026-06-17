@@ -5,7 +5,6 @@ import { supabase } from '../supabaseClient';
 export default function VhktRan() {
   const [activeTab, setActiveTab] = useState('md');
   const [alarms, setAlarms] = useState([]);
-  const [slaRecords, setSlaRecords] = useState([]);
   const [siteMap, setSiteMap] = useState({});
   const [status, setStatus] = useState({
     last_alarm_poll: null,
@@ -51,21 +50,7 @@ export default function VhktRan() {
     }
   }
 
-  // Fetch SLA data
-  async function fetchSla() {
-    try {
-      const { data } = await supabase
-        .from('smartw_vhkt_sla')
-        .select('*');
-      if (data) {
-        // Sort by md_so_lan descending
-        const sorted = [...data].sort((a, b) => (b.md_so_lan || 0) - (a.md_so_lan || 0));
-        setSlaRecords(sorted);
-      }
-    } catch (err) {
-      console.error('Error fetching SLA:', err);
-    }
-  }
+
 
   // Fetch worker status
   async function fetchStatus() {
@@ -87,7 +72,7 @@ export default function VhktRan() {
   useEffect(() => {
     async function init() {
       setLoading(true);
-      await Promise.all([fetchSiteMap(), fetchAlarms(), fetchSla(), fetchStatus()]);
+      await Promise.all([fetchSiteMap(), fetchAlarms(), fetchStatus()]);
       setLoading(false);
     }
     init();
@@ -108,18 +93,9 @@ export default function VhktRan() {
       })
       .subscribe();
 
-    // Subscribe to SLA changes
-    const slaSubscription = supabase
-      .channel('smartw_sla_changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'smartw_vhkt_sla' }, () => {
-        fetchSla();
-      })
-      .subscribe();
-
     return () => {
       supabase.removeChannel(alarmsSubscription);
       supabase.removeChannel(statusSubscription);
-      supabase.removeChannel(slaSubscription);
     };
   }, []);
 
@@ -214,7 +190,6 @@ export default function VhktRan() {
         <button
           onClick={() => {
             fetchAlarms();
-            fetchSla();
             fetchStatus();
           }}
           className="flex items-center gap-1.5 px-4 py-2 border border-blue-600 text-blue-600 rounded-lg font-semibold text-sm hover:bg-blue-50 transition-colors shadow-sm"
@@ -251,13 +226,12 @@ export default function VhktRan() {
       )}
 
       {/* Nav Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         {[
           { id: 'md', label: 'Mất điện', count: mdActive.length, color: 'amber', icon: '⚠️' },
           { id: 'mpd', label: 'Máy phát điện', count: mpdActive.length, color: 'emerald', icon: '🟢' },
           { id: 'mll', label: 'Mất liên lạc', count: mllActive.length, color: 'red', icon: '🔴' },
           { id: 'mll_cell', label: 'Cell Off', count: cellActive.length, color: 'purple', icon: '📡' },
-          { id: 'vhkt', label: 'SLA', count: '📊 BÁO CÁO', color: 'blue', icon: null },
         ].map(card => {
           const isActive = activeTab === card.id;
           
@@ -546,106 +520,7 @@ export default function VhktRan() {
               </div>
             )}
 
-            {/* Tab: SLA (VHKT) */}
-            {activeTab === 'vhkt' && (
-              <div className="divide-y divide-gray-200 bg-white">
-                <div className="p-4 bg-gray-50 flex items-center justify-between text-xs text-gray-500 font-medium">
-                  <span className="flex items-center gap-2">
-                    <BarChart3 className="h-4 w-4 text-blue-600" />
-                    Báo cáo tổng hợp SLA ngày hôm qua (TVT 3)
-                  </span>
-                  <span>Đồng bộ lúc: {status.last_vhkt_poll ? formatDateTime(status.last_vhkt_poll) : 'N/A'}</span>
-                </div>
-                {slaRecords.length === 0 ? (
-                  <div className="p-12 text-center text-gray-400 text-sm">
-                    ⚠️ Chưa có dữ liệu SLA ngày hôm qua. SLA được cập nhật tự động vào 5:00 AM hàng ngày.
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-center border-collapse text-xs sm:text-sm">
-                      <thead>
-                        {/* Group Headers - Desktop Only */}
-                        <tr className="border-b border-gray-200 bg-gray-50 text-gray-500 uppercase tracking-wider font-semibold text-[10px] sm:text-xs hidden md:table-row">
-                          <th className="py-2.5 px-3" rowSpan={2}>Trạm (Mới/Cũ)</th>
-                          <th className="py-2 px-3 border-l border-gray-200 bg-amber-500/5 text-amber-700" colSpan={3}>Mất điện (MĐ)</th>
-                          <th className="py-2 px-3 border-l border-gray-200 bg-green-500/5 text-green-700" colSpan={2}>Chạy máy phát (MPĐ)</th>
-                          <th className="py-2 px-3 border-l border-gray-200 bg-red-500/5 text-red-700" colSpan={3}>Mất liên lạc (MLL)</th>
-                        </tr>
-                        {/* Sub headers - Desktop Only */}
-                        <tr className="border-b border-gray-200 bg-gray-50 text-gray-400 uppercase tracking-wider font-semibold text-[9px] sm:text-[10px] hidden md:table-row">
-                          <th className="py-2 px-3 border-l border-gray-200">Lần</th>
-                          <th className="py-2 px-3">Phút</th>
-                          <th className="py-2 px-3">SLA</th>
-                          <th className="py-2 px-3 border-l border-gray-200">Lần</th>
-                          <th className="py-2 px-3">Phút</th>
-                          <th className="py-2 px-3 border-l border-gray-200">Lần</th>
-                          <th className="py-2 px-3">Phút</th>
-                          <th className="py-2 px-3">SLA</th>
-                        </tr>
-                        {/* Mobile Compact Headers */}
-                        <tr className="border-b border-gray-200 bg-gray-50 text-[10px] text-gray-500 uppercase font-semibold md:hidden">
-                          <th className="py-2.5 px-2">Trạm</th>
-                          <th className="py-2 px-1 border-l border-gray-200 text-[9px]">MĐ<br/>Lần</th>
-                          <th className="py-2 px-1 text-[9px]">MĐ<br/>Phút</th>
-                          <th className="py-2 px-1 text-[9px]">MĐ<br/>SLA</th>
-                          <th className="py-2 px-1 border-l border-gray-200 text-[9px]">MPĐ<br/>Lần</th>
-                          <th className="py-2 px-1 text-[9px]">MPĐ<br/>Phút</th>
-                          <th className="py-2 px-1 border-l border-gray-200 text-[9px]">MLL<br/>Lần</th>
-                          <th className="py-2 px-1 text-[9px]">MLL<br/>Phút</th>
-                          <th className="py-2 px-1 text-[9px]">MLL<br/>SLA</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100 text-gray-700">
-                        {slaRecords.map(r => {
-                          const isMdSlaPass = (r.md_sla || '').toLowerCase().includes('đạt');
-                          const isMllSlaPass = (r.mll_sla || '').toLowerCase().includes('đạt');
-                          
-                          return (
-                            <tr key={r.id} className="hover:bg-gray-50 transition-colors">
-                              <td className="py-3 px-3 font-bold border-r border-gray-100">
-                                <div className="flex items-center justify-start gap-2 max-w-xs mx-auto text-left">
-                                  {renderSiteLabel(r.tram)}
-                                </div>
-                              </td>
-                              
-                              {/* MD */}
-                              <td className="py-3 px-2 font-medium text-gray-600">{r.md_so_lan || 0}</td>
-                              <td className="py-3 px-2 font-semibold text-gray-900">{r.md_phut || 0}</td>
-                              <td className="py-3 px-2 border-r border-gray-100">
-                                {r.md_sla ? (
-                                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                                    isMdSlaPass ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
-                                  }`}>
-                                    {isMdSlaPass ? 'Đạt' : 'K.Đạt'}
-                                  </span>
-                                ) : '--'}
-                              </td>
 
-                              {/* MPD */}
-                              <td className="py-3 px-2 font-medium text-gray-600">{r.mpd_so_lan || 0}</td>
-                              <td className="py-3 px-2 font-semibold text-gray-900 border-r border-gray-100">{r.mpd_phut || 0}</td>
-
-                              {/* MLL */}
-                              <td className="py-3 px-2 font-medium text-gray-600">{r.mll_so_lan || 0}</td>
-                              <td className="py-3 px-2 font-semibold text-gray-900">{r.mll_phut || 0}</td>
-                              <td className="py-3 px-2">
-                                {r.mll_sla ? (
-                                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                                    isMllSlaPass ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
-                                  }`}>
-                                    {isMllSlaPass ? 'Đạt' : 'K.Đạt'}
-                                  </span>
-                                ) : '--'}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            )}
           </div>
         )}
       </div>
