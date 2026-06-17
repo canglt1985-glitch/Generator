@@ -7,8 +7,10 @@ import {
 import { supabase } from '../../supabaseClient';
 import ContractExportButton from './ContractExportButton';
 import PaymentSchedulePanel from './PaymentSchedulePanel';
+import { useCurrentUser } from '../../utils/useCurrentUser';
 
 export default function DatasiteDetailFullscreen({ site, onClose, defaultTab }) {
+  const { user } = useCurrentUser();
   const [activeTab, setActiveTab] = useState(defaultTab || 'general');
 
   // Đọc thông tin hợp đồng trực tiếp từ site.contract_info (không cần query thêm)
@@ -408,9 +410,11 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab }) 
               <p className="text-slate-500 max-w-md mb-6">
                 Trạm này chưa có dữ liệu hợp đồng hoặc hồ sơ pháp lý được ghi nhận trong hệ thống.
               </p>
-              <button className="hidden sm:inline-block px-4 py-2 bg-blue-600 text-white rounded-lg shadow font-medium hover:bg-blue-700 transition-colors cursor-pointer">
-                + Thêm Hợp Đồng
-              </button>
+              {user && (
+                <button className="hidden sm:inline-block px-4 py-2 bg-blue-600 text-white rounded-lg shadow font-medium hover:bg-blue-700 transition-colors cursor-pointer">
+                  + Thêm Hợp Đồng
+                </button>
+              )}
             </div>
           );
         }
@@ -616,14 +620,16 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab }) 
             </div>
           </div>
           
-          <div className="flex md:hidden items-center gap-1">
-            <button className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg">
-              <Edit className="h-4 w-4 text-blue-600" />
-            </button>
-            <button className="p-2 text-red-600 hover:bg-red-50 rounded-lg">
-              <Trash2 className="h-4 w-4" />
-            </button>
-          </div>
+          {user && (
+            <div className="flex md:hidden items-center gap-1">
+              <button className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg">
+                <Edit className="h-4 w-4 text-blue-600" />
+              </button>
+              <button className="p-2 text-red-600 hover:bg-red-50 rounded-lg">
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="hidden md:flex items-center gap-3">
@@ -631,14 +637,18 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab }) 
             <FileDown className="h-4 w-4 mr-2" />
             Xuất Excel
           </button>
-          <button className="inline-flex items-center justify-center px-4 py-2 border border-slate-200 text-sm font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 shadow-sm transition-colors cursor-pointer">
-            <Edit className="h-4 w-4 mr-2 text-blue-600" />
-            Chỉnh sửa
-          </button>
-          <button className="inline-flex items-center justify-center px-4 py-2 border border-red-200 text-sm font-medium rounded-lg text-red-600 bg-red-50 hover:bg-red-100 shadow-sm transition-colors cursor-pointer">
-            <Trash2 className="h-4 w-4 mr-2" />
-            Xóa
-          </button>
+          {user && (
+            <>
+              <button className="inline-flex items-center justify-center px-4 py-2 border border-slate-200 text-sm font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 shadow-sm transition-colors cursor-pointer">
+                <Edit className="h-4 w-4 mr-2 text-blue-600" />
+                Chỉnh sửa
+              </button>
+              <button className="inline-flex items-center justify-center px-4 py-2 border border-red-200 text-sm font-medium rounded-lg text-red-600 bg-red-50 hover:bg-red-100 shadow-sm transition-colors cursor-pointer">
+                <Trash2 className="h-4 w-4 mr-2" />
+                Xóa
+              </button>
+            </>
+          )}
         </div>
       </div>
 

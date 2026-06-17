@@ -110,7 +110,7 @@ def add_fuel_ledger():
             ghi_chu=request.form.get('ghi_chu')
         )
         # Auto-calc ton_sau_gd (user có thể override từ form)
-        user_ton = request.form.get('ton_sau_gd')
+        user_ton = request.form.get('ton_sau_gd') or request.form.get('nl_ton_thuc_te')
         if user_ton:
             new_trans.ton_sau_gd = float(user_ton)
         else:

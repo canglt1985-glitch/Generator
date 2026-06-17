@@ -178,41 +178,56 @@ export default function Dashboard() {
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Tổng quan Hệ thống</h1>
-        <p className="mt-1 text-sm text-gray-500">Dữ liệu thực từ Supabase – cập nhật theo thời gian thực.</p>
+        <h1 className="text-2xl font-bold text-gray-900">Tổ Viễn Thông 3</h1>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {statCards.map((item) => {
           const Icon = item.icon;
+          
+          const borderColors = {
+            'text-blue-600': 'border-l-blue-500',
+            'text-indigo-600': 'border-l-indigo-500',
+            'text-amber-600': 'border-l-amber-500',
+            'text-red-600': 'border-l-red-500',
+          };
+          
+          const borderClass = borderColors[item.color] || 'border-l-slate-400';
+
           const CardContent = (
-            <div className="p-5">
-              <div className="flex items-center justify-between">
-                <div className={`rounded-xl p-3 ${item.bg} group-hover:scale-110 transition-transform duration-300`}>
-                  <Icon className={`h-6 w-6 ${item.color}`} />
+            <div className="p-4 flex flex-col justify-between h-full">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Icon className={`h-4.5 w-4.5 shrink-0 ${item.color}`} />
+                  <span className="text-[10px] sm:text-xs text-slate-500 font-semibold uppercase tracking-wider truncate" title={item.name}>
+                    {item.name}
+                  </span>
+                </div>
+                <div className={`text-2xl sm:text-3xl font-extrabold pl-1 text-slate-900 ${loading ? 'text-gray-300' : ''}`}>
+                  {loading ? '...' : item.value}
                 </div>
               </div>
-              <div className="mt-4">
-                <h3 className="text-sm font-medium text-gray-500">{item.name}</h3>
-                <p className={`text-3xl font-bold mt-1 ${loading ? 'text-gray-300' : 'text-gray-900'}`}>
-                  {loading ? '...' : item.value}
-                </p>
-                <p className="text-xs text-gray-400 mt-1">{item.sub}</p>
-              </div>
+              <div className="text-[11px] text-slate-400 mt-2 pl-1 font-medium">{item.sub}</div>
             </div>
           );
 
+          const cardClasses = `
+            block bg-white overflow-hidden rounded-xl border-l-4 border-y border-r border-y-slate-200 border-r-slate-200
+            shadow-sm hover:shadow-md transition-all duration-200 group cursor-pointer
+            ${borderClass}
+          `;
+
           if (item.link) {
             return (
-              <Link key={item.name} to={item.link} className={`block bg-white overflow-hidden rounded-2xl border ${item.border} shadow-sm hover:shadow-md transition-all duration-200 group`}>
+              <Link key={item.name} to={item.link} className={cardClasses}>
                 {CardContent}
               </Link>
             );
           }
 
           return (
-            <div key={item.name} className={`bg-white overflow-hidden rounded-2xl border ${item.border} shadow-sm hover:shadow-md transition-all duration-200 group`}>
+            <div key={item.name} className={cardClasses}>
               {CardContent}
             </div>
           );

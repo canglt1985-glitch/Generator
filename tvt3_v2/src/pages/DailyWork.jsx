@@ -6,8 +6,10 @@ import {
   Zap
 } from 'lucide-react';
 import DatasiteDetailFullscreen from '../components/datasites/DatasiteDetailFullscreen';
+import { useCurrentUser } from '../utils/useCurrentUser';
 
 export default function DailyWork() {
+  const { user } = useCurrentUser();
   const [activeTab, setActiveTab] = useState('daily'); // daily, power, issues
   
   // Data States
@@ -570,75 +572,106 @@ export default function DailyWork() {
           </p>
         </div>
 
-        <div>
-          {activeTab === 'daily' && (
-            <button 
-              onClick={() => { resetLogForm(); setShowAddLogModal(true); }}
-              className="inline-flex items-center justify-center px-4 py-2 text-[13px] font-bold rounded-lg text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors cursor-pointer"
-            >
-              <Plus className="h-4 w-4 mr-1.5" /> Ghi nhật ký
-            </button>
-          )}
-          {activeTab === 'issues' && (
-            <button 
-              onClick={() => { resetIssueForm(); setShowAddIssueModal(true); }}
-              className="inline-flex items-center justify-center px-4 py-2 text-[13px] font-bold rounded-lg text-white bg-red-600 hover:bg-red-700 shadow-sm transition-colors cursor-pointer"
-            >
-              <Plus className="h-4 w-4 mr-1.5" /> Cập nhật tồn tại
-            </button>
-          )}
-          {activeTab === 'mobile' && (
-            <button 
-              onClick={() => { resetEquipForm(); setShowAddEquipModal(true); }}
-              className="inline-flex items-center justify-center px-4 py-2 text-[13px] font-bold rounded-lg text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors cursor-pointer"
-            >
-              <Plus className="h-4 w-4 mr-1.5" /> Thêm thiết bị lưu động
-            </button>
-          )}
-        </div>
+        {user && (
+          <div>
+            {activeTab === 'daily' && (
+              <button 
+                onClick={() => { resetLogForm(); setShowAddLogModal(true); }}
+                className="inline-flex items-center justify-center px-4 py-2 text-[13px] font-bold rounded-lg text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors cursor-pointer"
+              >
+                <Plus className="h-4 w-4 mr-1.5" /> Ghi nhật ký
+              </button>
+            )}
+            {activeTab === 'issues' && (
+              <button 
+                onClick={() => { resetIssueForm(); setShowAddIssueModal(true); }}
+                className="inline-flex items-center justify-center px-4 py-2 text-[13px] font-bold rounded-lg text-white bg-red-600 hover:bg-red-700 shadow-sm transition-colors cursor-pointer"
+              >
+                <Plus className="h-4 w-4 mr-1.5" /> Cập nhật tồn tại
+              </button>
+            )}
+            {activeTab === 'mobile' && (
+              <button 
+                onClick={() => { resetEquipForm(); setShowAddEquipModal(true); }}
+                className="inline-flex items-center justify-center px-4 py-2 text-[13px] font-bold rounded-lg text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors cursor-pointer"
+              >
+                <Plus className="h-4 w-4 mr-1.5" /> Thêm thiết bị lưu động
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Tabs & Search Card */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="flex border-b border-slate-100 overflow-x-auto scrollbar-none">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button 
-                key={tab.id}
-                onClick={() => { setActiveTab(tab.id); setSearchQuery(''); }}
-                className={`py-3 px-5 flex items-center gap-2 text-[13px] font-semibold uppercase tracking-wider transition-all border-b-2 whitespace-nowrap ${
-                  isActive 
-                    ? tab.id === 'issues' ? 'text-red-600 border-red-600' : 'text-blue-600 border-blue-600'
-                    : 'text-slate-400 border-transparent hover:text-slate-600'
-                }`}
-              >
-                <Icon className="w-4 h-4" /> {tab.label}
-              </button>
-            );
-          })}
-        </div>
+      {/* Navigation Cards as Tabs */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+        {[
+          { id: 'daily', label: 'Nhật ký sự cố', color: 'blue', icon: ClipboardList },
+          { id: 'power', label: 'Lịch cúp điện', color: 'amber', icon: Calendar },
+          { id: 'issues', label: 'Quản lý tồn tại', color: 'red', icon: AlertTriangle },
+          { id: 'mobile', label: 'Thiết bị lưu động', color: 'purple', icon: Zap },
+        ].map(tab => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+          
+          const borderColors = {
+            blue: 'border-l-blue-500',
+            amber: 'border-l-amber-500',
+            red: 'border-l-red-500',
+            purple: 'border-l-purple-500',
+          };
+          
+          const textColors = {
+            blue: 'text-blue-700',
+            amber: 'text-amber-700',
+            red: 'text-red-700',
+            purple: 'text-purple-700',
+          };
 
-        {/* Search */}
-        <div className="p-3 md:p-4">
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-4 w-4 text-slate-400" />
-            </div>
-            <input
-              type="text"
-              className="block w-full pl-10 pr-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-slate-50/50 placeholder-slate-400 transition-colors hover:bg-white"
-              placeholder={
-                activeTab === 'daily' ? "Tìm theo mã trạm, nội dung, nhân viên..." :
-                activeTab === 'power' ? "Tìm lịch mất điện theo mã trạm, khu vực..." :
-                activeTab === 'issues' ? "Tìm tồn tại theo trạm, mô tả, người báo cáo..." :
-                "Tìm theo mã thiết bị, loại, thông số, vị trí..."
-              }
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+          const ringColors = {
+            blue: 'ring-blue-400',
+            amber: 'ring-amber-400',
+            red: 'ring-red-400',
+            purple: 'ring-purple-400',
+          };
+
+          return (
+            <button
+              key={tab.id}
+              onClick={() => { setActiveTab(tab.id); setSearchQuery(''); }}
+              className={`
+                bg-white rounded-xl p-3.5 text-left transition-all border-l-4 border-y border-r border-y-slate-200 border-r-slate-200
+                hover:shadow-md cursor-pointer flex items-center gap-2.5
+                ${borderColors[tab.color]}
+                ${isActive ? `ring-2 ${ringColors[tab.color]} ring-offset-1` : ''}
+              `}
+            >
+              <Icon className={`w-5 h-5 shrink-0 ${isActive ? textColors[tab.color] : 'text-slate-400'}`} />
+              <span className={`text-xs font-bold uppercase tracking-wider truncate ${isActive ? 'text-slate-800 font-extrabold' : 'text-slate-500 font-semibold'}`} title={tab.label}>
+                {tab.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Search Input Box */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3 md:p-4 mb-4">
+        <div className="relative">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Search className="h-4 w-4 text-slate-400" />
           </div>
+          <input
+            type="text"
+            className="block w-full pl-10 pr-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-slate-50/50 placeholder-slate-400 transition-colors hover:bg-white"
+            placeholder={
+              activeTab === 'daily' ? "Tìm theo mã trạm, nội dung, nhân viên..." :
+              activeTab === 'power' ? "Tìm lịch mất điện theo mã trạm, khu vực..." :
+              activeTab === 'issues' ? "Tìm tồn tại theo trạm, mô tả, người báo cáo..." :
+              "Tìm theo mã thiết bị, loại, thông số, vị trí..."
+            }
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </div>
       </div>
 
@@ -705,20 +738,26 @@ export default function DailyWork() {
                                 {log.ghi_chu || <span className="text-slate-300 italic">Không có</span>}
                               </td>
                             <td className="px-4 py-3 whitespace-nowrap text-right text-xs">
-                              <button 
-                                onClick={() => handleEditLog(log)}
-                                className="text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 p-1.5 rounded mr-2 transition-colors inline-flex items-center cursor-pointer"
-                                title="Sửa"
-                              >
-                                <Edit size={14} />
-                              </button>
-                              <button 
-                                onClick={() => handleDeleteLog(log.id)}
-                                className="text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 p-1.5 rounded transition-colors inline-flex items-center cursor-pointer"
-                                title="Xóa"
-                              >
-                                <Trash size={14} />
-                              </button>
+                              {user ? (
+                                <>
+                                  <button 
+                                    onClick={() => handleEditLog(log)}
+                                    className="text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 p-1.5 rounded mr-2 transition-colors inline-flex items-center cursor-pointer"
+                                    title="Sửa"
+                                  >
+                                    <Edit size={14} />
+                                  </button>
+                                  <button 
+                                    onClick={() => handleDeleteLog(log.id)}
+                                    className="text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 p-1.5 rounded transition-colors inline-flex items-center cursor-pointer"
+                                    title="Xóa"
+                                  >
+                                    <Trash size={14} />
+                                  </button>
+                                </>
+                              ) : (
+                                <span className="text-slate-400 italic text-xs">Không có quyền</span>
+                              )}
                             </td>
                           </tr>
                           );
@@ -839,17 +878,30 @@ export default function DailyWork() {
                                   <td className="px-4 py-3 max-w-md truncate font-medium text-slate-800" title={dataDetail.description}>{dataDetail.description}</td>
                                   <td className="px-4 py-3 whitespace-nowrap text-slate-500">{dataDetail.reporter || '—'}</td>
                                   <td className="px-4 py-3 whitespace-nowrap">
-                                    <button
-                                      onClick={() => handleToggleIssueStatus(issue)}
-                                      className={`text-[11px] font-bold px-2.5 py-1 rounded-full cursor-pointer flex items-center gap-1 transition-all ${
-                                        isResolved 
-                                          ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' 
-                                          : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
-                                      }`}
-                                    >
-                                      {isResolved ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
-                                      {dataDetail.status || 'Chưa XL'}
-                                    </button>
+                                    {user ? (
+                                      <button
+                                        onClick={() => handleToggleIssueStatus(issue)}
+                                        className={`text-[11px] font-bold px-2.5 py-1 rounded-full cursor-pointer flex items-center gap-1 transition-all ${
+                                          isResolved 
+                                            ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' 
+                                            : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
+                                        }`}
+                                      >
+                                        {isResolved ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
+                                        {dataDetail.status || 'Chưa XL'}
+                                      </button>
+                                    ) : (
+                                      <span
+                                        className={`text-[11px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 inline-flex ${
+                                          isResolved 
+                                            ? 'bg-emerald-100 text-emerald-700' 
+                                            : 'bg-amber-100 text-amber-800'
+                                        }`}
+                                      >
+                                        {isResolved ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
+                                        {dataDetail.status || 'Chưa XL'}
+                                      </span>
+                                    )}
                                   </td>
                                   <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-500 font-mono">
                                     {isResolved && solutions.resolved_at ? `✅ ${solutions.resolved_at}` : '—'}
@@ -887,17 +939,30 @@ export default function DailyWork() {
                                     {siteIds.oldId} &rarr; {siteIds.newId}
                                     <ExternalLink size={10} className="opacity-60" />
                                   </button>
-                                  <button
-                                    onClick={() => handleToggleIssueStatus(issue)}
-                                    className={`text-[11px] font-bold px-2 py-1 rounded-full cursor-pointer flex items-center gap-1 transition-all ${
-                                      isResolved 
-                                        ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' 
-                                        : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
-                                    }`}
-                                  >
-                                    {isResolved ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
-                                    {dataDetail.status || 'Chưa XL'}
-                                  </button>
+                                  {user ? (
+                                    <button
+                                      onClick={() => handleToggleIssueStatus(issue)}
+                                      className={`text-[11px] font-bold px-2 py-1 rounded-full cursor-pointer flex items-center gap-1 transition-all ${
+                                        isResolved 
+                                          ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' 
+                                          : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
+                                      }`}
+                                    >
+                                      {isResolved ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
+                                      {dataDetail.status || 'Chưa XL'}
+                                    </button>
+                                  ) : (
+                                    <span
+                                      className={`text-[11px] font-bold px-2 py-1 rounded-full flex items-center gap-1 inline-flex ${
+                                        isResolved 
+                                          ? 'bg-emerald-100 text-emerald-700' 
+                                          : 'bg-amber-100 text-amber-800'
+                                      }`}
+                                    >
+                                      {isResolved ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
+                                      {dataDetail.status || 'Chưa XL'}
+                                    </span>
+                                  )}
                                 </div>
 
                                 <div className="space-y-2">
@@ -975,12 +1040,14 @@ export default function DailyWork() {
                                   </td>
                                   <td className="px-4 py-3 max-w-xs truncate text-slate-500 italic" title={eq.notes}>{eq.notes || '—'}</td>
                                   <td className="px-4 py-3 whitespace-nowrap text-right">
-                                    <button
-                                      onClick={() => handleStartTransfer(eq)}
-                                      className="text-[12px] font-bold px-3 py-1 rounded-lg text-white bg-blue-600 hover:bg-blue-700 cursor-pointer shadow-sm transition-colors"
-                                    >
-                                      Điều chuyển
-                                    </button>
+                                    {user && (
+                                      <button
+                                        onClick={() => handleStartTransfer(eq)}
+                                        className="text-[12px] font-bold px-3 py-1 rounded-lg text-white bg-blue-600 hover:bg-blue-700 cursor-pointer shadow-sm transition-colors"
+                                      >
+                                        Điều chuyển
+                                      </button>
+                                    )}
                                   </td>
                                 </tr>
                               );
@@ -1015,14 +1082,16 @@ export default function DailyWork() {
                                   {eq.notes && <div className="text-slate-400 text-xs mt-2 italic">"{eq.notes}"</div>}
                                 </div>
                               </div>
-                              <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end">
-                                <button
-                                  onClick={() => handleStartTransfer(eq)}
-                                  className="text-[12px] font-bold px-3 py-1.5 rounded-lg text-white bg-blue-600 hover:bg-blue-700 cursor-pointer shadow-sm transition-colors animate-in"
-                                >
-                                  Điều chuyển
-                                </button>
-                              </div>
+                              {user && (
+                                <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end">
+                                  <button
+                                    onClick={() => handleStartTransfer(eq)}
+                                    className="text-[12px] font-bold px-3 py-1.5 rounded-lg text-white bg-blue-600 hover:bg-blue-700 cursor-pointer shadow-sm transition-colors animate-in"
+                                  >
+                                    Điều chuyển
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           );
                         })}

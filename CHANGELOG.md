@@ -1,5 +1,20 @@
 # Changelog
 
+## [2026-06-17]
+### Added
+- **Telegram Bot V2 Migration (Phase 02)**: Di chuyển hoàn tất Telegram Bot từ `web-app/bot_telegram_v2.py` sang `backend/bot_telegram.py`. Làm sạch toàn bộ dependencies Flask/SQLAlchemy và kết nối trực tiếp Supabase V2.
+- **Bot Fuel Commands**: Triển khai mới các lệnh ghi nhận vận hành qua Telegram: `/log <site_id> <gio_chay>` (báo cáo chạy máy), `/refill <site_id> <lit> [gia]` (phiếu đổ dầu trực tiếp), và `/stock <site_id> <ton_thuc_te>` (hiệu chỉnh tồn kho dầu thực tế trạm). Tích hợp logic băm UUID5 idempotent và đồng bộ tồn kho dầu trực tiếp vào trường JSONB `infrastructure_info` trong bảng `datasites` của Supabase V2.
+- **Outage & Fuel Scrapers Migration (Phase 03)**: Di chuyển hai scraper `fetch_outages_v2.py` -> `backend/fetch_outages.py` và `fuel_price.py` -> `backend/fuel_price.py` sang cấu trúc `/backend` độc lập kết nối trực tiếp Supabase V2.
+- **Scraper Enhancements**: Bổ sung cơ chế retry logic nâng cao độ ổn định (Robustness) khi kết nối API của EVN SPC và WebTyGia. Sửa lỗi cú pháp sắp xếp (.order()) của Supabase client trong query lấy lịch mất điện gửi Viber.
+
+## [2026-06-16]
+### Added
+- **Idempotent Data Migration**: Cập nhật mã nguồn `migrate_v1_to_v2_ops.py` và `migrate_v1_to_v2.py` sang dạng sinh UUID xác định (deterministic UUIDs) bằng `uuid.uuid5` từ ID V1. Khắc phục hoàn toàn lỗi trùng lặp bản ghi trong V2 khi chạy lại script migration.
+- **Fuel Transaction Adjustment Logic**: Cấu hình thêm loại giao dịch 'Hiệu chỉnh tồn' (ADJUSTMENT) trên các trang web Flask của V1 (`generator.html`, `power_schedule.html`), hỗ trợ tự động tính lượng dầu chênh lệch dựa trên tồn thực tế nhập vào và tồn hiện tại của trạm.
+
+### Fixed
+- **Database Deduplication**: Dọn dẹp thành công dữ liệu trùng lặp trong V2 trên các bảng `generator_logs`, `operation_defects_logs`, `parsed_invoices`, và `fuel_and_expenses`. Tổng số lượng bản ghi sau xử lý hoàn toàn sạch sẽ và khớp khớp tuyệt đối với dữ liệu V1.
+
 ## [2026-04-29]
 ### Added
 - **Web App Windows Service (Persistence)**: Tích hợp công cụ **WinSW** và script cài đặt `install_webapp_service.ps1`. Web App giờ đây có thể chạy như một Windows Service thực thụ (`VH_WebApp`), tự động khởi động cùng Windows và tự phục hồi khi gặp sự cố.

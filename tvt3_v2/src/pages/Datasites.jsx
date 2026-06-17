@@ -3,7 +3,10 @@ import { Search, Filter, MapPin, Radio, Building2, FileDown, X, Navigation, Chev
 import { supabase } from '../supabaseClient';
 import DatasiteDetailFullscreen from '../components/datasites/DatasiteDetailFullscreen';
 import * as XLSX from 'xlsx';
+import { useCurrentUser } from '../utils/useCurrentUser';
+
 export default function Datasites() {
+  const { user } = useCurrentUser();
   const formatDate = (dateString) => {
     if (!dateString || dateString === 'N/A') return 'N/A';
     try {
@@ -469,87 +472,106 @@ export default function Datasites() {
             Xuất Excel
           </button>
           
-          <div className="relative">
-            <button 
-              className="inline-flex items-center justify-center px-3 py-2 border border-transparent text-[13px] font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors cursor-pointer"
-              onClick={() => setShowAddMenu(!showAddMenu)}
-            >
-              + Thêm Trạm
-              <ChevronDown className="h-4 w-4 ml-1" />
-            </button>
-            
-            {showAddMenu && (
-              <div className="absolute right-0 mt-2 w-56 rounded-lg shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50 animate-in fade-in slide-in-from-top-2">
-                <div className="py-1" role="menu">
-                  <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700">
-                    ✍️ Điền Form Thủ Công
-                  </button>
-                  <div className="border-t border-gray-100 my-1"></div>
-                  <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 flex items-center justify-between">
-                    <span><Upload className="h-4 w-4 inline mr-2 text-gray-400"/>Upload File Excel</span>
-                  </button>
-                  <div className="px-4 py-2 bg-slate-50 border-t border-gray-100">
-                    <a href="#" className="text-xs text-blue-600 hover:text-blue-800 font-medium underline flex items-center" onClick={(e) => { e.preventDefault(); alert('Đang tải Template.xlsx...'); }}>
-                      📥 Tải file Template mẫu
-                    </a>
+          {user && (
+            <div className="relative">
+              <button 
+                className="inline-flex items-center justify-center px-3 py-2 border border-transparent text-[13px] font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors cursor-pointer"
+                onClick={() => setShowAddMenu(!showAddMenu)}
+              >
+                + Thêm Trạm
+                <ChevronDown className="h-4 w-4 ml-1" />
+              </button>
+              
+              {showAddMenu && (
+                <div className="absolute right-0 mt-2 w-56 rounded-lg shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50 animate-in fade-in slide-in-from-top-2">
+                  <div className="py-1" role="menu">
+                    <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700">
+                      ✍️ Điền Form Thủ Công
+                    </button>
+                    <div className="border-t border-gray-100 my-1"></div>
+                    <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 flex items-center justify-between">
+                      <span><Upload className="h-4 w-4 inline mr-2 text-gray-400"/>Upload File Excel</span>
+                    </button>
+                    <div className="px-4 py-2 bg-slate-50 border-t border-gray-100">
+                      <a href="#" className="text-xs text-blue-600 hover:text-blue-800 font-medium underline flex items-center" onClick={(e) => { e.preventDefault(); alert('Đang tải Template.xlsx...'); }}>
+                        📥 Tải file Template mẫu
+                      </a>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Tabs + Search Card */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        {/* Tabs */}
-        <div className="flex border-b border-slate-100">
-          <button 
-            onClick={() => setViewMode('list')}
-            className={`flex-1 sm:flex-initial py-2.5 px-5 flex items-center justify-center gap-2 text-[13px] font-semibold uppercase tracking-wider transition-all border-b-2 ${
-              viewMode === 'list' 
-                ? 'text-blue-600 border-blue-600' 
-                : 'text-slate-400 border-transparent hover:text-slate-600'
-            }`}
-          >
-            <Search className="w-3.5 h-3.5" /> Tra cứu trạm
-          </button>
-          <button 
-            onClick={() => setViewMode('stats')}
-            className={`flex-1 sm:flex-initial py-2.5 px-5 flex items-center justify-center gap-2 text-[13px] font-semibold uppercase tracking-wider transition-all border-b-2 ${
-              viewMode === 'stats' 
-                ? 'text-emerald-600 border-emerald-600' 
-                : 'text-slate-400 border-transparent hover:text-slate-600'
-            }`}
-          >
-            <BarChart2 className="w-3.5 h-3.5" /> Thống kê toàn mạng
-          </button>
-        </div>
-
-        {/* Search Input */}
-        {viewMode === 'list' && (
-          <div className="p-3 md:p-4">
-            <div className="flex gap-2">
-              <div className="flex-1 relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Database className="h-4 w-4 text-slate-400" />
-                </div>
-                <input
-                  type="text"
-                  className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-slate-50/50 placeholder-slate-400 transition-colors hover:bg-white"
-                  placeholder="Nhập mã trạm, địa chỉ, loại trạm... (VD: DNLK03)"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-              <button className="bg-blue-600 text-white px-4 md:px-5 py-2.5 rounded-lg font-medium flex items-center gap-1.5 hover:bg-blue-700 transition-colors shrink-0 text-sm shadow-sm">
-                <Search size={16} /> 
-                <span className="hidden sm:inline">Tra cứu</span>
-              </button>
+              )}
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
+
+      {/* Navigation Cards as Tabs */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
+        {[
+          { id: 'list', label: 'Tra cứu trạm', color: 'blue', icon: Search },
+          { id: 'stats', label: 'Thống kê toàn mạng', color: 'emerald', icon: BarChart2 },
+        ].map(tab => {
+          const Icon = tab.icon;
+          const isActive = viewMode === tab.id;
+          
+          const borderColors = {
+            blue: 'border-l-blue-500',
+            emerald: 'border-l-emerald-500',
+          };
+          
+          const textColors = {
+            blue: 'text-blue-700',
+            emerald: 'text-emerald-700',
+          };
+
+          const ringColors = {
+            blue: 'ring-blue-400',
+            emerald: 'ring-emerald-400',
+          };
+
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setViewMode(tab.id)}
+              className={`
+                bg-white rounded-xl p-3.5 text-left transition-all border-l-4 border-y border-r border-y-slate-200 border-r-slate-200
+                hover:shadow-md cursor-pointer flex items-center gap-2.5
+                ${borderColors[tab.color]}
+                ${isActive ? `ring-2 ${ringColors[tab.color]} ring-offset-1` : ''}
+              `}
+            >
+              <Icon className={`w-5 h-5 shrink-0 ${isActive ? textColors[tab.color] : 'text-slate-400'}`} />
+              <span className={`text-xs font-bold uppercase tracking-wider truncate ${isActive ? 'text-slate-800 font-extrabold' : 'text-slate-500 font-semibold'}`} title={tab.label}>
+                {tab.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Search Input Box */}
+      {viewMode === 'list' && (
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3 md:p-4 mb-4">
+          <div className="flex gap-2">
+            <div className="flex-1 relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Database className="h-4 w-4 text-slate-400" />
+              </div>
+              <input
+                type="text"
+                className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-slate-50/50 placeholder-slate-400 transition-colors hover:bg-white"
+                placeholder="Nhập mã trạm, địa chỉ, loại trạm... (VD: DNLK03)"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            <button className="bg-blue-600 text-white px-4 md:px-5 py-2.5 rounded-lg font-medium flex items-center gap-1.5 hover:bg-blue-700 transition-colors shrink-0 text-sm shadow-sm">
+              <Search size={16} /> 
+              <span className="hidden sm:inline">Tra cứu</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {viewMode === 'list' ? (
         <>

@@ -273,6 +273,50 @@ export default function Generator() {
     XLSX.writeFile(workbook, fileName);
   };
 
+  // Export Invoices to Excel
+  const exportInvoicesToExcel = () => {
+    const dataForExcel = filteredInvoices.map(inv => ({
+      'Ngày Lập': inv.invoice_date || '',
+      'Số Hóa Đơn': inv.invoice_number || '',
+      'Đơn Vị Bán Hàng': inv.seller_name || '',
+      'Mã Số Thuế': inv.seller_mst || '',
+      'Tổng Tiền': inv.total_amount || 0,
+      'Trạng Thái': inv.status === 'Approved' ? 'Đã duyệt' : inv.status === 'Discarded' ? 'Từ chối' : 'Chờ duyệt',
+      'Nguồn thu thập': inv.source || 'Upload'
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(dataForExcel);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'HoaDonDienTu');
+    XLSX.writeFile(workbook, `Danh_sach_hoa_don_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+
+  // Export Anomalies to Excel
+  const exportAnomaliesToExcel = () => {
+    const dataForExcel = anomaliesList.map(anom => {
+      const isHigh = anom.severity === 'high';
+      const typeStr = 
+        anom.type === 'MISSING_LOG' ? 'Thiếu log chạy máy' :
+        anom.type === 'CONSECUTIVE_REFILL' ? 'Đổ dầu không chạy' :
+        anom.type === 'QUARTERLY_DISCREPANCY' ? 'Lệch nhiên liệu quý' :
+        anom.type === 'INACTIVE_GEN' ? 'Máy phát ngủ quên' : anom.type;
+      
+      return {
+        'Trạm': getSiteLabel(anom.site_id) || '',
+        'Mức độ': isHigh ? 'Đỏ (Nguy cơ cao)' : 'Vàng (Cần lưu ý)',
+        'Loại cảnh báo': typeStr || '',
+        'Tiêu đề': anom.title || '',
+        'Chi tiết bất thường': anom.desc || '',
+        'Ngày phát hiện': anom.date || ''
+      };
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(dataForExcel);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'BatThuongChayMay');
+    XLSX.writeFile(workbook, `Bao_cao_bat_thuong_chay_may_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+
   // Recalculate generator logs
   async function handleRecalculate() {
     if (!confirm('Tính lại định mức, nhiên liệu và chi phí cho tất cả bản ghi chưa có thành tiền?')) return;
@@ -748,55 +792,94 @@ export default function Generator() {
             </button>
           </div>
         )}
-      </div>
 
-      {/* Tabs Menu */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="flex border-b border-slate-100 overflow-x-auto scrollbar-none">
-          <button 
-            onClick={() => { setActiveTab('logs'); setSearchQuery(''); }}
-            className={`py-3 px-5 flex items-center gap-2 text-[13px] font-semibold uppercase tracking-wider transition-all border-b-2 whitespace-nowrap ${
-              activeTab === 'logs' ? 'text-blue-600 border-blue-600' : 'text-slate-400 border-transparent hover:text-slate-600'
-            }`}
-          >
-            <Clock className="w-4 h-4" /> Nhật ký chạy máy
-          </button>
-          <button 
-            onClick={() => { setActiveTab('anomalies'); setSearchQuery(''); }}
-            className={`py-3 px-5 flex items-center gap-2 text-[13px] font-semibold uppercase tracking-wider transition-all border-b-2 whitespace-nowrap ${
-              activeTab === 'anomalies' ? 'text-red-600 border-red-600' : 'text-slate-400 border-transparent hover:text-slate-600'
-            }`}
-          >
-            <AlertTriangle className="w-4 h-4" /> Báo cáo chạy máy bất thường
-          </button>
-          <button 
-            onClick={() => { setActiveTab('invoices'); setSearchQuery(''); }}
-            className={`py-3 px-5 flex items-center gap-2 text-[13px] font-semibold uppercase tracking-wider transition-all border-b-2 whitespace-nowrap ${
-              activeTab === 'invoices' ? 'text-blue-600 border-blue-600' : 'text-slate-400 border-transparent hover:text-slate-600'
-            }`}
-          >
-            <FileText className="w-4 h-4" /> Quản lý hóa đơn
-          </button>
-        </div>
+        {activeTab === 'anomalies' && (
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={exportAnomaliesToExcel}
+              className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg text-emerald-700 border border-emerald-200 bg-white hover:bg-emerald-50 shadow-sm transition-colors cursor-pointer"
+            >
+              <ExternalLink className="h-3.5 w-3.5 mr-1" /> Xuất Excel
+            </button>
+          </div>
+        )}
 
-        {/* Global Search Input for invoices */}
         {activeTab === 'invoices' && (
-          <div className="p-3 md:p-4">
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-4 w-4 text-slate-400" />
-              </div>
-              <input
-                type="text"
-                className="block w-full pl-10 pr-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-slate-50/50 placeholder-slate-400 transition-colors hover:bg-white"
-                placeholder="Tìm theo số hóa đơn, tên nhà cung cấp, MST..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={exportInvoicesToExcel}
+              className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg text-emerald-700 border border-emerald-200 bg-white hover:bg-emerald-50 shadow-sm transition-colors cursor-pointer"
+            >
+              <ExternalLink className="h-3.5 w-3.5 mr-1" /> Xuất Excel
+            </button>
           </div>
         )}
       </div>
+
+      {/* Navigation Cards as Tabs */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+        {[
+          { id: 'logs', label: 'Nhật ký chạy máy', color: 'blue', icon: '⏱' },
+          { id: 'anomalies', label: 'Báo cáo bất thường', color: 'red', icon: '⚠️' },
+          { id: 'invoices', label: 'Hóa đơn điện tử', color: 'emerald', icon: '💳' },
+        ].map(card => {
+          const isActive = activeTab === card.id;
+          
+          const borderColors = {
+            blue: 'border-l-blue-500',
+            red: 'border-l-red-500',
+            emerald: 'border-l-emerald-500',
+          };
+          
+          const textColors = {
+            blue: 'text-blue-700',
+            red: 'text-red-700',
+            emerald: 'text-emerald-700',
+          };
+
+          const ringColors = {
+            blue: 'ring-blue-400',
+            red: 'ring-red-400',
+            emerald: 'ring-emerald-400',
+          };
+
+          return (
+            <button
+              key={card.id}
+              onClick={() => { setActiveTab(card.id); setSearchQuery(''); }}
+              className={`
+                bg-white rounded-xl p-3.5 text-left transition-all border-l-4 border-y border-r border-y-slate-200 border-r-slate-200
+                hover:shadow-md cursor-pointer flex items-center gap-2.5
+                ${borderColors[card.color]}
+                ${isActive ? `ring-2 ${ringColors[card.color]} ring-offset-1` : ''}
+              `}
+            >
+              <span className="text-base shrink-0">{card.icon}</span>
+              <span className={`text-xs font-bold uppercase tracking-wider truncate ${isActive ? 'text-slate-800 font-extrabold' : 'text-slate-500 font-semibold'}`} title={card.label}>
+                {card.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Global Search Input for invoices */}
+      {activeTab === 'invoices' && (
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3 md:p-4 mb-4">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search className="h-4 w-4 text-slate-400" />
+            </div>
+            <input
+              type="text"
+              className="block w-full pl-10 pr-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-slate-50/50 placeholder-slate-400 transition-colors hover:bg-white"
+              placeholder="Tìm theo số hóa đơn, tên nhà cung cấp, MST..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Statistics Row for Logs tab */}
       {activeTab === 'logs' && (

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ thống Đang Bảo Trì - VHKT-TVT3</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            text-align: center;
+        }
+        .container {
+            max-width: 600px;
+            padding: 40px 20px;
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+            border: 1px solid #f1f5f9;
+            margin: 20px;
+        }
+        .icon-wrapper {
+            width: 80px;
+            height: 80px;
+            background-color: #eff6ff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+            color: #2563eb;
+            animation: pulse 2s infinite;
+        }
+        h1 {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: #0f172a;
+        }
+        p {
+            font-size: 16px;
+            color: #64748b;
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+        .badge {
+            display: inline-block;
+            background-color: #fef3c7;
+            color: #d97706;
+            font-size: 14px;
+            font-weight: 600;
+            padding: 6px 16px;
+            border-radius: 9999px;
+            margin-bottom: 20px;
+        }
+        .footer {
+            margin-top: 32px;
+            font-size: 12px;
+            color: #94a3b8;
+            border-top: 1px solid #f1f5f9;
+            padding-top: 20px;
+        }
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon-wrapper">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 40px; height: 40px;">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17L17.25 21A2.65 2.65 0 1021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.619 1.25-.619h5.833m-9.58 3.65a2.502 2.502 0 01-3.65-3.65m0 0l-5.38-5.38a2.25 2.25 0 113.18-3.18l5.38 5.38m-3.18 3.18a8.25 8.25 0 0013.8 3.7M9.25 17.22L3.623 21a1.24 1.24 0 01-1.62-1.62l3.777-5.625" />
+            </svg>
+        </div>
+        <div class="badge">Đang Cập Nhật Hệ Thống</div>
+        <h1>Hệ Thống Đang Bảo Trì</h1>
+        <p>
+            Chào anh, hệ thống Vận Hành Kỹ Thuật Tổ Viễn Thông 3 (VHKT-TVT3) đang được nâng cấp cơ sở dữ liệu định kỳ để tăng tốc hiệu năng.
+            Quá trình này dự kiến sẽ mất khoảng 15-30 phút. Anh vui lòng quay lại sau nhé!
+        </p>
+        <div class="footer">
+            Tổ Viễn Thông 3 - Vận Hành Mạng Lưới Ổn Định & An Toàn
+        </div>
+    </div>
+</body>
+</html>

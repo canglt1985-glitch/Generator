@@ -1,0 +1,9 @@
+{
+  "telegram_report_chat_id": "-100987654321",
+  "telegram_bot_token": "123456:mock_token",
+  "viber_bot_token": "mock_viber_token",
+  "gmail_user": "mock_gmail@gmail.com",
+  "gmail_app_password": "mock_gmail_pass",
+  "viber_bot_token_outages": "56a990b99bf464bd-d406c456f5380df0-770d03e18af041d0",
+  "viber_bot_token_alarms": "567370461ff5bfce-6527e240db117ad7-ce130e1ad6041265"
+}

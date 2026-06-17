@@ -9,8 +9,10 @@ import { exportContractsToExcel, importContractsFromExcel } from '../utils/excel
 import { getContractFlags } from '../utils/contractChecks';
 import ContractAlertCards from '../components/contracts/ContractAlertCards';
 import ContractFilterDropdown from '../components/contracts/ContractFilterDropdown';
+import { useCurrentUser } from '../utils/useCurrentUser';
 
 export default function ContractDashboard() {
+  const { user } = useCurrentUser();
   const [searchTerm, setSearchTerm] = useState('');
   const [contracts, setContracts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -142,21 +144,25 @@ export default function ContractDashboard() {
             <p className="text-slate-500 text-sm mt-1">Quản lý danh sách hợp đồng nhà trạm, chi phí và thanh toán</p>
           </div>
           <div className="flex items-center gap-3">
-            <button 
-              onClick={handleImportClick}
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors font-medium text-sm shadow-sm cursor-pointer"
-            >
-              <Upload size={16} /> Nhập Excel
-            </button>
+            {user && (
+              <button 
+                onClick={handleImportClick}
+                className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors font-medium text-sm shadow-sm cursor-pointer"
+              >
+                <Upload size={16} /> Nhập Excel
+              </button>
+            )}
             <button 
               onClick={handleExport}
               className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium text-sm shadow-sm cursor-pointer"
             >
               <Download size={16} /> Xuất Excel
             </button>
-            <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm shadow-sm cursor-pointer">
-              <Plus size={16} /> Thêm HĐ mới
-            </button>
+            {user && (
+              <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm shadow-sm cursor-pointer">
+                <Plus size={16} /> Thêm HĐ mới
+              </button>
+            )}
           </div>
         </div>
       </div>

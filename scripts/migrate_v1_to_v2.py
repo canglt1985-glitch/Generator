@@ -1,5 +1,6 @@
 import os
 import json
+import uuid
 from dotenv import load_dotenv
 from supabase import create_client, Client
 from datetime import datetime
@@ -145,7 +146,10 @@ def migrate_defects(v1_client: Client, v2_client: Client, valid_sites: set):
         proposed_solutions = {
             "resolved_at": a.get("resolved_at")
         }
+        v1_id = a.get("id")
+        log_id = str(uuid.uuid5(uuid.NAMESPACE_OID, f"datasite_anomalies_{v1_id}"))
         new_logs.append({
+            "log_id": log_id,
             "site_id": a.get("site_id"),
             "date": date_val,
             "existing_issues": clean_dict(existing_issues),
@@ -175,7 +179,10 @@ def migrate_generators(v1_client: Client, v2_client: Client, valid_sites: set):
             "cong_suat_may": g.get("cong_suat_may"),
             "ghi_chu": g.get("ghi_chu")
         }
+        v1_id = g.get("id")
+        gen_log_id = str(uuid.uuid5(uuid.NAMESPACE_OID, f"generator_log_{v1_id}"))
         new_logs.append({
+            "gen_log_id": gen_log_id,
             "site_id": site_id,
             "date": date_val,
             "run_details": clean_dict(run_details)
@@ -203,7 +210,10 @@ def migrate_fuels(v1_client: Client, v2_client: Client, valid_sites: set):
             "nguoi_cham": f.get("nguoi_cham"),
             "ghi_chu": f.get("ghi_chu")
         }
+        v1_id = f.get("id")
+        record_id = str(uuid.uuid5(uuid.NAMESPACE_OID, f"fuel_refill_log_{v1_id}"))
         new_fuels.append({
+            "record_id": record_id,
             "site_id": site_id,
             "date": date_val,
             "fuel_tracking": clean_dict(fuel_tracking),

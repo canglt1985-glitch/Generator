@@ -1,20 +1,44 @@
-import { Bell, Search, User, Menu, Home, Database, FileText, Settings, Activity, Zap, Coins, X } from 'lucide-react';
+import { Bell, Search, User, Menu, Home, Database, FileText, Settings, Activity, Zap, Coins, Radio, X, LogOut } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useState } from 'react';
+import { useCurrentUser } from '../utils/useCurrentUser';
+import { supabase } from '../supabaseClient';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: Home },
+  { name: 'Công việc hàng ngày', href: '/daily-work', icon: Activity },
+  { name: 'Quản lý chi phí', href: '/expenses', icon: Coins },
+  { name: 'VHKT-RAN', href: '/vhkt-ran', icon: Radio },
   { name: 'Danh sách Trạm', href: '/datasites', icon: Database },
   { name: 'Hợp đồng', href: '/contracts', icon: FileText, desktopOnly: true },
   { name: 'Máy phát điện', href: '/generator', icon: Zap },
-  { name: 'Công việc hàng ngày', href: '/daily-work', icon: Activity },
-  { name: 'Quản lý chi phí', href: '/expenses', icon: Coins },
   { name: 'Cài đặt', href: '/settings', icon: Settings },
 ];
 
 export default function Header() {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const { displayName, email, user } = useCurrentUser();
+  
+  const initialLetter = displayName ? displayName.trim().charAt(0).toUpperCase() : 'U';
+  const displayRole = email === 'admin@mobifone.vn' || displayName.toLowerCase().includes('admin') ? 'Quản trị' : 'Kỹ thuật';
+  const isAdmin = user && displayRole === 'Quản trị';
+
+  const visibleNavigation = navigation.filter(item => {
+    if (item.href === '/generator' || item.href === '/settings') {
+      return isAdmin; // Chỉ hiển thị Máy phát điện & Cài đặt cho Admin đã đăng nhập
+    }
+    return true;
+  });
+  
+  async function handleLogout() {
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error('Lỗi khi đăng xuất:', err);
+    }
+  }
 
   return (
     <>
@@ -39,16 +63,16 @@ export default function Header() {
               </div>
               <div className="flex flex-col justify-center">
                 <span className="text-sm md:text-[15px] font-bold text-white tracking-wide leading-tight">
-                  Tổ VT3 - PVT
+                  Tổ Viễn Thông 3
                 </span>
-                <span className="text-[10px] font-medium text-cyan-400/80 leading-tight tracking-wider">Hệ thống quản lý</span>
+                <span className="text-[10px] font-medium text-cyan-400/80 leading-tight tracking-wider">MobiFone Đồng Nai</span>
               </div>
             </Link>
             
             {/* Desktop Navigation */}
             <nav className="hidden lg:flex items-center ml-4">
               <div className="flex items-center bg-slate-800/50 rounded-lg p-0.5">
-                {navigation.map((item) => {
+                {visibleNavigation.map((item) => {
                   const isActive = location.pathname === item.href;
                   const Icon = item.icon;
                   return (
@@ -90,15 +114,48 @@ export default function Header() {
             
             <div className="h-5 w-px bg-slate-700/50 hidden sm:block"></div>
             
-            <button className="flex items-center gap-2 focus:outline-none group">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center text-white shadow-sm group-hover:shadow-cyan-500/20 group-hover:shadow-md transition-all">
-                <span className="font-bold text-xs">A</span>
+            {user ? (
+              <div className="relative">
+                <button 
+                  onClick={() => setProfileOpen(!profileOpen)}
+                  className="flex items-center gap-2 focus:outline-none group text-left"
+                >
+                  <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center text-white shadow-sm group-hover:shadow-cyan-500/20 group-hover:shadow-md transition-all">
+                    <span className="font-bold text-xs">{initialLetter}</span>
+                  </div>
+                  <div className="hidden md:flex flex-col">
+                    <span className="text-[12px] font-medium text-slate-300 leading-tight">{displayName || 'Người dùng'}</span>
+                    <span className="text-[10px] text-slate-500 leading-tight">{displayRole}</span>
+                  </div>
+                </button>
+                
+                {profileOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setProfileOpen(false)} />
+                    <div className="absolute right-0 mt-2 w-48 bg-slate-800 border border-slate-700/60 rounded-xl shadow-xl py-1 z-20 text-slate-200 animate-in fade-in slide-in-from-top-1 duration-200">
+                      <div className="px-4 py-2 border-b border-slate-700/60 text-xs text-left">
+                        <p className="font-semibold text-slate-300 truncate">{displayName}</p>
+                        <p className="text-slate-500 truncate mt-0.5">{email}</p>
+                      </div>
+                      <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-2 px-4 py-2.5 text-xs text-red-400 hover:bg-slate-700/50 hover:text-red-300 transition-colors text-left font-medium"
+                      >
+                        <LogOut className="h-3.5 w-3.5" />
+                        Đăng xuất
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
-              <div className="hidden md:flex flex-col">
-                <span className="text-[12px] font-medium text-slate-300 leading-tight">admin</span>
-                <span className="text-[10px] text-slate-500 leading-tight">Quản trị</span>
-              </div>
-            </button>
+            ) : (
+              <Link 
+                to="/login"
+                className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold text-sm hover:bg-blue-700 transition-colors shadow-sm"
+              >
+                Đăng nhập
+              </Link>
+            )}
           </div>
         </div>
       </div>
@@ -121,9 +178,9 @@ export default function Header() {
               </div>
               <div className="flex flex-col justify-center">
                 <span className="text-[15px] font-bold text-white tracking-tight leading-tight">
-                  Tổ VT3 - PVT
+                  Tổ Viễn Thông 3
                 </span>
-                <span className="text-[10px] font-medium text-cyan-400/70 leading-tight tracking-wider">Hệ thống quản lý</span>
+                <span className="text-[10px] font-medium text-cyan-400/70 leading-tight tracking-wider">MobiFone Đồng Nai</span>
               </div>
             </div>
             <button onClick={() => setMobileMenuOpen(false)} className="p-2 text-slate-500 hover:text-white rounded-lg hover:bg-white/10 transition-colors">
@@ -133,7 +190,7 @@ export default function Header() {
           
           {/* Mobile Menu Navigation */}
           <div className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
-            {navigation.filter(item => !item.desktopOnly).map((item) => {
+            {visibleNavigation.filter(item => !item.desktopOnly).map((item) => {
               const isActive = location.pathname === item.href;
               const Icon = item.icon;
               return (
@@ -162,16 +219,38 @@ export default function Header() {
           </div>
 
           {/* Mobile Menu Footer */}
-          <div className="px-4 py-3 border-t border-white/5">
-            <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center text-white">
-                <span className="font-bold text-sm">A</span>
+          <div className="px-4 py-4 border-t border-white/5 bg-slate-900/30">
+            {user ? (
+              <div className="flex items-center justify-between w-full">
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center text-white">
+                    <span className="font-bold text-sm">{initialLetter}</span>
+                  </div>
+                  <div className="flex flex-col text-left">
+                    <span className="text-sm font-medium text-white leading-tight">{displayName}</span>
+                    <span className="text-[11px] text-slate-500 leading-tight">{displayRole}</span>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => {
+                    handleLogout();
+                    setMobileMenuOpen(false);
+                  }}
+                  className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors"
+                  title="Đăng xuất"
+                >
+                  <LogOut className="h-4.5 w-4.5" />
+                </button>
               </div>
-              <div className="flex flex-col">
-                <span className="text-sm font-medium text-white leading-tight">admin</span>
-                <span className="text-[11px] text-slate-500 leading-tight">Quản trị viên</span>
-              </div>
-            </div>
+            ) : (
+              <Link 
+                to="/login"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center justify-center w-full py-2.5 bg-blue-600 text-white rounded-xl font-semibold text-sm hover:bg-blue-700 transition-colors shadow-sm"
+              >
+                Đăng nhập
+              </Link>
+            )}
           </div>
         </div>
       </div>

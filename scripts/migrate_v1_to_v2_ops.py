@@ -1,5 +1,6 @@
 import os
 import json
+import uuid
 from dotenv import load_dotenv
 from supabase import create_client, Client
 from datetime import datetime
@@ -136,7 +137,11 @@ def migrate_generator_logs(v1: Client, v2: Client, valid_new_ids: set, map_old_t
             "v1_id": r.get("id")
         }
         
+        v1_id = r.get("id")
+        gen_log_id = str(uuid.uuid5(uuid.NAMESPACE_OID, f"generator_log_{v1_id}"))
+        
         v2_records.append({
+            "gen_log_id": gen_log_id,
             "site_id": site_id,
             "date": date_val,
             "run_details": clean_dict(run_details)
@@ -147,6 +152,7 @@ def migrate_generator_logs(v1: Client, v2: Client, valid_new_ids: set, map_old_t
 
 def migrate_fuel_and_expenses(v1: Client, v2: Client, valid_new_ids: set, map_old_to_new: dict):
     print("🚀 Bắt đầu migrate: fuel_ledger & other_expense -> fuel_and_expenses")
+
     
     # 1. Fetch fuel_ledger
     ledger_records = fetch_all_records(v1, "fuel_ledger")
@@ -167,6 +173,9 @@ def migrate_fuel_and_expenses(v1: Client, v2: Client, valid_new_ids: set, map_ol
         if not date_val:
             date_val = datetime.now().strftime("%Y-%m-%d")
             
+        v1_id = r.get("id")
+        record_id = str(uuid.uuid5(uuid.NAMESPACE_OID, f"fuel_ledger_{v1_id}"))
+            
         fuel_tracking = {
             "type": r.get("type"),
             "is_approved": r.get("is_approved"),
@@ -178,10 +187,11 @@ def migrate_fuel_and_expenses(v1: Client, v2: Client, valid_new_ids: set, map_ol
             "operator": r.get("nguoi_thuc_hien"),
             "notes": r.get("ghi_chu"),
             "balance_after": r.get("ton_sau_gd"),
-            "v1_id": r.get("id")
+            "v1_id": v1_id
         }
         
         v2_records.append({
+            "record_id": record_id,
             "site_id": site_id,
             "date": date_val,
             "fuel_tracking": clean_dict(fuel_tracking),
@@ -197,16 +207,20 @@ def migrate_fuel_and_expenses(v1: Client, v2: Client, valid_new_ids: set, map_ol
         if not date_val:
             date_val = datetime.now().strftime("%Y-%m-%d")
             
+        v1_id = r.get("id")
+        record_id = str(uuid.uuid5(uuid.NAMESPACE_OID, f"other_expense_{v1_id}"))
+            
         other_expenses = {
             "content": r.get("noi_dung"),
             "project": r.get("du_an"),
             "amount": r.get("so_tien"),
             "advance_person": r.get("nguoi_tam_ung"),
             "notes": r.get("ghi_chu"),
-            "v1_id": r.get("id")
+            "v1_id": v1_id
         }
         
         v2_records.append({
+            "record_id": record_id,
             "site_id": None,
             "date": date_val,
             "fuel_tracking": {},
@@ -243,7 +257,11 @@ def migrate_operation_defects_logs(v1: Client, v2: Client, valid_new_ids: set, m
             "v1_id": r.get("id")
         }
         
+        v1_id = r.get("id")
+        log_id = str(uuid.uuid5(uuid.NAMESPACE_OID, f"station_issue_{v1_id}"))
+        
         v2_records.append({
+            "log_id": log_id,
             "site_id": site_id,
             "date": date_val,
             "existing_issues": clean_dict(existing_issues),
@@ -273,7 +291,11 @@ def migrate_parsed_invoices(v1: Client, v2: Client):
             except Exception as e:
                 print(f"  [!] Lỗi parse items_json cho hóa đơn {r.get('so_hd')}: {e}")
         
+        v1_id = r.get("id")
+        invoice_uuid = str(uuid.uuid5(uuid.NAMESPACE_OID, f"parsed_invoice_{v1_id}"))
+        
         v2_records.append({
+            "id": invoice_uuid,
             "invoice_date": date_val,
             "invoice_number": r.get("so_hd"),
             "seller_name": r.get("seller_name"),

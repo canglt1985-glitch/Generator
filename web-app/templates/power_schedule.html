@@ -355,12 +355,13 @@
                 <div class="modal-body">
                     <!-- Loại giao dịch -->
                     <div class="mb-2">
-                        <label class="form-label small fw-bold mb-1">Loại giao dịch</label>
-                        <select class="form-select form-select-sm fw-bold" name="type" id="fuel_type"
+                        <label class="form-label small fw-bold mb-1 text-indigo">🔄 Loại giao dịch</label>
+                        <select class="form-select form-select-sm fw-bold border-indigo bg-indigo-lt text-indigo" name="type" id="fuel_type"
                             onchange="setFuelType(this.value)" required>
                             <option value="DIRECT_BUY" selected>⛽ ĐỔ NL (MUA) — mua đổ thẳng cho trạm</option>
                             <option value="STOCK_IN">📥 NHẬP KHO — mua dầu về kho</option>
                             <option value="STATION_OUT">📤 XUẤT KHO — lấy từ kho đổ cho trạm</option>
+                            <option value="ADJUSTMENT">🔧 HIỆU CHỈNH TỒN — hiệu chỉnh dầu tồn trạm</option>
                         </select>
                     </div>
                     <input type="hidden" name="active_tab" value="fuel">
@@ -368,8 +369,8 @@
                     <div class="tab-content px-3 pb-3">
                         <!-- COMMON FIELDS -->
                         <div class="mb-2">
-                            <label class="form-label small fw-bold mb-1">Ngày thực hiện</label>
-                            <input type="date" class="form-control form-control-sm" name="ngay" value="{{ now_date }}"
+                            <label class="form-label small fw-bold mb-1 text-warning">📅 Ngày thực hiện</label>
+                            <input type="date" class="form-control form-control-sm border-warning bg-warning-lt fw-bold" name="ngay" value="{{ now_date }}"
                                 required>
                         </div>
 
@@ -377,8 +378,8 @@
                         <div id="dynamic-fields">
                             <div class="row g-2 mb-2">
                                 <div class="col-6" id="group-station">
-                                    <label class="form-label small fw-bold mb-1">Trạm</label>
-                                    <input type="text" class="form-control form-control-sm" name="id_tram"
+                                    <label class="form-label small fw-bold mb-1 text-indigo">📍 Trạm</label>
+                                    <input type="text" class="form-control form-control-sm border-indigo bg-indigo-lt fw-bold" name="id_tram"
                                         id="inp_id_tram" list="stationList" placeholder="Nhập mã trạm..."
                                         onchange="validateStation(this)">
                                     <datalist id="stationList">
@@ -390,8 +391,8 @@
                                     </div>
                                 </div>
                                 <div class="col-6">
-                                    <label class="form-label small fw-bold mb-1">Loại NL</label>
-                                    <select class="form-select form-select-sm" name="loai_nhien_lieu" id="inp_loai_nl">
+                                    <label class="form-label small fw-bold mb-1 text-warning">⛽ Loại NL</label>
+                                    <select class="form-select form-select-sm border-warning bg-warning-lt fw-bold" name="loai_nhien_lieu" id="inp_loai_nl">
                                         <option value="Dầu" selected>Dầu</option>
                                         <option value="Xăng">Xăng</option>
                                     </select>
@@ -399,14 +400,14 @@
                             </div>
                             <div class="row g-2 mb-2">
                                 <div class="col-6">
-                                    <label class="form-label small fw-bold mb-1">Số Lượng (Lít)</label>
-                                    <input type="number" step="0.01" class="form-control form-control-sm fw-bold"
+                                    <label class="form-label small fw-bold mb-1 text-success">📊 Số Lượng (Lít)</label>
+                                    <input type="number" step="0.01" class="form-control form-control-sm fw-bold border-success bg-success-lt text-success"
                                         name="so_luong" id="inp_soluong" oninput="calcMoney()">
                                 </div>
                                 <div class="col-6" id="group-price">
-                                    <label class="form-label small fw-bold mb-1">Đơn giá <small
+                                    <label class="form-label small fw-bold mb-1 text-success">🏷️ Đơn giá <small
                                             class="text-muted fw-normal">(Gợi ý PVOil)</small></label>
-                                    <input type="number" step="1" class="form-control form-control-sm bg-light"
+                                    <input type="number" step="1" class="form-control form-control-sm fw-bold border-success bg-success-lt text-success"
                                         name="don_gia" id="inp_dongia" oninput="calcMoney()">
                                     <small class="text-muted d-block text-end" id="price-source"></small>
                                 </div>
@@ -414,14 +415,14 @@
 
                             <div class="row g-2 mb-2">
                                 <div class="col-6" id="group-money">
-                                    <label class="form-label small fw-bold mb-1">Thành Tiền</label>
+                                    <label class="form-label small fw-bold mb-1 text-azure">💰 Thành Tiền</label>
                                     <input type="number" step="1"
-                                        class="form-control form-control-sm fw-bold text-azure" name="thanh_tien"
+                                        class="form-control form-control-sm fw-bold border-azure bg-azure-lt text-azure" name="thanh_tien"
                                         id="inp_thanhtien" oninput="calcQty()">
                                 </div>
                                 <div class="col-6" id="group-supplier">
-                                    <label class="form-label small fw-bold mb-1">NCC</label>
-                                    <select class="form-select form-select-sm" name="nha_cung_cap" id="inp_ncc"
+                                    <label class="form-label small fw-bold mb-1 text-warning">🏢 NCC</label>
+                                    <select class="form-select form-select-sm border-warning bg-warning-lt fw-bold" name="nha_cung_cap" id="inp_ncc"
                                         required>
                                         <option value="" disabled selected>Chọn NCC</option>
                                         <option value="CX 222">CX 222</option>
@@ -432,14 +433,15 @@
                             </div>
 
                             <div class="mb-2" id="group-actual-stock">
-                                <label class="form-label small fw-bold mb-1">NL tồn thực tế</label>
+                                <label class="form-label small fw-bold mb-1" id="lbl_nl_ton">📊 NL tồn thực tế</label>
                                 <input type="number" step="0.01" class="form-control form-control-sm"
                                     name="nl_ton_thuc_te" id="inp_nl_ton"
-                                    placeholder="Nhập nếu cần điều chỉnh theo thực tế">
+                                    placeholder="Nhập nếu cần điều chỉnh theo thực tế"
+                                    oninput="calcAdjustmentQty()">
                             </div>
 
                             <div class="mb-2" id="group-note">
-                                <label class="form-label small fw-bold mb-1">Ghi chú</label>
+                                <label class="form-label small fw-bold mb-1">📝 Ghi chú</label>
                                 <input type="text" class="form-control form-control-sm" name="ghi_chu"
                                     placeholder="Số hóa đơn, lý do...">
                             </div>
@@ -482,6 +484,26 @@
     const nlSelect = document.getElementById('inp_loai_nl');
     if (nlSelect) nlSelect.addEventListener('change', applyFuelPrice);
 
+    let currentStationStock = 0;
+    let editingTransactionQty = 0;
+
+    function calcAdjustmentQty() {
+        const fuelType = document.getElementById('fuel_type').value;
+        if (fuelType !== 'ADJUSTMENT') return;
+
+        const actualStockEl = document.getElementById('inp_nl_ton');
+        const qtyEl = document.getElementById('inp_soluong');
+        if (!actualStockEl || !qtyEl) return;
+
+        const actualStock = parseFloat(actualStockEl.value);
+        if (!isNaN(actualStock)) {
+            const adjustmentQty = actualStock - currentStationStock;
+            qtyEl.value = adjustmentQty.toFixed(2);
+        } else {
+            qtyEl.value = '';
+        }
+    }
+
     function setFuelType(type) {
         document.getElementById('fuel_type').value = type;
         const groupStation = document.getElementById('group-station');
@@ -491,9 +513,15 @@
         const groupActual = document.getElementById('group-actual-stock');
         const nccSelect = document.getElementById('inp_ncc');
         const stationInput = document.getElementById('inp_id_tram');
+        const qtyInput = document.getElementById('inp_soluong');
+        const priceInput = document.getElementById('inp_dongia');
+        const moneyInput = document.getElementById('inp_thanhtien');
+        const actualInput = document.getElementById('inp_nl_ton');
+        const labelActual = document.getElementById('lbl_nl_ton');
 
-        // Reset all: visible + enabled
+        // Reset all: visible + enabled + readOnly + placeholder
         [groupStation, groupPrice, groupMoney, groupSupplier, groupActual].forEach(g => {
+            if (!g) return;
             g.style.opacity = '1';
             g.style.pointerEvents = 'auto';
             g.style.display = 'block';
@@ -502,12 +530,27 @@
                 el.disabled = false;
             });
         });
-        // Price always readonly
-        document.getElementById('inp_dongia').readOnly = true;
+        
+        qtyInput.readOnly = false;
+        qtyInput.classList.remove('bg-light');
+        qtyInput.placeholder = '';
+        
+        priceInput.readOnly = false;
+        priceInput.classList.remove('bg-light');
+        priceInput.classList.add('bg-success-lt');
+
+        moneyInput.readOnly = false;
+        moneyInput.classList.remove('bg-light');
+        moneyInput.classList.add('bg-azure-lt');
+
+        actualInput.required = false;
+        if (labelActual) labelActual.innerHTML = '📊 NL tồn thực tế';
+
         nccSelect.required = true;
         stationInput.required = false;
 
         function dimGroup(group) {
+            if (!group) return;
             group.style.opacity = '0.35';
             group.style.pointerEvents = 'none';
             group.querySelectorAll('input, select').forEach(el => el.disabled = true);
@@ -521,6 +564,30 @@
             dimGroup(groupSupplier);
             nccSelect.required = false;
             stationInput.required = true;
+            
+            // Price readOnly on STATION_OUT
+            priceInput.readOnly = true;
+            priceInput.classList.add('bg-light');
+            priceInput.classList.remove('bg-success-lt');
+        } else if (type === 'ADJUSTMENT') {
+            dimGroup(groupSupplier);
+            dimGroup(groupPrice);
+            dimGroup(groupMoney);
+            
+            nccSelect.required = false;
+            stationInput.required = true;
+            actualInput.required = true;
+            if (labelActual) labelActual.innerHTML = '📊 NL tồn thực tế <span class="text-danger">* Bắt buộc</span>';
+
+            qtyInput.readOnly = true;
+            qtyInput.classList.add('bg-light');
+            qtyInput.placeholder = 'Tự động tính';
+            
+            // Clear fields
+            priceInput.value = '';
+            moneyInput.value = '';
+
+            calcAdjustmentQty();
         } else {
             nccSelect.required = true;
             stationInput.required = true;
@@ -529,28 +596,55 @@
     }
 
     function calcMoney() {
-        const qty = parseFloat(document.getElementById('inp_soluong').value) || 0;
-        const price = parseFloat(document.getElementById('inp_dongia').value) || 0;
+        const qtyEl = document.getElementById('inp_soluong');
+        const priceEl = document.getElementById('inp_dongia');
+        const moneyEl = document.getElementById('inp_thanhtien');
+        if (!qtyEl || !priceEl || !moneyEl) return;
+
+        const qty = parseFloat(qtyEl.value) || 0;
+        const price = parseFloat(priceEl.value) || 0;
+        const money = parseFloat(moneyEl.value) || 0;
+
         if (qty && price) {
-            document.getElementById('inp_thanhtien').value = Math.round(qty * price);
+            moneyEl.value = Math.round(qty * price);
+        } else if (money && qty) {
+            priceEl.value = Math.round(money / qty);
+        } else if (money && price) {
+            qtyEl.value = (money / price).toFixed(2);
         }
     }
 
     // === STATION HELPER TEXT ===
     function loadStationHint(stationId) {
         const hint = document.getElementById('station-stock-hint');
-        if (!stationId) { hint.style.display = 'none'; return; }
+        if (!stationId) { 
+            hint.style.display = 'none'; 
+            currentStationStock = 0;
+            calcAdjustmentQty();
+            return; 
+        }
         fetch('/api/fuel-context?station_id=' + encodeURIComponent(stationId))
             .then(r => r.json())
             .then(data => {
-                if (data.error) { hint.style.display = 'none'; return; }
+                if (data.error) { 
+                    hint.style.display = 'none'; 
+                    currentStationStock = 0;
+                    calcAdjustmentQty();
+                    return; 
+                }
                 const pctClass = data.fill_percent < 10 ? 'text-danger' : data.fill_percent < 30 ? 'text-warning' : 'text-success';
                 hint.className = 'form-text small fw-bold ' + pctClass;
                 hint.textContent = (data.may_phat_dien ? data.may_phat_dien + ' │ ' : '')
                     + 'V=' + (data.dung_tich || '?') + 'L │ Tồn: ~' + data.station_stock + 'L (' + data.fill_percent + '%)';
                 hint.style.display = 'block';
+                currentStationStock = (parseFloat(data.station_stock) || 0) - editingTransactionQty;
+                calcAdjustmentQty();
             })
-            .catch(() => { hint.style.display = 'none'; });
+            .catch(() => { 
+                hint.style.display = 'none'; 
+                currentStationStock = 0;
+                calcAdjustmentQty();
+            });
     }
 
     // Hook into station input
@@ -560,10 +654,21 @@
     }
 
     function calcQty() {
-        const money = parseFloat(document.getElementById('inp_thanhtien').value) || 0;
-        const price = parseFloat(document.getElementById('inp_dongia').value) || 0;
+        const qtyEl = document.getElementById('inp_soluong');
+        const priceEl = document.getElementById('inp_dongia');
+        const moneyEl = document.getElementById('inp_thanhtien');
+        if (!qtyEl || !priceEl || !moneyEl) return;
+
+        const qty = parseFloat(qtyEl.value) || 0;
+        const price = parseFloat(priceEl.value) || 0;
+        const money = parseFloat(moneyEl.value) || 0;
+
         if (money && price) {
-            document.getElementById('inp_soluong').value = (money / price).toFixed(2);
+            qtyEl.value = (money / price).toFixed(2);
+        } else if (money && qty) {
+            priceEl.value = Math.round(money / qty);
+        } else if (qty && price) {
+            moneyEl.value = Math.round(qty * price);
         }
     }
 
@@ -573,6 +678,8 @@
         const hint = document.getElementById('station-stock-hint');
         if (!stationId) {
             hint.style.display = 'none';
+            currentStationStock = 0;
+            calcAdjustmentQty();
             return;
         }
 
@@ -582,7 +689,13 @@
                 if (data.station_stock !== undefined) {
                     hint.textContent = `Tồn trạm hiện tại: ${data.station_stock} lít`;
                     hint.style.display = 'block';
+                    currentStationStock = (parseFloat(data.station_stock) || 0) - editingTransactionQty;
+                    calcAdjustmentQty();
                 }
+            })
+            .catch(() => {
+                currentStationStock = 0;
+                calcAdjustmentQty();
             });
     }
 
@@ -607,10 +720,13 @@
     setFuelType('DIRECT_BUY');
 
     function resetFuelModal() {
+        editingTransactionQty = 0;
+        currentStationStock = 0;
         const modal = document.querySelector('#smartFuelModal');
         modal.querySelector('.modal-title').textContent = 'Giao Dịch Nhiên Liệu Mới';
         modal.querySelector('form').action = "{{ url_for('generator.add_fuel_ledger') }}";
         modal.querySelector('form').reset();
+        document.getElementById('station-stock-hint').style.display = 'none';
         setFuelType('DIRECT_BUY');
     }
 
@@ -627,18 +743,30 @@
         modal.querySelector('.modal-title').textContent = (typeLabels[log.type] || 'Sửa') + ' #' + log.id;
         modal.querySelector('form').action = "/fuel-ledger/edit/" + log.id;
 
-        // Populate data TRƯỚC setFuelType
+        // Set editing quantities
+        editingTransactionQty = parseFloat(log.so_luong) || 0;
+
+        // Populate basic text/date fields FIRST
         modal.querySelector('input[name="ngay"]').value = log.ngay ? log.ngay.split(' ')[0] : '';
         modal.querySelector('input[name="id_tram"]').value = log.id_tram || '';
         modal.querySelector('select[name="loai_nhien_lieu"]').value = log.loai_nhien_lieu || 'Dầu';
-        modal.querySelector('input[name="so_luong"]').value = log.so_luong;
-        modal.querySelector('input[name="don_gia"]').value = Math.round(log.don_gia || 0);
-        modal.querySelector('input[name="thanh_tien"]').value = Math.round(log.thanh_tien || 0);
         modal.querySelector('select[name="nha_cung_cap"]').value = log.nha_cung_cap || '';
         modal.querySelector('input[name="ghi_chu"]').value = log.ghi_chu || '';
 
-        // Set dropdown + field visibility
+        // Call setFuelType to handle UI display & states
         setFuelType(log.type);
+
+        // Populate values AFTER setFuelType to prevent auto-calculation overrides
+        modal.querySelector('input[name="so_luong"]').value = log.so_luong;
+        modal.querySelector('input[name="don_gia"]').value = Math.round(log.don_gia || 0);
+        modal.querySelector('input[name="thanh_tien"]').value = Math.round(log.thanh_tien || 0);
+        modal.querySelector('input[name="nl_ton_thuc_te"]').value = log.ton_sau_gd || '';
+
+        // Load stock hint for this station
+        if (log.id_tram) {
+            checkStationStock(log.id_tram);
+            document.getElementById('inp_id_tram').value = log.id_tram;
+        }
     }
 
     function editExpense(btn) {

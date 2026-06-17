@@ -1,23 +1,83 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Datasites from './pages/Datasites';
 import ContractDashboard from './pages/ContractDashboard';
 import DailyWork from './pages/DailyWork';
 import Generator from './pages/Generator';
+import Settings from './pages/Settings';
 import Expenses from './pages/Expenses';
+import VhktRan from './pages/VhktRan';
+import Privacy from './pages/Privacy';
+import Terms from './pages/Terms';
+import Login from './pages/Login';
+import { useCurrentUser } from './utils/useCurrentUser';
+import { RefreshCw } from 'lucide-react';
+
+// Component bảo vệ Route chỉ dành riêng cho Admin
+function AdminRoute({ children }) {
+  const { user, isLoading } = useCurrentUser();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center font-sans">
+        <RefreshCw className="h-8 w-8 text-blue-600 animate-spin mb-3" />
+        <span className="text-sm font-semibold text-slate-500">Đang kiểm tra quyền truy cập...</span>
+      </div>
+    );
+  }
+
+  const email = user?.email || '';
+  const displayName = user?.user_metadata?.full_name || user?.user_metadata?.name || '';
+  const displayRole = email === 'admin@mobifone.vn' || displayName.toLowerCase().includes('admin') ? 'Quản trị' : 'Kỹ thuật';
+  const isAdmin = displayRole === 'Quản trị';
+
+  if (!user || !isAdmin) {
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
+}
 
 function App() {
+  const { isLoading } = useCurrentUser();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center font-sans">
+        <RefreshCw className="h-8 w-8 text-blue-600 animate-spin mb-3" />
+        <span className="text-sm font-semibold text-slate-500">Đang kiểm tra phiên làm việc...</span>
+      </div>
+    );
+  }
+
   return (
     <Router>
       <Routes>
+        {/* Route login riêng lẻ */}
+        <Route path="/login" element={<Login />} />
+        
+        {/* Các route trong Layout chính */}
         <Route path="/" element={<Layout />}>
           <Route index element={<Dashboard />} />
           <Route path="datasites" element={<Datasites />} />
           <Route path="contracts" element={<ContractDashboard />} />
           <Route path="daily-work" element={<DailyWork />} />
-          <Route path="generator" element={<Generator />} />
+          {/* Chỉ Admin được phép truy cập module máy phát điện */}
+          <Route path="generator" element={
+            <AdminRoute>
+              <Generator />
+            </AdminRoute>
+          } />
+          <Route path="settings" element={
+            <AdminRoute>
+              <Settings />
+            </AdminRoute>
+          } />
           <Route path="expenses" element={<Expenses />} />
+          <Route path="vhkt-ran" element={<VhktRan />} />
+          <Route path="privacy" element={<Privacy />} />
+          <Route path="terms" element={<Terms />} />
           <Route path="*" element={
             <div className="flex flex-col items-center justify-center h-full py-20 text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="bg-gray-50 rounded-full p-6 mb-6 border border-gray-100 shadow-sm">
