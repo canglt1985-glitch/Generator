@@ -239,6 +239,85 @@ export default function Generator() {
     };
   }, [filteredLogs]);
 
+  // Statistics calculation for filtered invoices
+  const invoiceStats = useMemo(() => {
+    let count = filteredInvoices.length;
+    let fuelDau = 0;
+    let fuelXang = 0;
+    let subTotal = 0;
+    let vatAmount = 0;
+    let totalAmount = 0;
+    
+    // Group total amount by date to detect days exceeding 5,000,000
+    const amountByDate = {};
+
+    filteredInvoices.forEach(inv => {
+      const total = parseFloat(inv.total_amount) || 0;
+      const vat = parseFloat(inv.vat_amount) || 0;
+      const sub = parseFloat(inv.sub_total) || (total - vat);
+
+      totalAmount += total;
+      vatAmount += vat;
+      subTotal += sub;
+
+      let displayDate = inv.invoice_date || '';
+      if (displayDate.includes('-')) {
+        const parts = displayDate.split('-');
+        if (parts.length === 3) {
+          displayDate = `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+      }
+      
+      amountByDate[displayDate] = (amountByDate[displayDate] || 0) + total;
+
+      // Parse items for fuel qty
+      let itemsList = [];
+      if (inv.items) {
+        if (typeof inv.items === 'string') {
+          try {
+            itemsList = JSON.parse(inv.items);
+          } catch (e) {
+            itemsList = [];
+          }
+        } else if (Array.isArray(inv.items)) {
+          itemsList = inv.items;
+        }
+      }
+
+      if (Array.isArray(itemsList)) {
+        itemsList.forEach(item => {
+          const qty = parseFloat(item.sl || item.quantity) || 0;
+          const name = (item.ten || item.name || '').toLowerCase();
+          const isDau = name.includes('dầu') || name.includes('dau') || name.includes('diesel') || name.includes('điêzen') || name.includes('diezen') || /\bdo\b/.test(name);
+          const isXang = name.includes('xăng') || name.includes('xang') || name.includes('ron') || name.includes('e5') || name.includes('a95') || name.includes('95') || name.includes('92');
+
+          if (isDau) {
+            fuelDau += qty;
+          } else if (isXang) {
+            fuelXang += qty;
+          }
+        });
+      }
+    });
+
+    const warningDays = [];
+    Object.keys(amountByDate).forEach(d => {
+      if (amountByDate[d] > 5000000) {
+        warningDays.push({ date: d, amount: amountByDate[d] });
+      }
+    });
+
+    return {
+      count,
+      fuelDau: parseFloat(fuelDau.toFixed(1)),
+      fuelXang: parseFloat(fuelXang.toFixed(1)),
+      subTotal,
+      vatAmount,
+      totalAmount,
+      warningDays
+    };
+  }, [filteredInvoices]);
+
   // Export to Excel
   const exportToExcel = () => {
     const dataForExcel = filteredLogs.map(log => {
@@ -707,6 +786,19 @@ export default function Generator() {
     }
   }
 
+  // Delete Invoice
+  async function handleDeleteInvoice(id) {
+    if (!confirm("Bạn có chắc chắn muốn xóa hóa đơn này không?")) return;
+    try {
+      const { error } = await supabase.from('parsed_invoices').delete().eq('id', id);
+      if (error) throw error;
+      alert("Xóa hóa đơn thành công!");
+      fetchData();
+    } catch (err) {
+      alert("Lỗi khi xóa hóa đơn: " + err.message);
+    }
+  }
+
   function resetLogForm() {
     setLogDate(new Date().toISOString().split('T')[0]);
     setLogSiteId('');
@@ -926,6 +1018,70 @@ export default function Generator() {
               <div className="font-extrabold text-amber-800 text-sm">{stats.pendingCount}</div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Statistics and Warning Row for Invoices tab */}
+      {activeTab === 'invoices' && (
+        <div className="space-y-3">
+          {invoiceStats.warningDays.length > 0 && (
+            <div className="bg-red-600 border border-red-700 text-white rounded-xl p-4 shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 mt-0.5 text-white animate-pulse" />
+                <div>
+                  <h4 className="font-extrabold text-sm uppercase tracking-wider">CẢNH BÁO THANH TOÁN (TỔNG NGÀY VƯỢT QUÁ 5 TRIỆU ĐỒNG)</h4>
+                  <p className="text-xs text-red-100 mt-1">Các ngày sau đây có tổng cộng hóa đơn vượt quá 5,000,000đ. Vui lòng thực hiện chuyển khoản (không dùng tiền mặt) để đảm bảo điều kiện khấu trừ thuế:</p>
+                  <ul className="list-disc list-inside mt-2 text-xs font-bold space-y-1">
+                    {invoiceStats.warningDays.map(wd => (
+                      <li key={wd.date}>
+                        Ngày {wd.date}: Tổng cộng {formatCurrency(wd.amount)}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-2 animate-in fade-in slide-in-from-top-2 duration-300">
+            {/* Số HĐ */}
+            <div className="bg-blue-50 border border-blue-100 rounded-xl p-2 px-3 min-w-[70px] shadow-sm">
+              <div className="text-slate-500 text-[10px] font-semibold uppercase">🗒 Số HĐ</div>
+              <div className="font-extrabold text-blue-700 text-sm">{invoiceStats.count}</div>
+            </div>
+            {/* Dầu D */}
+            <div className="bg-orange-50 border border-orange-100 rounded-xl p-2 px-3 min-w-[80px] shadow-sm">
+              <div className="text-slate-500 text-[10px] font-semibold uppercase">🛢 Dầu D</div>
+              <div className="font-extrabold text-orange-700 text-sm">{invoiceStats.fuelDau} L</div>
+            </div>
+            {/* Xăng X */}
+            <div className="bg-red-50 border border-red-100 rounded-xl p-2 px-3 min-w-[80px] shadow-sm">
+              <div className="text-slate-500 text-[10px] font-semibold uppercase">⛽ Xăng X</div>
+              <div className="font-extrabold text-red-600 text-sm">{invoiceStats.fuelXang} L</div>
+            </div>
+            {/* Cộng chưa VAT */}
+            <div className="bg-sky-50 border border-sky-100 rounded-xl p-2 px-3 min-w-[110px] shadow-sm">
+              <div className="text-slate-500 text-[10px] font-semibold uppercase">💰 Cộng chưa VAT</div>
+              <div className="font-extrabold text-sky-700 text-sm">{formatCurrency(invoiceStats.subTotal)}</div>
+            </div>
+            {/* VAT */}
+            <div className="bg-orange-50 border border-orange-100 rounded-xl p-2 px-3 min-w-[95px] shadow-sm">
+              <div className="text-slate-500 text-[10px] font-semibold uppercase">VAT</div>
+              <div className="font-extrabold text-orange-600 text-sm">{formatCurrency(invoiceStats.vatAmount)}</div>
+            </div>
+            {/* Tổng tiền */}
+            <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-2 px-4 min-w-[120px] shadow-sm">
+              <div className="text-slate-500 text-[10px] font-semibold uppercase">🏆 Tổng tiền</div>
+              <div className="font-extrabold text-emerald-700 text-sm">{formatCurrency(invoiceStats.totalAmount)}</div>
+            </div>
+            {/* Cần CK */}
+            {invoiceStats.warningDays.length > 0 && (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-2 px-3 min-w-[85px] shadow-sm">
+                <div className="text-red-800 text-[10px] font-semibold uppercase">⚠️ Cần CK</div>
+                <div className="font-extrabold text-red-800 text-sm">{invoiceStats.warningDays.length} ngày</div>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -1253,6 +1409,13 @@ export default function Generator() {
                                   </button>
                                 </>
                               )}
+                              <button 
+                                onClick={() => handleDeleteInvoice(inv.id)}
+                                className="text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 p-1.5 rounded transition-colors inline-flex items-center cursor-pointer"
+                                title="Xóa hóa đơn"
+                              >
+                                <Trash size={14} />
+                              </button>
                             </td>
                           </tr>
                         ))}
