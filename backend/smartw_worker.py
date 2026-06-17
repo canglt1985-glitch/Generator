@@ -610,30 +610,7 @@ def sync_alarms_to_supabase(result: dict):
             "status": "CLEARED" if edate_iso else "ACTIVE"
         })
 
-    # 2. MPD
-    for alarm in result.get('mpd', []):
-        site = (alarm.get('site') or '').strip()
-        alarm_name = (alarm.get('alarmName') or '').strip()
-        sdate_str = (alarm.get('sdateStr') or alarm.get('sdate_str') or '').strip()
-        edate_str = (alarm.get('edateStr') or alarm.get('clear_time') or alarm.get('ket_thuc') or '').strip()
-        sdate_iso = parse_to_iso(sdate_str)
-        edate_iso = parse_to_iso(edate_str)
-        val_str = f"mpd_{site}_{alarm_name}_{sdate_str}"
-        rec_id = str(uuid.uuid5(uuid.NAMESPACE_OID, val_str))
-        
-        all_rows.append({
-            "id": rec_id,
-            "site": site,
-            "ne_type": alarm.get('neType'),
-            "alarm_name": alarm_name,
-            "alarm_type": "mpd",
-            "sdate": sdate_iso,
-            "sdate_str": sdate_str,
-            "edate": edate_iso,
-            "edate_str": edate_str if edate_str else None,
-            "duration": int(alarm.get('duaration') or alarm.get('minute') or 0),
-            "status": "CLEARED" if edate_iso else "ACTIVE"
-        })
+
 
 
     if all_rows:
