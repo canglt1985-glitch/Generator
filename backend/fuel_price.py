@@ -216,6 +216,19 @@ def save_fuel_prices(prices):
     # Append to history if this is a new price for today
     _append_price_history(today, prices.get('xang_ron95', 0), prices.get('dau_do', 0))
 
+    if supabase:
+        try:
+            supabase.table("system_config").upsert({
+                "key": "fuel_prices",
+                "value": data,
+                "description": "Scraped PVOil Fuel Prices",
+                "updated_at": datetime.now().isoformat(),
+                "updated_by": "backend_scraper"
+            }).execute()
+            print("[FuelPrice] Pushed latest prices to Supabase system_config table.")
+        except Exception as e:
+            print(f"[FuelPrice] Failed to push to Supabase system_config table: {e}")
+
     print(f"[FuelPrice] Saved: Xang={data['xang_ron95']:,}d, Dau={data['dau_do']:,}d")
     return data
 

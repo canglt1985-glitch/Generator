@@ -7,8 +7,37 @@ import {
 } from 'lucide-react';
 import { useCurrentUser } from '../utils/useCurrentUser';
 
+const getTodayDMY = () => {
+  const today = new Date();
+  const day = String(today.getDate()).padStart(2, '0');
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const year = today.getFullYear();
+  return `${day}/${month}/${year}`;
+};
+
+const formatDateToDMY = (dateStr) => {
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  if (parts.length === 3) {
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+  return dateStr;
+};
+
+const parseDateFromDMY = (dmyStr) => {
+  if (!dmyStr) return '';
+  const parts = dmyStr.split('/');
+  if (parts.length === 3) {
+    const day = parts[0].padStart(2, '0');
+    const month = parts[1].padStart(2, '0');
+    const year = parts[2];
+    return `${year}-${month}-${day}`;
+  }
+  return dmyStr;
+};
+
 export default function Expenses() {
-  const { user } = useCurrentUser();
+  const { user, displayName } = useCurrentUser();
   const [activeTab, setActiveTab] = useState('fuel'); // fuel, other, summary
   
   // Data States
@@ -40,14 +69,20 @@ export default function Expenses() {
 
   // Form states - Fuel Transaction
   const [fuelDate, setFuelDate] = useState(new Date().toISOString().split('T')[0]);
+  const [fuelDateDMY, setFuelDateDMY] = useState(getTodayDMY());
   const [fuelType, setFuelType] = useState('STOCK_IN'); // STOCK_IN, STATION_OUT, DIRECT_BUY, ADJUSTMENT
   const [fuelSiteId, setFuelSiteId] = useState('');
+  const [fuelSiteInput, setFuelSiteInput] = useState('');
+  const [showSiteSuggestions, setShowSiteSuggestions] = useState(false);
   const [fuelProduct, setFuelProduct] = useState('Dầu'); // Dầu, Xăng
   const [fuelQty, setFuelQty] = useState('');
   const [fuelPrice, setFuelPrice] = useState('');
-  const [fuelVendor, setFuelVendor] = useState('');
+  const [fuelTotalAmount, setFuelTotalAmount] = useState('');
+  const [fuelActualInventory, setFuelActualInventory] = useState('');
+  const [fuelVendor, setFuelVendor] = useState('CX222');
   const [fuelOperator, setFuelOperator] = useState('');
   const [fuelNotes, setFuelNotes] = useState('');
+  const [fuelPrices, setFuelPrices] = useState({ dau_do: 25870, xang_ron95: 22060 });
 
   // Form states - Other Expense
   const [otherDate, setOtherDate] = useState(new Date().toISOString().split('T')[0]);
@@ -85,12 +120,87 @@ export default function Expenses() {
       if (txsErr) throw txsErr;
       setTransactions(txs || []);
 
+      // 3. Tải cấu giá xăng dầu từ system_config
+      const { data: config, error: configErr } = await supabase
+        .from('system_config')
+        .select('*')
+        .eq('key', 'fuel_prices')
+        .single();
+      if (!configErr && config?.value) {
+        setFuelPrices(config.value);
+      }
+
     } catch (err) {
       console.error("Lỗi khi tải dữ liệu:", err);
     } finally {
       setLoading(false);
     }
   }
+
+  // Set operator automatically based on login profile
+  useEffect(() => {
+    if (displayName) {
+      setFuelOperator(displayName);
+    }
+  }, [displayName]);
+
+  // Autofill unit price when product selection or loaded price config changes
+  useEffect(() => {
+    const price = fuelProduct === 'Dầu' ? (fuelPrices.dau_do || '') : (fuelPrices.xang_ron95 || '');
+    setFuelPrice(price);
+    
+    // Recalculate total amount if quantity exists
+    const qty = parseFloat(fuelQty);
+    const pVal = parseFloat(price);
+    if (!isNaN(qty) && !isNaN(pVal)) {
+      setFuelTotalAmount(Math.round(qty * pVal));
+    } else {
+      setFuelTotalAmount('');
+    }
+  }, [fuelProduct, fuelPrices]);
+
+  // Handle changes for bidirectional quantity/amount calculations
+  const handleQtyChange = (val) => {
+    setFuelQty(val);
+    const qty = parseFloat(val);
+    const price = parseFloat(fuelPrice);
+    if (!isNaN(qty) && !isNaN(price)) {
+      setFuelTotalAmount(Math.round(qty * price));
+    } else {
+      setFuelTotalAmount('');
+    }
+  };
+
+  const handlePriceChange = (val) => {
+    setFuelPrice(val);
+    const qty = parseFloat(fuelQty);
+    const price = parseFloat(val);
+    if (!isNaN(qty) && !isNaN(price)) {
+      setFuelTotalAmount(Math.round(qty * price));
+    } else {
+      setFuelTotalAmount('');
+    }
+  };
+
+  const handleTotalAmountChange = (val) => {
+    setFuelTotalAmount(val);
+    const total = parseFloat(val);
+    const price = parseFloat(fuelPrice);
+    if (!isNaN(total) && !isNaN(price) && price > 0) {
+      setFuelQty(Math.round((total / price) * 100) / 100);
+    }
+  };
+
+  // Autocomplete Site ID filtered suggestions list
+  const filteredSiteSuggestions = useMemo(() => {
+    if (!fuelSiteInput.trim()) return [];
+    const q = fuelSiteInput.toLowerCase();
+    return stations.filter(st => 
+      (st.site_id || '').toLowerCase().includes(q) ||
+      (st.site_id_old || '').toLowerCase().includes(q) ||
+      (st.name || '').toLowerCase().includes(q)
+    ).slice(0, 10);
+  }, [stations, fuelSiteInput]);
 
   // Phân loại các giao dịch
   const fuelTransactions = useMemo(() => {
@@ -407,6 +517,14 @@ export default function Expenses() {
   // Submit Fuel Transaction
   async function handleAddFuel(e) {
     e.preventDefault();
+
+    // Parse and validate date
+    const dbDate = parseDateFromDMY(fuelDateDMY);
+    if (!dbDate || isNaN(Date.parse(dbDate))) {
+      alert("Vui lòng nhập ngày thực hiện đúng định dạng dd/mm/yyyy!");
+      return;
+    }
+
     const qty = parseFloat(fuelQty);
     const price = parseFloat(fuelPrice);
     if (isNaN(qty) || qty <= 0) {
@@ -414,28 +532,77 @@ export default function Expenses() {
       return;
     }
 
-    const total = qty * (price || 0);
+    const total = parseFloat(fuelTotalAmount) || (qty * (price || 0));
 
     const payload = {
-      date: fuelDate,
-      site_id: (fuelType === 'STATION_OUT' || fuelType === 'DIRECT_BUY') && fuelSiteId ? fuelSiteId : null,
+      date: dbDate,
+      site_id: (fuelType !== 'STOCK_IN') && fuelSiteId ? fuelSiteId : null,
       fuel_tracking: {
         type: fuelType,
         fuel_type: fuelProduct,
         quantity: qty,
         unit_price: price || 0,
         total_amount: total,
+        thanh_tien: total,
         vendor: fuelVendor.trim() || null,
         operator: fuelOperator.trim() || null,
         notes: fuelNotes.trim() || null,
-        is_approved: true
+        is_approved: true,
+        ...(fuelActualInventory.trim() !== '' ? { balance_after: parseFloat(fuelActualInventory) } : {})
       },
       other_expenses: {}
     };
 
     try {
+      // 1. Insert fuel transaction
       const { error } = await supabase.from('fuel_and_expenses').insert([payload]);
       if (error) throw error;
+
+      // 2. If actual inventory is provided and there is a site_id, update datasites.infrastructure_info
+      const actualInv = parseFloat(fuelActualInventory);
+      if (fuelSiteId && !isNaN(actualInv) && fuelActualInventory.trim() !== '') {
+        const { data: siteData, error: fetchErr } = await supabase
+          .from('datasites')
+          .select('infrastructure_info')
+          .eq('site_id', fuelSiteId)
+          .single();
+
+        if (fetchErr) {
+          console.error("Lỗi khi tải thông tin trạm để cập nhật NL tồn:", fetchErr);
+        } else if (siteData) {
+          const infra = siteData.infrastructure_info || {};
+          if (!infra.may_phat_dien) {
+            infra.may_phat_dien = {};
+          }
+          if (!Array.isArray(infra.may_phat_dien.mpd)) {
+            infra.may_phat_dien.mpd = [];
+          }
+          if (infra.may_phat_dien.mpd.length === 0) {
+            infra.may_phat_dien.mpd.push({
+              ten: "MÁY PHÁT ĐIỆN (1)",
+              nl_ton: actualInv,
+              dinh_muc: 3.15,
+              cong_suat: "12.5",
+              dung_tich: 30,
+              nhien_lieu: "DẦU DO",
+              trang_thai: "HOẠT ĐỘNG TỐT"
+            });
+          } else {
+            infra.may_phat_dien.mpd[0].nl_ton = actualInv;
+          }
+
+          const { error: updateErr } = await supabase
+            .from('datasites')
+            .update({ infrastructure_info: infra })
+            .eq('site_id', fuelSiteId);
+
+          if (updateErr) {
+            console.error("Lỗi khi cập nhật tồn nhiên liệu trạm:", updateErr);
+            alert("Giao dịch đã lưu, nhưng không thể cập nhật tồn nhiên liệu của trạm trong datasites (Lỗi RLS hoặc kết nối).");
+          }
+        }
+      }
+
       alert("Thêm giao dịch nhiên liệu thành công!");
       setShowAddFuelModal(false);
       resetFuelForm();
@@ -615,13 +782,17 @@ export default function Expenses() {
 
   function resetFuelForm() {
     setFuelDate(new Date().toISOString().split('T')[0]);
+    setFuelDateDMY(getTodayDMY());
     setFuelType('STOCK_IN');
     setFuelSiteId('');
+    setFuelSiteInput('');
     setFuelProduct('Dầu');
     setFuelQty('');
-    setFuelPrice('');
-    setFuelVendor('');
-    setFuelOperator('');
+    setFuelPrice(fuelPrices.dau_do || '');
+    setFuelTotalAmount('');
+    setFuelActualInventory('');
+    setFuelVendor('CX222');
+    setFuelOperator(displayName || 'admin');
     setFuelNotes('');
   }
 
@@ -647,9 +818,9 @@ export default function Expenses() {
 
   const getTxTypeBadge = (type) => {
     switch(type) {
-      case 'STOCK_IN': return <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded text-[11px] font-bold border border-blue-100">Nhập kho</span>;
-      case 'STATION_OUT': return <span className="bg-orange-50 text-orange-700 px-2 py-0.5 rounded text-[11px] font-bold border border-orange-100">Xuất trạm</span>;
-      case 'DIRECT_BUY': return <span className="bg-purple-50 text-purple-700 px-2 py-0.5 rounded text-[11px] font-bold border border-purple-100">Mua thẳng</span>;
+      case 'STOCK_IN': return <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded text-[11px] font-bold border border-blue-100">Mua về kho</span>;
+      case 'STATION_OUT': return <span className="bg-orange-50 text-orange-700 px-2 py-0.5 rounded text-[11px] font-bold border border-orange-100">Xuất kho</span>;
+      case 'DIRECT_BUY': return <span className="bg-purple-50 text-purple-700 px-2 py-0.5 rounded text-[11px] font-bold border border-purple-100">Đổ nhiên liệu</span>;
       case 'ADJUSTMENT': return <span className="bg-gray-50 text-gray-700 px-2 py-0.5 rounded text-[11px] font-bold border border-gray-100">Hiệu chỉnh</span>;
       default: return type;
     }
@@ -1358,16 +1529,17 @@ export default function Expenses() {
                 <X size={20} />
               </button>
             </div>
-
+ 
             <form onSubmit={handleAddFuel} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Ngày thực hiện</label>
                   <input 
-                    type="date" 
+                    type="text" 
+                    placeholder="dd/mm/yyyy"
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                    value={fuelDate}
-                    onChange={(e) => setFuelDate(e.target.value)}
+                    value={fuelDateDMY}
+                    onChange={(e) => setFuelDateDMY(e.target.value)}
                   />
                 </div>
                 <div>
@@ -1382,7 +1554,7 @@ export default function Expenses() {
                   </select>
                 </div>
               </div>
-
+ 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Loại giao dịch</label>
@@ -1391,82 +1563,132 @@ export default function Expenses() {
                     value={fuelType}
                     onChange={(e) => {
                       setFuelType(e.target.value);
-                      if (e.target.value === 'STOCK_IN' || e.target.value === 'ADJUSTMENT') {
+                      if (e.target.value === 'STOCK_IN') {
                         setFuelSiteId('');
+                        setFuelSiteInput('');
                       }
                     }}
                   >
-                    <option value="STOCK_IN">Nhập kho (Mua về kho Tổ)</option>
-                    <option value="STATION_OUT">Xuất trạm (Xuất từ kho cho trạm)</option>
-                    <option value="DIRECT_BUY">Mua thẳng (Mua lẻ đổ thẳng trạm)</option>
-                    <option value="ADJUSTMENT">Hiệu chỉnh kho</option>
+                    <option value="DIRECT_BUY">Đổ nhiên liệu</option>
+                    <option value="STOCK_IN">Mua về kho</option>
+                    <option value="STATION_OUT">Xuất kho</option>
+                    <option value="ADJUSTMENT">Hiệu chỉnh</option>
                   </select>
                 </div>
-                <div>
+                <div className="relative">
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Trạm liên quan</label>
-                  <select 
+                  <input 
+                    type="text" 
+                    placeholder="Gõ Site ID cũ hoặc mới..."
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                    value={fuelSiteId}
-                    onChange={(e) => setFuelSiteId(e.target.value)}
-                    disabled={fuelType === 'STOCK_IN' || (fuelType === 'ADJUSTMENT' && !fuelSiteId)}
-                  >
-                    <option value="">-- Kho chung (Không chọn trạm) --</option>
-                    {stations.map(st => (
-                      <option key={st.site_id} value={st.site_id}>
-                        {st.site_id} {st.site_id_old ? `(${st.site_id_old})` : ''} - {st.name}
-                      </option>
-                    ))}
-                  </select>
+                    value={fuelSiteInput}
+                    onChange={(e) => {
+                      setFuelSiteInput(e.target.value);
+                      setShowSiteSuggestions(true);
+                      if (e.target.value === '') {
+                        setFuelSiteId('');
+                      }
+                    }}
+                    onFocus={() => setShowSiteSuggestions(true)}
+                    onBlur={() => {
+                      setTimeout(() => setShowSiteSuggestions(false), 200);
+                    }}
+                    disabled={fuelType === 'STOCK_IN'}
+                  />
+                  {showSiteSuggestions && filteredSiteSuggestions.length > 0 && (
+                    <div className="absolute z-[110] left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-lg">
+                      {filteredSiteSuggestions.map(st => (
+                        <div 
+                          key={st.site_id}
+                          onClick={() => {
+                            setFuelSiteId(st.site_id);
+                            setFuelSiteInput(st.site_id_old ? `${st.site_id} - ${st.site_id_old} - ${st.name}` : `${st.site_id} - ${st.name}`);
+                            setShowSiteSuggestions(false);
+                          }}
+                          className="px-3 py-2 hover:bg-slate-100 text-xs text-slate-700 cursor-pointer border-b border-slate-100 last:border-b-0"
+                        >
+                          {st.site_id} {st.site_id_old ? ` - ${st.site_id_old}` : ''} - {st.name}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
-
-              <div className="grid grid-cols-2 gap-4">
+ 
+              <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Số lượng (Lít)</label>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Số lượng (Lít)</label>
                   <input 
                     type="number" 
                     step="any"
                     placeholder="VD: 50"
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                     value={fuelQty}
-                    onChange={(e) => setFuelQty(e.target.value)}
+                    onChange={(e) => handleQtyChange(e.target.value)}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Đơn giá (VND/Lít)</label>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Đơn giá (VND/Lít)</label>
                   <input 
                     type="number" 
                     placeholder="VD: 21000"
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                     value={fuelPrice}
-                    onChange={(e) => setFuelPrice(e.target.value)}
+                    onChange={(e) => handlePriceChange(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Thành tiền (VND)</label>
+                  <input 
+                    type="number" 
+                    placeholder="Tự động tính..."
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 font-semibold"
+                    value={fuelTotalAmount}
+                    onChange={(e) => handleTotalAmountChange(e.target.value)}
                   />
                 </div>
               </div>
-
+ 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Nhà cung cấp / Cửa hàng</label>
-                  <input 
-                    type="text" 
-                    placeholder="Tên cây xăng..."
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                  <select 
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white"
                     value={fuelVendor}
                     onChange={(e) => setFuelVendor(e.target.value)}
-                  />
+                  >
+                    <option value="CX222">CX222</option>
+                    <option value="VNPT/VTL">VNPT/VTL</option>
+                    <option value="Mua Lẻ">Mua Lẻ</option>
+                  </select>
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Người thực hiện</label>
                   <input 
                     type="text" 
                     placeholder="Tên nhân viên..."
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-100/80 text-slate-500 font-medium cursor-not-allowed"
                     value={fuelOperator}
-                    onChange={(e) => setFuelOperator(e.target.value)}
+                    disabled={true}
                   />
                 </div>
               </div>
-
+ 
+              {fuelSiteId && (
+                <div className="bg-blue-50/50 p-3 rounded-lg border border-blue-100 animate-in fade-in slide-in-from-top-1 duration-200">
+                  <label className="block text-xs font-bold text-blue-700 uppercase tracking-wider mb-1">Hiệu chỉnh NL tồn thực tế tại trạm (Lít)</label>
+                  <input 
+                    type="number" 
+                    step="any"
+                    placeholder="Nhập lượng dầu thực tế đo được tại trạm..."
+                    className="w-full px-3 py-2 border border-blue-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                    value={fuelActualInventory}
+                    onChange={(e) => setFuelActualInventory(e.target.value)}
+                  />
+                  <p className="text-[11px] text-blue-600/80 mt-1">Khi lưu, hệ thống sẽ cập nhật lại số lượng tồn dầu thực tế của máy phát điện tại trạm này.</p>
+                </div>
+              )}
+ 
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Ghi chú</label>
                 <input 
@@ -1477,7 +1699,7 @@ export default function Expenses() {
                   onChange={(e) => setFuelNotes(e.target.value)}
                 />
               </div>
-
+ 
               <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
                 <button 
                   type="button"
