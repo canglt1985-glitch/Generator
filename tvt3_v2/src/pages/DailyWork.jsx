@@ -131,11 +131,12 @@ export default function DailyWork() {
         if (error) throw error;
         setDailyLogs(data || []);
       } else if (activeTab === 'power') {
+        const todayStr = new Date().toISOString().split('T')[0];
         const { data, error } = await supabase
           .from('power_schedule')
           .select('*')
-          .order('ngay_mat_dien', { ascending: false })
-          .limit(1000);
+          .gte('ngay_mat_dien', todayStr)
+          .order('ngay_mat_dien', { ascending: true });
         if (error) throw error;
         setPowerSchedules(data || []);
       } else if (activeTab === 'issues') {
