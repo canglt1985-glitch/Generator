@@ -191,13 +191,23 @@ def _fmt_sdate(sdate_str: str, full: bool = False) -> str:
     return sdate_str
 
 
-def _send_viber_report(lines: list, token: str = None):
+def _send_viber_report(lines: list, token: str = None, sender: str = None):
     """Send a formatted report to Viber Channel via pa/post."""
     if not lines:
         return
     text = "\n".join(lines)
+    
+    # Determine sender ID based on token if not explicitly provided
+    from_id = sender
+    if not from_id:
+        pakh_token = "56b57ae5bbb11e4f-b8084d4fec7bf6ee-e681b83f2f40f110"
+        if token == pakh_token:
+            from_id = "7DjCba+6SC7OvtozmG+ySQ=="
+        else:
+            from_id = "OMu7ptWb9vbA4pvi5QfVjQ=="
+            
     payload = {
-        "from": "OMu7ptWb9vbA4pvi5QfVjQ==",
+        "from": from_id,
         "type": "text",
         "text": text
     }
