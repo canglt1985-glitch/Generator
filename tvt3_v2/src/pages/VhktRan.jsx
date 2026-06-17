@@ -187,13 +187,13 @@ export default function VhktRan() {
       </div>
 
       {/* Nav Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
+      <div className="grid grid-cols-6 sm:grid-cols-5 gap-2.5 mb-6">
         {[
-          { id: 'md', label: 'Mất điện', count: mdActive.length, color: 'amber', icon: '⚠️' },
-          { id: 'mpd', label: 'Máy phát điện', count: mpdActive.length, color: 'emerald', icon: '🟢' },
-          { id: 'mll', label: 'Mất liên lạc', count: mllActive.length, color: 'red', icon: '🔴' },
-          { id: 'mll_cell', label: 'Cell Off', count: cellActive.length, color: 'purple', icon: '📡' },
-          { id: 'pakh', label: 'PAKH', count: pakhList.length, color: 'blue', icon: '💬' },
+          { id: 'md', label: 'Mất điện', count: mdActive.length, color: 'amber', icon: '⚠️', cols: 'col-span-2' },
+          { id: 'mpd', label: 'Máy phát điện', count: mpdActive.length, color: 'emerald', icon: '🟢', cols: 'col-span-2' },
+          { id: 'mll', label: 'Mất liên lạc', count: mllActive.length, color: 'red', icon: '🔴', cols: 'col-span-2' },
+          { id: 'mll_cell', label: 'Cell Off', count: cellActive.length, color: 'purple', icon: '📡', cols: 'col-span-3' },
+          { id: 'pakh', label: 'PAKH', count: pakhList.length, color: 'blue', icon: '💬', cols: 'col-span-3' },
         ].map(card => {
           const isActive = activeTab === card.id;
           
@@ -226,19 +226,20 @@ export default function VhktRan() {
               key={card.id}
               onClick={() => setActiveTab(card.id)}
               className={`
-                bg-white rounded-xl p-3 text-left transition-all border-l-4 border-y border-r border-y-slate-200 border-r-slate-200
+                bg-white rounded-xl p-2.5 sm:p-3 text-left transition-all border-l-4 border-y border-r border-y-slate-200 border-r-slate-200
                 hover:shadow-md cursor-pointer
+                ${card.cols} sm:col-span-1
                 ${borderColors[card.color]}
                 ${isActive ? `ring-2 ${ringColors[card.color]} ring-offset-1` : ''}
               `}
             >
-              <div className="flex items-center gap-1.5 mb-1">
-                {card.icon && <span className="text-base">{card.icon}</span>}
-                <span className="text-[10px] sm:text-xs text-slate-500 font-semibold uppercase tracking-wider truncate" title={card.label}>
+              <div className="flex items-center gap-1 mb-1">
+                {card.icon && <span className="text-sm sm:text-base">{card.icon}</span>}
+                <span className="text-[9px] sm:text-xs text-slate-500 font-semibold uppercase tracking-wider truncate" title={card.label}>
                   {card.label}
                 </span>
               </div>
-              <div className={`text-xl font-extrabold pl-1 ${
+              <div className={`text-lg sm:text-xl font-extrabold pl-1 ${
                 isActive ? textColors[card.color] : (card.count === 0 || card.count === '0' ? 'text-slate-400' : 'text-slate-700')
               }`}>
                 {card.count}
