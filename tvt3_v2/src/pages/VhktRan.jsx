@@ -14,6 +14,7 @@ export default function VhktRan() {
     status: 'configured'
   });
   const [loading, setLoading] = useState(true);
+  const [pakhList, setPakhList] = useState([]);
 
   // Fetch site id mapping dynamically
   async function fetchSiteMap() {
@@ -50,7 +51,20 @@ export default function VhktRan() {
     }
   }
 
-
+  // Fetch PAKH from Supabase
+  async function fetchPakh() {
+    try {
+      const { data } = await supabase
+        .from('smartw_pakh')
+        .select('*')
+        .order('thoiGianGhiNhan', { ascending: false });
+      if (data) {
+        setPakhList(data);
+      }
+    } catch (err) {
+      console.error('Error fetching PAKH:', err);
+    }
+  }
 
   // Fetch worker status
   async function fetchStatus() {
@@ -72,7 +86,7 @@ export default function VhktRan() {
   useEffect(() => {
     async function init() {
       setLoading(true);
-      await Promise.all([fetchSiteMap(), fetchAlarms(), fetchStatus()]);
+      await Promise.all([fetchSiteMap(), fetchAlarms(), fetchStatus(), fetchPakh()]);
       setLoading(false);
     }
     init();
@@ -93,9 +107,18 @@ export default function VhktRan() {
       })
       .subscribe();
 
+    // Subscribe to PAKH changes
+    const pakhSubscription = supabase
+      .channel('smartw_pakh_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'smartw_pakh' }, () => {
+        fetchPakh();
+      })
+      .subscribe();
+
     return () => {
       supabase.removeChannel(alarmsSubscription);
       supabase.removeChannel(statusSubscription);
+      supabase.removeChannel(pakhSubscription);
     };
   }, []);
 
@@ -226,12 +249,13 @@ export default function VhktRan() {
       )}
 
       {/* Nav Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
         {[
           { id: 'md', label: 'Mất điện', count: mdActive.length, color: 'amber', icon: '⚠️' },
           { id: 'mpd', label: 'Máy phát điện', count: mpdActive.length, color: 'emerald', icon: '🟢' },
           { id: 'mll', label: 'Mất liên lạc', count: mllActive.length, color: 'red', icon: '🔴' },
           { id: 'mll_cell', label: 'Cell Off', count: cellActive.length, color: 'purple', icon: '📡' },
+          { id: 'pakh', label: 'PAKH', count: pakhList.length, color: 'blue', icon: '💬' },
         ].map(card => {
           const isActive = activeTab === card.id;
           
@@ -510,6 +534,64 @@ export default function VhktRan() {
                             </td>
                             <td className="py-3 px-2 sm:px-4 font-bold text-amber-500">
                               {(a.duration / 60).toFixed(1)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Tab: PAKH */}
+            {activeTab === 'pakh' && (
+              <div className="divide-y divide-gray-200">
+                {pakhList.length === 0 ? (
+                  <div className="p-12 text-center text-gray-400 text-sm">
+                    ✅ Không có phản ánh khách hàng (PAKH) nào cần xử lý.
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-center border-collapse text-xs sm:text-sm">
+                      <thead>
+                        <tr className="border-b border-gray-200 bg-gray-50 text-gray-500 uppercase tracking-wider font-semibold text-[10px] sm:text-xs">
+                          <th className="py-3 px-2 sm:px-4 text-center">PAKH</th>
+                          <th className="py-3 px-2 sm:px-4 text-left">THỜI GIAN NHẬN</th>
+                          <th className="py-3 px-2 sm:px-4 text-left">ĐỊA BÀN</th>
+                          <th className="py-3 px-2 sm:px-4 text-left">NỘI DUNG PHẢN ÁNH</th>
+                          <th className="py-3 px-2 sm:px-4 text-left">TRẠM / CELL</th>
+                          <th className="py-3 px-2 sm:px-4 text-center">HẠN CÒN LẠI</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 text-left">
+                        {pakhList.map(p => (
+                          <tr key={p.id} className="hover:bg-gray-50 transition-colors">
+                            <td className="py-3 px-2 sm:px-4 text-center font-bold text-blue-600 font-mono">
+                              {p.so_thue_bao || '--'}
+                              <div className="text-[10px] font-semibold text-gray-400">{p.loai_thue_bao}</div>
+                            </td>
+                            <td className="py-3 px-2 sm:px-4 text-gray-500 font-mono">
+                              {p.thoi_gian_ghi_nhan ? formatDateTime(p.thoi_gian_ghi_nhan) : '--'}
+                            </td>
+                            <td className="py-3 px-2 sm:px-4 text-gray-700">
+                              <div className="font-semibold text-slate-800">{p.tinh_thanh_pho || '--'}</div>
+                              <div className="text-[11px] text-gray-500">{p.phuong_xa}</div>
+                            </td>
+                            <td className="py-3 px-2 sm:px-4 text-gray-600 max-w-xs sm:max-w-md truncate whitespace-pre-wrap text-xs font-sans" title={p.noi_dung_phan_anh}>
+                              {p.noi_dung_phan_anh || '--'}
+                            </td>
+                            <td className="py-3 px-2 sm:px-4 font-mono font-bold text-purple-700 text-xs text-center">
+                              {p.ma_tram || '--'}
+                            </td>
+                            <td className="py-3 px-2 sm:px-4 text-center">
+                              <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                                (p.tg_con_lai || '').includes('giờ') && parseInt(p.tg_con_lai) <= 12
+                                  ? 'bg-red-100 text-red-800 border border-red-200 animate-pulse'
+                                  : 'bg-amber-100 text-amber-800 border border-amber-200'
+                              }`}>
+                                {p.tg_con_lai || '--'}
+                              </span>
                             </td>
                           </tr>
                         ))}

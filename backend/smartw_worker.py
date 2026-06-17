@@ -747,6 +747,52 @@ def process_pakh_alerts(pakh_list: list):
             logger.error(f"Failed to save PAKH alerts state: {e}")
 
 
+def sync_pakh_to_supabase(pakh_list: list):
+    """Upsert scraped PAKH tickets into Supabase smartw_pakh table."""
+    if not supabase:
+        logger.warning("Supabase client not initialized, skipping PAKH DB sync.")
+        return
+        
+    if not pakh_list:
+        return
+
+    all_rows = []
+    for row in pakh_list:
+        pakh_id = row.get('id')
+        if not pakh_id:
+            continue
+            
+        all_rows.append({
+            "id": pakh_id,
+            "so_thue_bao": row.get('soThueBao'),
+            "loai_thue_bao": row.get('loaiThueBao'),
+            "noi_dung_phan_anh": row.get('noiDungPhanAnh'),
+            "tinh_thanh_pho": row.get('tinhThanhPho'),
+            "phuong_xa": row.get('phuongXa'),
+            "loai_phan_anh": row.get('loaiPhanAnh'),
+            "hien_tuong": row.get('hienTuong'),
+            "thong_tin_xu_ly": row.get('thongTinXuLy'),
+            "trang_thai_wo": row.get('trangThaiWo'),
+            "thoi_gian_ghi_nhan": row.get('thoiGianGhiNhan'),
+            "tg_tao_wo": row.get('tgTaoWo'),
+            "tg_con_lai": row.get('tgConLai'),
+            "ma_tram": row.get('maTram'),
+            "province_code": row.get('provinceCode'),
+            "noc_status": row.get('nocStatus'),
+            "scraped_at": __import__('datetime').datetime.now().isoformat() + '+07:00'
+        })
+        
+    if all_rows:
+        try:
+            chunk_size = 100
+            for i in range(0, len(all_rows), chunk_size):
+                chunk = all_rows[i:i+chunk_size]
+                supabase.table("smartw_pakh").upsert(chunk).execute()
+            logger.info(f"Supabase Sync: Upserted {len(all_rows)} PAKH tickets.")
+        except Exception as e:
+            logger.error(f"Supabase Sync Error: Failed to upsert PAKH: {e}")
+
+
 def run_pakh_poll():
     """Poll PAKH reports and send Viber alerts for new or near-expiration tickets."""
     if not _acquire_lock():
@@ -831,6 +877,10 @@ def run_pakh_poll():
 
             pakh_list = result.get('pakh', [])
             process_pakh_alerts(pakh_list)
+            try:
+                sync_pakh_to_supabase(pakh_list)
+            except Exception as e:
+                logger.error(f"Error syncing PAKH to Supabase inside worker: {e}")
 
         status['last_pakh_poll'] = datetime.now().isoformat()
 
