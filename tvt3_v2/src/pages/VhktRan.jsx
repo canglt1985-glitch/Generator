@@ -466,51 +466,115 @@ export default function VhktRan() {
                     ✅ Không có phản ánh khách hàng (PAKH) nào cần xử lý.
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-center border-collapse text-xs sm:text-sm">
-                      <thead>
-                        <tr className="border-b border-gray-200 bg-gray-50 text-gray-500 uppercase tracking-wider font-semibold text-[10px] sm:text-xs">
-                          <th className="py-3 px-2 sm:px-4 text-center">PAKH</th>
-                          <th className="py-3 px-2 sm:px-4 text-left">THỜI GIAN NHẬN</th>
-                          <th className="py-3 px-2 sm:px-4 text-left">ĐỊA BÀN</th>
-                          <th className="py-3 px-2 sm:px-4 text-left">NỘI DUNG PHẢN ÁNH</th>
-                          <th className="py-3 px-2 sm:px-4 text-left">TRẠM / CELL</th>
-                          <th className="py-3 px-2 sm:px-4 text-center">HẠN CÒN LẠI</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100 text-left">
-                        {pakhList.map(p => (
-                          <tr key={p.id} className="hover:bg-gray-50 transition-colors">
-                            <td className="py-3 px-2 sm:px-4 text-center font-bold text-blue-600 font-mono">
-                              {p.so_thue_bao || '--'}
-                              <div className="text-[10px] font-semibold text-gray-400">{p.loai_thue_bao}</div>
-                            </td>
-                            <td className="py-3 px-2 sm:px-4 text-gray-500 font-mono">
-                              {p.thoi_gian_ghi_nhan ? formatDateTime(p.thoi_gian_ghi_nhan) : '--'}
-                            </td>
-                            <td className="py-3 px-2 sm:px-4 text-gray-700">
-                              <div className="font-semibold text-slate-800">{p.tinh_thanh_pho || '--'}</div>
-                              <div className="text-[11px] text-gray-500">{p.phuong_xa}</div>
-                            </td>
-                            <td className="py-3 px-2 sm:px-4 text-gray-600 max-w-xs sm:max-w-md truncate whitespace-pre-wrap text-xs font-sans" title={p.noi_dung_phan_anh}>
-                              {p.noi_dung_phan_anh || '--'}
-                            </td>
-                            <td className="py-3 px-2 sm:px-4 font-mono font-bold text-purple-700 text-xs text-center">
-                              {p.ma_tram || '--'}
-                            </td>
-                            <td className="py-3 px-2 sm:px-4 text-center">
-                              <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
-                                (p.tg_con_lai || '').includes('giờ') && parseInt(p.tg_con_lai) <= 12
-                                  ? 'bg-red-100 text-red-800 border border-red-200 animate-pulse'
-                                  : 'bg-amber-100 text-amber-800 border border-amber-200'
-                              }`}>
-                                {p.tg_con_lai || '--'}
-                              </span>
-                            </td>
+                  <div>
+                    {/* Desktop View: Table */}
+                    <div className="hidden lg:block overflow-x-auto">
+                      <table className="w-full text-center border-collapse text-xs sm:text-sm">
+                        <thead>
+                          <tr className="border-b border-gray-200 bg-gray-50 text-gray-500 uppercase tracking-wider font-semibold text-[10px] sm:text-xs">
+                            <th className="py-3 px-2 sm:px-4 text-center">PAKH</th>
+                            <th className="py-3 px-2 sm:px-4 text-left">THỜI GIAN NHẬN</th>
+                            <th className="py-3 px-2 sm:px-4 text-left">ĐỊA BÀN</th>
+                            <th className="py-3 px-2 sm:px-4 text-left">NỘI DUNG PHẢN ÁNH</th>
+                            <th className="py-3 px-2 sm:px-4 text-left">TRẠM / CELL</th>
+                            <th className="py-3 px-2 sm:px-4 text-center">HẠN CÒN LẠI</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 text-left">
+                          {pakhList.map(p => (
+                            <tr key={p.id} className="hover:bg-gray-50 transition-colors">
+                              <td className="py-3 px-2 sm:px-4 text-center font-bold text-blue-600 font-mono">
+                                {p.so_thue_bao || '--'}
+                                <div>
+                                  <span className="inline-block px-1 py-0.2 rounded bg-slate-100 text-[9px] font-bold text-slate-600 border border-slate-200 uppercase tracking-tight mt-0.5">
+                                    {p.loai_thue_bao || '--'}
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="py-3 px-2 sm:px-4 text-gray-500 font-mono text-[11px]">
+                                {p.thoi_gian_ghi_nhan ? formatDateTime(p.thoi_gian_ghi_nhan) : '--'}
+                              </td>
+                              <td className="py-3 px-2 sm:px-4 text-gray-700">
+                                <div className="font-semibold text-slate-800 text-xs">{p.tinh_thanh_pho || '--'}</div>
+                                <div className="text-[10px] text-gray-500">{p.phuong_xa}</div>
+                              </td>
+                              <td className="py-3 px-2 sm:px-4 text-gray-600 max-w-xs sm:max-w-md truncate whitespace-pre-wrap text-xs font-sans" title={p.noi_dung_phan_anh}>
+                                {p.noi_dung_phan_anh || '--'}
+                              </td>
+                              <td className="py-3 px-2 sm:px-4 text-center">
+                                <span className="inline-block px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-100 text-[10px] font-extrabold font-mono">
+                                  {p.ma_tram || '--'}
+                                </span>
+                              </td>
+                              <td className="py-3 px-2 sm:px-4 text-center">
+                                <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold font-mono tracking-tight ${
+                                  (p.tg_con_lai || '').includes('giờ') && parseInt(p.tg_con_lai) <= 12
+                                    ? 'bg-red-100 text-red-800 border border-red-200 animate-pulse'
+                                    : 'bg-amber-100 text-amber-800 border border-amber-200'
+                                }`}>
+                                  {p.tg_con_lai || '--'}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Mobile View: Compact Cards */}
+                    <div className="lg:hidden grid grid-cols-1 md:grid-cols-2 gap-3 p-3 bg-slate-50">
+                      {pakhList.map(p => {
+                        const isUrgent = (p.tg_con_lai || '').includes('giờ') && parseInt(p.tg_con_lai) <= 12;
+                        return (
+                          <div key={p.id} className="bg-white rounded-xl border border-slate-200 p-3 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
+                            <div>
+                              {/* Header: SĐT & Hạn còn lại */}
+                              <div className="flex items-center justify-between gap-2 mb-2">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-xs font-bold text-blue-600 font-mono">
+                                    {p.so_thue_bao || '--'}
+                                  </span>
+                                  {p.loai_thue_bao && (
+                                    <span className="px-1 py-0.2 rounded bg-slate-100 text-[8px] font-bold text-slate-500 border border-slate-200 uppercase tracking-tight">
+                                      {p.loai_thue_bao}
+                                    </span>
+                                  )}
+                                </div>
+                                <span className={`px-1 py-0.2 rounded text-[9px] font-bold tracking-tight uppercase ${
+                                  isUrgent
+                                    ? 'bg-red-100 text-red-800 border border-red-200 animate-pulse'
+                                    : 'bg-amber-100 text-amber-800 border border-amber-200'
+                                }`}>
+                                  ⏱️ {p.tg_con_lai || '--'}
+                                </span>
+                              </div>
+
+                              {/* Metadata Grid */}
+                              <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[10px] text-slate-500 font-mono mb-2 bg-slate-50 p-2 rounded-lg border border-slate-100">
+                                <div>
+                                  <span className="text-[9px] text-slate-400 block font-sans">TRẠM / CELL</span>
+                                  <span className="font-extrabold text-purple-700 text-[10px]">{p.ma_tram || '--'}</span>
+                                </div>
+                                <div>
+                                  <span className="text-[9px] text-slate-400 block font-sans">THỜI GIAN NHẬN</span>
+                                  <span className="text-slate-600 text-[10px]">{p.thoi_gian_ghi_nhan ? formatDateTime(p.thoi_gian_ghi_nhan) : '--'}</span>
+                                </div>
+                                <div className="col-span-2 mt-0.5">
+                                  <span className="text-[9px] text-slate-400 block font-sans">ĐỊA BÀN</span>
+                                  <span className="text-slate-700 font-semibold font-sans text-[10px]">{p.phuong_xa ? `${p.phuong_xa}, ` : ''}{p.tinh_thanh_pho || '--'}</span>
+                                </div>
+                              </div>
+
+                              {/* Nội dung phản ánh */}
+                              <div className="text-[11px] text-slate-600 font-sans whitespace-pre-wrap leading-relaxed mt-2 bg-slate-50/50 p-2 rounded-lg border border-dashed border-slate-200">
+                                <span className="text-[9px] text-slate-400 block font-bold mb-0.5">NỘI DUNG PHẢN ÁNH:</span>
+                                {p.noi_dung_phan_anh || '--'}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </div>
