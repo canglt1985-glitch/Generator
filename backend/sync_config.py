@@ -45,9 +45,11 @@ def sync_configs():
         # 1. Sync SmartW Config
         smartw_user = cfg_dict.get('smartw_username')
         smartw_pass = cfg_dict.get('smartw_password')
-        if smartw_user and smartw_pass:
+        if smartw_user and smartw_pass and 'mock' not in smartw_user and 'mock' not in smartw_pass:
             save_smartw_config(smartw_user, smartw_pass)
             logger.info("SmartW configs synced and encrypted locally.")
+        else:
+            logger.info("SmartW configs from Supabase are mock or empty. Skipped local overwrite.")
             
         # 2. Sync System Config (Telegram, Gmail, Viber, etc.)
         system_cfg_keys = [
@@ -60,8 +62,11 @@ def sync_configs():
         ]
         system_cfg = {}
         for k in system_cfg_keys:
-            if k in cfg_dict:
-                system_cfg[k] = cfg_dict[k]
+            val = cfg_dict.get(k)
+            if val and 'mock' not in str(val) and str(val) != '-100987654321':
+                system_cfg[k] = val
+            else:
+                logger.info(f"Key {k} from Supabase is mock or empty. Skipped local overwrite.")
                 
         if system_cfg:
             sys_cfg_file = os.path.join(current_dir, 'data', 'system_config.json')

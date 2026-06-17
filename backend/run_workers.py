@@ -3,7 +3,12 @@ import sys
 import time
 import subprocess
 import logging
+import json
 from datetime import datetime, timedelta
+
+# Reconfigure stdout to use UTF-8 on Windows
+sys.stdout.reconfigure(encoding='utf-8')
+
 
 # 1. Logging Configuration
 current_dir = os.path.dirname(os.path.abspath(__file__))

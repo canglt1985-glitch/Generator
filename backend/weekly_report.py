@@ -4,7 +4,7 @@ import json
 import requests
 from datetime import datetime
 from dotenv import load_dotenv
-from daily_report import generate_daily_report_data, get_telegram_config
+from daily_report import generate_daily_report_data, get_telegram_config, get_site_id_mapping
 from report_helpers import (
     get_inactive_generators,
     get_weekly_anomaly_report,
@@ -109,6 +109,7 @@ def format_weekly_report_message(data):
 
 def format_weekly_anomalies_message(data):
     """Format weekly anomalies as a separate Markdown message."""
+    site_map = get_site_id_mapping()
     def format_num(val):
         try:
             val_f = float(val)
@@ -131,7 +132,9 @@ def format_weekly_anomalies_message(data):
             days_str = g['days_inactive']
             if days_str != "Chưa từng chạy":
                 days_str = f"{days_str} không chạy"
-            lines.append(f"• Trạm `{g['id_tram']}`: {days_str} (Lần cuối: {g['last_run']})")
+            tram_id = g['id_tram']
+            tram_old = site_map.get(tram_id.strip().upper(), tram_id)
+            lines.append(f"• Trạm `{tram_old}`: {days_str} (Lần cuối: {g['last_run']})")
         if len(data['inactive_generators']) > limit_cnt:
             lines.append(f"• ... và `{len(data['inactive_generators']) - limit_cnt}` trạm khác.")
     else:
@@ -142,7 +145,9 @@ def format_weekly_anomalies_message(data):
     if data.get('quarterly_fuel_anomalies'):
         limit_cnt = 15
         for a in data['quarterly_fuel_anomalies'][:limit_cnt]:
-            lines.append(f"• Trạm `{a['id_tram']}`: Đổ {format_num(a['refuel_qty'])}L, Log chạy {format_num(a['consume_qty'])}L | Lệch: `{format_num(a['diff'])}L`")
+            tram_id = a['id_tram']
+            tram_old = site_map.get(tram_id.strip().upper(), tram_id)
+            lines.append(f"• Trạm `{tram_old}`: Đổ {format_num(a['refuel_qty'])}L, Log chạy {format_num(a['consume_qty'])}L | Lệch: `{format_num(a['diff'])}L`")
         if len(data['quarterly_fuel_anomalies']) > limit_cnt:
             lines.append(f"• ... và `{len(data['quarterly_fuel_anomalies']) - limit_cnt}` trạm khác.")
     else:
@@ -152,7 +157,9 @@ def format_weekly_anomalies_message(data):
     lines.append("\n🟡 *3. Đổ dầu nhiều lần nhưng không chạy máy phát:*")
     if data.get('weekly_refuel_anomalies'):
         for wa in data['weekly_refuel_anomalies']:
-            lines.append(f"• Trạm `{wa['id_tram']}`: Đổ {wa['refuel_count']} lần ({format_num(wa['total_qty'])}L từ {wa['date_range']}) nhưng không chạy máy trong 7 ngày sau đó.")
+            tram_id = wa['id_tram']
+            tram_old = site_map.get(tram_id.strip().upper(), tram_id)
+            lines.append(f"• Trạm `{tram_old}`: Đổ {wa['refuel_count']} lần ({format_num(wa['total_qty'])}L từ {wa['date_range']}) nhưng không chạy máy trong 7 ngày sau đó.")
     else:
         lines.append("✅ Không phát hiện bất thường đổ dầu.")
 
@@ -174,7 +181,9 @@ def format_weekly_anomalies_message(data):
                 refuel_str = ""
             parts = rec['ngay_mat_dien'].split('/')
             date_display = "/".join(parts[:2]) if len(parts) >= 2 else rec['ngay_mat_dien']
-            lines.append(f"• Trạm `{rec['id_tram']}`: Cúp ngày `{date_display}` (~{h_str}h){refuel_str}")
+            tram_id = rec['id_tram']
+            tram_old = site_map.get(tram_id.strip().upper(), tram_id)
+            lines.append(f"• Trạm `{tram_old}`: Cúp ngày `{date_display}` (~{h_str}h){refuel_str}")
         if len(data['missing_logs']) > limit_cnt:
             lines.append(f"• ... và `{len(data['missing_logs']) - limit_cnt}` lượt cúp khác.")
     else:

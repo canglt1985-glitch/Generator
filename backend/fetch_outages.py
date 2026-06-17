@@ -60,7 +60,7 @@ def calculate_duration(start_time, end_time):
     except:
         return "?"
 
-def send_to_viber(new_outages, map_old_to_new):
+def send_to_viber(new_outages, map_new_to_old):
     today_str = datetime.now().strftime("%Y-%m-%d")
     filtered_outages = [ot for ot in new_outages if ot.get("ngay") and ot["ngay"] >= today_str]
     
@@ -96,8 +96,8 @@ def send_to_viber(new_outages, map_old_to_new):
     for date_str in sorted_dates:
         lines.append(f"📅 Ngày {date_str}:")
         for ot in grouped[date_str]:
-            old_id = ot["id_tram"]
-            new_id = map_old_to_new.get(old_id, old_id)
+            new_id = ot["id_tram"]
+            old_id = map_new_to_old.get(new_id, new_id)
             dur = calculate_duration(ot["start"], ot["end"])
             lines.append(f"  • {old_id}: {ot['start']}-{ot['end']} ({dur}h)")
             
@@ -207,13 +207,13 @@ def main():
         return
  
     customers = []
-    map_old_to_new = {}
+    map_new_to_old = {}
     
     for row in stations_data:
         site_id = row.get("site_id")
         site_old = row.get("site_id_old")
         if site_id and site_old:
-            map_old_to_new[site_old.strip().upper()] = site_id.strip().upper()
+            map_new_to_old[site_id.strip().upper()] = site_old.strip().upper()
             
         m_info = row.get("management_info") or {}
         l_info = row.get("location_info") or {}
@@ -304,7 +304,7 @@ def main():
 
     if upcoming_outages:
         print(f"📤 Gửi {len(upcoming_outages)} lịch cúp điện sắp tới lên Viber...")
-        send_to_viber(upcoming_outages, map_old_to_new)
+        send_to_viber(upcoming_outages, map_new_to_old)
     else:
         print("📢 Không có lịch cúp điện sắp tới nào để thông báo.")
 

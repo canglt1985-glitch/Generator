@@ -27,6 +27,23 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 
+def get_site_id_mapping():
+    """Build a mapping of new site_id to old site_id from datasites table."""
+    try:
+        res = supabase.table("datasites").select("site_id, site_id_old").execute()
+        mapping = {}
+        for row in (res.data or []):
+            s_id = row.get("site_id")
+            s_old = row.get("site_id_old")
+            if s_id and s_old:
+                mapping[s_id.strip().upper()] = s_old.strip().upper()
+        return mapping
+    except Exception as e:
+        print(f"⚠️ Error building site mapping: {e}")
+        return {}
+
+
+
 def get_telegram_config():
     """Load Telegram token and chat ID from environment or system_config.json."""
     token = os.getenv("TELEGRAM_TOKEN")
@@ -354,7 +371,7 @@ def generate_daily_report_data(target_date_str=None):
         try:
             from report_helpers import get_missing_logs_recommendations
             target_dt = datetime.strptime(target_date_str, '%Y-%m-%d').date()
-            start_date_scan = (target_dt - timedelta(days=2)).strftime('%Y-%m-%d')
+            start_date_scan = target_date_str
             ref_date = target_dt + timedelta(days=1)
             
             missing_logs = get_missing_logs_recommendations(
@@ -376,6 +393,7 @@ def generate_daily_report_data(target_date_str=None):
 
 def format_daily_report_message(data):
     """Format statistics as Markdown message."""
+    site_map = get_site_id_mapping()
     lines = [
         f"📊 *BÁO CÁO VẬN HÀNH & CHI PHÍ - Ngày {data['date']}*",
         "=====================================",
@@ -386,7 +404,9 @@ def format_daily_report_message(data):
     ]
     
     if data['runs_count'] > 0:
-        lines.append(f"• Trạm chạy nhiều nhất: `{data['top_station']}` ({data['top_station_hours']}h)")
+        top_st = data['top_station']
+        top_st_old = site_map.get(top_st.strip().upper(), top_st)
+        lines.append(f"• Trạm chạy nhiều nhất: `{top_st_old}` ({data['top_station_hours']}h)")
         
     lines.extend([
         "",
@@ -459,6 +479,7 @@ def format_missing_logs_message(data):
     if not data.get('missing_logs'):
         return None
         
+    site_map = get_site_id_mapping()
     def format_num(val):
         try:
             val_f = float(val)
@@ -488,10 +509,47 @@ def format_missing_logs_message(data):
             
         parts = rec['ngay_mat_dien'].split('/')
         date_display = "/".join(parts[:2]) if len(parts) >= 2 else rec['ngay_mat_dien']
-        lines.append(f"• Trạm `{rec['id_tram']}`: Cúp ngày `{date_display}` (~{h_str}h){refuel_str}")
+        tram_id = rec['id_tram']
+        tram_old = site_map.get(tram_id.strip().upper(), tram_id)
+        lines.append(f"• Trạm `{tram_old}`: Cúp ngày `{date_display}` (~{h_str}h){refuel_str}")
         
     lines.append("=====================================")
     return "\n".join(lines)
+
+
+def send_to_viber_outages(text):
+    """Send a text message to Viber Outages Channel."""
+    if not text:
+        return
+    # Loại bỏ dấu nháy đơn để tránh hiển thị lỗi trên Viber
+    text = text.replace("`", "")
+    payload = {
+        "from": "1B+9xBdRnqEQJXfWFZr4Dg==",
+        "type": "text",
+        "text": text
+    }
+    
+    viber_token = None
+    config_path = os.path.join(current_dir, 'data', 'system_config.json')
+    if os.path.exists(config_path):
+        try:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                cfg = json.load(f)
+                viber_token = cfg.get('viber_bot_token_outages')
+        except:
+            pass
+    if not viber_token:
+        viber_token = os.getenv("VIBER_TOKEN") or "56a990b99bf464bd-d406c456f5380df0-770d03e18af041d0"
+        
+    headers = {
+        "X-Viber-Auth-Token": viber_token,
+        "Content-Type": "application/json"
+    }
+    try:
+        r = requests.post("https://chatapi.viber.com/pa/post", headers=headers, json=payload, timeout=15)
+        print(f"Viber Outages (Missing Logs) send status: {r.status_code} - {r.text}")
+    except Exception as e:
+        print(f"❌ Failed to send Viber outages report: {e}")
 
 
 def send_daily_report(target_date_str=None):
@@ -527,6 +585,7 @@ def send_daily_report(target_date_str=None):
     if report_data.get('missing_logs'):
         missing_msg = format_missing_logs_message(report_data)
         if missing_msg:
+            # 1. Gửi lên Telegram
             missing_payload = {
                 "chat_id": chat_id,
                 "text": missing_msg,
@@ -537,6 +596,12 @@ def send_daily_report(target_date_str=None):
                 print(f"Telegram Missing Logs Report status: {r_missing.status_code} - {r_missing.text}")
             except Exception as e:
                 print(f"❌ Failed to send Telegram missing logs report: {e}")
+
+            # 2. Gửi lên Viber Lịch cúp điện
+            try:
+                send_to_viber_outages(missing_msg)
+            except Exception as e:
+                print(f"❌ Failed to send Viber missing logs report: {e}")
                 
     return daily_sent
 
