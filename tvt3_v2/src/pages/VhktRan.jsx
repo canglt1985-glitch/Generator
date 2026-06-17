@@ -57,7 +57,7 @@ export default function VhktRan() {
       const { data } = await supabase
         .from('smartw_pakh')
         .select('*')
-        .order('thoiGianGhiNhan', { ascending: false });
+        .order('thoi_gian_ghi_nhan', { ascending: false });
       if (data) {
         setPakhList(data);
       }
