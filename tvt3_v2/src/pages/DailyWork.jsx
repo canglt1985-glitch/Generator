@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import DatasiteDetailFullscreen from '../components/datasites/DatasiteDetailFullscreen';
 import { useCurrentUser } from '../utils/useCurrentUser';
+import * as XLSX from 'xlsx';
 
 const getTodayDMY = () => {
   const today = new Date();
@@ -105,6 +106,11 @@ export default function DailyWork() {
   const [issueCategory, setIssueCategory] = useState('Cột anten');
   const [issueDescription, setIssueDescription] = useState('');
   const [issueReporter, setIssueReporter] = useState(localStorage.getItem('username') || 'admin');
+  
+  // Edit issue states
+  const [editingIssue, setEditingIssue] = useState(null);
+  const [issueStatus, setIssueStatus] = useState('Chưa XL');
+  const [issueResolvedAt, setIssueResolvedAt] = useState('');
 
   // Danh mục hạng mục công việc chuẩn V1 cho Nhật ký
   const categoriesWorkV1 = [
@@ -431,25 +437,54 @@ export default function DailyWork() {
 
     const canonicalSiteId = matchingSite.site_id;
 
-    const payload = {
-      site_id: canonicalSiteId,
-      date: issueDate,
-      existing_issues: {
-        category: issueCategory,
-        description: issueDescription.trim(),
-        status: "Chưa XL",
-        reporter: issueReporter.trim()
-      },
-      proposed_solutions: {}
-    };
-
     try {
-      const { error } = await supabase
-        .from('operation_defects_logs')
-        .insert([payload]);
-      if (error) throw error;
+      if (editingIssue) {
+        // Edit mode
+        const updatedIssues = {
+          category: issueCategory,
+          description: issueDescription.trim(),
+          status: issueStatus,
+          reporter: issueReporter.trim()
+        };
+        const updatedSolutions = issueStatus === "Đã XL" 
+          ? { resolved_at: issueResolvedAt || new Date().toISOString().split('T')[0] }
+          : {};
+
+        const { error } = await supabase
+          .from('operation_defects_logs')
+          .update({
+            site_id: canonicalSiteId,
+            date: issueDate,
+            existing_issues: updatedIssues,
+            proposed_solutions: updatedSolutions,
+            updated_at: new Date().toISOString()
+          })
+          .eq('log_id', editingIssue.log_id);
+          
+        if (error) throw error;
+        alert("Cập nhật sự cố thành công!");
+      } else {
+        // Create mode
+        const payload = {
+          site_id: canonicalSiteId,
+          date: issueDate,
+          existing_issues: {
+            category: issueCategory,
+            description: issueDescription.trim(),
+            status: "Chưa XL",
+            reporter: issueReporter.trim()
+          },
+          proposed_solutions: {}
+        };
+
+        const { error } = await supabase
+          .from('operation_defects_logs')
+          .insert([payload]);
+          
+        if (error) throw error;
+        alert("Báo cáo sự cố thành công!");
+      }
       
-      alert("Báo cáo sự cố thành công!");
       resetIssueForm();
       setShowAddIssueModal(false);
       fetchData();
@@ -497,6 +532,66 @@ export default function DailyWork() {
     setIssueDescription('');
     setIssueReporter(localStorage.getItem('username') || 'admin');
     setShowIssueSiteSuggestions(false);
+    setEditingIssue(null);
+    setIssueStatus('Chưa XL');
+    setIssueResolvedAt('');
+  }
+
+  function handleStartEditIssue(issue) {
+    const dataDetail = issue.existing_issues || {};
+    const solutions = issue.proposed_solutions || {};
+    
+    setEditingIssue(issue);
+    setIssueSiteId(issue.site_id || '');
+    setIssueDate(issue.date || new Date().toISOString().split('T')[0]);
+    setIssueCategory(dataDetail.category || 'Cột anten');
+    setIssueDescription(dataDetail.description || '');
+    setIssueReporter(dataDetail.reporter || localStorage.getItem('username') || 'admin');
+    setIssueStatus(dataDetail.status || 'Chưa XL');
+    setIssueResolvedAt(solutions.resolved_at || '');
+    
+    setShowAddIssueModal(true);
+  }
+
+  function handleExportIssuesExcel() {
+    if (filteredDefectsLogs.length === 0) {
+      alert("Không có dữ liệu để xuất Excel.");
+      return;
+    }
+    const dataForExcel = filteredDefectsLogs.map(issue => {
+      const dataDetail = issue.existing_issues || {};
+      const solutions = issue.proposed_solutions || {};
+      const siteIds = getSiteIds(issue.site_id);
+      return {
+        "Ngày phát hiện": issue.date || '',
+        "Mã trạm cũ": siteIds.oldId || '',
+        "Mã trạm mới": siteIds.newId || '',
+        "Hạng mục": dataDetail.category || '',
+        "Mô tả tồn tại": dataDetail.description || '',
+        "Người báo cáo": dataDetail.reporter || '',
+        "Trạng thái": dataDetail.status || 'Chưa XL',
+        "Ngày xử lý": dataDetail.status === "Đã XL" ? (solutions.resolved_at || '') : ''
+      };
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(dataForExcel);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Tồn tại trạm');
+    
+    // Auto fit column widths
+    const maxLens = {};
+    dataForExcel.forEach(row => {
+      Object.keys(row).forEach(key => {
+        const val = String(row[key] || '');
+        maxLens[key] = Math.max(maxLens[key] || key.length, val.length);
+      });
+    });
+    worksheet['!cols'] = Object.keys(maxLens).map(key => ({
+      wch: Math.min(Math.max(maxLens[key] + 3, 10), 50)
+    }));
+
+    const dateStr = new Date().toISOString().split('T')[0];
+    XLSX.writeFile(workbook, `Quan_Ly_Ton_Tai_${dateStr}.xlsx`);
   }
 
   // Filtered list - Mobile Equipment
@@ -675,6 +770,15 @@ export default function DailyWork() {
                 ))}
               </select>
             </>
+          )}
+
+          {activeTab === 'issues' && (
+            <button 
+              onClick={handleExportIssuesExcel}
+              className="inline-flex items-center justify-center px-4 py-2 text-[13px] font-bold rounded-lg text-emerald-700 bg-white border border-emerald-300 hover:bg-emerald-50 shadow-sm transition-colors cursor-pointer h-[34px]"
+            >
+              Xuất Excel
+            </button>
           )}
 
           {user && (
@@ -1063,6 +1167,7 @@ export default function DailyWork() {
                               <th scope="col" className="px-4 py-3">Người báo cáo</th>
                               <th scope="col" className="px-4 py-3">Trạng thái</th>
                               <th scope="col" className="px-4 py-3">Ngày xử lý</th>
+                              {user && <th scope="col" className="px-4 py-3 text-right">Hành động</th>}
                             </tr>
                           </thead>
                           <tbody className="bg-white divide-y divide-gray-100 text-[13px] text-gray-700">
@@ -1117,6 +1222,17 @@ export default function DailyWork() {
                                   <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-500 font-mono">
                                     {isResolved && solutions.resolved_at ? `✅ ${solutions.resolved_at}` : '—'}
                                   </td>
+                                  {user && (
+                                    <td className="px-4 py-3 whitespace-nowrap text-right text-xs">
+                                      <button
+                                        onClick={() => handleStartEditIssue(issue)}
+                                        className="text-blue-600 hover:text-blue-800 font-semibold inline-flex items-center gap-1 cursor-pointer ml-auto"
+                                        title="Chỉnh sửa chi tiết tồn tại"
+                                      >
+                                        <Edit size={14} /> Chỉnh sửa
+                                      </button>
+                                    </td>
+                                  )}
                                 </tr>
                               );
                             })}
@@ -1198,6 +1314,15 @@ export default function DailyWork() {
                                 <div className="mt-2 text-[11px] font-medium text-emerald-600 bg-emerald-100/40 px-2 py-1 rounded border border-emerald-200/50 text-center flex items-center justify-center gap-1">
                                   ✅ Đã xử lý xong vào: {solutions.resolved_at}
                                 </div>
+                              )}
+                              {user && (
+                                <button
+                                  onClick={() => handleStartEditIssue(issue)}
+                                  className="mt-3 w-full bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 font-semibold px-3 py-1.5 rounded-lg text-xs flex items-center justify-center gap-1 transition-all"
+                                >
+                                  <Edit size={14} className="text-slate-500" />
+                                  Chỉnh sửa chi tiết
+                                </button>
                               )}
                             </div>
                           );
@@ -1503,7 +1628,7 @@ export default function DailyWork() {
           <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
             <div className="bg-gradient-to-r from-red-600 to-rose-600 px-6 py-4 flex items-center justify-between text-white">
               <h2 className="font-bold text-lg flex items-center gap-2">
-                <AlertTriangle size={20} /> Cập nhật tồn tại trạm mới
+                <AlertTriangle size={20} /> {editingIssue ? "Chỉnh sửa tồn tại trạm" : "Cập nhật tồn tại trạm mới"}
               </h2>
               <button 
                 onClick={() => { resetIssueForm(); setShowAddIssueModal(false); }}
@@ -1596,6 +1721,39 @@ export default function DailyWork() {
                 />
               </div>
 
+              {editingIssue && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Trạng thái</label>
+                    <select 
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-red-500 focus:border-red-500 bg-white font-semibold"
+                      value={issueStatus}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setIssueStatus(val);
+                        if (val === "Đã XL" && !issueResolvedAt) {
+                          setIssueResolvedAt(new Date().toISOString().split('T')[0]);
+                        }
+                      }}
+                    >
+                      <option value="Chưa XL">Chưa XL</option>
+                      <option value="Đã XL">Đã XL</option>
+                    </select>
+                  </div>
+                  {issueStatus === "Đã XL" && (
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Ngày xử lý</label>
+                      <input 
+                        type="date" 
+                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-red-500 focus:border-red-500"
+                        value={issueResolvedAt}
+                        onChange={(e) => setIssueResolvedAt(e.target.value)}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
                 <button 
                   type="button"
@@ -1608,7 +1766,7 @@ export default function DailyWork() {
                   type="submit"
                   className="px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-lg hover:bg-red-700 shadow-sm transition-all cursor-pointer"
                 >
-                  Báo Cáo
+                  {editingIssue ? "Cập Nhật" : "Báo Cáo"}
                 </button>
               </div>
             </form>
