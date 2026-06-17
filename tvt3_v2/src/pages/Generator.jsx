@@ -1595,11 +1595,11 @@ export default function Generator() {
                       {selectedInvoice.items && selectedInvoice.items.length > 0 ? (
                         selectedInvoice.items.map((item, idx) => (
                           <tr key={idx}>
-                            <td className="px-4 py-2 font-semibold">{item.name || item.ProductName}</td>
-                            <td className="px-4 py-2">{item.unit || item.UnitName || 'Lít'}</td>
-                            <td className="px-4 py-2 font-bold">{item.quantity || item.Quantity}</td>
-                            <td className="px-4 py-2 font-mono">{formatCurrency(item.unit_price || item.Price)}</td>
-                            <td className="px-4 py-2 font-bold font-mono text-slate-900">{formatCurrency(item.total_amount || item.Total)}</td>
+                            <td className="px-4 py-2 font-semibold">{item.ten || item.name || item.ProductName || '—'}</td>
+                            <td className="px-4 py-2">{item.dvt || item.unit || item.UnitName || 'Lít'}</td>
+                            <td className="px-4 py-2 font-bold">{item.sl !== undefined ? item.sl : (item.quantity || item.Quantity || 0)}</td>
+                            <td className="px-4 py-2 font-mono">{formatCurrency(item.dg !== undefined ? item.dg : (item.unit_price || item.Price || 0))}</td>
+                            <td className="px-4 py-2 font-bold font-mono text-slate-900">{formatCurrency(item.tt !== undefined ? item.tt : (item.total_amount || item.Total || 0))}</td>
                           </tr>
                         ))
                       ) : (
