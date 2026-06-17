@@ -1360,7 +1360,6 @@ export default function Generator() {
                           <th scope="col" className="px-4 py-3">Đơn Vị Bán Hàng</th>
                           <th scope="col" className="px-4 py-3">Mã Số Thuế</th>
                           <th scope="col" className="px-4 py-3">Tổng Tiền</th>
-                          <th scope="col" className="px-4 py-3">Trạng Thái</th>
                           <th scope="col" className="px-4 py-3">Nguồn thu thập</th>
                           <th scope="col" className="px-4 py-3 text-right">Thao Tác</th>
                         </tr>
@@ -1373,15 +1372,6 @@ export default function Generator() {
                             <td className="px-4 py-3 font-semibold text-slate-800">{inv.seller_name}</td>
                             <td className="px-4 py-3 whitespace-nowrap text-slate-500 font-mono text-xs">{inv.seller_mst}</td>
                             <td className="px-4 py-3 whitespace-nowrap font-extrabold text-slate-950 font-mono">{formatCurrency(inv.total_amount)}</td>
-                            <td className="px-4 py-3 whitespace-nowrap">
-                              {inv.status === 'Approved' ? (
-                                <span className="bg-emerald-50 text-emerald-700 border border-emerald-100 text-[11px] font-bold px-2 py-0.5 rounded">Đã duyệt</span>
-                              ) : inv.status === 'Discarded' ? (
-                                <span className="bg-red-50 text-red-700 border border-red-100 text-[11px] font-bold px-2 py-0.5 rounded">Từ chối</span>
-                              ) : (
-                                <span className="bg-amber-50 text-amber-800 border border-amber-100 text-[11px] font-bold px-2 py-0.5 rounded">Chờ duyệt</span>
-                              )}
-                            </td>
                             <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-400">{inv.source || 'Upload'}</td>
                             <td className="px-4 py-3 whitespace-nowrap text-right text-xs space-x-1">
                               <button 
@@ -1391,24 +1381,6 @@ export default function Generator() {
                               >
                                 <Eye size={14} />
                               </button>
-                              {inv.status === 'Pending' && (
-                                <>
-                                  <button 
-                                    onClick={() => handleApproveInvoice(inv.id, 'Approved')}
-                                    className="text-emerald-600 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 p-1.5 rounded transition-colors inline-flex items-center cursor-pointer"
-                                    title="Duyệt chi"
-                                  >
-                                    <CheckCircle2 size={14} />
-                                  </button>
-                                  <button 
-                                    onClick={() => handleApproveInvoice(inv.id, 'Discarded')}
-                                    className="text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 p-1.5 rounded transition-colors inline-flex items-center cursor-pointer"
-                                    title="Từ chối"
-                                  >
-                                    <X size={14} />
-                                  </button>
-                                </>
-                              )}
                               <button 
                                 onClick={() => handleDeleteInvoice(inv.id)}
                                 className="text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 p-1.5 rounded transition-colors inline-flex items-center cursor-pointer"
@@ -1592,7 +1564,7 @@ export default function Generator() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4 text-sm border-b border-slate-100 pb-4">
+              <div className="grid grid-cols-2 gap-4 text-sm border-b border-slate-100 pb-4">
                 <div>
                   <div className="text-xs text-slate-400 font-bold uppercase">Ngày lập hóa đơn</div>
                   <div className="font-bold text-slate-800 mt-1">{selectedInvoice.invoice_date}</div>
@@ -1600,18 +1572,6 @@ export default function Generator() {
                 <div>
                   <div className="text-xs text-slate-400 font-bold uppercase">Tổng thanh toán</div>
                   <div className="font-extrabold text-blue-600 mt-1 font-mono">{formatCurrency(selectedInvoice.total_amount)}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-slate-400 font-bold uppercase">Trạng thái</div>
-                  <div className="mt-1">
-                    {selectedInvoice.status === 'Approved' ? (
-                      <span className="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded text-xs font-bold border border-emerald-100">Đã duyệt</span>
-                    ) : selectedInvoice.status === 'Discarded' ? (
-                      <span className="bg-red-50 text-red-700 px-2 py-0.5 rounded text-xs font-bold border border-red-100">Từ chối</span>
-                    ) : (
-                      <span className="bg-amber-50 text-amber-800 px-2 py-0.5 rounded text-xs font-bold border border-amber-100">Chờ duyệt</span>
-                    )}
-                  </div>
                 </div>
               </div>
 
@@ -1672,22 +1632,6 @@ export default function Generator() {
               >
                 Đóng lại
               </button>
-              {selectedInvoice.status === 'Pending' && (
-                <>
-                  <button 
-                    onClick={() => { handleApproveInvoice(selectedInvoice.id, 'Discarded'); setSelectedInvoice(null); }}
-                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg shadow-sm cursor-pointer"
-                  >
-                    Từ chối
-                  </button>
-                  <button 
-                    onClick={() => { handleApproveInvoice(selectedInvoice.id, 'Approved'); setSelectedInvoice(null); }}
-                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg shadow-sm cursor-pointer"
-                  >
-                    Duyệt chi
-                  </button>
-                </>
-              )}
             </div>
           </div>
         </div>
