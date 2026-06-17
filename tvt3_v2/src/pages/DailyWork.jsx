@@ -8,6 +8,39 @@ import {
 import DatasiteDetailFullscreen from '../components/datasites/DatasiteDetailFullscreen';
 import { useCurrentUser } from '../utils/useCurrentUser';
 
+const getTodayDMY = () => {
+  const today = new Date();
+  const dd = String(today.getDate()).padStart(2, '0');
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const yyyy = today.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
+};
+
+const formatDateToDMY = (dateStr) => {
+  if (!dateStr) return '';
+  try {
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return dateStr;
+  } catch(e) {
+    return dateStr;
+  }
+};
+
+const parseDateFromDMY = (dmyStr) => {
+  if (!dmyStr) return null;
+  const parts = dmyStr.trim().split('/');
+  if (parts.length === 3) {
+    const dd = parts[0].padStart(2, '0');
+    const mm = parts[1].padStart(2, '0');
+    const yyyy = parts[2];
+    return `${yyyy}-${mm}-${dd}`;
+  }
+  return null;
+};
+
 export default function DailyWork() {
   const { user } = useCurrentUser();
   const [activeTab, setActiveTab] = useState('daily'); // daily, power, issues
@@ -59,6 +92,7 @@ export default function DailyWork() {
 
   // Form states - Daily Log
   const [logDate, setLogDate] = useState(new Date().toISOString().split('T')[0]);
+  const [logDateDMY, setLogDateDMY] = useState(getTodayDMY());
   const [logSiteId, setLogSiteId] = useState('');
   const [logStaff, setLogStaff] = useState(localStorage.getItem('username') || 'admin');
   const [logContent, setLogContent] = useState('');
@@ -280,6 +314,13 @@ export default function DailyWork() {
       return;
     }
 
+    // Parse and validate date
+    const dbDate = parseDateFromDMY(logDateDMY);
+    if (!dbDate || isNaN(Date.parse(dbDate))) {
+      alert("Vui lòng nhập ngày thực hiện đúng định dạng dd/mm/yyyy!");
+      return;
+    }
+
     // Validate Site ID
     const matchingSite = stations.find(s => 
       s.site_id.trim().toUpperCase() === enteredSite || 
@@ -294,7 +335,7 @@ export default function DailyWork() {
     const canonicalSiteId = matchingSite.site_id;
 
     const payload = {
-      ngay: logDate,
+      ngay: dbDate,
       id_tram: canonicalSiteId,
       nhan_vien: logStaff.trim(),
       noi_dung: logContent.trim(),
@@ -330,6 +371,7 @@ export default function DailyWork() {
   function handleEditLog(log) {
     setEditingLog(log);
     setLogDate(log.ngay || new Date().toISOString().split('T')[0]);
+    setLogDateDMY(formatDateToDMY(log.ngay || new Date().toISOString().split('T')[0]));
     setLogSiteId(log.id_tram || '');
     setLogStaff(log.nhan_vien || localStorage.getItem('username') || 'admin');
     setLogContent(log.noi_dung || '');
@@ -358,6 +400,7 @@ export default function DailyWork() {
   function resetLogForm() {
     setEditingLog(null);
     setLogDate(new Date().toISOString().split('T')[0]);
+    setLogDateDMY(getTodayDMY());
     setLogSiteId('');
     setLogStaff(localStorage.getItem('username') || 'admin');
     setLogContent('');
@@ -1355,10 +1398,11 @@ export default function DailyWork() {
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Ngày thực hiện</label>
                   <input 
-                    type="date" 
+                    type="text" 
+                    placeholder="dd/mm/yyyy"
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                    value={logDate}
-                    onChange={(e) => setLogDate(e.target.value)}
+                    value={logDateDMY}
+                    onChange={(e) => setLogDateDMY(e.target.value)}
                   />
                 </div>
                 <div className="relative">
@@ -1398,28 +1442,17 @@ export default function DailyWork() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Nhân viên thực hiện</label>
-                  <input 
-                    type="text" 
-                    readOnly
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 text-slate-500 cursor-not-allowed font-medium"
-                    value={logStaff}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Hạng mục</label>
-                  <select 
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                    value={logCategory}
-                    onChange={(e) => setLogCategory(e.target.value)}
-                  >
-                    {categoriesWorkV1.map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
-                </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Hạng mục</label>
+                <select 
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                  value={logCategory}
+                  onChange={(e) => setLogCategory(e.target.value)}
+                >
+                  {categoriesWorkV1.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
               </div>
 
               <div>

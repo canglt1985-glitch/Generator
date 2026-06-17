@@ -1,0 +1,546 @@
+import os
+import sys
+import json
+import re
+import requests
+from datetime import datetime, timedelta
+from dotenv import load_dotenv
+from supabase import create_client, Client
+
+# Configure stdout encoding
+sys.stdout.reconfigure(encoding="utf-8")
+
+# Environment & Supabase configuration
+current_dir = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(current_dir, '.env'))
+if not os.getenv("VITE_SUPABASE_URL"):
+    parent_dir = os.path.dirname(current_dir)
+    load_dotenv(os.path.join(parent_dir, 'tvt3_v2', '.env'))
+
+SUPABASE_URL = os.getenv("VITE_SUPABASE_URL")
+SUPABASE_KEY = os.getenv("VITE_SUPABASE_ANON_KEY")
+
+if not SUPABASE_URL or not SUPABASE_KEY:
+    print("❌ ERROR: Missing Supabase credentials in environment variables.")
+    sys.exit(1)
+
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+
+def get_telegram_config():
+    """Load Telegram token and chat ID from environment or system_config.json."""
+    token = os.getenv("TELEGRAM_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+    
+    config_path = os.path.join(current_dir, 'data', 'system_config.json')
+    if os.path.exists(config_path):
+        try:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                cfg = json.load(f)
+                if not token:
+                    token = cfg.get('telegram_bot_token')
+                if not chat_id:
+                    chat_id = cfg.get('telegram_report_chat_id')
+        except Exception as e:
+            print(f"⚠️ Error reading system_config.json: {e}")
+            
+    return token, chat_id
+
+
+def is_cx222(ncc):
+    if not ncc:
+        return False
+    ncc_up = str(ncc).upper()
+    return 'CX' in ncc_up or 'CÂY XĂNG' in ncc_up or 'CX222' in ncc_up or 'CX 222' in ncc_up
+
+
+def is_vnpt_vtl(ncc):
+    if not ncc:
+        return False
+    ncc_up = str(ncc).upper()
+    return 'VNPT' in ncc_up or 'VTL' in ncc_up
+
+
+def generate_daily_report_data(target_date_str=None):
+    """
+    Generate statistics for target_date_str (YYYY-MM-DD).
+    Default is yesterday.
+    """
+    if not target_date_str:
+        target_date_str = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+        
+    try:
+        dt = datetime.strptime(target_date_str, '%Y-%m-%d')
+        display_date = dt.strftime('%d/%m/%Y')
+        start_of_month = dt.strftime('%Y-%m-01')
+        end_of_month_limit = target_date_str
+    except:
+        display_date = target_date_str
+        start_of_month = datetime.now().strftime('%Y-%m-01')
+        end_of_month_limit = target_date_str
+ 
+    report_data = {
+        'date': display_date,
+        'runs_count': 0,
+        'total_hours': 0.0,
+        'total_fuel': 0.0,
+        'run_revenue': 0.0,
+        'top_station': '--',
+        'top_station_hours': 0.0,
+        
+        # Mua nhiên liệu trong ngày từ CX222
+        'purchased_cx222_xang_qty': 0.0,
+        'purchased_cx222_xang_cost': 0.0,
+        'purchased_cx222_dau_qty': 0.0,
+        'purchased_cx222_dau_cost': 0.0,
+        
+        # Mua nhiên liệu trong ngày từ VNPT/VTL
+        'purchased_vnpt_vtl_xang_qty': 0.0,
+        'purchased_vnpt_vtl_xang_cost': 0.0,
+        'purchased_vnpt_vtl_dau_qty': 0.0,
+        'purchased_vnpt_vtl_dau_cost': 0.0,
+
+        # Mua nhiên liệu trong ngày từ Mua lẻ
+        'purchased_mua_le_xang_qty': 0.0,
+        'purchased_mua_le_xang_cost': 0.0,
+        'purchased_mua_le_dau_qty': 0.0,
+        'purchased_mua_le_dau_cost': 0.0,
+        
+        'other_expense_cost': 0.0,
+        'total_purchase_cost': 0.0,
+        
+        'matched_count': 0,
+        'mismatched_count': 0,
+        'pending_approvals': 0,
+        'pending_invoices': 0,
+        
+        # Lũy kế tháng (MTD)
+        'mtd': {
+            'purchased_cx222_xang_qty': 0.0,
+            'purchased_cx222_xang_cost': 0.0,
+            'purchased_cx222_dau_qty': 0.0,
+            'purchased_cx222_dau_cost': 0.0,
+            
+            'purchased_vnpt_vtl_xang_qty': 0.0,
+            'purchased_vnpt_vtl_xang_cost': 0.0,
+            'purchased_vnpt_vtl_dau_qty': 0.0,
+            'purchased_vnpt_vtl_dau_cost': 0.0,
+            
+            'purchased_mua_le_xang_qty': 0.0,
+            'purchased_mua_le_xang_cost': 0.0,
+            'purchased_mua_le_dau_qty': 0.0,
+            'purchased_mua_le_dau_cost': 0.0,
+            
+            'other_expense_cost': 0.0,
+            'total_purchase_cost': 0.0,
+            
+            'consumed_xang_qty': 0.0,
+            'consumed_dau_qty': 0.0,
+            'run_revenue': 0.0,
+            'run_hours': 0.0,
+            'runs_count': 0,
+            
+            'invoice_count': 0,
+            'invoice_dau_qty': 0.0,
+            'invoice_xang_qty': 0.0,
+            'invoice_total_cost': 0.0
+        }
+    }
+ 
+    try:
+        # 1. Fetch runs for the month (both MTD and target day)
+        res_runs = supabase.table("generator_logs")\
+            .select("site_id, date, run_details")\
+            .gte("date", start_of_month)\
+            .lte("date", end_of_month_limit)\
+            .execute()
+            
+        station_hours = {}
+        for row in (res_runs.data or []):
+            dt_str = row.get("date")
+            site_id = row.get("site_id")
+            details = row.get("run_details") or {}
+            
+            duration = float(details.get("thoi_gian_hoat_dong") or 0.0)
+            fuel = float(details.get("nhien_lieu_tieu_hao") or 0.0)
+            revenue = float(details.get("thanh_tien") or 0.0)
+            cross_check = details.get("ket_qua_doi_soat")
+            fuel_type = details.get("nhien_lieu_loai") or details.get("nhien_lieu") or "Dầu"
+            fuel_type_lower = str(fuel_type).lower()
+            
+            is_daily = (dt_str == target_date_str)
+            
+            if is_daily:
+                report_data['runs_count'] += 1
+                report_data['total_hours'] += duration
+                report_data['total_fuel'] += fuel
+                report_data['run_revenue'] += revenue
+                if site_id:
+                    station_hours[site_id] = station_hours.get(site_id, 0.0) + duration
+                
+                if cross_check and 'Khớp' in str(cross_check):
+                    report_data['matched_count'] += 1
+                elif cross_check:
+                    report_data['mismatched_count'] += 1
+                    
+            report_data['mtd']['runs_count'] += 1
+            report_data['mtd']['run_hours'] += duration
+            report_data['mtd']['run_revenue'] += revenue
+            
+            if 'xăng' in fuel_type_lower or 'xang' in fuel_type_lower:
+                report_data['mtd']['consumed_xang_qty'] += fuel
+            else:
+                report_data['mtd']['consumed_dau_qty'] += fuel
+
+        if station_hours:
+            top_st = max(station_hours, key=station_hours.get)
+            report_data['top_station'] = top_st
+            report_data['top_station_hours'] = round(station_hours[top_st], 1)
+            
+        # 2 & 3 & 4. Fetch fuel transactions and expenses (both MTD and target day)
+        res_expenses = supabase.table("fuel_and_expenses")\
+            .select("site_id, date, fuel_tracking, other_expenses")\
+            .gte("date", start_of_month)\
+            .lte("date", end_of_month_limit)\
+            .execute()
+            
+        for row in (res_expenses.data or []):
+            dt_str = row.get("date")
+            ft = row.get("fuel_tracking") or {}
+            oe = row.get("other_expenses") or {}
+            
+            is_daily = (dt_str == target_date_str)
+            
+            # Fuel transaction
+            if ft and ft.get("is_approved") is True and ft.get("type") in ['STOCK_IN', 'DIRECT_BUY']:
+                qty = float(ft.get("quantity") or 0.0)
+                cost = float(ft.get("total_amount") or ft.get("thanh_tien") or 0.0)
+                ncc = ft.get("vendor")
+                fuel_type_lower = str(ft.get("fuel_type") or '').lower()
+                is_xang = 'xăng' in fuel_type_lower or 'xang' in fuel_type_lower
+                
+                if is_cx222(ncc):
+                    if is_xang:
+                        if is_daily:
+                            report_data['purchased_cx222_xang_qty'] += qty
+                            report_data['purchased_cx222_xang_cost'] += cost
+                        report_data['mtd']['purchased_cx222_xang_qty'] += qty
+                        report_data['mtd']['purchased_cx222_xang_cost'] += cost
+                    else:
+                        if is_daily:
+                            report_data['purchased_cx222_dau_qty'] += qty
+                            report_data['purchased_cx222_dau_cost'] += cost
+                        report_data['mtd']['purchased_cx222_dau_qty'] += qty
+                        report_data['mtd']['purchased_cx222_dau_cost'] += cost
+                elif is_vnpt_vtl(ncc):
+                    if is_xang:
+                        if is_daily:
+                            report_data['purchased_vnpt_vtl_xang_qty'] += qty
+                            report_data['purchased_vnpt_vtl_xang_cost'] += cost
+                        report_data['mtd']['purchased_vnpt_vtl_xang_qty'] += qty
+                        report_data['mtd']['purchased_vnpt_vtl_xang_cost'] += cost
+                    else:
+                        if is_daily:
+                            report_data['purchased_vnpt_vtl_dau_qty'] += qty
+                            report_data['purchased_vnpt_vtl_dau_cost'] += cost
+                        report_data['mtd']['purchased_vnpt_vtl_dau_qty'] += qty
+                        report_data['mtd']['purchased_vnpt_vtl_dau_cost'] += cost
+                else:
+                    if is_xang:
+                        if is_daily:
+                            report_data['purchased_mua_le_xang_qty'] += qty
+                            report_data['purchased_mua_le_xang_cost'] += cost
+                        report_data['mtd']['purchased_mua_le_xang_qty'] += qty
+                        report_data['mtd']['purchased_mua_le_xang_cost'] += cost
+                    else:
+                        if is_daily:
+                            report_data['purchased_mua_le_dau_qty'] += qty
+                            report_data['purchased_mua_le_dau_cost'] += cost
+                        report_data['mtd']['purchased_mua_le_dau_qty'] += qty
+                        report_data['mtd']['purchased_mua_le_dau_cost'] += cost
+                        
+            # Other expense
+            if oe:
+                cost = float(oe.get("amount") or 0.0)
+                if is_daily:
+                    report_data['other_expense_cost'] += cost
+                report_data['mtd']['other_expense_cost'] += cost
+                
+        report_data['total_purchase_cost'] = (
+            report_data['purchased_cx222_xang_cost'] + 
+            report_data['purchased_cx222_dau_cost'] + 
+            report_data['purchased_vnpt_vtl_xang_cost'] + 
+            report_data['purchased_vnpt_vtl_dau_cost'] + 
+            report_data['purchased_mua_le_xang_cost'] + 
+            report_data['purchased_mua_le_dau_cost'] + 
+            report_data['other_expense_cost']
+        )
+        
+        report_data['mtd']['total_purchase_cost'] = (
+            report_data['mtd']['purchased_cx222_xang_cost'] + 
+            report_data['mtd']['purchased_cx222_dau_cost'] + 
+            report_data['mtd']['purchased_vnpt_vtl_xang_cost'] + 
+            report_data['mtd']['purchased_vnpt_vtl_dau_cost'] + 
+            report_data['mtd']['purchased_mua_le_xang_cost'] + 
+            report_data['mtd']['purchased_mua_le_dau_cost'] + 
+            report_data['mtd']['other_expense_cost']
+        )
+        
+        # 4b. MTD Invoices
+        res_invoices = supabase.table("parsed_invoices")\
+            .select("items, total_amount, status")\
+            .gte("invoice_date", start_of_month)\
+            .lte("invoice_date", end_of_month_limit)\
+            .execute()
+            
+        def safe_float(val):
+            try:
+                if val is None:
+                    return 0.0
+                val_str = str(val).replace(',', '').strip()
+                return float(val_str)
+            except:
+                return 0.0
+
+        for row in (res_invoices.data or []):
+            status = row.get("status")
+            if status == "Discarded":
+                continue
+                
+            tong_tien = float(row.get("total_amount") or 0.0)
+            items = row.get("items") or []
+            
+            report_data['mtd']['invoice_count'] += 1
+            report_data['mtd']['invoice_total_cost'] += tong_tien
+            
+            if isinstance(items, str):
+                try:
+                    items = json.loads(items)
+                except:
+                    items = []
+            if not isinstance(items, list):
+                items = []
+
+            qty_d = 0.0
+            qty_x = 0.0
+
+            for it in items:
+                if not isinstance(it, dict):
+                    continue
+                ten = (it.get("ten") or "").strip()
+                ten_lower = ten.lower()
+                qty = safe_float(it.get("sl"))
+                
+                is_dau = any(k in ten_lower for k in ["dầu", "dau", "diesel", "điêzen", "diezen"]) or (re.search(r'\bdo\b', ten_lower) is not None)
+                is_xang = any(k in ten_lower for k in ["xăng", "xang", "ron", "e5", "a95", "95", "92"])
+                
+                if is_dau:
+                    qty_d += qty
+                elif is_xang:
+                    qty_x += qty
+
+            report_data['mtd']['invoice_dau_qty'] += qty_d
+            report_data['mtd']['invoice_xang_qty'] += qty_x
+
+        # 5. Pending approvals count
+        res_pending_logs = supabase.table("generator_logs").select("gen_log_id").eq("run_details->>status", "pending").execute()
+        report_data['pending_approvals'] = len(res_pending_logs.data) if res_pending_logs.data else 0
+
+        # 6. Pending parsed invoices count
+        res_pending_inv = supabase.table("parsed_invoices").select("id").eq("status", "Pending").execute()
+        report_data['pending_invoices'] = len(res_pending_inv.data) if res_pending_inv.data else 0
+
+        # 7. Recommendations
+        try:
+            from report_helpers import get_missing_logs_recommendations
+            target_dt = datetime.strptime(target_date_str, '%Y-%m-%d').date()
+            start_date_scan = (target_dt - timedelta(days=2)).strftime('%Y-%m-%d')
+            ref_date = target_dt + timedelta(days=1)
+            
+            missing_logs = get_missing_logs_recommendations(
+                start_date=start_date_scan,
+                end_date=target_date_str,
+                grace_days=0,
+                current_date=ref_date
+            )
+            report_data['missing_logs'] = missing_logs
+        except Exception as missing_logs_err:
+            print(f"⚠️ Error querying missing logs for daily report: {missing_logs_err}")
+            report_data['missing_logs'] = []
+            
+    except Exception as e:
+        print(f"❌ Error compiling daily report statistics: {e}")
+        
+    return report_data
+
+
+def format_daily_report_message(data):
+    """Format statistics as Markdown message."""
+    lines = [
+        f"📊 *BÁO CÁO VẬN HÀNH & CHI PHÍ - Ngày {data['date']}*",
+        "=====================================",
+        "🚀 *TIÊU THỤ & CHẠY MÁY TRONG NGÀY:*",
+        f"• Tổng lượt chạy máy: `{data['runs_count']}` lượt (`{round(data['total_hours'], 1)}` giờ)",
+        f"• Nhiên liệu tiêu hao: `{round(data['total_fuel'], 1)}` lít",
+        f"• Số tiền chạy máy: `{data['run_revenue']:,.0f}` VND",
+    ]
+    
+    if data['runs_count'] > 0:
+        lines.append(f"• Trạm chạy nhiều nhất: `{data['top_station']}` ({data['top_station_hours']}h)")
+        
+    lines.extend([
+        "",
+        "💰 *CHI PHÍ MUA NHIÊN LIỆU TRONG NGÀY:*",
+    ])
+    
+    has_daily_purchase = False
+    if data['purchased_cx222_dau_qty'] > 0 or data['purchased_cx222_xang_qty'] > 0:
+        lines.append("• Mua từ CX 222:")
+        if data['purchased_cx222_dau_qty'] > 0:
+            lines.append(f"  - Dầu: `{round(data['purchased_cx222_dau_qty'], 1)}`L (`{data['purchased_cx222_dau_cost']:,.0f}` VND)")
+        if data['purchased_cx222_xang_qty'] > 0:
+            lines.append(f"  - Xăng: `{round(data['purchased_cx222_xang_qty'], 1)}`L (`{data['purchased_cx222_xang_cost']:,.0f}` VND)")
+        has_daily_purchase = True
+
+    if data['purchased_vnpt_vtl_dau_qty'] > 0 or data['purchased_vnpt_vtl_xang_qty'] > 0:
+        lines.append("• Mua từ VNPT/VTL:")
+        if data['purchased_vnpt_vtl_dau_qty'] > 0:
+            lines.append(f"  - Dầu: `{round(data['purchased_vnpt_vtl_dau_qty'], 1)}`L (`{data['purchased_vnpt_vtl_dau_cost']:,.0f}` VND)")
+        if data['purchased_vnpt_vtl_xang_qty'] > 0:
+            lines.append(f"  - Xăng: `{round(data['purchased_vnpt_vtl_xang_qty'], 1)}`L (`{data['purchased_vnpt_vtl_xang_cost']:,.0f}` VND)")
+        has_daily_purchase = True
+            
+    if data['purchased_mua_le_dau_qty'] > 0 or data['purchased_mua_le_xang_qty'] > 0:
+        lines.append("• Mua lẻ:")
+        if data['purchased_mua_le_dau_qty'] > 0:
+            lines.append(f"  - Dầu: `{round(data['purchased_mua_le_dau_qty'], 1)}`L (`{data['purchased_mua_le_dau_cost']:,.0f}` VND)")
+        if data['purchased_mua_le_xang_qty'] > 0:
+            lines.append(f"  - Xăng: `{round(data['purchased_mua_le_xang_qty'], 1)}`L (`{data['purchased_mua_le_xang_cost']:,.0f}` VND)")
+        has_daily_purchase = True
+ 
+    if data['other_expense_cost'] > 0:
+        lines.append(f"• Chi phí khác: `{data['other_expense_cost']:,.0f}` VND")
+        has_daily_purchase = True
+ 
+    if not has_daily_purchase:
+        lines.append("• Không phát sinh mua nhiên liệu.")
+ 
+    mtd_purchase_dau = (
+        data['mtd']['purchased_cx222_dau_qty'] + 
+        data['mtd']['purchased_vnpt_vtl_dau_qty'] + 
+        data['mtd']['purchased_mua_le_dau_qty']
+    )
+    mtd_purchase_xang = (
+        data['mtd']['purchased_cx222_xang_qty'] + 
+        data['mtd']['purchased_vnpt_vtl_xang_qty'] + 
+        data['mtd']['purchased_mua_le_xang_qty']
+    )
+
+    lines.extend([
+        f"➡️ *Tổng chi mua phát sinh trong ngày:* `{data['total_purchase_cost']:,.0f}` VND",
+        "",
+        "📊 *ĐỐI CHIẾU LŨY KẾ THÁNG (MTD):*",
+        f"• Tổng tiêu hao: Dầu `{round(data['mtd']['consumed_dau_qty'], 1)}`L | Xăng `{round(data['mtd']['consumed_xang_qty'], 1)}`L",
+        f"• Tổng mua (Ledger): Dầu `{round(mtd_purchase_dau, 1)}`L | Xăng `{round(mtd_purchase_xang, 1)}`L",
+        f"• Tổng hóa đơn: Dầu `{round(data['mtd']['invoice_dau_qty'], 1)}`L | Xăng `{round(data['mtd']['invoice_xang_qty'], 1)}`L",
+        "",
+        "⏳ *YÊU CẦU CHỜ PHÊ DUYỆT:*",
+        f"• Log chạy máy cần duyệt: `{data['pending_approvals']}` dòng",
+        f"• Hóa đơn điện tử mới nhận: `{data['pending_invoices']}` hóa đơn"
+    ])
+
+    lines.append("=====================================")
+    
+    return "\n".join(lines)
+
+
+def format_missing_logs_message(data):
+    """Format missing logs recommendations as a separate Markdown message."""
+    if not data.get('missing_logs'):
+        return None
+        
+    def format_num(val):
+        try:
+            val_f = float(val)
+            if val_f == int(val_f):
+                return str(int(val_f))
+            return str(val_f)
+        except:
+            return str(val)
+            
+    lines = [
+        "⚠️ *DANH SÁCH KHÔNG CÓ LOG CHẠY MÁY (Cúp ≥ 3h):*",
+        "====================================="
+    ]
+    
+    for rec in data['missing_logs']:
+        h_str = format_num(rec['hours'])
+        refuel_val = rec.get('refuel_amount', 0.0)
+        try:
+            refuel_f = float(refuel_val)
+            if refuel_f > 0:
+                refuel_str = f", đã đổ {format_num(refuel_f)}L"
+            else:
+                ton_val = rec.get('nl_ton', 0.0)
+                refuel_str = f", tồn {format_num(ton_val)}L"
+        except:
+            refuel_str = ""
+            
+        parts = rec['ngay_mat_dien'].split('/')
+        date_display = "/".join(parts[:2]) if len(parts) >= 2 else rec['ngay_mat_dien']
+        lines.append(f"• Trạm `{rec['id_tram']}`: Cúp ngày `{date_display}` (~{h_str}h){refuel_str}")
+        
+    lines.append("=====================================")
+    return "\n".join(lines)
+
+
+def send_daily_report(target_date_str=None):
+    """Build daily report and send to Telegram chat."""
+    token, chat_id = get_telegram_config()
+    
+    if not chat_id:
+        print("⚠️ No Telegram chat registered for report. Skip sending.")
+        return False
+        
+    if not token:
+        print("⚠️ TELEGRAM_TOKEN not set. Skip sending.")
+        return False
+        
+    report_data = generate_daily_report_data(target_date_str)
+    message_text = format_daily_report_message(report_data)
+    
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    payload = {
+        "chat_id": chat_id,
+        "text": message_text,
+        "parse_mode": "Markdown"
+    }
+    
+    daily_sent = False
+    try:
+        r = requests.post(url, json=payload, timeout=10)
+        print(f"Telegram Daily Report status: {r.status_code} - {r.text}")
+        daily_sent = (r.status_code == 200)
+    except Exception as e:
+        print(f"❌ Failed to send Telegram daily report: {e}")
+        
+    if report_data.get('missing_logs'):
+        missing_msg = format_missing_logs_message(report_data)
+        if missing_msg:
+            missing_payload = {
+                "chat_id": chat_id,
+                "text": missing_msg,
+                "parse_mode": "Markdown"
+            }
+            try:
+                r_missing = requests.post(url, json=missing_payload, timeout=10)
+                print(f"Telegram Missing Logs Report status: {r_missing.status_code} - {r_missing.text}")
+            except Exception as e:
+                print(f"❌ Failed to send Telegram missing logs report: {e}")
+                
+    return daily_sent
+
+
+if __name__ == "__main__":
+    print("Running Daily Report generation and dispatch...")
+    send_daily_report()

@@ -48,6 +48,7 @@ export default function Expenses() {
   // UI & Search States
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddFuelModal, setShowAddFuelModal] = useState(false);
+  const [editingFuel, setEditingFuel] = useState(null);
   const [showAddOtherModal, setShowAddOtherModal] = useState(false);
   const [showAddAdvanceModal, setShowAddAdvanceModal] = useState(false);
 
@@ -79,7 +80,7 @@ export default function Expenses() {
   const [fuelPrice, setFuelPrice] = useState('');
   const [fuelTotalAmount, setFuelTotalAmount] = useState('');
   const [fuelActualInventory, setFuelActualInventory] = useState('');
-  const [fuelVendor, setFuelVendor] = useState('CX222');
+  const [fuelVendor, setFuelVendor] = useState('CX 222');
   const [fuelOperator, setFuelOperator] = useState('');
   const [fuelNotes, setFuelNotes] = useState('');
   const [fuelPrices, setFuelPrices] = useState({ dau_do: 25870, xang_ron95: 22060 });
@@ -390,7 +391,7 @@ export default function Expenses() {
         if (type === 'STOCK_IN' || type === 'DIRECT_BUY') {
           const amount = parseFloat(t.fuel_tracking.total_amount || t.fuel_tracking.thanh_tien) || 0;
           const vendor = (t.fuel_tracking.vendor || '').trim().toUpperCase();
-          const isCX = vendor.includes('CX') || vendor.includes('CÂY XĂNG') || vendor.includes('CX222');
+          const isCX = vendor.includes('CX') || vendor.includes('CÂY XĂNG') || vendor.includes('CX222') || vendor.includes('CX 222');
           
           if (isCX) {
             if (isAccum) cx222_accum += amount;
@@ -437,7 +438,7 @@ export default function Expenses() {
           const amount = parseFloat(t.fuel_tracking.total_amount || t.fuel_tracking.thanh_tien) || 0;
           const vendor = (t.fuel_tracking.vendor || '').trim().toUpperCase();
           
-          const isCX = vendor.includes('CX') || vendor.includes('CÂY XĂNG') || vendor.includes('CX222');
+          const isCX = vendor.includes('CX') || vendor.includes('CÂY XĂNG') || vendor.includes('CX222') || vendor.includes('CX 222');
           const isVnptVtl = vendor.includes('VNPT') || vendor.includes('VTL');
 
           if (!data[name]) {
@@ -514,7 +515,7 @@ export default function Expenses() {
     );
   }, [otherExpenses, searchQuery]);
 
-  // Submit Fuel Transaction
+  // Submit/Update Fuel Transaction
   async function handleAddFuel(e) {
     e.preventDefault();
 
@@ -533,38 +534,17 @@ export default function Expenses() {
     }
 
     const total = parseFloat(fuelTotalAmount) || (qty * (price || 0));
+    const targetSiteId = (fuelType !== 'STOCK_IN') && fuelSiteId ? fuelSiteId : null;
 
-    const payload = {
-      date: dbDate,
-      site_id: (fuelType !== 'STOCK_IN') && fuelSiteId ? fuelSiteId : null,
-      fuel_tracking: {
-        type: fuelType,
-        fuel_type: fuelProduct,
-        quantity: qty,
-        unit_price: price || 0,
-        total_amount: total,
-        thanh_tien: total,
-        vendor: fuelVendor.trim() || null,
-        operator: fuelOperator.trim() || null,
-        notes: fuelNotes.trim() || null,
-        is_approved: true,
-        ...(fuelActualInventory.trim() !== '' ? { balance_after: parseFloat(fuelActualInventory) } : {})
-      },
-      other_expenses: {}
-    };
+    let calculatedBalanceAfter = null;
 
-    try {
-      // 1. Insert fuel transaction
-      const { error } = await supabase.from('fuel_and_expenses').insert([payload]);
-      if (error) throw error;
-
-      // 2. If actual inventory is provided and there is a site_id, update datasites.infrastructure_info
-      const actualInv = parseFloat(fuelActualInventory);
-      if (fuelSiteId && !isNaN(actualInv) && fuelActualInventory.trim() !== '') {
+    // 1. Calculate and update station fuel stock in datasites if targetSiteId exists
+    if (targetSiteId) {
+      try {
         const { data: siteData, error: fetchErr } = await supabase
           .from('datasites')
           .select('infrastructure_info')
-          .eq('site_id', fuelSiteId)
+          .eq('site_id', targetSiteId)
           .single();
 
         if (fetchErr) {
@@ -580,36 +560,124 @@ export default function Expenses() {
           if (infra.may_phat_dien.mpd.length === 0) {
             infra.may_phat_dien.mpd.push({
               ten: "MÁY PHÁT ĐIỆN (1)",
-              nl_ton: actualInv,
+              nl_ton: 0,
               dinh_muc: 3.15,
               cong_suat: "12.5",
               dung_tich: 30,
               nhien_lieu: "DẦU DO",
               trang_thai: "HOẠT ĐỘNG TỐT"
             });
-          } else {
-            infra.may_phat_dien.mpd[0].nl_ton = actualInv;
           }
+
+          const currentStock = parseFloat(infra.may_phat_dien.mpd[0].nl_ton) || 0;
+          let newStock = currentStock;
+
+          if (fuelActualInventory.trim() !== '') {
+            // User entered actual inventory override
+            newStock = parseFloat(fuelActualInventory);
+          } else {
+            // No actual inventory entered -> use transaction quantity to adjust stock (cộng dồn)
+            const oldQty = editingFuel ? (parseFloat(editingFuel.fuel_tracking.quantity) || 0) : 0;
+            const delta = qty - oldQty;
+
+            if (fuelType === 'DIRECT_BUY') {
+              newStock = currentStock + delta;
+            } else if (fuelType === 'STATION_OUT') {
+              newStock = currentStock - delta;
+            }
+          }
+
+          newStock = Math.max(0, parseFloat(newStock.toFixed(2)));
+          calculatedBalanceAfter = newStock;
+
+          infra.may_phat_dien.mpd[0].nl_ton = newStock;
 
           const { error: updateErr } = await supabase
             .from('datasites')
             .update({ infrastructure_info: infra })
-            .eq('site_id', fuelSiteId);
+            .eq('site_id', targetSiteId);
 
           if (updateErr) {
             console.error("Lỗi khi cập nhật tồn nhiên liệu trạm:", updateErr);
-            alert("Giao dịch đã lưu, nhưng không thể cập nhật tồn nhiên liệu của trạm trong datasites (Lỗi RLS hoặc kết nối).");
+            alert("Không thể cập nhật tồn nhiên liệu của trạm trong datasites (Lỗi RLS hoặc kết nối).");
           }
         }
+      } catch (err) {
+        console.error("Lỗi cập nhật tồn kho:", err);
+      }
+    }
+
+    const payload = {
+      date: dbDate,
+      site_id: targetSiteId,
+      fuel_tracking: {
+        type: fuelType,
+        fuel_type: fuelProduct,
+        quantity: qty,
+        unit_price: price || 0,
+        total_amount: total,
+        thanh_tien: total,
+        vendor: fuelVendor.trim() || null,
+        operator: fuelOperator.trim() || null,
+        notes: fuelNotes.trim() || null,
+        is_approved: true,
+        ...(calculatedBalanceAfter !== null ? { balance_after: calculatedBalanceAfter } : {})
+      },
+      other_expenses: {}
+    };
+
+    try {
+      if (editingFuel) {
+        // Update fuel transaction
+        const { error } = await supabase
+          .from('fuel_and_expenses')
+          .update(payload)
+          .eq('record_id', editingFuel.record_id);
+        if (error) throw error;
+      } else {
+        // Insert fuel transaction
+        const { error } = await supabase
+          .from('fuel_and_expenses')
+          .insert([payload]);
+        if (error) throw error;
       }
 
-      alert("Thêm giao dịch nhiên liệu thành công!");
+      alert(editingFuel ? "Cập nhật giao dịch nhiên liệu thành công!" : "Thêm giao dịch nhiên liệu thành công!");
       setShowAddFuelModal(false);
       resetFuelForm();
       fetchData();
     } catch (err) {
       alert("Lỗi: " + err.message);
     }
+  }
+
+  // Populate form for editing
+  function handleEditFuel(record) {
+    setEditingFuel(record);
+    const ft = record.fuel_tracking || {};
+    
+    setFuelDate(record.date || new Date().toISOString().split('T')[0]);
+    setFuelDateDMY(formatDateToDMY(record.date || new Date().toISOString().split('T')[0]));
+    setFuelType(ft.type || 'DIRECT_BUY');
+    setFuelSiteId(record.site_id || '');
+    
+    const st = stations.find(s => s.site_id === record.site_id);
+    if (st) {
+      setFuelSiteInput(st.site_id_old ? `${st.site_id} - ${st.site_id_old} - ${st.name}` : `${st.site_id} - ${st.name}`);
+    } else {
+      setFuelSiteInput(record.site_id || '');
+    }
+    
+    setFuelProduct(ft.fuel_type || 'Dầu');
+    setFuelQty(ft.quantity || '');
+    setFuelPrice(ft.unit_price || '');
+    setFuelTotalAmount(ft.total_amount || ft.thanh_tien || '');
+    setFuelActualInventory(ft.balance_after !== undefined && ft.balance_after !== null ? String(ft.balance_after) : '');
+    setFuelVendor(ft.vendor || 'CX 222');
+    setFuelOperator(ft.operator || displayName || 'admin');
+    setFuelNotes(ft.notes || '');
+    
+    setShowAddFuelModal(true);
   }
 
   // Submit Other Expense
@@ -781,6 +849,7 @@ export default function Expenses() {
   }
 
   function resetFuelForm() {
+    setEditingFuel(null);
     setFuelDate(new Date().toISOString().split('T')[0]);
     setFuelDateDMY(getTodayDMY());
     setFuelType('STOCK_IN');
@@ -791,7 +860,7 @@ export default function Expenses() {
     setFuelPrice(fuelPrices.dau_do || '');
     setFuelTotalAmount('');
     setFuelActualInventory('');
-    setFuelVendor('CX222');
+    setFuelVendor('CX 222');
     setFuelOperator(displayName || 'admin');
     setFuelNotes('');
   }
@@ -846,7 +915,7 @@ export default function Expenses() {
                 onClick={() => { resetFuelForm(); setShowAddFuelModal(true); }}
                 className="inline-flex items-center justify-center px-4 py-2 text-[13px] font-bold rounded-lg text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors cursor-pointer"
               >
-                <Plus className="h-4 w-4 mr-1.5" /> Giao dịch kho dầu
+                <Plus className="h-4 w-4 mr-1.5" /> Phiếu nhiên liệu
               </button>
             )}
             {activeTab === 'other' && (
@@ -1009,7 +1078,7 @@ export default function Expenses() {
                                     {t.fuel_tracking.total_amount || t.fuel_tracking.thanh_tien ? formatCurrency(t.fuel_tracking.total_amount || t.fuel_tracking.thanh_tien) : '0'}
                                   </td>
                                   <td className="px-4 py-3 max-w-xs truncate text-slate-500">
-                                    {t.fuel_tracking.vendor || t.fuel_tracking.notes || '—'}
+                                    {t.fuel_tracking.vendor === 'CX 222' ? 'CX 222' : (t.fuel_tracking.vendor || t.fuel_tracking.notes || '—')}
                                   </td>
                                   <td className={`px-4 py-3 whitespace-nowrap font-bold text-right font-mono ${hasNlTon && t.fuel_tracking.balance_after > 50 ? 'text-emerald-600' : hasNlTon && t.fuel_tracking.balance_after > 20 ? 'text-amber-500' : hasNlTon && t.fuel_tracking.balance_after > 0 ? 'text-red-600' : 'text-slate-400'}`}>
                                     {hasNlTon ? `${t.fuel_tracking.balance_after}L` : '—'}
@@ -1019,13 +1088,22 @@ export default function Expenses() {
                                   </td>
                                   <td className="px-4 py-3 whitespace-nowrap text-right text-xs">
                                     {user && (
-                                      <button 
-                                        onClick={() => handleDelete(t.record_id)}
-                                        className="text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 p-1.5 rounded transition-colors inline-flex items-center cursor-pointer"
-                                        title="Xóa"
-                                      >
-                                        <Trash size={14} />
-                                      </button>
+                                      <div className="flex justify-end gap-1.5">
+                                        <button 
+                                          onClick={() => handleEditFuel(t)}
+                                          className="text-amber-600 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 p-1.5 rounded transition-colors inline-flex items-center cursor-pointer"
+                                          title="Sửa"
+                                        >
+                                          <Edit size={14} />
+                                        </button>
+                                        <button 
+                                          onClick={() => handleDelete(t.record_id)}
+                                          className="text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 p-1.5 rounded transition-colors inline-flex items-center cursor-pointer"
+                                          title="Xóa"
+                                        >
+                                          <Trash size={14} />
+                                        </button>
+                                      </div>
                                     )}
                                   </td>
                                 </tr>
@@ -1044,15 +1122,25 @@ export default function Expenses() {
                             <div key={t.record_id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
                               <div className="flex justify-between items-center">
                                 <span className="text-xs font-semibold text-slate-500">{t.date}</span>
-                                <div className="flex gap-2">
+                                <div className="flex gap-2 items-center">
                                   {getTxTypeBadge(t.fuel_tracking.type)}
                                   {user && (
-                                    <button
-                                      onClick={() => handleDelete(t.record_id)}
-                                      className="text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 p-1.5 rounded transition-colors inline-flex items-center cursor-pointer"
-                                    >
-                                      <Trash size={14} />
-                                    </button>
+                                    <div className="flex gap-1.5">
+                                      <button
+                                        onClick={() => handleEditFuel(t)}
+                                        className="text-amber-600 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 p-1.5 rounded transition-colors inline-flex items-center cursor-pointer"
+                                        title="Sửa"
+                                      >
+                                        <Edit size={14} />
+                                      </button>
+                                      <button
+                                        onClick={() => handleDelete(t.record_id)}
+                                        className="text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 p-1.5 rounded transition-colors inline-flex items-center cursor-pointer"
+                                        title="Xóa"
+                                      >
+                                        <Trash size={14} />
+                                      </button>
+                                    </div>
                                   )}
                                 </div>
                               </div>
@@ -1323,12 +1411,12 @@ export default function Expenses() {
                       )}
                     </div>
 
-                    {/* Card 2: Chi Phí CX222 */}
+                    {/* Card 2: Chi Phí CX 222 */}
                     <div className="bg-white rounded-xl border border-blue-200 shadow-sm overflow-hidden flex flex-col justify-between">
                       <div className="bg-blue-50/50 px-4 py-3 border-b border-blue-100 flex items-center justify-between">
                         <h4 className="font-bold text-slate-800 text-[14px] flex items-center gap-1.5">
-                          <TrendingUp className="text-blue-600 w-4 h-4" /> Chi Phí CX222
-                          <span className="text-[11px] text-slate-500 font-normal">(Trạm xăng CX222)</span>
+                          <TrendingUp className="text-blue-600 w-4 h-4" /> Chi Phí CX 222
+                          <span className="text-[11px] text-slate-500 font-normal">(Trạm xăng CX 222)</span>
                         </h4>
                       </div>
                       <div className="p-4 space-y-2.5 text-[13px] text-slate-600 flex-1">
@@ -1434,7 +1522,7 @@ export default function Expenses() {
                           <tr>
                             <th className="px-4 py-3">Nhân viên</th>
                             <th className="px-4 py-3 text-right">Mua Lẻ</th>
-                            <th className="px-4 py-3 text-right">CX222</th>
+                            <th className="px-4 py-3 text-right">CX 222</th>
                             <th className="px-4 py-3 text-right">VNPT-VTL</th>
                             <th className="px-4 py-3 text-right">Chi phí khác</th>
                             <th className="px-4 py-3 text-right text-blue-700 font-bold">Tổng cộng</th>
@@ -1520,7 +1608,7 @@ export default function Expenses() {
           <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-xl overflow-hidden animate-in fade-in zoom-in duration-200">
             <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 flex items-center justify-between text-white">
               <h2 className="font-bold text-lg flex items-center gap-2">
-                <TrendingUp size={20} /> Giao dịch nhiên liệu mới
+                <TrendingUp size={20} /> {editingFuel ? "Cập nhật phiếu nhiên liệu" : "Phiếu nhiên liệu mới"}
               </h2>
               <button 
                 onClick={() => { resetFuelForm(); setShowAddFuelModal(false); }}
@@ -1558,22 +1646,30 @@ export default function Expenses() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Loại giao dịch</label>
-                  <select 
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                    value={fuelType}
-                    onChange={(e) => {
-                      setFuelType(e.target.value);
-                      if (e.target.value === 'STOCK_IN') {
-                        setFuelSiteId('');
-                        setFuelSiteInput('');
-                      }
-                    }}
-                  >
-                    <option value="DIRECT_BUY">Đổ nhiên liệu</option>
-                    <option value="STOCK_IN">Mua về kho</option>
-                    <option value="STATION_OUT">Xuất kho</option>
-                    <option value="ADJUSTMENT">Hiệu chỉnh</option>
-                  </select>
+                  {!editingFuel ? (
+                    <select 
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                      value={fuelType}
+                      onChange={(e) => {
+                        setFuelType(e.target.value);
+                        if (e.target.value === 'STOCK_IN') {
+                          setFuelSiteId('');
+                          setFuelSiteInput('');
+                        }
+                      }}
+                    >
+                      <option value="DIRECT_BUY">Đổ nhiên liệu</option>
+                      <option value="STOCK_IN">Mua về kho</option>
+                      <option value="STATION_OUT">Xuất kho</option>
+                    </select>
+                  ) : (
+                    <div className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-100 text-slate-500 font-semibold cursor-not-allowed">
+                      {fuelType === 'DIRECT_BUY' ? 'Đổ nhiên liệu' : 
+                       fuelType === 'STOCK_IN' ? 'Mua về kho' : 
+                       fuelType === 'STATION_OUT' ? 'Xuất kho' : 
+                       fuelType === 'ADJUSTMENT' ? 'Hiệu chỉnh' : fuelType}
+                    </div>
+                  )}
                 </div>
                 <div className="relative">
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Trạm liên quan</label>
@@ -1649,43 +1745,31 @@ export default function Expenses() {
                 </div>
               </div>
  
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Nhà cung cấp / Cửa hàng</label>
-                  <select 
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                    value={fuelVendor}
-                    onChange={(e) => setFuelVendor(e.target.value)}
-                  >
-                    <option value="CX222">CX222</option>
-                    <option value="VNPT/VTL">VNPT/VTL</option>
-                    <option value="Mua Lẻ">Mua Lẻ</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Người thực hiện</label>
-                  <input 
-                    type="text" 
-                    placeholder="Tên nhân viên..."
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-100/80 text-slate-500 font-medium cursor-not-allowed"
-                    value={fuelOperator}
-                    disabled={true}
-                  />
-                </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Nhà cung cấp / Cửa hàng</label>
+                <select 
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                  value={fuelVendor}
+                  onChange={(e) => setFuelVendor(e.target.value)}
+                >
+                  <option value="CX 222">CX 222</option>
+                  <option value="VNPT/VTL">VNPT/VTL</option>
+                  <option value="Mua Lẻ">Mua Lẻ</option>
+                </select>
               </div>
  
               {fuelSiteId && (
                 <div className="bg-blue-50/50 p-3 rounded-lg border border-blue-100 animate-in fade-in slide-in-from-top-1 duration-200">
-                  <label className="block text-xs font-bold text-blue-700 uppercase tracking-wider mb-1">Hiệu chỉnh NL tồn thực tế tại trạm (Lít)</label>
+                  <label className="block text-xs font-bold text-blue-700 uppercase tracking-wider mb-1">Nhiên liệu tồn thực tế tại trạm (Lít)</label>
                   <input 
                     type="number" 
                     step="any"
-                    placeholder="Nhập lượng dầu thực tế đo được tại trạm..."
+                    placeholder="Để trống nếu muốn cộng dồn tự động..."
                     className="w-full px-3 py-2 border border-blue-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white"
                     value={fuelActualInventory}
                     onChange={(e) => setFuelActualInventory(e.target.value)}
                   />
-                  <p className="text-[11px] text-blue-600/80 mt-1">Khi lưu, hệ thống sẽ cập nhật lại số lượng tồn dầu thực tế của máy phát điện tại trạm này.</p>
+                  <p className="text-[11px] text-blue-600/80 mt-1">Nếu không nhập, hệ thống sẽ tự động cộng dồn/trừ theo số lượng giao dịch.</p>
                 </div>
               )}
  
@@ -1910,7 +1994,7 @@ export default function Expenses() {
           <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
             <div className="bg-gradient-to-r from-amber-500 to-orange-600 px-6 py-4 flex items-center justify-between text-white">
               <h2 className="font-bold text-lg flex items-center gap-2">
-                <Edit size={20} /> Cập nhật nhóm: {selectedGroup === 'mua_ngoai' ? 'Mua Ngoài' : 'CX222'}
+                <Edit size={20} /> Cập nhật nhóm: {selectedGroup === 'mua_ngoai' ? 'Mua Ngoài' : 'CX 222'}
               </h2>
               <button 
                 onClick={() => setShowPaymentGroupModal(false)}

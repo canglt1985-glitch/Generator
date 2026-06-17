@@ -37,7 +37,9 @@ last_run = {
     "fuel_price": bootstrap_time,
     "smartw_vhkt": None,  # Special handler by day date string
     "smartw_mfd": bootstrap_time,
-    "config_sync": bootstrap_time
+    "config_sync": bootstrap_time,
+    "daily_report": None,  # Special handler by day date string
+    "weekly_report": None  # Special handler by day date string
 }
 
 # Long-running subprocess reference
@@ -200,6 +202,22 @@ def main():
                 run_job(
                     "smartw_mfd", 
                     [python_exe, os.path.join(current_dir, "smartw_worker.py"), "--job", "mfd"]
+                )
+
+            # Job I: Telegram Daily Report (Once daily at 07:15 AM)
+            if (now.hour > 7 or (now.hour == 7 and now.minute >= 15)) and last_run["daily_report"] != today_str:
+                last_run["daily_report"] = today_str
+                run_job(
+                    "daily_report", 
+                    [python_exe, os.path.join(current_dir, "daily_report.py")]
+                )
+
+            # Job J: Telegram Weekly Report (Once weekly on Mondays at 07:30 AM)
+            if now.weekday() == 0 and (now.hour > 7 or (now.hour == 7 and now.minute >= 30)) and last_run["weekly_report"] != today_str:
+                last_run["weekly_report"] = today_str
+                run_job(
+                    "weekly_report", 
+                    [python_exe, os.path.join(current_dir, "weekly_report.py")]
                 )
 
             # Job H: Sync configs from Supabase (Every 2 minutes)
