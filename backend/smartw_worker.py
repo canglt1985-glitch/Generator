@@ -635,59 +635,6 @@ def sync_alarms_to_supabase(result: dict):
             "status": "CLEARED" if edate_iso else "ACTIVE"
         })
 
-    # 3. MLL
-    for alarm in result.get('mll', []):
-        site = (alarm.get('site') or '').strip()
-        alarm_name = "Mất liên lạc trạm"
-        sdate_str = (alarm.get('sdateStr') or alarm.get('sdate_str') or '').strip()
-        edate_str = (alarm.get('edateStr') or alarm.get('clear_time') or alarm.get('ket_thuc') or '').strip()
-        sdate_iso = parse_to_iso(sdate_str)
-        edate_iso = parse_to_iso(edate_str)
-        val_str = f"mll_{site}_{alarm_name}_{sdate_str}"
-        rec_id = str(uuid.uuid5(uuid.NAMESPACE_OID, val_str))
-        
-        all_rows.append({
-            "id": rec_id,
-            "site": site,
-            "network": alarm.get('network'),
-            "vendor": alarm.get('vendor'),
-            "alarm_name": alarm_name,
-            "alarm_type": "mll",
-            "sdate": sdate_iso,
-            "sdate_str": sdate_str,
-            "edate": edate_iso,
-            "edate_str": edate_str if edate_str else None,
-            "duration": int(alarm.get('duaration') or alarm.get('minute') or 0),
-            "status": "CLEARED" if edate_iso else "ACTIVE"
-        })
-
-    # 4. MLL Cell
-    for alarm in result.get('mll_cell', []):
-        site = (alarm.get('site') or '').strip()
-        cellid = (alarm.get('cellid') or '').strip()
-        alarm_name = (alarm.get('alarmName') or '').strip()
-        sdate_str = (alarm.get('sdateStr') or alarm.get('sdate_str') or '').strip()
-        edate_str = (alarm.get('edateStr') or alarm.get('clear_time') or alarm.get('ket_thuc') or '').strip()
-        sdate_iso = parse_to_iso(sdate_str)
-        edate_iso = parse_to_iso(edate_str)
-        val_str = f"mllcell_{site}_{cellid}_{alarm_name}_{sdate_str}"
-        rec_id = str(uuid.uuid5(uuid.NAMESPACE_OID, val_str))
-        
-        all_rows.append({
-            "id": rec_id,
-            "site": site,
-            "network": alarm.get('network'),
-            "cellid": cellid,
-            "vendor": alarm.get('vendor'),
-            "alarm_name": alarm_name,
-            "alarm_type": "mll_cell",
-            "sdate": sdate_iso,
-            "sdate_str": sdate_str,
-            "edate": edate_iso,
-            "edate_str": edate_str if edate_str else None,
-            "duration": int(alarm.get('duaration') or alarm.get('minute') or 0),
-            "status": "CLEARED" if edate_iso else "ACTIVE"
-        })
 
     if all_rows:
         try:
