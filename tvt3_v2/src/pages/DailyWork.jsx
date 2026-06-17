@@ -26,12 +26,17 @@ export default function DailyWork() {
   const [selectedSite, setSelectedSite] = useState(null); // Trạm được chọn để mở Slide-over chi tiết
   const [siteDetailTab, setSiteDetailTab] = useState('general'); // Tab mặc định khi mở Slide-over
   
+  // Month/Year filters
+  const [filterMonth, setFilterMonth] = useState(new Date().getMonth() + 1); // 1-12
+  const [filterYear, setFilterYear] = useState(new Date().getFullYear());
+
   // Mobile Equipment States
   const [mobileEquipments, setMobileEquipments] = useState([]);
   const [equipmentTransfers, setEquipmentTransfers] = useState([]);
   const [showAddEquipModal, setShowAddEquipModal] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [selectedEquip, setSelectedEquip] = useState(null);
+  const [editingEquip, setEditingEquip] = useState(null);
 
   // Form states - Add Equipment
   const [equipCode, setEquipCode] = useState('');
@@ -96,7 +101,7 @@ export default function DailyWork() {
 
   useEffect(() => {
     fetchData();
-  }, [activeTab]);
+  }, [activeTab, filterMonth, filterYear]);
 
   async function fetchData() {
     setLoading(true);
@@ -111,26 +116,48 @@ export default function DailyWork() {
       }
 
       if (activeTab === 'daily') {
-        const { data, error } = await supabase
-          .from('daily_work')
-          .select('*')
-          .order('ngay', { ascending: false })
-          .limit(1000);
+        let query = supabase.from('daily_work').select('*');
+        if (filterYear) {
+          if (filterMonth) {
+            const startStr = `${filterYear}-${String(filterMonth).padStart(2, '0')}-01`;
+            const lastDay = new Date(filterYear, filterMonth, 0).getDate();
+            const endStr = `${filterYear}-${String(filterMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+            query = query.gte('ngay', startStr).lte('ngay', endStr);
+          } else {
+            query = query.gte('ngay', `${filterYear}-01-01`).lte('ngay', `${filterYear}-12-31`);
+          }
+        }
+        const { data, error } = await query.order('ngay', { ascending: false });
         if (error) throw error;
         setDailyLogs(data || []);
       } else if (activeTab === 'power') {
-        const { data, error } = await supabase
-          .from('power_schedule')
-          .select('*')
-          .order('ngay_mat_dien', { ascending: false })
-          .limit(1000);
+        let query = supabase.from('power_schedule').select('*');
+        if (filterYear) {
+          if (filterMonth) {
+            const startStr = `${filterYear}-${String(filterMonth).padStart(2, '0')}-01`;
+            const lastDay = new Date(filterYear, filterMonth, 0).getDate();
+            const endStr = `${filterYear}-${String(filterMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+            query = query.gte('ngay_mat_dien', startStr).lte('ngay_mat_dien', endStr);
+          } else {
+            query = query.gte('ngay_mat_dien', `${filterYear}-01-01`).lte('ngay_mat_dien', `${filterYear}-12-31`);
+          }
+        }
+        const { data, error } = await query.order('ngay_mat_dien', { ascending: false });
         if (error) throw error;
         setPowerSchedules(data || []);
       } else if (activeTab === 'issues') {
-        const { data, error } = await supabase
-          .from('operation_defects_logs')
-          .select('*')
-          .order('date', { ascending: false });
+        let query = supabase.from('operation_defects_logs').select('*');
+        if (filterYear) {
+          if (filterMonth) {
+            const startStr = `${filterYear}-${String(filterMonth).padStart(2, '0')}-01`;
+            const lastDay = new Date(filterYear, filterMonth, 0).getDate();
+            const endStr = `${filterYear}-${String(filterMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+            query = query.gte('date', startStr).lte('date', endStr);
+          } else {
+            query = query.gte('date', `${filterYear}-01-01`).lte('date', `${filterYear}-12-31`);
+          }
+        }
+        const { data, error } = await query.order('date', { ascending: false });
         if (error) throw error;
         setDefectsLogs(data || []);
       } else if (activeTab === 'mobile') {
@@ -455,7 +482,7 @@ export default function DailyWork() {
     );
   }, [mobileEquipments, searchQuery]);
 
-  // Thêm thiết bị lưu động mới
+  // Thêm / Sửa thiết bị lưu động
   async function handleSaveEquip(e) {
     e.preventDefault();
     if (!equipCode.trim() || !equipType.trim()) {
@@ -468,21 +495,42 @@ export default function DailyWork() {
       type: equipType,
       specifications: equipSpecs.trim() || null,
       status: equipStatus,
-      current_location: "KHO",
-      fuel_balance: 0,
       notes: equipNotes.trim() || null
     };
 
     try {
-      const { error } = await supabase.from('mobile_equipment').insert([payload]);
-      if (error) throw error;
-      alert("Thêm thiết bị lưu động thành công!");
+      if (editingEquip) {
+        const { error } = await supabase
+          .from('mobile_equipment')
+          .update(payload)
+          .eq('id', editingEquip.id);
+        if (error) throw error;
+        alert("Cập nhật thiết bị lưu động thành công!");
+      } else {
+        const { error } = await supabase.from('mobile_equipment').insert([{
+          ...payload,
+          current_location: "KHO",
+          fuel_balance: 0
+        }]);
+        if (error) throw error;
+        alert("Thêm thiết bị lưu động thành công!");
+      }
       setShowAddEquipModal(false);
       resetEquipForm();
       fetchData();
     } catch (err) {
       alert("Lỗi: " + err.message);
     }
+  }
+
+  function handleEditEquip(eq) {
+    setEditingEquip(eq);
+    setEquipCode(eq.equipment_code || '');
+    setEquipType(eq.type || 'MPĐ');
+    setEquipSpecs(eq.specifications || '');
+    setEquipStatus(eq.status || 'Tốt');
+    setEquipNotes(eq.notes || '');
+    setShowAddEquipModal(true);
   }
 
   // Bắt đầu điều chuyển thiết bị
@@ -544,6 +592,7 @@ export default function DailyWork() {
   }
 
   function resetEquipForm() {
+    setEditingEquip(null);
     setEquipCode('');
     setEquipType('MPĐ');
     setEquipSpecs('');
@@ -572,40 +621,68 @@ export default function DailyWork() {
           </p>
         </div>
 
-        {user && (
-          <div>
-            {activeTab === 'daily' && (
-              <button 
-                onClick={() => { resetLogForm(); setShowAddLogModal(true); }}
-                className="inline-flex items-center justify-center px-4 py-2 text-[13px] font-bold rounded-lg text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors cursor-pointer"
+        <div className="flex flex-wrap items-center gap-2">
+          {activeTab !== 'mobile' && (
+            <>
+              {/* Month select */}
+              <select
+                value={filterMonth}
+                onChange={(e) => setFilterMonth(e.target.value === "" ? "" : Number(e.target.value))}
+                className="bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer h-[34px]"
               >
-                <Plus className="h-4 w-4 mr-1.5" /> Ghi nhật ký
-              </button>
-            )}
-            {activeTab === 'issues' && (
-              <button 
-                onClick={() => { resetIssueForm(); setShowAddIssueModal(true); }}
-                className="inline-flex items-center justify-center px-4 py-2 text-[13px] font-bold rounded-lg text-white bg-red-600 hover:bg-red-700 shadow-sm transition-colors cursor-pointer"
+                <option value="">-- Cả năm --</option>
+                {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                  <option key={m} value={m}>Tháng {m}</option>
+                ))}
+              </select>
+              {/* Year select */}
+              <select
+                value={filterYear}
+                onChange={(e) => setFilterYear(Number(e.target.value))}
+                className="bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer h-[34px]"
               >
-                <Plus className="h-4 w-4 mr-1.5" /> Cập nhật tồn tại
-              </button>
-            )}
-            {activeTab === 'mobile' && (
-              <button 
-                onClick={() => { resetEquipForm(); setShowAddEquipModal(true); }}
-                className="inline-flex items-center justify-center px-4 py-2 text-[13px] font-bold rounded-lg text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors cursor-pointer"
-              >
-                <Plus className="h-4 w-4 mr-1.5" /> Thêm thiết bị lưu động
-              </button>
-            )}
-          </div>
-        )}
+                {[2024, 2025, 2026, 2027].map(y => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            </>
+          )}
+
+          {user && (
+            <div>
+              {activeTab === 'daily' && (
+                <button 
+                  onClick={() => { resetLogForm(); setShowAddLogModal(true); }}
+                  className="inline-flex items-center justify-center px-4 py-2 text-[13px] font-bold rounded-lg text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors cursor-pointer h-[34px]"
+                >
+                  <Plus className="h-4 w-4 mr-1.5" /> Ghi nhật ký
+                </button>
+              )}
+              {activeTab === 'issues' && (
+                <button 
+                  onClick={() => { resetIssueForm(); setShowAddIssueModal(true); }}
+                  className="inline-flex items-center justify-center px-4 py-2 text-[13px] font-bold rounded-lg text-white bg-red-600 hover:bg-red-700 shadow-sm transition-colors cursor-pointer h-[34px]"
+                >
+                  <Plus className="h-4 w-4 mr-1.5" /> Cập nhật tồn tại
+                </button>
+              )}
+              {activeTab === 'mobile' && (
+                <button 
+                  onClick={() => { resetEquipForm(); setShowAddEquipModal(true); }}
+                  className="inline-flex items-center justify-center px-4 py-2 text-[13px] font-bold rounded-lg text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors cursor-pointer h-[34px]"
+                >
+                  <Plus className="h-4 w-4 mr-1.5" /> Thêm thiết bị lưu động
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Navigation Cards as Tabs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         {[
-          { id: 'daily', label: 'Nhật ký sự cố', color: 'blue', icon: ClipboardList },
+          { id: 'daily', label: 'Nhật ký', color: 'blue', icon: ClipboardList },
           { id: 'power', label: 'Lịch cúp điện', color: 'amber', icon: Calendar },
           { id: 'issues', label: 'Quản lý tồn tại', color: 'red', icon: AlertTriangle },
           { id: 'mobile', label: 'Thiết bị lưu động', color: 'purple', icon: Zap },
@@ -1041,12 +1118,20 @@ export default function DailyWork() {
                                   <td className="px-4 py-3 max-w-xs truncate text-slate-500 italic" title={eq.notes}>{eq.notes || '—'}</td>
                                   <td className="px-4 py-3 whitespace-nowrap text-right">
                                     {user && (
-                                      <button
-                                        onClick={() => handleStartTransfer(eq)}
-                                        className="text-[12px] font-bold px-3 py-1 rounded-lg text-white bg-blue-600 hover:bg-blue-700 cursor-pointer shadow-sm transition-colors"
-                                      >
-                                        Điều chuyển
-                                      </button>
+                                      <div className="flex justify-end items-center gap-2">
+                                        <button
+                                          onClick={() => handleEditEquip(eq)}
+                                          className="text-[12px] font-bold px-3 py-1 rounded-lg text-blue-600 border border-blue-200 bg-white hover:bg-slate-50 cursor-pointer shadow-sm transition-colors flex items-center gap-1"
+                                        >
+                                          <Edit size={12} /> Sửa
+                                        </button>
+                                        <button
+                                          onClick={() => handleStartTransfer(eq)}
+                                          className="text-[12px] font-bold px-3 py-1 rounded-lg text-white bg-blue-600 hover:bg-blue-700 cursor-pointer shadow-sm transition-colors"
+                                        >
+                                          Điều chuyển
+                                        </button>
+                                      </div>
                                     )}
                                   </td>
                                 </tr>
@@ -1083,7 +1168,13 @@ export default function DailyWork() {
                                 </div>
                               </div>
                               {user && (
-                                <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end">
+                                <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end gap-2">
+                                  <button
+                                    onClick={() => handleEditEquip(eq)}
+                                    className="text-[12px] font-bold px-3 py-1.5 rounded-lg text-blue-600 border border-blue-200 bg-white hover:bg-slate-50 cursor-pointer shadow-sm transition-colors flex items-center gap-1"
+                                  >
+                                    <Edit size={12} /> Sửa
+                                  </button>
                                   <button
                                     onClick={() => handleStartTransfer(eq)}
                                     className="text-[12px] font-bold px-3 py-1.5 rounded-lg text-white bg-blue-600 hover:bg-blue-700 cursor-pointer shadow-sm transition-colors animate-in"
@@ -1401,13 +1492,13 @@ export default function DailyWork() {
         </div>
       )}
 
-      {/* MODAL 3: ADD MOBILE EQUIPMENT */}
+      {/* MODAL 3: ADD / EDIT MOBILE EQUIPMENT */}
       {showAddEquipModal && (
         <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
             <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 flex items-center justify-between text-white">
               <h2 className="font-bold text-lg flex items-center gap-2">
-                <Zap size={20} /> Thêm thiết bị lưu động mới
+                <Zap size={20} /> {editingEquip ? "Cập nhật thiết bị lưu động" : "Thêm thiết bị lưu động mới"}
               </h2>
               <button 
                 onClick={() => { resetEquipForm(); setShowAddEquipModal(false); }}
@@ -1455,7 +1546,9 @@ export default function DailyWork() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Tình trạng ban đầu</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    {editingEquip ? "Tình trạng hiện tại" : "Tình trạng ban đầu"}
+                  </label>
                   <select 
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white"
                     value={equipStatus}
@@ -1490,7 +1583,7 @@ export default function DailyWork() {
                   type="submit"
                   className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 shadow-sm transition-all cursor-pointer"
                 >
-                  Thêm thiết bị
+                  {editingEquip ? "Cập nhật" : "Thêm thiết bị"}
                 </button>
               </div>
             </form>
