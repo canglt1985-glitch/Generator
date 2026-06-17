@@ -91,14 +91,31 @@ def _parse_site_suffix(site_id: str) -> tuple[str, str]:
                 return base, suffix
     return s, ""
 
-def _get_site_label(site_id: str) -> str:
-    """Return '*ID_MOI* (ID_CU)' label for Viber display on V2."""
+_datasites_cache = None
+
+def _get_datasites_list():
+    global _datasites_cache
+    if _datasites_cache is not None:
+        return _datasites_cache
     if not supabase:
-        return f"*{site_id}*"
-    site_upper = site_id.strip().upper()
+        return []
     try:
         res = supabase.table("datasites").select("site_id, site_id_old").execute()
-        for s in (res.data or []):
+        _datasites_cache = res.data or []
+    except Exception as e:
+        logger.error(f'SmartW failed to fetch datasites cache: {e}')
+        _datasites_cache = []
+    return _datasites_cache
+
+
+def _get_site_label(site_id: str) -> str:
+    """Return '*ID_MOI* (ID_CU)' label for Viber display on V2."""
+    if not site_id:
+        return ""
+    site_upper = site_id.strip().upper()
+    try:
+        data = _get_datasites_list()
+        for s in data:
             s_id = (s.get("site_id") or "").upper()
             s_old = (s.get("site_id_old") or "").upper()
             if site_upper == s_id or site_upper == s_old:
@@ -129,12 +146,12 @@ def _norm_net(network: str) -> str:
 
 def _old_id(site_id: str) -> str:
     """Look up legacy site ID from V2 datasites table."""
-    if not supabase:
-        return site_id
+    if not site_id:
+        return ""
     site_upper = site_id.strip().upper()
     try:
-        res = supabase.table("datasites").select("site_id, site_id_old").execute()
-        for s in (res.data or []):
+        data = _get_datasites_list()
+        for s in data:
             s_id = (s.get("site_id") or "").upper()
             s_old = (s.get("site_id_old") or "").upper()
             if site_upper == s_id or site_upper == s_old:
@@ -660,9 +677,7 @@ def _get_val(row: dict, keys: list) -> str:
 
 
 def format_pakh_message(row: dict) -> str:
-    pakh_id = row.get('id') or ''
     so_thue_bao = row.get('soThueBao') or ''
-    pakh_display = f"{pakh_id} (SĐT: {so_thue_bao})" if so_thue_bao else f"{pakh_id}"
 
     # Parse and format thoiGianGhiNhan (GMT+7)
     tg_nhan_raw = row.get('thoiGianGhiNhan') or row.get('tgTaoWo')
@@ -681,14 +696,42 @@ def format_pakh_message(row: dict) -> str:
     dia_ban = f"{xa}, {tinh}".strip(', ')
 
     noi_dung = row.get('noiDungPhanAnh') or ''
+    
+    # Map Trạm/Cell to old/new ID using cache
     tram_cell = row.get('maTram') or ''
+    tram_cell_display = tram_cell
+    if tram_cell:
+        try:
+            data = _get_datasites_list()
+            matched_site = None
+            tram_upper = tram_cell.strip().upper()
+            # Sort by site_id length desc to match the most specific site first
+            for s in sorted(data, key=lambda x: len(x.get('site_id') or ''), reverse=True):
+                s_id = (s.get("site_id") or "").upper()
+                s_old = (s.get("site_id_old") or "").upper()
+                if s_id and tram_upper.startswith(s_id):
+                    matched_site = s
+                    break
+                if s_old and tram_upper.startswith(s_old):
+                    matched_site = s
+                    break
+            if matched_site:
+                s_id = matched_site.get("site_id") or ""
+                s_old = matched_site.get("site_id_old") or ""
+                if s_old and s_id != s_old:
+                    tram_cell_display = f"{tram_cell} (mới: {s_id} / cũ: {s_old})"
+                elif s_id:
+                    tram_cell_display = f"{tram_cell} (mới: {s_id})"
+        except Exception as e:
+            logger.error(f'SmartW format_pakh_message site mapping error: {e}')
+
     han_con_lai = row.get('tgConLai') or ''
 
-    msg = f"""- PAKH: {pakh_display}
+    msg = f"""- PAKH: {so_thue_bao}
 - THỜI GIAN NHẬN: {tg_nhan}
 - ĐỊA BÀN: {dia_ban}
 - NỘI DUNG PHẢN ÁNH: {noi_dung}
-- TRẠM / CELL: {tram_cell}
+- TRẠM / CELL: {tram_cell_display}
 - HẠN CÒN LẠI: {han_con_lai}"""
     return msg
 
