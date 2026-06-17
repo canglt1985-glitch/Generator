@@ -501,7 +501,7 @@ export default function Generator() {
     if (!searchQuery.trim()) return invoices;
     const q = searchQuery.toLowerCase();
     return invoices.filter(inv => 
-      (inv.invoice_number || '').toLowerCase().includes(inv) ||
+      (inv.invoice_number || '').toLowerCase().includes(q) ||
       (inv.seller_name || '').toLowerCase().includes(q) ||
       (inv.seller_mst || '').toLowerCase().includes(q)
     );
