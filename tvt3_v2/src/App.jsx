@@ -29,7 +29,7 @@ function AdminRoute({ children }) {
 
   const email = user?.email || '';
   const displayName = user?.user_metadata?.full_name || user?.user_metadata?.name || '';
-  const displayRole = email === 'admin@mobifone.vn' || displayName.toLowerCase().includes('admin') ? 'Quản trị' : 'Kỹ thuật';
+  const displayRole = email === 'admin@mobifone.vn' || displayName.toLowerCase().includes('admin') || user?.user_metadata?.role === 'admin' ? 'Quản trị' : 'Nhân viên';
   const isAdmin = displayRole === 'Quản trị';
 
   if (!user || !isAdmin) {

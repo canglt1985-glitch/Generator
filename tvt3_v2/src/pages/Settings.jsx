@@ -122,7 +122,7 @@ export default function Settings() {
     setPasswordInput('');
     setFullNameInput('');
     setPhoneInput('');
-    setRoleInput('user');
+    setRoleInput('nhanvien');
     setModalError('');
     setShowPassword(false);
     setIsModalOpen(true);
@@ -137,7 +137,7 @@ export default function Settings() {
     const meta = u.raw_user_meta_data || {};
     setFullNameInput(meta.full_name || '');
     setPhoneInput(meta.phone_number || '');
-    setRoleInput(meta.role || 'user');
+    setRoleInput(meta.role === 'admin' ? 'admin' : 'nhanvien');
     setModalError('');
     setShowPassword(false);
     setIsModalOpen(true);
@@ -371,17 +371,11 @@ export default function Settings() {
                       const isOwner = u.email === 'admin@mobifone.vn';
                       
                       // Format Role Display
-                      let roleLabel = 'Kỹ thuật';
-                      let roleColor = 'bg-slate-100 text-slate-600';
+                      let roleLabel = 'Nhân viên';
+                      let roleColor = 'bg-indigo-50 text-indigo-700 font-semibold';
                       if (meta.role === 'admin') {
                         roleLabel = 'Quản trị';
                         roleColor = 'bg-blue-50 text-blue-600 font-semibold';
-                      } else if (meta.role === 'chuyenvien') {
-                        roleLabel = 'Chuyên viên';
-                        roleColor = 'bg-cyan-50 text-cyan-700 font-semibold';
-                      } else if (meta.role === 'nhanvien') {
-                        roleLabel = 'Nhân viên';
-                        roleColor = 'bg-indigo-50 text-indigo-700 font-semibold';
                       }
 
                       return (
@@ -739,10 +733,8 @@ export default function Settings() {
                   onChange={(e) => setRoleInput(e.target.value)}
                   className="block w-full px-3.5 py-2 bg-slate-50/80 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 text-xs transition-all font-medium"
                 >
-                  <option value="user">Kỹ thuật (Xem trạm/lịch cúp, nhập DailyWork)</option>
-                  <option value="nhanvien">Nhân viên (Xem trạm/lịch cúp, nhập DailyWork, Chi phí)</option>
-                  <option value="chuyenvien">Chuyên viên (Quyền hạn nâng cao, xem Hợp đồng)</option>
-                  <option value="admin">Quản trị viên (Toàn quyền, Máy phát điện, Cấu hình hệ thống)</option>
+                  <option value="nhanvien">Nhân viên (Xem thông tin, nhập DailyWork, Quản lý chi phí & Hợp đồng)</option>
+                  <option value="admin">Quản trị viên (Toàn quyền quản trị, xem Máy phát điện & Cài đặt cấu hình)</option>
                 </select>
               </div>
 

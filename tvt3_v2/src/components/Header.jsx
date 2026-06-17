@@ -22,7 +22,7 @@ export default function Header() {
   const { displayName, email, user } = useCurrentUser();
   
   const initialLetter = displayName ? displayName.trim().charAt(0).toUpperCase() : 'U';
-  const displayRole = email === 'admin@mobifone.vn' || displayName.toLowerCase().includes('admin') ? 'Quản trị' : 'Kỹ thuật';
+  const displayRole = email === 'admin@mobifone.vn' || displayName.toLowerCase().includes('admin') || user?.user_metadata?.role === 'admin' ? 'Quản trị' : 'Nhân viên';
   const isAdmin = user && displayRole === 'Quản trị';
 
   const visibleNavigation = navigation.filter(item => {
