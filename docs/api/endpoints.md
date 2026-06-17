@@ -53,3 +53,11 @@
 
 ### GET `/daily-work`
 - View and manage daily maintenance work logs.
+
+## Viber Bot Integration
+### POST `/api/viber`
+- **Description:** Serverless Webhook callback handler deployed on Vercel for Viber Bot communication and verification.
+- **Response:**
+  ```json
+  { "status": 0, "status_message": "ok" }
+  ```
