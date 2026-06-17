@@ -131,33 +131,18 @@ export default function DailyWork() {
         if (error) throw error;
         setDailyLogs(data || []);
       } else if (activeTab === 'power') {
-        let query = supabase.from('power_schedule').select('*');
-        if (filterYear) {
-          if (filterMonth) {
-            const startStr = `${filterYear}-${String(filterMonth).padStart(2, '0')}-01`;
-            const lastDay = new Date(filterYear, filterMonth, 0).getDate();
-            const endStr = `${filterYear}-${String(filterMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-            query = query.gte('ngay_mat_dien', startStr).lte('ngay_mat_dien', endStr);
-          } else {
-            query = query.gte('ngay_mat_dien', `${filterYear}-01-01`).lte('ngay_mat_dien', `${filterYear}-12-31`);
-          }
-        }
-        const { data, error } = await query.order('ngay_mat_dien', { ascending: false });
+        const { data, error } = await supabase
+          .from('power_schedule')
+          .select('*')
+          .order('ngay_mat_dien', { ascending: false })
+          .limit(1000);
         if (error) throw error;
         setPowerSchedules(data || []);
       } else if (activeTab === 'issues') {
-        let query = supabase.from('operation_defects_logs').select('*');
-        if (filterYear) {
-          if (filterMonth) {
-            const startStr = `${filterYear}-${String(filterMonth).padStart(2, '0')}-01`;
-            const lastDay = new Date(filterYear, filterMonth, 0).getDate();
-            const endStr = `${filterYear}-${String(filterMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-            query = query.gte('date', startStr).lte('date', endStr);
-          } else {
-            query = query.gte('date', `${filterYear}-01-01`).lte('date', `${filterYear}-12-31`);
-          }
-        }
-        const { data, error } = await query.order('date', { ascending: false });
+        const { data, error } = await supabase
+          .from('operation_defects_logs')
+          .select('*')
+          .order('date', { ascending: false });
         if (error) throw error;
         setDefectsLogs(data || []);
       } else if (activeTab === 'mobile') {
@@ -622,7 +607,7 @@ export default function DailyWork() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {activeTab !== 'mobile' && (
+          {activeTab === 'daily' && (
             <>
               {/* Month select */}
               <select
