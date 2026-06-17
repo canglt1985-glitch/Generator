@@ -768,79 +768,148 @@ export default function DailyWork() {
                   {filteredDailyLogs.length === 0 ? (
                     <div className="text-center py-20 text-slate-400">Không tìm thấy dòng nhật ký nào.</div>
                   ) : (
-                    <table className="min-w-full divide-y divide-gray-200 text-left">
-                      <thead className="bg-gray-50 sticky top-0 z-10 text-xs font-bold text-gray-500 uppercase tracking-wider">
-                        <tr>
-                          <th scope="col" className="px-4 py-3">Ngày</th>
-                          <th scope="col" className="px-4 py-3">Site ID cũ</th>
-                          <th scope="col" className="px-4 py-3">Site ID mới</th>
-                          <th scope="col" className="px-4 py-3">Nhân Viên</th>
-                          <th scope="col" className="px-4 py-3">Hạng Mục</th>
-                          <th scope="col" className="px-4 py-3">Nội Dung Thực Hiện</th>
-                          <th scope="col" className="px-4 py-3">Ghi chú</th>
-                          <th scope="col" className="px-4 py-3 text-right">Thao Tác</th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-100 text-[13px] text-gray-700">
+                    <>
+                      {/* Desktop View Table */}
+                      <div className="hidden lg:block w-full overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200 text-left">
+                          <thead className="bg-gray-50 sticky top-0 z-10 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                            <tr>
+                              <th scope="col" className="px-4 py-3">Ngày</th>
+                              <th scope="col" className="px-4 py-3">Site ID cũ</th>
+                              <th scope="col" className="px-4 py-3">Site ID mới</th>
+                              <th scope="col" className="px-4 py-3">Nhân Viên</th>
+                              <th scope="col" className="px-4 py-3">Hạng Mục</th>
+                              <th scope="col" className="px-4 py-3">Nội Dung Thực Hiện</th>
+                              <th scope="col" className="px-4 py-3">Ghi chú</th>
+                              <th scope="col" className="px-4 py-3 text-right">Thao Tác</th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-100 text-[13px] text-gray-700">
+                            {filteredDailyLogs.map((log) => {
+                              const siteIds = getSiteIds(log.id_tram);
+                              return (
+                                <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
+                                  <td className="px-4 py-3 whitespace-nowrap font-medium text-slate-900">
+                                    {log.ngay}
+                                  </td>
+                                  <td className="px-4 py-3 whitespace-nowrap font-bold text-slate-900">
+                                    {siteIds.oldId}
+                                  </td>
+                                  <td className="px-4 py-3 whitespace-nowrap">
+                                    <button
+                                      onClick={() => handleOpenSiteDetail(log.id_tram, 'general')}
+                                      className="bg-blue-50 text-blue-700 font-bold px-2 py-0.5 rounded border border-blue-100 text-xs hover:bg-blue-100 transition-colors cursor-pointer flex items-center gap-1"
+                                      title="Xem chi tiết trạm"
+                                    >
+                                      {siteIds.newId}
+                                      <ExternalLink size={10} className="opacity-60" />
+                                    </button>
+                                  </td>
+                                  <td className="px-4 py-3 whitespace-nowrap text-slate-800 font-semibold">
+                                    {log.nhan_vien}
+                                  </td>
+                                  <td className="px-4 py-3 whitespace-nowrap text-slate-600 font-medium">
+                                    {log.hang_muc}
+                                  </td>
+                                  <td className="px-4 py-3 max-w-sm truncate" title={log.noi_dung}>
+                                    {log.noi_dung}
+                                  </td>
+                                  <td className="px-4 py-3 max-w-xs truncate text-slate-500" title={log.ghi_chu}>
+                                    {log.ghi_chu || <span className="text-slate-300 italic">Không có</span>}
+                                  </td>
+                                  <td className="px-4 py-3 whitespace-nowrap text-right text-xs">
+                                    {user ? (
+                                      <>
+                                        <button 
+                                          onClick={() => handleEditLog(log)}
+                                          className="text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 p-1.5 rounded mr-2 transition-colors inline-flex items-center cursor-pointer"
+                                          title="Sửa"
+                                        >
+                                          <Edit size={14} />
+                                        </button>
+                                        <button 
+                                          onClick={() => handleDeleteLog(log.id)}
+                                          className="text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 p-1.5 rounded transition-colors inline-flex items-center cursor-pointer"
+                                          title="Xóa"
+                                        >
+                                          <Trash size={14} />
+                                        </button>
+                                      </>
+                                    ) : (
+                                      <span className="text-slate-400 italic text-xs">Không có quyền</span>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Mobile View Card Grid */}
+                      <div className="lg:hidden grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
                         {filteredDailyLogs.map((log) => {
                           const siteIds = getSiteIds(log.id_tram);
                           return (
-                            <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
-                              <td className="px-4 py-3 whitespace-nowrap font-medium text-slate-900">
-                                {log.ngay}
-                              </td>
-                              <td className="px-4 py-3 whitespace-nowrap font-bold text-slate-900">
-                                {siteIds.oldId}
-                              </td>
-                              <td className="px-4 py-3 whitespace-nowrap">
-                                <button
-                                  onClick={() => handleOpenSiteDetail(log.id_tram, 'general')}
-                                  className="bg-blue-50 text-blue-700 font-bold px-2 py-0.5 rounded border border-blue-100 text-xs hover:bg-blue-100 transition-colors cursor-pointer flex items-center gap-1"
-                                  title="Xem chi tiết trạm"
-                                >
-                                  {siteIds.newId}
-                                  <ExternalLink size={10} className="opacity-60" />
-                                </button>
-                              </td>
-                              <td className="px-4 py-3 whitespace-nowrap text-slate-800 font-semibold">
-                                {log.nhan_vien}
-                              </td>
-                              <td className="px-4 py-3 whitespace-nowrap text-slate-600 font-medium">
-                                {log.hang_muc}
-                              </td>
-                              <td className="px-4 py-3 max-w-sm truncate" title={log.noi_dung}>
-                                {log.noi_dung}
-                              </td>
-                              <td className="px-4 py-3 max-w-xs truncate text-slate-500" title={log.ghi_chu}>
-                                {log.ghi_chu || <span className="text-slate-300 italic">Không có</span>}
-                              </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-right text-xs">
-                              {user ? (
-                                <>
+                            <div 
+                              key={log.id} 
+                              className="rounded-xl border border-slate-200 p-4 shadow-sm bg-white flex flex-col justify-between hover:shadow-md transition-all"
+                            >
+                              <div>
+                                <div className="flex justify-between items-start mb-2">
+                                  <span className="font-bold text-slate-500 font-mono text-xs">{log.ngay}</span>
+                                  <button
+                                    onClick={() => handleOpenSiteDetail(log.id_tram, 'general')}
+                                    className="bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold px-2 py-0.5 rounded text-xs transition-colors cursor-pointer flex items-center gap-1"
+                                    title="Xem chi tiết trạm"
+                                  >
+                                    {siteIds.oldId} &rarr; {siteIds.newId}
+                                    <ExternalLink size={10} className="opacity-60" />
+                                  </button>
+                                </div>
+                                <div className="space-y-1.5 text-[13px] text-slate-700">
+                                  <div>
+                                    <span className="text-slate-400 font-semibold">Nhân viên:</span>{' '}
+                                    <span className="font-bold text-slate-800">{log.nhan_vien}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-slate-400 font-semibold">Hạng mục:</span>{' '}
+                                    <span className="font-semibold text-slate-600">{log.hang_muc}</span>
+                                  </div>
+                                  <div className="mt-2 pt-2 border-t border-slate-100">
+                                    <div className="text-slate-400 font-semibold mb-0.5">Nội dung thực hiện:</div>
+                                    <p className="text-slate-800 leading-snug font-medium break-words">{log.noi_dung}</p>
+                                  </div>
+                                  {log.ghi_chu && (
+                                    <div className="mt-1 text-xs text-slate-500 italic">
+                                      Ghi chú: {log.ghi_chu}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              {user && (
+                                <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end gap-2">
                                   <button 
                                     onClick={() => handleEditLog(log)}
-                                    className="text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 p-1.5 rounded mr-2 transition-colors inline-flex items-center cursor-pointer"
+                                    className="text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded font-bold transition-colors inline-flex items-center gap-1 cursor-pointer text-xs"
                                     title="Sửa"
                                   >
-                                    <Edit size={14} />
+                                    <Edit size={12} /> Sửa
                                   </button>
                                   <button 
                                     onClick={() => handleDeleteLog(log.id)}
-                                    className="text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 p-1.5 rounded transition-colors inline-flex items-center cursor-pointer"
+                                    className="text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded font-bold transition-colors inline-flex items-center gap-1 cursor-pointer text-xs"
                                     title="Xóa"
                                   >
-                                    <Trash size={14} />
+                                    <Trash size={12} /> Xóa
                                   </button>
-                                </>
-                              ) : (
-                                <span className="text-slate-400 italic text-xs">Không có quyền</span>
+                                </div>
                               )}
-                            </td>
-                          </tr>
+                            </div>
                           );
                         })}
-                      </tbody>
-                    </table>
+                      </div>
+                    </>
                   )}
                 </div>
               )}
@@ -851,60 +920,96 @@ export default function DailyWork() {
                   {filteredPowerSchedules.length === 0 ? (
                     <div className="text-center py-20 text-slate-400">Không tìm thấy lịch cúp điện nào.</div>
                   ) : (
-                    <table className="min-w-full divide-y divide-gray-200 text-left">
-                      <thead className="bg-gray-50 sticky top-0 z-10 text-xs font-bold text-gray-500 uppercase tracking-wider">
-                        <tr>
-                          <th scope="col" className="px-4 py-3">Ngày cúp điện</th>
-                          <th scope="col" className="px-4 py-3">Site ID cũ</th>
-                          <th scope="col" className="px-4 py-3">Site ID mới</th>
-                          <th scope="col" className="px-4 py-3">Khu Vực</th>
-                          <th scope="col" className="px-4 py-3">Thời Gian</th>
-                          <th scope="col" className="px-4 py-3">Lý Do</th>
-                          <th scope="col" className="px-4 py-3">Quản Lý Trạm</th>
-                          <th scope="col" className="px-4 py-3">Điện Lực</th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-100 text-[13px] text-gray-700">
-                        {filteredPowerSchedules.map((sch) => {
-                          const siteIds = getSiteIds(sch.id_tram);
-                          return (
-                            <tr key={sch.id} className="hover:bg-slate-50/50 transition-colors">
-                              <td className="px-4 py-3 whitespace-nowrap font-medium text-slate-900">
-                                {sch.ngay_mat_dien}
-                              </td>
-                              <td className="px-4 py-3 whitespace-nowrap font-bold text-slate-900">
-                                {siteIds.oldId}
-                              </td>
-                              <td className="px-4 py-3 whitespace-nowrap">
-                                <button
-                                  onClick={() => handleOpenSiteDetail(sch.id_tram, 'general')}
-                                  className="bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded border border-emerald-100 text-xs hover:bg-emerald-100 transition-colors cursor-pointer flex items-center gap-1"
-                                  title="Xem chi tiết trạm"
-                                >
-                                  {siteIds.newId}
-                                  <ExternalLink size={10} className="opacity-60" />
-                                </button>
-                              </td>
-                              <td className="px-4 py-3 whitespace-nowrap text-slate-800">
-                                {sch.khu_vuc || 'N/A'}
-                              </td>
-                              <td className="px-4 py-3 whitespace-nowrap text-amber-700 font-semibold font-mono">
-                                ⏳ {sch.thoi_gian_cup_dien || '--'} &rarr; {sch.thoi_gian_co_dien || '--'}
-                              </td>
-                              <td className="px-4 py-3 max-w-sm truncate" title={sch.ly_do}>
-                                {sch.ly_do || 'N/A'}
-                              </td>
-                              <td className="px-4 py-3 whitespace-nowrap text-slate-500">
-                                {sch.quan_ly_tram || 'N/A'}
-                              </td>
-                              <td className="px-4 py-3 whitespace-nowrap text-slate-500 text-xs">
-                                {sch.doi_quan_ly_dien || 'N/A'}
-                              </td>
+                    <>
+                      {/* Desktop View Table */}
+                      <div className="hidden lg:block w-full overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200 text-left">
+                          <thead className="bg-gray-50 sticky top-0 z-10 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                            <tr>
+                              <th scope="col" className="px-4 py-3">Ngày cúp điện</th>
+                              <th scope="col" className="px-4 py-3">Site ID cũ</th>
+                              <th scope="col" className="px-4 py-3">Site ID mới</th>
+                              <th scope="col" className="px-4 py-3">Khu Vực</th>
+                              <th scope="col" className="px-4 py-3">Thời Gian</th>
+                              <th scope="col" className="px-4 py-3">Lý Do</th>
+                              <th scope="col" className="px-4 py-3">Quản Lý Trạm</th>
+                              <th scope="col" className="px-4 py-3">Điện Lực</th>
                             </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-100 text-[13px] text-gray-700">
+                            {filteredPowerSchedules.map((sch) => {
+                              const siteIds = getSiteIds(sch.id_tram);
+                              return (
+                                <tr key={sch.id} className="hover:bg-slate-50/50 transition-colors">
+                                  <td className="px-4 py-3 whitespace-nowrap font-medium text-slate-900">
+                                    {sch.ngay_mat_dien}
+                                  </td>
+                                  <td className="px-4 py-3 whitespace-nowrap font-bold text-slate-900">
+                                    {siteIds.oldId}
+                                  </td>
+                                  <td className="px-4 py-3 whitespace-nowrap">
+                                    <button
+                                      onClick={() => handleOpenSiteDetail(sch.id_tram, 'general')}
+                                      className="bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded border border-emerald-100 text-xs hover:bg-emerald-100 transition-colors cursor-pointer flex items-center gap-1"
+                                      title="Xem chi tiết trạm"
+                                    >
+                                      {siteIds.newId}
+                                      <ExternalLink size={10} className="opacity-60" />
+                                    </button>
+                                  </td>
+                                  <td className="px-4 py-3 whitespace-nowrap text-slate-800">
+                                    {sch.khu_vuc || 'N/A'}
+                                  </td>
+                                  <td className="px-4 py-3 whitespace-nowrap text-amber-700 font-semibold font-mono">
+                                    ⏳ {sch.thoi_gian_cup_dien || '--'} &rarr; {sch.thoi_gian_co_dien || '--'}
+                                  </td>
+                                  <td className="px-4 py-3 max-w-sm truncate" title={sch.ly_do}>
+                                    {sch.ly_do || 'N/A'}
+                                  </td>
+                                  <td className="px-4 py-3 whitespace-nowrap text-slate-500">
+                                    {sch.quan_ly_tram || 'N/A'}
+                                  </td>
+                                  <td className="px-4 py-3 whitespace-nowrap text-slate-500 text-xs">
+                                    {sch.doi_quan_ly_dien || 'N/A'}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Mobile View Table (Simplified) */}
+                      <div className="lg:hidden w-full overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200 text-left">
+                          <thead className="bg-gray-50 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                            <tr>
+                              <th scope="col" className="px-3 py-2.5">Ngày</th>
+                              <th scope="col" className="px-3 py-2.5">Site ID cũ</th>
+                              <th scope="col" className="px-3 py-2.5">Thời gian</th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-100 text-xs text-gray-700">
+                            {filteredPowerSchedules.map((sch) => {
+                              const siteIds = getSiteIds(sch.id_tram);
+                              return (
+                                <tr key={sch.id} className="hover:bg-slate-50/50 transition-colors">
+                                  <td className="px-3 py-2.5 whitespace-nowrap font-medium text-slate-900">
+                                    {sch.ngay_mat_dien}
+                                  </td>
+                                  <td className="px-3 py-2.5 whitespace-nowrap font-bold text-slate-900">
+                                    {siteIds.oldId}
+                                  </td>
+                                  <td className="px-3 py-2.5 whitespace-nowrap text-amber-700 font-semibold font-mono">
+                                    ⏳ {sch.thoi_gian_cup_dien || '--'} &rarr; {sch.thoi_gian_co_dien || '--'}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </>
                   )}
                 </div>
               )}
