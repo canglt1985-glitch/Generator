@@ -105,7 +105,7 @@ export default function Login() {
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="e.g. cang_it hoặc cang_it@mobifone.vn"
+                  placeholder="e.g. canglt hoặc canglt@mobifone.vn"
                   disabled={loading}
                   className="block w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-gray-200 rounded-xl leading-5 text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 text-sm transition-all"
                   required
