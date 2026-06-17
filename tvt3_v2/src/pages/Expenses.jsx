@@ -943,7 +943,7 @@ export default function Expenses() {
       {/* Tabs Menu & Search */}
       <div className="space-y-4">
         {/* Navigation Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-2">
+        <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-2">
           {[
             { id: 'fuel', label: 'Nhiên Liệu', color: 'teal', icon: '⛽' },
             { id: 'other', label: 'Chi Phí Khác', color: 'pink', icon: '💳' },
@@ -974,14 +974,14 @@ export default function Expenses() {
                 key={card.id}
                 onClick={() => { setActiveTab(card.id); setSearchQuery(''); }}
                 className={`
-                  bg-white rounded-xl p-3.5 text-left transition-all border-l-4 border-y border-r border-y-slate-200 border-r-slate-200
-                  hover:shadow-md cursor-pointer flex items-center gap-2.5
+                  bg-white rounded-xl p-2 sm:p-3.5 text-left transition-all border-l-4 border-y border-r border-y-slate-200 border-r-slate-200
+                  hover:shadow-md cursor-pointer flex items-center gap-1 sm:gap-2.5
                   ${borderColors[card.color]}
                   ${isActive ? `ring-2 ${ringColors[card.color]} ring-offset-1` : ''}
                 `}
               >
-                <span className="text-base shrink-0">{card.icon}</span>
-                <span className={`text-xs font-bold uppercase tracking-wider truncate ${isActive ? 'text-slate-800 font-extrabold' : 'text-slate-500 font-semibold'}`} title={card.label}>
+                <span className="text-sm sm:text-base shrink-0">{card.icon}</span>
+                <span className={`text-[9px] sm:text-xs font-bold uppercase tracking-wider truncate ${isActive ? 'text-slate-800 font-extrabold' : 'text-slate-500 font-semibold'}`} title={card.label}>
                   {card.label}
                 </span>
               </button>
