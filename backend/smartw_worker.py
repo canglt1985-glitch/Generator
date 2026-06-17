@@ -895,7 +895,6 @@ def run_pakh_poll():
     finally:
         _save_status(status)
         _release_lock()
-        sync_status_to_supabase(status)
 
 
 def check_and_alert_flapping(all_new_alarms: dict):
@@ -983,19 +982,7 @@ def check_and_alert_flapping(all_new_alarms: dict):
 
 
 
-def sync_status_to_supabase(status: dict):
-    """Upsert worker status metadata into Supabase."""
-    if not supabase:
-        return
-    from datetime import datetime
-    try:
-        supabase.table("smartw_status").upsert({
-            "key": "status",
-            "value": status,
-            "updated_at": datetime.now().isoformat() + "+07:00"
-        }).execute()
-    except Exception as e:
-        logger.error(f"Supabase Status Sync Error: {e}")
+# sync_status_to_supabase removed (no longer syncing status to Supabase)
 
 
 def run_alarm_poll():
@@ -1295,7 +1282,6 @@ def run_alarm_poll():
             'mll_cell': (mll_cell_raw or {}).get('data', [])
         }
         sync_alarms_to_supabase(compiled_result)
-        sync_status_to_supabase(status)
 
         _sse_broadcast('scrape_done', {
             'scraped_at': status.get('last_alarm_poll'),
@@ -1417,7 +1403,6 @@ def run_vhkt_poll():
         from smartw.scraper import load_cached_data
         vhkt_raw = load_cached_data('vhkt')
         save_vhkt_to_local_json(vhkt_raw)
-        sync_status_to_supabase(status)
 
 
 def run_mfd_import_poll(target_date: str = None):

@@ -1,18 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Radio, AlertTriangle, Zap, AlertCircle, BarChart3, RefreshCw, Smartphone } from 'lucide-react';
+import { Radio, Zap, BarChart3, RefreshCw, Smartphone } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 
 export default function VhktRan() {
   const [activeTab, setActiveTab] = useState('md');
   const [alarms, setAlarms] = useState([]);
   const [siteMap, setSiteMap] = useState({});
-  const [status, setStatus] = useState({
-    last_alarm_poll: null,
-    last_vhkt_poll: null,
-    login_fail_count: 0,
-    errors: [],
-    status: 'configured'
-  });
   const [loading, setLoading] = useState(true);
   const [pakhList, setPakhList] = useState([]);
 
@@ -66,27 +59,11 @@ export default function VhktRan() {
     }
   }
 
-  // Fetch worker status
-  async function fetchStatus() {
-    try {
-      const { data } = await supabase
-        .from('smartw_status')
-        .select('*')
-        .eq('key', 'status')
-        .single();
-      if (data && data.value) {
-        setStatus(data.value);
-      }
-    } catch (err) {
-      console.error('Error fetching status:', err);
-    }
-  }
-
   // Initial fetch and Realtime subscription
   useEffect(() => {
     async function init() {
       setLoading(true);
-      await Promise.all([fetchSiteMap(), fetchAlarms(), fetchStatus(), fetchPakh()]);
+      await Promise.all([fetchSiteMap(), fetchAlarms(), fetchPakh()]);
       setLoading(false);
     }
     init();
@@ -96,14 +73,6 @@ export default function VhktRan() {
       .channel('smartw_alarms_changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'smartw_alarms' }, () => {
         fetchAlarms();
-      })
-      .subscribe();
-
-    // Subscribe to status changes
-    const statusSubscription = supabase
-      .channel('smartw_status_changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'smartw_status' }, () => {
-        fetchStatus();
       })
       .subscribe();
 
@@ -117,7 +86,6 @@ export default function VhktRan() {
 
     return () => {
       supabase.removeChannel(alarmsSubscription);
-      supabase.removeChannel(statusSubscription);
       supabase.removeChannel(pakhSubscription);
     };
   }, []);
@@ -191,33 +159,6 @@ export default function VhktRan() {
     return `${hours}:${minutes}`;
   }
 
-  // Helper to determine if an error is still active
-  const getIsActiveError = (err) => {
-    if (!err) return false;
-    const errTime = new Date(err.time).getTime();
-    if (isNaN(errTime)) return false;
-    
-    const sourcePollMap = {
-      alarm: status.last_alarm_poll,
-      pakh: status.last_pakh_poll,
-      vhkt: status.last_vhkt_poll,
-      mfd: status.last_mfd_poll,
-    };
-    
-    const lastPollStr = sourcePollMap[err.source];
-    if (!lastPollStr) return true;
-    
-    const lastPollTime = new Date(lastPollStr).getTime();
-    if (isNaN(lastPollTime)) return true;
-    
-    return errTime > lastPollTime;
-  };
-
-  // Render Status Alert Banner
-  const loginPaused = status.login_fail_count >= 10;
-  const recentError = status.errors && status.errors.length > 0 ? status.errors[status.errors.length - 1] : null;
-  const activeError = getIsActiveError(recentError) ? recentError : null;
-
   return (
     <div className="space-y-6 animate-in fade-in duration-300 text-slate-800">
       {/* Page Header */}
@@ -236,7 +177,6 @@ export default function VhktRan() {
         <button
           onClick={() => {
             fetchAlarms();
-            fetchStatus();
             fetchPakh();
           }}
           className="flex items-center gap-1.5 px-4 py-2 border border-blue-600 text-blue-600 rounded-lg font-semibold text-sm hover:bg-blue-50 transition-colors shadow-sm"
@@ -245,32 +185,6 @@ export default function VhktRan() {
           <span className="hidden sm:inline">Refresh</span>
         </button>
       </div>
-
-      {/* Warning/Error Banner */}
-      {loginPaused && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex gap-3 text-red-700 text-xs leading-relaxed animate-in slide-in-from-top-2 duration-300">
-          <AlertTriangle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
-          <div>
-            <h4 className="font-bold text-red-800">Hệ thống quét SmartW tạm dừng đăng nhập</h4>
-            <p className="mt-1">
-              Phát hiện nhiều lần đăng nhập không thành công liên tiếp. Để tránh khóa tài khoản SSO vĩnh viễn, quá trình cào dữ liệu đã tạm khóa. 
-              Vui lòng cập nhật thông tin đăng nhập trong phần <strong>Cài đặt → Cấu hình SmartW</strong> để khôi phục.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {activeError && !loginPaused && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3 text-amber-700 text-xs leading-relaxed">
-          <AlertCircle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
-          <div>
-            <h4 className="font-bold text-amber-800">Cảnh báo lỗi vận hành gần nhất</h4>
-            <p className="mt-1 font-mono text-[11px] bg-white p-2 rounded border border-gray-200 mt-1.5">
-              Lỗi: {activeError.error} ({formatDateTime(activeError.time)})
-            </p>
-          </div>
-        </div>
-      )}
 
       {/* Nav Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
@@ -334,30 +248,6 @@ export default function VhktRan() {
         })}
       </div>
 
-      {/* Status Bar */}
-      <div className="bg-white border border-gray-200 rounded-xl p-3 flex items-center justify-between text-xs sm:text-sm shadow-sm">
-        <div className="flex items-center gap-2">
-          {loginPaused ? (
-            <span className="inline-flex items-center gap-1 bg-red-100 text-red-800 px-2 py-0.5 rounded font-semibold text-xs border border-red-200">
-              <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse"></span>
-              TẠM DỪNG
-            </span>
-          ) : activeError ? (
-            <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-semibold text-xs border border-amber-200">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-600 animate-pulse"></span>
-              LỖI KẾT NỐI
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1.5 bg-green-50 text-green-700 px-2 py-0.5 rounded text-xs font-semibold border border-green-200">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-600 animate-pulse"></span>
-              OK
-            </span>
-          )}
-          <span className="text-gray-500 font-medium">
-            Cập nhật lúc {status.last_alarm_poll ? formatTimeOnly(status.last_alarm_poll) : '--:--'}
-          </span>
-        </div>
-      </div>
 
       {/* Main Data Container */}
       <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
