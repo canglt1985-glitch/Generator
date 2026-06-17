@@ -660,31 +660,36 @@ def _get_val(row: dict, keys: list) -> str:
 
 
 def format_pakh_message(row: dict) -> str:
-    pakh = _get_val(row, ['pakh', 'ma_pa', 'maPa', 'mã pa', 'id', 'ticket_id', 'ticketId', 'soPhanAnh', 'sđt', 'sdt', 'soThueBao'])
-    loai_tb = _get_val(row, ['loai_thue_bao', 'loaiThueBao', 'loaiTb', 'loại thuê bao', 'loại tb', 'loai_tb'])
-    tg_nhan = _get_val(row, ['tg_nhan', 'thoiGianNhan', 'ngayNhan', 'ngay_nhan', 'thời gian nhận', 'ngày nhận', 'sdate', 'sdateStr', 'created_at'])
-    tinh = _get_val(row, ['tinh', 'tinhThanhPho', 'tinh_thanh_pho', 'tỉnh', 'tỉnh/tp'])
-    huyen = _get_val(row, ['quanHuyen', 'quan_huyen', 'huyen', 'district', 'quận/huyện', 'quận', 'huyện'])
-    xa = _get_val(row, ['xaPhuong', 'xa_phuong', 'xa', 'phuong_xa', 'phường/xã', 'phường', 'xã'])
-    noi_dung = _get_val(row, ['noiDung', 'noiDungPa', 'noi_dung_pa', 'noi_dung', 'nội dung pa', 'nội dung phản ánh', 'nội dung'])
-    loai_cv = _get_val(row, ['loaiCongViec', 'loai_cong_viec', 'loaiCv', 'loại công việc', 'loại cv', 'loai_cv']) or 'XU_LY_PAKH'
-    priority = _get_val(row, ['priority', 'uuTien', 'uu_tien', 'mức độ ưu tiên', 'độ ưu tiên', 'ưu tiên', 'severity']) or 'THAP'
-    tg_bd = _get_val(row, ['tg_bd', 'thoiGianBatDau', 'ngayBatDau', 'tg_bat_dau', 'thời gian bắt đầu', 'ngày bắt đầu'])
-    tg_kt = _get_val(row, ['tg_kt', 'thoiGianKetThuc', 'ngayKetThuc', 'deadline', 'thời gian kết thúc', 'ngày kết thúc', 'hạn xử lý', 'edate', 'edateStr'])
+    pakh_id = row.get('id') or ''
+    so_thue_bao = row.get('soThueBao') or ''
+    pakh_display = f"{pakh_id} (SĐT: {so_thue_bao})" if so_thue_bao else f"{pakh_id}"
 
-    msg = f"""- PAKH: {pakh}
-- Loại thuê bao: {loai_tb}
-- Thời gian nhận: {tg_nhan}
-- Tỉnh: {tinh}
-- Quận/huyện: {huyen}
-- Phường/xã: {xa}
-Bạn nhận được yêu cầu xử lý công việc sau: 
- Nội dung công việc: {noi_dung}
-,
- Loại công việc: {loai_cv},
- Mức độ ưu tiên: {priority},
- Thời gian bắt đầu: {tg_bd},
- Thời gian kết thúc: {tg_kt}"""
+    # Parse and format thoiGianGhiNhan (GMT+7)
+    tg_nhan_raw = row.get('thoiGianGhiNhan') or row.get('tgTaoWo')
+    tg_nhan = ""
+    if tg_nhan_raw:
+        try:
+            from datetime import timezone, timedelta
+            dt = datetime.fromisoformat(str(tg_nhan_raw).replace('Z', '+00:00'))
+            dt_local = dt.astimezone(timezone(timedelta(hours=7)))
+            tg_nhan = dt_local.strftime("%d/%m/%Y %H:%M:%S")
+        except Exception:
+            tg_nhan = str(tg_nhan_raw)
+
+    tinh = row.get('tinhThanhPho') or ''
+    xa = row.get('phuongXa') or ''
+    dia_ban = f"{xa}, {tinh}".strip(', ')
+
+    noi_dung = row.get('noiDungPhanAnh') or ''
+    tram_cell = row.get('maTram') or ''
+    han_con_lai = row.get('tgConLai') or ''
+
+    msg = f"""- PAKH: {pakh_display}
+- THỜI GIAN NHẬN: {tg_nhan}
+- ĐỊA BÀN: {dia_ban}
+- NỘI DUNG PHẢN ÁNH: {noi_dung}
+- TRẠM / CELL: {tram_cell}
+- HẠN CÒN LẠI: {han_con_lai}"""
     return msg
 
 
