@@ -197,10 +197,9 @@ def main():
                 last_run["smartw_report_key"] = report_key
                 run_job("smartw_report", [python_exe, os.path.join(current_dir, "smartw_worker.py"), "--job", "report"])
 
-            # Job F: EVN Outages Scraper (Every 6 hours at minute :30 of hours 5, 11, 17, 23)
-            outage_key = f"{today_str}_{now.hour}"
-            if now.hour in [5, 11, 17, 23] and now.minute == 30 and last_run.get("evn_outages_key") != outage_key:
-                last_run["evn_outages_key"] = outage_key
+            # Job F: EVN Outages Scraper (Once daily at 05:30 AM)
+            if now.hour == 5 and now.minute == 30 and last_run.get("evn_outages_key") != today_str:
+                last_run["evn_outages_key"] = today_str
                 run_job("evn_outages", [python_exe, os.path.join(current_dir, "fetch_outages.py")])
 
             # Job G: Fuel Price Scraper (Every 12 hours at minute :30 of hours 0 and 16)

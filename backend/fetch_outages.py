@@ -264,24 +264,48 @@ def main():
                     "end": ot['thoi_gian_co_dien']
                 })
                 
-    # 3. Tiến hành Upsert hàng loạt (Batch Upsert) lên Supabase V2
-    if records_to_upsert:
-        print(f"💾 Đang upsert {len(records_to_upsert)} bản ghi lịch cúp điện lên Supabase V2...")
+    # Fetch existing outages from DB to prevent duplicate database entries
+    existing_keys = set()
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    try:
+        res_existing = supabase.table("power_schedule")\
+            .select("id_tram, ngay_mat_dien, thoi_gian_cup_dien")\
+            .gte("ngay_mat_dien", today_str)\
+            .execute()
+        for row in (res_existing.data or []):
+            key = (row.get("id_tram"), row.get("ngay_mat_dien"), row.get("thoi_gian_cup_dien"))
+            existing_keys.add(key)
+    except Exception as e:
+        print(f"⚠️ Không thể đọc lịch cúp điện hiện tại từ DB: {e}")
+
+    # Filter out duplicate records (only insert ones that don't exist in DB)
+    filtered_records_to_insert = []
+    seen_keys = set()
+    for r in records_to_upsert:
+        key = (r["id_tram"], r["ngay_mat_dien"], r["thoi_gian_cup_dien"])
+        if key not in existing_keys and key not in seen_keys:
+            seen_keys.add(key)
+            filtered_records_to_insert.append(r)
+
+    # 3. Tiến hành Insert/Upsert hàng loạt bản ghi mới lên Supabase V2
+    if filtered_records_to_insert:
+        print(f"💾 Đang lưu {len(filtered_records_to_insert)} bản ghi lịch cúp điện mới lên Supabase V2...")
         try:
-            # Chia nhỏ records_to_upsert thành các chunk 100 dòng để tránh lỗi payload quá lớn
             chunk_size = 100
-            for idx in range(0, len(records_to_upsert), chunk_size):
-                chunk = records_to_upsert[idx:idx+chunk_size]
+            for idx in range(0, len(filtered_records_to_insert), chunk_size):
+                chunk = filtered_records_to_insert[idx:idx+chunk_size]
                 supabase.table("power_schedule").upsert(
                     chunk, 
                     on_conflict="id_tram, ngay_mat_dien, thoi_gian_cup_dien"
                 ).execute()
-            print(f"✅ Upsert hoàn tất.")
+            print(f"✅ Lưu hoàn tất.")
         except Exception as e:
-            print(f"❌ Lỗi upsert lên Supabase: {e}")
+            print(f"❌ Lỗi lưu lên Supabase: {e}")
+    else:
+        print("📢 Không có lịch cúp điện mới nào cần lưu.")
 
-    # Lấy tất cả lịch cúp điện sắp tới để gửi Viber
-    today_str = datetime.now().strftime("%Y-%m-%d")
+    # 4. Lấy tất cả lịch cúp điện sắp tới (từ hôm nay trở đi) để gửi Viber
+    upcoming_outages = []
     try:
         res_upcoming = supabase.table("power_schedule")\
             .select("id_tram, ngay_mat_dien, thoi_gian_cup_dien, thoi_gian_co_dien")\
@@ -290,7 +314,6 @@ def main():
             .order("thoi_gian_cup_dien", desc=False)\
             .execute()
             
-        upcoming_outages = []
         for row in (res_upcoming.data or []):
             upcoming_outages.append({
                 "id_tram": row["id_tram"],
@@ -300,7 +323,6 @@ def main():
             })
     except Exception as e:
         print(f"❌ Lỗi khi truy vấn lịch cúp điện từ Supabase: {e}")
-        upcoming_outages = []
 
     if upcoming_outages:
         print(f"📤 Gửi {len(upcoming_outages)} lịch cúp điện sắp tới lên Viber...")
