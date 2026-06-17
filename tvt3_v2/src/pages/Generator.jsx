@@ -239,6 +239,17 @@ export default function Generator() {
     };
   }, [filteredLogs]);
 
+  // Search Filter - Invoices
+  const filteredInvoices = useMemo(() => {
+    if (!searchQuery.trim()) return invoices;
+    const q = searchQuery.toLowerCase();
+    return invoices.filter(inv => 
+      (inv.invoice_number || '').toLowerCase().includes(q) ||
+      (inv.seller_name || '').toLowerCase().includes(q) ||
+      (inv.seller_mst || '').toLowerCase().includes(q)
+    );
+  }, [invoices, searchQuery]);
+
   // Statistics calculation for filtered invoices
   const invoiceStats = useMemo(() => {
     let count = filteredInvoices.length;
@@ -496,16 +507,7 @@ export default function Generator() {
     }
   }
 
-  // Search Filter - Invoices
-  const filteredInvoices = useMemo(() => {
-    if (!searchQuery.trim()) return invoices;
-    const q = searchQuery.toLowerCase();
-    return invoices.filter(inv => 
-      (inv.invoice_number || '').toLowerCase().includes(q) ||
-      (inv.seller_name || '').toLowerCase().includes(q) ||
-      (inv.seller_mst || '').toLowerCase().includes(q)
-    );
-  }, [invoices, searchQuery]);
+
 
   // THUẬT TOÁN PHÁT HIỆN BẤT THƯỜNG DÒNG TIỀN & CHẠY MÁY PHÁT (TÍNH TOÁN REALTIME FRONTEND)
   const anomaliesList = useMemo(() => {
