@@ -517,13 +517,30 @@ export default function Generator() {
     const anomalies = [];
     const today = new Date();
 
-    // 1. Phân nhóm dữ liệu theo trạm
+    // 1. Phân nhóm dữ liệu theo trạm (ánh xạ mã cũ -> mã mới)
+    const canonicalMap = {};
+    stations.forEach(s => {
+      if (s.site_id) {
+        const canonical = s.site_id.toUpperCase();
+        canonicalMap[canonical] = canonical;
+        if (s.site_id_old) {
+          canonicalMap[s.site_id_old.toUpperCase()] = canonical;
+        }
+      }
+    });
+
+    const getCanonicalId = (id) => {
+      if (!id) return '';
+      const upper = id.toUpperCase();
+      return canonicalMap[upper] || upper;
+    };
+
     const logsBySite = {};
     const powerBySite = {};
     const refillsBySite = {};
 
     genLogs.forEach(l => {
-      const sId = l.site_id?.toUpperCase();
+      const sId = getCanonicalId(l.site_id);
       if (sId) {
         if (!logsBySite[sId]) logsBySite[sId] = [];
         logsBySite[sId].push(l);
@@ -531,7 +548,7 @@ export default function Generator() {
     });
 
     powerSchedules.forEach(p => {
-      const sId = p.id_tram?.toUpperCase();
+      const sId = getCanonicalId(p.id_tram);
       if (sId) {
         if (!powerBySite[sId]) powerBySite[sId] = [];
         powerBySite[sId].push(p);
@@ -539,7 +556,7 @@ export default function Generator() {
     });
 
     fuelTxs.forEach(f => {
-      const sId = f.site_id?.toUpperCase();
+      const sId = getCanonicalId(f.site_id);
       // Chỉ lấy các giao dịch đổ dầu thực tế (STOCK_IN/DIRECT_BUY)
       if (sId && f.fuel_tracking && (f.fuel_tracking.type === 'STOCK_IN' || f.fuel_tracking.type === 'DIRECT_BUY')) {
         if (!refillsBySite[sId]) refillsBySite[sId] = [];
