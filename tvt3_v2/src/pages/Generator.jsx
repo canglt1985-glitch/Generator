@@ -639,13 +639,13 @@ export default function Generator() {
 
           // Nếu đổ nhiên liệu 2 lần liên tiếp cách nhau <= 7 ngày
           if (diffDays <= 7) {
-            // Kiểm tra xem trong khoảng từ ngày đổ thứ 2 (d2) cộng thêm 7 ngày nữa, có chạy máy phát không
+            // Kiểm tra xem trong khoảng từ ngày đổ thứ 1 (d1) đến ngày đổ thứ 2 (d2) cộng thêm 7 ngày nữa, có chạy máy phát không
             const checkEnd = new Date(d2);
             checkEnd.setDate(checkEnd.getDate() + 7);
 
             const hasRun = siteLogs.some(log => {
               const logDate = new Date(log.date);
-              return logDate >= d2 && logDate <= checkEnd;
+              return logDate >= d1 && logDate <= checkEnd;
             });
 
             if (!hasRun) {

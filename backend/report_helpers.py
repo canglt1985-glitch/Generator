@@ -374,7 +374,7 @@ def get_weekly_anomaly_report(days_scan=7):
                 for log_date_str in station_log_dates:
                     try:
                         ld = datetime.strptime(log_date_str, '%Y-%m-%d').date()
-                        if d2 <= ld <= check_end:
+                        if d1 <= ld <= check_end:
                             has_run = True
                             break
                     except:
