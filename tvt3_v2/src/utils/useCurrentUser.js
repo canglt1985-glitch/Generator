@@ -23,10 +23,12 @@ export function useCurrentUser() {
           const name = meta.full_name || meta.name || u.email?.split('@')[0] || '';
           setDisplayName(name);
           setEmail(u.email || '');
+          localStorage.setItem('username', name);
         } else {
           setUser(null);
           setDisplayName('');
           setEmail('');
+          localStorage.removeItem('username');
         }
       } catch (err) {
         console.error('Lỗi khi lấy session:', err);
@@ -46,10 +48,12 @@ export function useCurrentUser() {
         const name = meta.full_name || meta.name || u.email?.split('@')[0] || '';
         setDisplayName(name);
         setEmail(u.email || '');
+        localStorage.setItem('username', name);
       } else {
         setUser(null);
         setDisplayName('');
         setEmail('');
+        localStorage.removeItem('username');
       }
       setIsLoading(false);
     });

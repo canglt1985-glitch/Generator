@@ -43,7 +43,7 @@ const parseDateFromDMY = (dmyStr) => {
 };
 
 export default function DailyWork() {
-  const { user } = useCurrentUser();
+  const { user, displayName } = useCurrentUser();
   const [activeTab, setActiveTab] = useState('daily'); // daily, power, issues
   
   // Data States
@@ -138,6 +138,13 @@ export default function DailyWork() {
     'Thiết bị vô tuyến',
     'Khác'
   ];
+
+  useEffect(() => {
+    if (displayName) {
+      setLogStaff(displayName);
+      setIssueReporter(displayName);
+    }
+  }, [displayName]);
 
   useEffect(() => {
     fetchData();
@@ -379,7 +386,7 @@ export default function DailyWork() {
     setLogDate(log.ngay || new Date().toISOString().split('T')[0]);
     setLogDateDMY(formatDateToDMY(log.ngay || new Date().toISOString().split('T')[0]));
     setLogSiteId(log.id_tram || '');
-    setLogStaff(log.nhan_vien || localStorage.getItem('username') || 'admin');
+    setLogStaff(log.nhan_vien || displayName || localStorage.getItem('username') || 'admin');
     setLogContent(log.noi_dung || '');
     setLogCategory(log.hang_muc || 'C2-Kiểm tra nhà trạm');
     setLogNote(log.ghi_chu || '');
@@ -408,7 +415,7 @@ export default function DailyWork() {
     setLogDate(new Date().toISOString().split('T')[0]);
     setLogDateDMY(getTodayDMY());
     setLogSiteId('');
-    setLogStaff(localStorage.getItem('username') || 'admin');
+    setLogStaff(displayName || localStorage.getItem('username') || 'admin');
     setLogContent('');
     setLogCategory('C2-Kiểm tra nhà trạm');
     setLogNote('');
@@ -530,7 +537,7 @@ export default function DailyWork() {
     setIssueDate(new Date().toISOString().split('T')[0]);
     setIssueCategory('Cột anten');
     setIssueDescription('');
-    setIssueReporter(localStorage.getItem('username') || 'admin');
+    setIssueReporter(displayName || localStorage.getItem('username') || 'admin');
     setShowIssueSiteSuggestions(false);
     setEditingIssue(null);
     setIssueStatus('Chưa XL');
@@ -546,7 +553,7 @@ export default function DailyWork() {
     setIssueDate(issue.date || new Date().toISOString().split('T')[0]);
     setIssueCategory(dataDetail.category || 'Cột anten');
     setIssueDescription(dataDetail.description || '');
-    setIssueReporter(dataDetail.reporter || localStorage.getItem('username') || 'admin');
+    setIssueReporter(dataDetail.reporter || displayName || localStorage.getItem('username') || 'admin');
     setIssueStatus(dataDetail.status || 'Chưa XL');
     setIssueResolvedAt(solutions.resolved_at || '');
     
