@@ -154,7 +154,7 @@ def format_weekly_anomalies_message(data):
         lines.append("✅ Không phát hiện lệch tiêu hao đáng ngờ.")
 
     # 3. Weekly refuel anomalies
-    lines.append("\n🟡 *3. Đổ dầu nhiều lần nhưng không chạy máy phát:*")
+    lines.append("\n🟡 *3. Đổ xăng/dầu nhiều lần không chạy máy phát:*")
     if data.get('weekly_refuel_anomalies'):
         for wa in data['weekly_refuel_anomalies']:
             tram_id = wa['id_tram']

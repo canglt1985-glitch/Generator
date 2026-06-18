@@ -298,6 +298,29 @@ def get_weekly_anomaly_report(days_scan=7):
     
     scan_start = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
     
+    res_sites = supabase.table("datasites").select("site_id, site_id_old, infrastructure_info").execute()
+    datasites = res_sites.data or []
+    
+    map_id_to_site_id = {}
+    fuel_by_site = {}
+    for s in datasites:
+        s_id = (s.get("site_id") or "").strip().upper()
+        s_old = (s.get("site_id_old") or "").strip().upper()
+        
+        infra = s.get("infrastructure_info") or {}
+        mpd_list = infra.get("may_phat_dien", {}).get("mpd", [])
+        fuel_type = "Dầu"
+        if mpd_list and len(mpd_list) > 0:
+            fuel_type = mpd_list[0].get("nhien_lieu") or "Dầu"
+            
+        if s_id:
+            map_id_to_site_id[s_id] = s_id
+            fuel_by_site[s_id] = fuel_type
+        if s_old:
+            map_id_to_site_id[s_old] = s_id
+            if s_id not in fuel_by_site:
+                fuel_by_site[s_id] = fuel_type
+
     res_refuels = supabase.table("fuel_and_expenses")\
         .select("site_id, date, fuel_tracking")\
         .gte("date", scan_start)\
@@ -312,7 +335,8 @@ def get_weekly_anomaly_report(days_scan=7):
     for tx in transactions:
         site = tx.get("site_id")
         if site:
-            refuels_by_station[site.strip().upper()].append(tx)
+            resolved = map_id_to_site_id.get(site.strip().upper(), site.strip().upper())
+            refuels_by_station[resolved].append(tx)
             
     anomalies = []
     
@@ -327,8 +351,9 @@ def get_weekly_anomaly_report(days_scan=7):
     for l in logs:
         site = l.get("site_id")
         l_date = l.get("date")
-        if site and l_date:
-            logs_by_station[site.strip().upper()].add(l_date)
+        if site:
+            resolved = map_id_to_site_id.get(site.strip().upper(), site.strip().upper())
+            logs_by_station[resolved].add(l_date)
     
     for station, txs in refuels_by_station.items():
         if len(txs) < 2:
@@ -361,12 +386,23 @@ def get_weekly_anomaly_report(days_scan=7):
                     qty1 = float(ft1.get("quantity") or 0)
                     qty2 = float(ft2.get("quantity") or 0)
                     total_qty = qty1 + qty2
+                    
+                    # Determine fuel label: check transaction first, then station specs
+                    f_type1 = str(ft1.get("fuel_type") or '').lower()
+                    f_type2 = str(ft2.get("fuel_type") or '').lower()
+                    gen_fuel = str(fuel_by_site.get(station, "Dầu")).lower()
+                    
+                    is_xang = ('xăng' in f_type1 or 'xang' in f_type1 or 
+                               'xăng' in f_type2 or 'xang' in f_type2 or 
+                               'xăng' in gen_fuel or 'xang' in gen_fuel)
+                    fuel_label = 'xăng' if is_xang else 'dầu'
+                    
                     anomalies.append({
                         'id_tram': station,
                         'date_range': f"{d1.strftime('%d/%m')} - {d2.strftime('%d/%m')}",
                         'refuel_count': 2,
                         'total_qty': total_qty,
-                        'msg': f"Đổ dầu 2 lần liên tiếp ({total_qty}L từ {d1.strftime('%d/%m')} đến {d2.strftime('%d/%m')}) nhưng không chạy máy phát trong 7 ngày tiếp theo."
+                        'msg': f"Đổ {fuel_label} 2 lần liên tiếp ({total_qty}L từ {d1.strftime('%d/%m')} đến {d2.strftime('%d/%m')}) nhưng không chạy máy phát trong 7 ngày tiếp theo."
                     })
                     break
                     
@@ -381,11 +417,31 @@ def get_quarterly_fuel_anomalies():
     from datetime import datetime, timedelta
     start_date = (datetime.now() - timedelta(days=90)).strftime('%Y-%m-%d')
     
-    res_sites = supabase.table("datasites").select("site_id").execute()
-    stations = res_sites.data or []
-    if not stations:
+    res_sites = supabase.table("datasites").select("site_id, site_id_old, infrastructure_info").execute()
+    datasites = res_sites.data or []
+    if not datasites:
         return []
         
+    map_id_to_site_id = {}
+    fuel_by_site = {}
+    for s in datasites:
+        s_id = (s.get("site_id") or "").strip().upper()
+        s_old = (s.get("site_id_old") or "").strip().upper()
+        
+        infra = s.get("infrastructure_info") or {}
+        mpd_list = infra.get("may_phat_dien", {}).get("mpd", [])
+        fuel_type = "Dầu"
+        if mpd_list and len(mpd_list) > 0:
+            fuel_type = mpd_list[0].get("nhien_lieu") or "Dầu"
+            
+        if s_id:
+            map_id_to_site_id[s_id] = s_id
+            fuel_by_site[s_id] = fuel_type
+        if s_old:
+            map_id_to_site_id[s_old] = s_id
+            if s_id not in fuel_by_site:
+                fuel_by_site[s_id] = fuel_type
+
     res_refuels = supabase.table("fuel_and_expenses")\
         .select("site_id, date, fuel_tracking")\
         .gte("date", start_date)\
@@ -400,7 +456,7 @@ def get_quarterly_fuel_anomalies():
         ft = r.get("fuel_tracking") or {}
         qty = float(ft.get("quantity") or 0.0)
         if site:
-            s_up = site.strip().upper()
+            s_up = map_id_to_site_id.get(site.strip().upper(), site.strip().upper())
             refuel_by_station[s_up] = refuel_by_station.get(s_up, 0.0) + qty
             
     res_logs = supabase.table("generator_logs")\
@@ -416,12 +472,12 @@ def get_quarterly_fuel_anomalies():
         details = l.get("run_details") or {}
         consume = float(details.get("nhien_lieu_tieu_hao") or 0.0)
         if site:
-            s_up = site.strip().upper()
+            s_up = map_id_to_site_id.get(site.strip().upper(), site.strip().upper())
             consume_by_station[s_up] = consume_by_station.get(s_up, 0.0) + consume
             
     anomalies = []
     
-    for g in stations:
+    for g in datasites:
         station = (g.get('site_id') or '').strip().upper()
         if not station:
             continue
@@ -432,12 +488,16 @@ def get_quarterly_fuel_anomalies():
         diff = consume_sum - refuel_sum
         
         if refuel_sum > 0 and diff < -50.0:
+            fuel_type = fuel_by_site.get(station, "Dầu")
+            fuel_type_lower = str(fuel_type).lower()
+            fuel_label = "xăng" if ("xăng" in fuel_type_lower or "xang" in fuel_type_lower) else "dầu"
+            
             anomalies.append({
                 'id_tram': station,
                 'refuel_qty': round(refuel_sum, 1),
                 'consume_qty': round(consume_sum, 1),
                 'diff': round(diff, 1),
-                'msg': f"Đổ dầu {refuel_sum}L nhưng tiêu hao log chỉ {consume_sum}L trong 3 tháng qua (hụt {abs(diff)}L)."
+                'msg': f"Đổ {fuel_label} {refuel_sum}L nhưng tiêu hao log chỉ {consume_sum}L trong 3 tháng qua (hụt {abs(diff)}L)."
             })
             
     anomalies.sort(key=lambda x: x['diff'])

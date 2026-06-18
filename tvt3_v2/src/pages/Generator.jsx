@@ -132,7 +132,8 @@ export default function Generator() {
           dinh_muc_thuc_te: parseFloat(mpd.dinh_muc_thuc_te) || 0,
           dung_tich: parseFloat(mpd.dung_tich) || 0,
           nhan_hieu: mpd.nhan_hieu || '',
-          cong_suat: mpd.cong_suat || ''
+          cong_suat: mpd.cong_suat || '',
+          nhien_lieu: mpd.nhien_lieu || ''
         };
       }
     }
@@ -555,7 +556,7 @@ export default function Generator() {
       const siteOutages = powerBySite[siteId] || [];
       const siteRefills = refillsBySite[siteId] || [];
 
-      // --- RULE 1: THIẾU LOG CHẠY MÁY PHÁT (Cúp điện >= 3h, có đổ dầu gần đó, nhưng không có log chạy máy) ---
+      // --- RULE 1: THIẾU LOG CHẠY MÁY PHÁT (Cúp điện >= 3h, có đổ dầu/xăng gần đó, nhưng không có log chạy máy) ---
       siteOutages.forEach(outage => {
         try {
           if (!outage.thoi_gian_cup_dien || !outage.thoi_gian_co_dien) return;
@@ -578,7 +579,7 @@ export default function Generator() {
             });
 
             if (!hasLog) {
-              // Lọc xem trong vòng +/- 5 ngày của cúp điện có giao dịch đổ dầu nào không
+              // Lọc xem trong vòng +/- 5 ngày của cúp điện có giao dịch đổ dầu/xăng nào không
               const matchingRefill = siteRefills.find(ref => {
                 const refDate = new Date(ref.date);
                 const diffTime = Math.abs(refDate - outageDate);
@@ -587,13 +588,17 @@ export default function Generator() {
               });
 
               if (matchingRefill) {
+                const fType = (matchingRefill.fuel_tracking?.fuel_type || specs?.nhien_lieu || '').toLowerCase();
+                const isXang = fType.includes('xăng') || fType.includes('xang');
+                const fuelLabel = isXang ? 'xăng' : 'dầu';
+
                 anomalies.push({
                   type: 'MISSING_LOG',
                   severity: 'high',
                   site_id: site.site_id,
                   date: outage.ngay_mat_dien,
                   title: 'Thiếu log chạy máy phát điện',
-                  desc: `Trạm cúp điện ngày ${outage.ngay_mat_dien} trong ${hours.toFixed(1)} giờ, ghi nhận có đổ dầu ngày ${matchingRefill.date} (${matchingRefill.fuel_tracking.quantity}L), nhưng không ghi nhận log chạy máy phát trong vòng 7 ngày sau đó.`
+                  desc: `Trạm cúp điện ngày ${outage.ngay_mat_dien} trong ${hours.toFixed(1)} giờ, ghi nhận có đổ ${fuelLabel} ngày ${matchingRefill.date} (${matchingRefill.fuel_tracking.quantity}L), nhưng không ghi nhận log chạy máy phát trong vòng 7 ngày sau đó.`
                 });
               }
             }
@@ -603,9 +608,9 @@ export default function Generator() {
         }
       });
 
-      // --- RULE 2: ĐỔ DẦU LIÊN TIẾP KHÔNG CHẠY MÁY (Đổ dầu 2 lần liên tiếp trong 7 ngày nhưng không chạy máy) ---
+      // --- RULE 2: ĐỔ NHIÊN LIỆU LIÊN TIẾP KHÔNG CHẠY MÁY ---
       if (siteRefills.length >= 2) {
-        // Sắp xếp các giao dịch đổ dầu theo ngày tăng dần
+        // Sắp xếp các giao dịch đổ dầu/xăng theo ngày tăng dần
         const sortedRefills = [...siteRefills].sort((a, b) => new Date(a.date) - new Date(b.date));
         
         for (let i = 0; i < sortedRefills.length - 1; i++) {
@@ -615,9 +620,9 @@ export default function Generator() {
           const d2 = new Date(r2.date);
           const diffDays = (d2 - d1) / (1000 * 60 * 60 * 24);
 
-          // Nếu đổ dầu 2 lần liên tiếp cách nhau <= 7 ngày
+          // Nếu đổ nhiên liệu 2 lần liên tiếp cách nhau <= 7 ngày
           if (diffDays <= 7) {
-            // Kiểm tra xem trong khoảng từ ngày đổ dầu thứ 2 (d2) cộng thêm 7 ngày nữa, có chạy máy phát không
+            // Kiểm tra xem trong khoảng từ ngày đổ thứ 2 (d2) cộng thêm 7 ngày nữa, có chạy máy phát không
             const checkEnd = new Date(d2);
             checkEnd.setDate(checkEnd.getDate() + 7);
 
@@ -627,14 +632,18 @@ export default function Generator() {
             });
 
             if (!hasRun) {
+              const fType1 = (r1.fuel_tracking?.fuel_type || specs?.nhien_lieu || '').toLowerCase();
+              const isXang1 = fType1.includes('xăng') || fType1.includes('xang');
+              const fuelLabel = isXang1 ? 'xăng' : 'dầu';
               const totalQty = (parseFloat(r1.fuel_tracking.quantity) || 0) + (parseFloat(r2.fuel_tracking.quantity) || 0);
+
               anomalies.push({
                 type: 'CONSECUTIVE_REFILL',
                 severity: 'high',
                 site_id: site.site_id,
                 date: r2.date,
-                title: 'Đổ dầu liên tiếp không chạy máy',
-                desc: `Đổ dầu 2 lần liên tiếp (${totalQty}L từ ${r1.date} đến ${r2.date}) nhưng không chạy máy phát trong vòng 7 ngày tiếp theo.`
+                title: `Đổ ${fuelLabel} liên tiếp không chạy máy`,
+                desc: `Đổ ${fuelLabel} 2 lần liên tiếp (${totalQty}L từ ${r1.date} đến ${r2.date}) nhưng không chạy máy phát trong vòng 7 ngày tiếp theo.`
               });
               break; // Chỉ cần cảnh báo 1 lần gần nhất
             }
@@ -642,8 +651,12 @@ export default function Generator() {
         }
       }
 
-      // --- RULE 3: HỤT DẦU THEO QUÝ (So sánh dầu đổ vs dầu tiêu thụ thực tế) ---
+      // --- RULE 3: HỤT NHIÊN LIỆU THEO QUÝ (So sánh dầu/xăng đổ vs tiêu thụ thực tế) ---
       if (specs) {
+        const fuel = (specs.nhien_lieu || '').toLowerCase();
+        const isXang = fuel.includes('xăng') || fuel.includes('xang');
+        const fuelLabel = isXang ? 'xăng' : 'dầu';
+
         const q_refuels = siteRefills.reduce((sum, r) => sum + (parseFloat(r.fuel_tracking.quantity) || 0), 0);
         
         // Tính tiêu hao thực tế từ log chạy máy = số giờ hoạt động * định mức thực tế của trạm
@@ -655,43 +668,48 @@ export default function Generator() {
 
         const diff = q_consumes - q_refuels;
         
-        // Nếu chênh lệch đổ dầu nhiều hơn chạy máy trên 50 lít trong 90 ngày qua
+        // Nếu chênh lệch đổ nhiên liệu nhiều hơn chạy máy trên 50 lít trong 90 ngày qua
         if (q_refuels > 0 && diff < -50.0) {
           anomalies.push({
             type: 'QUARTERLY_DISCREPANCY',
             severity: 'medium',
             site_id: site.site_id,
             date: today.toISOString().split('T')[0],
-            title: 'Lệch tiêu hao dầu theo quý (Nghi ngờ hụt dầu)',
-            desc: `Trong 90 ngày qua, trạm châm tổng cộng ${q_refuels.toFixed(1)}L dầu, nhưng nhật ký hoạt động chỉ tiêu hao ${q_consumes.toFixed(1)}L (lệch hụt ${Math.abs(diff).toFixed(1)}L dầu không rõ lý do).`
+            title: `Lệch tiêu hao ${fuelLabel} theo quý (Nghi ngờ hụt ${fuelLabel})`,
+            desc: `Trong 90 ngày qua, trạm châm tổng cộng ${q_refuels.toFixed(1)}L ${fuelLabel}, nhưng nhật ký hoạt động chỉ tiêu hao ${q_consumes.toFixed(1)}L (lệch hụt ${Math.abs(diff).toFixed(1)}L ${fuelLabel} không rõ lý do).`
           });
         }
       }
 
-      // --- RULE 4: MÁY PHÁT CỐ ĐỊNH NGỦ QUÊN (Không hoạt động > 90 ngày) ---
+      // --- RULE 4: MÁY PHÁT CỐ ĐỊNH NGỦ QUÊN (Không hoạt động > 90 ngày - CHỈ XÉT MÁY DẦU) ---
       if (specs && specs.dinh_muc > 0) {
-        // Tìm ngày chạy máy gần nhất
-        let lastRunDate = null;
-        if (siteLogs.length > 0) {
-          const sortedLogs = [...siteLogs].sort((a, b) => new Date(b.date) - new Date(a.date));
-          lastRunDate = new Date(sortedLogs[0].date);
-        }
+        const fuel = (specs.nhien_lieu || '').toLowerCase();
+        const isDiesel = fuel.includes('dầu') || fuel.includes('dau') || fuel.includes('diesel') || fuel === '';
 
-        const daysInactive = lastRunDate 
-          ? Math.floor((today - lastRunDate) / (1000 * 60 * 60 * 24))
-          : 999; // Chưa từng chạy
+        if (isDiesel) {
+          // Tìm ngày chạy máy gần nhất
+          let lastRunDate = null;
+          if (siteLogs.length > 0) {
+            const sortedLogs = [...siteLogs].sort((a, b) => new Date(b.date) - new Date(a.date));
+            lastRunDate = new Date(sortedLogs[0].date);
+          }
 
-        if (daysInactive >= 90) {
-          anomalies.push({
-            type: 'INACTIVE_GEN',
-            severity: 'medium',
-            site_id: site.site_id,
-            date: lastRunDate ? lastRunDate.toISOString().split('T')[0] : 'Chưa từng chạy',
-            title: 'Máy phát cố định ngủ quên',
-            desc: lastRunDate 
-              ? `Máy phát tại trạm đã không chạy trong ${daysInactive} ngày qua (Lần chạy cuối: ${lastRunDate.toISOString().split('T')[0]}). Cần kiểm tra bảo dưỡng.`
-              : `Máy phát tại trạm chưa từng ghi nhận chạy máy phát điện trong lịch sử hệ thống.`
-          });
+          const daysInactive = lastRunDate 
+            ? Math.floor((today - lastRunDate) / (1000 * 60 * 60 * 24))
+            : 999; // Chưa từng chạy
+
+          if (daysInactive >= 90) {
+            anomalies.push({
+              type: 'INACTIVE_GEN',
+              severity: 'medium',
+              site_id: site.site_id,
+              date: lastRunDate ? lastRunDate.toISOString().split('T')[0] : 'Chưa từng chạy',
+              title: 'Máy phát cố định ngủ quên',
+              desc: lastRunDate 
+                ? `Máy phát tại trạm đã không chạy trong ${daysInactive} ngày qua (Lần chạy cuối: ${lastRunDate.toISOString().split('T')[0]}). Cần kiểm tra bảo dưỡng.`
+                : `Máy phát tại trạm chưa từng ghi nhận chạy máy phát điện trong lịch sử hệ thống.`
+            });
+          }
         }
       }
 
