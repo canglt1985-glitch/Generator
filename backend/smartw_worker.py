@@ -824,21 +824,70 @@ def format_pakh_message(row: dict) -> str:
     return msg
 
 
+def format_pakh_reminder_message(row: dict) -> str:
+    so_thue_bao = row.get('soThueBao') or ''
+    tinh = row.get('tinhThanhPho') or ''
+    xa = row.get('phuongXa') or ''
+    dia_ban = f"{xa}, {tinh}".strip(', ')
+    
+    # Map Trạm/Cell to old/new ID using cache
+    tram_cell = row.get('maTram') or ''
+    tram_cell_display = tram_cell
+    if tram_cell:
+        try:
+            data = _get_datasites_list()
+            matched_site = None
+            tram_upper = tram_cell.strip().upper()
+            for s in sorted(data, key=lambda x: len(x.get('site_id') or ''), reverse=True):
+                s_id = (s.get("site_id") or "").upper()
+                s_old = (s.get("site_id_old") or "").upper()
+                if s_id and tram_upper.startswith(s_id):
+                    matched_site = s
+                    break
+                if s_old and tram_upper.startswith(s_old):
+                    matched_site = s
+                    break
+            if matched_site:
+                s_id = matched_site.get("site_id") or ""
+                s_old = matched_site.get("site_id_old") or ""
+                if s_old and s_id != s_old:
+                    tram_cell_display = f"{tram_cell} (mới: {s_id} / cũ: {s_old})"
+                elif s_id:
+                    tram_cell_display = f"{tram_cell} (mới: {s_id})"
+        except Exception as e:
+            logger.error(f'SmartW format_pakh_reminder_message site mapping error: {e}')
+
+    han_con_lai = row.get('tgConLai') or ''
+
+    msg = f"""- SĐT PHẢN ÁNH: {so_thue_bao}
+- ĐỊA BÀN: {dia_ban}
+- TRẠM / CELL: {tram_cell_display}
+- HẠN CÒN LẠI: {han_con_lai}"""
+    return msg
+
+
 def process_pakh_alerts(pakh_list: list):
     """Process scraped PAKH list: detect new tickets and expiring tickets, and alert to Viber."""
     state_file = os.path.join(DATA_DIR, 'pakh_sent_alerts.json')
     pakh_token = "56b57ae5bbb11e4f-b8084d4fec7bf6ee-e681b83f2f40f110"
     
     # Load state
-    state = {"alerted_new": [], "alerted_expiring": []}
+    state = {"alerted_new": [], "alerted_expiring": [], "alerted_expiring_milestones": {}}
     if os.path.exists(state_file):
         try:
             with open(state_file, 'r', encoding='utf-8') as f:
                 state = json.load(f)
                 if "alerted_new" not in state: state["alerted_new"] = []
                 if "alerted_expiring" not in state: state["alerted_expiring"] = []
+                if "alerted_expiring_milestones" not in state: state["alerted_expiring_milestones"] = {}
         except Exception:
             pass
+
+    # Migrate old format if needed
+    milestones_dict = state.setdefault("alerted_expiring_milestones", {})
+    for old_id in state.get("alerted_expiring", []):
+        if old_id not in milestones_dict:
+            milestones_dict[old_id] = ["16h", "8h"]
 
     changed = False
 
@@ -864,18 +913,40 @@ def process_pakh_alerts(pakh_list: list):
             state["alerted_new"].append(pakh_id)
             changed = True
 
-        # 2. Alert for expiring tickets (less than 12 hours remaining)
+        # 2. Alert for expiring tickets (milestones: 16h, 8h, 2h)
         tg_kt_str = _get_val(row, ['tg_kt', 'thoiGianKetThuc', 'ngayKetThuc', 'deadline', 'thời gian kết thúc', 'ngày kết thúc', 'hạn xử lý', 'edate', 'edateStr'])
-        if tg_kt_str and pakh_id not in state["alerted_expiring"]:
+        if tg_kt_str:
             kt_dt = parse_dt(tg_kt_str)
             if kt_dt:
                 now = datetime.now()
                 remaining = (kt_dt - now).total_seconds()
-                if 0 < remaining <= 12 * 3600:
-                    msg = "⏰ *CẢNH BÁO: PAKH SẮP HẾT HẠN (DEADLINE CLOCK)*\n\n" + format_pakh_message(row)
-                    _send_viber_report(msg.split('\n'), token=pakh_token)
-                    state["alerted_expiring"].append(pakh_id)
-                    changed = True
+                
+                # Determine current milestone
+                milestone = None
+                auto_complete_milestones = []
+                if 0 < remaining <= 2 * 3600:
+                    milestone = "2h"
+                    auto_complete_milestones = ["2h", "8h", "16h"]
+                elif 2 * 3600 < remaining <= 8 * 3600:
+                    milestone = "8h"
+                    auto_complete_milestones = ["8h", "16h"]
+                elif 8 * 3600 < remaining <= 16 * 3600:
+                    milestone = "16h"
+                    auto_complete_milestones = ["16h"]
+                    
+                if milestone:
+                    already_sent = milestones_dict.get(str(pakh_id), [])
+                    if milestone not in already_sent:
+                        milestone_lbl = "16" if milestone == "16h" else "8" if milestone == "8h" else "2"
+                        msg = f"⏰ *CẢNH BÁO: PAKH CÒN {milestone_lbl} GIỜ XỬ LÝ (DEADLINE {milestone_lbl}H)*\n\n" + format_pakh_reminder_message(row)
+                        _send_viber_report(msg.split('\n'), token=pakh_token)
+                        
+                        # Add new milestone + auto-complete higher ones to avoid duplicates
+                        for m in auto_complete_milestones:
+                            if m not in already_sent:
+                                already_sent.append(m)
+                        milestones_dict[str(pakh_id)] = already_sent
+                        changed = True
 
     # Limit state size to prevent infinite growth (keep last 500 records)
     if len(state["alerted_new"]) > 500:
@@ -883,6 +954,12 @@ def process_pakh_alerts(pakh_list: list):
         changed = True
     if len(state["alerted_expiring"]) > 500:
         state["alerted_expiring"] = state["alerted_expiring"][-500:]
+        changed = True
+        
+    # Trim milestones dict
+    if len(milestones_dict) > 500:
+        keys_to_keep = list(milestones_dict.keys())[-500:]
+        state["alerted_expiring_milestones"] = {k: milestones_dict[k] for k in keys_to_keep}
         changed = True
 
     if changed:
