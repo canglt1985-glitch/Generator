@@ -191,9 +191,9 @@ def main():
                 last_run["smartw_vhkt_key"] = today_str
                 run_job("smartw_vhkt", [python_exe, os.path.join(current_dir, "smartw_worker.py"), "--job", "vhkt"])
 
-            # Job E: SmartW Periodic 2-Hour Report Review (Every 2 hours at minute :25 of even hours)
+            # Job E: SmartW Periodic 2-Hour Report Review (Every 2 hours at minute :25 of even hours, exclude 12 PM for lunch break)
             report_key = f"{today_str}_{now.hour}"
-            if now.hour % 2 == 0 and now.minute == 25 and last_run.get("smartw_report_key") != report_key:
+            if now.hour % 2 == 0 and now.hour != 12 and now.minute == 25 and last_run.get("smartw_report_key") != report_key:
                 last_run["smartw_report_key"] = report_key
                 run_job("smartw_report", [python_exe, os.path.join(current_dir, "smartw_worker.py"), "--job", "report"])
 
