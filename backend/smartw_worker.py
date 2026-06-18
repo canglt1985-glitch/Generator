@@ -666,6 +666,94 @@ def save_vhkt_to_local_json(vhkt_raw: dict):
         logger.error(f"Local Storage Error: Failed to save SLA records to file: {e}")
 
 
+def send_daily_flapping_report(vhkt_data: list):
+    """
+    Analyzes VHKT (daily summary) data and sends a Viber report for:
+    - Stations with flapping alarms (> 10 times) for MAC, GEN, or MLL.
+    - Stations with MLL duration > 2 hours (> 120 minutes).
+    """
+    logger.info("SmartW Worker: 🕒 Starting daily flapping and long MLL report...")
+    if not vhkt_data:
+        logger.info("SmartW Worker: No VHKT data to analyze, skipping report.")
+        return
+        
+    sep = '------------'
+    lines = ["📊 *BÁO CÁO CHẬP CHỜN & MLL KÉO DÀI (HÀNG NGÀY)* 📊"]
+    lines.append(sep)
+    
+    mac_lines = []
+    gen_lines = []
+    mll_lines = []
+    
+    for row in vhkt_data:
+        site = row.get('tram') or ''
+        if not site:
+            continue
+            
+        site_label = _get_site_label(site)
+        
+        # MAC (AC Fail)
+        md_cnt = int(row.get('md_so_lan') or 0)
+        if md_cnt > 10:
+            mac_lines.append(f"  • {site_label} - {md_cnt} lần")
+            
+        # GEN (MPD)
+        mpd_cnt = int(row.get('mpd_so_lan') or 0)
+        if mpd_cnt > 10:
+            gen_lines.append(f"  • {site_label} - {mpd_cnt} lần")
+            
+        # MLL
+        mll_cnt = int(row.get('mll_so_lan') or 0)
+        mll_duration = float(row.get('mll_phut') or 0.0)
+        
+        mll_reasons = []
+        if mll_cnt > 10:
+            mll_reasons.append(f"{mll_cnt} lần")
+        if mll_duration > 120.0:
+            mll_hours = round(mll_duration / 60.0, 1)
+            mll_reasons.append(f"{mll_hours}h")
+            
+        if mll_reasons:
+            mll_lines.append(f"  • {site_label} - {', '.join(mll_reasons)}")
+            
+    total_reported = len(mac_lines) + len(gen_lines) + len(mll_lines)
+    
+    if total_reported == 0:
+        logger.info("SmartW Worker: No flapping or long MLL alarms found yesterday.")
+        return
+
+    # ── Section 1: MAC ──
+    lines.append("⚡ *MAC (Chập chờn > 10 lần):*")
+    if mac_lines:
+        lines.extend(mac_lines)
+    else:
+        lines.append("  • Không có")
+        
+    lines.append("")
+    
+    # ── Section 2: GEN ──
+    lines.append("🔋 *GEN (Chập chờn > 10 lần):*")
+    if gen_lines:
+        lines.extend(gen_lines)
+    else:
+        lines.append("  • Không có")
+        
+    lines.append("")
+    
+    # ── Section 3: MLL ──
+    lines.append("📵 *MLL (Chập chờn > 10 lần hoặc MLL > 2h):*")
+    if mll_lines:
+        lines.extend(mll_lines)
+    else:
+        lines.append("  • Không có")
+        
+    lines.append(sep)
+    lines.append("📢 Vui lòng kiểm tra tiếp xúc nguồn, cáp quang hoặc thiết bị tại trạm!")
+    
+    _send_viber_report(lines)
+    logger.info(f"SmartW Worker: ✅ Daily flapping and long MLL report sent ({total_reported} entries)")
+
+
 def _get_val(row: dict, keys: list) -> str:
     for k in keys:
         if k in row:
@@ -1182,8 +1270,9 @@ def run_alarm_poll():
                     logger.info(f'SmartW Worker: {len(new_alarms)} {table_type.upper()} alarm(s) newly detected')
                     all_new[table_type] = new_alarms
 
-            if all_new:
-                check_and_alert_flapping(all_new)
+            # Real-time flapping alerts disabled (replaced by morning daily report based on VHKT summary)
+            # if all_new:
+            #     check_and_alert_flapping(all_new)
 
             if all_new or all_cleared:
                 sep = '------------'
@@ -1444,6 +1533,12 @@ def run_vhkt_poll():
                 e for e in status['errors']
                 if e.get('source') != 'vhkt'  # keep non-vhkt errors
             ]
+
+            # Trigger daily flapping & long MLL report
+            try:
+                send_daily_flapping_report(result.get('vhkt', []))
+            except Exception as report_err:
+                logger.error(f"Error sending daily flapping report: {report_err}")
 
         status['last_vhkt_poll'] = datetime.now().isoformat()
 
