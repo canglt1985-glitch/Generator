@@ -356,55 +356,80 @@ def get_weekly_anomaly_report(days_scan=7):
             logs_by_station[resolved].add(l_date)
     
     for station, txs in refuels_by_station.items():
-        if len(txs) < 2:
-            continue
-            
-        for i in range(len(txs) - 1):
-            try:
-                d1 = datetime.strptime(txs[i]["date"], '%Y-%m-%d').date()
-                d2 = datetime.strptime(txs[i+1]["date"], '%Y-%m-%d').date()
-            except:
-                continue
-                
-            if (d2 - d1).days <= days_scan:
-                check_end = d2 + timedelta(days=7)
+        gen_fuel = str(fuel_by_site.get(station, "Dầu")).lower()
+        is_xang = 'xăng' in gen_fuel or 'xang' in gen_fuel
+
+        if is_xang:
+            # Máy xăng: Xét đổ xăng mà từ ngày đó trở đi 7 ngày không chạy thì cảnh báo luôn
+            for tx in txs:
+                try:
+                    refill_date = datetime.strptime(tx["date"], '%Y-%m-%d').date()
+                except:
+                    continue
+                check_end = refill_date + timedelta(days=7)
                 
                 station_log_dates = logs_by_station.get(station, set())
                 has_run = False
                 for log_date_str in station_log_dates:
                     try:
                         ld = datetime.strptime(log_date_str, '%Y-%m-%d').date()
-                        if d1 <= ld <= check_end:
+                        if refill_date <= ld <= check_end:
                             has_run = True
                             break
                     except:
                         pass
                 
                 if not has_run:
-                    ft1 = txs[i].get("fuel_tracking") or {}
-                    ft2 = txs[i+1].get("fuel_tracking") or {}
-                    qty1 = float(ft1.get("quantity") or 0)
-                    qty2 = float(ft2.get("quantity") or 0)
-                    total_qty = qty1 + qty2
-                    
-                    # Determine fuel label: check transaction first, then station specs
-                    f_type1 = str(ft1.get("fuel_type") or '').lower()
-                    f_type2 = str(ft2.get("fuel_type") or '').lower()
-                    gen_fuel = str(fuel_by_site.get(station, "Dầu")).lower()
-                    
-                    is_xang = ('xăng' in f_type1 or 'xang' in f_type1 or 
-                               'xăng' in f_type2 or 'xang' in f_type2 or 
-                               'xăng' in gen_fuel or 'xang' in gen_fuel)
-                    fuel_label = 'xăng' if is_xang else 'dầu'
-                    
+                    ft = tx.get("fuel_tracking") or {}
+                    qty = float(ft.get("quantity") or 0)
                     anomalies.append({
                         'id_tram': station,
-                        'date_range': f"{d1.strftime('%d/%m')} - {d2.strftime('%d/%m')}",
-                        'refuel_count': 2,
-                        'total_qty': total_qty,
-                        'msg': f"Đổ {fuel_label} 2 lần liên tiếp ({total_qty}L từ {d1.strftime('%d/%m')} đến {d2.strftime('%d/%m')}) nhưng không chạy máy phát trong 7 ngày tiếp theo."
+                        'date_range': f"{refill_date.strftime('%d/%m')}",
+                        'refuel_count': 1,
+                        'total_qty': qty,
+                        'msg': f"Đổ xăng ngày {refill_date.strftime('%d/%m')} ({qty}L) nhưng không chạy máy phát trong 7 ngày tiếp theo."
                     })
-                    break
+        else:
+            # Máy dầu: Giữ nguyên quy tắc đổ dầu liên tiếp không chạy máy
+            if len(txs) < 2:
+                continue
+                
+            for i in range(len(txs) - 1):
+                try:
+                    d1 = datetime.strptime(txs[i]["date"], '%Y-%m-%d').date()
+                    d2 = datetime.strptime(txs[i+1]["date"], '%Y-%m-%d').date()
+                except:
+                    continue
+                    
+                if (d2 - d1).days <= days_scan:
+                    check_end = d2 + timedelta(days=7)
+                    
+                    station_log_dates = logs_by_station.get(station, set())
+                    has_run = False
+                    for log_date_str in station_log_dates:
+                        try:
+                            ld = datetime.strptime(log_date_str, '%Y-%m-%d').date()
+                            if d1 <= ld <= check_end:
+                                has_run = True
+                                break
+                        except:
+                            pass
+                    
+                    if not has_run:
+                        ft1 = txs[i].get("fuel_tracking") or {}
+                        ft2 = txs[i+1].get("fuel_tracking") or {}
+                        qty1 = float(ft1.get("quantity") or 0)
+                        qty2 = float(ft2.get("quantity") or 0)
+                        total_qty = qty1 + qty2
+                        
+                        anomalies.append({
+                            'id_tram': station,
+                            'date_range': f"{d1.strftime('%d/%m')} - {d2.strftime('%d/%m')}",
+                            'refuel_count': 2,
+                            'total_qty': total_qty,
+                            'msg': f"Đổ dầu 2 lần liên tiếp ({total_qty}L từ {d1.strftime('%d/%m')} đến {d2.strftime('%d/%m')}) nhưng không chạy máy phát trong 7 ngày tiếp theo."
+                        })
+                        break
                     
     return anomalies
 

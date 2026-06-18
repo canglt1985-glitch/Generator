@@ -388,7 +388,7 @@ export default function Generator() {
       const isHigh = anom.severity === 'high';
       const typeStr = 
         anom.type === 'MISSING_LOG' ? 'Thiếu log chạy máy' :
-        anom.type === 'CONSECUTIVE_REFILL' ? 'Đổ dầu không chạy' :
+        anom.type === 'CONSECUTIVE_REFILL' ? (anom.title.includes('xăng') || anom.desc.includes('xăng') ? 'Đổ xăng không chạy' : 'Đổ dầu không chạy') :
         anom.type === 'QUARTERLY_DISCREPANCY' ? 'Lệch nhiên liệu quý' :
         anom.type === 'INACTIVE_GEN' ? 'Máy phát ngủ quên' : anom.type;
       
@@ -625,44 +625,69 @@ export default function Generator() {
         }
       });
 
-      // --- RULE 2: ĐỔ NHIÊN LIỆU LIÊN TIẾP KHÔNG CHẠY MÁY ---
-      if (siteRefills.length >= 2) {
-        // Sắp xếp các giao dịch đổ dầu/xăng theo ngày tăng dần
-        const sortedRefills = [...siteRefills].sort((a, b) => new Date(a.date) - new Date(b.date));
-        
-        for (let i = 0; i < sortedRefills.length - 1; i++) {
-          const r1 = sortedRefills[i];
-          const r2 = sortedRefills[i+1];
-          const d1 = new Date(r1.date);
-          const d2 = new Date(r2.date);
-          const diffDays = (d2 - d1) / (1000 * 60 * 60 * 24);
+      // --- RULE 2: ĐỔ NHIÊN LIỆU LIÊN TIẾP / ĐỔ XĂNG KHÔNG CHẠY MÁY ---
+      const isXang = specs && (specs.nhien_lieu || '').toLowerCase().includes('xăng');
 
-          // Nếu đổ nhiên liệu 2 lần liên tiếp cách nhau <= 7 ngày
-          if (diffDays <= 7) {
-            // Kiểm tra xem trong khoảng từ ngày đổ thứ 1 (d1) đến ngày đổ thứ 2 (d2) cộng thêm 7 ngày nữa, có chạy máy phát không
-            const checkEnd = new Date(d2);
-            checkEnd.setDate(checkEnd.getDate() + 7);
+      if (isXang) {
+        // Máy xăng: Xét đổ xăng mà từ ngày đó trở đi 7 ngày không chạy thì cảnh báo luôn
+        siteRefills.forEach(refill => {
+          const refillDate = new Date(refill.date);
+          const checkEnd = new Date(refillDate);
+          checkEnd.setDate(checkEnd.getDate() + 7);
 
-            const hasRun = siteLogs.some(log => {
-              const logDate = new Date(log.date);
-              return logDate >= d1 && logDate <= checkEnd;
+          const hasRun = siteLogs.some(log => {
+            const logDate = new Date(log.date);
+            return logDate >= refillDate && logDate <= checkEnd;
+          });
+
+          if (!hasRun) {
+            anomalies.push({
+              type: 'CONSECUTIVE_REFILL', // Giữ nguyên type để đồng bộ UI
+              severity: 'high',
+              site_id: site.site_id,
+              date: refill.date,
+              title: 'Đổ xăng không chạy máy',
+              desc: `Ghi nhận đổ xăng ngày ${refill.date} (${refill.fuel_tracking.quantity}L) nhưng không chạy máy phát trong vòng 7 ngày tiếp theo.`
             });
+          }
+        });
+      } else {
+        // Máy dầu: Giữ nguyên quy tắc đổ dầu liên tiếp không chạy máy
+        if (siteRefills.length >= 2) {
+          // Sắp xếp các giao dịch đổ dầu theo ngày tăng dần
+          const sortedRefills = [...siteRefills].sort((a, b) => new Date(a.date) - new Date(b.date));
+          
+          for (let i = 0; i < sortedRefills.length - 1; i++) {
+            const r1 = sortedRefills[i];
+            const r2 = sortedRefills[i+1];
+            const d1 = new Date(r1.date);
+            const d2 = new Date(r2.date);
+            const diffDays = (d2 - d1) / (1000 * 60 * 60 * 24);
 
-            if (!hasRun) {
-              const fType1 = (r1.fuel_tracking?.fuel_type || specs?.nhien_lieu || '').toLowerCase();
-              const isXang1 = fType1.includes('xăng') || fType1.includes('xang');
-              const fuelLabel = isXang1 ? 'xăng' : 'dầu';
-              const totalQty = (parseFloat(r1.fuel_tracking.quantity) || 0) + (parseFloat(r2.fuel_tracking.quantity) || 0);
+            // Nếu đổ nhiên liệu 2 lần liên tiếp cách nhau <= 7 ngày
+            if (diffDays <= 7) {
+              // Kiểm tra xem trong khoảng từ ngày đổ thứ 1 (d1) đến ngày đổ thứ 2 (d2) cộng thêm 7 ngày nữa, có chạy máy phát không
+              const checkEnd = new Date(d2);
+              checkEnd.setDate(checkEnd.getDate() + 7);
 
-              anomalies.push({
-                type: 'CONSECUTIVE_REFILL',
-                severity: 'high',
-                site_id: site.site_id,
-                date: r2.date,
-                title: `Đổ ${fuelLabel} liên tiếp không chạy máy`,
-                desc: `Đổ ${fuelLabel} 2 lần liên tiếp (${totalQty}L từ ${r1.date} đến ${r2.date}) nhưng không chạy máy phát trong vòng 7 ngày tiếp theo.`
+              const hasRun = siteLogs.some(log => {
+                const logDate = new Date(log.date);
+                return logDate >= d1 && logDate <= checkEnd;
               });
-              break; // Chỉ cần cảnh báo 1 lần gần nhất
+
+              if (!hasRun) {
+                const totalQty = (parseFloat(r1.fuel_tracking.quantity) || 0) + (parseFloat(r2.fuel_tracking.quantity) || 0);
+
+                anomalies.push({
+                  type: 'CONSECUTIVE_REFILL',
+                  severity: 'high',
+                  site_id: site.site_id,
+                  date: r2.date,
+                  title: 'Đổ dầu liên tiếp không chạy máy',
+                  desc: `Đổ dầu 2 lần liên tiếp (${totalQty}L từ ${r1.date} đến ${r2.date}) nhưng không chạy máy phát trong vòng 7 ngày tiếp theo.`
+                });
+                break; // Chỉ cần cảnh báo 1 lần gần nhất
+              }
             }
           }
         }
@@ -1317,7 +1342,7 @@ export default function Generator() {
                                   </td>
                                   <td className="px-4 py-3 whitespace-nowrap font-semibold text-blue-700 text-xs">
                                     {anom.type === 'MISSING_LOG' && 'Thiếu log chạy máy'}
-                                    {anom.type === 'CONSECUTIVE_REFILL' && 'Đổ dầu không chạy'}
+                                    {anom.type === 'CONSECUTIVE_REFILL' && (anom.title.includes('xăng') || anom.desc.includes('xăng') ? 'Đổ xăng không chạy' : 'Đổ dầu không chạy')}
                                     {anom.type === 'QUARTERLY_DISCREPANCY' && 'Lệch nhiên liệu quý'}
                                     {anom.type === 'INACTIVE_GEN' && 'Máy phát ngủ quên'}
                                   </td>
