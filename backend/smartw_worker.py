@@ -592,7 +592,9 @@ def _run_async(coro_func):
 
 
 def sync_alarms_to_supabase(result: dict):
-    """Upsert scraped active alarms into Supabase smartw_alarms table."""
+    """Upsert scraped active/cleared alarms into Supabase smartw_alarms table,
+    and automatically clear any stale active alarms that are no longer active in reality.
+    """
     if not supabase:
         logger.warning("Supabase client not initialized, skipping DB sync.")
         return
@@ -601,6 +603,7 @@ def sync_alarms_to_supabase(result: dict):
     from datetime import datetime
 
     all_rows = []
+    active_ids_in_scrape = set()
     
     def parse_to_iso(date_str):
         if not date_str:
@@ -613,33 +616,49 @@ def sync_alarms_to_supabase(result: dict):
                 continue
         return None
 
-    # 1. MD
-    for alarm in result.get('md', []):
-        site = (alarm.get('site') or '').strip()
-        alarm_name = (alarm.get('alarmName') or '').strip()
-        sdate_str = (alarm.get('sdateStr') or alarm.get('sdate_str') or '').strip()
-        edate_str = (alarm.get('edateStr') or alarm.get('clear_time') or alarm.get('ket_thuc') or '').strip()
-        sdate_iso = parse_to_iso(sdate_str)
-        edate_iso = parse_to_iso(edate_str)
-        val_str = f"md_{site}_{alarm_name}_{sdate_str}"
-        rec_id = str(uuid.uuid5(uuid.NAMESPACE_OID, val_str))
-        
-        all_rows.append({
-            "id": rec_id,
-            "site": site,
-            "network": alarm.get('network'),
-            "alarm_name": alarm_name,
-            "alarm_type": "md",
-            "sdate": sdate_iso,
-            "sdate_str": sdate_str,
-            "edate": edate_iso,
-            "edate_str": edate_str if edate_str else None,
-            "duration": int(alarm.get('duaration') or alarm.get('minute') or 0),
-            "status": "CLEARED" if edate_iso else "ACTIVE"
-        })
-
-
-
+    types = ['md', 'mpd', 'mll', 'mll_cell']
+    for t in types:
+        alarms_list = result.get(t, [])
+        for alarm in alarms_list:
+            site = (alarm.get('site') or '').strip()
+            alarm_name = (alarm.get('alarmName') or '').strip()
+            sdate_str = (alarm.get('sdateStr') or alarm.get('sdate_str') or '').strip()
+            edate_str = (alarm.get('edateStr') or alarm.get('clear_time') or alarm.get('ket_thuc') or '').strip()
+            
+            if not site or not alarm_name or not sdate_str:
+                continue
+                
+            sdate_iso = parse_to_iso(sdate_str)
+            edate_iso = parse_to_iso(edate_str)
+            
+            # Construct a unique, deterministic ID using UUIDv5
+            if t == 'mll_cell':
+                cellid = (alarm.get('cellid') or '').strip()
+                val_str = f"{t}_{site}_{cellid}_{alarm_name}_{sdate_str}"
+            else:
+                val_str = f"{t}_{site}_{alarm_name}_{sdate_str}"
+                
+            rec_id = str(uuid.uuid5(uuid.NAMESPACE_OID, val_str))
+            status_val = "CLEARED" if edate_iso else "ACTIVE"
+            
+            if status_val == "ACTIVE":
+                active_ids_in_scrape.add(rec_id)
+                
+            all_rows.append({
+                "id": rec_id,
+                "site": site,
+                "network": alarm.get('network'),
+                "cellid": alarm.get('cellid') if t == 'mll_cell' else None,
+                "vendor": alarm.get('vendor'),
+                "alarm_name": alarm_name,
+                "alarm_type": t,
+                "sdate": sdate_iso,
+                "sdate_str": sdate_str,
+                "edate": edate_iso,
+                "edate_str": edate_str if edate_str else None,
+                "duration": int(alarm.get('duration') or alarm.get('duaration') or alarm.get('minute') or 0),
+                "status": status_val
+            })
 
     if all_rows:
         try:
@@ -650,6 +669,40 @@ def sync_alarms_to_supabase(result: dict):
             logger.info(f"Supabase Sync: Upserted {len(all_rows)} active/cleared alarms.")
         except Exception as e:
             logger.error(f"Supabase Sync Error: Failed to upsert alarms: {e}")
+
+    # 2. Automatically clear stale active alarms in Supabase.
+    # Any alarm in Supabase with status = 'ACTIVE' that is NOT in the scraped active list must be cleared.
+    try:
+        res_supabase_active = supabase.table("smartw_alarms")\
+            .select("id")\
+            .eq("status", "ACTIVE")\
+            .execute()
+        supabase_active = res_supabase_active.data or []
+        
+        stale_ids = []
+        for sa in supabase_active:
+            sa_id = sa.get("id")
+            if sa_id and sa_id not in active_ids_in_scrape:
+                stale_ids.append(sa_id)
+                
+        if stale_ids:
+            now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            now_iso = datetime.now().isoformat() + '+07:00'
+            
+            chunk_size = 50
+            for i in range(0, len(stale_ids), chunk_size):
+                batch = stale_ids[i:i+chunk_size]
+                supabase.table("smartw_alarms")\
+                    .update({
+                        "status": "CLEARED",
+                        "edate": now_iso,
+                        "edate_str": now_str
+                    })\
+                    .in_("id", batch)\
+                    .execute()
+            logger.info(f"Supabase Sync: Marked {len(stale_ids)} stale active alarms as CLEARED.")
+    except Exception as e:
+        logger.error(f"Supabase Sync Error: Failed to clear stale alarms: {e}")
 
 
 def save_vhkt_to_local_json(vhkt_raw: dict):
@@ -1491,19 +1544,25 @@ def run_alarm_poll():
     finally:
         _save_status(status)
         _release_lock()
-        # Broadcast to all connected browsers via SSE (Disabled)
-        from smartw.scraper import load_cached_data
-        md_raw = load_cached_data('md')
-        mpd_raw = load_cached_data('mpd')
-        mll_raw = load_cached_data('mll')
-        mll_cell_raw = load_cached_data('mll_cell')
-
         # Sync to Supabase
+        from smartw.scraper import load_cached_data
+        md_raw = (load_cached_data('md') or {}).get('data', [])
+        md_cl = (load_cached_data('md_cleared') or {}).get('data', [])
+        
+        mpd_raw = (load_cached_data('mpd') or {}).get('data', [])
+        mpd_cl = (load_cached_data('mpd_cleared') or {}).get('data', [])
+        
+        mll_raw = (load_cached_data('mll') or {}).get('data', [])
+        mll_cl = (load_cached_data('mll_cleared') or {}).get('data', [])
+        
+        mll_cell_raw = (load_cached_data('mll_cell') or {}).get('data', [])
+        mll_cell_cl = (load_cached_data('mll_cell_cleared') or {}).get('data', [])
+
         compiled_result = {
-            'md': (md_raw or {}).get('data', []),
-            'mpd': (mpd_raw or {}).get('data', []),
-            'mll': (mll_raw or {}).get('data', []),
-            'mll_cell': (mll_cell_raw or {}).get('data', [])
+            'md': md_raw + md_cl,
+            'mpd': mpd_raw + mpd_cl,
+            'mll': mll_raw + mll_cl,
+            'mll_cell': mll_cell_raw + mll_cell_cl
         }
         sync_alarms_to_supabase(compiled_result)
 
