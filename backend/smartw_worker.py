@@ -1570,10 +1570,10 @@ def run_alarm_poll():
             'scraped_at': status.get('last_alarm_poll'),
             'last_poll': datetime.now().strftime('%H:%M'),
             'status': 'configured',
-            'md_count': len([r for r in (md_raw or {}).get('data', []) if not r.get('edate')]),
-            'mpd_count': len([r for r in (mpd_raw or {}).get('data', []) if not r.get('edate')]),
-            'mll_count': len((mll_raw or {}).get('data', [])),
-            'mll_cell_count': len((mll_cell_raw or {}).get('data', [])),
+            'md_count': len([r for r in md_raw if not r.get('edate')]),
+            'mpd_count': len([r for r in mpd_raw if not r.get('edate')]),
+            'mll_count': len(mll_raw),
+            'mll_cell_count': len(mll_cell_raw),
             'has_error': bool(result.get('error')) if 'result' in dir() else False
         })
 
