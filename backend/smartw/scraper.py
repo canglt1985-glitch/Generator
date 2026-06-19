@@ -1209,7 +1209,7 @@ class SmartWScraper:
             if (typeof $ !== 'undefined' && $('#jqxgrid').length) {
                 try {
                     const rows = $('#jqxgrid').jqxGrid('getrows');
-                    if (rows && rows.length > 0) {
+                    if (rows) {
                         return { api: true, rows: rows };
                     }
                 } catch(e) {}
@@ -1233,11 +1233,18 @@ class SmartWScraper:
             for (const row of rowEls) {
                 const cells = row.querySelectorAll('div[role="gridcell"]');
                 const cellTexts = [];
+                let hasValue = false;
                 for (const cell of cells) {
                     const innerDiv = cell.querySelector('div');
-                    cellTexts.push(innerDiv ? innerDiv.textContent.trim() : cell.textContent.trim());
+                    const text = innerDiv ? innerDiv.textContent.trim() : cell.textContent.trim();
+                    cellTexts.push(text);
+                    if (text && text.toLowerCase() !== 'no data to display') {
+                        hasValue = true;
+                    }
                 }
-                if (cellTexts.length > 0) dataRows.push(cellTexts);
+                if (hasValue && cellTexts.length > 0) {
+                    dataRows.push(cellTexts);
+                }
             }
             return { api: false, headers, rows: dataRows };
         }''')
@@ -1256,10 +1263,18 @@ class SmartWScraper:
             
             for r in raw_rows:
                 row_dict = {}
+                is_no_data = False
+                all_empty = True
                 for idx, val in enumerate(r):
                     if idx < len(headers):
+                        val_str = str(val).strip()
                         row_dict[headers[idx]] = val
-                rows.append(row_dict)
+                        if "no data to display" in val_str.lower():
+                            is_no_data = True
+                        if val_str:
+                            all_empty = False
+                if not is_no_data and not all_empty:
+                    rows.append(row_dict)
 
         # Convert any datetime objects in rows to ISO string format (Playwright python auto-converts JS Dates)
         from datetime import datetime as datetime_class

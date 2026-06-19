@@ -1114,8 +1114,8 @@ def process_pakh_alerts(pakh_list: list):
 
 def save_pakh_to_storage(pakh_list: list):
     """Save scraped PAKH tickets to pakh.json and upload to Supabase storage."""
-    if not pakh_list:
-        return
+    if pakh_list is None:
+        pakh_list = []
         
     local_path = os.path.join(DATA_DIR, 'pakh.json')
     try:
