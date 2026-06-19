@@ -950,6 +950,34 @@ def format_pakh_reminder_message(row: dict) -> str:
     return msg
 
 
+def parse_vietnamese_duration(duration_str: str) -> int:
+    """Parse Vietnamese duration string (e.g. '22 giờ 37 phút', '3 giờ', '15 phút') to total seconds."""
+    if not duration_str:
+        return None
+    import re
+    duration_str = duration_str.strip().lower()
+    if 'quá hạn' in duration_str or 'qua han' in duration_str:
+        return 0
+    
+    hours = 0
+    minutes = 0
+    
+    h_match = re.search(r'(\d+)\s*(giờ|g|h)', duration_str)
+    if h_match:
+        hours = int(h_match.group(1))
+        
+    m_match = re.search(r'(\d+)\s*(phút|p|phut)', duration_str)
+    if m_match:
+        minutes = int(m_match.group(1))
+        
+    if not h_match and not m_match:
+        digits = re.findall(r'\d+', duration_str)
+        if digits:
+            minutes = int(digits[0])
+            
+    return hours * 3600 + minutes * 60
+
+
 def process_pakh_alerts(pakh_list: list):
     """Process scraped PAKH list: detect new tickets and expiring tickets, and alert to Viber."""
     state_file = os.path.join(DATA_DIR, 'pakh_sent_alerts.json')
@@ -1018,39 +1046,52 @@ def process_pakh_alerts(pakh_list: list):
             changed = True
 
         # 2. Alert for expiring tickets (milestones: 16h, 8h, 2h)
-        tg_kt_str = _get_val(row, ['tg_kt', 'thoiGianKetThuc', 'ngayKetThuc', 'deadline', 'thời gian kết thúc', 'ngày kết thúc', 'hạn xử lý', 'edate', 'edateStr'])
-        if tg_kt_str:
-            kt_dt = parse_dt(tg_kt_str)
-            if kt_dt:
-                now = datetime.now()
-                remaining = (kt_dt - now).total_seconds()
+        remaining = None
+        
+        # Try parsing remaining duration from tgConLai
+        tg_con_lai = _get_val(row, ['tgConLai', 'tg_con_lai', 'thoiGianConLai'])
+        if tg_con_lai:
+            remaining = parse_vietnamese_duration(tg_con_lai)
+            
+        # Fallback to datetime deadline parsing if tgConLai is not available
+        if remaining is None:
+            tg_kt_str = _get_val(row, ['tg_kt', 'thoiGianKetThuc', 'ngayKetThuc', 'deadline', 'thời gian kết thúc', 'ngày kết thúc', 'hạn xử lý', 'edate', 'edateStr'])
+            if tg_kt_str:
+                kt_dt = parse_dt(tg_kt_str)
+                if kt_dt:
+                    now = datetime.now()
+                    remaining = (kt_dt - now).total_seconds()
+
+        if remaining is not None:
+            # Determine current milestone
+            milestone = None
+            auto_complete_milestones = []
+            if 0 < remaining <= 2 * 3600:
+                milestone = "2h"
+                auto_complete_milestones = ["2h", "6h", "8h", "16h"]
+            elif 2 * 3600 < remaining <= 6 * 3600:
+                milestone = "6h"
+                auto_complete_milestones = ["6h", "8h", "16h"]
+            elif 6 * 3600 < remaining <= 8 * 3600:
+                milestone = "8h"
+                auto_complete_milestones = ["8h", "16h"]
+            elif 8 * 3600 < remaining <= 16 * 3600:
+                milestone = "16h"
+                auto_complete_milestones = ["16h"]
                 
-                # Determine current milestone
-                milestone = None
-                auto_complete_milestones = []
-                if 0 < remaining <= 2 * 3600:
-                    milestone = "2h"
-                    auto_complete_milestones = ["2h", "8h", "16h"]
-                elif 2 * 3600 < remaining <= 8 * 3600:
-                    milestone = "8h"
-                    auto_complete_milestones = ["8h", "16h"]
-                elif 8 * 3600 < remaining <= 16 * 3600:
-                    milestone = "16h"
-                    auto_complete_milestones = ["16h"]
+            if milestone:
+                already_sent = milestones_dict.get(str(pakh_id), [])
+                if milestone not in already_sent:
+                    milestone_lbl = "16" if milestone == "16h" else "8" if milestone == "8h" else "6" if milestone == "6h" else "2"
+                    msg = f"⏰ *CẢNH BÁO: PAKH CÒN {milestone_lbl} GIỜ XỬ LÝ (DEADLINE {milestone_lbl}H)*\n\n" + format_pakh_reminder_message(row)
+                    _send_viber_report(msg.split('\n'), token=pakh_token, sender=pakh_sender)
                     
-                if milestone:
-                    already_sent = milestones_dict.get(str(pakh_id), [])
-                    if milestone not in already_sent:
-                        milestone_lbl = "16" if milestone == "16h" else "8" if milestone == "8h" else "2"
-                        msg = f"⏰ *CẢNH BÁO: PAKH CÒN {milestone_lbl} GIỜ XỬ LÝ (DEADLINE {milestone_lbl}H)*\n\n" + format_pakh_reminder_message(row)
-                        _send_viber_report(msg.split('\n'), token=pakh_token, sender=pakh_sender)
-                        
-                        # Add new milestone + auto-complete higher ones to avoid duplicates
-                        for m in auto_complete_milestones:
-                            if m not in already_sent:
-                                already_sent.append(m)
-                        milestones_dict[str(pakh_id)] = already_sent
-                        changed = True
+                    # Add new milestone + auto-complete higher ones to avoid duplicates
+                    for m in auto_complete_milestones:
+                        if m not in already_sent:
+                            already_sent.append(m)
+                    milestones_dict[str(pakh_id)] = already_sent
+                    changed = True
 
     # Limit state size to prevent infinite growth (keep last 500 records)
     if len(state["alerted_new"]) > 500:
