@@ -843,6 +843,7 @@ class SmartWScraper:
 
         # Load site cell counts reference
         import json as _json
+        import re
         cell_count_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'site_cell_count.json')
         site_cell_ref = {}
         try:
@@ -851,12 +852,26 @@ class SmartWScraper:
         except Exception as e:
             logger.warning(f'Cannot load site_cell_count.json: {e}')
 
+        def _extract_cellid_from_ref(obj_ref: str) -> str:
+            if not obj_ref:
+                return ""
+            match = re.search(r'(?:UtranCell|EUtranCell|Lncel)=([^,]+)', obj_ref, re.IGNORECASE)
+            if match:
+                return match.group(1)
+            return ""
+
         mll_tram = []
         cell_candidates = []
 
         # Step 1: Separate no-cellid (always MLL Trạm) from cell-level alarms
         for r in all_data:
             cellid = r.get('cellid') or ''
+            obj_ref = r.get('objectReference') or ''
+            if not cellid and obj_ref:
+                cellid = _extract_cellid_from_ref(obj_ref)
+                if cellid:
+                    r['cellid'] = cellid
+            
             site = r.get('site') or ''
             if not cellid or cellid == site:
                 mll_tram.append(r)

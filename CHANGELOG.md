@@ -1,5 +1,18 @@
 # Changelog
 
+## [2026-06-19]
+### Fixed
+- **PAKH Viber Notification Failover**: Khắc phục lỗi tính năng PAKH không gửi Viber do token riêng `pakh_token` chưa được đăng ký webhook đầy đủ. Cấu hình tự động nạp Viber config và tự động chuyển hướng gửi bản tin PAKH vào kênh **Cảnh báo SmartW** (`viber_bot_token_alarms`) nếu không cấu hình token riêng `viber_bot_token_pakh` trong database.
+
+## [2026-06-18]
+### Added
+- **Cell Inventory Import (V2)**: Khởi tạo bảng `datacells` trên Supabase V2 và viết script [import_cells.py](file:///Users/cang_it/Antigravity/TVT3/scripts/import_cells.py) để đồng bộ thông tin cell từ file Excel trên Google Drive. Tiến hành nạp thành công **2.725 cell** của các trạm đang hoạt động.
+- **Cell Count Sync**: Sinh tự động file cấu hình số lượng cell `site_cell_count.json` lưu tại thư mục dữ liệu của cả `backend` và `web-app`.
+
+### Changed
+- **Scraper MLL False Promotion Fix**: Nâng cấp logic cào cảnh báo MLL (`scrape_mll_all`) trong [scraper.py](file:///Users/cang_it/Antigravity/TVT3/backend/smartw/scraper.py#L850-L865) để bóc tách cell ID từ trường `objectReference` (cho thiết bị Ericsson 3G/4G) khi API trả về `null`. Giúp sửa lỗi nhận diện nhầm các lỗi đơn lẻ mức cell thành MLL Trạm (ví dụ trạm Phú Lâm 4 - DNTP18).
+- **Flapping Alerts Fix**: Chỉnh sửa hàm `check_and_alert_flapping` trong [smartw_worker.py](file:///Users/cang_it/Antigravity/TVT3/backend/smartw_worker.py#L1228-L1233) để loại bỏ số lượng (`count`) khỏi khóa chống trùng lặp `alert_key`, ngăn việc hệ thống gửi spam tin nhắn chập chờn liên tiếp (3 lần, 4 lần, 5 lần) cho cùng một trạm trong ngày.
+
 ## [2026-06-17]
 ### Added
 - **Telegram Bot V2 Migration (Phase 02)**: Di chuyển hoàn tất Telegram Bot từ `web-app/bot_telegram_v2.py` sang `backend/bot_telegram.py`. Làm sạch toàn bộ dependencies Flask/SQLAlchemy và kết nối trực tiếp Supabase V2.

@@ -157,3 +157,72 @@ SELECT
     created_at,
     updated_at
 FROM datasites;
+
+-- ==========================================
+-- 7. Bảng datacells (Danh sách cell chi tiết)
+-- ==========================================
+CREATE TABLE IF NOT EXISTS datacells (
+    cell_id TEXT PRIMARY KEY, -- e.g., 'DNIBLO00BM3EC'
+    site_id TEXT REFERENCES datasites(site_id) ON DELETE CASCADE,
+    cell_name_old TEXT,
+    cell_name_new TEXT,
+    ran TEXT, -- '3G', '4G', '5G'
+    vendor TEXT, -- 'NOKIA', 'ERICSSON'
+    pci_psc INTEGER,
+    node_id INTEGER,
+    cell_idx INTEGER, -- Cell-ID number (sector/frequency index)
+    longitude NUMERIC,
+    latitude NUMERIC,
+    status TEXT DEFAULT 'ACTIVE',
+    metadata JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_datacells_site_id ON datacells(site_id);
+CREATE INDEX IF NOT EXISTS idx_datacells_ran ON datacells(ran);
+
+-- ==========================================
+-- 8. Bảng technical_assets (Thông tin tài sản kỹ thuật - Planned)
+-- ==========================================
+CREATE TABLE IF NOT EXISTS technical_assets (
+    asset_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    site_id TEXT REFERENCES datasites(site_id) ON DELETE CASCADE,
+    name TEXT NOT NULL, -- e.g., 'MÁY PHÁT ĐIỆN VIKYNO', 'TỔ ACCU VISION'
+    category TEXT, -- 'may_lanh', 'may_phat_dien', 'accu', 'tu_nguon', 'anten'
+    serial_number TEXT,
+    manufacturer TEXT,
+    product_code TEXT,
+    condition TEXT, -- 'HOẠT ĐỘNG TỐT', 'HỎNG HOÀN TOÀN'
+    date_in_use DATE,
+    warranty_expiry DATE,
+    quantity INTEGER DEFAULT 1,
+    details JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_technical_assets_site_id ON technical_assets(site_id);
+CREATE INDEX IF NOT EXISTS idx_technical_assets_category ON technical_assets(category);
+
+-- ==========================================
+-- 9. Bảng site_cabinets (Thông tin tủ thiết bị 3G/4G/5G - Planned)
+-- ==========================================
+CREATE TABLE IF NOT EXISTS site_cabinets (
+    cabinet_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    site_id TEXT REFERENCES datasites(site_id) ON DELETE CASCADE,
+    name TEXT NOT NULL, -- e.g., 'TỦ THIẾT BỊ 3G/4G NOKIA', 'TỦ ERICSSON 5G'
+    tech_type TEXT, -- '3G', '4G', '5G', 'HYBRID'
+    manufacturer TEXT, -- 'NOKIA', 'ERICSSON'
+    model TEXT, -- e.g., 'AirScale', 'BBU 5216'
+    serial_number TEXT,
+    bbu_count INTEGER DEFAULT 1,
+    card_layout JSONB DEFAULT '[]'::jsonb, -- e.g., [{'slot': 1, 'name': 'ASIA', 'serial': '...'}]
+    power_consumption NUMERIC, -- kW
+    status TEXT DEFAULT 'ACTIVE',
+    metadata JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_site_cabinets_site_id ON site_cabinets(site_id);

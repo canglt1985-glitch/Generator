@@ -922,7 +922,27 @@ def format_pakh_reminder_message(row: dict) -> str:
 def process_pakh_alerts(pakh_list: list):
     """Process scraped PAKH list: detect new tickets and expiring tickets, and alert to Viber."""
     state_file = os.path.join(DATA_DIR, 'pakh_sent_alerts.json')
-    pakh_token = "56b57ae5bbb11e4f-b8084d4fec7bf6ee-e681b83f2f40f110"
+    
+    # Load Viber configuration dynamically
+    pakh_token = None
+    pakh_sender = None
+    config_path = os.path.join(current_dir, 'data', 'system_config.json')
+    if os.path.exists(config_path):
+        try:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                cfg = json.load(f)
+                pakh_token = cfg.get('viber_bot_token_pakh')
+                pakh_sender = cfg.get('viber_sender_id_pakh')
+                if not pakh_token:
+                    pakh_token = cfg.get('viber_bot_token_alarms')
+                    pakh_sender = "OMu7ptWb9vbA4pvi5QfVjQ=="
+        except Exception as ce:
+            logger.warning(f"Failed to load Viber config for PAKH alerts: {ce}")
+            
+    # Default fallback to original hardcoded pakh bot token if not configured at all
+    if not pakh_token:
+        pakh_token = "56b57ae5bbb11e4f-b8084d4fec7bf6ee-e681b83f2f40f110"
+        pakh_sender = "7DjCba+6SC7OvtozmG+ySQ=="
     
     # Load state
     state = {"alerted_new": [], "alerted_expiring": [], "alerted_expiring_milestones": {}}
@@ -962,7 +982,7 @@ def process_pakh_alerts(pakh_list: list):
         # 1. Alert for NEW tickets
         if pakh_id not in state["alerted_new"]:
             msg = format_pakh_message(row)
-            _send_viber_report(msg.split('\n'), token=pakh_token)
+            _send_viber_report(msg.split('\n'), token=pakh_token, sender=pakh_sender)
             state["alerted_new"].append(pakh_id)
             changed = True
 
@@ -992,7 +1012,7 @@ def process_pakh_alerts(pakh_list: list):
                     if milestone not in already_sent:
                         milestone_lbl = "16" if milestone == "16h" else "8" if milestone == "8h" else "2"
                         msg = f"⏰ *CẢNH BÁO: PAKH CÒN {milestone_lbl} GIỜ XỬ LÝ (DEADLINE {milestone_lbl}H)*\n\n" + format_pakh_reminder_message(row)
-                        _send_viber_report(msg.split('\n'), token=pakh_token)
+                        _send_viber_report(msg.split('\n'), token=pakh_token, sender=pakh_sender)
                         
                         # Add new milestone + auto-complete higher ones to avoid duplicates
                         for m in auto_complete_milestones:
@@ -1227,8 +1247,8 @@ def check_and_alert_flapping(all_new_alarms: dict):
             
             # Check threshold (>= 3 times)
             if count >= 3:
-                # We alert on the 3rd time, 4th time, etc. but only once per count landmark
-                alert_key = f"{site}_{ttype}_{count}"
+                # Alert once per site and alarm type per day (prevent spamming 4, 5, etc. times)
+                alert_key = f"{site}_{ttype}"
                 if alert_key not in history_data["alerted"]:
                     site_label = _get_site_label(site)
                     alarm_name = type_names.get(ttype, ttype)
