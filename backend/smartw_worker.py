@@ -705,18 +705,49 @@ def sync_alarms_to_supabase(result: dict):
         logger.error(f"Supabase Sync Error: Failed to clear stale alarms: {e}")
 
 
+def upload_to_supabase_storage(local_path: str, destination_name: str):
+    """Upload a local file to Supabase Storage smartw_data bucket."""
+    if not supabase:
+        logger.warning("Supabase client not initialized, skipping storage upload.")
+        return
+    try:
+        with open(local_path, 'rb') as f:
+            supabase.storage.from_("smartw_data").upload(
+                path=destination_name,
+                file=f,
+                file_options={"x-upsert": "true"}
+            )
+        logger.info(f"Supabase Storage: Uploaded {destination_name} successfully.")
+    except Exception as e:
+        logger.error(f"Supabase Storage Error: Failed to upload {destination_name}: {e}")
+
+
 def save_vhkt_to_local_json(vhkt_raw: dict):
-    """Save daily VHKT SLA records into a local JSON file."""
+    """Save daily VHKT SLA records into a local JSON file and upload to Supabase storage."""
     if not vhkt_raw or not vhkt_raw.get('data'):
         return
+
+    # Filter by TEAM_ALARM before saving
+    from smartw.scraper import TEAM_ALARM
+    filtered_data = [r for r in vhkt_raw.get('data', []) if TEAM_ALARM in (r.get('to_vt') or '')]
+
+    payload = {
+        "scraped_at": vhkt_raw.get('scraped_at') or datetime.now().isoformat(),
+        "count": len(filtered_data),
+        "data": filtered_data
+    }
 
     local_path = os.path.join(DATA_DIR, 'vhkt_sla.json')
     try:
         with open(local_path, 'w', encoding='utf-8') as f:
-            json.dump(vhkt_raw, f, ensure_ascii=False, indent=2)
-        logger.info(f"Local Storage: Saved {len(vhkt_raw.get('data', []))} SLA records to vhkt_sla.json")
+            json.dump(payload, f, ensure_ascii=False, indent=2)
+        logger.info(f"Local Storage: Saved {len(filtered_data)} SLA records to vhkt_sla.json")
+        
+        # Upload to Supabase Storage
+        upload_to_supabase_storage(local_path, 'vhkt_sla.json')
     except Exception as e:
-        logger.error(f"Local Storage Error: Failed to save SLA records to file: {e}")
+        logger.error(f"Error saving/uploading VHKT SLA: {e}")
+
 
 
 def send_daily_flapping_report(vhkt_data: list):
@@ -1043,50 +1074,28 @@ def process_pakh_alerts(pakh_list: list):
             logger.error(f"Failed to save PAKH alerts state: {e}")
 
 
-def sync_pakh_to_supabase(pakh_list: list):
-    """Upsert scraped PAKH tickets into Supabase smartw_pakh table."""
-    if not supabase:
-        logger.warning("Supabase client not initialized, skipping PAKH DB sync.")
-        return
-        
+def save_pakh_to_storage(pakh_list: list):
+    """Save scraped PAKH tickets to pakh.json and upload to Supabase storage."""
     if not pakh_list:
         return
-
-    all_rows = []
-    for row in pakh_list:
-        pakh_id = row.get('id')
-        if not pakh_id:
-            continue
-            
-        all_rows.append({
-            "id": pakh_id,
-            "so_thue_bao": row.get('soThueBao'),
-            "loai_thue_bao": row.get('loaiThueBao'),
-            "noi_dung_phan_anh": row.get('noiDungPhanAnh'),
-            "tinh_thanh_pho": row.get('tinhThanhPho'),
-            "phuong_xa": row.get('phuongXa'),
-            "loai_phan_anh": row.get('loaiPhanAnh'),
-            "hien_tuong": row.get('hienTuong'),
-            "thong_tin_xu_ly": row.get('thongTinXuLy'),
-            "trang_thai_wo": row.get('trangThaiWo'),
-            "thoi_gian_ghi_nhan": row.get('thoiGianGhiNhan'),
-            "tg_tao_wo": row.get('tgTaoWo'),
-            "tg_con_lai": row.get('tgConLai'),
-            "ma_tram": row.get('maTram'),
-            "province_code": row.get('provinceCode'),
-            "noc_status": row.get('nocStatus'),
-            "scraped_at": __import__('datetime').datetime.now().isoformat() + '+07:00'
-        })
         
-    if all_rows:
-        try:
-            chunk_size = 100
-            for i in range(0, len(all_rows), chunk_size):
-                chunk = all_rows[i:i+chunk_size]
-                supabase.table("smartw_pakh").upsert(chunk).execute()
-            logger.info(f"Supabase Sync: Upserted {len(all_rows)} PAKH tickets.")
-        except Exception as e:
-            logger.error(f"Supabase Sync Error: Failed to upsert PAKH: {e}")
+    local_path = os.path.join(DATA_DIR, 'pakh.json')
+    try:
+        # Save to local JSON first
+        payload = {
+            "scraped_at": datetime.now().isoformat(),
+            "count": len(pakh_list),
+            "data": pakh_list
+        }
+        with open(local_path, 'w', encoding='utf-8') as f:
+            json.dump(payload, f, ensure_ascii=False, indent=2)
+        logger.info(f"Local Storage: Saved {len(pakh_list)} PAKH tickets to pakh.json")
+        
+        # Upload to Supabase Storage
+        upload_to_supabase_storage(local_path, 'pakh.json')
+    except Exception as e:
+        logger.error(f"Error saving/uploading PAKH: {e}")
+
 
 
 def run_pakh_poll():
@@ -1174,9 +1183,9 @@ def run_pakh_poll():
             pakh_list = result.get('pakh', [])
             process_pakh_alerts(pakh_list)
             try:
-                sync_pakh_to_supabase(pakh_list)
+                save_pakh_to_storage(pakh_list)
             except Exception as e:
-                logger.error(f"Error syncing PAKH to Supabase inside worker: {e}")
+                logger.error(f"Error saving/uploading PAKH: {e}")
 
         status['last_pakh_poll'] = datetime.now().isoformat()
 
