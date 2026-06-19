@@ -1068,11 +1068,8 @@ def process_pakh_alerts(pakh_list: list):
             auto_complete_milestones = []
             if 0 < remaining <= 2 * 3600:
                 milestone = "2h"
-                auto_complete_milestones = ["2h", "6h", "8h", "16h"]
-            elif 2 * 3600 < remaining <= 6 * 3600:
-                milestone = "6h"
-                auto_complete_milestones = ["6h", "8h", "16h"]
-            elif 6 * 3600 < remaining <= 8 * 3600:
+                auto_complete_milestones = ["2h", "8h", "16h"]
+            elif 2 * 3600 < remaining <= 8 * 3600:
                 milestone = "8h"
                 auto_complete_milestones = ["8h", "16h"]
             elif 8 * 3600 < remaining <= 16 * 3600:
@@ -1082,7 +1079,7 @@ def process_pakh_alerts(pakh_list: list):
             if milestone:
                 already_sent = milestones_dict.get(str(pakh_id), [])
                 if milestone not in already_sent:
-                    milestone_lbl = "16" if milestone == "16h" else "8" if milestone == "8h" else "6" if milestone == "6h" else "2"
+                    milestone_lbl = "16" if milestone == "16h" else "8" if milestone == "8h" else "2"
                     msg = f"⏰ *CẢNH BÁO: PAKH CÒN {milestone_lbl} GIỜ XỬ LÝ (DEADLINE {milestone_lbl}H)*\n\n" + format_pakh_reminder_message(row)
                     _send_viber_report(msg.split('\n'), token=pakh_token, sender=pakh_sender)
                     
