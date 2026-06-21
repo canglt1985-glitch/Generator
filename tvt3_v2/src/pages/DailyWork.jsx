@@ -141,8 +141,8 @@ export default function DailyWork() {
 
   useEffect(() => {
     if (displayName) {
-      setLogStaff(displayName);
-      setIssueReporter(displayName);
+      setLogStaff(prev => (prev === 'admin' || !prev ? displayName : prev));
+      setIssueReporter(prev => (prev === 'admin' || !prev ? displayName : prev));
     }
   }, [displayName]);
 
@@ -1574,17 +1574,29 @@ export default function DailyWork() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Hạng mục</label>
-                <select 
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                  value={logCategory}
-                  onChange={(e) => setLogCategory(e.target.value)}
-                >
-                  {categoriesWorkV1.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Hạng mục</label>
+                  <select 
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                    value={logCategory}
+                    onChange={(e) => setLogCategory(e.target.value)}
+                  >
+                    {categoriesWorkV1.map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Nhân viên thực hiện</label>
+                  <input 
+                    type="text" 
+                    placeholder="Nhập tên nhân viên..."
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 font-medium"
+                    value={logStaff}
+                    onChange={(e) => setLogStaff(e.target.value)}
+                  />
+                </div>
               </div>
 
               <div>

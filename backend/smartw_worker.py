@@ -738,7 +738,7 @@ def upload_to_supabase_storage(local_path: str, destination_name: str):
             supabase.storage.from_("smartw_data").upload(
                 path=destination_name,
                 file=f,
-                file_options={"x-upsert": "true"}
+                file_options={"x-upsert": "true", "cacheControl": "0", "cache_control": "0"}
             )
         logger.info(f"Supabase Storage: Uploaded {destination_name} successfully.")
     except Exception as e:
@@ -977,6 +977,46 @@ def format_pakh_reminder_message(row: dict) -> str:
     return msg
 
 
+def format_pakh_closed_message(c_id: str, details: dict) -> str:
+    so_thue_bao = details.get("soThueBao") or ""
+    tinh = details.get("tinhThanhPho") or ""
+    xa = details.get("phuongXa") or ""
+    dia_ban = f"{xa}, {tinh}".strip(', ')
+    
+    tram_cell = details.get("maTram") or ""
+    tram_cell_display = tram_cell
+    if tram_cell:
+        try:
+            data = _get_datasites_list()
+            matched_site = None
+            tram_upper = tram_cell.strip().upper()
+            for s in sorted(data, key=lambda x: len(x.get('site_id') or ''), reverse=True):
+                s_id = (s.get("site_id") or "").upper()
+                s_old = (s.get("site_id_old") or "").upper()
+                if s_id and tram_upper.startswith(s_id):
+                    matched_site = s
+                    break
+                if s_old and tram_upper.startswith(s_old):
+                    matched_site = s
+                    break
+            if matched_site:
+                s_id = matched_site.get("site_id") or ""
+                s_old = matched_site.get("site_id_old") or ""
+                if s_old and s_id != s_old:
+                    tram_cell_display = f"{tram_cell} (mới: {s_id} / cũ: {s_old})"
+                elif s_id:
+                    tram_cell_display = f"{tram_cell} (mới: {s_id})"
+        except Exception as e:
+            logger.error(f'SmartW format_pakh_closed_message site mapping error: {e}')
+
+    msg = f"""✅ *PAKH ĐÃ ĐÓNG / XỬ LÝ XONG*
+
+- SĐT PHẢN ÁNH: {so_thue_bao}
+- ĐỊA BÀN: {dia_ban}
+- TRẠM / CELL: {tram_cell_display}"""
+    return msg
+
+
 def parse_vietnamese_duration(duration_str: str) -> int:
     """Parse Vietnamese duration string (e.g. '22 giờ 37 phút', '3 giờ', '15 phút') to total seconds."""
     if not duration_str:
@@ -1028,7 +1068,7 @@ def process_pakh_alerts(pakh_list: list):
         pakh_sender = "7DjCba+6SC7OvtozmG+ySQ=="
     
     # Load state
-    state = {"alerted_new": [], "alerted_expiring": [], "alerted_expiring_milestones": {}}
+    state = {"alerted_new": [], "alerted_expiring": [], "alerted_expiring_milestones": {}, "alerted_details": {}}
     if os.path.exists(state_file):
         try:
             with open(state_file, 'r', encoding='utf-8') as f:
@@ -1036,14 +1076,16 @@ def process_pakh_alerts(pakh_list: list):
                 if "alerted_new" not in state: state["alerted_new"] = []
                 if "alerted_expiring" not in state: state["alerted_expiring"] = []
                 if "alerted_expiring_milestones" not in state: state["alerted_expiring_milestones"] = {}
+                if "alerted_details" not in state: state["alerted_details"] = {}
         except Exception:
             pass
 
     # Migrate old format if needed
     milestones_dict = state.setdefault("alerted_expiring_milestones", {})
     for old_id in state.get("alerted_expiring", []):
-        if old_id not in milestones_dict:
-            milestones_dict[old_id] = ["16h", "8h"]
+        old_id_str = str(old_id)
+        if old_id_str not in milestones_dict:
+            milestones_dict[old_id_str] = ["16h", "8h"]
 
     changed = False
 
@@ -1057,16 +1099,36 @@ def process_pakh_alerts(pakh_list: list):
                 continue
         return None
 
+    # Ensure all IDs in alerted_new are strings for consistent comparison
+    state["alerted_new"] = [str(x) for x in state["alerted_new"]]
+
     for row in pakh_list:
         pakh_id = _get_val(row, ['pakh', 'ma_pa', 'maPa', 'mã pa', 'id', 'ticket_id', 'ticketId', 'soPhanAnh', 'sđt', 'sdt', 'soThueBao'])
         if not pakh_id:
             continue
 
+        pakh_id_str = str(pakh_id)
+
+        # Save details for active tickets to support closed notifications later
+        if "alerted_details" not in state:
+            state["alerted_details"] = {}
+        
+        current_detail = state["alerted_details"].get(pakh_id_str, {})
+        new_detail = {
+            "soThueBao": row.get('soThueBao') or '',
+            "maTram": row.get('maTram') or '',
+            "tinhThanhPho": row.get('tinhThanhPho') or '',
+            "phuongXa": row.get('phuongXa') or row.get('phuong_xa') or ''
+        }
+        if current_detail != new_detail:
+            state["alerted_details"][pakh_id_str] = new_detail
+            changed = True
+
         # 1. Alert for NEW tickets
-        if pakh_id not in state["alerted_new"]:
+        if pakh_id_str not in state["alerted_new"]:
             msg = format_pakh_message(row)
             _send_viber_report(msg.split('\n'), token=pakh_token, sender=pakh_sender)
-            state["alerted_new"].append(pakh_id)
+            state["alerted_new"].append(pakh_id_str)
             changed = True
 
         # 2. Alert for expiring tickets (milestones: 16h, 8h, 2h)
@@ -1101,7 +1163,7 @@ def process_pakh_alerts(pakh_list: list):
                 auto_complete_milestones = ["16h"]
                 
             if milestone:
-                already_sent = milestones_dict.get(str(pakh_id), [])
+                already_sent = milestones_dict.get(pakh_id_str, [])
                 if milestone not in already_sent:
                     milestone_lbl = "16" if milestone == "16h" else "8" if milestone == "8h" else "2"
                     msg = f"⏰ *CẢNH BÁO: PAKH CÒN {milestone_lbl} GIỜ XỬ LÝ (DEADLINE {milestone_lbl}H)*\n\n" + format_pakh_reminder_message(row)
@@ -1111,8 +1173,44 @@ def process_pakh_alerts(pakh_list: list):
                     for m in auto_complete_milestones:
                         if m not in already_sent:
                             already_sent.append(m)
-                    milestones_dict[str(pakh_id)] = already_sent
+                    milestones_dict[pakh_id_str] = already_sent
                     changed = True
+
+    # 3. Detect closed tickets
+    active_ids = set()
+    for row in pakh_list:
+        pakh_id = _get_val(row, ['pakh', 'ma_pa', 'maPa', 'mã pa', 'id', 'ticket_id', 'ticketId', 'soPhanAnh', 'sđt', 'sdt', 'soThueBao'])
+        if pakh_id:
+            active_ids.add(str(pakh_id))
+
+    closed_ids = []
+    for alerted_id in state["alerted_new"]:
+        if alerted_id not in active_ids:
+            closed_ids.append(alerted_id)
+
+    if closed_ids:
+        for c_id in closed_ids:
+            details = state.get("alerted_details", {}).get(c_id, {})
+            if details and details.get("soThueBao"):
+                msg = format_pakh_closed_message(c_id, details)
+            else:
+                msg = f"✅ *PAKH ĐÃ ĐÓNG / XỬ LÝ XONG*\n\n- ID: {c_id}"
+                
+            try:
+                _send_viber_report(msg.split('\n'), token=pakh_token, sender=pakh_sender)
+                logger.info(f"Viber Alert: Sent closed notification for PAKH {c_id}")
+            except Exception as ve:
+                logger.error(f"Failed to send Viber closed alert for PAKH {c_id}: {ve}")
+            
+            # Remove from state to clear and prevent growth
+            if c_id in state["alerted_new"]:
+                state["alerted_new"].remove(c_id)
+            if c_id in milestones_dict:
+                milestones_dict.pop(c_id, None)
+            if "alerted_details" in state and c_id in state["alerted_details"]:
+                state["alerted_details"].pop(c_id, None)
+                
+            changed = True
 
     # Limit state size to prevent infinite growth (keep last 500 records)
     if len(state["alerted_new"]) > 500:
@@ -1126,6 +1224,12 @@ def process_pakh_alerts(pakh_list: list):
     if len(milestones_dict) > 500:
         keys_to_keep = list(milestones_dict.keys())[-500:]
         state["alerted_expiring_milestones"] = {k: milestones_dict[k] for k in keys_to_keep}
+        changed = True
+
+    # Trim details dict
+    if "alerted_details" in state and len(state["alerted_details"]) > 500:
+        keys_to_keep = list(state["alerted_details"].keys())[-500:]
+        state["alerted_details"] = {k: state["alerted_details"][k] for k in keys_to_keep}
         changed = True
 
     if changed:

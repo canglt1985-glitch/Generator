@@ -53,14 +53,13 @@ export default function VhktRan() {
   // Fetch PAKH from Supabase Storage public JSON file
   async function fetchPakh() {
     try {
-      const { data } = supabase.storage.from('smartw_data').getPublicUrl('pakh.json');
-      if (data && data.publicUrl) {
-        const res = await fetch(`${data.publicUrl}?t=${Date.now()}`);
-        if (res.ok) {
-          const json = await res.json();
-          setPakhList(json.data || []);
-          setPakhScrapedAt(json.scraped_at || '');
-        }
+      const { data, error } = await supabase.storage.from('smartw_data').download('pakh.json');
+      if (error) throw error;
+      if (data) {
+        const text = await data.text();
+        const json = JSON.parse(text);
+        setPakhList(json.data || []);
+        setPakhScrapedAt(json.scraped_at || '');
       }
     } catch (err) {
       console.error('Error fetching PAKH from storage:', err);
@@ -70,14 +69,13 @@ export default function VhktRan() {
   // Fetch VHKT SLA from Supabase Storage public JSON file
   async function fetchVhktSla() {
     try {
-      const { data } = supabase.storage.from('smartw_data').getPublicUrl('vhkt_sla.json');
-      if (data && data.publicUrl) {
-        const res = await fetch(`${data.publicUrl}?t=${Date.now()}`);
-        if (res.ok) {
-          const json = await res.json();
-          setVhktData(json.data || []);
-          setVhktScrapedAt(json.scraped_at || '');
-        }
+      const { data, error } = await supabase.storage.from('smartw_data').download('vhkt_sla.json');
+      if (error) throw error;
+      if (data) {
+        const text = await data.text();
+        const json = JSON.parse(text);
+        setVhktData(json.data || []);
+        setVhktScrapedAt(json.scraped_at || '');
       }
     } catch (err) {
       console.error('Error fetching VHKT SLA from storage:', err);
