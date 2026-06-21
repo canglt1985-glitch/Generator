@@ -128,6 +128,28 @@ def _get_site_label(site_id: str) -> str:
     return f"*{site_id}*"
 
 
+def _is_managed_site(site_id: str) -> bool:
+    """Check if the site exists in datasites table (i.e. managed by Telecom Team 3)."""
+    if not site_id:
+        return False
+    base_id, _ = _split_site_id(site_id)
+    site_upper = base_id.strip().upper()
+    try:
+        data = _get_datasites_list()
+        if not data:
+            # Fallback if datasites list cannot be fetched: assume managed to avoid missing alerts
+            return True
+        for s in data:
+            s_id = (s.get("site_id") or "").upper()
+            s_old = (s.get("site_id_old") or "").upper()
+            if site_upper == s_id or site_upper == s_old:
+                return True
+    except Exception as e:
+        logger.error(f'Error checking managed site {site_id}: {e}')
+        return True
+    return False
+
+
 def _site_key(alarm: dict) -> str:
     """Extract a consistent site key from raw alarm fields."""
     return alarm.get('site_id') or alarm.get('site') or alarm.get('tram') or alarm.get('ne') or 'Unknown'
@@ -762,6 +784,11 @@ def send_daily_flapping_report(vhkt_data: list):
         logger.info("SmartW Worker: No VHKT data to analyze, skipping report.")
         return
         
+    vhkt_data = [row for row in vhkt_data if _is_managed_site(row.get('tram') or '')]
+    if not vhkt_data:
+        logger.info("SmartW Worker: No TVT3 managed VHKT data to analyze, skipping report.")
+        return
+        
     sep = '------------'
     lines = ["📊 *BÁO CÁO CHẬP CHỜN & MLL KÉO DÀI (HÀNG NGÀY)* 📊"]
     lines.append(sep)
@@ -1277,6 +1304,8 @@ def check_and_alert_flapping(all_new_alarms: dict):
             site = _site_key(alarm)
             if site == 'Unknown':
                 continue
+            if not _is_managed_site(site):
+                continue
                 
             event_time = datetime.now().isoformat()
             history_data["history"].append({
@@ -1470,13 +1499,13 @@ def run_alarm_poll():
                 sep = '------------'
                 
                 # Filter for real-time reporting (skip mll_cell)
-                new_md = all_new.get('md', [])
-                new_mpd = all_new.get('mpd', [])
-                new_mll = all_new.get('mll', [])
+                new_md = [a for a in all_new.get('md', []) if _is_managed_site(_site_key(a))]
+                new_mpd = [a for a in all_new.get('mpd', []) if _is_managed_site(_site_key(a))]
+                new_mll = [a for a in all_new.get('mll', []) if _is_managed_site(_site_key(a))]
                 
-                cl_md = [a for (t, a) in all_cleared if t == 'md']
-                cl_mpd = [a for (t, a) in all_cleared if t == 'mpd']
-                cl_mll = [a for (t, a) in all_cleared if t == 'mll']
+                cl_md = [a for (t, a) in all_cleared if t == 'md' and _is_managed_site(_site_key(a))]
+                cl_mpd = [a for (t, a) in all_cleared if t == 'mpd' and _is_managed_site(_site_key(a))]
+                cl_mll = [a for (t, a) in all_cleared if t == 'mll' and _is_managed_site(_site_key(a))]
 
                 if not (new_md or new_mpd or new_mll or cl_md or cl_mpd or cl_mll):
                     # No real-time updates to report (only celloff changes)
@@ -1950,10 +1979,10 @@ def send_periodic_full_report():
     logger.info("SmartW Worker: 🕒 Starting periodic 2-hour review report...")
     
     # 1. Load latest active data from disk
-    md_list = _load_smartw_json('md.json')
-    mpd_list = _load_smartw_json('mpd.json')
-    mll_list = _load_smartw_json('mll.json')
-    cell_list = _load_smartw_json('mll_cell.json')
+    md_list = [r for r in _load_smartw_json('md.json') if _is_managed_site(_site_key(r))]
+    mpd_list = [r for r in _load_smartw_json('mpd.json') if _is_managed_site(_site_key(r))]
+    mll_list = [r for r in _load_smartw_json('mll.json') if _is_managed_site(_site_key(r))]
+    cell_list = [r for r in _load_smartw_json('mll_cell.json') if _is_managed_site(_site_key(r))]
     
     # Check if empty
     if not any([md_list, mpd_list, mll_list, cell_list]):
