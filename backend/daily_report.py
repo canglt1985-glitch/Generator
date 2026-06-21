@@ -394,28 +394,29 @@ def generate_daily_report_data(target_date_str=None):
 def format_daily_report_message(data):
     """Format statistics as Markdown message."""
     site_map = get_site_id_mapping()
+    sep = "------------"
     lines = [
-        f"📊 *BÁO CÁO VẬN HÀNH & CHI PHÍ - Ngày {data['date']}*",
-        "=====================================",
+        f"📊 *BÁO CÁO VẬN HÀNH & CHI PHÍ ({data['date']})*",
+        sep,
         "🚀 *TIÊU THỤ & CHẠY MÁY TRONG NGÀY:*",
-        f"• Tổng lượt chạy máy: `{data['runs_count']}` lượt (`{round(data['total_hours'], 1)}` giờ)",
-        f"• Nhiên liệu tiêu hao: `{round(data['total_fuel'], 1)}` lít",
-        f"• Số tiền chạy máy: `{data['run_revenue']:,.0f}` VND",
+        f"• Tổng chạy: `{data['runs_count']}` lượt (`{round(data['total_hours'], 1)}`h)",
+        f"• Tiêu hao: `{round(data['total_fuel'], 1)}`L",
+        f"• Doanh thu: `{data['run_revenue']:,.0f}` VND",
     ]
     
     if data['runs_count'] > 0:
         top_st = data['top_station']
         top_st_old = site_map.get(top_st.strip().upper(), top_st)
-        lines.append(f"• Trạm chạy nhiều nhất: `{top_st_old}` ({data['top_station_hours']}h)")
+        lines.append(f"• Chạy nhiều nhất: `{top_st_old}` ({data['top_station_hours']}h)")
         
     lines.extend([
         "",
-        "💰 *CHI PHÍ MUA NHIÊN LIỆU TRONG NGÀY:*",
+        "💰 *CHI PHÍ NHIÊN LIỆU TRONG NGÀY:*",
     ])
     
     has_daily_purchase = False
     if data['purchased_cx222_dau_qty'] > 0 or data['purchased_cx222_xang_qty'] > 0:
-        lines.append("• Mua từ CX 222:")
+        lines.append("• Mua CX 222:")
         if data['purchased_cx222_dau_qty'] > 0:
             lines.append(f"  - Dầu: `{round(data['purchased_cx222_dau_qty'], 1)}`L (`{data['purchased_cx222_dau_cost']:,.0f}` VND)")
         if data['purchased_cx222_xang_qty'] > 0:
@@ -423,7 +424,7 @@ def format_daily_report_message(data):
         has_daily_purchase = True
 
     if data['purchased_vnpt_vtl_dau_qty'] > 0 or data['purchased_vnpt_vtl_xang_qty'] > 0:
-        lines.append("• Mua từ VNPT/VTL:")
+        lines.append("• Mua VNPT/VTL:")
         if data['purchased_vnpt_vtl_dau_qty'] > 0:
             lines.append(f"  - Dầu: `{round(data['purchased_vnpt_vtl_dau_qty'], 1)}`L (`{data['purchased_vnpt_vtl_dau_cost']:,.0f}` VND)")
         if data['purchased_vnpt_vtl_xang_qty'] > 0:
@@ -457,19 +458,19 @@ def format_daily_report_message(data):
     )
 
     lines.extend([
-        f"➡️ *Tổng chi mua phát sinh trong ngày:* `{data['total_purchase_cost']:,.0f}` VND",
+        f"➡️ *Tổng chi trong ngày:* `{data['total_purchase_cost']:,.0f}` VND",
         "",
-        "📊 *ĐỐI CHIẾU LŨY KẾ THÁNG (MTD):*",
-        f"• Tổng tiêu hao: Dầu `{round(data['mtd']['consumed_dau_qty'], 1)}`L | Xăng `{round(data['mtd']['consumed_xang_qty'], 1)}`L",
-        f"• Tổng mua (Ledger): Dầu `{round(mtd_purchase_dau, 1)}`L | Xăng `{round(mtd_purchase_xang, 1)}`L",
-        f"• Tổng hóa đơn: Dầu `{round(data['mtd']['invoice_dau_qty'], 1)}`L | Xăng `{round(data['mtd']['invoice_xang_qty'], 1)}`L",
+        "📊 *LŨY KẾ THÁNG (MTD):*",
+        f"• Tiêu hao: Dầu `{round(data['mtd']['consumed_dau_qty'], 1)}`L | Xăng `{round(data['mtd']['consumed_xang_qty'], 1)}`L",
+        f"• Ledger mua: Dầu `{round(mtd_purchase_dau, 1)}`L | Xăng `{round(mtd_purchase_xang, 1)}`L",
+        f"• Hóa đơn: Dầu `{round(data['mtd']['invoice_dau_qty'], 1)}`L | Xăng `{round(data['mtd']['invoice_xang_qty'], 1)}`L",
         "",
-        "⏳ *YÊU CẦU CHỜ PHÊ DUYỆT:*",
-        f"• Log chạy máy cần duyệt: `{data['pending_approvals']}` dòng",
-        f"• Hóa đơn điện tử mới nhận: `{data['pending_invoices']}` hóa đơn"
+        "⏳ *CHỜ PHÊ DUYỆT:*",
+        f"• Log cần duyệt: `{data['pending_approvals']}` dòng",
+        f"• Hóa đơn mới nhận: `{data['pending_invoices']}` HĐ"
     ])
 
-    lines.append("=====================================")
+    lines.append(sep)
     
     return "\n".join(lines)
 
@@ -480,6 +481,7 @@ def format_missing_logs_message(data):
         return None
         
     site_map = get_site_id_mapping()
+    sep = "------------"
     def format_num(val):
         try:
             val_f = float(val)
@@ -490,8 +492,8 @@ def format_missing_logs_message(data):
             return str(val)
             
     lines = [
-        "⚠️ *DANH SÁCH KHÔNG CÓ LOG CHẠY MÁY (Cúp ≥ 3h):*",
-        "====================================="
+        "⚠️ *DANH SÁCH THIẾU LOG (Cúp ≥ 3h):*",
+        sep
     ]
     
     for rec in data['missing_logs']:
@@ -513,7 +515,7 @@ def format_missing_logs_message(data):
         tram_old = site_map.get(tram_id.strip().upper(), tram_id)
         lines.append(f"• Trạm `{tram_old}`: Cúp ngày `{date_display}` (~{h_str}h){refuel_str}")
         
-    lines.append("=====================================")
+    lines.append(sep)
     return "\n".join(lines)
 
 
