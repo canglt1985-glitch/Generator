@@ -992,9 +992,6 @@ def process_pakh_alerts(pakh_list: list):
                 cfg = json.load(f)
                 pakh_token = cfg.get('viber_bot_token_pakh')
                 pakh_sender = cfg.get('viber_sender_id_pakh')
-                if not pakh_token:
-                    pakh_token = cfg.get('viber_bot_token_alarms')
-                    pakh_sender = "OMu7ptWb9vbA4pvi5QfVjQ=="
         except Exception as ce:
             logger.warning(f"Failed to load Viber config for PAKH alerts: {ce}")
             

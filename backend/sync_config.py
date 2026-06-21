@@ -57,6 +57,8 @@ def sync_configs():
             'telegram_bot_token', 
             'viber_bot_token_outages', 
             'viber_bot_token_alarms', 
+            'viber_bot_token_pakh',
+            'viber_sender_id_pakh',
             'gmail_user', 
             'gmail_app_password'
         ]
