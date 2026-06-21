@@ -112,7 +112,8 @@ def _get_site_label(site_id: str) -> str:
     """Return '*ID_MOI* (ID_CU)' label for Viber display on V2."""
     if not site_id:
         return ""
-    site_upper = site_id.strip().upper()
+    base_id, suffix = _split_site_id(site_id)
+    site_upper = base_id.strip().upper()
     try:
         data = _get_datasites_list()
         for s in data:
@@ -120,8 +121,8 @@ def _get_site_label(site_id: str) -> str:
             s_old = (s.get("site_id_old") or "").upper()
             if site_upper == s_id or site_upper == s_old:
                 if s.get("site_id_old") and s.get("site_id") != s.get("site_id_old"):
-                    return f"*{s.get('site_id')}* ({s.get('site_id_old')})"
-                return f"*{s.get('site_id')}*"
+                    return f"*{s.get('site_id')}{suffix}* ({s.get('site_id_old')}{suffix})"
+                return f"*{s.get('site_id')}{suffix}*"
     except Exception as e:
         logger.error(f'SmartW _get_site_label V2 error: {e}')
     return f"*{site_id}*"
@@ -832,7 +833,6 @@ def send_daily_flapping_report(vhkt_data: list):
         lines.append("  • Không có")
         
     lines.append(sep)
-    lines.append("📢 Vui lòng kiểm tra tiếp xúc nguồn, cáp quang hoặc thiết bị tại trạm!")
     
     _send_viber_report(lines)
     logger.info(f"SmartW Worker: ✅ Daily flapping and long MLL report sent ({total_reported} entries)")
@@ -1302,9 +1302,7 @@ def check_and_alert_flapping(all_new_alarms: dict):
                         "------------",
                         f"Trạm {site_label} đang có hiện tượng chập chờn cảnh báo:",
                         f"• **Loại cảnh báo:** `{alarm_name}`",
-                        f"• **Số lần xuất hiện hôm nay:** `{count} lần`",
-                        "------------",
-                        "📢 Vui lòng kiểm tra tiếp xúc nguồn, cáp quang hoặc thiết bị tại trạm!"
+                        f"• **Số lần xuất hiện hôm nay:** `{count} lần`"
                     ]
                     flapping_alerts.append(message)
                     history_data["alerted"][alert_key] = True
