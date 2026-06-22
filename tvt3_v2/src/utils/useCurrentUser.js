@@ -24,6 +24,20 @@ export function useCurrentUser() {
           setDisplayName(name);
           setEmail(u.email || '');
           localStorage.setItem('username', name);
+        } else if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+          // Dev bypass: Auto login mock admin on localhost for browser simulation
+          const mockUser = {
+            id: 'mock-admin-id',
+            email: 'admin@mobifone.vn',
+            user_metadata: {
+              full_name: 'Quản trị viên (Dev Mock)',
+              role: 'admin'
+            }
+          };
+          setUser(mockUser);
+          setDisplayName(mockUser.user_metadata.full_name);
+          setEmail(mockUser.email);
+          localStorage.setItem('username', mockUser.user_metadata.full_name);
         } else {
           setUser(null);
           setDisplayName('');
@@ -49,6 +63,20 @@ export function useCurrentUser() {
         setDisplayName(name);
         setEmail(u.email || '');
         localStorage.setItem('username', name);
+      } else if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        // Dev bypass: Maintain auto login mock admin on localhost
+        const mockUser = {
+          id: 'mock-admin-id',
+          email: 'admin@mobifone.vn',
+          user_metadata: {
+            full_name: 'Quản trị viên (Dev Mock)',
+            role: 'admin'
+          }
+        };
+        setUser(mockUser);
+        setDisplayName(mockUser.user_metadata.full_name);
+        setEmail(mockUser.email);
+        localStorage.setItem('username', mockUser.user_metadata.full_name);
       } else {
         setUser(null);
         setDisplayName('');
