@@ -1828,7 +1828,7 @@ def run_alarm_poll():
         })
 
 
-def run_vhkt_poll():
+def run_vhkt_poll(target_date: str = None):
     """Poll VHKT daily summary.
     Called by APScheduler once at 5:00 AM.
     Uses persistent session — logs in only once, reuses for subsequent polls.
@@ -1860,7 +1860,7 @@ def run_vhkt_poll():
         try:
             await scraper._ensure_login()
 
-            results['vhkt'] = await scraper.scrape_vhkt()
+            results['vhkt'] = await scraper.scrape_vhkt(target_date)
             results['status'] = 'success'
             results['scraped_at'] = datetime.now().isoformat()
         except Exception as e:
@@ -1876,7 +1876,7 @@ def run_vhkt_poll():
                     scraper = await _get_or_create_scraper(config['username'], config['password'])
                     if scraper:
                         await scraper._ensure_login()
-                        results['vhkt'] = await scraper.scrape_vhkt()
+                        results['vhkt'] = await scraper.scrape_vhkt(target_date)
                         results['status'] = 'success'
                         results['scraped_at'] = datetime.now().isoformat()
                         logger.info('SmartW Worker: ✅ VHKT retry succeeded!')
@@ -2251,8 +2251,20 @@ if __name__ == '__main__':
         logger.info("Executing alarm poll job...")
         run_alarm_poll()
     elif args.job == 'vhkt':
-        logger.info("Executing VHKT morning poll job...")
-        run_vhkt_poll()
+        target_date = None
+        if args.date:
+            try:
+                if '-' in args.date:
+                    from datetime import datetime as _dt
+                    target_date = _dt.strptime(args.date, '%Y-%m-%d').strftime('%d/%m/%Y')
+                else:
+                    target_date = args.date
+            except Exception as e:
+                logger.error(f"Error parsing date {args.date}: {e}")
+                import sys
+                sys.exit(1)
+        logger.info(f"Executing VHKT morning poll job with date={target_date}...")
+        run_vhkt_poll(target_date)
     elif args.job == 'mfd':
         logger.info(f"Executing MFD import job with date={args.date}...")
         run_mfd_import_poll(args.date)

@@ -1003,30 +1003,34 @@ class SmartWScraper:
             search_btn = self._page.locator('button:has-text("Tìm kiếm"), input[value="Tìm kiếm"]')
             await search_btn.first.click(timeout=5000)
             await self._page.wait_for_timeout(3000)
-            await self._page.wait_for_load_state('networkidle', timeout=15000)
+            try:
+                await self._page.wait_for_load_state('networkidle', timeout=10000)
+            except Exception:
+                pass
         except Exception as e:
-            logger.warning(f'SmartW VHKT: Search button click failed: {e}')
-
-        # ── Set jqxGrid pagesize to show ALL rows ────────────────────
-        try:
-            await self._page.evaluate('''() => {
-                if (typeof $ !== 'undefined' && $('#jqxgrid').length) {
-                    $('#jqxgrid').jqxGrid({ pagesize: 1000 });
-                }
-            }''')
-            await self._page.wait_for_timeout(3000)
-            await self._page.wait_for_load_state('networkidle', timeout=15000)
-            logger.info('SmartW VHKT: Set pagesize=1000')
-        except Exception as e:
-            logger.warning(f'SmartW VHKT: Could not set pagesize: {e}')
+            logger.warning(f'SmartW VHKT: Search button click failed or not needed: {e}')
 
         # ── Parse VHKT with positional column mapping ────────────────
         all_rows = []
 
         try:
+            # Wait for grid rows to render first (ensures grid has finished initial data loading)
+            logger.info('SmartW VHKT: Waiting for grid rows to render...')
             await self._page.wait_for_selector(
-                '#contenttablejqxgrid div[role="row"]', timeout=15000
+                '#contenttablejqxgrid div[role="row"]', timeout=30000
             )
+
+            # ── Set jqxGrid pagesize to show ALL rows ────────────────────
+            try:
+                await self._page.evaluate('''() => {
+                    if (typeof $ !== 'undefined' && $('#jqxgrid').length) {
+                        $('#jqxgrid').jqxGrid({ pagesize: 1000 });
+                    }
+                }''')
+                logger.info('SmartW VHKT: Set pagesize=1000')
+                await self._page.wait_for_timeout(4000)
+            except Exception as e:
+                logger.warning(f'SmartW VHKT: Could not set pagesize: {e}')
 
             # Extract headers + ALL rows (pagesize=1000 should give everything)
             table_data = await self._page.evaluate('''() => {
@@ -1182,24 +1186,29 @@ class SmartWScraper:
             if await search_btn.count() > 0:
                 await search_btn.first.click(timeout=5000)
                 await self._page.wait_for_timeout(3000)
-                await self._page.wait_for_load_state('networkidle', timeout=15000)
+                try:
+                    await self._page.wait_for_load_state('networkidle', timeout=10000)
+                except Exception:
+                    pass
         except Exception as e:
             logger.warning(f'SmartW PAKH: Search click failed or not needed: {e}')
 
-        # Set page size to 1000 to display all entries
+        # Wait for grid rows to render first (ensures grid has finished initial data loading)
         try:
-            await self._page.evaluate('''() => {
-                if (typeof $ !== 'undefined' && $('#jqxgrid').length) {
-                    $('#jqxgrid').jqxGrid({ pagesize: 1000 });
-                }
-            }''')
-            await self._page.wait_for_timeout(3000)
-        except Exception as e:
-            logger.warning(f'SmartW PAKH: Could not set pagesize: {e}')
-
-        # Wait for grid rows to render
-        try:
-            await self._page.wait_for_selector('#contenttablejqxgrid div[role="row"]', timeout=15000)
+            logger.info('SmartW PAKH: Waiting for grid rows to render...')
+            await self._page.wait_for_selector('#contenttablejqxgrid div[role="row"]', timeout=30000)
+            
+            # Set page size to 1000 to display all entries
+            try:
+                await self._page.evaluate('''() => {
+                    if (typeof $ !== 'undefined' && $('#jqxgrid').length) {
+                        $('#jqxgrid').jqxGrid({ pagesize: 1000 });
+                    }
+                }''')
+                logger.info('SmartW PAKH: Set pagesize=1000')
+                await self._page.wait_for_timeout(4000)
+            except Exception as e:
+                logger.warning(f'SmartW PAKH: Could not set pagesize: {e}')
         except Exception as e:
             logger.error(f'SmartW PAKH: jqxGrid rows not found: {e}')
             return []
