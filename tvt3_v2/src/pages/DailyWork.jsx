@@ -95,7 +95,7 @@ export default function DailyWork() {
   const [logDate, setLogDate] = useState(new Date().toISOString().split('T')[0]);
   const [logDateDMY, setLogDateDMY] = useState(getTodayDMY());
   const [logSiteId, setLogSiteId] = useState('');
-  const [logStaff, setLogStaff] = useState(localStorage.getItem('username') || 'admin');
+  const [logStaff, setLogStaff] = useState(user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'admin');
   const [logContent, setLogContent] = useState('');
   const [logCategory, setLogCategory] = useState('C2-Kiểm tra nhà trạm');
   const [logNote, setLogNote] = useState('');
@@ -105,7 +105,7 @@ export default function DailyWork() {
   const [issueDate, setIssueDate] = useState(new Date().toISOString().split('T')[0]);
   const [issueCategory, setIssueCategory] = useState('Cột anten');
   const [issueDescription, setIssueDescription] = useState('');
-  const [issueReporter, setIssueReporter] = useState(localStorage.getItem('username') || 'admin');
+  const [issueReporter, setIssueReporter] = useState(user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'admin');
   
   // Edit issue states
   const [editingIssue, setEditingIssue] = useState(null);
@@ -140,11 +140,12 @@ export default function DailyWork() {
   ];
 
   useEffect(() => {
-    if (displayName) {
-      setLogStaff(prev => (prev === 'admin' || !prev ? displayName : prev));
-      setIssueReporter(prev => (prev === 'admin' || !prev ? displayName : prev));
+    if (user) {
+      const name = user.user_metadata?.full_name || user.email?.split('@')[0] || 'admin';
+      setLogStaff(prev => (prev === 'admin' || !prev ? name : prev));
+      setIssueReporter(prev => (prev === 'admin' || !prev ? name : prev));
     }
-  }, [displayName]);
+  }, [user]);
 
   useEffect(() => {
     fetchData();
@@ -386,7 +387,7 @@ export default function DailyWork() {
     setLogDate(log.ngay || new Date().toISOString().split('T')[0]);
     setLogDateDMY(formatDateToDMY(log.ngay || new Date().toISOString().split('T')[0]));
     setLogSiteId(log.id_tram || '');
-    setLogStaff(displayName || localStorage.getItem('username') || log.nhan_vien || 'admin');
+    setLogStaff(user?.user_metadata?.full_name || user?.email?.split('@')[0] || log.nhan_vien || 'admin');
     setLogContent(log.noi_dung || '');
     setLogCategory(log.hang_muc || 'C2-Kiểm tra nhà trạm');
     setLogNote(log.ghi_chu || '');
@@ -415,7 +416,7 @@ export default function DailyWork() {
     setLogDate(new Date().toISOString().split('T')[0]);
     setLogDateDMY(getTodayDMY());
     setLogSiteId('');
-    setLogStaff(displayName || localStorage.getItem('username') || 'admin');
+    setLogStaff(user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'admin');
     setLogContent('');
     setLogCategory('C2-Kiểm tra nhà trạm');
     setLogNote('');
@@ -537,7 +538,7 @@ export default function DailyWork() {
     setIssueDate(new Date().toISOString().split('T')[0]);
     setIssueCategory('Cột anten');
     setIssueDescription('');
-    setIssueReporter(displayName || localStorage.getItem('username') || 'admin');
+    setIssueReporter(user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'admin');
     setShowIssueSiteSuggestions(false);
     setEditingIssue(null);
     setIssueStatus('Chưa XL');
@@ -553,7 +554,7 @@ export default function DailyWork() {
     setIssueDate(issue.date || new Date().toISOString().split('T')[0]);
     setIssueCategory(dataDetail.category || 'Cột anten');
     setIssueDescription(dataDetail.description || '');
-    setIssueReporter(displayName || localStorage.getItem('username') || dataDetail.reporter || 'admin');
+    setIssueReporter(user?.user_metadata?.full_name || user?.email?.split('@')[0] || dataDetail.reporter || 'admin');
     setIssueStatus(dataDetail.status || 'Chưa XL');
     setIssueResolvedAt(solutions.resolved_at || '');
     
