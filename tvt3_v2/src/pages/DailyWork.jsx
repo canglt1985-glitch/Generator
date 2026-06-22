@@ -386,7 +386,7 @@ export default function DailyWork() {
     setLogDate(log.ngay || new Date().toISOString().split('T')[0]);
     setLogDateDMY(formatDateToDMY(log.ngay || new Date().toISOString().split('T')[0]));
     setLogSiteId(log.id_tram || '');
-    setLogStaff(log.nhan_vien || displayName || localStorage.getItem('username') || 'admin');
+    setLogStaff(displayName || localStorage.getItem('username') || log.nhan_vien || 'admin');
     setLogContent(log.noi_dung || '');
     setLogCategory(log.hang_muc || 'C2-Kiểm tra nhà trạm');
     setLogNote(log.ghi_chu || '');
@@ -553,7 +553,7 @@ export default function DailyWork() {
     setIssueDate(issue.date || new Date().toISOString().split('T')[0]);
     setIssueCategory(dataDetail.category || 'Cột anten');
     setIssueDescription(dataDetail.description || '');
-    setIssueReporter(dataDetail.reporter || displayName || localStorage.getItem('username') || 'admin');
+    setIssueReporter(displayName || localStorage.getItem('username') || dataDetail.reporter || 'admin');
     setIssueStatus(dataDetail.status || 'Chưa XL');
     setIssueResolvedAt(solutions.resolved_at || '');
     
