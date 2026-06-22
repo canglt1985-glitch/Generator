@@ -1210,8 +1210,19 @@ class SmartWScraper:
             except Exception as e:
                 logger.warning(f'SmartW PAKH: Could not set pagesize: {e}')
         except Exception as e:
-            logger.error(f'SmartW PAKH: jqxGrid rows not found: {e}')
-            return []
+            # Check if grid is genuinely empty
+            try:
+                content_text = await self._page.locator('#contenttablejqxgrid').text_content(timeout=5000)
+                if content_text:
+                    content_lower = content_text.lower()
+                    if 'no data to display' in content_lower or 'không có dữ liệu' in content_lower:
+                        logger.info('SmartW PAKH: Grid is genuinely empty (No data to display / Không có dữ liệu)')
+                        return []
+            except Exception as check_err:
+                logger.warning(f'SmartW PAKH: Empty check failed: {check_err}')
+                
+            logger.error(f'SmartW PAKH: jqxGrid rows not found (loading failure): {e}')
+            raise Exception('Không thể tải danh sách phản ánh (Timeout grid)')
 
         # Parse using jqxGrid API or DOM
         table_data = await self._page.evaluate('''() => {
