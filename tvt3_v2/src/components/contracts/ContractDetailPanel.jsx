@@ -1,15 +1,121 @@
-import React, { useMemo, useState } from 'react';
-import { X, User, Calendar, Clock, CreditCard, CheckCircle2, Building2, Download, FileText, AlertCircle, RefreshCw, Calculator, MapPin } from 'lucide-react';
+import React, { useMemo, useState, useEffect } from 'react';
+import { X, User, Calendar, Clock, CreditCard, CheckCircle2, Building2, Download, FileText, AlertCircle, RefreshCw, Calculator, MapPin, Edit, Save, Undo } from 'lucide-react';
 import { generatePaymentCycles } from '../../utils/contractLogic';
 import { getContractFlags, checkPriceFrame, checkExpiry, checkPaymentStatus, checkAccountMatch } from '../../utils/contractChecks';
 import { CONTRACT_STATUSES } from '../../utils/contractConstants';
 import { supabase } from '../../supabaseClient';
 import ContractExportButton from '../datasites/ContractExportButton';
 import PaymentSchedulePanel from '../datasites/PaymentSchedulePanel';
+import { useCurrentUser } from '../../utils/useCurrentUser';
 
-export default function ContractDetailPanel({ contract, onClose }) {
+export default function ContractDetailPanel({ contract, onClose, onUpdate }) {
+  const { user } = useCurrentUser();
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [customPriceStr, setCustomPriceStr] = useState('');
+  
+  // States for Editing Form
+  const [isEditing, setIsEditing] = useState(false);
+  const [contractNum, setContractNum] = useState('');
+  const [landlord, setLandlord] = useState('');
+  const [landlordPhone, setLandlordPhone] = useState('');
+  const [startDateInput, setStartDateInput] = useState('');
+  const [endDateInput, setEndDateInput] = useState('');
+  const [paymentCycle, setPaymentCycle] = useState('6 tháng');
+  const [priceWithVat, setPriceWithVat] = useState(0);
+  const [priceWithoutVat, setPriceWithoutVat] = useState(0);
+  const [electricityPrice, setElectricityPrice] = useState(0);
+  const [paidUntil, setPaidUntil] = useState('');
+  const [bankNameInput, setBankNameInput] = useState('');
+  const [bankAccInput, setBankAccInput] = useState('');
+  const [bankOwnerInput, setBankOwnerInput] = useState('');
+  const [costDetailsState, setCostDetailsState] = useState({});
+
+  // Sync form states with contract data when it changes
+  useEffect(() => {
+    if (contract) {
+      setContractNum(contract.contract_number || '');
+      setLandlord(contract.contractor_info?.chu_the_hop_dong || '');
+      setLandlordPhone(contract.contractor_info?.sdt_chu_nha || '');
+      setStartDateInput(contract.dates?.ngay_ky_hd || '');
+      setEndDateInput(contract.dates?.ngay_ket_thuc_hd || '');
+      setPaymentCycle(contract.dates?.chu_ky_thanh_toan || '6 tháng');
+      setPriceWithVat(contract.financials?.gia_thue_co_vat || 0);
+      setPriceWithoutVat(contract.financials?.gia_thue_khong_vat || 0);
+      setElectricityPrice(contract.financials?.gia_dien_khoan || 0);
+      setPaidUntil(contract.financials?.da_thanh_toan_den || '');
+      setBankNameInput(contract.bank_info?.ngan_hang || '');
+      setBankAccInput(contract.bank_info?.so_tai_khoan || '');
+      setBankOwnerInput(contract.bank_info?.chu_tai_khoan || '');
+      setCostDetailsState(contract.cost_details || {});
+    }
+  }, [contract]);
+
+  // Auto calculate price without VAT when price with VAT changes
+  const handlePriceWithVatChange = (val) => {
+    setPriceWithVat(val);
+    setPriceWithoutVat(Math.round(val / 1.1));
+  };
+
+  const handleSave = async (e) => {
+    if (e) e.preventDefault();
+    setIsUpdatingStatus(true);
+    try {
+      if (!contractNum.trim()) {
+        alert("Vui lòng nhập Số hợp đồng!");
+        setIsUpdatingStatus(false);
+        return;
+      }
+
+      const updatedContractInfo = {
+        ...contract._raw_contract_info,
+        status: contract.status || 'valid',
+        contractor_info: {
+          ...contract._raw_contract_info?.contractor_info,
+          chu_the_hop_dong: landlord.trim(),
+          sdt_chu_nha: landlordPhone.trim()
+        },
+        dates: {
+          ...contract._raw_contract_info?.dates,
+          ngay_ky_hd: startDateInput || null,
+          ngay_ket_thuc_hd: endDateInput || null,
+          chu_ky_thanh_toan: paymentCycle
+        },
+        financials: {
+          ...contract._raw_contract_info?.financials,
+          gia_thue_co_vat: Number(priceWithVat) || 0,
+          gia_thue_khong_vat: Number(priceWithoutVat) || 0,
+          gia_dien_khoan: Number(electricityPrice) || 0,
+          da_thanh_toan_den: paidUntil || null
+        },
+        bank_info: {
+          ...contract._raw_contract_info?.bank_info,
+          so_tai_khoan: bankAccInput.trim(),
+          chu_tai_khoan: bankOwnerInput.trim(),
+          ngan_hang: bankNameInput.trim()
+        },
+        cost_details: costDetailsState
+      };
+
+      const { error } = await supabase
+        .from('datasites')
+        .update({
+          contract_number: contractNum.trim(),
+          contract_info: updatedContractInfo
+        })
+        .eq('site_id', contract.site_id);
+
+      if (error) throw error;
+
+      alert("Cập nhật thông tin hợp đồng thành công!");
+      setIsEditing(false);
+      if (onUpdate) onUpdate(contract.site_id);
+    } catch (err) {
+      console.error("Error saving contract:", err);
+      alert("Lỗi khi lưu hợp đồng: " + err.message);
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
 
   const formatDate = (dateString) => {
     if (!dateString || dateString === 'N/A') return 'N/A';
@@ -165,6 +271,263 @@ export default function ContractDetailPanel({ contract, onClose }) {
     return generatePaymentCycles(paidUntilDate, endDate, cycleString, negotiatedPrice || originalPrice);
   }, [paidUntilDate, endDate, cycleString, negotiatedPrice, originalPrice]);
 
+  if (isEditing) {
+    return (
+      <div className="bg-slate-50 h-full overflow-y-auto flex flex-col relative shadow-xl font-sans">
+        {/* Header khi sửa */}
+        <div className="sticky top-0 z-20 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between shadow-sm">
+          <div className="flex items-center gap-4">
+            <div className="bg-blue-50 p-2.5 rounded-lg text-blue-600 border border-blue-100">
+              <FileText size={24} />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-slate-800">
+                Chỉnh sửa Hợp đồng: <span className="text-blue-600">{contract.site_id}</span>
+              </h2>
+              <p className="text-xs text-slate-500 font-medium">
+                Cập nhật thông tin chi tiết hợp đồng trạm {siteId} ({siteIdOld})
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <button 
+              type="button"
+              onClick={() => setIsEditing(false)} 
+              disabled={isUpdatingStatus}
+              className="flex items-center gap-1.5 px-4 py-2 border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 font-semibold text-sm cursor-pointer disabled:opacity-50"
+            >
+              <Undo size={16} /> Hủy
+            </button>
+            <button 
+              type="button"
+              onClick={handleSave} 
+              disabled={isUpdatingStatus}
+              className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold text-sm shadow-sm cursor-pointer disabled:bg-blue-400"
+            >
+              {isUpdatingStatus ? <RefreshCw size={16} className="animate-spin" /> : <Save size={16} />}
+              Lưu thay đổi
+            </button>
+          </div>
+        </div>
+
+        {/* Form Body */}
+        <form onSubmit={handleSave} className="p-4 md:p-6 flex-1 max-w-[900px] mx-auto w-full space-y-6 pb-20">
+          
+          {/* Section 1: Thông tin chung */}
+          <div className="bg-white border border-slate-200/60 rounded-xl p-5 shadow-sm space-y-4">
+            <h3 className="text-xs font-extrabold text-slate-500 tracking-wider uppercase border-b border-slate-100 pb-2 flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+              Thông tin Chủ thể & Pháp lý
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Số Hợp Đồng</label>
+                <input 
+                  type="text" 
+                  value={contractNum} 
+                  onChange={(e) => setContractNum(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 font-semibold text-slate-800"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Chủ thể ký HĐ (Chủ nhà)</label>
+                <input 
+                  type="text" 
+                  value={landlord} 
+                  onChange={(e) => setLandlord(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 font-semibold text-slate-800"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Số điện thoại liên hệ</label>
+                <input 
+                  type="text" 
+                  value={landlordPhone} 
+                  onChange={(e) => setLandlordPhone(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 font-semibold text-slate-800"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Section 2: Thời hạn hợp đồng */}
+          <div className="bg-white border border-slate-200/60 rounded-xl p-5 shadow-sm space-y-4">
+            <h3 className="text-xs font-extrabold text-slate-500 tracking-wider uppercase border-b border-slate-100 pb-2 flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+              Thời hạn Hợp đồng
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Ngày ký HĐ</label>
+                <input 
+                  type="date" 
+                  value={startDateInput} 
+                  onChange={(e) => setStartDateInput(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 font-medium text-slate-800"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Ngày kết thúc HĐ (Gia hạn)</label>
+                <input 
+                  type="date" 
+                  value={endDateInput} 
+                  onChange={(e) => setEndDateInput(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 font-medium text-slate-800"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Chu kỳ thanh toán</label>
+                <select 
+                  value={paymentCycle} 
+                  onChange={(e) => setPaymentCycle(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white font-medium text-slate-800"
+                >
+                  <option value="3 tháng">3 tháng</option>
+                  <option value="6 tháng">6 tháng</option>
+                  <option value="12 tháng">12 tháng</option>
+                  <option value="1 tháng">1 tháng</option>
+                  <option value="2 tháng">2 tháng</option>
+                  <option value="Khác">Khác</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 3: Tài chính & Thanh toán */}
+          <div className="bg-white border border-slate-200/60 rounded-xl p-5 shadow-sm space-y-4">
+            <h3 className="text-xs font-extrabold text-slate-500 tracking-wider uppercase border-b border-slate-100 pb-2 flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              Tài chính & Thanh toán
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Giá thuê có VAT (đ)</label>
+                <input 
+                  type="number" 
+                  value={priceWithVat} 
+                  onChange={(e) => handlePriceWithVatChange(Number(e.target.value))}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 font-bold text-blue-600"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Giá thuê không VAT (đ)</label>
+                <input 
+                  type="number" 
+                  value={priceWithoutVat} 
+                  onChange={(e) => setPriceWithoutVat(Number(e.target.value))}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 font-semibold text-slate-800"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Giá điện khoán (đ)</label>
+                <input 
+                  type="number" 
+                  value={electricityPrice} 
+                  onChange={(e) => setElectricityPrice(Number(e.target.value))}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 font-semibold text-slate-800"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Đã thanh toán đến ngày</label>
+                <input 
+                  type="date" 
+                  value={paidUntil} 
+                  onChange={(e) => setPaidUntil(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 font-medium text-slate-800"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Section 4: Tài khoản Ngân hàng */}
+          <div className="bg-white border border-slate-200/60 rounded-xl p-5 shadow-sm space-y-4">
+            <h3 className="text-xs font-extrabold text-slate-500 tracking-wider uppercase border-b border-slate-100 pb-2 flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-500" />
+              Thông tin Ngân hàng chuyển khoản
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Số Tài Khoản</label>
+                <input 
+                  type="text" 
+                  value={bankAccInput} 
+                  onChange={(e) => setBankAccInput(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 font-bold text-slate-800"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Chủ Tài Khoản</label>
+                <input 
+                  type="text" 
+                  value={bankOwnerInput} 
+                  onChange={(e) => setBankOwnerInput(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 font-bold text-slate-800"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Ngân hàng</label>
+                <input 
+                  type="text" 
+                  value={bankNameInput} 
+                  onChange={(e) => setBankNameInput(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 font-medium text-slate-800"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Section 5: Chi tiết các hạng mục thuê */}
+          <div className="bg-white border border-slate-200/60 rounded-xl p-5 shadow-sm space-y-4">
+            <h3 className="text-xs font-extrabold text-slate-500 tracking-wider uppercase border-b border-slate-100 pb-2 flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+              Chi tiết giá các hạng mục thuê (đ)
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
+              {Object.keys(costDetailsMap).map((key) => {
+                const label = costDetailsMap[key];
+                return (
+                  <div key={key} className="flex items-center justify-between gap-4">
+                    <span className="text-xs font-bold text-slate-500 uppercase max-w-[60%] tracking-wider">{label}</span>
+                    <input 
+                      type="number" 
+                      value={costDetailsState[key] || 0} 
+                      onChange={(e) => setCostDetailsState({
+                        ...costDetailsState,
+                        [key]: Number(e.target.value)
+                      })}
+                      className="w-36 px-3 py-1.5 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 font-bold text-right text-slate-800"
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Form Actions Footer */}
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+            <button 
+              type="button"
+              onClick={() => setIsEditing(false)} 
+              disabled={isUpdatingStatus}
+              className="px-6 py-2.5 border border-slate-200 text-sm font-semibold rounded-lg text-slate-600 hover:bg-slate-50 cursor-pointer disabled:opacity-50"
+            >
+              Hủy bỏ
+            </button>
+            <button 
+              type="submit"
+              disabled={isUpdatingStatus}
+              className="px-6 py-2.5 bg-blue-600 text-white text-sm font-bold rounded-lg hover:bg-blue-700 shadow-sm transition-colors cursor-pointer flex items-center gap-2 disabled:bg-blue-400"
+            >
+              {isUpdatingStatus ? <RefreshCw size={16} className="animate-spin" /> : <Save size={16} />}
+              Lưu thay đổi
+            </button>
+          </div>
+        </form>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-slate-50 h-full overflow-y-auto flex flex-col relative shadow-xl">
       {/* Header */}
@@ -203,6 +566,19 @@ export default function ContractDetailPanel({ contract, onClose }) {
             <div className="scale-90 origin-right">
                 <ContractExportButton site={exportSite} contract={contract} overridePrice={negotiatedPrice} />
             </div>
+            {user && (
+              <>
+                <div className="w-px h-8 bg-slate-200 mx-1"></div>
+                <button 
+                  type="button"
+                  onClick={() => setIsEditing(true)} 
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 rounded-lg font-semibold text-xs shadow-sm transition-colors cursor-pointer"
+                  title="Chỉnh sửa hợp đồng"
+                >
+                  <Edit size={14} /> Sửa HĐ
+                </button>
+              </>
+            )}
             <div className="w-px h-8 bg-slate-200 mx-1"></div>
             <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors bg-white border border-slate-200 shadow-sm">
               <X size={18} />

@@ -68,6 +68,45 @@ export default function ContractDashboard() {
     }
   };
 
+  const handleContractUpdate = async (updatedSiteId) => {
+    await fetchContracts();
+    if (updatedSiteId) {
+      try {
+        const { data, error } = await supabase
+          .from('datasites')
+          .select('site_id, site_id_old, name, status, location_info, classification, contract_number, contract_info')
+          .eq('site_id', updatedSiteId)
+          .single();
+
+        if (!error && data) {
+          const c = {
+            contract_id: data.site_id,
+            site_id: data.site_id,
+            contract_number: data.contract_number,
+            contractor_info: data.contract_info?.contractor_info || {},
+            financials: data.contract_info?.financials || {},
+            dates: data.contract_info?.dates || {},
+            erp_info: data.contract_info?.erp_info || {},
+            bank_info: data.contract_info?.bank_info || {},
+            cost_details: data.contract_info?.cost_details || {},
+            status: data.contract_info?.status || null,
+            _raw_contract_info: data.contract_info || {},
+            datasites: {
+              site_id_old: data.site_id_old,
+              name: data.name,
+              location_info: data.location_info,
+              classification: data.classification,
+              status: data.status
+            }
+          };
+          setSelectedContract(c);
+        }
+      } catch (err) {
+        console.error("Error updating selected contract state:", err);
+      }
+    }
+  };
+
   const activeFilter = searchParams.get('filter') || 'all';
   const setActiveFilter = (filter) => {
     if (filter === 'all' || !filter) {
@@ -273,6 +312,7 @@ export default function ContractDashboard() {
             <ContractDetailPanel 
               contract={selectedContract} 
               onClose={() => setSelectedContract(null)} 
+              onUpdate={handleContractUpdate}
             />
           </div>
         )}
