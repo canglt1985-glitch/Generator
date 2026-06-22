@@ -1575,29 +1575,17 @@ export default function DailyWork() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Hạng mục</label>
-                  <select 
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                    value={logCategory}
-                    onChange={(e) => setLogCategory(e.target.value)}
-                  >
-                    {categoriesWorkV1.map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Nhân viên thực hiện</label>
-                  <input 
-                    type="text" 
-                    placeholder="Nhập tên nhân viên..."
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 font-medium"
-                    value={logStaff}
-                    onChange={(e) => setLogStaff(e.target.value)}
-                  />
-                </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Hạng mục</label>
+                <select 
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                  value={logCategory}
+                  onChange={(e) => setLogCategory(e.target.value)}
+                >
+                  {categoriesWorkV1.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
               </div>
 
               <div>
@@ -1706,28 +1694,17 @@ export default function DailyWork() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Hạng mục tồn tại</label>
-                  <select 
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-red-500 focus:border-red-500 bg-white"
-                    value={issueCategory}
-                    onChange={(e) => setIssueCategory(e.target.value)}
-                  >
-                    {categoriesDefectsV1.map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Người báo cáo</label>
-                  <input 
-                    type="text" 
-                    readOnly
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 text-slate-500 cursor-not-allowed font-medium"
-                    value={issueReporter}
-                  />
-                </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Hạng mục tồn tại</label>
+                <select 
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-red-500 focus:border-red-500 bg-white"
+                  value={issueCategory}
+                  onChange={(e) => setIssueCategory(e.target.value)}
+                >
+                  {categoriesDefectsV1.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
               </div>
 
               <div>
