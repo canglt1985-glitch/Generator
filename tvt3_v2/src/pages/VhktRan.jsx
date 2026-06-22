@@ -696,7 +696,7 @@ export default function VhktRan() {
                             const phuongXa = p.phuong_xa || p.phuongXa || '';
                             const noiDungPhanAnh = p.noi_dung_phan_anh || p.noiDungPhanAnh || '--';
                             const maTram = p.ma_tram || p.maTram || '--';
-                            const tgConLai = p.tg_con_lai || p.tgConLai || '--';
+                            const tgConLai = p.tgclTtml || p.tg_con_lai || p.tgConLai || '--';
                             return (
                               <tr key={i} className="hover:bg-gray-50 transition-colors">
                                 <td className="py-3 px-2 sm:px-4 text-center font-bold text-blue-600 font-mono">
@@ -748,7 +748,7 @@ export default function VhktRan() {
                         const phuongXa = p.phuong_xa || p.phuongXa || '';
                         const noiDungPhanAnh = p.noi_dung_phan_anh || p.noiDungPhanAnh || '--';
                         const maTram = p.ma_tram || p.maTram || '--';
-                        const tgConLai = p.tg_con_lai || p.tgConLai || '--';
+                        const tgConLai = p.tgclTtml || p.tg_con_lai || p.tgConLai || '--';
                         const isUrgent = String(tgConLai).includes('giờ') && parseInt(tgConLai) <= 12;
                         return (
                           <div key={i} className="bg-white rounded-xl border border-slate-200 p-3 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">

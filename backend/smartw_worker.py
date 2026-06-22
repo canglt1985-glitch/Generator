@@ -960,7 +960,7 @@ def format_pakh_message(row: dict) -> str:
         except Exception as e:
             logger.error(f'SmartW format_pakh_message site mapping error: {e}')
 
-    han_con_lai = row.get('tgConLai') or ''
+    han_con_lai = row.get('tgclTtml') or row.get('tgConLai') or ''
 
     msg = f"""- PAKH: {so_thue_bao}
 - THỜI GIAN NHẬN: {tg_nhan}
@@ -1004,7 +1004,7 @@ def format_pakh_reminder_message(row: dict) -> str:
         except Exception as e:
             logger.error(f'SmartW format_pakh_reminder_message site mapping error: {e}')
 
-    han_con_lai = row.get('tgConLai') or ''
+    han_con_lai = row.get('tgclTtml') or row.get('tgConLai') or ''
 
     msg = f"""- SĐT PHẢN ÁNH: {so_thue_bao}
 - ĐỊA BÀN: {dia_ban}
@@ -1188,8 +1188,8 @@ def process_pakh_alerts(pakh_list: list):
         # 2. Alert for expiring tickets (milestones: 16h, 8h, 2h) - only if not closed/processed
         remaining = None
         
-        # Try parsing remaining duration from tgConLai
-        tg_con_lai = _get_val(row, ['tgConLai', 'tg_con_lai', 'thoiGianConLai'])
+        # Try parsing remaining duration from tgclTtml first (correct SLA for TTML/province), fallback to tgConLai
+        tg_con_lai = _get_val(row, ['tgclTtml', 'tgConLai', 'tg_con_lai', 'thoiGianConLai'])
         if tg_con_lai:
             remaining = parse_vietnamese_duration(tg_con_lai)
             
