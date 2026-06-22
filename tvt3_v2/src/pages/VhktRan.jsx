@@ -134,8 +134,9 @@ export default function VhktRan() {
   const activePakhList = pakhList.filter(p => {
     const nocStatus = String(p.nocStatus || p.noc_status || '').trim().toUpperCase();
     const trangThaiWo = String(p.trangThaiWo || p.trang_thai_wo || '').trim().toUpperCase();
-    const closedStatuses = ['DA_XU_LY', 'DA_DONG', 'CHO_DUYET_DONG', 'DUYET_DONG', 'HOAN_THANH'];
-    return !closedStatuses.includes(nocStatus) && !closedStatuses.includes(trangThaiWo);
+    const closedNocStatuses = ['DA_DONG', 'CHO_DUYET_DONG', 'DUYET_DONG', 'HOAN_THANH'];
+    const closedWoStatuses = ['DA_XU_LY', 'DA_DONG', 'CHO_DUYET_DONG', 'DUYET_DONG', 'HOAN_THANH'];
+    return !closedNocStatuses.includes(nocStatus) && !closedWoStatuses.includes(trangThaiWo);
   });
 
   // Cross-check: check if MĐ site has active MPĐ running

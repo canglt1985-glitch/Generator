@@ -1085,8 +1085,12 @@ def _is_pakh_closed(row: dict) -> bool:
     """Check if the PAKH ticket has been processed/closed based on nocStatus or trangThaiWo."""
     noc_status = str(row.get('nocStatus') or '').strip().upper()
     trang_thai_wo = str(row.get('trangThaiWo') or '').strip().upper()
-    closed_statuses = {'DA_XU_LY', 'DA_DONG', 'CHO_DUYET_DONG', 'DUYET_DONG', 'HOAN_THANH'}
-    return noc_status in closed_statuses or trang_thai_wo in closed_statuses
+    
+    # NOC status DA_XU_LY means NOC has forwarded the ticket to TVT3, so it is NOT closed yet.
+    closed_noc_statuses = {'DA_DONG', 'CHO_DUYET_DONG', 'DUYET_DONG', 'HOAN_THANH'}
+    closed_wo_statuses = {'DA_XU_LY', 'DA_DONG', 'CHO_DUYET_DONG', 'DUYET_DONG', 'HOAN_THANH'}
+    
+    return noc_status in closed_noc_statuses or trang_thai_wo in closed_wo_statuses
 
 
 def process_pakh_alerts(pakh_list: list):
