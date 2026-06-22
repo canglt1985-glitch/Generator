@@ -130,6 +130,14 @@ export default function VhktRan() {
   const mllActive = filteredAlarms.filter(a => a.alarm_type === 'mll');
   const cellActive = filteredAlarms.filter(a => a.alarm_type === 'mll_cell');
 
+  // Filter out closed/processed tickets
+  const activePakhList = pakhList.filter(p => {
+    const nocStatus = String(p.nocStatus || p.noc_status || '').trim().toUpperCase();
+    const trangThaiWo = String(p.trangThaiWo || p.trang_thai_wo || '').trim().toUpperCase();
+    const closedStatuses = ['DA_XU_LY', 'DA_DONG', 'CHO_DUYET_DONG', 'DUYET_DONG', 'HOAN_THANH'];
+    return !closedStatuses.includes(nocStatus) && !closedStatuses.includes(trangThaiWo);
+  });
+
   // Cross-check: check if MĐ site has active MPĐ running
   const activeMpdSites = new Set(
     mpdActive.filter(a => a.status === 'ACTIVE').map(a => (a.site || '').trim().toUpperCase()).filter(Boolean)
@@ -252,7 +260,7 @@ export default function VhktRan() {
           { id: 'mll', label: 'Mất liên lạc', count: mllCount, color: 'red', icon: '🔴', minWidth: 'min-w-[100px] sm:min-w-[120px]' },
           { id: 'mll_cell', label: 'Cell Off', count: cellCount, color: 'purple', icon: '📡', minWidth: 'min-w-[85px] sm:min-w-[120px]' },
           { id: 'vhkt', label: 'SLA', count: '📊', color: 'blue', icon: '', minWidth: 'min-w-[70px] sm:min-w-[100px]' },
-          { id: 'pakh', label: 'PAKH', count: pakhList.length, color: 'sky', icon: '💬', minWidth: 'min-w-[80px] sm:min-w-[100px]' },
+          { id: 'pakh', label: 'PAKH', count: activePakhList.length, color: 'sky', icon: '💬', minWidth: 'min-w-[80px] sm:min-w-[100px]' },
         ].map(card => {
           const isActive = activeTab === card.id;
           
@@ -659,7 +667,7 @@ export default function VhktRan() {
             {/* Tab: PAKH */}
             {activeTab === 'pakh' && (
               <div className="divide-y divide-gray-200">
-                {pakhList.length === 0 ? (
+                {activePakhList.length === 0 ? (
                   <div className="p-12 text-center text-gray-400 text-sm">
                     ✅ Không có phản ánh khách hàng (PAKH) nào cần xử lý.
                   </div>
@@ -679,7 +687,7 @@ export default function VhktRan() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100 text-left">
-                          {pakhList.map((p, i) => {
+                          {activePakhList.map((p, i) => {
                             const soThueBao = p.so_thue_bao || p.soThueBao || '--';
                             const loaiThueBao = p.loai_thue_bao || p.loaiThueBao || '--';
                             const thoiGianGhiNhan = p.thoi_gian_ghi_nhan || p.thoiGianGhiNhan;
@@ -731,7 +739,7 @@ export default function VhktRan() {
 
                     {/* Mobile View: Compact Cards */}
                     <div className="lg:hidden grid grid-cols-1 md:grid-cols-2 gap-3 p-3 bg-slate-50">
-                      {pakhList.map((p, i) => {
+                      {activePakhList.map((p, i) => {
                         const soThueBao = p.so_thue_bao || p.soThueBao || '--';
                         const loaiThueBao = p.loai_thue_bao || p.loaiThueBao || '';
                         const thoiGianGhiNhan = p.thoi_gian_ghi_nhan || p.thoiGianGhiNhan;

@@ -75,13 +75,13 @@ def _release_lock():
 # Circuit breaker: stop polling after this many consecutive login failures
 MAX_LOGIN_FAILURES = 10
 
-def _parse_site_suffix(site_id: str) -> tuple[str, str]:
-    """Split site_id into (base_site_id, cell_suffix).
+def _split_site_id(site_id) -> tuple[str, str]:
+    """Split a site ID into its base and suffix.
     Example: 'DNIXTC06_1' -> ('DNIXTC06', '_1')
     """
     if not site_id:
         return "", ""
-    s = site_id.strip()
+    s = str(site_id).strip()
     for delimiter in ['_', '-']:
         if delimiter in s:
             parts = s.split(delimiter)
@@ -108,18 +108,32 @@ def _get_datasites_list():
     return _datasites_cache
 
 
-def _get_site_label(site_id: str) -> str:
+def _get_site_label(site_id) -> str:
     """Return '*ID_MOI* (ID_CU)' label for Viber display on V2."""
     if not site_id:
         return ""
-    base_id, suffix = _split_site_id(site_id)
+    site_str = str(site_id).strip().upper()
+    base_id, suffix = _split_site_id(site_str)
     site_upper = base_id.strip().upper()
     try:
         data = _get_datasites_list()
-        for s in data:
+        # Sort by site_id length desc to match the most specific prefix first
+        sorted_data = sorted(data, key=lambda x: len(x.get('site_id') or ''), reverse=True)
+        for s in sorted_data:
             s_id = (s.get("site_id") or "").upper()
             s_old = (s.get("site_id_old") or "").upper()
+            
+            matched = False
+            # Check exact match on base
             if site_upper == s_id or site_upper == s_old:
+                matched = True
+            # Or prefix match on full string (supporting tech suffixes like DNIBLC12CM4CC)
+            elif (s_id and site_str.startswith(s_id)) or (s_old and site_str.startswith(s_old)):
+                matched = True
+                matched_prefix = s_id if (s_id and site_str.startswith(s_id)) else s_old
+                suffix = site_str[len(matched_prefix):]
+                
+            if matched:
                 if s.get("site_id_old") and s.get("site_id") != s.get("site_id_old"):
                     return f"*{s.get('site_id')}{suffix}* ({s.get('site_id_old')}{suffix})"
                 return f"*{s.get('site_id')}{suffix}*"
@@ -128,21 +142,34 @@ def _get_site_label(site_id: str) -> str:
     return f"*{site_id}*"
 
 
-def _is_managed_site(site_id: str) -> bool:
+def _is_managed_site(site_id) -> bool:
     """Check if the site exists in datasites table (i.e. managed by Telecom Team 3)."""
     if not site_id:
         return False
-    base_id, _ = _split_site_id(site_id)
-    site_upper = base_id.strip().upper()
+    site_str = str(site_id).strip().upper()
     try:
         data = _get_datasites_list()
         if not data:
             # Fallback if datasites list cannot be fetched: assume managed to avoid missing alerts
             return True
-        for s in data:
+            
+        base_id, _ = _split_site_id(site_str)
+        site_upper = base_id.strip().upper()
+        
+        # Sort by site_id length desc to match the most specific prefix first
+        sorted_data = sorted(data, key=lambda x: len(x.get('site_id') or ''), reverse=True)
+        for s in sorted_data:
             s_id = (s.get("site_id") or "").upper()
             s_old = (s.get("site_id_old") or "").upper()
+            
+            # Exact matches (after delimiter split)
             if site_upper == s_id or site_upper == s_old:
+                return True
+                
+            # Prefix matches (to support cell IDs or site IDs with tech suffixes, e.g. DNIBLC12CM4CC)
+            if s_id and site_str.startswith(s_id):
+                return True
+            if s_old and site_str.startswith(s_old):
                 return True
     except Exception as e:
         logger.error(f'Error checking managed site {site_id}: {e}')
@@ -167,18 +194,27 @@ def _norm_net(network: str) -> str:
     return network
 
 
-def _old_id(site_id: str) -> str:
+def _old_id(site_id) -> str:
     """Look up legacy site ID from V2 datasites table."""
     if not site_id:
         return ""
-    site_upper = site_id.strip().upper()
+    site_str = str(site_id).strip().upper()
     try:
         data = _get_datasites_list()
-        for s in data:
+        sorted_data = sorted(data, key=lambda x: len(x.get('site_id') or ''), reverse=True)
+        for s in sorted_data:
             s_id = (s.get("site_id") or "").upper()
             s_old = (s.get("site_id_old") or "").upper()
-            if site_upper == s_id or site_upper == s_old:
+            if site_str == s_id or site_str == s_old:
                 return s.get("site_id_old") or s.get("site_id")
+            if s_id and site_str.startswith(s_id):
+                suffix = site_str[len(s_id):]
+                old_base = s.get("site_id_old") or s.get("site_id")
+                return f"{old_base}{suffix}"
+            if s_old and site_str.startswith(s_old):
+                suffix = site_str[len(s_old):]
+                old_base = s.get("site_id_old") or s.get("site_id")
+                return f"{old_base}{suffix}"
     except Exception:
         pass
     return site_id
@@ -897,7 +933,7 @@ def format_pakh_message(row: dict) -> str:
     noi_dung = row.get('noiDungPhanAnh') or ''
     
     # Map Trạm/Cell to old/new ID using cache
-    tram_cell = row.get('maTram') or ''
+    tram_cell = str(row.get('maTram') or '')
     tram_cell_display = tram_cell
     if tram_cell:
         try:
@@ -942,7 +978,7 @@ def format_pakh_reminder_message(row: dict) -> str:
     dia_ban = f"{xa}, {tinh}".strip(', ')
     
     # Map Trạm/Cell to old/new ID using cache
-    tram_cell = row.get('maTram') or ''
+    tram_cell = str(row.get('maTram') or '')
     tram_cell_display = tram_cell
     if tram_cell:
         try:
@@ -983,7 +1019,7 @@ def format_pakh_closed_message(c_id: str, details: dict) -> str:
     xa = details.get("phuongXa") or ""
     dia_ban = f"{xa}, {tinh}".strip(', ')
     
-    tram_cell = details.get("maTram") or ""
+    tram_cell = str(details.get("maTram") or "")
     tram_cell_display = tram_cell
     if tram_cell:
         try:
@@ -1043,6 +1079,14 @@ def parse_vietnamese_duration(duration_str: str) -> int:
             minutes = int(digits[0])
             
     return hours * 3600 + minutes * 60
+
+
+def _is_pakh_closed(row: dict) -> bool:
+    """Check if the PAKH ticket has been processed/closed based on nocStatus or trangThaiWo."""
+    noc_status = str(row.get('nocStatus') or '').strip().upper()
+    trang_thai_wo = str(row.get('trangThaiWo') or '').strip().upper()
+    closed_statuses = {'DA_XU_LY', 'DA_DONG', 'CHO_DUYET_DONG', 'DUYET_DONG', 'HOAN_THANH'}
+    return noc_status in closed_statuses or trang_thai_wo in closed_statuses
 
 
 def process_pakh_alerts(pakh_list: list):
@@ -1108,6 +1152,12 @@ def process_pakh_alerts(pakh_list: list):
             continue
 
         pakh_id_str = str(pakh_id)
+        
+        # Check if site is managed by TVT3
+        ma_tram = row.get('maTram') or ''
+        if not _is_managed_site(ma_tram):
+            logger.info(f"SmartW PAKH: Skipping alert for unmanaged site: {ma_tram} (ticket ID: {pakh_id_str})")
+            continue
 
         # Save details for active tickets to support closed notifications later
         if "alerted_details" not in state:
@@ -1124,14 +1174,14 @@ def process_pakh_alerts(pakh_list: list):
             state["alerted_details"][pakh_id_str] = new_detail
             changed = True
 
-        # 1. Alert for NEW tickets
-        if pakh_id_str not in state["alerted_new"]:
+        # 1. Alert for NEW tickets (only if not already closed/processed)
+        if pakh_id_str not in state["alerted_new"] and not _is_pakh_closed(row):
             msg = format_pakh_message(row)
             _send_viber_report(msg.split('\n'), token=pakh_token, sender=pakh_sender)
             state["alerted_new"].append(pakh_id_str)
             changed = True
 
-        # 2. Alert for expiring tickets (milestones: 16h, 8h, 2h)
+        # 2. Alert for expiring tickets (milestones: 16h, 8h, 2h) - only if not closed/processed
         remaining = None
         
         # Try parsing remaining duration from tgConLai
@@ -1148,7 +1198,7 @@ def process_pakh_alerts(pakh_list: list):
                     now = datetime.now()
                     remaining = (kt_dt - now).total_seconds()
 
-        if remaining is not None:
+        if remaining is not None and not _is_pakh_closed(row):
             # Determine current milestone
             milestone = None
             auto_complete_milestones = []
@@ -1176,12 +1226,14 @@ def process_pakh_alerts(pakh_list: list):
                     milestones_dict[pakh_id_str] = already_sent
                     changed = True
 
-    # 3. Detect closed tickets
+    # 3. Detect closed tickets (either missing from list, or present but marked as closed/processed)
     active_ids = set()
     for row in pakh_list:
         pakh_id = _get_val(row, ['pakh', 'ma_pa', 'maPa', 'mã pa', 'id', 'ticket_id', 'ticketId', 'soPhanAnh', 'sđt', 'sdt', 'soThueBao'])
         if pakh_id:
-            active_ids.add(str(pakh_id))
+            ma_tram = row.get('maTram') or ''
+            if _is_managed_site(ma_tram) and not _is_pakh_closed(row):
+                active_ids.add(str(pakh_id))
 
     closed_ids = []
     for alerted_id in state["alerted_new"]:
@@ -1245,17 +1297,20 @@ def save_pakh_to_storage(pakh_list: list):
     if pakh_list is None:
         pakh_list = []
         
+    # Filter out closed/processed tickets so that only active ones are saved/uploaded
+    active_pakh = [row for row in pakh_list if not _is_pakh_closed(row)]
+        
     local_path = os.path.join(DATA_DIR, 'pakh.json')
     try:
         # Save to local JSON first
         payload = {
             "scraped_at": datetime.now().isoformat(),
-            "count": len(pakh_list),
-            "data": pakh_list
+            "count": len(active_pakh),
+            "data": active_pakh
         }
         with open(local_path, 'w', encoding='utf-8') as f:
             json.dump(payload, f, ensure_ascii=False, indent=2)
-        logger.info(f"Local Storage: Saved {len(pakh_list)} PAKH tickets to pakh.json")
+        logger.info(f"Local Storage: Saved {len(active_pakh)} active PAKH tickets to pakh.json")
         
         # Upload to Supabase Storage
         upload_to_supabase_storage(local_path, 'pakh.json')

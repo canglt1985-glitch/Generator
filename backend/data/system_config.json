@@ -5,5 +5,7 @@
   "gmail_user": "mock_gmail@gmail.com",
   "gmail_app_password": "mock_gmail_pass",
   "viber_bot_token_outages": "56a990b99bf464bd-d406c456f5380df0-770d03e18af041d0",
-  "viber_bot_token_alarms": "567370461ff5bfce-6527e240db117ad7-ce130e1ad6041265"
+  "viber_bot_token_alarms": "567370461ff5bfce-6527e240db117ad7-ce130e1ad6041265",
+  "viber_bot_token_pakh": "56b57ae5bbb11e4f-b8084d4fec7bf6ee-e681b83f2f40f110",
+  "viber_sender_id_pakh": "7DjCba+6SC7OvtozmG+ySQ=="
 }
