@@ -100,46 +100,13 @@ def _get_datasites_list():
     if not supabase:
         return []
     try:
-        res = supabase.table("datasites").select("site_id, site_id_old, classification").execute()
+        res = supabase.table("datasites").select("site_id, site_id_old").execute()
         _datasites_cache = res.data or []
     except Exception as e:
         logger.error(f'SmartW failed to fetch datasites cache: {e}')
         _datasites_cache = []
     return _datasites_cache
 
-
-def _is_night_mode() -> bool:
-    """Return True if current local hour is in the night-mode window (22h00 to 04h00)."""
-    now_hour = datetime.now().hour
-    return now_hour >= 22 or now_hour < 4
-
-
-def _is_critical_site(site_id) -> bool:
-    """Check if the site is classified as critical (Type 1, BBU Hub, or Transmission Intermediate Node)."""
-    if not site_id:
-        return False
-    site_str = str(site_id).strip().upper()
-    base_id, suffix = _split_site_id(site_str)
-    site_upper = base_id.strip().upper()
-    try:
-        data = _get_datasites_list()
-        for s in data:
-            s_id = (s.get("site_id") or "").upper()
-            s_old = (s.get("site_id_old") or "").upper()
-            if site_upper == s_id or site_upper == s_old:
-                classification = s.get("classification") or {}
-                phan_loai_tram = str(classification.get("phan_loai_tram") or "")
-                phan_lop_csht = str(classification.get("phan_lop_csht") or "")
-                
-                if (phan_loai_tram in ["1.0", "1"] or 
-                    "bbu" in phan_lop_csht.lower() or 
-                    "trung gian" in phan_lop_csht.lower()):
-                    return True
-                return False
-    except Exception as e:
-        logger.error(f"Error checking critical site for {site_id}: {e}")
-    # Default to True on failure to ensure we don't accidentally silence a critical site
-    return True
 
 
 
@@ -1301,11 +1268,8 @@ def process_pakh_alerts(pakh_list: list, job_type: str = 'pakh'):
             has_content = True
 
         if has_content:
-            if not _is_night_mode():
-                _send_viber_report(lines, token=pakh_token, sender=pakh_sender)
-                logger.info("Viber Alert: Sent PAKH delta (hourly) report")
-            else:
-                logger.info("Viber Alert: Night-Mode is active. Suppressed PAKH delta (hourly) report.")
+            _send_viber_report(lines, token=pakh_token, sender=pakh_sender)
+            logger.info("Viber Alert: Sent PAKH delta (hourly) report")
         else:
             logger.info("Viber Alert: No changes in PAKH delta this hour, skipped report")
 
@@ -1334,17 +1298,11 @@ def process_pakh_alerts(pakh_list: list, job_type: str = 'pakh'):
                 tram = get_site_display(ma_tram)
                 tg_con_lai = row.get("tgConLai") or "N/A"
                 lines1.append(f"• SĐT: {sdt} - Trạm: {tram}\n  ⏳ Hạn còn lại: {tg_con_lai}")
-            if not _is_night_mode():
-                _send_viber_report(lines1, token=pakh_token, sender=pakh_sender)
-                logger.info("Viber Alert: Sent PAKH summary (unresolved) report")
-            else:
-                logger.info("Viber Alert: Night-Mode is active. Suppressed PAKH summary (unresolved) report.")
+            _send_viber_report(lines1, token=pakh_token, sender=pakh_sender)
+            logger.info("Viber Alert: Sent PAKH summary (unresolved) report")
         else:
-            if not _is_night_mode():
-                _send_viber_report(["⏳ *TỔNG HỢP PAKH CHƯA XỬ LÝ (TỒN ĐỌNG)*\n\n- Không có phiếu tồn đọng nào. 🎉"], token=pakh_token, sender=pakh_sender)
-                logger.info("Viber Alert: No unresolved tickets, sent empty summary report")
-            else:
-                logger.info("Viber Alert: Night-Mode is active. Suppressed empty summary report.")
+            _send_viber_report(["⏳ *TỔNG HỢP PAKH CHƯA XỬ LÝ (TỒN ĐỌNG)*\n\n- Không có phiếu tồn đọng nào. 🎉"], token=pakh_token, sender=pakh_sender)
+            logger.info("Viber Alert: No unresolved tickets, sent empty summary report")
 
         # Tin nhắn 2: Tổng hợp các phiếu đã xử lý (đóng) trong 2 giờ qua
         if state["closed_since_last_summary"]:
@@ -1354,11 +1312,8 @@ def process_pakh_alerts(pakh_list: list, job_type: str = 'pakh'):
                 sdt = det.get("soThueBao") or "SĐT --"
                 tram = get_site_display(det.get("maTram") or "")
                 lines2.append(f"• SĐT: {sdt} - Trạm: {tram}")
-            if not _is_night_mode():
-                _send_viber_report(lines2, token=pakh_token, sender=pakh_sender)
-                logger.info("Viber Alert: Sent PAKH summary (resolved) report")
-            else:
-                logger.info("Viber Alert: Night-Mode is active. Suppressed PAKH summary (resolved) report.")
+            _send_viber_report(lines2, token=pakh_token, sender=pakh_sender)
+            logger.info("Viber Alert: Sent PAKH summary (resolved) report")
 
         # Clear state variables after summary report
         state["closed_since_last_summary"] = []
@@ -1761,17 +1716,6 @@ def run_alarm_poll():
                 cl_mpd = [a for (t, a) in all_cleared if t == 'mpd' and _is_managed_site(_site_key(a))]
                 cl_mll = [a for (t, a) in all_cleared if t == 'mll' and _is_managed_site(_site_key(a))]
 
-                # Apply Night-Mode filtering (22h00 to 04h00)
-                if _is_night_mode():
-                    logger.info("SmartW Worker: Night-Mode is active (22h-4h). Filtering for critical alarms only.")
-                    new_mpd = []  # Mute all generator alarms
-                    new_md = [a for a in new_md if _is_critical_site(_site_key(a))]  # Mute non-critical AC loss
-                    # Keep all new_mll (site MLL)
-                    
-                    # Mute all cleared alarms
-                    cl_md = []
-                    cl_mpd = []
-                    cl_mll = []
 
                 if not (new_md or new_mpd or new_mll or cl_md or cl_mpd or cl_mll):
                     # No real-time updates to report (only celloff changes)
@@ -2236,10 +2180,6 @@ def send_periodic_full_report():
     """Send a full status report to Viber Channel (Periodic 2-hour Review).
     Explicitly triggered by scheduler even if no changes occur.
     """
-    if _is_night_mode():
-        logger.info("SmartW Worker: Night-Mode is active (22h-4h). Skipping periodic 2-hour report.")
-        return
-
     logger.info("SmartW Worker: 🕒 Starting periodic 2-hour review report...")
     
     # 1. Load latest active data from disk
