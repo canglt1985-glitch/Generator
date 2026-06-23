@@ -954,9 +954,9 @@ def format_pakh_message(row: dict) -> str:
                 s_id = matched_site.get("site_id") or ""
                 s_old = matched_site.get("site_id_old") or ""
                 if s_old and s_id != s_old:
-                    tram_cell_display = f"{tram_cell} (mới: {s_id} / cũ: {s_old})"
+                    tram_cell_display = f"{tram_cell} ({s_id} / {s_old})"
                 elif s_id:
-                    tram_cell_display = f"{tram_cell} (mới: {s_id})"
+                    tram_cell_display = f"{tram_cell} ({s_id})"
         except Exception as e:
             logger.error(f'SmartW format_pakh_message site mapping error: {e}')
 
@@ -998,9 +998,9 @@ def format_pakh_reminder_message(row: dict) -> str:
                 s_id = matched_site.get("site_id") or ""
                 s_old = matched_site.get("site_id_old") or ""
                 if s_old and s_id != s_old:
-                    tram_cell_display = f"{tram_cell} (mới: {s_id} / cũ: {s_old})"
+                    tram_cell_display = f"{tram_cell} ({s_id} / {s_old})"
                 elif s_id:
-                    tram_cell_display = f"{tram_cell} (mới: {s_id})"
+                    tram_cell_display = f"{tram_cell} ({s_id})"
         except Exception as e:
             logger.error(f'SmartW format_pakh_reminder_message site mapping error: {e}')
 
@@ -1039,9 +1039,9 @@ def format_pakh_closed_message(c_id: str, details: dict) -> str:
                 s_id = matched_site.get("site_id") or ""
                 s_old = matched_site.get("site_id_old") or ""
                 if s_old and s_id != s_old:
-                    tram_cell_display = f"{tram_cell} (mới: {s_id} / cũ: {s_old})"
+                    tram_cell_display = f"{tram_cell} ({s_id} / {s_old})"
                 elif s_id:
-                    tram_cell_display = f"{tram_cell} (mới: {s_id})"
+                    tram_cell_display = f"{tram_cell} ({s_id})"
         except Exception as e:
             logger.error(f'SmartW format_pakh_closed_message site mapping error: {e}')
 
@@ -1093,7 +1093,7 @@ def _is_pakh_closed(row: dict) -> bool:
     return noc_status in closed_noc_statuses or trang_thai_wo in closed_wo_statuses
 
 
-def process_pakh_alerts(pakh_list: list):
+def process_pakh_alerts(pakh_list: list, job_type: str = 'pakh'):
     """Process scraped PAKH list: detect new tickets and expiring tickets, and alert to Viber."""
     state_file = os.path.join(DATA_DIR, 'pakh_sent_alerts.json')
     
@@ -1116,57 +1116,80 @@ def process_pakh_alerts(pakh_list: list):
         pakh_sender = "7DjCba+6SC7OvtozmG+ySQ=="
     
     # Load state
-    state = {"alerted_new": [], "alerted_expiring": [], "alerted_expiring_milestones": {}, "alerted_details": {}}
+    state = {
+        "alerted_new": [],
+        "alerted_expiring": [],
+        "alerted_expiring_milestones": {},
+        "alerted_details": {},
+        "newly_added_since_last_hour": [],
+        "closed_since_last_hour": [],
+        "closed_since_last_summary": []
+    }
     if os.path.exists(state_file):
         try:
             with open(state_file, 'r', encoding='utf-8') as f:
                 state = json.load(f)
-                if "alerted_new" not in state: state["alerted_new"] = []
-                if "alerted_expiring" not in state: state["alerted_expiring"] = []
-                if "alerted_expiring_milestones" not in state: state["alerted_expiring_milestones"] = {}
-                if "alerted_details" not in state: state["alerted_details"] = {}
+                state.setdefault("alerted_new", [])
+                state.setdefault("alerted_expiring", [])
+                state.setdefault("alerted_expiring_milestones", {})
+                state.setdefault("alerted_details", {})
+                state.setdefault("newly_added_since_last_hour", [])
+                state.setdefault("closed_since_last_hour", [])
+                state.setdefault("closed_since_last_summary", [])
         except Exception:
             pass
 
-    # Migrate old format if needed
-    milestones_dict = state.setdefault("alerted_expiring_milestones", {})
-    for old_id in state.get("alerted_expiring", []):
-        old_id_str = str(old_id)
-        if old_id_str not in milestones_dict:
-            milestones_dict[old_id_str] = ["16h", "8h"]
-
     changed = False
-
-    def parse_dt(dt_str):
-        if not dt_str:
-            return None
-        for fmt in ['%d/%m/%Y %H:%M:%S', '%d/%m/%Y %H:%M', '%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M', '%Y-%m-%dT%H:%M:%S']:
-            try:
-                return datetime.strptime(dt_str.strip(), fmt)
-            except ValueError:
-                continue
-        return None
 
     # Ensure all IDs in alerted_new are strings for consistent comparison
     state["alerted_new"] = [str(x) for x in state["alerted_new"]]
+    milestones_dict = state.setdefault("alerted_expiring_milestones", {})
 
+    # Helper function to format trạm mới / cũ
+    def get_site_display(ma_tram):
+        tram_cell_display = ma_tram
+        if ma_tram:
+            try:
+                data = _get_datasites_list()
+                matched_site = None
+                tram_upper = ma_tram.strip().upper()
+                for s in sorted(data, key=lambda x: len(x.get('site_id') or ''), reverse=True):
+                    s_id = (s.get("site_id") or "").upper()
+                    s_old = (s.get("site_id_old") or "").upper()
+                    if s_id and tram_upper.startswith(s_id):
+                        matched_site = s
+                        break
+                    if s_old and tram_upper.startswith(s_old):
+                        matched_site = s
+                        break
+                if matched_site:
+                    s_id = matched_site.get("site_id") or ""
+                    s_old = matched_site.get("site_id_old") or ""
+                    if s_old and s_id != s_old:
+                        tram_cell_display = f"{ma_tram} ({s_id} / {s_old})"
+                    elif s_id:
+                        tram_cell_display = f"{ma_tram} ({s_id})"
+            except Exception as e:
+                logger.error(f'SmartW site mapping error: {e}')
+        return tram_cell_display
+
+    # Identify active and closed tickets from the current pakh_list
+    active_ids = set()
     for row in pakh_list:
         pakh_id = _get_val(row, ['pakh', 'ma_pa', 'maPa', 'mã pa', 'id', 'ticket_id', 'ticketId', 'soPhanAnh', 'sđt', 'sdt', 'soThueBao'])
         if not pakh_id:
             continue
-
         pakh_id_str = str(pakh_id)
         
         # Check if site is managed by TVT3
         ma_tram = row.get('maTram') or ''
         if not _is_managed_site(ma_tram):
-            logger.info(f"SmartW PAKH: Skipping alert for unmanaged site: {ma_tram} (ticket ID: {pakh_id_str})")
             continue
 
-        # Save details for active tickets to support closed notifications later
-        if "alerted_details" not in state:
-            state["alerted_details"] = {}
-        
+        if not _is_pakh_closed(row):
+            active_ids.add(pakh_id_str)
+
+        # Track details
         current_detail = state["alerted_details"].get(pakh_id_str, {})
         new_detail = {
             "soThueBao": row.get('soThueBao') or '',
@@ -1178,11 +1201,11 @@ def process_pakh_alerts(pakh_list: list):
             state["alerted_details"][pakh_id_str] = new_detail
             changed = True
 
-        # 1. Alert for NEW tickets (only if not already closed/processed)
+        # Check for NEW tickets
         if pakh_id_str not in state["alerted_new"] and not _is_pakh_closed(row):
-            msg = format_pakh_message(row)
-            _send_viber_report(msg.split('\n'), token=pakh_token, sender=pakh_sender)
             state["alerted_new"].append(pakh_id_str)
+            if pakh_id_str not in state["newly_added_since_last_hour"]:
+                state["newly_added_since_last_hour"].append(pakh_id_str)
             changed = True
 
         # 2. Alert for expiring tickets (milestones: 16h, 8h, 2h) - only if not closed/processed
@@ -1239,6 +1262,7 @@ def process_pakh_alerts(pakh_list: list):
             if _is_managed_site(ma_tram) and not _is_pakh_closed(row):
                 active_ids.add(str(pakh_id))
 
+    # Identify newly CLOSED tickets
     closed_ids = []
     for alerted_id in state["alerted_new"]:
         if alerted_id not in active_ids:
@@ -1246,44 +1270,107 @@ def process_pakh_alerts(pakh_list: list):
 
     if closed_ids:
         for c_id in closed_ids:
-            details = state.get("alerted_details", {}).get(c_id, {})
-            if details and details.get("soThueBao"):
-                msg = format_pakh_closed_message(c_id, details)
-            else:
-                msg = f"✅ *PAKH ĐÃ ĐÓNG / XỬ LÝ XONG*\n\n- ID: {c_id}"
-                
-            try:
-                _send_viber_report(msg.split('\n'), token=pakh_token, sender=pakh_sender)
-                logger.info(f"Viber Alert: Sent closed notification for PAKH {c_id}")
-            except Exception as ve:
-                logger.error(f"Failed to send Viber closed alert for PAKH {c_id}: {ve}")
-            
-            # Remove from state to clear and prevent growth
             if c_id in state["alerted_new"]:
                 state["alerted_new"].remove(c_id)
-            if c_id in milestones_dict:
-                milestones_dict.pop(c_id, None)
-            if "alerted_details" in state and c_id in state["alerted_details"]:
-                state["alerted_details"].pop(c_id, None)
-                
+            state["alerted_expiring_milestones"].pop(c_id, None)
+            
+            # Track closed lists
+            if c_id not in state["closed_since_last_hour"]:
+                state["closed_since_last_hour"].append(c_id)
+            if c_id not in state["closed_since_last_summary"]:
+                state["closed_since_last_summary"].append(c_id)
             changed = True
 
-    # Limit state size to prevent infinite growth (keep last 500 records)
-    if len(state["alerted_new"]) > 500:
-        state["alerted_new"] = state["alerted_new"][-500:]
-        changed = True
-    if len(state["alerted_expiring"]) > 500:
-        state["alerted_expiring"] = state["alerted_expiring"][-500:]
-        changed = True
-        
-    # Trim milestones dict
-    if len(milestones_dict) > 500:
-        keys_to_keep = list(milestones_dict.keys())[-500:]
-        state["alerted_expiring_milestones"] = {k: milestones_dict[k] for k in keys_to_keep}
+    # Job-specific alert dispatch logic
+    if job_type == 'pakh_delta':
+        # Báo cáo lẻ: mới/đóng trong giờ qua
+        lines = ["🔔 *BÁO CÁO NHANH PAKH (CẬP NHẬT TRONG GIỜ)*\n"]
+        has_content = False
+
+        if state["newly_added_since_last_hour"]:
+            lines.append("🆕 *Phiếu mới phát sinh:*")
+            for n_id in state["newly_added_since_last_hour"]:
+                det = state["alerted_details"].get(n_id, {})
+                sdt = det.get("soThueBao") or "SĐT --"
+                tram = get_site_display(det.get("maTram") or "")
+                lines.append(f"  • SĐT: `{sdt}` - Trạm: `{tram}`")
+            has_content = True
+
+        if state["closed_since_last_hour"]:
+            if has_content:
+                lines.append("")
+            lines.append("✅ *Phiếu đã xử lý xong:*")
+            for c_id in state["closed_since_last_hour"]:
+                det = state["alerted_details"].get(c_id, {})
+                sdt = det.get("soThueBao") or "SĐT --"
+                tram = get_site_display(det.get("maTram") or "")
+                lines.append(f"  • SĐT: `{sdt}` - Trạm: `{tram}`")
+            has_content = True
+
+        if has_content:
+            _send_viber_report(lines, token=pakh_token, sender=pakh_sender)
+            logger.info("Viber Alert: Sent PAKH delta (hourly) report")
+        else:
+            logger.info("Viber Alert: No changes in PAKH delta this hour, skipped report")
+
+        # Clear delta state
+        state["newly_added_since_last_hour"] = []
+        state["closed_since_last_hour"] = []
         changed = True
 
-    # Trim details dict
-    if "alerted_details" in state and len(state["alerted_details"]) > 500:
+    elif job_type == 'pakh_summary':
+        # Báo cáo chung:
+        # Tin nhắn 1: Danh sách chưa xử lý (tồn đọng)
+        active_tickets = []
+        for row in pakh_list:
+            pakh_id = _get_val(row, ['pakh', 'ma_pa', 'maPa', 'mã pa', 'id', 'ticket_id', 'ticketId', 'soPhanAnh', 'sđt', 'sdt', 'soThueBao'])
+            if not pakh_id:
+                continue
+            pakh_id_str = str(pakh_id)
+            if pakh_id_str in active_ids:
+                active_tickets.append(row)
+
+        if active_tickets:
+            lines1 = ["⏳ *TỔNG HỢP PAKH CHƯA XỬ LÝ (TỒN ĐỌNG)*\n"]
+            for row in active_tickets:
+                sdt = row.get("soThueBao") or "SĐT --"
+                ma_tram = row.get("maTram") or ""
+                tram = get_site_display(ma_tram)
+                tg_con_lai = row.get("tgConLai") or "N/A"
+                lines1.append(f"• SĐT: `{sdt}` - Trạm: `{tram}`\n  ⏳ Hạn còn lại: `{tg_con_lai}`")
+            _send_viber_report(lines1, token=pakh_token, sender=pakh_sender)
+            logger.info("Viber Alert: Sent PAKH summary (unresolved) report")
+        else:
+            _send_viber_report(["⏳ *TỔNG HỢP PAKH CHƯA XỬ LÝ (TỒN ĐỌNG)*\n\n- Không có phiếu tồn đọng nào. 🎉"], token=pakh_token, sender=pakh_sender)
+            logger.info("Viber Alert: No unresolved tickets, sent empty summary report")
+
+        # Tin nhắn 2: Tổng hợp các phiếu đã xử lý (đóng) trong 2 giờ qua
+        if state["closed_since_last_summary"]:
+            lines2 = ["✅ *TỔNG HỢP PAKH ĐÃ XỬ LÝ (TRONG 2 GIỜ QUA)*\n"]
+            for c_id in state["closed_since_last_summary"]:
+                det = state["alerted_details"].get(c_id, {})
+                sdt = det.get("soThueBao") or "SĐT --"
+                tram = get_site_display(det.get("maTram") or "")
+                lines2.append(f"• SĐT: `{sdt}` - Trạm: `{tram}`")
+            _send_viber_report(lines2, token=pakh_token, sender=pakh_sender)
+            logger.info("Viber Alert: Sent PAKH summary (resolved) report")
+
+        # Clear state variables after summary report
+        state["closed_since_last_summary"] = []
+        state["newly_added_since_last_hour"] = []
+        state["closed_since_last_hour"] = []
+        changed = True
+
+    # Limit state size to prevent infinite growth
+    for key in ["alerted_new", "alerted_expiring", "newly_added_since_last_hour", "closed_since_last_hour", "closed_since_last_summary"]:
+        if key in state and len(state[key]) > 500:
+            state[key] = state[key][-500:]
+            changed = True
+    if len(state["alerted_expiring_milestones"]) > 500:
+        keys_to_keep = list(state["alerted_expiring_milestones"].keys())[-500:]
+        state["alerted_expiring_milestones"] = {k: state["alerted_expiring_milestones"][k] for k in keys_to_keep}
+        changed = True
+    if len(state["alerted_details"]) > 500:
         keys_to_keep = list(state["alerted_details"].keys())[-500:]
         state["alerted_details"] = {k: state["alerted_details"][k] for k in keys_to_keep}
         changed = True
@@ -1323,7 +1410,7 @@ def save_pakh_to_storage(pakh_list: list):
 
 
 
-def run_pakh_poll():
+def run_pakh_poll(job_type: str = 'pakh'):
     """Poll PAKH reports and send Viber alerts for new or near-expiration tickets."""
     if not _acquire_lock():
         return
@@ -1381,7 +1468,7 @@ def run_pakh_poll():
         return results
 
     try:
-        logger.info(f'⏰ SmartW Worker: Starting PAKH poll at {datetime.now()}')
+        logger.info(f'⏰ SmartW Worker: Starting PAKH poll ({job_type}) at {datetime.now()}')
         result = _run_async(_do_pakh_poll) or {}
 
         if result.get('error'):
@@ -1406,7 +1493,7 @@ def run_pakh_poll():
             ]
 
             pakh_list = result.get('pakh', [])
-            process_pakh_alerts(pakh_list)
+            process_pakh_alerts(pakh_list, job_type)
             try:
                 save_pakh_to_storage(pakh_list)
             except Exception as e:
@@ -2245,8 +2332,8 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     
     parser = argparse.ArgumentParser(description="SmartW Worker")
-    parser.add_argument('--job', type=str, default='alarm', choices=['alarm', 'vhkt', 'mfd', 'report', 'pakh'],
-                        help="Job to run (alarm, vhkt, mfd, report, pakh)")
+    parser.add_argument('--job', type=str, default='alarm', choices=['alarm', 'vhkt', 'mfd', 'report', 'pakh', 'pakh_delta', 'pakh_summary'],
+                        help="Job to run (alarm, vhkt, mfd, report, pakh, pakh_delta, pakh_summary)")
     parser.add_argument('--date', type=str, default=None,
                         help="Target date for mfd job (YYYY-MM-DD)")
     args = parser.parse_args()
@@ -2277,4 +2364,10 @@ if __name__ == '__main__':
         send_periodic_full_report()
     elif args.job == 'pakh':
         logger.info("Executing PAKH poll job...")
-        run_pakh_poll()
+        run_pakh_poll('pakh')
+    elif args.job == 'pakh_delta':
+        logger.info("Executing PAKH delta poll job...")
+        run_pakh_poll('pakh_delta')
+    elif args.job == 'pakh_summary':
+        logger.info("Executing PAKH summary poll job...")
+        run_pakh_poll('pakh_summary')
