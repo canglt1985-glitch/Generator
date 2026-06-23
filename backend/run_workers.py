@@ -175,11 +175,11 @@ def main():
                 last_run["smartw_alarm_key"] = alarm_key
                 run_job("smartw_alarm", [python_exe, os.path.join(current_dir, "smartw_worker.py"), "--job", "alarm"])
 
-            # Job B: SmartW PAKH Poller (Every 1 hour at minute :05)
+            # Job B: SmartW PAKH Poller - Delta (Every 1 hour at minute :05)
             pakh_key = f"{today_str}_{now.hour}"
             if now.minute == 5 and last_run.get("smartw_pakh_key") != pakh_key:
                 last_run["smartw_pakh_key"] = pakh_key
-                run_job("smartw_pakh", [python_exe, os.path.join(current_dir, "smartw_worker.py"), "--job", "pakh"])
+                run_job("smartw_pakh", [python_exe, os.path.join(current_dir, "smartw_worker.py"), "--job", "pakh_delta"])
 
             # Job C: SmartW MFD Oil Import (Once daily at 07:10 AM)
             if now.hour == 7 and now.minute == 10 and last_run.get("smartw_mfd_key") != today_str:
@@ -196,6 +196,12 @@ def main():
             if now.hour % 2 == 0 and now.hour != 12 and now.minute == 25 and last_run.get("smartw_report_key") != report_key:
                 last_run["smartw_report_key"] = report_key
                 run_job("smartw_report", [python_exe, os.path.join(current_dir, "smartw_worker.py"), "--job", "report"])
+
+            # Job E.2: SmartW PAKH Summary Report (Every 2 hours at minute :35 of even hours, exclude 12 PM for lunch break)
+            pakh_summary_key = f"{today_str}_{now.hour}"
+            if now.hour % 2 == 0 and now.hour != 12 and now.minute == 35 and last_run.get("smartw_pakh_summary_key") != pakh_summary_key:
+                last_run["smartw_pakh_summary_key"] = pakh_summary_key
+                run_job("smartw_pakh_summary", [python_exe, os.path.join(current_dir, "smartw_worker.py"), "--job", "pakh_summary"])
 
             # Job F: EVN Outages Scraper (Once daily at 05:30 AM)
             if now.hour == 5 and now.minute == 30 and last_run.get("evn_outages_key") != today_str:

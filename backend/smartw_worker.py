@@ -1208,50 +1208,6 @@ def process_pakh_alerts(pakh_list: list, job_type: str = 'pakh'):
                 state["newly_added_since_last_hour"].append(pakh_id_str)
             changed = True
 
-        # 2. Alert for expiring tickets (milestones: 16h, 8h, 2h) - only if not closed/processed
-        remaining = None
-        
-        # Try parsing remaining duration from tgclTtml first (correct SLA for TTML/province), fallback to tgConLai
-        tg_con_lai = _get_val(row, ['tgclTtml', 'tgConLai', 'tg_con_lai', 'thoiGianConLai'])
-        if tg_con_lai:
-            remaining = parse_vietnamese_duration(tg_con_lai)
-            
-        # Fallback to datetime deadline parsing if tgConLai is not available
-        if remaining is None:
-            tg_kt_str = _get_val(row, ['tg_kt', 'thoiGianKetThuc', 'ngayKetThuc', 'deadline', 'thời gian kết thúc', 'ngày kết thúc', 'hạn xử lý', 'edate', 'edateStr'])
-            if tg_kt_str:
-                kt_dt = parse_dt(tg_kt_str)
-                if kt_dt:
-                    now = datetime.now()
-                    remaining = (kt_dt - now).total_seconds()
-
-        if remaining is not None and not _is_pakh_closed(row):
-            # Determine current milestone
-            milestone = None
-            auto_complete_milestones = []
-            if 0 < remaining <= 2 * 3600:
-                milestone = "2h"
-                auto_complete_milestones = ["2h", "8h", "16h"]
-            elif 2 * 3600 < remaining <= 8 * 3600:
-                milestone = "8h"
-                auto_complete_milestones = ["8h", "16h"]
-            elif 8 * 3600 < remaining <= 16 * 3600:
-                milestone = "16h"
-                auto_complete_milestones = ["16h"]
-                
-            if milestone:
-                already_sent = milestones_dict.get(pakh_id_str, [])
-                if milestone not in already_sent:
-                    milestone_lbl = "16" if milestone == "16h" else "8" if milestone == "8h" else "2"
-                    msg = f"⏰ *CẢNH BÁO: PAKH CÒN {milestone_lbl} GIỜ XỬ LÝ (DEADLINE {milestone_lbl}H)*\n\n" + format_pakh_reminder_message(row)
-                    _send_viber_report(msg.split('\n'), token=pakh_token, sender=pakh_sender)
-                    
-                    # Add new milestone + auto-complete higher ones to avoid duplicates
-                    for m in auto_complete_milestones:
-                        if m not in already_sent:
-                            already_sent.append(m)
-                    milestones_dict[pakh_id_str] = already_sent
-                    changed = True
 
     # 3. Detect closed tickets (either missing from list, or present but marked as closed/processed)
     active_ids = set()
@@ -1293,7 +1249,7 @@ def process_pakh_alerts(pakh_list: list, job_type: str = 'pakh'):
                 det = state["alerted_details"].get(n_id, {})
                 sdt = det.get("soThueBao") or "SĐT --"
                 tram = get_site_display(det.get("maTram") or "")
-                lines.append(f"  • SĐT: `{sdt}` - Trạm: `{tram}`")
+                lines.append(f"  • SĐT: {sdt} - Trạm: {tram}")
             has_content = True
 
         if state["closed_since_last_hour"]:
@@ -1304,7 +1260,7 @@ def process_pakh_alerts(pakh_list: list, job_type: str = 'pakh'):
                 det = state["alerted_details"].get(c_id, {})
                 sdt = det.get("soThueBao") or "SĐT --"
                 tram = get_site_display(det.get("maTram") or "")
-                lines.append(f"  • SĐT: `{sdt}` - Trạm: `{tram}`")
+                lines.append(f"  • SĐT: {sdt} - Trạm: {tram}")
             has_content = True
 
         if has_content:
@@ -1337,7 +1293,7 @@ def process_pakh_alerts(pakh_list: list, job_type: str = 'pakh'):
                 ma_tram = row.get("maTram") or ""
                 tram = get_site_display(ma_tram)
                 tg_con_lai = row.get("tgConLai") or "N/A"
-                lines1.append(f"• SĐT: `{sdt}` - Trạm: `{tram}`\n  ⏳ Hạn còn lại: `{tg_con_lai}`")
+                lines1.append(f"• SĐT: {sdt} - Trạm: {tram}\n  ⏳ Hạn còn lại: {tg_con_lai}")
             _send_viber_report(lines1, token=pakh_token, sender=pakh_sender)
             logger.info("Viber Alert: Sent PAKH summary (unresolved) report")
         else:
@@ -1351,7 +1307,7 @@ def process_pakh_alerts(pakh_list: list, job_type: str = 'pakh'):
                 det = state["alerted_details"].get(c_id, {})
                 sdt = det.get("soThueBao") or "SĐT --"
                 tram = get_site_display(det.get("maTram") or "")
-                lines2.append(f"• SĐT: `{sdt}` - Trạm: `{tram}`")
+                lines2.append(f"• SĐT: {sdt} - Trạm: {tram}")
             _send_viber_report(lines2, token=pakh_token, sender=pakh_sender)
             logger.info("Viber Alert: Sent PAKH summary (resolved) report")
 
