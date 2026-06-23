@@ -100,12 +100,47 @@ def _get_datasites_list():
     if not supabase:
         return []
     try:
-        res = supabase.table("datasites").select("site_id, site_id_old").execute()
+        res = supabase.table("datasites").select("site_id, site_id_old, classification").execute()
         _datasites_cache = res.data or []
     except Exception as e:
         logger.error(f'SmartW failed to fetch datasites cache: {e}')
         _datasites_cache = []
     return _datasites_cache
+
+
+def _is_night_mode() -> bool:
+    """Return True if current local hour is in the night-mode window (22h00 to 04h00)."""
+    now_hour = datetime.now().hour
+    return now_hour >= 22 or now_hour < 4
+
+
+def _is_critical_site(site_id) -> bool:
+    """Check if the site is classified as critical (Type 1, BBU Hub, or Transmission Intermediate Node)."""
+    if not site_id:
+        return False
+    site_str = str(site_id).strip().upper()
+    base_id, suffix = _split_site_id(site_str)
+    site_upper = base_id.strip().upper()
+    try:
+        data = _get_datasites_list()
+        for s in data:
+            s_id = (s.get("site_id") or "").upper()
+            s_old = (s.get("site_id_old") or "").upper()
+            if site_upper == s_id or site_upper == s_old:
+                classification = s.get("classification") or {}
+                phan_loai_tram = str(classification.get("phan_loai_tram") or "")
+                phan_lop_csht = str(classification.get("phan_lop_csht") or "")
+                
+                if (phan_loai_tram in ["1.0", "1"] or 
+                    "bbu" in phan_lop_csht.lower() or 
+                    "trung gian" in phan_lop_csht.lower()):
+                    return True
+                return False
+    except Exception as e:
+        logger.error(f"Error checking critical site for {site_id}: {e}")
+    # Default to True on failure to ensure we don't accidentally silence a critical site
+    return True
+
 
 
 def _get_site_label(site_id) -> str:
@@ -272,6 +307,8 @@ def _send_viber_report(lines: list, token: str = None, sender: str = None):
     if not lines:
         return
     text = "\n".join(lines)
+    # Loại bỏ dấu backtick để tránh lỗi hiển thị nháy đơn lem nhem trên Viber di động
+    text = text.replace("`", "")
     
     # Determine sender ID based on token if not explicitly provided
     from_id = sender
@@ -1264,8 +1301,11 @@ def process_pakh_alerts(pakh_list: list, job_type: str = 'pakh'):
             has_content = True
 
         if has_content:
-            _send_viber_report(lines, token=pakh_token, sender=pakh_sender)
-            logger.info("Viber Alert: Sent PAKH delta (hourly) report")
+            if not _is_night_mode():
+                _send_viber_report(lines, token=pakh_token, sender=pakh_sender)
+                logger.info("Viber Alert: Sent PAKH delta (hourly) report")
+            else:
+                logger.info("Viber Alert: Night-Mode is active. Suppressed PAKH delta (hourly) report.")
         else:
             logger.info("Viber Alert: No changes in PAKH delta this hour, skipped report")
 
@@ -1294,11 +1334,17 @@ def process_pakh_alerts(pakh_list: list, job_type: str = 'pakh'):
                 tram = get_site_display(ma_tram)
                 tg_con_lai = row.get("tgConLai") or "N/A"
                 lines1.append(f"• SĐT: {sdt} - Trạm: {tram}\n  ⏳ Hạn còn lại: {tg_con_lai}")
-            _send_viber_report(lines1, token=pakh_token, sender=pakh_sender)
-            logger.info("Viber Alert: Sent PAKH summary (unresolved) report")
+            if not _is_night_mode():
+                _send_viber_report(lines1, token=pakh_token, sender=pakh_sender)
+                logger.info("Viber Alert: Sent PAKH summary (unresolved) report")
+            else:
+                logger.info("Viber Alert: Night-Mode is active. Suppressed PAKH summary (unresolved) report.")
         else:
-            _send_viber_report(["⏳ *TỔNG HỢP PAKH CHƯA XỬ LÝ (TỒN ĐỌNG)*\n\n- Không có phiếu tồn đọng nào. 🎉"], token=pakh_token, sender=pakh_sender)
-            logger.info("Viber Alert: No unresolved tickets, sent empty summary report")
+            if not _is_night_mode():
+                _send_viber_report(["⏳ *TỔNG HỢP PAKH CHƯA XỬ LÝ (TỒN ĐỌNG)*\n\n- Không có phiếu tồn đọng nào. 🎉"], token=pakh_token, sender=pakh_sender)
+                logger.info("Viber Alert: No unresolved tickets, sent empty summary report")
+            else:
+                logger.info("Viber Alert: Night-Mode is active. Suppressed empty summary report.")
 
         # Tin nhắn 2: Tổng hợp các phiếu đã xử lý (đóng) trong 2 giờ qua
         if state["closed_since_last_summary"]:
@@ -1308,8 +1354,11 @@ def process_pakh_alerts(pakh_list: list, job_type: str = 'pakh'):
                 sdt = det.get("soThueBao") or "SĐT --"
                 tram = get_site_display(det.get("maTram") or "")
                 lines2.append(f"• SĐT: {sdt} - Trạm: {tram}")
-            _send_viber_report(lines2, token=pakh_token, sender=pakh_sender)
-            logger.info("Viber Alert: Sent PAKH summary (resolved) report")
+            if not _is_night_mode():
+                _send_viber_report(lines2, token=pakh_token, sender=pakh_sender)
+                logger.info("Viber Alert: Sent PAKH summary (resolved) report")
+            else:
+                logger.info("Viber Alert: Night-Mode is active. Suppressed PAKH summary (resolved) report.")
 
         # Clear state variables after summary report
         state["closed_since_last_summary"] = []
@@ -1536,8 +1585,8 @@ def check_and_alert_flapping(all_new_alarms: dict):
                         "⚠️ *CẢNH BÁO CHẬP CHỜN (FLAPPING ALARM)*",
                         "------------",
                         f"Trạm {site_label} đang có hiện tượng chập chờn cảnh báo:",
-                        f"• **Loại cảnh báo:** `{alarm_name}`",
-                        f"• **Số lần xuất hiện hôm nay:** `{count} lần`"
+                        f"• *Loại cảnh báo:* {alarm_name}",
+                        f"• *Số lần xuất hiện hôm nay:* {count} lần"
                     ]
                     flapping_alerts.append(message)
                     history_data["alerted"][alert_key] = True
@@ -1549,9 +1598,10 @@ def check_and_alert_flapping(all_new_alarms: dict):
         except Exception as e:
             logger.error(f"Failed to save alarm history: {e}")
 
-    # Send alerts if any
-    for msg in flapping_alerts:
-        _send_viber_report(msg)
+    # Send alerts if any (only if not in Night-Mode)
+    if not _is_night_mode():
+        for msg in flapping_alerts:
+            _send_viber_report(msg)
 
 
 
@@ -1702,8 +1752,6 @@ def run_alarm_poll():
             #     check_and_alert_flapping(all_new)
 
             if all_new or all_cleared:
-                sep = '------------'
-                
                 # Filter for real-time reporting (skip mll_cell)
                 new_md = [a for a in all_new.get('md', []) if _is_managed_site(_site_key(a))]
                 new_mpd = [a for a in all_new.get('mpd', []) if _is_managed_site(_site_key(a))]
@@ -1712,6 +1760,18 @@ def run_alarm_poll():
                 cl_md = [a for (t, a) in all_cleared if t == 'md' and _is_managed_site(_site_key(a))]
                 cl_mpd = [a for (t, a) in all_cleared if t == 'mpd' and _is_managed_site(_site_key(a))]
                 cl_mll = [a for (t, a) in all_cleared if t == 'mll' and _is_managed_site(_site_key(a))]
+
+                # Apply Night-Mode filtering (22h00 to 04h00)
+                if _is_night_mode():
+                    logger.info("SmartW Worker: Night-Mode is active (22h-4h). Filtering for critical alarms only.")
+                    new_mpd = []  # Mute all generator alarms
+                    new_md = [a for a in new_md if _is_critical_site(_site_key(a))]  # Mute non-critical AC loss
+                    # Keep all new_mll (site MLL)
+                    
+                    # Mute all cleared alarms
+                    cl_md = []
+                    cl_mpd = []
+                    cl_mll = []
 
                 if not (new_md or new_mpd or new_mll or cl_md or cl_mpd or cl_mll):
                     # No real-time updates to report (only celloff changes)
@@ -1722,11 +1782,10 @@ def run_alarm_poll():
 
                 # --- 1. ACTIVE SECTION ---
                 if new_md or new_mpd or new_mll:
-                    lines.append("🚨 *ACTIVE* 🚨")
-                    lines.append(sep)
+                    lines.append("🚨 *ACTIVE*")
                     
                     if new_md:
-                        lines.append("⚡ *MAC:*")
+                        lines.append("*MAC:*")
                         mac_groups = {}
                         for alarm in new_md:
                             site = _site_key(alarm)
@@ -1741,7 +1800,7 @@ def run_alarm_poll():
                             lines.append(f"  • {grp['label']}{net_part} - {grp['t']}")
                     
                     if new_mpd:
-                        lines.append("🔋 *GEN:*")
+                        lines.append("*GEN:*")
                         mpd_groups = {}
                         for alarm in new_mpd:
                             site = _site_key(alarm)
@@ -1756,6 +1815,7 @@ def run_alarm_poll():
                             lines.append(f"  • {grp['label']}{net_part} - {grp['t']}")
 
                     if new_mll:
+                        lines.append("*MLL:*")
                         mll_groups = {}
                         for alarm in new_mll:
                             site = _site_key(alarm)
@@ -1765,20 +1825,18 @@ def run_alarm_poll():
                                 mll_groups[site] = {'label': _get_site_label(site), 'nets': [], 't': t}
                             if net and net not in mll_groups[site]['nets']:
                                 mll_groups[site]['nets'].append(net)
-                        
-                        lines.append("📵 *MLL:*")
                         for site, grp in mll_groups.items():
                             net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
                             lines.append(f"  • {grp['label']}{net_part} - {grp['t']}")
 
                 # --- 2. CLEARED SECTION ---
                 if cl_md or cl_mpd or cl_mll:
-                    if lines: lines.append(sep) # Separator only if ACTIVE was present
-                    lines.append("✅ *CLEARED* ✅")
-                    lines.append(sep)
+                    if lines:
+                        lines.append("") # Empty line separator instead of divider
+                    lines.append("✅ *CLEARED*")
 
                     if cl_md:
-                        lines.append("⚡ *MAC:*")
+                        lines.append("*MAC:*")
                         cl_mac_groups = {}
                         for alarm in cl_md:
                             site = _site_key(alarm)
@@ -1793,7 +1851,7 @@ def run_alarm_poll():
                             lines.append(f"  • {grp['label']}{net_part} - {grp['t']}")
 
                     if cl_mpd:
-                        lines.append("🔋 *GEN:*")
+                        lines.append("*GEN:*")
                         cl_mpd_groups = {}
                         for alarm in cl_mpd:
                             site = _site_key(alarm)
@@ -1808,6 +1866,7 @@ def run_alarm_poll():
                             lines.append(f"  • {grp['label']}{net_part} - {grp['t']}")
 
                     if cl_mll:
+                        lines.append("*MLL:*")
                         mll_cl_groups = {}
                         for alarm in cl_mll:
                             site = _site_key(alarm)
@@ -1817,14 +1876,9 @@ def run_alarm_poll():
                                 mll_cl_groups[site] = {'label': _get_site_label(site), 'nets': [], 't': clear_t}
                             if net and net not in mll_cl_groups[site]['nets']:
                                 mll_cl_groups[site]['nets'].append(net)
-                        
-                        lines.append("📵 *MLL:*")
                         for site, grp in mll_cl_groups.items():
                             net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
                             lines.append(f"  • {grp['label']}{net_part} - {grp['t']}")
-
-                # lines.append(sep)
-                # lines.append("📢 Tổng: " + str(total_active) + " cảnh báo đang hoạt động")
 
                 _send_viber_report(lines)
 
@@ -2182,6 +2236,10 @@ def send_periodic_full_report():
     """Send a full status report to Viber Channel (Periodic 2-hour Review).
     Explicitly triggered by scheduler even if no changes occur.
     """
+    if _is_night_mode():
+        logger.info("SmartW Worker: Night-Mode is active (22h-4h). Skipping periodic 2-hour report.")
+        return
+
     logger.info("SmartW Worker: 🕒 Starting periodic 2-hour review report...")
     
     # 1. Load latest active data from disk
@@ -2194,9 +2252,7 @@ def send_periodic_full_report():
     if not any([md_list, mpd_list, mll_list, cell_list]):
         pass
 
-    sep = '------------'
-    lines = ["📊 *SUMMARY (2H)* 📊"]
-    lines.append(sep)
+    lines = ["📊 *SUMMARY (2H)*"]
     
     total_active = 0
     
@@ -2205,7 +2261,7 @@ def send_periodic_full_report():
 
     # ── Section 1: MAC ──
     if md_list:
-        lines.append("⚡ *MAC:*")
+        lines.append("*MAC:*")
         mac_groups = {}
         for alarm in md_list:
             site = _site_key(alarm)
@@ -2222,7 +2278,7 @@ def send_periodic_full_report():
 
     # ── Section 2: GEN ──
     if mpd_list:
-        lines.append("🔋 *GEN:*")
+        lines.append("*GEN:*")
         mpd_groups = {}
         for alarm in mpd_list:
             site = _site_key(alarm)
@@ -2249,7 +2305,7 @@ def send_periodic_full_report():
             if net and net not in mll_groups[site]['nets']:
                 mll_groups[site]['nets'].append(net)
         
-        lines.append("📵 *MLL:*")
+        lines.append("*MLL:*")
         for site, grp in mll_groups.items():
             net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
             lines.append(f"  • {grp['label']}{net_part} - {grp['t']}")
@@ -2263,7 +2319,7 @@ def send_periodic_full_report():
             if cid and cid not in seen_cells: seen_cells[cid] = alarm
             elif not cid: seen_cells[id(alarm)] = alarm
             
-        lines.append("📵 *CELLOFF* (" + str(len(seen_cells)) + " cell):")
+        lines.append("*CELLOFF* (" + str(len(seen_cells)) + " cell):")
         for cid, alarm in seen_cells.items():
             site = _site_key(alarm)
             old_id = _old_id(site)
