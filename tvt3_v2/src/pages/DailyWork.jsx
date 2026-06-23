@@ -387,7 +387,7 @@ export default function DailyWork() {
     setLogDate(log.ngay || new Date().toISOString().split('T')[0]);
     setLogDateDMY(formatDateToDMY(log.ngay || new Date().toISOString().split('T')[0]));
     setLogSiteId(log.id_tram || '');
-    setLogStaff(user?.user_metadata?.full_name || user?.email?.split('@')[0] || log.nhan_vien || 'admin');
+    setLogStaff(log.nhan_vien || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'admin');
     setLogContent(log.noi_dung || '');
     setLogCategory(log.hang_muc || 'C2-Kiểm tra nhà trạm');
     setLogNote(log.ghi_chu || '');
@@ -554,7 +554,7 @@ export default function DailyWork() {
     setIssueDate(issue.date || new Date().toISOString().split('T')[0]);
     setIssueCategory(dataDetail.category || 'Cột anten');
     setIssueDescription(dataDetail.description || '');
-    setIssueReporter(user?.user_metadata?.full_name || user?.email?.split('@')[0] || dataDetail.reporter || 'admin');
+    setIssueReporter(dataDetail.reporter || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'admin');
     setIssueStatus(dataDetail.status || 'Chưa XL');
     setIssueResolvedAt(solutions.resolved_at || '');
     
@@ -1575,17 +1575,29 @@ export default function DailyWork() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Hạng mục</label>
-                <select 
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                  value={logCategory}
-                  onChange={(e) => setLogCategory(e.target.value)}
-                >
-                  {categoriesWorkV1.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Hạng mục</label>
+                  <select 
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                    value={logCategory}
+                    onChange={(e) => setLogCategory(e.target.value)}
+                  >
+                    {categoriesWorkV1.map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Nhân viên thực hiện</label>
+                  <input 
+                    type="text" 
+                    placeholder="Nhập tên nhân viên..."
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 font-medium"
+                    value={logStaff}
+                    onChange={(e) => setLogStaff(e.target.value)}
+                  />
+                </div>
               </div>
 
               <div>
@@ -1694,17 +1706,29 @@ export default function DailyWork() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Hạng mục tồn tại</label>
-                <select 
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-red-500 focus:border-red-500 bg-white"
-                  value={issueCategory}
-                  onChange={(e) => setIssueCategory(e.target.value)}
-                >
-                  {categoriesDefectsV1.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Hạng mục tồn tại</label>
+                  <select 
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-red-500 focus:border-red-500 bg-white"
+                    value={issueCategory}
+                    onChange={(e) => setIssueCategory(e.target.value)}
+                  >
+                    {categoriesDefectsV1.map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Người báo cáo</label>
+                  <input 
+                    type="text" 
+                    placeholder="Nhập tên người báo cáo..."
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-red-500 focus:border-red-500 font-medium"
+                    value={issueReporter}
+                    onChange={(e) => setIssueReporter(e.target.value)}
+                  />
+                </div>
               </div>
 
               <div>
