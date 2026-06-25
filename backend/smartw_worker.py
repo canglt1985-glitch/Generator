@@ -884,8 +884,21 @@ def send_daily_flapping_report(vhkt_data: list):
     else:
         lines.append("  • Không có")
         
-    _send_viber_report(lines)
-    logger.info(f"SmartW Worker: ✅ Daily flapping and long MLL report sent ({total_reported} entries)")
+    # Load outages token from config to send daily flapping report to Outages channel
+    outages_token = None
+    config_path = os.path.join(current_dir, 'data', 'system_config.json')
+    if os.path.exists(config_path):
+        try:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                cfg = json.load(f)
+                outages_token = cfg.get('viber_bot_token_outages')
+        except:
+            pass
+    if not outages_token:
+        outages_token = "56a990b99bf464bd-d406c456f5380df0-770d03e18af041d0"  # fallback default
+        
+    _send_viber_report(lines, token=outages_token)
+    logger.info(f"SmartW Worker: ✅ Daily flapping and long MLL report sent to Outages channel ({total_reported} entries)")
 
 
 
