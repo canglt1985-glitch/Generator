@@ -2185,7 +2185,7 @@ def send_periodic_full_report():
     # ── Section 1: MAC ──
     if md_list:
         lines.append("")
-        lines.append("• ⚡ *MAC:*")
+        lines.append("⚡ *MAC:*")
         mac_groups = {}
         for alarm in md_list:
             site = _site_key(alarm)
@@ -2203,7 +2203,7 @@ def send_periodic_full_report():
     # ── Section 2: GEN ──
     if mpd_list:
         lines.append("")
-        lines.append("• 🔋 *GEN:*")
+        lines.append("🔋 *GEN:*")
         mpd_groups = {}
         for alarm in mpd_list:
             site = _site_key(alarm)
@@ -2231,7 +2231,7 @@ def send_periodic_full_report():
                 mll_groups[site]['nets'].append(net)
         
         lines.append("")
-        lines.append("• 📵 *MLL:*")
+        lines.append("📵 *MLL:*")
         for site, grp in mll_groups.items():
             net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
             lines.append(f"  • {grp['label']}{net_part} - {grp['t']}")
@@ -2247,7 +2247,7 @@ def send_periodic_full_report():
             elif not cid: seen_cells[id(alarm)] = alarm
             
         lines.append("")
-        lines.append("• 📡 *CELLOFF* (" + str(len(seen_cells)) + " cell):")
+        lines.append("📡 *CELLOFF* (" + str(len(seen_cells)) + " cell):")
         for cid, alarm in seen_cells.items():
             site = _site_key(alarm)
             old_id = _old_id(site)
