@@ -31,7 +31,7 @@ def sync_configs():
         
         supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
         
-        # Call RPC to fetch config securely
+        logger.info("Syncing system config from Supabase V2 secure RPC...")
         res = supabase.rpc('get_system_config_secure', {'p_secret': 'TVT3_SECRET_SYNC_2026'}).execute()
         configs = res.data or []
         

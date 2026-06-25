@@ -44,6 +44,8 @@ export default function Settings() {
   const [telegramChatId, setTelegramChatId] = useState('');
   const [viberTokenOutages, setViberTokenOutages] = useState('');
   const [viberTokenAlarms, setViberTokenAlarms] = useState('');
+  const [viberTokenPakh, setViberTokenPakh] = useState('');
+  const [viberSenderIdPakh, setViberSenderIdPakh] = useState('');
   const [gmailUser, setGmailUser] = useState('');
   const [gmailAppPass, setGmailAppPass] = useState('');
   const [savingConfig, setSavingConfig] = useState(false);
@@ -79,6 +81,8 @@ export default function Settings() {
       setTelegramChatId('');
       setViberTokenOutages('');
       setViberTokenAlarms('');
+      setViberTokenPakh('');
+      setViberSenderIdPakh('');
       setGmailUser('');
       setGmailAppPass('');
 
@@ -92,6 +96,8 @@ export default function Settings() {
             case 'telegram_report_chat_id': setTelegramChatId(val || ''); break;
             case 'viber_bot_token_outages': setViberTokenOutages(val || ''); break;
             case 'viber_bot_token_alarms': setViberTokenAlarms(val || ''); break;
+            case 'viber_bot_token_pakh': setViberTokenPakh(val || ''); break;
+            case 'viber_sender_id_pakh': setViberSenderIdPakh(val || ''); break;
             case 'gmail_user': setGmailUser(val || ''); break;
             case 'gmail_app_password': setGmailAppPass(val || ''); break;
             default: break;
@@ -249,6 +255,8 @@ export default function Settings() {
       { key: 'telegram_report_chat_id', value: telegramChatId.trim(), description: 'Telegram Report Group Chat ID', updated_by: user?.email },
       { key: 'viber_bot_token_outages', value: viberTokenOutages.trim(), description: 'Viber Bot Token for Outages', updated_by: user?.email },
       { key: 'viber_bot_token_alarms', value: viberTokenAlarms.trim(), description: 'Viber Bot Token for Alarms', updated_by: user?.email },
+      { key: 'viber_bot_token_pakh', value: viberTokenPakh.trim(), description: 'Viber Bot Token for PAKH', updated_by: user?.email },
+      { key: 'viber_sender_id_pakh', value: viberSenderIdPakh.trim(), description: 'Viber Sender ID for PAKH', updated_by: user?.email },
       { key: 'gmail_user', value: gmailUser.trim(), description: 'Gmail Address for Invoices', updated_by: user?.email },
       { key: 'gmail_app_password', value: gmailAppPass.trim(), description: 'Gmail App Specific Password', updated_by: user?.email }
     ];
@@ -528,7 +536,7 @@ export default function Settings() {
                 <div className="bg-slate-50/50 p-5 rounded-2xl border border-slate-100 space-y-4">
                   <h3 className="text-xs font-extrabold text-slate-500 tracking-wider flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-                    CẤU HÌNH VIBER CHANNEL API (2 KÊNH)
+                    CẤU HÌNH VIBER CHANNEL API (3 KÊNH)
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
@@ -548,6 +556,26 @@ export default function Settings() {
                         value={viberTokenAlarms}
                         onChange={(e) => setViberTokenAlarms(e.target.value)}
                         placeholder="e.g. 567370461ff5bfce-xxxxxxxxxxxxxxxx-xxxxxxxxxxxxxxxx"
+                        className="block w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl leading-5 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 text-sm transition-all font-mono"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-500 block">Viber Token - PAKH</label>
+                      <input
+                        type="text"
+                        value={viberTokenPakh}
+                        onChange={(e) => setViberTokenPakh(e.target.value)}
+                        placeholder="e.g. 56b57ae5bbb11e4f-xxxxxxxxxxxxxxxx-xxxxxxxxxxxxxxxx"
+                        className="block w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl leading-5 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 text-sm transition-all font-mono"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-500 block">Viber Sender ID - PAKH</label>
+                      <input
+                        type="text"
+                        value={viberSenderIdPakh}
+                        onChange={(e) => setViberSenderIdPakh(e.target.value)}
+                        placeholder="e.g. 7DjCba+6SC7OvtozmG+ySQ=="
                         className="block w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl leading-5 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 text-sm transition-all font-mono"
                       />
                     </div>

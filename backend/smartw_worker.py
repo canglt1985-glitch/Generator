@@ -1232,7 +1232,7 @@ def process_pakh_alerts(pakh_list: list, job_type: str = 'pakh'):
         has_content = False
 
         if state["newly_added_since_last_hour"]:
-            lines.append("🆕 *Phiếu mới phát sinh:*")
+            lines.append("🆕 *PAKH mới:*")
             for n_id in state["newly_added_since_last_hour"]:
                 matched_row = None
                 for row in pakh_list:
@@ -1253,7 +1253,7 @@ def process_pakh_alerts(pakh_list: list, job_type: str = 'pakh'):
         if state["closed_since_last_hour"]:
             if has_content:
                 lines.append("")
-            lines.append("✅ *Phiếu đã xử lý xong:*")
+            lines.append("✅ *PAKH đã xử lý:*")
             for c_id in state["closed_since_last_hour"]:
                 det = state["alerted_details"].get(c_id, {})
                 sdt = det.get("soThueBao") or "SĐT --"
@@ -1297,17 +1297,6 @@ def process_pakh_alerts(pakh_list: list, job_type: str = 'pakh'):
         else:
             _send_viber_report(["⏳ *PAKH TỒN ĐỌNG*\n\n- Không có phiếu tồn đọng nào. 🎉"], token=pakh_token, sender=pakh_sender)
             logger.info("Viber Alert: No unresolved tickets, sent empty summary report")
-
-        # Tin nhắn 2: Tổng hợp các phiếu đã xử lý (đóng) trong 3 giờ qua
-        if state["closed_since_last_summary"]:
-            lines2 = ["✅ *PAKH ĐÃ XỬ LÝ (3H QUA)*\n"]
-            for c_id in state["closed_since_last_summary"]:
-                det = state["alerted_details"].get(c_id, {})
-                sdt = det.get("soThueBao") or "SĐT --"
-                tram = get_site_display(det.get("maTram") or "")
-                lines2.append(f"• SĐT: {sdt} - Trạm: {tram}")
-            _send_viber_report(lines2, token=pakh_token, sender=pakh_sender)
-            logger.info("Viber Alert: Sent PAKH summary (resolved) report")
 
         # Clear state variables after summary report
         state["closed_since_last_summary"] = []
@@ -2195,7 +2184,8 @@ def send_periodic_full_report():
 
     # ── Section 1: MAC ──
     if md_list:
-        lines.append("*MAC:*")
+        lines.append("")
+        lines.append("• *MAC:*")
         mac_groups = {}
         for alarm in md_list:
             site = _site_key(alarm)
@@ -2212,7 +2202,8 @@ def send_periodic_full_report():
 
     # ── Section 2: GEN ──
     if mpd_list:
-        lines.append("*GEN:*")
+        lines.append("")
+        lines.append("• *GEN:*")
         mpd_groups = {}
         for alarm in mpd_list:
             site = _site_key(alarm)
@@ -2239,21 +2230,24 @@ def send_periodic_full_report():
             if net and net not in mll_groups[site]['nets']:
                 mll_groups[site]['nets'].append(net)
         
-        lines.append("*MLL:*")
+        lines.append("")
+        lines.append("• *MLL:*")
         for site, grp in mll_groups.items():
             net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
             lines.append(f"  • {grp['label']}{net_part} - {grp['t']}")
             total_active += 1
 
     # ── Section 4: CELLOFF ──
-    if cell_list:
+    is_office_hours = (8 <= datetime.now().hour < 18)
+    if cell_list and is_office_hours:
         seen_cells = {}
         for alarm in cell_list:
             cid = str(alarm.get('cellid') or alarm.get('cell_id') or '').strip().upper()
             if cid and cid not in seen_cells: seen_cells[cid] = alarm
             elif not cid: seen_cells[id(alarm)] = alarm
             
-        lines.append("*CELLOFF* (" + str(len(seen_cells)) + " cell):")
+        lines.append("")
+        lines.append("• *CELLOFF* (" + str(len(seen_cells)) + " cell):")
         for cid, alarm in seen_cells.items():
             site = _site_key(alarm)
             old_id = _old_id(site)

@@ -13,6 +13,7 @@ import requests
 from dotenv import load_dotenv
 from supabase import create_client, Client
 import sys
+import json
 
 logger = logging.getLogger("invoice_worker")
 
@@ -437,6 +438,159 @@ def parse_invoice_from_html(html_content, source_name="Gmail"):
         return None
 
 
+# 4c. Helper to parse invoice from PDF attachment using pypdf
+def parse_invoice_from_pdf(pdf_bytes, source_name="Gmail PDF"):
+    try:
+        import io
+        from pypdf import PdfReader
+        
+        reader = PdfReader(io.BytesIO(pdf_bytes))
+        text = ""
+        for page in reader.pages:
+            t = page.extract_text()
+            if t:
+                text += t + "\n"
+        
+        # Regex to find invoice number
+        so_hd_match = re.search(r'Số\s*(?:\([^)]*\))?\s*:\s*(\d+)', text, re.IGNORECASE)
+        if not so_hd_match:
+            so_hd_match = re.search(r'(?:Số|No\.)\s*:\s*(\d+)', text, re.IGNORECASE)
+        so_hd = so_hd_match.group(1).strip() if so_hd_match else ""
+        
+        # Regex to find invoice date
+        # "Ngày (Date) 23 tháng (month) 06 năm (year) 2026"
+        date_match = re.search(r'Ngày\s*\(Date\)\s*(\d+)\s*tháng\s*\(month\)\s*(\d+)\s*năm\s*\(year\)\s*(\d+)', text, re.IGNORECASE)
+        if date_match:
+            d = date_match.group(1).zfill(2)
+            m = date_match.group(2).zfill(2)
+            y = date_match.group(3)
+            ngay_lap = f"{y}-{m}-{d}"
+        else:
+            ngay_lap_match = re.search(r'(?:Ngà\s*y h\u00f3a \u0111\u01a1n|Ngà\s*y l\u1eadp):\s*([\d/:-]+)', text, re.IGNORECASE)
+            ngay_lap_raw = ngay_lap_match.group(1).strip() if ngay_lap_match else ""
+            ngay_lap = ""
+            if ngay_lap_raw:
+                for fmt in ('%d/%m/%Y', '%Y-%m-%d', '%d-%m-%Y'):
+                    try:
+                        ngay_lap = datetime.strptime(ngay_lap_raw, fmt).strftime('%Y-%m-%d')
+                        break
+                    except ValueError:
+                        pass
+        if not ngay_lap:
+            ngay_lap = datetime.now().strftime('%Y-%m-%d')
+            
+        # Seller tax code (first match) and buyer tax code (second match)
+        mst_matches = re.findall(r'(?:Mã số thuế|Tax code)\s*\(?\)?\s*:\s*([\d\-]+)', text, re.IGNORECASE)
+        seller_mst = mst_matches[0].strip() if len(mst_matches) >= 1 else ""
+        buyer_mst = mst_matches[1].strip() if len(mst_matches) >= 2 else ""
+        
+        # Seller name: usually the first line or name before the first MST
+        lines = [line.strip() for line in text.split('\n') if line.strip()]
+        seller_name = "Đơn vị bán lẻ xăng dầu"
+        for line in lines[:5]:
+            if any(k in line.lower() for k in ["công ty", "tnhh", "dịch vụ", "doanh nghiệp"]):
+                seller_name = line
+                break
+                
+        buyer_name = "CHI NHÁNH MOBIFONE"
+        # Find buyer name: line after "Tên đơn vị (Company's name) :"
+        for idx, line in enumerate(lines):
+            if "tên đơn vị" in line.lower() or "company's name" in line.lower():
+                buyer_parts = []
+                for offset in range(1, 3):
+                    next_line = lines[idx + offset]
+                    if any(k in next_line.lower() for k in ["mã số thuế", "địa chỉ", "tax code", "address"]):
+                        break
+                    buyer_parts.append(next_line)
+                if buyer_parts:
+                    buyer_name = " ".join(buyer_parts)
+                break
+                
+        # Total amount
+        tong_tien = 0.0
+        tong_tien_match = re.search(r'Tổng tiền thanh toán\s*\(Total amount\)\s*:\s*([\d.,]+)', text, re.IGNORECASE)
+        if tong_tien_match:
+            val_str = tong_tien_match.group(1).strip()
+            val_clean = re.sub(r'[.,]', '', val_str)
+            try:
+                tong_tien = float(val_clean)
+            except:
+                pass
+        else:
+            tong_tien_match = re.search(r'Tổng cộng\s*:\s*([\d.,]+)', text, re.IGNORECASE)
+            if tong_tien_match:
+                val_str = tong_tien_match.group(1).strip()
+                val_clean = re.sub(r'[.,]', '', val_str)
+                try:
+                    tong_tien = float(val_clean)
+                except:
+                    pass
+
+        # Items parsing
+        items = []
+        has_fuel = False
+        for line in lines:
+            line_lc = line.lower()
+            if any(k in line_lc for k in ["dầu", "xăng", "diesel", " do ", "dầu do"]) or line_lc.startswith("do"):
+                has_fuel = True
+                parts = line.split()
+                floats = []
+                for p in parts:
+                    cleaned_p = p.replace('.', '').replace(',', '.')
+                    try:
+                        floats.append(float(cleaned_p))
+                    except:
+                        pass
+                items.append({
+                    "ten": line,
+                    "sl": floats[-3] if len(floats) >= 3 else 1.0,
+                    "dg": floats[-2] if len(floats) >= 2 else tong_tien,
+                    "tt": floats[-1] if len(floats) >= 1 else tong_tien
+                })
+                break
+        
+        if not items:
+            items = [{"ten": f"Hóa đơn xăng dầu số {so_hd}", "sl": 1.0, "dg": tong_tien, "tt": tong_tien}]
+            
+        loai_chi_phi = "Mua dầu" if has_fuel or any(k in seller_name.lower() or k in text.lower() for k in ["xăng", "dầu", "diesel", "fuel", "do", "dầu do"]) else "Chi phí khác"
+
+        ma_tra_cuu = ""
+        ma_tra_cuu_match = re.search(r'Mã tra cứu\s*(?:\([^)]*\))?\s*:\s*([A-Z0-9]+)', text, re.IGNORECASE)
+        if not ma_tra_cuu_match:
+            ma_tra_cuu_match = re.search(r'(?:Mã tra cứu|Invoice code)\s*:\s*([A-Z0-9]+)', text, re.IGNORECASE)
+        if ma_tra_cuu_match:
+            ma_tra_cuu = ma_tra_cuu_match.group(1).strip()
+            
+        kh_hd = ""
+        kh_hd_match = re.search(r'Ký hiệu\s*(?:\([^)]*\))?\s*:\s*([A-Z0-9/\-]+)', text, re.IGNORECASE)
+        if not kh_hd_match:
+            kh_hd_match = re.search(r'(?:Ký hiệu|Serial)\s*:\s*([A-Z0-9/\-]+)', text, re.IGNORECASE)
+        if kh_hd_match:
+            kh_hd = kh_hd_match.group(1).strip()
+
+        return {
+            "so_hd": so_hd,
+            "ngay_lap": ngay_lap,
+            "seller_name": seller_name,
+            "seller_mst": seller_mst,
+            "buyer_name": buyer_name,
+            "buyer_mst": buyer_mst,
+            "tong_tien": tong_tien,
+            "loai_chi_phi": loai_chi_phi,
+            "items": items,
+            "invoice_url": "",
+            "source": source_name,
+            "kh_hd": kh_hd,
+            "ma_tra_cuu": ma_tra_cuu,
+            "sub_total": tong_tien,
+            "vat_amount": 0.0,
+            "is_duplicate": False
+        }
+    except Exception as e:
+        logger.error(f"Error parsing PDF email attachment: {e}")
+        return None
+
+
 # 5. Fetch emails from Gmail
 def fetch_gmail_emails(gmail_user, gmail_app_pass, subject_filter="Hóa đơn", days_back=3, limit=30):
     try:
@@ -539,7 +693,7 @@ def fetch_gmail_emails(gmail_user, gmail_app_pass, subject_filter="Hóa đơn", 
                             fn_str += part_fn
                             
                     fn_lower = fn_str.lower()
-                    if fn_lower.endswith('.xml') or fn_lower.endswith('.zip'):
+                    if fn_lower.endswith('.xml') or fn_lower.endswith('.zip') or fn_lower.endswith('.pdf'):
                         attachments.append({
                             "filename": fn_str,
                             "data": part.get_payload(decode=True),
@@ -637,6 +791,7 @@ def scan_invoices_job():
             data = att["data"]
             
             xml_files = []
+            pdf_files = []
             if filename.lower().endswith('.xml'):
                 xml_files.append((filename, data))
             elif filename.lower().endswith('.zip'):
@@ -647,7 +802,10 @@ def scan_invoices_job():
                                 xml_files.append((zname, z.read(zname)))
                 except Exception as ex:
                     logger.warning(f"Failed to unzip {filename}: {ex}")
+            elif filename.lower().endswith('.pdf'):
+                pdf_files.append((filename, data))
                     
+            # 1. Process XML files
             for xml_name, xml_data in xml_files:
                 scanned_count += 1
                 has_xml_att = True
@@ -687,10 +845,54 @@ def scan_invoices_job():
                         
                         supabase.table("parsed_invoices").insert(payload).execute()
                         logger.info(f"✅ XML success: Inserted invoice {parsed['so_hd']} from {parsed['seller_name']}")
-                        send_telegram_invoice_notification(payload)
+                        # send_telegram_invoice_notification(payload) # Tắt thông báo riêng lẻ
                         new_invoices_count += 1
                 except Exception as db_err:
                     logger.error(f"Failed to process XML invoice: {db_err}")
+
+            # 2. Process PDF files
+            for pdf_name, pdf_data in pdf_files:
+                scanned_count += 1
+                has_xml_att = True
+                parsed = parse_invoice_from_pdf(pdf_data, source_name=f"Gmail PDF từ {sender}")
+                if not parsed or "error" in parsed:
+                    logger.warning(f"PDF parse error for {pdf_name}")
+                    continue
+                    
+                invoice_id = str(uuid.uuid5(uuid.NAMESPACE_OID, f"invoice_{parsed['so_hd']}_{parsed['seller_mst']}"))
+                
+                try:
+                    if supabase:
+                        res_exist = supabase.table("parsed_invoices").select("id").eq("id", invoice_id).execute()
+                        if res_exist.data:
+                            continue
+                            
+                        payload = {
+                            "id": invoice_id,
+                            "invoice_date": parsed["ngay_lap"],
+                            "invoice_number": parsed["so_hd"],
+                            "seller_name": parsed["seller_name"],
+                            "seller_mst": parsed["seller_mst"],
+                            "buyer_name": parsed["buyer_name"],
+                            "buyer_mst": parsed["buyer_mst"],
+                            "total_amount": parsed["tong_tien"],
+                            "expense_type": parsed["loai_chi_phi"],
+                            "items": parsed["items"],
+                            "source": parsed["source"],
+                            "status": "Approved",
+                            "invoice_url": parsed.get("invoice_url"),
+                            "kh_hd": parsed.get("kh_hd"),
+                            "ma_tra_cuu": parsed.get("ma_tra_cuu"),
+                            "sub_total": parsed.get("sub_total"),
+                            "vat_amount": parsed.get("vat_amount")
+                        }
+                        
+                        supabase.table("parsed_invoices").insert(payload).execute()
+                        logger.info(f"✅ PDF success: Inserted invoice {parsed['so_hd']} from {parsed['seller_name']}")
+                        # send_telegram_invoice_notification(payload) # Tắt thông báo riêng lẻ
+                        new_invoices_count += 1
+                except Exception as db_err:
+                    logger.error(f"Failed to process PDF invoice: {db_err}")
                     
         # Fallback to HTML body parse
         if not has_xml_att and mail_info.get("body_html"):
@@ -727,7 +929,7 @@ def scan_invoices_job():
                         
                         supabase.table("parsed_invoices").insert(payload).execute()
                         logger.info(f"✅ HTML success: Inserted invoice {parsed['so_hd']} from {parsed['seller_name']}")
-                        send_telegram_invoice_notification(payload)
+                        # send_telegram_invoice_notification(payload) # Tắt thông báo riêng lẻ
                         new_invoices_count += 1
                 except Exception as db_err:
                     logger.error(f"Failed to process HTML invoice: {db_err}")

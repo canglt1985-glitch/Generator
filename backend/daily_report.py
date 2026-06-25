@@ -129,7 +129,7 @@ def generate_daily_report_data(target_date_str=None):
         'matched_count': 0,
         'mismatched_count': 0,
         'pending_approvals': 0,
-        'pending_invoices': 0,
+        'new_invoices_today': 0,
         
         # Lũy kế tháng (MTD)
         'mtd': {
@@ -363,9 +363,9 @@ def generate_daily_report_data(target_date_str=None):
         res_pending_logs = supabase.table("generator_logs").select("gen_log_id").eq("run_details->>status", "pending").execute()
         report_data['pending_approvals'] = len(res_pending_logs.data) if res_pending_logs.data else 0
 
-        # 6. Pending parsed invoices count
-        res_pending_inv = supabase.table("parsed_invoices").select("id").eq("status", "Pending").execute()
-        report_data['pending_invoices'] = len(res_pending_inv.data) if res_pending_inv.data else 0
+        # 6. New parsed invoices count for the report date
+        res_new_inv = supabase.table("parsed_invoices").select("id").eq("invoice_date", target_date_str).execute()
+        report_data['new_invoices_today'] = len(res_new_inv.data) if res_new_inv.data else 0
 
         # 7. Recommendations
         try:
@@ -467,7 +467,7 @@ def format_daily_report_message(data):
         "",
         "⏳ *CHỜ PHÊ DUYỆT:*",
         f"• Log cần duyệt: `{data['pending_approvals']}` dòng",
-        f"• Hóa đơn mới nhận: `{data['pending_invoices']}` HĐ"
+        f"• Hóa đơn mới nhận: `{data['new_invoices_today']}` HĐ | Đã nhận: `{data['mtd']['invoice_count']}` HĐ"
     ])
 
     lines.append(sep)
