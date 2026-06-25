@@ -800,19 +800,6 @@ def save_vhkt_to_local_json(vhkt_raw: dict):
         "data": filtered_data
     }
 
-    local_path = os.path.join(DATA_DIR, 'vhkt_sla.json')
-    try:
-        with open(local_path, 'w', encoding='utf-8') as f:
-            json.dump(payload, f, ensure_ascii=False, indent=2)
-        logger.info(f"Local Storage: Saved {len(filtered_data)} SLA records to vhkt_sla.json")
-        
-        # Upload to Supabase Storage
-        upload_to_supabase_storage(local_path, 'vhkt_sla.json')
-    except Exception as e:
-        logger.error(f"Error saving/uploading VHKT SLA: {e}")
-
-
-
 def send_daily_flapping_report(vhkt_data: list):
     """
     Analyzes VHKT (daily summary) data and sends a Viber report for:
@@ -829,9 +816,7 @@ def send_daily_flapping_report(vhkt_data: list):
         logger.info("SmartW Worker: No TVT3 managed VHKT data to analyze, skipping report.")
         return
         
-    sep = '------------'
-    lines = ["📊 *BÁO CÁO CHẬP CHỜN & MLL KÉO DÀI (HÀNG NGÀY)* 📊"]
-    lines.append(sep)
+    lines = ["📊 *BÁO CÁO NGÀY: CHẬP CHỜN & MLL KÉO DÀI*"]
     
     mac_lines = []
     gen_lines = []
@@ -873,9 +858,9 @@ def send_daily_flapping_report(vhkt_data: list):
     if total_reported == 0:
         logger.info("SmartW Worker: No flapping or long MLL alarms found yesterday.")
         return
-
+ 
     # ── Section 1: MAC ──
-    lines.append("⚡ *MAC (Chập chờn > 10 lần):*")
+    lines.append("*MAC (Chập chờn > 10 lần):*")
     if mac_lines:
         lines.extend(mac_lines)
     else:
@@ -884,7 +869,7 @@ def send_daily_flapping_report(vhkt_data: list):
     lines.append("")
     
     # ── Section 2: GEN ──
-    lines.append("🔋 *GEN (Chập chờn > 10 lần):*")
+    lines.append("*GEN (Chập chờn > 10 lần):*")
     if gen_lines:
         lines.extend(gen_lines)
     else:
@@ -893,16 +878,15 @@ def send_daily_flapping_report(vhkt_data: list):
     lines.append("")
     
     # ── Section 3: MLL ──
-    lines.append("📵 *MLL (Chập chờn > 10 lần hoặc MLL > 2h):*")
+    lines.append("*MLL (Chập chờn > 10 lần hoặc MLL > 2h):*")
     if mll_lines:
         lines.extend(mll_lines)
     else:
         lines.append("  • Không có")
         
-    lines.append(sep)
-    
     _send_viber_report(lines)
     logger.info(f"SmartW Worker: ✅ Daily flapping and long MLL report sent ({total_reported} entries)")
+
 
 
 def _get_val(row: dict, keys: list) -> str:
@@ -1244,16 +1228,26 @@ def process_pakh_alerts(pakh_list: list, job_type: str = 'pakh'):
     # Job-specific alert dispatch logic
     if job_type == 'pakh_delta':
         # Báo cáo lẻ: mới/đóng trong giờ qua
-        lines = ["🔔 *BÁO CÁO NHANH PAKH (CẬP NHẬT TRONG GIỜ)*\n"]
+        lines = ["🔔 *TIN NHANH PAKH*\n"]
         has_content = False
 
         if state["newly_added_since_last_hour"]:
             lines.append("🆕 *Phiếu mới phát sinh:*")
             for n_id in state["newly_added_since_last_hour"]:
-                det = state["alerted_details"].get(n_id, {})
-                sdt = det.get("soThueBao") or "SĐT --"
-                tram = get_site_display(det.get("maTram") or "")
-                lines.append(f"  • SĐT: {sdt} - Trạm: {tram}")
+                matched_row = None
+                for row in pakh_list:
+                    pakh_id = _get_val(row, ['pakh', 'ma_pa', 'maPa', 'mã pa', 'id', 'ticket_id', 'ticketId', 'soPhanAnh', 'sđt', 'sdt', 'soThueBao'])
+                    if pakh_id and str(pakh_id) == n_id:
+                        matched_row = row
+                        break
+                if matched_row:
+                    lines.append(format_pakh_message(matched_row))
+                else:
+                    det = state["alerted_details"].get(n_id, {})
+                    sdt = det.get("soThueBao") or "SĐT --"
+                    tram = get_site_display(det.get("maTram") or "")
+                    lines.append(f"  • SĐT: {sdt} - Trạm: {tram}")
+                lines.append("")
             has_content = True
 
         if state["closed_since_last_hour"]:
@@ -1291,7 +1285,7 @@ def process_pakh_alerts(pakh_list: list, job_type: str = 'pakh'):
                 active_tickets.append(row)
 
         if active_tickets:
-            lines1 = ["⏳ *TỔNG HỢP PAKH CHƯA XỬ LÝ (TỒN ĐỌNG)*\n"]
+            lines1 = ["⏳ *PAKH TỒN ĐỌNG*\n"]
             for row in active_tickets:
                 sdt = row.get("soThueBao") or "SĐT --"
                 ma_tram = row.get("maTram") or ""
@@ -1301,12 +1295,12 @@ def process_pakh_alerts(pakh_list: list, job_type: str = 'pakh'):
             _send_viber_report(lines1, token=pakh_token, sender=pakh_sender)
             logger.info("Viber Alert: Sent PAKH summary (unresolved) report")
         else:
-            _send_viber_report(["⏳ *TỔNG HỢP PAKH CHƯA XỬ LÝ (TỒN ĐỌNG)*\n\n- Không có phiếu tồn đọng nào. 🎉"], token=pakh_token, sender=pakh_sender)
+            _send_viber_report(["⏳ *PAKH TỒN ĐỌNG*\n\n- Không có phiếu tồn đọng nào. 🎉"], token=pakh_token, sender=pakh_sender)
             logger.info("Viber Alert: No unresolved tickets, sent empty summary report")
 
-        # Tin nhắn 2: Tổng hợp các phiếu đã xử lý (đóng) trong 2 giờ qua
+        # Tin nhắn 2: Tổng hợp các phiếu đã xử lý (đóng) trong 3 giờ qua
         if state["closed_since_last_summary"]:
-            lines2 = ["✅ *TỔNG HỢP PAKH ĐÃ XỬ LÝ (TRONG 2 GIỜ QUA)*\n"]
+            lines2 = ["✅ *PAKH ĐÃ XỬ LÝ (3H QUA)*\n"]
             for c_id in state["closed_since_last_summary"]:
                 det = state["alerted_details"].get(c_id, {})
                 sdt = det.get("soThueBao") or "SĐT --"
