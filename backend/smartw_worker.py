@@ -800,6 +800,15 @@ def save_vhkt_to_local_json(vhkt_raw: dict):
         "data": filtered_data
     }
 
+    local_path = os.path.join(DATA_DIR, 'vhkt_sla.json')
+    try:
+        with open(local_path, 'w', encoding='utf-8') as f:
+            json.dump(payload, f, ensure_ascii=False, indent=2)
+        logger.info(f"Local Storage: Saved {len(filtered_data)} VHKT SLA records to vhkt_sla.json")
+        upload_to_supabase_storage(local_path, 'vhkt_sla.json')
+    except Exception as e:
+        logger.error(f"Error saving/uploading VHKT SLA: {e}")
+
 def send_daily_flapping_report(vhkt_data: list):
     """
     Analyzes VHKT (daily summary) data and sends a Viber report for:
