@@ -281,8 +281,11 @@ def _send_viber_report(lines: list, token: str = None, sender: str = None):
     from_id = sender
     if not from_id:
         pakh_token = "56b57ae5bbb11e4f-b8084d4fec7bf6ee-e681b83f2f40f110"
+        outages_token = "56a990b99bf464bd-d406c456f5380df0-770d03e18af041d0"
         if token == pakh_token:
             from_id = "7DjCba+6SC7OvtozmG+ySQ=="
+        elif token == outages_token:
+            from_id = "1B+9xBdRnqEQJXfWFZr4Dg=="
         else:
             from_id = "OMu7ptWb9vbA4pvi5QfVjQ=="
             
