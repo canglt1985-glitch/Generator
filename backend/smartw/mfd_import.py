@@ -407,7 +407,7 @@ def resolve_overlapping_logs(raw_data: list[dict]) -> int:
     deleted_count = 0
     try:
         for target_date in affected_dates:
-            res = supabase.table("generator_logs").eq("date", target_date).execute()
+            res = supabase.table("generator_logs").select("*").eq("date", target_date).execute()
             logs = res.data or []
             
             by_station = {}

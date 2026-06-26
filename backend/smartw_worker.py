@@ -2310,8 +2310,20 @@ if __name__ == '__main__':
         logger.info(f"Executing VHKT morning poll job with date={target_date}...")
         run_vhkt_poll(target_date)
     elif args.job == 'mfd':
-        logger.info(f"Executing MFD import job with date={args.date}...")
-        run_mfd_import_poll(args.date)
+        target_date = None
+        if args.date:
+            try:
+                if '-' in args.date:
+                    from datetime import datetime as _dt
+                    target_date = _dt.strptime(args.date, '%Y-%m-%d').strftime('%d/%m/%Y')
+                else:
+                    target_date = args.date
+            except Exception as e:
+                logger.error(f"Error parsing date {args.date} for MFD: {e}")
+                import sys
+                sys.exit(1)
+        logger.info(f"Executing MFD import job with date={target_date}...")
+        run_mfd_import_poll(target_date)
     elif args.job == 'report':
         logger.info("Executing periodic report job...")
         send_periodic_full_report()
