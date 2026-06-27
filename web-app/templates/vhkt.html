@@ -683,15 +683,16 @@
                 }
 
 
-                // Sync card count with actual data
+                // Sync card count with actual data (active only)
                 const countMap = { md: 'mdCount', mpd: 'mpdCount', mll: 'mllCount', mll_cell: 'mllCellCount' };
                 if (countMap[tabName]) {
+                    const activeRows = rows.filter(r => r.status === 'ACTIVE');
                     if (tabName === 'md') {
                         // Count unique stations instead of total alarms
-                        const uniqueStations = new Set(rows.map(r => (r.site || '').trim()).filter(Boolean));
+                        const uniqueStations = new Set(activeRows.map(r => (r.site || '').trim()).filter(Boolean));
                         document.getElementById(countMap[tabName]).textContent = uniqueStations.size;
                     } else {
-                        document.getElementById(countMap[tabName]).textContent = rows.length;
+                        document.getElementById(countMap[tabName]).textContent = activeRows.length;
                     }
                 }
             })

@@ -147,12 +147,11 @@ export default function VhktRan() {
     return activeMpdSites.has((site || '').trim().toUpperCase());
   };
 
-  // Card counts
-  const uniqueMdSites = new Set(mdActive.map(a => (a.site || '').trim().toUpperCase()).filter(Boolean));
-  const mdCount = uniqueMdSites.size;
-  const mpdCount = mpdActive.length;
-  const mllCount = mllActive.length;
-  const cellCount = cellActive.length;
+  // Card counts (active only)
+  const mdCount = new Set(mdActive.filter(a => a.status === 'ACTIVE').map(a => (a.site || '').trim().toUpperCase()).filter(Boolean)).size;
+  const mpdCount = mpdActive.filter(a => a.status === 'ACTIVE').length;
+  const mllCount = mllActive.filter(a => a.status === 'ACTIVE').length;
+  const cellCount = cellActive.filter(a => a.status === 'ACTIVE').length;
 
   // Sort function: ACTIVE first, then newest first (sdate DESC)
   const sortAlarms = (list) => {
