@@ -2034,6 +2034,26 @@ def run_mfd_import_poll(target_date: str = None):
             mfd_data = await scraper.scrape_mfd_reports(target_date)
             results['raw_count'] = len(mfd_data)
             results['data'] = mfd_data
+            
+            # Also scrape the past 3 days in the same thread/event loop
+            prev_results = []
+            if target_date:
+                base_dt = datetime.strptime(target_date, '%d/%m/%Y')
+            else:
+                base_dt = datetime.now() - timedelta(days=1)
+                
+            for d in range(1, 4):
+                prev_dt = base_dt - timedelta(days=d)
+                prev_date_str = prev_dt.strftime('%d/%m/%Y')
+                logger.info(f'SmartW Worker: MFD also checking {prev_date_str} for overnight updates...')
+                try:
+                    prev_data = await scraper.scrape_mfd_reports(prev_date_str)
+                    if prev_data:
+                        prev_results.append((prev_date_str, prev_data))
+                except Exception as ex:
+                    logger.warning(f'SmartW Worker: MFD prev-day scrape error for {prev_date_str}: {ex}')
+            
+            results['prev_results'] = prev_results
             results['status'] = 'success'
         except Exception as e:
             err_str = str(e)
@@ -2051,6 +2071,25 @@ def run_mfd_import_poll(target_date: str = None):
                         mfd_data = await scraper.scrape_mfd_reports(target_date)
                         results['raw_count'] = len(mfd_data)
                         results['data'] = mfd_data
+                        
+                        prev_results = []
+                        if target_date:
+                            base_dt = datetime.strptime(target_date, '%d/%m/%Y')
+                        else:
+                            base_dt = datetime.now() - timedelta(days=1)
+                            
+                        for d in range(1, 4):
+                            prev_dt = base_dt - timedelta(days=d)
+                            prev_date_str = prev_dt.strftime('%d/%m/%Y')
+                            logger.info(f'SmartW Worker: MFD also checking {prev_date_str} for overnight updates (retry)...')
+                            try:
+                                prev_data = await scraper.scrape_mfd_reports(prev_date_str)
+                                if prev_data:
+                                    prev_results.append((prev_date_str, prev_data))
+                            except Exception as ex:
+                                logger.warning(f'SmartW Worker: MFD prev-day scrape error for {prev_date_str}: {ex}')
+                        
+                        results['prev_results'] = prev_results
                         results['status'] = 'success'
                     else:
                         results['error'] = 'Login failed (retry)'
@@ -2109,29 +2148,11 @@ def run_mfd_import_poll(target_date: str = None):
                                  'duplicates': 0, 'updated': 0, 'errors': []}
                 logger.info(f'SmartW Worker: MFD — no events for {date_label}')
 
-            # Step 3: Also scrape the past 3 days to catch overnight events
-            # that started previously and ended on D (now completed with end time)
+            # Step 3: Also process the past 3 days scraped data
             try:
-                if target_date:
-                    base_dt = datetime.strptime(target_date, '%d/%m/%Y')
-                else:
-                    base_dt = datetime.now() - timedelta(days=1)
-                
+                prev_results = scrape_result.get('prev_results', [])
                 total_updated = 0
-                for d in range(1, 4):  # Check 3 days back
-                    prev_dt = base_dt - timedelta(days=d)
-                    prev_date_str = prev_dt.strftime('%d/%m/%Y')
-
-                    logger.info(f'SmartW Worker: MFD also checking {prev_date_str} for overnight updates...')
-
-                    async def _scrape_prev(date_str=prev_date_str):
-                        scraper = await _get_or_create_scraper(config['username'], config['password'])
-                        if scraper:
-                            await scraper._ensure_login()
-                            return await scraper.scrape_mfd_reports(date_str)
-                        return []
-
-                    prev_data = _run_async(_scrape_prev)
+                for prev_date_str, prev_data in prev_results:
                     if prev_data:
                         from smartw.mfd_import import update_incomplete_records
                         prev_updated = update_incomplete_records(prev_data)
@@ -2143,7 +2164,7 @@ def run_mfd_import_poll(target_date: str = None):
                     import_result['updated'] = import_result.get('updated', 0) + total_updated
 
             except Exception as prev_err:
-                logger.warning(f'SmartW Worker: MFD prev-day scrape error (non-critical): {prev_err}')
+                logger.warning(f'SmartW Worker: MFD prev-day processing error: {prev_err}')
 
         status['last_mfd_import'] = datetime.now().isoformat()
 

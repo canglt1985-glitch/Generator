@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { FileDown, Loader2, X, CheckCircle2, Server, FileText, Wallet, CreditCard, ChevronRight } from 'lucide-react';
 import { generateWordDocument } from '../../utils/wordGenerator';
-import { generatePaymentSchedule } from '../../utils/contractCalculations';
+import { generatePaymentSchedule, convertNumberToVietnameseWords } from '../../utils/contractCalculations';
 
 const TEMPLATES = {
     M: { id: 'hd_moi_mat_bang', label: '1. Hợp đồng mới Mặt Bằng', file: 'HOP_DONG_MOI_MAT_BANG.docx', type: 'MBF' },
@@ -109,7 +109,7 @@ export default function ContractExportButton({ site, contract, overridePrice }) 
             OWNER_NAME_NEW: '',
             PHONE: contract?.contractor_info?.sdt_chu_nha || '',
             RENT_FEE: formatCurrency(contract?.financials?.gia_thue_co_vat),
-            RENT_FEE_TEXT: 'Bằng chữ ghi ở đây',
+            RENT_FEE_TEXT: convertNumberToVietnameseWords(oldPrice),
             ACCOUNT_OWNER: contract?.bank_info?.chu_tai_khoan || '',
             ACCOUNT_NO: contract?.bank_info?.so_tai_khoan || '',
             BANK_NAME: contract?.bank_info?.ngan_hang || '',
@@ -117,7 +117,7 @@ export default function ContractExportButton({ site, contract, overridePrice }) 
             CONTACT_ADDR: contract?.contractor_info?.dia_chi_lien_he || '',
             OLD_PRICE: formatCurrency(contract?.financials?.gia_thue_co_vat),
             NEW_PRICE: formatCurrency(tong_chot),
-            NEW_PRICE_TEXT: 'Bằng chữ ghi ở đây',
+            NEW_PRICE_TEXT: convertNumberToVietnameseWords(tong_chot),
             LY_DO: 'Thực hiện phương án đàm phán giảm giá thuê vị trí đặt trạm BTS',
             IS_GIAM_GIA: opts.giamGia ? 1 : 0,
             IS_GIA_HAN: opts.giaHan ? 1 : 0,
@@ -170,6 +170,28 @@ export default function ContractExportButton({ site, contract, overridePrice }) 
         setOptions(nextOpts);
         const data = buildMasterData(selectedTemplate, nextOpts);
         setMasterData(data);
+    };
+
+    const handleUpdateMasterDataField = (key, value) => {
+        setMasterData(prev => {
+            if (!prev) return prev;
+            const next = { ...prev, [key]: value };
+            
+            // Automatically update RENT_FEE_TEXT / NEW_PRICE_TEXT if their numeric fields are edited
+            if (key === 'RENT_FEE' || key === 'OLD_PRICE') {
+                const num = parseInt(value.replace(/\D/g, ''), 10);
+                if (!isNaN(num)) {
+                    next['RENT_FEE_TEXT'] = convertNumberToVietnameseWords(num);
+                }
+            }
+            if (key === 'NEW_PRICE') {
+                const num = parseInt(value.replace(/\D/g, ''), 10);
+                if (!isNaN(num)) {
+                    next['NEW_PRICE_TEXT'] = convertNumberToVietnameseWords(num);
+                }
+            }
+            return next;
+        });
     };
 
     const handleDownloadMain = async () => {
@@ -371,11 +393,23 @@ export default function ContractExportButton({ site, contract, overridePrice }) 
                                                 <td className="px-5 py-3 align-top">
                                                     <code className="text-[11px] bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded font-mono">{`{{${key}}}`}</code>
                                                 </td>
-                                                <td className="px-4 py-3 font-medium text-slate-800 text-sm">
-                                                    {masterData[key] ? (
-                                                        <span className="bg-amber-50 px-1.5 py-0.5 rounded text-amber-900">{masterData[key]}</span>
+                                                <td className="px-4 py-2 font-medium text-slate-800 text-sm">
+                                                    {['PAY_ROW', 'DEDUCTION_TEXT', 'ADDRESS', 'ADDRESS_OLD', 'ADDRESS_NEW', 'CONTACT_ADDR'].includes(key) ? (
+                                                        <textarea
+                                                            value={masterData[key] || ''}
+                                                            onChange={(e) => handleUpdateMasterDataField(key, e.target.value)}
+                                                            rows={key === 'PAY_ROW' ? 4 : 2}
+                                                            className="w-full px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100/50 focus:bg-white border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg text-slate-800 font-medium text-sm transition-all outline-none resize-y"
+                                                            placeholder="Nhập giá trị..."
+                                                        />
                                                     ) : (
-                                                        <span className="text-slate-300 italic text-xs">Trống</span>
+                                                        <input
+                                                            type="text"
+                                                            value={masterData[key] || ''}
+                                                            onChange={(e) => handleUpdateMasterDataField(key, e.target.value)}
+                                                            className="w-full px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100/50 focus:bg-white border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg text-slate-800 font-medium text-sm transition-all outline-none"
+                                                            placeholder="Nhập giá trị..."
+                                                        />
                                                     )}
                                                 </td>
                                             </tr>

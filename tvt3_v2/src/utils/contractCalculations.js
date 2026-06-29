@@ -127,3 +127,72 @@ export function generatePaymentSchedule(paidUntilDateStr, endContractStr, oldPri
         paidUntilDate
     };
 }
+
+/**
+ * Chuyển đổi số thành chữ tiếng Việt (đọc số tiền)
+ * @param {number} number 
+ * @returns {string} Số tiền bằng chữ
+ */
+export function convertNumberToVietnameseWords(number) {
+    if (number === 0) return "Không đồng";
+    
+    const units = ["", "một", "hai", "ba", "bốn", "năm", "sáu", "bảy", "tám", "chín"];
+    const places = ["", "nghìn", "triệu", "tỷ", "nghìn tỷ", "triệu tỷ"];
+    
+    function readThreeDigits(n, showZeroHundred) {
+        let hundred = Math.floor(n / 100);
+        let ten = Math.floor((n % 100) / 10);
+        let single = n % 10;
+        let res = "";
+        
+        if (hundred > 0 || showZeroHundred) {
+            res += units[hundred] + " trăm ";
+        }
+        
+        if (ten > 0) {
+            if (ten === 1) {
+                res += "mười ";
+            } else {
+                res += units[ten] + " mươi ";
+            }
+        } else if (hundred > 0 && single > 0) {
+            res += "lẻ ";
+        }
+        
+        if (single > 0) {
+            if (single === 1 && ten > 1) {
+                res += "mốt ";
+            } else if (single === 5 && ten > 0) {
+                res += "lăm ";
+            } else {
+                res += units[single] + " ";
+            }
+        }
+        return res;
+    }
+    
+    let str = "";
+    let num = Math.abs(number);
+    let groups = [];
+    
+    while (num > 0) {
+        groups.push(num % 1000);
+        num = Math.floor(num / 1000);
+    }
+    
+    for (let i = groups.length - 1; i >= 0; i--) {
+        let g = groups[i];
+        if (g > 0) {
+            let showZeroHundred = i < groups.length - 1;
+            str += readThreeDigits(g, showZeroHundred) + places[i] + " ";
+        }
+    }
+    
+    str = str.trim().replace(/\s+/g, ' ');
+    if (str.length > 0) {
+        str = str.charAt(0).toUpperCase() + str.slice(1) + " đồng";
+    }
+    
+    return str;
+}
+
