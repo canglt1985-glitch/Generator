@@ -21,7 +21,7 @@ const TEMPLATES = {
 
 const PREVIEW_TABS = [
     { id: 'tram', label: 'Trạm', icon: Server, keys: ['SITE_ID', 'SITE_NAME', 'ADDRESS'] },
-    { id: 'hopdong', label: 'Hợp Đồng', icon: FileText, keys: ['CONTRACT_NO', 'CONTRACT_DATE', 'END_DATE', 'OWNER_NAME', 'ADDRESS_OLD', 'ADDRESS_NEW', 'PHONE', 'KICH_BAN_TEXT'] },
+    { id: 'hopdong', label: 'Hợp Đồng', icon: FileText, keys: ['CONTRACT_NO', 'CONTRACT_DATE', 'ORIGINAL_END_DATE', 'END_DATE', 'OWNER_NAME', 'ADDRESS_OLD', 'ADDRESS_NEW', 'PHONE', 'KICH_BAN_TEXT'] },
     { id: 'taichinh', label: 'Tài Chính', icon: Wallet, keys: ['RENT_FEE', 'OLD_PRICE', 'NEW_PRICE'] },
     { id: 'nganhang', label: 'Ngân Hàng', icon: CreditCard, keys: ['ACCOUNT_OWNER', 'ACCOUNT_NO', 'BANK_NAME', 'BRANCH'] },
     { id: 'giamgia', label: 'Giảm Giá', icon: Wallet, keys: ['MB_QĐ02', 'P_MB', 'TL_MB', 'MFĐ_1245', 'P_MFD', 'TL_MFD', 'COT_1245', 'GIAM_TRU', 'COT_CHOT', 'TL_COT', 'PM_1245', 'P_PM', 'TL_PM', 'TONG_QD', 'TONG_CHOT', 'TL_TONG'] },
@@ -103,7 +103,8 @@ export default function ContractExportButton({ site, contract, overridePrice }) 
             ADDRESS_NEW: addressNew,
             CONTRACT_NO: contract?.contract_number || '',
             CONTRACT_DATE: formatDate(contract?.dates?.ngay_ky_hd),
-            END_DATE: formatDate(contract?.dates?.ngay_ket_thuc_hd),
+            END_DATE: formatDate(scheduleData.endContract),
+            ORIGINAL_END_DATE: formatDate(scheduleData.originalEndContract),
             OWNER_NAME: contract?.contractor_info?.chu_the_hop_dong || '',
             OWNER_NAME_OLD: contract?.contractor_info?.chu_the_hop_dong || '',
             OWNER_NAME_NEW: '',
