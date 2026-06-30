@@ -1681,6 +1681,17 @@ export default function Generator() {
                 </div>
               </div>
 
+              <div className="grid grid-cols-2 gap-4 text-sm border-b border-slate-100 pb-4">
+                <div>
+                  <div className="text-xs text-slate-400 font-bold uppercase">Mã tra cứu hóa đơn</div>
+                  <div className="font-bold text-slate-700 mt-1 font-mono select-all bg-slate-50 px-2 py-1 rounded border border-slate-100 inline-block">{selectedInvoice.ma_tra_cuu || '—'}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-slate-400 font-bold uppercase">Ký hiệu hóa đơn</div>
+                  <div className="font-bold text-slate-800 mt-1">{selectedInvoice.kh_hd || '—'}</div>
+                </div>
+              </div>
+
               {/* Chi tiết mặt hàng (items) */}
               <div className="space-y-2">
                 <div className="text-xs text-slate-400 font-bold uppercase">Danh sách mặt hàng chi tiết</div>
