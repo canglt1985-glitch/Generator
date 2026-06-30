@@ -365,23 +365,60 @@ export default function Generator() {
   };
 
   const exportInvoicesToExcel = () => {
-    const dataForExcel = filteredInvoices.map((inv, idx) => ({
-      'STT': idx + 1,
-      'Ngày Lập': inv.invoice_date || '',
-      'Ký Hiệu HĐ': inv.kh_hd || '',
-      'Số Hóa Đơn': inv.invoice_number || '',
-      'Đơn Vị Bán Hàng': inv.seller_name || '',
-      'Mã Số Thuế Bán': inv.seller_mst || '',
-      'Người Mua Hàng': inv.buyer_name || '',
-      'MST Người Mua': inv.buyer_mst || '',
-      'Cộng Tiền Hàng': inv.sub_total || 0,
-      'Tiền Thuế GTGT': inv.vat_amount || 0,
-      'Tổng Tiền': inv.total_amount || 0,
-      'Link Tra Cứu': inv.invoice_url || '',
-      'Mã Tra Cứu': inv.ma_tra_cuu || '',
-      'Trạng Thái': inv.status === 'Approved' ? 'Đã duyệt' : inv.status === 'Discarded' ? 'Từ chối' : 'Chờ duyệt',
-      'Nguồn Thu Thập': inv.source || 'Upload'
-    }));
+    const dataForExcel = filteredInvoices.map((inv, idx) => {
+      const items = Array.isArray(inv.items) ? inv.items : [];
+      let qtyD = '';
+      let priceD = '';
+      let amountD = '';
+      let qtyX = '';
+      let priceX = '';
+      let amountX = '';
+      let loaiNl = '';
+
+      items.forEach(item => {
+        const name = (item.ten || '').toLowerCase();
+        const qty = item.sl || '';
+        const price = item.dg || '';
+        const amount = item.tt || '';
+
+        if (name.includes('dầu') || name.includes('điêzen') || name.includes('diezen')) {
+          qtyD = qty;
+          priceD = price;
+          amountD = amount;
+          loaiNl = 'Dầu';
+        } else if (name.includes('xăng') || name.includes('ron')) {
+          qtyX = qty;
+          priceX = price;
+          amountX = amount;
+          loaiNl = 'Xăng';
+        }
+      });
+
+      return {
+        'STT': idx + 1,
+        'Cửa hàng xăng dầu': inv.seller_name || '',
+        'Link Tra Cứu': inv.invoice_url || '',
+        'Mã Tra Cứu': inv.ma_tra_cuu || '',
+        'Loại NL': loaiNl,
+        'Mã Số Thuế': inv.seller_mst || '',
+        'Ký Hiệu HĐ': inv.kh_hd || '',
+        'Số Hóa Đơn': inv.invoice_number || '',
+        'Ngày Lập': inv.invoice_date || '',
+        'Số lượng D (lít)': qtyD,
+        'Đơn giá D': priceD,
+        'Thành tiền D': amountD,
+        'Số lượng X (lít)': qtyX,
+        'Đơn giá X': priceX,
+        'Thành tiền X': amountX,
+        'Cộng chưa VAT': inv.sub_total || 0,
+        'Thuế VAT': inv.vat_amount || 0,
+        'Tổng Tiền': inv.total_amount || 0,
+        'Người Mua Hàng': inv.buyer_name || '',
+        'MST Người Mua': inv.buyer_mst || '',
+        'Trạng Thái': inv.status === 'Approved' ? 'Đã duyệt' : inv.status === 'Discarded' ? 'Từ chối' : 'Chờ duyệt',
+        'Nguồn Thu Thập': inv.source || 'Upload'
+      };
+    });
 
     const worksheet = XLSX.utils.json_to_sheet(dataForExcel);
     const workbook = XLSX.utils.book_new();
