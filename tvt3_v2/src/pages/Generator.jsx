@@ -364,16 +364,23 @@ export default function Generator() {
     XLSX.writeFile(workbook, fileName);
   };
 
-  // Export Invoices to Excel
   const exportInvoicesToExcel = () => {
-    const dataForExcel = filteredInvoices.map(inv => ({
+    const dataForExcel = filteredInvoices.map((inv, idx) => ({
+      'STT': idx + 1,
       'Ngày Lập': inv.invoice_date || '',
+      'Ký Hiệu HĐ': inv.kh_hd || '',
       'Số Hóa Đơn': inv.invoice_number || '',
       'Đơn Vị Bán Hàng': inv.seller_name || '',
-      'Mã Số Thuế': inv.seller_mst || '',
+      'Mã Số Thuế Bán': inv.seller_mst || '',
+      'Người Mua Hàng': inv.buyer_name || '',
+      'MST Người Mua': inv.buyer_mst || '',
+      'Cộng Tiền Hàng': inv.sub_total || 0,
+      'Tiền Thuế GTGT': inv.vat_amount || 0,
       'Tổng Tiền': inv.total_amount || 0,
+      'Link Tra Cứu': inv.invoice_url || '',
+      'Mã Tra Cứu': inv.ma_tra_cuu || '',
       'Trạng Thái': inv.status === 'Approved' ? 'Đã duyệt' : inv.status === 'Discarded' ? 'Từ chối' : 'Chờ duyệt',
-      'Nguồn thu thập': inv.source || 'Upload'
+      'Nguồn Thu Thập': inv.source || 'Upload'
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(dataForExcel);
