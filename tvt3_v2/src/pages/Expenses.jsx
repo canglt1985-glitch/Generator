@@ -47,9 +47,16 @@ export default function Expenses() {
   
   // UI & Search States
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const today = new Date();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const year = today.getFullYear();
+    return `${year}-${month}`;
+  });
   const [showAddFuelModal, setShowAddFuelModal] = useState(false);
   const [editingFuel, setEditingFuel] = useState(null);
   const [showAddOtherModal, setShowAddOtherModal] = useState(false);
+  const [editingOther, setEditingOther] = useState(null);
   const [showAddAdvanceModal, setShowAddAdvanceModal] = useState(false);
 
   // Payment Group Edit States
@@ -491,29 +498,41 @@ export default function Expenses() {
     return data;
   }, [transactions, employeePaymentRecords]);
 
-  // Search filter
+  // Search & Month filter
   const filteredFuelTxs = useMemo(() => {
-    if (!searchQuery.trim()) return fuelTransactions;
-    const q = searchQuery.toLowerCase();
-    return fuelTransactions.filter(t => 
-      (t.site_id || '').toLowerCase().includes(q) ||
-      (t.fuel_tracking.operator || '').toLowerCase().includes(q) ||
-      (t.fuel_tracking.vendor || '').toLowerCase().includes(q) ||
-      (t.fuel_tracking.type || '').toLowerCase().includes(q) ||
-      (t.fuel_tracking.notes || '').toLowerCase().includes(q)
-    );
-  }, [fuelTransactions, searchQuery]);
+    let result = fuelTransactions;
+    if (selectedMonth) {
+      result = result.filter(t => t.date && t.date.startsWith(selectedMonth));
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(t => 
+        (t.site_id || '').toLowerCase().includes(q) ||
+        (t.fuel_tracking.operator || '').toLowerCase().includes(q) ||
+        (t.fuel_tracking.vendor || '').toLowerCase().includes(q) ||
+        (t.fuel_tracking.type || '').toLowerCase().includes(q) ||
+        (t.fuel_tracking.notes || '').toLowerCase().includes(q)
+      );
+    }
+    return result;
+  }, [fuelTransactions, selectedMonth, searchQuery]);
 
   const filteredOtherExp = useMemo(() => {
-    if (!searchQuery.trim()) return otherExpenses;
-    const q = searchQuery.toLowerCase();
-    return otherExpenses.filter(t => 
-      (t.other_expenses.content || '').toLowerCase().includes(q) ||
-      (t.other_expenses.project || '').toLowerCase().includes(q) ||
-      (t.other_expenses.advance_person || '').toLowerCase().includes(q) ||
-      (t.other_expenses.notes || '').toLowerCase().includes(q)
-    );
-  }, [otherExpenses, searchQuery]);
+    let result = otherExpenses;
+    if (selectedMonth) {
+      result = result.filter(t => t.date && t.date.startsWith(selectedMonth));
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(t => 
+        (t.other_expenses.content || '').toLowerCase().includes(q) ||
+        (t.other_expenses.project || '').toLowerCase().includes(q) ||
+        (t.other_expenses.advance_person || '').toLowerCase().includes(q) ||
+        (t.other_expenses.notes || '').toLowerCase().includes(q)
+      );
+    }
+    return result;
+  }, [otherExpenses, selectedMonth, searchQuery]);
 
   // Submit/Update Fuel Transaction
   async function handleAddFuel(e) {
@@ -680,7 +699,7 @@ export default function Expenses() {
     setShowAddFuelModal(true);
   }
 
-  // Submit Other Expense
+  // Submit / Update Other Expense
   async function handleAddOther(e) {
     e.preventDefault();
     const amount = parseFloat(otherAmount);
@@ -704,9 +723,18 @@ export default function Expenses() {
     };
 
     try {
-      const { error } = await supabase.from('fuel_and_expenses').insert([payload]);
-      if (error) throw error;
-      alert("Thêm chi phí thành công!");
+      if (editingOther) {
+        const { error } = await supabase
+          .from('fuel_and_expenses')
+          .update(payload)
+          .eq('record_id', editingOther.record_id);
+        if (error) throw error;
+        alert("Cập nhật chi phí thành công!");
+      } else {
+        const { error } = await supabase.from('fuel_and_expenses').insert([payload]);
+        if (error) throw error;
+        alert("Thêm chi phí thành công!");
+      }
       setShowAddOtherModal(false);
       resetOtherForm();
       fetchData();
@@ -865,7 +893,20 @@ export default function Expenses() {
     setFuelNotes('');
   }
 
+  function handleEditOther(record) {
+    setEditingOther(record);
+    const oe = record.other_expenses || {};
+    setOtherDate(record.date || new Date().toISOString().split('T')[0]);
+    setOtherContent(oe.content || '');
+    setOtherProject(oe.project || '');
+    setOtherAmount(oe.amount || '');
+    setOtherPerson(oe.advance_person || '');
+    setOtherNotes(oe.notes || '');
+    setShowAddOtherModal(true);
+  }
+
   function resetOtherForm() {
+    setEditingOther(null);
     setOtherDate(new Date().toISOString().split('T')[0]);
     setOtherContent('');
     setOtherProject('');
@@ -989,10 +1030,10 @@ export default function Expenses() {
           })}
         </div>
 
-        {/* Search Input (only for fuel and other expense tabs) */}
+        {/* Search & Month Filter (only for fuel and other expense tabs) */}
         {activeTab !== 'summary' && (
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3 md:p-4">
-            <div className="relative">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3 md:p-4 flex flex-col md:flex-row gap-4 items-stretch md:items-center">
+            <div className="relative flex-1">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <Search className="h-4 w-4 text-slate-400" />
               </div>
@@ -1006,6 +1047,31 @@ export default function Expenses() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
+            </div>
+
+            <div className="flex items-center gap-3 shrink-0 justify-between sm:justify-start border-t border-slate-100 md:border-t-0 pt-3 md:pt-0">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-slate-400 shrink-0" />
+                <span className="text-[13px] font-semibold text-slate-600 whitespace-nowrap">Lọc theo tháng:</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="month"
+                  className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-slate-50/50 outline-none transition-colors hover:bg-white"
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                />
+                {selectedMonth && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedMonth('')}
+                    className="px-3 py-1.5 border border-red-200 hover:border-red-300 text-[11px] font-bold rounded-lg text-red-600 hover:bg-red-50 cursor-pointer transition-colors whitespace-nowrap"
+                    title="Xem toàn bộ giao dịch"
+                  >
+                    Tất cả
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -1242,13 +1308,22 @@ export default function Expenses() {
                                 </td>
                                 <td className="px-4 py-3 whitespace-nowrap text-right text-xs">
                                   {user && (
-                                    <button 
-                                      onClick={() => handleDelete(t.record_id)}
-                                      className="text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 p-1.5 rounded transition-colors inline-flex items-center cursor-pointer"
-                                      title="Xóa"
-                                    >
-                                      <Trash size={14} />
-                                    </button>
+                                    <div className="flex justify-end gap-1.5">
+                                      <button 
+                                        onClick={() => handleEditOther(t)}
+                                        className="text-amber-600 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 p-1.5 rounded transition-colors inline-flex items-center cursor-pointer"
+                                        title="Sửa"
+                                      >
+                                        <Edit size={14} />
+                                      </button>
+                                      <button 
+                                        onClick={() => handleDelete(t.record_id)}
+                                        className="text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 p-1.5 rounded transition-colors inline-flex items-center cursor-pointer"
+                                        title="Xóa"
+                                      >
+                                        <Trash size={14} />
+                                      </button>
+                                    </div>
                                   )}
                                 </td>
                               </tr>
@@ -1264,12 +1339,22 @@ export default function Expenses() {
                             <div className="flex justify-between items-center">
                               <span className="text-xs font-semibold text-slate-500">{t.date}</span>
                               {user && (
-                                <button
-                                  onClick={() => handleDelete(t.record_id)}
-                                  className="text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 p-1.5 rounded transition-colors inline-flex items-center cursor-pointer"
-                                >
-                                  <Trash size={14} />
-                                </button>
+                                <div className="flex gap-1.5">
+                                  <button
+                                    onClick={() => handleEditOther(t)}
+                                    className="text-amber-600 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 p-1.5 rounded transition-colors inline-flex items-center cursor-pointer"
+                                    title="Sửa"
+                                  >
+                                    <Edit size={14} />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDelete(t.record_id)}
+                                    className="text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 p-1.5 rounded transition-colors inline-flex items-center cursor-pointer"
+                                    title="Xóa"
+                                  >
+                                    <Trash size={14} />
+                                  </button>
+                                </div>
                               )}
                             </div>
                             <div className="text-xs">
@@ -1810,7 +1895,7 @@ export default function Expenses() {
           <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
             <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 flex items-center justify-between text-white">
               <h2 className="font-bold text-lg flex items-center gap-2">
-                <FileText size={20} /> Chi phí phát sinh ngoài dầu
+                <FileText size={20} /> {editingOther ? "Cập nhật chi phí phát sinh" : "Chi phí phát sinh ngoài dầu"}
               </h2>
               <button 
                 onClick={() => { resetOtherForm(); setShowAddOtherModal(false); }}
