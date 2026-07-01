@@ -47,12 +47,7 @@ export default function Expenses() {
   
   // UI & Search States
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedMonth, setSelectedMonth] = useState(() => {
-    const today = new Date();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const year = today.getFullYear();
-    return `${year}-${month}`;
-  });
+  const [selectedMonth, setSelectedMonth] = useState('');
   const [showAddFuelModal, setShowAddFuelModal] = useState(false);
   const [editingFuel, setEditingFuel] = useState(null);
   const [showAddOtherModal, setShowAddOtherModal] = useState(false);
