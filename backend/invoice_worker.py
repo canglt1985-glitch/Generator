@@ -458,8 +458,8 @@ def parse_invoice_from_pdf(pdf_bytes, source_name="Gmail PDF"):
         so_hd = so_hd_match.group(1).strip() if so_hd_match else ""
         
         # Regex to find invoice date
-        # "Ngày (Date) 23 tháng (month) 06 năm (year) 2026"
-        date_match = re.search(r'Ngày\s*\(Date\)\s*(\d+)\s*tháng\s*\(month\)\s*(\d+)\s*năm\s*\(year\)\s*(\d+)', text, re.IGNORECASE)
+        # "Ngày (Date) 23 tháng (month) 06 năm (year) 2026" or "Ngày 01 tháng 07 năm 2026"
+        date_match = re.search(r'Ngày\s*(?:\(Date\))?\s*(\d+)\s*tháng\s*(?:\(month\))?\s*(\d+)\s*năm\s*(?:\(year\))?\s*(\d+)', text, re.IGNORECASE)
         if date_match:
             d = date_match.group(1).zfill(2)
             m = date_match.group(2).zfill(2)
@@ -508,21 +508,20 @@ def parse_invoice_from_pdf(pdf_bytes, source_name="Gmail PDF"):
                 
         # Total amount
         tong_tien = 0.0
-        tong_tien_match = re.search(r'Tổng tiền thanh toán\s*\(Total amount\)\s*:\s*([\d.,]+)', text, re.IGNORECASE)
-        if tong_tien_match:
-            val_str = tong_tien_match.group(1).strip()
-            val_clean = re.sub(r'[.,]', '', val_str)
-            try:
-                tong_tien = float(val_clean)
-            except:
-                pass
-        else:
-            tong_tien_match = re.search(r'Tổng cộng\s*:\s*([\d.,]+)', text, re.IGNORECASE)
-            if tong_tien_match:
-                val_str = tong_tien_match.group(1).strip()
+        tong_tien_patterns = [
+            r'Tổng tiền thanh toán\s*\(Total amount\)\s*:\s*([\d.,]+)',
+            r'Tổng cộng tiền thanh toán\s*:\s*([\d.,]+)',
+            r'Tổng cộng\s*:\s*([\d.,]+)',
+            r'Cộng tiền hàng\s*:\s*([\d.,]+)'
+        ]
+        for pat in tong_tien_patterns:
+            match = re.search(pat, text, re.IGNORECASE)
+            if match:
+                val_str = match.group(1).strip()
                 val_clean = re.sub(r'[.,]', '', val_str)
                 try:
                     tong_tien = float(val_clean)
+                    break
                 except:
                     pass
 
@@ -531,8 +530,11 @@ def parse_invoice_from_pdf(pdf_bytes, source_name="Gmail PDF"):
         has_fuel = False
         for line in lines:
             line_lc = line.lower()
+            # Skip company info, tax codes, addresses, etc. to avoid matching seller name
+            if any(k in line_lc for k in ["công ty", "cổ phần", "tnhh", "chi nhánh", "mst", "mã số thuế", "địa chỉ", "tài khoản", "điện thoại", "email", "website", "người mua", "người bán"]):
+                continue
+                
             if any(k in line_lc for k in ["dầu", "xăng", "diesel", " do ", "dầu do"]) or line_lc.startswith("do"):
-                has_fuel = True
                 parts = line.split()
                 floats = []
                 for p in parts:
@@ -541,13 +543,17 @@ def parse_invoice_from_pdf(pdf_bytes, source_name="Gmail PDF"):
                         floats.append(float(cleaned_p))
                     except:
                         pass
-                items.append({
-                    "ten": line,
-                    "sl": floats[-3] if len(floats) >= 3 else 1.0,
-                    "dg": floats[-2] if len(floats) >= 2 else tong_tien,
-                    "tt": floats[-1] if len(floats) >= 1 else tong_tien
-                })
-                break
+                
+                # Must have at least 2 floats (e.g. quantity and price) to be a valid item line
+                if len(floats) >= 2:
+                    has_fuel = True
+                    items.append({
+                        "ten": line,
+                        "sl": floats[-3] if len(floats) >= 3 else 1.0,
+                        "dg": floats[-2] if len(floats) >= 2 else tong_tien,
+                        "tt": floats[-1] if len(floats) >= 1 else tong_tien
+                    })
+                    break
         
         if not items:
             items = [{"ten": f"Hóa đơn xăng dầu số {so_hd}", "sl": 1.0, "dg": tong_tien, "tt": tong_tien}]
