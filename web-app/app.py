@@ -353,23 +353,31 @@ if __name__ == '__main__':
                 max_instances=1,
                 misfire_grace_time=3600
             )
-            def run_mfd_import_and_send_report():
-                run_mfd_import_poll()
+            # MFD daily import: 6:00 AM (scrape yesterday's generator runtime)
+            scheduler.add_job(
+                id='mfd_import_daily',
+                func=lambda: run_with_context(run_mfd_import_poll),
+                trigger='cron', hour=6, minute=0,
+                max_instances=1,
+                misfire_grace_time=3600
+            )
+
+            def run_send_daily_report():
                 try:
                     from daily_report import send_daily_report
                     send_daily_report()
                 except Exception as ex:
                     print(f"❌ [Scheduler] Error sending daily report: {ex}")
 
-            # MFD daily import: 8:30 AM (scrape yesterday's generator runtime + send daily report)
+            # Daily Report: 7:30 AM
             scheduler.add_job(
-                id='mfd_import_daily',
-                func=lambda: run_with_context(run_mfd_import_and_send_report),
-                trigger='cron', hour=8, minute=30,
+                id='daily_report_daily',
+                func=lambda: run_with_context(run_send_daily_report),
+                trigger='cron', hour=7, minute=30,
                 max_instances=1,
                 misfire_grace_time=3600
             )
-            print("SmartW Scheduler: Alarm poll 15p + VHKT 5AM + MFD import & Report 8:30AM")
+            print("SmartW Scheduler: Alarm poll 15p + VHKT 5AM + MFD import 6AM + Report 7:30AM")
 
         # DataSite Auto-Sync: Weekly on Sunday at 2 AM
         from datasite_scraper import perform_datasite_sync_real
