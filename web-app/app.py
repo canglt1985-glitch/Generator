@@ -361,15 +361,15 @@ if __name__ == '__main__':
                 except Exception as ex:
                     print(f"❌ [Scheduler] Error sending daily report: {ex}")
 
-            # MFD daily import: 7 AM (scrape yesterday's generator runtime + send daily report)
+            # MFD daily import: 8:30 AM (scrape yesterday's generator runtime + send daily report)
             scheduler.add_job(
                 id='mfd_import_daily',
                 func=lambda: run_with_context(run_mfd_import_and_send_report),
-                trigger='cron', hour=7, minute=0,
+                trigger='cron', hour=8, minute=30,
                 max_instances=1,
                 misfire_grace_time=3600
             )
-            print("SmartW Scheduler: Alarm poll 15p + VHKT 5AM + MFD import & Report 7AM")
+            print("SmartW Scheduler: Alarm poll 15p + VHKT 5AM + MFD import & Report 8:30AM")
 
         # DataSite Auto-Sync: Weekly on Sunday at 2 AM
         from datasite_scraper import perform_datasite_sync_real

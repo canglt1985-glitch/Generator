@@ -181,13 +181,13 @@ def main():
                 last_run["smartw_pakh_key"] = pakh_key
                 run_job("smartw_pakh", [python_exe, os.path.join(current_dir, "smartw_worker.py"), "--job", "pakh_delta"])
 
-            # Job C: SmartW MFD Oil Import (Once daily at 07:10 AM)
-            if now.hour == 7 and now.minute == 10 and last_run.get("smartw_mfd_key") != today_str:
+            # Job C: SmartW MFD Oil Import (Once daily at 08:00 AM)
+            if now.hour == 8 and now.minute == 0 and last_run.get("smartw_mfd_key") != today_str:
                 last_run["smartw_mfd_key"] = today_str
                 run_job("smartw_mfd", [python_exe, os.path.join(current_dir, "smartw_worker.py"), "--job", "mfd"])
 
-            # Job D: SmartW VHKT Morning Poll (Once daily at 07:20 AM)
-            if now.hour == 7 and now.minute == 20 and last_run.get("smartw_vhkt_key") != today_str:
+            # Job D: SmartW VHKT Morning Poll (Once daily at 08:10 AM)
+            if now.hour == 8 and now.minute == 10 and last_run.get("smartw_vhkt_key") != today_str:
                 last_run["smartw_vhkt_key"] = today_str
                 run_job("smartw_vhkt", [python_exe, os.path.join(current_dir, "smartw_worker.py"), "--job", "vhkt"])
 
@@ -214,13 +214,13 @@ def main():
                 last_run["fuel_price_key"] = fuel_key
                 run_job("fuel_price", [python_exe, os.path.join(current_dir, "fuel_price.py")])
 
-            # Job H: Telegram Daily Report (Once daily at 07:35 AM)
-            if now.hour == 7 and now.minute == 35 and last_run.get("daily_report_key") != today_str:
+            # Job H: Telegram Daily Report (Once daily at 08:30 AM)
+            if now.hour == 8 and now.minute == 30 and last_run.get("daily_report_key") != today_str:
                 last_run["daily_report_key"] = today_str
                 run_job("daily_report", [python_exe, os.path.join(current_dir, "daily_report.py")])
 
-            # Job I: Telegram Weekly Report (Once weekly on Mondays at 07:50 AM)
-            if now.weekday() == 0 and now.hour == 7 and now.minute == 50 and last_run.get("weekly_report_key") != today_str:
+            # Job I: Telegram Weekly Report (Once weekly on Mondays at 08:45 AM)
+            if now.weekday() == 0 and now.hour == 8 and now.minute == 45 and last_run.get("weekly_report_key") != today_str:
                 last_run["weekly_report_key"] = today_str
                 run_job("weekly_report", [python_exe, os.path.join(current_dir, "weekly_report.py")])
 
