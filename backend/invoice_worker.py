@@ -560,12 +560,27 @@ def parse_invoice_from_pdf(pdf_bytes, source_name="Gmail PDF"):
             
         loai_chi_phi = "Mua dầu" if has_fuel or any(k in seller_name.lower() or k in text.lower() for k in ["xăng", "dầu", "diesel", "fuel", "do", "dầu do"]) else "Chi phí khác"
 
+        # Extract invoice lookup URL
+        invoice_url = ""
+        url_matches = re.findall(r'(https?://[^\s\)]+)', text)
+        for url in url_matches:
+            url_clean = url.rstrip('.,;:')
+            if any(k in url_clean.lower() for k in ["tracuu", "tra-cuu", "invoice", "meinvoice", "vinvoice", "hddt", "einvoice", "search", "utilities"]):
+                invoice_url = url_clean
+                break
+        if not invoice_url and url_matches:
+            invoice_url = url_matches[0].rstrip('.,;:')
+
         ma_tra_cuu = ""
-        ma_tra_cuu_match = re.search(r'Mã tra cứu\s*(?:\([^)]*\))?\s*:\s*([A-Z0-9]+)', text, re.IGNORECASE)
-        if not ma_tra_cuu_match:
-            ma_tra_cuu_match = re.search(r'(?:Mã tra cứu|Invoice code)\s*:\s*([A-Z0-9]+)', text, re.IGNORECASE)
-        if ma_tra_cuu_match:
-            ma_tra_cuu = ma_tra_cuu_match.group(1).strip()
+        ma_tra_cuu_patterns = [
+            r'(?:Mã tra cứu|Mã số tra cứu|Invoice code|Mã bí mật|Mã số bí mật|Mã bảo mật|Mã nhận hóa đơn)\s*(?:\([^)]*\))?\s*:\s*([a-z0-9\-]+)',
+            r'(?:Mã tra cứu|Mã số tra cứu|Invoice code|Mã bí mật|Mã số bí mật|Mã bảo mật|Mã nhận hóa đơn)\s+([a-z0-9\-]{6,25})'
+        ]
+        for pat in ma_tra_cuu_patterns:
+            match = re.search(pat, text, re.IGNORECASE)
+            if match:
+                ma_tra_cuu = match.group(1).strip()
+                break
             
         kh_hd = ""
         kh_hd_match = re.search(r'Ký hiệu\s*(?:\([^)]*\))?\s*:\s*([A-Z0-9/\-]+)', text, re.IGNORECASE)
@@ -584,7 +599,7 @@ def parse_invoice_from_pdf(pdf_bytes, source_name="Gmail PDF"):
             "tong_tien": tong_tien,
             "loai_chi_phi": loai_chi_phi,
             "items": items,
-            "invoice_url": "",
+            "invoice_url": invoice_url,
             "source": source_name,
             "kh_hd": kh_hd,
             "ma_tra_cuu": ma_tra_cuu,
