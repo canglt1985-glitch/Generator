@@ -119,6 +119,41 @@ export default function Generator() {
     return st ? st.name : '';
   };
 
+  // Helper lấy số lượng xăng/dầu của hóa đơn
+  const getInvoiceFuelQty = (inv) => {
+    let itemsList = [];
+    if (inv.items) {
+      if (typeof inv.items === 'string') {
+        try {
+          itemsList = JSON.parse(inv.items);
+        } catch (e) {
+          itemsList = [];
+        }
+      } else if (Array.isArray(inv.items)) {
+        itemsList = inv.items;
+      }
+    }
+    
+    let xang = 0;
+    let dau = 0;
+    if (Array.isArray(itemsList)) {
+      itemsList.forEach(item => {
+        const name = (item.ten || item.name || '').toLowerCase();
+        const qty = parseFloat(item.sl || item.quantity) || 0;
+        
+        const isDau = name.includes('dầu') || name.includes('dau') || name.includes('diesel') || name.includes('điêzen') || name.includes('diezen') || /\bdo\b/.test(name);
+        const isXang = name.includes('xăng') || name.includes('xang') || name.includes('ron') || name.includes('e5') || name.includes('a95') || name.includes('95') || name.includes('92');
+        
+        if (isDau) {
+          dau += qty;
+        } else if (isXang) {
+          xang += qty;
+        }
+      });
+    }
+    return { xang, dau };
+  };
+
   // Tính định mức từ cấu hình trạm
   const getStationSpecs = (siteId) => {
     if (!siteId) return null;
@@ -1465,38 +1500,45 @@ export default function Generator() {
                           <th scope="col" className="px-4 py-3">Số Hóa Đơn</th>
                           <th scope="col" className="px-4 py-3">Đơn Vị Bán Hàng</th>
                           <th scope="col" className="px-4 py-3">Mã Số Thuế</th>
+                          <th scope="col" className="px-4 py-3">Xăng (L)</th>
+                          <th scope="col" className="px-4 py-3">Dầu (L)</th>
                           <th scope="col" className="px-4 py-3">Tổng Tiền</th>
                           <th scope="col" className="px-4 py-3">Nguồn thu thập</th>
                           <th scope="col" className="px-4 py-3 text-right">Thao Tác</th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-100 text-[13px] text-gray-700">
-                        {filteredInvoices.map((inv) => (
-                          <tr key={inv.id} className="hover:bg-slate-50/50 transition-colors">
-                            <td className="px-4 py-3 whitespace-nowrap font-medium text-slate-900">{inv.invoice_date}</td>
-                            <td className="px-4 py-3 whitespace-nowrap font-bold text-blue-700">{inv.invoice_number}</td>
-                            <td className="px-4 py-3 font-semibold text-slate-800">{inv.seller_name}</td>
-                            <td className="px-4 py-3 whitespace-nowrap text-slate-500 font-mono text-xs">{inv.seller_mst}</td>
-                            <td className="px-4 py-3 whitespace-nowrap font-extrabold text-slate-950 font-mono">{formatCurrency(inv.total_amount)}</td>
-                            <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-400">{inv.source || 'Upload'}</td>
-                            <td className="px-4 py-3 whitespace-nowrap text-right text-xs space-x-1">
-                              <button 
-                                onClick={() => setSelectedInvoice(inv)}
-                                className="text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 p-1.5 rounded transition-colors inline-flex items-center cursor-pointer"
-                                title="Xem chi tiết"
-                              >
-                                <Eye size={14} />
-                              </button>
-                              <button 
-                                onClick={() => handleDeleteInvoice(inv.id)}
-                                className="text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 p-1.5 rounded transition-colors inline-flex items-center cursor-pointer"
-                                title="Xóa hóa đơn"
-                              >
-                                <Trash size={14} />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
+                        {filteredInvoices.map((inv) => {
+                          const { xang, dau } = getInvoiceFuelQty(inv);
+                          return (
+                            <tr key={inv.id} className="hover:bg-slate-50/50 transition-colors">
+                              <td className="px-4 py-3 whitespace-nowrap font-medium text-slate-900">{inv.invoice_date}</td>
+                              <td className="px-4 py-3 whitespace-nowrap font-bold text-blue-700">{inv.invoice_number}</td>
+                              <td className="px-4 py-3 font-semibold text-slate-800">{inv.seller_name}</td>
+                              <td className="px-4 py-3 whitespace-nowrap text-slate-500 font-mono text-xs">{inv.seller_mst}</td>
+                              <td className="px-4 py-3 whitespace-nowrap text-red-600 font-bold font-mono">{xang > 0 ? `${xang.toLocaleString()} L` : '-'}</td>
+                              <td className="px-4 py-3 whitespace-nowrap text-orange-600 font-bold font-mono">{dau > 0 ? `${dau.toLocaleString()} L` : '-'}</td>
+                              <td className="px-4 py-3 whitespace-nowrap font-extrabold text-slate-950 font-mono">{formatCurrency(inv.total_amount)}</td>
+                              <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-400">{inv.source || 'Upload'}</td>
+                              <td className="px-4 py-3 whitespace-nowrap text-right text-xs space-x-1">
+                                <button 
+                                  onClick={() => setSelectedInvoice(inv)}
+                                  className="text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 p-1.5 rounded transition-colors inline-flex items-center cursor-pointer"
+                                  title="Xem chi tiết"
+                                >
+                                  <Eye size={14} />
+                                </button>
+                                <button 
+                                  onClick={() => handleDeleteInvoice(inv.id)}
+                                  className="text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 p-1.5 rounded transition-colors inline-flex items-center cursor-pointer"
+                                  title="Xóa hóa đơn"
+                                >
+                                  <Trash size={14} />
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   )}
