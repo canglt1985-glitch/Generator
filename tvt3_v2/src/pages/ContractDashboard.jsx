@@ -81,7 +81,7 @@ export default function ContractDashboard() {
 
   const handleContractUpdate = async (updatedSiteId) => {
     await fetchContracts();
-    if (updatedSiteId) {
+    if (updatedSiteId && selectedContract && selectedContract.site_id === updatedSiteId) {
       try {
         const { data, error } = await supabase
           .from('datasites')
