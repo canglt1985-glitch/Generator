@@ -120,7 +120,8 @@ export const getContractFlags = (contract) => {
   // Price Frame
   const price = checkPriceFrame(contract);
   if (!price.inFrame) {
-    if (isApprovedPrice(contract.status)) {
+    const isChuaHetKhauHao = contract.chua_het_khau_hao || contract._raw_contract_info?.chua_het_khau_hao || false;
+    if (isApprovedPrice(contract.status) || isChuaHetKhauHao) {
       flags.push('ngoai_khung_da_duyet');
     } else {
       flags.push('ngoai_khung_gia');

@@ -158,6 +158,7 @@ export default function ContractDashboard() {
         newFilters.loaiHinh = ['csht'];
         newFilters.khungGia = ['out_of_frame'];
         newFilters.duyetGia = ['chua_duyet'];
+        newFilters.khauHao = ['da_het_khau_hao'];
       } else if (activeFilter === 'tram_vnpt') {
         newFilters.loaiHinh = ['vnpt'];
       } else if (activeFilter === 'dong_y_chua_pl') {
