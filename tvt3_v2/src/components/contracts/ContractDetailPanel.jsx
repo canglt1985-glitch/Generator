@@ -233,14 +233,14 @@ export default function ContractDetailPanel({ contract, onClose, onUpdate }) {
       } else if (key === 'giam_tru_dung_chung') {
         giamTruRaw += parsedValues[key];
       } else {
-        const roundedVal = Math.floor(parsedValues[key] / 50000) * 50000;
-        costItems.push({ label: costDetailsMap[key] || key, value: roundedVal });
-        targetPriceSum += roundedVal;
+        const rawVal = parsedValues[key];
+        costItems.push({ label: costDetailsMap[key] || key, value: rawVal });
+        targetPriceSum += rawVal;
       }
     });
 
     if (antenRaw > 0 || giamTruRaw < 0) {
-      const antenPricePay = Math.floor((antenRaw + giamTruRaw) / 50000) * 50000;
+      const antenPricePay = antenRaw + giamTruRaw;
       costItems.push({ label: "Giá thuê cột anten (Sau giảm trừ)", value: antenPricePay });
       targetPriceSum += antenPricePay;
     }
