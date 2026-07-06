@@ -72,9 +72,9 @@ export default function ContractExportButton({ site, contract, overridePrice }) 
         const cot_anten = Number(cost.cot_anten_mat_dat_tren_35m) || 0;
         const giam_tru = Number(cost.giam_tru_dung_chung) || 0;
         const tong_qd = mat_bang + phong_mfd + phong_may + cot_anten + giam_tru;
-        const round50k = (val) => Math.floor(val / 50000) * 50000;
-        const rounded_cot_chot = round50k(cot_anten + giam_tru);
-        const rounded_frame_total = round50k(mat_bang + phong_may + phong_mfd + rounded_cot_chot);
+        const round10k = (val) => Math.floor(val / 10000) * 10000;
+        const rounded_cot_chot = round10k(cot_anten + giam_tru);
+        const rounded_frame_total = round10k(mat_bang + phong_may + phong_mfd + rounded_cot_chot);
         
         let tong_chot = rounded_frame_total;
         if (overridePrice !== undefined && overridePrice !== null) tong_chot = Number(overridePrice);
@@ -83,8 +83,8 @@ export default function ContractExportButton({ site, contract, overridePrice }) 
         const isExceedingFrame = tong_chot > rounded_frame_total;
         const cot_chot = isExceedingFrame ? (cot_anten + giam_tru) : rounded_cot_chot;
         
-        const phong_may_chot = phong_may > 0 ? round50k(phong_may) : 0;
-        const phong_mfd_chot = phong_mfd > 0 ? round50k(phong_mfd) : 0;
+        const phong_may_chot = phong_may > 0 ? round10k(phong_may) : 0;
+        const phong_mfd_chot = phong_mfd > 0 ? round10k(phong_mfd) : 0;
         const mat_bang_chot = tong_chot - phong_may_chot - phong_mfd_chot - cot_chot;
         const calcPct = (chot, qd) => qd === 0 ? '0%' : (Number((((chot/qd)-1)*100).toFixed(2))) + '%';
 

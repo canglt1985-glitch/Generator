@@ -246,8 +246,8 @@ export default function ContractDetailPanel({ contract, onClose, onUpdate }) {
     }
   }
 
-  // Giá mục tiêu đã bao gồm VAT (theo xác nhận từ người dùng)
-  const targetPriceWithVat = targetPriceSum;
+  // Giá mục tiêu đã bao gồm VAT (làm tròn xuống số lẻ < 10.000đ để tránh vượt khung)
+  const targetPriceWithVat = Math.floor(targetPriceSum / 10000) * 10000;
   const targetPriceStr = new Intl.NumberFormat('vi-VN').format(targetPriceWithVat) + ' đ';
 
   const negotiatedPrice = customPriceStr ? Number(customPriceStr.replace(/\D/g, '')) : (originalPrice > 0 ? targetPriceWithVat : 0);

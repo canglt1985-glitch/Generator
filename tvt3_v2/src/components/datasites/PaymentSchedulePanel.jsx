@@ -26,11 +26,11 @@ export default function PaymentSchedulePanel({ contract, overridePrice }) {
             const phong_may = Number(cost.phong_may_mat_dat) || 0;
             const cot_anten = Number(cost.cot_anten_mat_dat_tren_35m) || 0;
             const giam_tru = Number(cost.giam_tru_dung_chung) || 0;
-            const round50k = (val) => Math.floor(val / 50000) * 50000;
+            const round10k = (val) => Math.floor(val / 10000) * 10000;
             
-            const cot_chot = round50k(cot_anten + giam_tru);
+            const cot_chot = round10k(cot_anten + giam_tru);
             const temp_total = mat_bang + phong_may + phong_mfd + cot_chot;
-            newPrice = round50k(temp_total);
+            newPrice = round10k(temp_total);
         }
 
         const paidUntilDateStr = contract.financials.da_thanh_toan_den;
