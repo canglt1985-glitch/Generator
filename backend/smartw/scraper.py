@@ -1221,6 +1221,12 @@ class SmartWScraper:
             except Exception as check_err:
                 logger.warning(f'SmartW PAKH: Empty check failed: {check_err}')
                 
+            screenshot_path = os.path.join(DATA_DIR, f'debug_pakh_fail_{datetime.now().strftime("%H%M%S")}.png')
+            try:
+                await self._page.screenshot(path=screenshot_path, full_page=True)
+                logger.info(f'SmartW PAKH: Saved debug screenshot to {screenshot_path}')
+            except Exception as ss_err:
+                logger.warning(f'SmartW PAKH: Failed to save debug screenshot: {ss_err}')
             logger.error(f'SmartW PAKH: jqxGrid rows not found (loading failure): {e}')
             raise Exception('Không thể tải danh sách phản ánh (Timeout grid)')
 

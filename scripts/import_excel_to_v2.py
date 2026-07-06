@@ -148,11 +148,10 @@ def import_datasites(client: Client, df: pd.DataFrame):
 def import_contracts(client: Client, df: pd.DataFrame, valid_sites: set):
     print("\n🚀 Bắt đầu import bảng 'contracts' (hop dong)...")
     
-    # Ở sheet 'hop dong', cột chứa Site ID là 'Site ID mới'
-    # Loại bỏ các dòng không có Site ID
-    if 'Site ID mới' not in df.columns:
-        print("  [!] Không tìm thấy cột 'Site ID mới' trong sheet hop dong.")
-        return
+    # Tìm cột chứa từ khóa mục tiêu 1245
+    target_cols = [c for c in df.columns if 'mục tiêu 1245' in c.lower() or '1245' in c]
+    if target_cols:
+        print(f"  [+] Tìm thấy cột khấu hao: '{target_cols[0]}'")
         
     df = df.dropna(subset=['Site ID mới'])
     
@@ -163,6 +162,12 @@ def import_contracts(client: Client, df: pd.DataFrame, valid_sites: set):
         # Bỏ qua nếu site_id chưa được import vào datasites (tránh lỗi Foreign Key)
         if not site_id or site_id not in valid_sites:
             continue
+            
+        chua_het_khau_hao = False
+        if target_cols:
+            val_str = str(row.get(target_cols[0], "")).lower()
+            if 'chưa hết khấu hao' in val_str or 'chua het khau hao' in val_str:
+                chua_het_khau_hao = True
             
         contractor_info = {
             "chu_the_hop_dong": row.get("Chủ thể hợp đồng"),
@@ -244,7 +249,8 @@ def import_contracts(client: Client, df: pd.DataFrame, valid_sites: set):
             "financials": clean_dict(financials),
             "bank_info": clean_dict(bank_info),
             "cost_details": clean_dict(cost_details),
-            "appendix_info": clean_dict(appendix_info)
+            "appendix_info": clean_dict(appendix_info),
+            "chua_het_khau_hao": chua_het_khau_hao
         })
         
     print(f"  [+] Đã map được {len(new_contracts)} hợp đồng từ Excel.")

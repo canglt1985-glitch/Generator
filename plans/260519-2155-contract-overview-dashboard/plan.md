@@ -1,6 +1,6 @@
 # Plan: Contract Overview Dashboard
 Created: 2026-05-19T21:55
-Status: 🟡 In Progress
+Status: ✅ Complete
 
 ## Overview
 Nâng cấp trang `/contracts` hiện tại thành Dashboard tổng quan hợp đồng nhà trạm với 6 bộ lọc thông minh (auto-check 5/6 từ data có sẵn). Giúp ưu tiên xử lý: trạm hết hạn, ngoài khung giá, lệch tài khoản, chưa thanh toán.
@@ -31,10 +31,10 @@ Nâng cấp trang `/contracts` hiện tại thành Dashboard tổng quan hợp �
 
 | Phase | Name | Status | Tasks | Est. |
 |-------|------|--------|-------|------|
-| 01 | Database & Logic Engine | ⬜ Pending | 6 | 1 session |
-| 02 | Alert Cards & Filters UI | ⬜ Pending | 8 | 1-2 sessions |
-| 03 | Enhanced Table & Detail Panel | ⬜ Pending | 7 | 1 session |
-| 04 | Polish & Cleanup | ⬜ Pending | 5 | 1 session |
+| 01 | Database & Logic Engine | ✅ Complete | 6 | 1 session |
+| 02 | Alert Cards & Filters UI | ✅ Complete | 8 | 1-2 sessions |
+| 03 | Enhanced Table & Detail Panel | ✅ Complete | 7 | 1 session |
+| 04 | Polish & Cleanup | ✅ Complete | 5 | 1 session |
 
 **Tổng: 26 tasks | Ước tính: 4-5 sessions**
 
