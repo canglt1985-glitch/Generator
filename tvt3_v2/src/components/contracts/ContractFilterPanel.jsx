@@ -139,7 +139,8 @@ export default function ContractFilterPanel({ filters, onFilterChange }) {
                 {[
                   { key: 'da_hoan_tat', label: 'Đã hoàn tất / Đã duyệt giá' },
                   { key: 'dong_y_chua_pl', label: 'Đồng ý giá, chưa ký Phụ lục' },
-                  { key: 'chua_duyet', label: 'Đang đàm phán / Chưa phê duyệt' }
+                  { key: 'dong_y_da_trinh_pl', label: 'Đồng ý, đã trình Phụ lục' },
+                  { key: 'chua_duyet', label: 'Chưa đàm phán / Chưa phê duyệt' }
                 ].map(opt => (
                   <label key={opt.key} className="flex items-center gap-2 text-sm text-slate-700 font-semibold cursor-pointer select-none">
                     <input 

@@ -29,6 +29,7 @@ export default function ContractFilterDropdown({ contracts, activeFilter, onFilt
       csht_can_dam_phan: 0,
       tram_vnpt: 0,
       dong_y_chua_pl: 0,
+      dong_y_da_trinh_pl: 0,
       da_hoan_tat: 0,
       lech_tai_khoan: 0,
       chua_thanh_toan: 0,

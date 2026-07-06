@@ -89,7 +89,7 @@ const isApprovedPrice = (status) => {
   if (s === 'NOK') return false;
   if (s.includes('KHÔNG ĐẠT') || s.includes('KHONG DAT')) return false;
   if (s.includes('ĐẠT') || s.includes('DAT') || s.includes('OK')) return true;
-  if (s === 'DONG_Y_CHUA_PL' || s === 'DA_HOAN_TAT') return true;
+  if (s === 'DONG_Y_CHUA_PL' || s === 'DONG_Y_DA_TRINH_PL' || s === 'DA_HOAN_TAT') return true;
   return false;
 };
 
@@ -146,6 +146,9 @@ export const getContractFlags = (contract) => {
   // Manual Status
   if (contract.status === 'dong_y_chua_pl') {
     flags.push('dong_y_chua_pl');
+  }
+  if (contract.status === 'dong_y_da_trinh_pl') {
+    flags.push('dong_y_da_trinh_pl');
   }
   if (contract.status === 'da_hoan_tat' || 
      (expiry.status === 'valid' && price.inFrame && payment.paid)) {

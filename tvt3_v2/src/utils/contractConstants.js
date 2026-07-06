@@ -13,7 +13,7 @@ export const COST_DETAIL_KEYS = [
 
 export const CONTRACT_STATUSES = [
   { key: 'dong_y_chua_pl', label: 'Đồng ý, chưa PL', color: 'blue' },
-  { key: 'dang_dam_phan', label: 'Đang đàm phán', color: 'orange' },
+  { key: 'dong_y_da_trinh_pl', label: 'Đồng ý, đã trình PL', color: 'indigo' },
   { key: 'da_hoan_tat', label: 'Đã hoàn tất', color: 'emerald' },
   { key: 'tam_dung', label: 'Tạm dừng', color: 'slate' }
 ];
@@ -24,6 +24,7 @@ export const FILTER_OPTIONS = [
   { key: 'csht_can_dam_phan',label: 'CSHT cần đàm phán',   icon: '💰', color: 'orange' },
   { key: 'tram_vnpt',        label: 'Trạm thuê VNPT',      icon: '🏢', color: 'slate' },
   { key: 'dong_y_chua_pl',   label: 'Đồng ý, chưa PL',     icon: '👍', color: 'blue' },
+  { key: 'dong_y_da_trinh_pl',label: 'Đồng ý, đã trình PL',  icon: '📝', color: 'indigo' },
   { key: 'da_hoan_tat',      label: 'Đã hoàn tất',         icon: '✅', color: 'emerald' },
   { key: 'lech_tai_khoan',   label: 'Lệch tài khoản',      icon: '🏦', color: 'purple' },
   { key: 'chua_thanh_toan',  label: 'Chưa thanh toán',     icon: '💳', color: 'red' },

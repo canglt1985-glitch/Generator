@@ -163,6 +163,8 @@ export default function ContractDashboard() {
         newFilters.loaiHinh = ['vnpt'];
       } else if (activeFilter === 'dong_y_chua_pl') {
         newFilters.duyetGia = ['dong_y_chua_pl'];
+      } else if (activeFilter === 'dong_y_da_trinh_pl') {
+        newFilters.duyetGia = ['dong_y_da_trinh_pl'];
       } else if (activeFilter === 'da_hoan_tat') {
         newFilters.duyetGia = ['da_hoan_tat'];
       } else if (activeFilter === 'chua_thanh_toan') {
@@ -211,7 +213,8 @@ export default function ContractDashboard() {
       
       const isApproved = flags.includes('da_hoan_tat') || c.status === 'da_hoan_tat';
       const isDongYChuaPL = flags.includes('dong_y_chua_pl') || c.status === 'dong_y_chua_pl';
-      const isChuaDuyet = !isApproved && !isDongYChuaPL;
+      const isDongYDaTrinhPL = flags.includes('dong_y_da_trinh_pl') || c.status === 'dong_y_da_trinh_pl';
+      const isChuaDuyet = !isApproved && !isDongYChuaPL && !isDongYDaTrinhPL;
 
       const isPaid = !flags.includes('chua_thanh_toan');
       const isChuaHetKhauHao = c.chua_het_khau_hao || c._raw_contract_info?.chua_het_khau_hao || false;
@@ -243,6 +246,7 @@ export default function ContractDashboard() {
       if (filters.duyetGia.length > 0) {
         const match = (filters.duyetGia.includes('da_hoan_tat') && isApproved) ||
                       (filters.duyetGia.includes('dong_y_chua_pl') && isDongYChuaPL) ||
+                      (filters.duyetGia.includes('dong_y_da_trinh_pl') && isDongYDaTrinhPL) ||
                       (filters.duyetGia.includes('chua_duyet') && isChuaDuyet);
         if (!match) return false;
       }

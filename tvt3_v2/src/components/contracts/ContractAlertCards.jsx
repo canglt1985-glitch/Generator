@@ -9,6 +9,7 @@ export default function ContractAlertCards({ contracts, activeFilter, onFilterSe
       csht_can_dam_phan: 0,
       tram_vnpt: 0,
       dong_y_chua_pl: 0,
+      dong_y_da_trinh_pl: 0,
       da_hoan_tat: 0,
       lech_tai_khoan: 0,
       chua_thanh_toan: 0,
@@ -31,13 +32,14 @@ export default function ContractAlertCards({ contracts, activeFilter, onFilterSe
     { key: 'csht_can_dam_phan',label: 'CSHT cần đàm phán',icon: '💰', count: counts.csht_can_dam_phan,color: 'orange' },
     { key: 'tram_vnpt',        label: 'Trạm thuê VNPT',   icon: '🏢', count: counts.tram_vnpt,        color: 'slate' },
     { key: 'dong_y_chua_pl',   label: 'Đồng ý, chưa PL', icon: '👍', count: counts.dong_y_chua_pl,   color: 'blue' },
+    { key: 'dong_y_da_trinh_pl',label: 'Đồng ý, đã trình PL',icon: '📝', count: counts.dong_y_da_trinh_pl,color: 'indigo' },
     { key: 'da_hoan_tat',      label: 'Đã hoàn tất',      icon: '✅', count: counts.da_hoan_tat,      color: 'emerald' },
     { key: 'lech_tai_khoan',   label: 'Lệch tài khoản',  icon: '🏦', count: counts.lech_tai_khoan,   color: 'purple' },
     { key: 'chua_thanh_toan',  label: 'Chưa thanh toán',  icon: '💳', count: counts.chua_thanh_toan,  color: 'red' },
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
+    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 mb-6">
       {cards.map(card => {
         const isActive = activeFilter === card.key;
         
@@ -50,6 +52,7 @@ export default function ContractAlertCards({ contracts, activeFilter, onFilterSe
           purple: 'border-l-purple-500',
           red: 'border-l-red-500',
           slate: 'border-l-slate-400',
+          indigo: 'border-l-indigo-500',
         };
         
         const textColors = {
@@ -60,6 +63,7 @@ export default function ContractAlertCards({ contracts, activeFilter, onFilterSe
           purple: 'text-purple-700',
           red: 'text-red-700',
           slate: 'text-slate-700',
+          indigo: 'text-indigo-700',
         };
 
         const ringColors = {
@@ -70,6 +74,7 @@ export default function ContractAlertCards({ contracts, activeFilter, onFilterSe
           purple: 'ring-purple-400',
           red: 'ring-red-400',
           slate: 'ring-slate-400',
+          indigo: 'ring-indigo-400',
         };
 
         return (
