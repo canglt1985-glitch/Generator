@@ -89,6 +89,7 @@ const isApprovedPrice = (status) => {
   if (s === 'NOK') return false;
   if (s.includes('KHÔNG ĐẠT') || s.includes('KHONG DAT')) return false;
   if (s.includes('ĐẠT') || s.includes('DAT') || s.includes('OK')) return true;
+  if (s === 'DONG_Y_CHUA_PL' || s === 'DA_HOAN_TAT') return true;
   return false;
 };
 

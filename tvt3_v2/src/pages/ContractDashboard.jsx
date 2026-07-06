@@ -157,6 +157,7 @@ export default function ContractDashboard() {
       } else if (activeFilter === 'csht_can_dam_phan') {
         newFilters.loaiHinh = ['csht'];
         newFilters.khungGia = ['out_of_frame'];
+        newFilters.duyetGia = ['chua_duyet'];
       } else if (activeFilter === 'tram_vnpt') {
         newFilters.loaiHinh = ['vnpt'];
       } else if (activeFilter === 'dong_y_chua_pl') {
