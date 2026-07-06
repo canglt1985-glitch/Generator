@@ -1,8 +1,10 @@
 import React, { useMemo } from 'react';
 import { Eye, Edit, Trash2 } from 'lucide-react';
 import { getContractFlags, checkPriceFrame } from '../../utils/contractChecks';
+import { supabase } from '../../supabaseClient';
+import { CONTRACT_STATUSES } from '../../utils/contractConstants';
 
-export default function ContractTable({ contracts, onSelect }) {
+export default function ContractTable({ contracts, onSelect, onUpdate }) {
   const formatDate = (dateString) => {
     if (!dateString || dateString === 'N/A') return 'N/A';
     try {
@@ -47,6 +49,7 @@ export default function ContractTable({ contracts, onSelect }) {
               <th className="py-3 px-3 whitespace-nowrap">Hết Hạn</th>
               <th className="py-3 px-3 whitespace-nowrap text-right">Giá Thuê</th>
               <th className="py-3 px-3 whitespace-nowrap text-right">Chênh Lệch</th>
+              <th className="py-3 px-3 whitespace-nowrap text-center">Đàm phán</th>
               <th className="py-3 px-3 whitespace-nowrap text-center">Chu kỳ TT</th>
               <th className="py-3 px-3 whitespace-nowrap text-center">Đã TT Đến</th>
               <th className="py-3 px-3 whitespace-nowrap text-center">Thao tác</th>
@@ -100,6 +103,46 @@ export default function ContractTable({ contracts, onSelect }) {
                   <td className="py-3 px-3 text-right font-medium text-rose-600">{price}</td>
                   <td className={`py-3 px-3 text-right font-medium ${priceCheck.diff > 0 ? 'text-orange-600' : 'text-emerald-600'}`}>
                     {diffText}
+                  </td>
+                  <td className="py-2 px-2 text-center" onClick={(e) => e.stopPropagation()}>
+                    <select
+                      value={contract.status || ''}
+                      onChange={async (e) => {
+                        const newStatus = e.target.value;
+                        try {
+                          const updatedContractInfo = { ...contract._raw_contract_info || {}, status: newStatus || null };
+                          const { error } = await supabase
+                            .from('datasites')
+                            .update({ contract_info: updatedContractInfo })
+                            .eq('site_id', contract.site_id);
+                          if (error) throw error;
+                          
+                          contract.status = newStatus || null;
+                          if (contract._raw_contract_info) {
+                            contract._raw_contract_info.status = newStatus || null;
+                          }
+                          if (onUpdate) onUpdate(contract.site_id);
+                        } catch (err) {
+                          console.error("Error updating status:", err);
+                          alert("Lỗi khi cập nhật trạng thái");
+                        }
+                      }}
+                      className={`
+                        text-[11px] font-bold rounded-full px-2 py-1.5 border cursor-pointer outline-none transition-all
+                        ${contract.status === 'da_hoan_tat' ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' : ''}
+                        ${contract.status === 'dong_y_chua_pl' ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100' : ''}
+                        ${contract.status === 'dong_y_da_trinh_pl' ? 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100' : ''}
+                        ${contract.status === 'tam_dung' ? 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200' : ''}
+                        ${!contract.status ? 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100' : ''}
+                      `}
+                    >
+                      <option value="">Chưa đàm phán</option>
+                      {CONTRACT_STATUSES.map(s => (
+                        <option key={s.key} value={s.key}>
+                          {s.label}
+                        </option>
+                      ))}
+                    </select>
                   </td>
                   <td className="py-3 px-3 text-center text-slate-600">{paymentCycle}</td>
                   <td className={`py-3 px-3 text-center font-medium ${flags.includes('chua_thanh_toan') ? 'text-red-500' : 'text-emerald-600'}`}>

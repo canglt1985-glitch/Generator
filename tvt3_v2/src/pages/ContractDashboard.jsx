@@ -439,6 +439,7 @@ export default function ContractDashboard() {
                   <ContractTable 
                     contracts={filteredContracts} 
                     onSelect={(c) => setSelectedContract(c)} 
+                    onUpdate={handleContractUpdate}
                   />
                 </div>
               </>
