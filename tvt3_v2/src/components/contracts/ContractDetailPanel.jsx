@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { X, User, Calendar, Clock, CreditCard, CheckCircle2, Building2, Download, FileText, AlertCircle, RefreshCw, Calculator, MapPin, Edit, Save, Undo } from 'lucide-react';
+import { X, User, Calendar, Clock, CreditCard, CheckCircle2, Building2, Download, FileText, AlertCircle, RefreshCw, Calculator, MapPin, Edit, Save, Undo, Loader2 } from 'lucide-react';
 import { generatePaymentCycles } from '../../utils/contractLogic';
 import { getContractFlags, checkPriceFrame, checkExpiry, checkPaymentStatus, checkAccountMatch } from '../../utils/contractChecks';
 import { CONTRACT_STATUSES } from '../../utils/contractConstants';
@@ -29,6 +29,7 @@ export default function ContractDetailPanel({ contract, onClose, onUpdate }) {
   const [bankAccInput, setBankAccInput] = useState('');
   const [bankOwnerInput, setBankOwnerInput] = useState('');
   const [costDetailsState, setCostDetailsState] = useState({});
+  const [chuaHetKhauHao, setChuaHetKhauHao] = useState(false);
 
   // Sync form states with contract data when it changes
   useEffect(() => {
@@ -47,6 +48,7 @@ export default function ContractDetailPanel({ contract, onClose, onUpdate }) {
       setBankAccInput(contract.bank_info?.so_tai_khoan || '');
       setBankOwnerInput(contract.bank_info?.chu_tai_khoan || '');
       setCostDetailsState(contract.cost_details || {});
+      setChuaHetKhauHao(contract.chua_het_khau_hao || contract._raw_contract_info?.chua_het_khau_hao || false);
     }
   }, [contract]);
 
@@ -69,6 +71,7 @@ export default function ContractDetailPanel({ contract, onClose, onUpdate }) {
       const updatedContractInfo = {
         ...contract._raw_contract_info,
         status: contract.status || 'valid',
+        chua_het_khau_hao: chuaHetKhauHao,
         contractor_info: {
           ...contract._raw_contract_info?.contractor_info,
           chu_the_hop_dong: landlord.trim(),
@@ -105,6 +108,12 @@ export default function ContractDetailPanel({ contract, onClose, onUpdate }) {
         .eq('site_id', contract.site_id);
 
       if (error) throw error;
+
+      // Update local object representation
+      contract.chua_het_khau_hao = chuaHetKhauHao;
+      if (contract._raw_contract_info) {
+        contract._raw_contract_info.chua_het_khau_hao = chuaHetKhauHao;
+      }
 
       alert("Cập nhật thông tin hợp đồng thành công!");
       setIsEditing(false);
@@ -163,6 +172,10 @@ export default function ContractDetailPanel({ contract, onClose, onUpdate }) {
       
       // Mutate local state for immediate feedback
       contract.status = newStatus || null;
+      if (contract._raw_contract_info) {
+        contract._raw_contract_info.status = newStatus || null;
+      }
+      if (onUpdate) onUpdate(contract.site_id);
     } catch (err) {
       console.error("Error updating status:", err);
       alert("Lỗi khi cập nhật trạng thái");
@@ -437,6 +450,17 @@ export default function ContractDetailPanel({ contract, onClose, onUpdate }) {
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 font-medium text-slate-800"
                 />
               </div>
+              <div className="sm:col-span-4 pt-2 border-t border-slate-100 flex items-center">
+                <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer font-bold select-none">
+                  <input 
+                    type="checkbox" 
+                    checked={chuaHetKhauHao} 
+                    onChange={(e) => setChuaHetKhauHao(e.target.checked)}
+                    className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 border-slate-300 cursor-pointer"
+                  />
+                  <span className="text-slate-700">Trạm chưa hết khấu hao (Chờ ký lại hợp đồng mới đàm phán, không thuộc diện đàm phán giá)</span>
+                </label>
+              </div>
             </div>
           </div>
 
@@ -537,11 +561,27 @@ export default function ContractDetailPanel({ contract, onClose, onUpdate }) {
             <FileText size={24} />
           </div>
           <div>
-            <div className="flex items-center gap-3 mb-1">
+            <div className="flex flex-col md:flex-row md:items-center gap-2 mb-1">
               <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
                 Hợp đồng: <span className="text-blue-600">{contractNumber}</span>
               </h2>
-              <span className="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider border border-emerald-200">Hiệu lực</span>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider border border-emerald-200">Hiệu lực</span>
+                
+                {/* Trạng thái đàm phán */}
+                <select
+                  value={contract.status || ''}
+                  onChange={handleStatusChange}
+                  disabled={isUpdatingStatus}
+                  className="text-xs font-bold bg-white border border-slate-300 rounded px-2 py-0.5 text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer shadow-sm"
+                >
+                  <option value="">-- Trạng thái đàm phán --</option>
+                  {CONTRACT_STATUSES.map(s => (
+                    <option key={s.key} value={s.key}>{s.label}</option>
+                  ))}
+                </select>
+                {isUpdatingStatus && <Loader2 size={12} className="animate-spin text-slate-500" />}
+              </div>
             </div>
             <div className="text-xs text-slate-500 font-medium flex items-center gap-2">
               <span>Trạm: <strong className="text-slate-700">{siteId}</strong> <span className="opacity-60">({siteIdOld})</span></span>
@@ -599,6 +639,16 @@ export default function ContractDetailPanel({ contract, onClose, onUpdate }) {
               </span>
             </div>
           </div>
+
+          {(contract.chua_het_khau_hao || contract._raw_contract_info?.chua_het_khau_hao) && (
+            <div className="shrink-0 snap-start px-4 py-3 min-w-[200px] rounded-lg border bg-blue-50/55 border-blue-200 flex items-center gap-3">
+              <AlertCircle size={20} className="text-blue-500"/>
+              <div className="text-sm leading-tight">
+                <span className="block text-[10px] uppercase font-bold tracking-wider mb-0.5 text-slate-500">Khấu hao</span>
+                <span className="font-bold text-blue-700">Chưa hết khấu hao</span>
+              </div>
+            </div>
+          )}
 
           <div className={`shrink-0 snap-start px-4 py-3 min-w-[200px] rounded-lg border ${priceCheck.inFrame ? 'bg-emerald-50/50 border-emerald-200/60' : 'bg-orange-50/50 border-orange-200/60'} flex items-center gap-3`}>
             {priceCheck.inFrame ? <CheckCircle2 size={20} className="text-emerald-500"/> : <AlertCircle size={20} className="text-orange-500"/>}

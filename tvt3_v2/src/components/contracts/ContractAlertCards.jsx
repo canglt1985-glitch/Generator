@@ -5,10 +5,11 @@ export default function ContractAlertCards({ contracts, activeFilter, onFilterSe
   const counts = useMemo(() => {
     const result = {
       all: contracts.length,
-      can_gia_han: 0,
+      mb_can_gia_han: 0,
+      csht_can_dam_phan: 0,
+      tram_vnpt: 0,
       dong_y_chua_pl: 0,
       da_hoan_tat: 0,
-      ngoai_khung_gia: 0,
       lech_tai_khoan: 0,
       chua_thanh_toan: 0,
     };
@@ -26,16 +27,17 @@ export default function ContractAlertCards({ contracts, activeFilter, onFilterSe
   }, [contracts]);
 
   const cards = [
-    { key: 'can_gia_han',      label: 'Cần gia hạn',      icon: '⚠️', count: counts.can_gia_han,      color: 'amber' },
+    { key: 'mb_can_gia_han',   label: 'MB cần gia hạn',   icon: '⚠️', count: counts.mb_can_gia_han,   color: 'amber' },
+    { key: 'csht_can_dam_phan',label: 'CSHT cần đàm phán',icon: '💰', count: counts.csht_can_dam_phan,color: 'orange' },
+    { key: 'tram_vnpt',        label: 'Trạm thuê VNPT',   icon: '🏢', count: counts.tram_vnpt,        color: 'slate' },
     { key: 'dong_y_chua_pl',   label: 'Đồng ý, chưa PL', icon: '👍', count: counts.dong_y_chua_pl,   color: 'blue' },
     { key: 'da_hoan_tat',      label: 'Đã hoàn tất',      icon: '✅', count: counts.da_hoan_tat,      color: 'emerald' },
-    { key: 'ngoai_khung_gia',  label: 'Ngoài khung giá',  icon: '💰', count: counts.ngoai_khung_gia,  color: 'orange' },
     { key: 'lech_tai_khoan',   label: 'Lệch tài khoản',  icon: '🏦', count: counts.lech_tai_khoan,   color: 'purple' },
     { key: 'chua_thanh_toan',  label: 'Chưa thanh toán',  icon: '💳', count: counts.chua_thanh_toan,  color: 'red' },
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
       {cards.map(card => {
         const isActive = activeFilter === card.key;
         
@@ -47,6 +49,7 @@ export default function ContractAlertCards({ contracts, activeFilter, onFilterSe
           orange: 'border-l-orange-500',
           purple: 'border-l-purple-500',
           red: 'border-l-red-500',
+          slate: 'border-l-slate-400',
         };
         
         const textColors = {
@@ -56,6 +59,7 @@ export default function ContractAlertCards({ contracts, activeFilter, onFilterSe
           orange: 'text-orange-700',
           purple: 'text-purple-700',
           red: 'text-red-700',
+          slate: 'text-slate-700',
         };
 
         const ringColors = {
@@ -65,6 +69,7 @@ export default function ContractAlertCards({ contracts, activeFilter, onFilterSe
           orange: 'ring-orange-400',
           purple: 'ring-purple-400',
           red: 'ring-red-400',
+          slate: 'ring-slate-400',
         };
 
         return (

@@ -59,7 +59,7 @@ export default function ContractTable({ contracts, onSelect }) {
               const siteId = contract.site_id || 'N/A';
               const landlordName = contract.contractor_info?.chu_the_hop_dong || 'N/A';
               const price = contract.financials?.gia_thue_co_vat 
-                ? (contract.financials.gia_thue_co_vat / 1000000).toFixed(1) + 'tr'
+                ? new Intl.NumberFormat('vi-VN').format(contract.financials.gia_thue_co_vat / 1000) + 'K'
                 : '-';
                 
               const diffText = priceCheck.diff > 0 
@@ -75,7 +75,8 @@ export default function ContractTable({ contracts, onSelect }) {
                 return (
                   <div className="flex items-center justify-center gap-1">
                     {flags.includes('can_gia_han') && <span className="text-amber-500" title="Cần gia hạn">⚠️</span>}
-                    {flags.includes('ngoai_khung_gia') && <span className="text-orange-500" title="Ngoài khung giá">💰</span>}
+                    {flags.includes('ngoai_khung_gia') && <span className="text-orange-500" title="Ngoài khung giá (Chưa phê duyệt)">💰</span>}
+                    {flags.includes('ngoai_khung_da_duyet') && <span className="text-emerald-500" title="Ngoài khung giá (Đã duyệt vượt giá / đã thanh toán)">💰</span>}
                     {flags.includes('lech_tai_khoan') && <span className="text-purple-500" title="Lệch tài khoản">🏦</span>}
                     {flags.includes('chua_thanh_toan') && <span className="text-red-500" title="Chưa thanh toán">💳</span>}
                     {flags.length === 0 && <span className="text-emerald-500" title="Tốt">✅</span>}

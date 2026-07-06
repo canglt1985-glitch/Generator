@@ -20,10 +20,11 @@ export const CONTRACT_STATUSES = [
 
 export const FILTER_OPTIONS = [
   { key: 'all',              label: 'Tất cả',              icon: '📋', color: 'slate' },
-  { key: 'can_gia_han',      label: 'Cần gia hạn',         icon: '⚠️', color: 'amber' },
-  { key: 'dong_y_chua_pl',   label: 'Đồng ý, chưa PL',    icon: '👍', color: 'blue' },
+  { key: 'mb_can_gia_han',   label: 'MB cần gia hạn',      icon: '⚠️', color: 'amber' },
+  { key: 'csht_can_dam_phan',label: 'CSHT cần đàm phán',   icon: '💰', color: 'orange' },
+  { key: 'tram_vnpt',        label: 'Trạm thuê VNPT',      icon: '🏢', color: 'slate' },
+  { key: 'dong_y_chua_pl',   label: 'Đồng ý, chưa PL',     icon: '👍', color: 'blue' },
   { key: 'da_hoan_tat',      label: 'Đã hoàn tất',         icon: '✅', color: 'emerald' },
-  { key: 'ngoai_khung_gia',  label: 'Ngoài khung giá',     icon: '💰', color: 'orange' },
-  { key: 'lech_tai_khoan',   label: 'Lệch tài khoản',     icon: '🏦', color: 'purple' },
+  { key: 'lech_tai_khoan',   label: 'Lệch tài khoản',      icon: '🏦', color: 'purple' },
   { key: 'chua_thanh_toan',  label: 'Chưa thanh toán',     icon: '💳', color: 'red' },
 ];

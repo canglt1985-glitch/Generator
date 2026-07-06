@@ -25,10 +25,11 @@ export default function ContractFilterDropdown({ contracts, activeFilter, onFilt
   const counts = useMemo(() => {
     const result = {
       all: contracts.length,
-      can_gia_han: 0,
+      mb_can_gia_han: 0,
+      csht_can_dam_phan: 0,
+      tram_vnpt: 0,
       dong_y_chua_pl: 0,
       da_hoan_tat: 0,
-      ngoai_khung_gia: 0,
       lech_tai_khoan: 0,
       chua_thanh_toan: 0,
     };

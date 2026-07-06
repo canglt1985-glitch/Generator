@@ -21,7 +21,7 @@ const TEMPLATES = {
 
 const PREVIEW_TABS = [
     { id: 'tram', label: 'Trạm', icon: Server, keys: ['SITE_ID', 'SITE_NAME', 'ADDRESS'] },
-    { id: 'hopdong', label: 'Hợp Đồng', icon: FileText, keys: ['CONTRACT_NO', 'CONTRACT_DATE', 'ORIGINAL_END_DATE', 'END_DATE', 'OWNER_NAME', 'ADDRESS_OLD', 'ADDRESS_NEW', 'PHONE', 'KICH_BAN_TEXT'] },
+    { id: 'hopdong', label: 'Hợp Đồng', icon: FileText, keys: ['CONTRACT_NO', 'CONTRACT_DATE', 'ORIGINAL_END_DATE', 'END_DATE', 'OWNER_NAME', 'ADDRESS_OLD', 'ADDRESS_NEW', 'PHONE', 'LY_DO', 'KICH_BAN_TEXT'] },
     { id: 'taichinh', label: 'Tài Chính', icon: Wallet, keys: ['RENT_FEE', 'OLD_PRICE', 'NEW_PRICE'] },
     { id: 'nganhang', label: 'Ngân Hàng', icon: CreditCard, keys: ['ACCOUNT_OWNER', 'ACCOUNT_NO', 'BANK_NAME', 'BRANCH'] },
     { id: 'giamgia', label: 'Giảm Giá', icon: Wallet, keys: ['MB_QĐ02', 'P_MB', 'TL_MB', 'MFĐ_1245', 'P_MFD', 'TL_MFD', 'COT_1245', 'GIAM_TRU', 'COT_CHOT', 'TL_COT', 'PM_1245', 'P_PM', 'TL_PM', 'TONG_QD', 'TONG_CHOT', 'TL_TONG'] },
@@ -73,10 +73,16 @@ export default function ContractExportButton({ site, contract, overridePrice }) 
         const giam_tru = Number(cost.giam_tru_dung_chung) || 0;
         const tong_qd = mat_bang + phong_mfd + phong_may + cot_anten + giam_tru;
         const round50k = (val) => Math.floor(val / 50000) * 50000;
-        const cot_chot = round50k(cot_anten + giam_tru);
-        const temp_total = mat_bang + phong_may + phong_mfd + cot_chot;
-        let tong_chot = round50k(temp_total);
+        const rounded_cot_chot = round50k(cot_anten + giam_tru);
+        const rounded_frame_total = round50k(mat_bang + phong_may + phong_mfd + rounded_cot_chot);
+        
+        let tong_chot = rounded_frame_total;
         if (overridePrice !== undefined && overridePrice !== null) tong_chot = Number(overridePrice);
+        
+        // Trường hợp giá thuê vượt khung thì cột anten không cần làm tròn
+        const isExceedingFrame = tong_chot > rounded_frame_total;
+        const cot_chot = isExceedingFrame ? (cot_anten + giam_tru) : rounded_cot_chot;
+        
         const phong_may_chot = phong_may > 0 ? round50k(phong_may) : 0;
         const phong_mfd_chot = phong_mfd > 0 ? round50k(phong_mfd) : 0;
         const mat_bang_chot = tong_chot - phong_may_chot - phong_mfd_chot - cot_chot;
@@ -92,7 +98,7 @@ export default function ContractExportButton({ site, contract, overridePrice }) 
         ).join('\n') || '';
 
         const deductionText = scheduleData.deductionVal > 0
-            ? `Trừ số tiền đã thanh toán quá hạn mốc giảm giá (01/10/2025): ${formatCurrency(scheduleData.deductionVal)} VNĐ.`
+            ? `Giảm trừ số tiền đã thanh toán từ 01/10/2025 đến ngày ${formatDate(paidUntilDateStr)} là: ${formatCurrency(scheduleData.deductionVal)} VNĐ.`
             : '';
 
         return {
@@ -119,7 +125,9 @@ export default function ContractExportButton({ site, contract, overridePrice }) 
             OLD_PRICE: formatCurrency(contract?.financials?.gia_thue_co_vat),
             NEW_PRICE: formatCurrency(tong_chot),
             NEW_PRICE_TEXT: convertNumberToVietnameseWords(tong_chot),
-            LY_DO: 'Thực hiện phương án đàm phán giảm giá thuê vị trí đặt trạm BTS',
+            LY_DO: (opts.giamGia && opts.giaHan)
+                ? 'giảm giá thuê và gia hạn'
+                : (opts.giamGia ? 'giảm giá thuê' : (opts.giaHan ? 'gia hạn' : 'đàm phán')),
             IS_GIAM_GIA: opts.giamGia ? 1 : 0,
             IS_GIA_HAN: opts.giaHan ? 1 : 0,
             IS_BOTH: (opts.giamGia && opts.giaHan) ? 1 : 0,

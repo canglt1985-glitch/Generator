@@ -81,20 +81,52 @@ export const checkPaymentStatus = (contract) => {
   };
 };
 
+// Helper to check if a contract's price has been approved/paid (no negotiation needed)
+const isApprovedPrice = (status) => {
+  if (!status) return false;
+  const s = status.trim().toUpperCase();
+  if (s === 'OK') return true;
+  if (s === 'NOK') return false;
+  if (s.includes('KHÔNG ĐẠT') || s.includes('KHONG DAT')) return false;
+  if (s.includes('ĐẠT') || s.includes('DAT') || s.includes('OK')) return true;
+  return false;
+};
+
 // Combine all checks to generate flags
 export const getContractFlags = (contract) => {
   const flags = [];
+  
+  // Phân loại trạm VNPT, CSHT, MobiFone
+  const cl = contract?.datasites?.classification || {};
+  const chuThe = (contract?.contractor_info?.chu_the_hop_dong || '').trim().toLowerCase();
+  const isVnpt = chuThe.includes('viễn thông đồng nai');
+  const isMbf = cl.hinh_thuc_dau_tu === 'TRẠM MOBIFONE';
+  
+  if (isVnpt) {
+    flags.push('tram_vnpt');
+    return flags; // Trạm thuê VNPT chỉ để biết, không kiểm tra đàm phán, thanh toán, gia hạn
+  }
   
   // Expiry
   const expiry = checkExpiry(contract);
   if (expiry.status === 'expired' || expiry.status === 'expiring_6m') {
     flags.push('can_gia_han');
+    if (isMbf) {
+      flags.push('mb_can_gia_han'); // Trạm thuê mặt bằng cần gia hạn
+    }
   }
   
   // Price Frame
   const price = checkPriceFrame(contract);
   if (!price.inFrame) {
-    flags.push('ngoai_khung_gia');
+    if (isApprovedPrice(contract.status)) {
+      flags.push('ngoai_khung_da_duyet');
+    } else {
+      flags.push('ngoai_khung_gia');
+      if (!isMbf) {
+        flags.push('csht_can_dam_phan'); // Trạm CSHT cần đàm phán
+      }
+    }
   }
   
   // Account Match

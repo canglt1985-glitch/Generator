@@ -22,6 +22,7 @@ export const exportContractsToExcel = (contracts) => {
     'Chủ Tài Khoản': c.bank_info?.chu_tai_khoan || '',
     'Số Tài Khoản': c.bank_info?.so_tai_khoan || '',
     'Ngân Hàng': c.bank_info?.ngan_hang || '',
+    'Đạt mục tiêu 1245 (trước đàm phán)': c.chua_het_khau_hao || c._raw_contract_info?.chua_het_khau_hao ? 'Chưa hết khấu hao' : 'Khác',
   }));
 
   const worksheet = XLSX.utils.json_to_sheet(dataForExcel);
@@ -42,6 +43,7 @@ export const exportContractsToExcel = (contracts) => {
     { wch: 25 }, // Chủ TK
     { wch: 20 }, // Số TK
     { wch: 25 }, // Ngân hàng
+    { wch: 30 }, // Khấu hao
   ];
   worksheet['!cols'] = wscols;
 
@@ -82,10 +84,14 @@ export const importContractsFromExcel = (file, onDataRead) => {
           return '';
         };
 
+        const target1245 = String(getVal(['mục tiêu 1245', '1245', 'khấu hao'])).toLowerCase();
+        const isChuaHetKhauHao = target1245.includes('chưa hết khấu hao') || target1245.includes('chua het khau hao');
+
         return {
           original_row: row,
           site_id: getVal(['site id', 'mã trạm', 'mã trạm mới']),
           contract_number: getVal(['số hợp đồng', 'số hđ']),
+          chua_het_khau_hao: isChuaHetKhauHao,
           contractor_info: {
             chu_the_hop_dong: getVal(['chủ thể', 'chủ nhà', 'tên chủ nhà']),
             dia_chi_lien_he: getVal(['địa chỉ']),

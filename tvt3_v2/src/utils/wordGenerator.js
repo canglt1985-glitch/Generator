@@ -10,7 +10,8 @@ import { saveAs } from 'file-saver';
  */
 export const generateWordBlob = async (templatePath, data) => {
     try {
-        const response = await fetch(templatePath);
+        const cacheBusterUrl = `${templatePath}?t=${new Date().getTime()}`;
+        const response = await fetch(cacheBusterUrl);
         if (!response.ok) {
             throw new Error(`Không thể tải template từ ${templatePath}`);
         }

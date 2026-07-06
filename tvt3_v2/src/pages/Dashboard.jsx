@@ -161,7 +161,7 @@ export default function Dashboard() {
       color: 'text-amber-600',
       bg: 'bg-amber-50',
       border: 'border-amber-100',
-      link: '/contracts?filter=can_gia_han'
+      link: '/contracts?filter=mb_can_gia_han'
     },
     {
       name: 'Hợp đồng cần xử lý',
