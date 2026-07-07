@@ -53,6 +53,87 @@ export default function InfrastructureDevelopment() {
 
   const districts = ['Cẩm Mỹ', 'Xuân Lộc', 'Long Khánh', 'Thống Nhất', 'Định Quán', 'Tân Phú'];
 
+  // Haversine formula to compute distance in km
+  const haversine = (lat1, lon1, lat2, lon2) => {
+    const R = 6371; // Earth's radius in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
+  // Find nearest active site from datasites table
+  const findNearestActiveSite = (proj) => {
+    const lat = proj.latitude_survey || proj.latitude_plan;
+    const lon = proj.longitude_survey || proj.longitude_plan;
+    if (!lat || !lon || activeSites.length === 0) return null;
+
+    let minDistance = Infinity;
+    let nearest = null;
+
+    activeSites.forEach(site => {
+      const sLat = site.location_info?.vi_do;
+      const sLon = site.location_info?.kinh_do;
+      if (sLat && sLon) {
+        try {
+          const dist = haversine(Number(lat), Number(lon), Number(sLat), Number(sLon));
+          if (dist < minDistance) {
+            minDistance = dist;
+            nearest = {
+              site_id_old: site.site_id_old,
+              site_id: site.site_id,
+              name: site.name,
+              distance: dist
+            };
+          }
+        } catch (e) {
+          // Ignore parse errors
+        }
+      }
+    });
+
+    return nearest;
+  };
+
+  // Get old district & old ward from old ID and Address
+  const getOldLocation = (proj) => {
+    let huyenCu = '';
+    const oldId = proj.planning_id_old || '';
+    if (oldId.includes('LT')) huyenCu = 'Long Thành';
+    else if (oldId.includes('XL')) huyenCu = 'Xuân Lộc';
+    else if (oldId.includes('CM')) huyenCu = 'Cẩm Mỹ';
+    else if (oldId.includes('LK')) huyenCu = 'Long Khánh';
+    else if (oldId.includes('DQ')) huyenCu = 'Định Quán';
+    else if (oldId.includes('TP')) huyenCu = 'Tân Phú';
+    else if (oldId.includes('TN')) huyenCu = 'Thống Nhất';
+    else if (oldId.includes('TB')) huyenCu = 'Trảng Bom';
+    else if (oldId.includes('BH')) huyenCu = 'Biên Hòa';
+    else if (oldId.includes('VC')) huyenCu = 'Vĩnh Cửu';
+    else if (oldId.includes('NT')) huyenCu = 'Nhơn Trạch';
+
+    let xaCu = '';
+    const addr = proj.address || '';
+    const match = addr.toLowerCase().match(/(?:xã|phường|thị trấn)\s+([a-z0-9àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹ\s]+)/i);
+    if (match && match[1]) {
+      xaCu = match[1].split(/[-–,]/)[0].trim();
+      // Capitalize first letters of words
+      xaCu = xaCu.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    }
+
+    if (huyenCu || xaCu) {
+      return {
+        huyen: huyenCu || null,
+        ward: xaCu || null,
+        label: `${xaCu ? xaCu : 'Chưa rõ'} (${huyenCu ? huyenCu : 'Chưa rõ'})`
+      };
+    }
+    return null;
+  };
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -421,6 +502,25 @@ export default function InfrastructureDevelopment() {
                               <span className="truncate">{proj.district} - {proj.ward || 'Chưa xác định'}</span>
                             </div>
 
+                            {(() => {
+                              const oldLoc = getOldLocation(proj);
+                              const nearestSite = findNearestActiveSite(proj);
+                              return (
+                                <>
+                                  {oldLoc && (
+                                    <div className="text-[10px] text-slate-400 font-medium mt-1">
+                                      🏠 Cũ: {oldLoc.label}
+                                    </div>
+                                  )}
+                                  {nearestSite && (
+                                    <div className="text-[10px] text-blue-600 font-semibold mt-1">
+                                      📡 Gần nhất: {nearestSite.site_id_old} ({nearestSite.distance.toFixed(1)} km)
+                                    </div>
+                                  )}
+                                </>
+                              );
+                            })()}
+
                             <div className="flex items-center justify-between border-t border-slate-50 mt-3 pt-2">
                               <span className="text-[9px] font-bold text-slate-400 bg-slate-50 border border-slate-100 px-2 py-0.5 rounded">
                                 {proj.implementation_type || 'MBF đầu tư'}
@@ -490,7 +590,9 @@ export default function InfrastructureDevelopment() {
                     <tr className="bg-slate-50 border-b border-slate-100 text-slate-500 font-semibold">
                       <th className="py-2.5 px-3">Mã QH mới</th>
                       <th className="py-2.5 px-3">Mã QH cũ</th>
-                      <th className="py-2.5 px-3">Địa bàn (Huyện - Xã)</th>
+                      <th className="py-2.5 px-3">Địa bàn Quy hoạch</th>
+                      <th className="py-2.5 px-3 hidden md:table-cell">Địa bàn cũ</th>
+                      <th className="py-2.5 px-3 hidden lg:table-cell">Trạm gần nhất</th>
                       <th className="py-2.5 px-3">Giai đoạn</th>
                       <th className="py-2.5 px-3">Hình thức</th>
                       <th className="py-2.5 px-3">Loại cột &amp; Độ cao</th>
@@ -501,13 +603,15 @@ export default function InfrastructureDevelopment() {
                   <tbody className="divide-y divide-slate-100">
                     {filteredProjects.length === 0 ? (
                       <tr>
-                        <td colSpan="8" className="py-8 text-center text-slate-400 font-medium bg-slate-50/20">
+                        <td colSpan="10" className="py-8 text-center text-slate-400 font-medium bg-slate-50/20">
                           Không tìm thấy kết quả phù hợp.
                         </td>
                       </tr>
                     ) : (
                       filteredProjects.map((proj) => {
                         const currentStageObj = STAGES.find(s => s.id === proj.current_stage);
+                        const oldLoc = getOldLocation(proj);
+                        const nearestSite = findNearestActiveSite(proj);
                         return (
                           <tr 
                             key={proj.project_id} 
@@ -519,6 +623,12 @@ export default function InfrastructureDevelopment() {
                             <td className="py-3 px-3 text-slate-600">
                               <span className="font-semibold">{proj.district}</span>
                               {proj.ward && <span className="text-slate-400"> - {proj.ward}</span>}
+                            </td>
+                            <td className="py-3 px-3 text-slate-500 hidden md:table-cell">
+                              {oldLoc ? oldLoc.label : '-'}
+                            </td>
+                            <td className="py-3 px-3 text-blue-600 font-semibold hidden lg:table-cell">
+                              {nearestSite ? `${nearestSite.site_id_old} (${nearestSite.distance.toFixed(1)} km)` : '-'}
                             </td>
                             <td className="py-3 px-3">
                               <span className="text-[11px] font-semibold text-slate-600">
@@ -641,13 +751,35 @@ export default function InfrastructureDevelopment() {
                   <span className="text-sm font-semibold text-slate-700 block">{selectedProject.planning_id_old || '-'}</span>
                 </div>
                 <div className="space-y-1">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">Địa bàn Huyện</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">Địa bàn Huyện (Mới)</span>
                   <span className="text-sm font-semibold text-slate-700 block">{selectedProject.district}</span>
                 </div>
                 <div className="space-y-1">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">Xã/Phường</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">Xã/Phường (Mới)</span>
                   <span className="text-sm font-semibold text-slate-700 block">{selectedProject.ward || '-'}</span>
                 </div>
+                {(() => {
+                  const oldLoc = getOldLocation(selectedProject);
+                  const nearestSite = findNearestActiveSite(selectedProject);
+                  return (
+                    <>
+                      <div className="space-y-1 col-span-2">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase">Địa bàn cũ (Xã cũ - Huyện cũ)</span>
+                        <span className="text-sm font-semibold text-slate-700 block bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
+                          {oldLoc ? oldLoc.label : 'Chưa xác định'}
+                        </span>
+                      </div>
+                      <div className="space-y-1 col-span-2">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase">Khoảng cách đến trạm hoạt động gần nhất</span>
+                        <span className="text-sm font-bold text-blue-600 block bg-blue-50/40 px-3 py-1.5 rounded-lg border border-blue-100">
+                          {nearestSite 
+                            ? `${nearestSite.site_id_old} (${nearestSite.name}) — cách ${nearestSite.distance.toFixed(2)} km` 
+                            : 'Không thể xác định (chưa có tọa độ hoặc thiếu danh mục trạm)'}
+                        </span>
+                      </div>
+                    </>
+                  );
+                })()}
                 <div className="space-y-1 col-span-2">
                   <span className="text-[10px] font-bold text-slate-400 uppercase">Địa chỉ thực tế</span>
                   <span className="text-sm font-medium text-slate-600 block">{selectedProject.address || '-'}</span>
