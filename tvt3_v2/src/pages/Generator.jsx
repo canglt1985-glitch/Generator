@@ -86,10 +86,18 @@ export default function Generator() {
         setPowerSchedules(powerRes.data || []);
         setFuelTxs(fuelRes.data || []);
       } else if (activeTab === 'invoices') {
-        const { data, error } = await supabase
-          .from('parsed_invoices')
-          .select('*')
-          .order('invoice_date', { ascending: false });
+        let query = supabase.from('parsed_invoices').select('*');
+        if (filterYear) {
+          if (filterMonth) {
+            const startStr = `${filterYear}-${String(filterMonth).padStart(2, '0')}-01`;
+            const lastDay = new Date(filterYear, filterMonth, 0).getDate();
+            const endStr = `${filterYear}-${String(filterMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+            query = query.gte('invoice_date', startStr).lte('invoice_date', endStr);
+          } else {
+            query = query.gte('invoice_date', `${filterYear}-01-01`).lte('invoice_date', `${filterYear}-12-31`);
+          }
+        }
+        const { data, error } = await query.order('invoice_date', { ascending: false });
         if (error) throw error;
         setInvoices(data || []);
       }
@@ -972,7 +980,7 @@ export default function Generator() {
           </p>
         </div>
 
-        {activeTab === 'logs' && (
+        {(activeTab === 'logs' || activeTab === 'invoices') && (
           <div className="flex flex-wrap items-center gap-2">
             {/* Month select */}
             <select
@@ -995,34 +1003,48 @@ export default function Generator() {
                 <option key={y} value={y}>{y}</option>
               ))}
             </select>
-            {/* Import Excel */}
-            <button
-              onClick={() => alert("Chức năng import đang được phát triển. Vui lòng quét SmartW hoặc nhập thủ công.")}
-              className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg text-white bg-emerald-600 hover:bg-emerald-700 shadow-sm transition-colors cursor-pointer"
-            >
-              <FileText className="h-3.5 w-3.5 mr-1" /> Import
-            </button>
-            {/* Recalculate */}
-            <button
-              onClick={handleRecalculate}
-              className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg text-white bg-amber-500 hover:bg-amber-600 shadow-sm transition-colors cursor-pointer"
-            >
-              <Zap className="h-3.5 w-3.5 mr-1" /> Tính lại ĐM
-            </button>
-            {/* Export */}
-            <button
-              onClick={exportToExcel}
-              className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg text-blue-600 border border-blue-200 bg-white hover:bg-slate-50 shadow-sm transition-colors cursor-pointer"
-            >
-              <ExternalLink className="h-3.5 w-3.5 mr-1" /> Xuất {filterMonth ? `T${filterMonth}/${filterYear}` : `${filterYear}`}
-            </button>
-            {/* Add manual log */}
-            <button 
-              onClick={() => { resetLogForm(); setShowAddLogModal(true); }}
-              className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors cursor-pointer"
-            >
-              <Plus className="h-3.5 w-3.5 mr-1" /> Thêm
-            </button>
+
+            {activeTab === 'logs' && (
+              <>
+                {/* Import Excel */}
+                <button
+                  onClick={() => alert("Chức năng import đang được phát triển. Vui lòng quét SmartW hoặc nhập thủ công.")}
+                  className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg text-white bg-emerald-600 hover:bg-emerald-700 shadow-sm transition-colors cursor-pointer"
+                >
+                  <FileText className="h-3.5 w-3.5 mr-1" /> Import
+                </button>
+                {/* Recalculate */}
+                <button
+                  onClick={handleRecalculate}
+                  className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg text-white bg-amber-500 hover:bg-amber-600 shadow-sm transition-colors cursor-pointer"
+                >
+                  <Zap className="h-3.5 w-3.5 mr-1" /> Tính lại ĐM
+                </button>
+                {/* Export */}
+                <button
+                  onClick={exportToExcel}
+                  className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg text-blue-600 border border-blue-200 bg-white hover:bg-slate-50 shadow-sm transition-colors cursor-pointer"
+                >
+                  <ExternalLink className="h-3.5 w-3.5 mr-1" /> Xuất {filterMonth ? `T${filterMonth}/${filterYear}` : `${filterYear}`}
+                </button>
+                {/* Add manual log */}
+                <button 
+                  onClick={() => { resetLogForm(); setShowAddLogModal(true); }}
+                  className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors cursor-pointer"
+                >
+                  <Plus className="h-3.5 w-3.5 mr-1" /> Thêm
+                </button>
+              </>
+            )}
+
+            {activeTab === 'invoices' && (
+              <button
+                onClick={exportInvoicesToExcel}
+                className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg text-emerald-700 border border-emerald-200 bg-white hover:bg-emerald-50 shadow-sm transition-colors cursor-pointer"
+              >
+                <ExternalLink className="h-3.5 w-3.5 mr-1" /> Xuất Excel
+              </button>
+            )}
           </div>
         )}
 
@@ -1030,17 +1052,6 @@ export default function Generator() {
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={exportAnomaliesToExcel}
-              className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg text-emerald-700 border border-emerald-200 bg-white hover:bg-emerald-50 shadow-sm transition-colors cursor-pointer"
-            >
-              <ExternalLink className="h-3.5 w-3.5 mr-1" /> Xuất Excel
-            </button>
-          </div>
-        )}
-
-        {activeTab === 'invoices' && (
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={exportInvoicesToExcel}
               className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg text-emerald-700 border border-emerald-200 bg-white hover:bg-emerald-50 shadow-sm transition-colors cursor-pointer"
             >
               <ExternalLink className="h-3.5 w-3.5 mr-1" /> Xuất Excel
