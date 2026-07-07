@@ -6,13 +6,13 @@ import { supabase } from '../supabaseClient';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: Home },
-  { name: 'Công việc hàng ngày', href: '/daily-work', icon: Activity },
-  { name: 'Quản lý chi phí', href: '/expenses', icon: Coins },
+  { name: 'Công việc', href: '/daily-work', icon: Activity },
+  { name: 'Chi phí', href: '/expenses', icon: Coins },
   { name: 'VHKT-RAN', href: '/vhkt-ran', icon: Radio },
-  { name: 'Phát triển CSHT', href: '/infrastructure', icon: Server },
+  { name: 'Dự án CSHT', href: '/infrastructure', icon: Server },
   { name: 'Danh sách Trạm', href: '/datasites', icon: Database },
   { name: 'Hợp đồng', href: '/contracts', icon: FileText, desktopOnly: true },
-  { name: 'Máy phát điện', href: '/generator', icon: Zap },
+  { name: 'Máy phát', href: '/generator', icon: Zap },
   { name: 'Cài đặt', href: '/settings', icon: Settings },
 ];
 
@@ -80,7 +80,7 @@ export default function Header() {
                     <Link
                       key={item.name}
                       to={item.href}
-                      className={`flex items-center px-3 py-1.5 rounded-md text-[13px] font-medium transition-all duration-200 ${
+                      className={`flex items-center px-1.5 xl:px-2.5 py-1.5 rounded-md text-[11px] xl:text-[12px] 2xl:text-[13px] font-medium transition-all duration-200 whitespace-nowrap ${
                         isActive
                           ? 'bg-white/10 text-white shadow-sm'
                           : 'text-slate-400 hover:text-slate-200'
