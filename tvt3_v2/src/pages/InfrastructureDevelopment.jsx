@@ -68,8 +68,9 @@ export default function InfrastructureDevelopment() {
 
   // Find nearest active site from datasites table
   const findNearestActiveSite = (proj) => {
-    const lat = proj.latitude_survey || proj.latitude_plan;
-    const lon = proj.longitude_survey || proj.longitude_plan;
+    // Giải mã và tính toán dựa theo tọa độ thiết kế (quy hoạch)
+    const lat = proj.latitude_plan || proj.latitude_survey;
+    const lon = proj.longitude_plan || proj.longitude_survey;
     if (!lat || !lon || activeSites.length === 0) return null;
 
     let minDistance = Infinity;
