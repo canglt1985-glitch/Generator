@@ -159,7 +159,8 @@ def format_weekly_anomalies_message(data):
         for wa in data['weekly_refuel_anomalies']:
             tram_id = wa['id_tram']
             tram_old = site_map.get(tram_id.strip().upper(), tram_id)
-            lines.append(f"• Trạm `{tram_old}`: Đổ {wa['refuel_count']} lần ({format_num(wa['total_qty'])}L từ {wa['date_range']}) nhưng không chạy máy trong 7 ngày sau đó.")
+            tram_display = f"{tram_old} / {tram_id}" if tram_old != tram_id else tram_id
+            lines.append(f"• Trạm `{tram_display}`: Đổ {wa['refuel_count']} lần ({format_num(wa['total_qty'])}L từ {wa['date_range']}) nhưng không chạy máy trong 7 ngày sau đó.")
     else:
         lines.append("✅ Không phát hiện bất thường đổ dầu.")
 
@@ -183,7 +184,8 @@ def format_weekly_anomalies_message(data):
             date_display = "/".join(parts[:2]) if len(parts) >= 2 else rec['ngay_mat_dien']
             tram_id = rec['id_tram']
             tram_old = site_map.get(tram_id.strip().upper(), tram_id)
-            lines.append(f"• Trạm `{tram_old}`: Cúp ngày `{date_display}` (~{h_str}h){refuel_str}")
+            tram_display = f"{tram_old} / {tram_id}" if tram_old != tram_id else tram_id
+            lines.append(f"• Trạm `{tram_display}`: Cúp ngày `{date_display}` (~{h_str}h){refuel_str}")
         if len(data['missing_logs']) > limit_cnt:
             lines.append(f"• ... và `{len(data['missing_logs']) - limit_cnt}` lượt cúp khác.")
     else:

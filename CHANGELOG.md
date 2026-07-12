@@ -1,5 +1,16 @@
 # Changelog
 
+## [2026-07-11]
+### Added
+- **CSHT Implementation Type Selection**: Bổ sung trường chọn **Hình thức triển khai** (`implementation_type`) ngay tại biểu mẫu Tạo đề xuất trạm mới, hỗ trợ chọn linh hoạt giữa MobiFone tự đầu tư hoặc Thuê dùng chung CSHT của đối tác ngay từ đầu.
+- **Sharing Partner Dropdown**: Chuẩn hóa trường nhập đối tác dùng chung CSHT thành dạng **Dropdown select** bao gồm các tùy chọn có sẵn (`Viettel`, `VCC`, `VNPT`) và lựa chọn `Khác` cho phép tự gõ tên đối tác mới. Áp dụng cho cả form tạo mới và form chỉnh sửa chi tiết trạm.
+
+## [2026-07-08]
+### Added
+- **Infrastructure Development Module (Phase 01)**: Triển khai trang quản lý Phát triển Cơ sở hạ tầng (CSHT) mới với giao diện Kanban/List. Tích hợp tính năng Nhập/Xuất Excel.
+- **Auto Geocoding & Boundary Filter**: Tự động giải mã tọa độ (Lat/Long) ra Xã/Huyện phía client-side và tự động lọc bỏ các trạm nằm ngoài địa bàn 6 huyện thuộc TVT3 Tổ 3 quản lý.
+- **Word Document Template Generation**: Tích hợp tính năng tự động điền thẻ động và xuất tài liệu Word (.docx) cho Biên bản làm việc/ghi nhớ (BBLV) và Hợp đồng ký mới ngay tại Slide-over chi tiết.
+
 ## [2026-06-19]
 ### Fixed
 - **PAKH Viber Notification Failover**: Khắc phục lỗi tính năng PAKH không gửi Viber do token riêng `pakh_token` chưa được đăng ký webhook đầy đủ. Cấu hình tự động nạp Viber config và tự động chuyển hướng gửi bản tin PAKH vào kênh **Cảnh báo SmartW** (`viber_bot_token_alarms`) nếu không cấu hình token riêng `viber_bot_token_pakh` trong database.

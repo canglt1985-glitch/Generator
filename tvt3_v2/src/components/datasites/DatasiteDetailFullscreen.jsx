@@ -62,9 +62,9 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab }) 
     switch (activeTab) {
       case 'general':
         const InfoRowGeneral = ({ label, value }) => value && String(value).trim() !== '' && String(value) !== 'KHÔNG CÓ' ? (
-          <div className="flex justify-between items-center py-2 border-b border-slate-100 last:border-0">
-            <span className="text-slate-500 text-[13px]">{label}</span>
-            <span className="text-slate-800 font-semibold text-[13px] text-right max-w-[65%] truncate" title={String(value)}>{value}</span>
+          <div className="flex justify-between items-start py-2 border-b border-slate-100 last:border-0 gap-4">
+            <span className="text-slate-500 text-[13px] shrink-0">{label}</span>
+            <span className="text-slate-800 font-semibold text-[13px] text-right max-w-[70%] break-words whitespace-normal" title={String(value)}>{value}</span>
           </div>
         ) : null;
 
@@ -79,6 +79,7 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab }) 
               <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
                 <div className="space-y-1">
                   <InfoRowGeneral label="Tên trạm" value={site.name} />
+                  <InfoRowGeneral label="Site ID Mới" value={site.site_id} />
                   <InfoRowGeneral label="Site ID Cũ" value={site.site_id_old} />
                   <InfoRowGeneral label="Tổ quản lý" value={site.management_info?.to_ql} />
                   <InfoRowGeneral label="Người QLT" value={site.management_info?.qlt} />

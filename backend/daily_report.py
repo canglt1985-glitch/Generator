@@ -407,7 +407,8 @@ def format_daily_report_message(data):
     if data['runs_count'] > 0:
         top_st = data['top_station']
         top_st_old = site_map.get(top_st.strip().upper(), top_st)
-        lines.append(f"• Chạy nhiều nhất: `{top_st_old}` ({data['top_station_hours']}h)")
+        top_st_display = f"{top_st_old} / {top_st}" if top_st_old != top_st else top_st
+        lines.append(f"• Chạy nhiều nhất: `{top_st_display}` ({data['top_station_hours']}h)")
         
     lines.extend([
         "",
@@ -513,7 +514,8 @@ def format_missing_logs_message(data):
         date_display = "/".join(parts[:2]) if len(parts) >= 2 else rec['ngay_mat_dien']
         tram_id = rec['id_tram']
         tram_old = site_map.get(tram_id.strip().upper(), tram_id)
-        lines.append(f"• Trạm `{tram_old}`: Cúp ngày `{date_display}` (~{h_str}h){refuel_str}")
+        tram_display = f"{tram_old} / {tram_id}" if tram_old != tram_id else tram_id
+        lines.append(f"• Trạm `{tram_display}`: Cúp ngày `{date_display}` (~{h_str}h){refuel_str}")
         
     lines.append(sep)
     return "\n".join(lines)
