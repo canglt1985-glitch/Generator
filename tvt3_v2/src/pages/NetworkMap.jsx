@@ -187,16 +187,16 @@ export default function NetworkMap() {
     const chuDauTu = String(line.chu_dau_tu_cap || '').toLowerCase();
     const vanHanh = String(line.don_vi_van_hanh_cap || '').toLowerCase();
 
-    // 1. Phân biệt màu theo loại kết nối & sở hữu
-    let color = '#64748b'; // Mặc định: Xám (Slate)
+    // 1. Phân biệt màu theo loại kết nối & sở hữu (Dải màu Neon High-Contrast rực rỡ)
+    let color = '#ff9100'; // Mặc định: Cam tươi Neon (Nhà mạng khác/Chưa rõ)
     if (loai.includes('viba') || loai.includes('mw')) {
-      color = '#a855f7'; // Tím: Viba (MW)
+      color = '#eab308'; // Vàng tươi Neon: Viba (MW)
     } else if (chuDauTu.includes('mobifone') || chuDauTu.includes('mbf')) {
-      color = '#10b981'; // Xanh lá: Mobifone
+      color = '#22c55e'; // Xanh lá Neon: Mobifone
     } else if (chuDauTu.includes('vnpt')) {
-      color = '#3b82f6'; // Xanh dương: VNPT
+      color = '#06b6d4'; // Xanh dương Cyan Neon: VNPT
     } else if (chuDauTu.includes('viettel') || chuDauTu.includes('vtl')) {
-      color = '#ef4444'; // Đỏ: Viettel
+      color = '#ff1744'; // Đỏ Neon: Viettel
     }
 
     // 2. Phân biệt nét vẽ theo loại backup & đơn vị vận hành
@@ -789,23 +789,23 @@ export default function NetworkMap() {
                   <div className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Chú giải truyền dẫn:</div>
                   <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 py-1">
                     <div className="flex items-center gap-1.5">
-                      <span className="w-3.5 h-1 rounded bg-[#10b981] inline-block"></span>
+                      <span className="w-3.5 h-1 rounded bg-[#22c55e] inline-block"></span>
                       <span className="text-[11px]">Cáp Mobifone</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <span className="w-3.5 h-1 rounded bg-[#3b82f6] inline-block"></span>
+                      <span className="w-3.5 h-1 rounded bg-[#06b6d4] inline-block"></span>
                       <span className="text-[11px]">Cáp VNPT</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <span className="w-3.5 h-1 rounded bg-[#ef4444] inline-block"></span>
+                      <span className="w-3.5 h-1 rounded bg-[#ff1744] inline-block"></span>
                       <span className="text-[11px]">Cáp Viettel</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <span className="w-3.5 h-1 rounded bg-[#a855f7] inline-block"></span>
+                      <span className="w-3.5 h-1 rounded bg-[#eab308] inline-block"></span>
                       <span className="text-[11px]">Vi ba (MW)</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <span className="w-3.5 h-1 rounded bg-[#64748b] inline-block"></span>
+                      <span className="w-3.5 h-1 rounded bg-[#ff9100] inline-block"></span>
                       <span className="text-[11px]">Cáp nhà mạng khác</span>
                     </div>
                     <div className="flex items-center gap-1.5">
@@ -1022,21 +1022,39 @@ export default function NetworkMap() {
                     pathOptions={{ 
                       color: color, 
                       dashArray: dashArray, 
-                      weight: 3, 
-                      opacity: 0.85 
+                      weight: 4.5, 
+                      opacity: 0.9 
                     }}
                   >
-                    <Tooltip sticky>
-                      <div className="font-sans text-xs p-2 space-y-1 bg-white border border-slate-200 rounded shadow-md text-slate-800">
-                        <div className="font-bold text-blue-700 flex items-center gap-1 border-b border-slate-100 pb-1 mb-1">
+                    <Popup>
+                      <div className="font-sans text-xs p-2.5 space-y-1.5 bg-white text-slate-800" style={{ minWidth: '220px' }}>
+                        <div className="font-bold text-blue-700 flex items-center gap-1 border-b border-slate-100 pb-1.5 mb-1.5">
                           <Radio size={12} className="text-blue-600 shrink-0" />
-                          <span>Tuyến truyền dẫn: {line.hubOldId || line.hubId} - {line.siteOldId || line.siteId}</span>
+                          <span className="text-[13px] font-extrabold">Tuyến: {line.hubOldId || line.hubId} ➔ {line.siteOldId || line.siteId}</span>
                         </div>
-                        <div>• Kiểu kết nối: <span className="font-medium text-slate-700">{line.loai_ket_noi || 'Cáp quang'} {line.isBackup ? '(Dự phòng/Ring)' : ''}</span></div>
-                        <div>• Chủ sở hữu: <span className="font-medium text-slate-700">{line.chu_dau_tu_cap || 'Chưa cập nhật'}</span></div>
-                        <div>• Đơn vị vận hành: <span className="font-medium text-slate-700">{line.don_vi_van_hanh_cap || 'Chưa cập nhật'}</span></div>
+                        <div>• Kiểu kết nối: <span className="font-semibold text-slate-900">{line.loai_ket_noi || 'Cáp quang'} {line.isBackup ? '(Dự phòng/Ring)' : ''}</span></div>
+                        <div>• Chủ sở hữu: <span className="font-semibold text-slate-900">{line.chu_dau_tu_cap || 'Chưa cập nhật'}</span></div>
+                        <div>• Đơn vị vận hành: <span className="font-semibold text-slate-900">{line.don_vi_van_hanh_cap || 'Chưa cập nhật'}</span></div>
+                        <div className="flex gap-1.5 mt-2.5 pt-2 border-t border-slate-100">
+                          <a 
+                            href={`/datasites?search=${line.hubOldId || line.hubId}`}
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="flex-1 inline-flex items-center justify-center gap-0.5 px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[10px] font-bold transition-all text-center border border-slate-200"
+                          >
+                            Trạm Hub
+                          </a>
+                          <a 
+                            href={`/datasites?search=${line.siteOldId || line.siteId}`}
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="flex-1 inline-flex items-center justify-center gap-0.5 px-2 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-[10px] font-bold transition-all text-center"
+                          >
+                            Trạm Nhận
+                          </a>
+                        </div>
                       </div>
-                    </Tooltip>
+                    </Popup>
                   </Polyline>
                 );
               })}
