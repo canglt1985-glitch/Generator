@@ -127,6 +127,55 @@ export default function NetworkMap() {
     fetchData();
   }, []);
 
+  // Tự động định vị GPS của người dùng khi mới vào trang (sau khi nạp xong dữ liệu trạm)
+  useEffect(() => {
+    if (activeSites.length > 0 && !customerLocation) {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            // Chỉ chạy quét nếu toạ độ nằm trong hoặc gần Việt Nam
+            if (lat >= 8 && lat <= 24 && lng >= 100 && lng <= 111) {
+              executeScan(lat, lng);
+              setCoordinateInput(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+            }
+          },
+          (error) => {
+            console.log('GPS tự động chưa được cấp quyền:', error.message);
+          },
+          { enableHighAccuracy: true, timeout: 6000 }
+        );
+      }
+    }
+  }, [activeSites, infraProjects]);
+
+  // Click định vị GPS thủ công
+  const handleGPSLocationClick = () => {
+    setValidationError('');
+    if (!navigator.geolocation) {
+      setValidationError('Trình duyệt của bạn không hỗ trợ định vị GPS!');
+      return;
+    }
+
+    setLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        executeScan(lat, lng);
+        setCoordinateInput(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+        setLoading(false);
+      },
+      (error) => {
+        console.error('Lỗi định vị GPS:', error);
+        setValidationError('Không thể lấy vị trí GPS. Vui lòng bật định vị trên điện thoại và cho phép trang web truy cập.');
+        setLoading(false);
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  };
+
   async function fetchData() {
     setLoading(true);
     try {
@@ -453,13 +502,24 @@ export default function NetworkMap() {
                 </div>
               )}
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl font-bold text-xs shadow-md shadow-cyan-500/10 active:scale-95 transition-all cursor-pointer font-sans"
-              >
-                Định vị & Tìm trạm
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="flex-grow py-2.5 bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-700 text-white rounded-xl font-bold text-xs shadow-md shadow-cyan-500/10 active:scale-95 transition-all cursor-pointer font-sans"
+                >
+                  Định vị & Tìm trạm
+                </button>
+                <button
+                  type="button"
+                  onClick={handleGPSLocationClick}
+                  disabled={loading}
+                  className="px-3 py-2.5 bg-slate-700 hover:bg-slate-650 disabled:bg-slate-800 disabled:text-slate-600 text-cyan-400 rounded-xl font-bold text-xs border border-slate-600 active:scale-95 transition-all cursor-pointer font-sans flex items-center gap-1.5"
+                  title="Sử dụng GPS hiện tại của thiết bị"
+                >
+                  <Compass className="h-4 w-4" /> GPS của tôi
+                </button>
+              </div>
             </form>
 
             {/* 2. Site Search box */}
