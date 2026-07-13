@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
-import Dashboard from './pages/Dashboard';
+import NetworkMap from './pages/NetworkMap';
 import Datasites from './pages/Datasites';
 import ContractDashboard from './pages/ContractDashboard';
 import DailyWork from './pages/DailyWork';
@@ -60,7 +60,8 @@ function App() {
         
         {/* Các route trong Layout chính */}
         <Route path="/" element={<Layout />}>
-          <Route index element={<Dashboard />} />
+          <Route index element={<Navigate to="/network-map" replace />} />
+          <Route path="network-map" element={<NetworkMap />} />
           <Route path="datasites" element={<Datasites />} />
           <Route path="contracts" element={<ContractDashboard />} />
           <Route path="daily-work" element={<DailyWork />} />

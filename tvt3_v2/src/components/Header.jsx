@@ -1,11 +1,11 @@
-import { Bell, Search, User, Menu, Home, Database, FileText, Settings, Activity, Zap, Coins, Radio, X, LogOut, Server } from 'lucide-react';
+import { Bell, Search, User, Menu, Home, Database, FileText, Settings, Activity, Zap, Coins, Radio, X, LogOut, Server, Map } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useState } from 'react';
 import { useCurrentUser } from '../utils/useCurrentUser';
 import { supabase } from '../supabaseClient';
 
 const navigation = [
-  { name: 'Dashboard', href: '/', icon: Home },
+  { name: 'Bản đồ Trạm', href: '/network-map', icon: Map },
   { name: 'Công việc', href: '/daily-work', icon: Activity },
   { name: 'Chi phí', href: '/expenses', icon: Coins },
   { name: 'VHKT-RAN', href: '/vhkt-ran', icon: Radio },
