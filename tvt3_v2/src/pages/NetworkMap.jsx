@@ -287,6 +287,13 @@ export default function NetworkMap() {
         (error) => {
           console.error('Lỗi định vị GPS thực địa:', error);
           setValidationError('Không thể lấy vị trí GPS. Vui lòng bật định vị trên điện thoại và cho phép trình duyệt truy cập.');
+          
+          // Dọn dẹp watchPosition ngay lập tức khi lỗi để tránh lặp bất đồng bộ làm lệch công tắc
+          if (watchIdRef.current !== null) {
+            navigator.geolocation.clearWatch(watchIdRef.current);
+            watchIdRef.current = null;
+          }
+          
           setLoading(false);
           setUseGPS(false);
         },
