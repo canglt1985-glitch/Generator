@@ -1133,22 +1133,22 @@ export default function NetworkMap() {
                         <div>• Kiểu kết nối: <span className="font-semibold text-slate-900">{line.loai_ket_noi || 'Cáp quang'} {line.isBackup ? '(Dự phòng/Ring)' : ''}</span></div>
                         <div>• Chủ sở hữu: <span className="font-semibold text-slate-900">{line.chu_dau_tu_cap || 'Chưa cập nhật'}</span></div>
                         <div>• Đơn vị vận hành: <span className="font-semibold text-slate-900">{line.don_vi_van_hanh_cap || 'Chưa cập nhật'}</span></div>
-                        <div className="flex gap-1.5 mt-2.5 pt-2 border-t border-slate-100">
+                        <div className="flex gap-1.5 mt-2.5 pt-2 border-t border-slate-100 font-sans">
                           <a 
                             href={`/datasites?search=${line.hubOldId || line.hubId}`}
                             target="_blank" 
                             rel="noopener noreferrer"
-                            className="flex-1 inline-flex items-center justify-center gap-0.5 px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[10px] font-bold transition-all text-center border border-slate-200"
+                            className="flex-1 inline-flex items-center justify-center gap-0.5 px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[10px] font-bold transition-all text-center border border-slate-200 uppercase"
                           >
-                            Trạm Hub
+                            Trạm MAIN
                           </a>
                           <a 
                             href={`/datasites?search=${line.siteOldId || line.siteId}`}
                             target="_blank" 
                             rel="noopener noreferrer"
-                            className="flex-1 inline-flex items-center justify-center gap-0.5 px-2 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-[10px] font-bold transition-all text-center"
+                            className="flex-1 inline-flex items-center justify-center gap-0.5 px-2 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-[10px] font-bold transition-all text-center uppercase"
                           >
-                            Trạm Nhận
+                            Trạm LASTMILE
                           </a>
                         </div>
                       </div>
