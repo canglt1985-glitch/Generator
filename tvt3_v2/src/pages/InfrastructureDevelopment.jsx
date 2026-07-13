@@ -25,7 +25,7 @@ export default function InfrastructureDevelopment() {
   const [projects, setProjects] = useState([]);
   const [activeSites, setActiveSites] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('kanban'); // kanban, list
+  const [activeTab, setActiveTab] = useState('list'); // list, kanban
   const [selectedProject, setSelectedProject] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
