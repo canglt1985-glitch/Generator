@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../supabaseClient';
 import { MapPin, Search, Server, Shield, Map as MapIcon, Compass, AlertCircle, Info, Radio, Layers, Filter } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, Circle, useMap, LayersControl, Tooltip } from 'react-leaflet';
@@ -84,9 +84,114 @@ export default function NetworkMap() {
   const [showActiveSites, setShowActiveSites] = useState(true);
   const [showProjects, setShowProjects] = useState(true);
   const [showCoverageCircle, setShowCoverageCircle] = useState(false);
+  const [showTransmission, setShowTransmission] = useState(false);
 
   // Autocomplete Suggestions
   const [searchSuggestions, setSearchSuggestions] = useState([]);
+
+  // Parse transmission lines from activeSites
+  const transmissionLines = useMemo(() => {
+    if (activeSites.length === 0) return [];
+    
+    const lines = [];
+    const siteMap = new Map();
+    activeSites.forEach(s => {
+      if (s.site_id) siteMap.set(s.site_id.toLowerCase(), s);
+      if (s.site_id_old) siteMap.set(s.site_id_old.toLowerCase(), s);
+    });
+
+    activeSites.forEach(site => {
+      const trans = site.technical_info;
+      if (!trans) return;
+
+      const latDich = parseFloat(site.location_info?.vi_do);
+      const lngDich = parseFloat(site.location_info?.kinh_do);
+      if (isNaN(latDich) || isNaN(lngDich)) return;
+
+      // 1. Tuyến chính
+      const primaryHubId = trans.last_mile_primary || trans.huong_ket_noi;
+      if (primaryHubId) {
+        const hub = siteMap.get(primaryHubId.trim().toLowerCase());
+        if (hub) {
+          const latNguon = parseFloat(hub.location_info?.vi_do);
+          const lngNguon = parseFloat(hub.location_info?.kinh_do);
+          if (!isNaN(latNguon) && !isNaN(lngNguon)) {
+            lines.push({
+              key: `primary-${site.site_id}-${primaryHubId}`,
+              from: [latNguon, lngNguon],
+              to: [latDich, lngDich],
+              siteId: site.site_id,
+              siteName: site.name,
+              hubId: hub.site_id,
+              hubName: hub.name,
+              loai_ket_noi: trans.loai_ket_noi,
+              chu_dau_tu_cap: trans.chu_dau_tu_cap,
+              don_vi_van_hanh_cap: trans.don_vi_van_hanh_cap,
+              isBackup: false,
+              details: trans
+            });
+          }
+        }
+      }
+
+      // 2. Tuyến phụ (Backup Ring)
+      const backupHubId = trans.last_mile_backup;
+      if (backupHubId) {
+        const hub = siteMap.get(backupHubId.trim().toLowerCase());
+        if (hub) {
+          const latNguon = parseFloat(hub.location_info?.vi_do);
+          const lngNguon = parseFloat(hub.location_info?.kinh_do);
+          if (!isNaN(latNguon) && !isNaN(lngNguon)) {
+            lines.push({
+              key: `backup-${site.site_id}-${backupHubId}`,
+              from: [latNguon, lngNguon],
+              to: [latDich, lngDich],
+              siteId: site.site_id,
+              siteName: site.name,
+              hubId: hub.site_id,
+              hubName: hub.name,
+              loai_ket_noi: trans.loai_ket_noi,
+              chu_dau_tu_cap: trans.chu_dau_tu_cap,
+              don_vi_van_hanh_cap: trans.don_vi_van_hanh_cap,
+              isBackup: true,
+              details: trans
+            });
+          }
+        }
+      }
+    });
+
+    return lines;
+  }, [activeSites]);
+
+  // Determine line style options
+  const getTransLineOptions = (line) => {
+    const loai = String(line.loai_ket_noi || '').toLowerCase();
+    const chuDauTu = String(line.chu_dau_tu_cap || '').toLowerCase();
+    const vanHanh = String(line.don_vi_van_hanh_cap || '').toLowerCase();
+
+    // 1. Phân biệt màu theo loại kết nối & sở hữu
+    let color = '#64748b'; // Mặc định: Xám (Slate)
+    if (loai.includes('viba') || loai.includes('mw')) {
+      color = '#a855f7'; // Tím: Viba (MW)
+    } else if (chuDauTu.includes('mobifone') || chuDauTu.includes('mbf')) {
+      color = '#10b981'; // Xanh lá: Mobifone
+    } else if (chuDauTu.includes('vnpt')) {
+      color = '#3b82f6'; // Xanh dương: VNPT
+    } else if (chuDauTu.includes('viettel') || chuDauTu.includes('vtl')) {
+      color = '#ef4444'; // Đỏ: Viettel
+    }
+
+    // 2. Phân biệt nét vẽ theo loại backup & đơn vị vận hành
+    let dashArray = undefined;
+    if (line.isBackup) {
+      dashArray = '8, 8'; // Ring backup: nét đứt thưa
+    } else if (vanHanh.includes('đối tác') || vanHanh.includes('ngoài') || vanHanh.includes('thuê')) {
+      dashArray = '5, 5'; // Đối tác ngoài vận hành: nét đứt dày
+    }
+
+    return { color, dashArray };
+  };
 
   // Haversine formula to compute distance in meters between two points
   const haversineMeters = (lat1, lon1, lat2, lon2) => {
@@ -641,7 +746,49 @@ export default function NetworkMap() {
                   />
                   <span>Hiển thị Vùng phủ sóng của Trạm (500m)</span>
                 </label>
+                <label className="flex items-center gap-2 cursor-pointer hover:text-white transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={showTransmission}
+                    onChange={(e) => setShowTransmission(e.target.checked)}
+                    className="rounded border-slate-700 text-cyan-600 bg-slate-900 focus:ring-cyan-500/30"
+                  />
+                  <span>Tuyến truyền dẫn Last Mile ({transmissionLines.length})</span>
+                </label>
               </div>
+
+              {/* Bảng chú giải truyền dẫn khi bật */}
+              {showTransmission && (
+                <div className="mt-4 pt-3 border-t border-slate-700/60 font-sans text-xs space-y-2 text-slate-300">
+                  <div className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Chú giải truyền dẫn:</div>
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 py-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-3.5 h-1 rounded bg-[#10b981] inline-block"></span>
+                      <span className="text-[11px]">Cáp Mobifone</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-3.5 h-1 rounded bg-[#3b82f6] inline-block"></span>
+                      <span className="text-[11px]">Cáp VNPT</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-3.5 h-1 rounded bg-[#ef4444] inline-block"></span>
+                      <span className="text-[11px]">Cáp Viettel</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-3.5 h-1 rounded bg-[#a855f7] inline-block"></span>
+                      <span className="text-[11px]">Vi ba (MW)</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-3.5 h-1 rounded bg-[#64748b] inline-block"></span>
+                      <span className="text-[11px]">Cáp nhà mạng khác</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-3.5 h-0.5 border-t border-dashed border-slate-400 inline-block"></span>
+                      <span className="text-[11px]">Đối tác vận hành</span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -836,6 +983,37 @@ export default function NetworkMap() {
                       />
                     )}
                   </div>
+                );
+              })}
+
+              {/* Render danh sách Tuyến truyền dẫn Last Mile */}
+              {showTransmission && transmissionLines.map(line => {
+                const { color, dashArray } = getTransLineOptions(line);
+                return (
+                  <Polyline 
+                    key={line.key}
+                    positions={[line.from, line.to]} 
+                    pathOptions={{ 
+                      color: color, 
+                      dashArray: dashArray, 
+                      weight: 3, 
+                      opacity: 0.85 
+                    }}
+                  >
+                    <Tooltip sticky>
+                      <div className="font-sans text-xs p-2 space-y-1 bg-white border border-slate-200 rounded shadow-md text-slate-800">
+                        <div className="font-bold text-blue-700 flex items-center gap-1 border-b border-slate-100 pb-1 mb-1">
+                          <Radio size={12} className="text-blue-600 shrink-0" />
+                          <span>Tuyến truyền dẫn Last Mile</span>
+                        </div>
+                        <div>• Trạm nguồn (Hub): <span className="font-semibold text-slate-900">{line.hubId} ({line.hubName || 'Chưa cập nhật'})</span></div>
+                        <div>• Trạm nhận: <span className="font-semibold text-slate-900">{line.siteId} ({line.siteName || 'Chưa cập nhật'})</span></div>
+                        <div>• Kiểu kết nối: <span className="font-medium text-slate-700">{line.loai_ket_noi || 'Cáp quang'} {line.isBackup ? '(Dự phòng/Ring)' : ''}</span></div>
+                        <div>• Chủ sở hữu: <span className="font-medium text-slate-700">{line.chu_dau_tu_cap || 'Chưa cập nhật'}</span></div>
+                        <div>• Đơn vị vận hành: <span className="font-medium text-slate-700">{line.don_vi_van_hanh_cap || 'Chưa cập nhật'}</span></div>
+                      </div>
+                    </Tooltip>
+                  </Polyline>
                 );
               })}
 
