@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { MapPin, Search, Server, Shield, Map as MapIcon, Compass, AlertCircle, Info, Radio, Layers, Filter } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, Circle, useMap, LayersControl, Tooltip } from 'react-leaflet';
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ReferenceLine } from 'recharts';
 import L from 'leaflet';
 
 // Fix Leaflet default marker icons bug in Vite build environment
@@ -86,13 +85,6 @@ export default function NetworkMap() {
   const [showProjects, setShowProjects] = useState(true);
   const [showCoverageCircle, setShowCoverageCircle] = useState(false);
 
-  // RF Map Profile states
-  const [activeTab, setActiveTab] = useState('map'); // 'map', 'los', 'rf' (for mobile split views)
-  const [selectedNearestSite, setSelectedNearestSite] = useState(null); 
-  const [elevationData, setElevationData] = useState([]);
-  const [isElevationLoading, setIsElevationLoading] = useState(false);
-  const [losStatus, setLosStatus] = useState('LOS (Thông suốt)');
-
   // Haversine formula to compute distance in meters between two points
   const haversineMeters = (lat1, lon1, lat2, lon2) => {
     const R = 6371e3; // Earth's radius in meters
@@ -107,185 +99,6 @@ export default function NetworkMap() {
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
     return R * c; // in meters
-  };
-
-  // RF Signal Prediction function based on Hata Path Loss model
-  // returns { rsrp, status, recommendation }
-  const predictSignalStrength = (distanceMeters, districtName, tech = '4G') => {
-    const dKm = Math.max(distanceMeters / 1000, 0.05); // Min 50m to avoid log(0)
-    let pTx = 46; 
-    let frequency = 1800; // 4G 1800MHz
-    if (tech === '5G') frequency = 2600;
-    if (tech === '3G') frequency = 900;
-
-    // Chiều cao Anten trạm: 30m, Anten khách: 1.5m
-    const hb = 30;
-    const hm = 1.5;
-    
-    // a(hm) correction factor
-    let a_hm = (1.1 * Math.log10(frequency) - 0.7) * hm - (1.56 * Math.log10(frequency) - 0.8);
-    
-    // Hata model formula
-    let pathLoss = 46.3 + 33.9 * Math.log10(frequency) - 13.82 * Math.log10(hb) - a_hm + (44.9 - 6.55 * Math.log10(hb)) * Math.log10(dKm);
-    
-    // Correction according to Đồng Nai district geography
-    const districtLower = (districtName || '').toLowerCase();
-    const isUrban = districtLower.includes('biên hòa') || districtLower.includes('long khánh');
-    const isMountain = districtLower.includes('định quán') || districtLower.includes('tân phú') || districtLower.includes('xuân lộc');
-    
-    if (isUrban) {
-      pathLoss += 3;
-    } else if (isMountain) {
-      pathLoss += 5;
-    } else {
-      pathLoss -= 2;
-    }
-
-    const rsrp = pTx - pathLoss;
-
-    let status = 'Yếu';
-    let bars = 1;
-    let recommendation = 'Tín hiệu yếu, không phù hợp lắp đặt MobiWifi. Cần lập dự án bổ sung trạm.';
-    let colorClass = 'text-red-400 bg-red-500/10 border-red-500/20';
-
-    if (rsrp >= -85) {
-      status = 'Tốt';
-      bars = 5;
-      recommendation = 'Sóng rất mạnh. Cực kỳ thích hợp tư vấn gói cước MobiWifi 5G tốc độ cao và các dịch vụ Internet.';
-      colorClass = 'text-green-400 bg-green-500/10 border-green-500/20';
-    } else if (rsrp >= -98) {
-      status = 'Khá';
-      bars = 4;
-      recommendation = 'Sóng đạt tiêu chuẩn. Thiết bị MobiWifi nên đặt ở vị trí thoáng, gần cửa sổ hướng về phía trạm.';
-      colorClass = 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20';
-    } else if (rsrp >= -108) {
-      status = 'Trung bình';
-      bars = 3;
-      recommendation = 'Sóng trung bình. Khuyến nghị lắp đặt thiết bị MobiWifi trên cao (tầng lầu) hoặc dùng anten ngoài để tối ưu.';
-      colorClass = 'text-amber-400 bg-amber-500/10 border-amber-500/20';
-    }
-
-    return {
-      rsrp: Math.round(rsrp),
-      status,
-      bars,
-      recommendation,
-      colorClass
-    };
-  };
-
-  // Fetch Elevation and simulate path profile
-  const fetchElevationData = async (custLoc, siteLoc, districtName) => {
-    setIsElevationLoading(true);
-    
-    const pointsCount = 12;
-    const pathPoints = [];
-    
-    for (let i = 0; i < pointsCount; i++) {
-      const fraction = i / (pointsCount - 1);
-      const lat = custLoc.lat + fraction * (siteLoc.lat - custLoc.lat);
-      const lng = custLoc.lng + fraction * (siteLoc.lng - custLoc.lng);
-      pathPoints.push({ lat, lng, fraction });
-    }
-
-    try {
-      const requestLocations = pathPoints.map(p => ({ latitude: p.lat, longitude: p.lng }));
-      const response = await fetch('https://api.open-elevation.com/api/v1/lookup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ locations: requestLocations })
-      });
-      
-      if (!response.ok) throw new Error('API Elevation error');
-      
-      const resData = await response.json();
-      const elevations = resData.results || [];
-      const chartData = generateChartData(pathPoints, elevations, custLoc, siteLoc, districtName);
-      setElevationData(chartData);
-    } catch (err) {
-      console.warn('Lỗi API Elevation, sử dụng dữ liệu mô phỏng đồi núi Đồng Nai:', err);
-      const chartData = generateFallbackElevation(pathPoints, custLoc, siteLoc, districtName);
-      setElevationData(chartData);
-    } finally {
-      setIsElevationLoading(false);
-    }
-  };
-
-  const generateChartData = (pathPoints, elevations, custLoc, siteLoc, districtName) => {
-    const totalDist = haversineMeters(custLoc.lat, custLoc.lng, siteLoc.lat, siteLoc.lng);
-    const hCustGround = elevations[0]?.elevation || 50;
-    const hSiteGround = elevations[elevations.length - 1]?.elevation || 70;
-    
-    const siteAntennaHeight = hSiteGround + 30; // Tower height
-    const custAntennaHeight = hCustGround + 1.5; // Device height
-
-    let isObstructed = false;
-    const dataPoints = pathPoints.map((p, idx) => {
-      const groundHeight = elevations[idx]?.elevation || 50;
-      const pointDist = Math.round(p.fraction * totalDist);
-      const radioLineHeight = custAntennaHeight + p.fraction * (siteAntennaHeight - custAntennaHeight);
-      
-      if (groundHeight > radioLineHeight) {
-        isObstructed = true;
-      }
-
-      return {
-        name: `${pointDist}m`,
-        distance: pointDist,
-        'Độ cao đất': Math.round(groundHeight),
-        'Đường truyền sóng': Math.round(radioLineHeight),
-      };
-    });
-
-    setLosStatus(isObstructed ? 'NLOS (Bị che chắn)' : 'LOS (Thông suốt)');
-    return dataPoints;
-  };
-
-  const generateFallbackElevation = (pathPoints, custLoc, siteLoc, districtName) => {
-    const totalDist = haversineMeters(custLoc.lat, custLoc.lng, siteLoc.lat, siteLoc.lng);
-    const districtLower = (districtName || '').toLowerCase();
-    
-    let roughness = 8;
-    let baseElevation = 40;
-    if (districtLower.includes('định quán') || districtLower.includes('tân phú')) {
-      roughness = 30;
-      baseElevation = 90;
-    } else if (districtLower.includes('biên hòa') || districtLower.includes('long khánh')) {
-      roughness = 3;
-      baseElevation = 25;
-    } else if (districtLower.includes('xuân lộc')) {
-      roughness = 18;
-      baseElevation = 60;
-    }
-
-    const hCustGround = baseElevation + Math.sin(0) * roughness;
-    const hSiteGround = baseElevation + Math.sin(Math.PI * 1.5) * roughness + 10;
-    
-    const siteAntennaHeight = hSiteGround + 30;
-    const custAntennaHeight = hCustGround + 1.5;
-
-    let isObstructed = false;
-    const dataPoints = pathPoints.map((p, idx) => {
-      const pointDist = Math.round(p.fraction * totalDist);
-      // Sin wave terrain generation with cosine noise
-      const noise = Math.sin(p.fraction * Math.PI * 2.5) * roughness + Math.cos(p.fraction * Math.PI * 5) * (roughness * 0.25);
-      const groundHeight = baseElevation + noise + 10;
-      const radioLineHeight = custAntennaHeight + p.fraction * (siteAntennaHeight - custAntennaHeight);
-      
-      if (groundHeight > radioLineHeight) {
-        isObstructed = true;
-      }
-
-      return {
-        name: `${pointDist}m`,
-        distance: pointDist,
-        'Độ cao đất': Math.round(groundHeight),
-        'Đường truyền sóng': Math.round(radioLineHeight),
-      };
-    });
-
-    setLosStatus(isObstructed ? 'NLOS (Bị che chắn)' : 'LOS (Thông suốt)');
-    return dataPoints;
   };
 
 
@@ -400,16 +213,7 @@ export default function NetworkMap() {
 
     // Take the minimum of withinRadius or limitCount (ensure we always show at least the nearest one)
     let finalSelection = withinRadius.slice(0, limitCount);
-    if (finalSelection.length === 0) {
-      finalSelection = [allCalculated[0]];
-    }
-
     setNearestSites(finalSelection);
-
-    // Tự động phân tích trạm gần nhất
-    const closest = finalSelection[0];
-    setSelectedNearestSite(closest);
-    fetchElevationData(customerCoord, closest, closest.district);
 
     // Adjust zoom dynamically
     const maxDist = finalSelection[finalSelection.length - 1].distance;
@@ -503,40 +307,10 @@ export default function NetworkMap() {
         </div>
       </div>
 
-      {/* Mobile Tab Control */}
-      {customerLocation && (
-        <div className="flex lg:hidden bg-slate-800 border border-slate-700/60 p-1 rounded-xl gap-1">
-          <button
-            onClick={() => setActiveTab('map')}
-            className={`flex-1 py-2 text-center text-xs font-bold rounded-lg transition-all ${
-              activeTab === 'map' ? 'bg-cyan-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            Bản đồ
-          </button>
-          <button
-            onClick={() => setActiveTab('los')}
-            className={`flex-1 py-2 text-center text-xs font-bold rounded-lg transition-all ${
-              activeTab === 'los' ? 'bg-cyan-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            Địa hình (LOS)
-          </button>
-          <button
-            onClick={() => setActiveTab('rf')}
-            className={`flex-1 py-2 text-center text-xs font-bold rounded-lg transition-all ${
-              activeTab === 'rf' ? 'bg-cyan-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            Sóng RF
-          </button>
-        </div>
-      )}
-
       {/* Main Grid Workspace */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Left Side Control Panel */}
-        <div className={`lg:col-span-1 space-y-4 ${customerLocation && activeTab !== 'map' ? 'hidden lg:block' : ''}`}>
+        <div className="lg:col-span-1 space-y-4">
           <div className="bg-slate-800 border border-slate-700/60 rounded-2xl p-5 shadow-lg space-y-4 text-slate-200">
             <h3 className="text-sm font-bold text-white flex items-center gap-2 border-b border-slate-700 pb-2.5 font-sans">
               <MapIcon className="h-4.5 w-4.5 text-cyan-400" /> Bảng điều khiển
@@ -884,128 +658,6 @@ export default function NetworkMap() {
               })}
             </MapContainer>
           </div>
-
-          {/* RF/LOS Analysis Panels */}
-          {customerLocation && selectedNearestSite && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              
-              {/* Biểu đồ địa hình LOS */}
-              <div className={`bg-slate-800 border border-slate-700/60 rounded-2xl p-5 shadow-lg space-y-3 ${
-                activeTab !== 'los' ? 'hidden lg:block' : ''
-              }`}>
-                <div className="flex items-center justify-between border-b border-slate-700/50 pb-2">
-                  <h4 className="text-xs font-bold text-white uppercase tracking-wider font-sans">
-                    Mặt cắt Địa hình & Line of Sight
-                  </h4>
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                    losStatus.includes('NLOS') 
-                      ? 'bg-red-500/10 text-red-400 border border-red-500/20' 
-                      : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                  }`}>
-                    {losStatus}
-                  </span>
-                </div>
-                
-                {isElevationLoading ? (
-                  <div className="h-[180px] flex items-center justify-center">
-                    <RefreshCw className="h-6 w-6 text-cyan-400 animate-spin" />
-                  </div>
-                ) : (
-                  <div className="h-[180px] w-full font-sans">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={elevationData} margin={{ top: 10, right: 5, left: -25, bottom: 0 }}>
-                        <defs>
-                          <linearGradient id="colorTerrain" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.2}/>
-                            <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.0}/>
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.3} />
-                        <XAxis dataKey="name" stroke="#94a3b8" fontSize={8} />
-                        <YAxis stroke="#94a3b8" fontSize={8} />
-                        <RechartsTooltip 
-                          contentStyle={{ backgroundColor: '#1e293b', borderColor: '#475569', borderRadius: 8, fontSize: 9 }}
-                          labelStyle={{ fontWeight: 'bold', color: '#38bdf8' }}
-                        />
-                        <Area type="monotone" dataKey="Độ cao đất" stroke="#f59e0b" fillOpacity={1} fill="url(#colorTerrain)" strokeWidth={1.5} />
-                        <Area type="monotone" dataKey="Đường truyền sóng" stroke="#06b6d4" strokeWidth={1.5} strokeDasharray="4 4" fill="none" />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                )}
-                <p className="text-[9px] text-slate-500 text-center font-sans">
-                  Đồ thị thể hiện cao độ đất đá (vàng) so với đường truyền sóng thẳng (xanh nét đứt).
-                </p>
-              </div>
-
-              {/* Phân tích vô tuyến RSRP */}
-              <div className={`bg-slate-800 border border-slate-700/60 rounded-2xl p-5 shadow-lg space-y-3.5 ${
-                activeTab !== 'rf' ? 'hidden lg:block' : ''
-              }`}>
-                <div className="flex items-center justify-between border-b border-slate-700/50 pb-2">
-                  <h4 className="text-xs font-bold text-white uppercase tracking-wider font-sans">
-                    Phân tích Vô tuyến (RSRP)
-                  </h4>
-                  <select 
-                    value={selectedNearestSite?.id || ''}
-                    onChange={(e) => {
-                      const found = nearestSites.find(item => item.id === e.target.value);
-                      if (found) {
-                        setSelectedNearestSite(found);
-                        if (customerLocation) {
-                          fetchElevationData(customerLocation, found, found.district);
-                        }
-                      }
-                    }}
-                    className="bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-[10px] font-bold text-cyan-400 focus:outline-none focus:border-cyan-500 font-sans cursor-pointer"
-                  >
-                    {nearestSites.map(item => (
-                      <option key={item.id} value={item.id}>Trạm {item.code}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Grid RSRP stats */}
-                <div className="grid grid-cols-3 gap-2">
-                  {['5G', '4G', '3G'].map(tech => {
-                    const rfInfo = predictSignalStrength(selectedNearestSite.distance, selectedNearestSite.district, tech);
-                    return (
-                      <div key={tech} className="bg-slate-900/60 border border-slate-700/40 rounded-xl p-2 flex flex-col items-center justify-center text-center">
-                        <span className="text-[9px] font-bold text-slate-400 uppercase">{tech} Signal</span>
-                        <span className="text-base font-black text-white mt-1">{rfInfo.rsrp} <span className="text-[9px] font-normal text-slate-500">dBm</span></span>
-                        <span className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded mt-1.5 ${rfInfo.colorClass}`}>
-                          {rfInfo.status}
-                        </span>
-                        {/* Cột sóng */}
-                        <div className="flex gap-0.5 items-end h-3 mt-2">
-                          {[1, 2, 3, 4, 5].map(barIdx => (
-                            <div 
-                              key={barIdx} 
-                              className={`w-0.5 rounded-sm ${
-                                barIdx <= rfInfo.bars 
-                                  ? rfInfo.status === 'Tốt' ? 'bg-emerald-500' : rfInfo.status === 'Khá' ? 'bg-cyan-500' : rfInfo.status === 'Trung bình' ? 'bg-amber-500' : 'bg-red-500'
-                                  : 'bg-slate-700'
-                              }`}
-                              style={{ height: `${barIdx * 20}%` }}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Khuyến nghị thông minh */}
-                <div className="bg-slate-900/40 rounded-xl p-3 border border-slate-700/20 text-[10px] text-slate-300 space-y-1 font-sans">
-                  <span className="font-bold text-cyan-400 uppercase tracking-wide block">Khuyến nghị Khảo sát:</span>
-                  <p className="leading-relaxed text-slate-400">
-                    {predictSignalStrength(selectedNearestSite.distance, selectedNearestSite.district, '4G').recommendation}
-                  </p>
-                </div>
-              </div>
-
-            </div>
-          )}
 
           {/* Bottom Table Grid Details */}
           {customerLocation && nearestSites.length > 0 && (
