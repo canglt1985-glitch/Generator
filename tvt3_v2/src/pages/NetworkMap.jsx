@@ -183,7 +183,7 @@ export default function NetworkMap() {
       const [sitesRes, projectsRes] = await Promise.all([
         supabase
           .from('datasites')
-          .select('site_id, site_id_old, name, location_info, management_info'),
+          .select('site_id, site_id_old, name, location_info, management_info, technical_info'),
         supabase
           .from('infrastructure_projects')
           .select('planning_id_new, planning_id_old, latitude_survey, longitude_survey, latitude_plan, longitude_plan, survey_status, overall_status, notes')
