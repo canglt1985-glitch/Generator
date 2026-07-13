@@ -53,6 +53,7 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, on
 
   const tabs = [
     { id: 'general', label: 'Thông tin chung', icon: Info },
+    { id: 'transmission', label: 'Truyền dẫn trạm', icon: Radio },
     { id: 'infrastructure', label: 'Hạ tầng phụ trợ', icon: Server },
     { id: 'legal', label: 'Pháp lý & Hợp đồng', icon: FileText },
     { id: 'history', label: 'Nhật ký & Lịch sử', icon: Clock },
@@ -114,6 +115,67 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, on
                 </div>
               </div>
             </div>
+          </div>
+        );
+      case 'transmission':
+        const trans = site.transmission_info || {};
+        
+        const InfoRowTrans = ({ label, value }) => value && String(value).trim() !== '' && String(value) !== 'KHÔNG CÓ' ? (
+          <div className="flex justify-between items-start py-2 border-b border-slate-100 last:border-0 gap-4">
+            <span className="text-slate-500 text-[13px] shrink-0">{label}</span>
+            <span className="text-slate-800 font-semibold text-[13px] text-right max-w-[70%] break-words whitespace-normal">{value}</span>
+          </div>
+        ) : null;
+
+        const hasTransData = trans && Object.keys(trans).length > 0;
+
+        return (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <h2 className="text-lg font-bold text-slate-800 border-b border-slate-200 pb-2">Thông tin Truyền dẫn</h2>
+            
+            {hasTransData ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* 1. Tuyến cáp & Liên kết */}
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 border-b border-slate-100 flex items-center gap-2">
+                    <Radio className="h-4 w-4 text-blue-600" />
+                    <h3 className="font-bold text-slate-800 text-sm">Liên kết & Hướng tuyến</h3>
+                  </div>
+                  <div className="p-4 space-y-1 font-sans">
+                    <InfoRowTrans label="Loại kết nối" value={trans.loai_ket_noi} />
+                    <InfoRowTrans label="Link Metro" value={trans.link_metro} />
+                    <InfoRowTrans label="Trạm AGG" value={trans.agg} />
+                    <InfoRowTrans label="Node CSG" value={trans.csg} />
+                    <InfoRowTrans label="Phân loại trạm" value={trans.site_type} />
+                    <InfoRowTrans label="Hướng kết nối chính" value={trans.last_mile_primary || trans.huong_ket_noi} />
+                    <InfoRowTrans label="Hướng kết nối phụ (Ring Backup)" value={trans.last_mile_backup} />
+                    <InfoRowTrans label="Thông tin Viba (MW)" value={trans.viba} />
+                  </div>
+                </div>
+
+                {/* 2. Thiết bị & Hạ tầng cáp */}
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 border-b border-slate-100 flex items-center gap-2">
+                    <Server className="h-4 w-4 text-blue-600" />
+                    <h3 className="font-bold text-slate-800 text-sm">Thiết bị & Hạ tầng quang</h3>
+                  </div>
+                  <div className="p-4 space-y-1 font-sans">
+                    <InfoRowTrans label="Số core quang hạ tầng" value={trans.core_quang_ha_tang} />
+                    <InfoRowTrans label="Số core quang C-RAN" value={trans.core_quang_cran} />
+                    <InfoRowTrans label="Thiết bị CSG" value={trans.thiet_bi_csg || trans.thiet_bi_td} />
+                    <InfoRowTrans label="Thiết bị CWDM" value={trans.thiet_bi_cwdm || trans.chung_loai_cwdm} />
+                    <InfoRowTrans label="Chủ đầu tư cáp" value={trans.chu_dau_tu_cap} />
+                    <InfoRowTrans label="Đơn vị vận hành cáp" value={trans.don_vi_van_hanh_cap} />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-8 text-center text-slate-500 font-sans">
+                <Radio className="h-8 w-8 mx-auto text-slate-300 mb-3" />
+                <p className="text-sm font-medium">Chưa có thông tin truyền dẫn cho trạm này.</p>
+                <p className="text-xs text-slate-400 mt-1">Hệ thống sẽ đồng bộ thông tin truyền dẫn từ file dữ liệu khi import.</p>
+              </div>
+            )}
           </div>
         );
       case 'infrastructure':
