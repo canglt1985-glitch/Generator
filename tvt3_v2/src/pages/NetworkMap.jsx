@@ -134,8 +134,10 @@ export default function NetworkMap() {
               to: [latDich, lngDich],
               siteId: site.site_id,
               siteName: site.name,
+              siteOldId: site.site_id_old,
               hubId: hub.site_id,
               hubName: hub.name,
+              hubOldId: hub.site_id_old,
               loai_ket_noi: trans.loai_ket_noi,
               chu_dau_tu_cap: trans.chu_dau_tu_cap,
               don_vi_van_hanh_cap: trans.don_vi_van_hanh_cap,
@@ -161,8 +163,10 @@ export default function NetworkMap() {
               to: [latDich, lngDich],
               siteId: site.site_id,
               siteName: site.name,
+              siteOldId: site.site_id_old,
               hubId: hub.site_id,
               hubName: hub.name,
+              hubOldId: hub.site_id_old,
               loai_ket_noi: trans.loai_ket_noi,
               chu_dau_tu_cap: trans.chu_dau_tu_cap,
               don_vi_van_hanh_cap: trans.don_vi_van_hanh_cap,
@@ -1017,10 +1021,8 @@ export default function NetworkMap() {
                       <div className="font-sans text-xs p-2 space-y-1 bg-white border border-slate-200 rounded shadow-md text-slate-800">
                         <div className="font-bold text-blue-700 flex items-center gap-1 border-b border-slate-100 pb-1 mb-1">
                           <Radio size={12} className="text-blue-600 shrink-0" />
-                          <span>Tuyến truyền dẫn Last Mile</span>
+                          <span>Tuyến truyền dẫn: {line.hubOldId || line.hubId} - {line.siteOldId || line.siteId}</span>
                         </div>
-                        <div>• Trạm nguồn (Hub): <span className="font-semibold text-slate-900">{line.hubId} ({line.hubName || 'Chưa cập nhật'})</span></div>
-                        <div>• Trạm nhận: <span className="font-semibold text-slate-900">{line.siteId} ({line.siteName || 'Chưa cập nhật'})</span></div>
                         <div>• Kiểu kết nối: <span className="font-medium text-slate-700">{line.loai_ket_noi || 'Cáp quang'} {line.isBackup ? '(Dự phòng/Ring)' : ''}</span></div>
                         <div>• Chủ sở hữu: <span className="font-medium text-slate-700">{line.chu_dau_tu_cap || 'Chưa cập nhật'}</span></div>
                         <div>• Đơn vị vận hành: <span className="font-medium text-slate-700">{line.don_vi_van_hanh_cap || 'Chưa cập nhật'}</span></div>
