@@ -895,20 +895,24 @@ export default function NetworkMap() {
                       <span className="text-[11px]">Cáp VNPT</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <span className="w-3.5 h-1 rounded bg-[#ff1744] inline-block"></span>
-                      <span className="text-[11px]">Cáp Viettel</span>
+                      <span className="w-3.5 h-1 rounded bg-[#ec4899] inline-block"></span>
+                      <span className="text-[11px]">Cáp TPCOMS</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-3.5 h-1 rounded bg-[#f97316] inline-block"></span>
+                      <span className="text-[11px]">Cáp VTC</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-3.5 h-1 rounded bg-[#a855f7] inline-block"></span>
+                      <span className="text-[11px]">Cáp CADICOM</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <span className="w-3.5 h-1 rounded bg-[#eab308] inline-block"></span>
                       <span className="text-[11px]">Vi ba (MW)</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <span className="w-3.5 h-1 rounded bg-[#ff9100] inline-block"></span>
-                      <span className="text-[11px]">Cáp nhà mạng khác</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-3.5 h-0.5 border-t border-dashed border-slate-400 inline-block"></span>
-                      <span className="text-[11px]">Đối tác vận hành</span>
+                      <span className="w-3.5 h-1 rounded bg-[#a1a1aa] inline-block"></span>
+                      <span className="text-[11px]">Cáp khác/Chưa rõ</span>
                     </div>
                   </div>
                 </div>
