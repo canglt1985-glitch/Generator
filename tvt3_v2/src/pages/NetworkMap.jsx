@@ -881,42 +881,7 @@ export default function NetworkMap() {
                 </label>
               </div>
 
-              {/* Bảng chú giải truyền dẫn khi bật */}
-              {showTransmission && (
-                <div className="mt-4 pt-3 border-t border-slate-700/60 font-sans text-xs space-y-2 text-slate-300">
-                  <div className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Chú giải truyền dẫn:</div>
-                  <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 py-1">
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-3.5 h-1 rounded bg-[#22c55e] inline-block"></span>
-                      <span className="text-[11px]">Cáp Mobifone</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-3.5 h-1 rounded bg-[#06b6d4] inline-block"></span>
-                      <span className="text-[11px]">Cáp VNPT</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-3.5 h-1 rounded bg-[#ec4899] inline-block"></span>
-                      <span className="text-[11px]">Cáp TPCOMS</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-3.5 h-1 rounded bg-[#f97316] inline-block"></span>
-                      <span className="text-[11px]">Cáp VTC</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-3.5 h-1 rounded bg-[#a855f7] inline-block"></span>
-                      <span className="text-[11px]">Cáp CADICOM</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-3.5 h-1 rounded bg-[#eab308] inline-block"></span>
-                      <span className="text-[11px]">Vi ba (MW)</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-3.5 h-1 rounded bg-[#a1a1aa] inline-block"></span>
-                      <span className="text-[11px]">Cáp khác/Chưa rõ</span>
-                    </div>
-                  </div>
-                </div>
-              )}
+
             </div>
           </div>
 

@@ -104,7 +104,7 @@ export default function Datasites() {
   });
 
   // Import states
-  const [importType, setImportType] = useState('general'); // 'general', 'contract', 'infra'
+  const [importType, setImportType] = useState('general'); // 'general', 'contract', 'infra', 'transmission'
   const [isImporting, setIsImporting] = useState(false);
   const [importLogs, setImportLogs] = useState([]);
 
@@ -479,6 +479,27 @@ export default function Datasites() {
       hasSheet = true;
     }
     
+    // 4. Truyền dẫn trạm
+    if (exportCategories.transmission) {
+      const transmissionData = selectedSiteList.map((site, idx) => {
+        const trans = site.technical_info || {};
+        return {
+          'STT': idx + 1,
+          'Mã trạm (Bắt buộc)': site.site_id,
+          'Mã trạm cũ': site.site_id_old || '',
+          'Tên trạm': site.name || '',
+          'Kiểu kết nối (FO/Viba)': trans.loai_ket_noi || '',
+          'Chủ sở hữu cáp (Mobifone/VNPT/TPCOMS/VTC/CADICOM)': trans.chu_dau_tu_cap || '',
+          'Đơn vị vận hành': trans.don_vi_van_hanh_cap || '',
+          'Hướng kết nối chính (MAIN)': trans.huong_ket_noi_chinh || '',
+          'Hướng kết nối phụ (MAIN)': trans.huong_ket_noi_phu || ''
+        };
+      });
+      const wsTrans = XLSX.utils.json_to_sheet(transmissionData);
+      XLSX.utils.book_append_sheet(wb, wsTrans, "Truyền dẫn trạm");
+      hasSheet = true;
+    }
+    
     if (!hasSheet) {
       alert("Vui lòng tích chọn ít nhất 1 hạng mục để xuất!");
       return;
@@ -631,6 +652,7 @@ export default function Datasites() {
         if (importType === 'general') targetSheetName = "Thông tin chung";
         else if (importType === 'contract') targetSheetName = "Hợp đồng";
         else if (importType === 'infra') targetSheetName = "Hạ tầng phụ trợ";
+        else if (importType === 'transmission') targetSheetName = "Truyền dẫn trạm";
         
         // Find sheet
         const sheetName = workbook.SheetNames.find(n => n.toLowerCase().includes(targetSheetName.toLowerCase()));
@@ -916,6 +938,19 @@ export default function Datasites() {
       }
     ]);
     XLSX.utils.book_append_sheet(wb, wsInfra, "Hạ tầng phụ trợ");
+    
+    // Sheet 4: Truyen_dan_tram
+    const wsTrans = XLSX.utils.json_to_sheet([
+      {
+        "Mã trạm (Bắt buộc)": "DNISRA99",
+        "Kiểu kết nối (FO/Viba)": "FO",
+        "Chủ sở hữu cáp (Mobifone/VNPT/TPCOMS/VTC/CADICOM)": "TPCOMS",
+        "Đơn vị vận hành": "Tổ VT3",
+        "Hướng kết nối chính (MAIN)": "DNDQ13",
+        "Hướng kết nối phụ (MAIN)": ""
+      }
+    ]);
+    XLSX.utils.book_append_sheet(wb, wsTrans, "Truyền dẫn trạm");
     
     XLSX.writeFile(wb, "Template_Nhap_Tram_TVT3.xlsx");
   };
@@ -2073,6 +2108,19 @@ export default function Datasites() {
                       <span className="text-[11px] text-slate-400 block">Loại cột, độ cao, máy lạnh, máy phát, accu, tủ nguồn...</span>
                     </div>
                   </label>
+                  <div className="border-t border-slate-200/60 my-1" />
+                  <label className="flex items-center gap-2.5 cursor-pointer">
+                    <input 
+                      type="checkbox"
+                      checked={exportCategories.transmission}
+                      onChange={(e) => setExportCategories(prev => ({ ...prev, transmission: e.target.checked }))}
+                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-4 w-4"
+                    />
+                    <div>
+                      <span className="font-bold text-slate-700 block">Truyền dẫn trạm</span>
+                      <span className="text-[11px] text-slate-400 block">Kiểu kết nối, chủ cáp, đơn vị vận hành, hướng kết nối MAIN/LASTMILE...</span>
+                    </div>
+                  </label>
                 </div>
               </div>
             </div>
@@ -2499,6 +2547,7 @@ export default function Datasites() {
                   <option value="general">📍 Sheet: Thông tin chung (Hỗ trợ Tạo trạm mới hoặc Cập nhật)</option>
                   <option value="contract">📄 Sheet: Hợp đồng (Chỉ cập nhật cho trạm đã có sẵn)</option>
                   <option value="infra">🔌 Sheet: Hạ tầng phụ trợ (Chỉ cập nhật cho trạm đã có sẵn)</option>
+                  <option value="transmission">🔗 Sheet: Truyền dẫn trạm (Chỉ cập nhật truyền dẫn cho trạm đã có sẵn)</option>
                 </select>
               </div>
 
