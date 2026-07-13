@@ -628,6 +628,90 @@ export default function NetworkMap() {
     );
   }, [customerLocation, nearestSites]);
 
+  // Bảng danh sách trạm lân cận (Đầy đủ hoặc Tinh gọn ở Sidebar)
+  const renderNearestSitesTable = (isCompact = false) => {
+    if (!customerLocation || nearestSites.length === 0) return null;
+    
+    return (
+      <div className="bg-slate-800/80 border border-slate-700/60 rounded-2xl overflow-hidden p-4 space-y-3 animate-in fade-in duration-300 text-slate-200">
+        <h4 className="text-xs font-bold text-white uppercase tracking-wider font-sans flex items-center gap-1.5 border-b border-slate-700/40 pb-2">
+          <Server size={12} className="text-cyan-400" />
+          {isCompact ? "Trạm lân cận trong tầm phủ" : "Danh sách trạm lân cận trong tầm phủ"}
+        </h4>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-[11px] border-collapse font-sans">
+            <thead>
+              <tr className="border-b border-slate-700/60 text-slate-400 font-semibold font-sans">
+                <th className="py-2 px-1 text-center">STT</th>
+                <th className="py-2 px-2">Mã trạm</th>
+                {!isCompact && <th className="py-2 px-2">Tên trạm / Vị trí</th>}
+                <th className="py-2 px-2 text-right">K.Cách</th>
+                <th className="py-2 px-2 text-center">Loại</th>
+                {!isCompact && <th className="py-2 px-2">Huyện / Địa bàn</th>}
+                {!isCompact && <th className="py-2 px-2">Tổ quản lý</th>}
+                <th className="py-2 px-2 text-center">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-700/40 text-slate-300">
+              {nearestSites.map((item, idx) => (
+                <tr 
+                  key={item.id}
+                  className="hover:bg-slate-700/50 cursor-pointer transition-colors font-sans"
+                  onClick={() => {
+                    setMapCenter([item.lat, item.lng]);
+                    setZoomLevel(15);
+                  }}
+                >
+                  <td className="py-2 px-1 text-center font-semibold text-slate-500 font-sans">{idx + 1}</td>
+                  <td className="py-2 px-2 font-bold text-cyan-400 font-sans">{item.code}</td>
+                  {!isCompact && <td className="py-2 px-2 font-medium text-slate-200 max-w-[200px] truncate font-sans">{item.name}</td>}
+                  <td className={`py-2 px-2 text-right font-bold font-sans ${
+                    idx === 0 ? 'text-cyan-400 bg-cyan-500/5' : ''
+                  }`}>
+                    {formatDistance(item.distance)}
+                  </td>
+                  <td className="py-2 px-2 text-center font-sans">
+                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                      item.type === 'Hoạt động' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-orange-500/10 text-orange-400 border border-orange-500/20'
+                    }`}>
+                      {item.type === 'Hoạt động' ? 'HĐ' : 'QH'}
+                    </span>
+                  </td>
+                  {!isCompact && <td className="py-2 px-2 text-slate-400 font-sans">{item.district}</td>}
+                  {!isCompact && <td className="py-2 px-2 text-slate-400 font-semibold font-sans">{item.toVT}</td>}
+                  <td className="py-2 px-2 text-center font-sans">
+                    <div className="flex justify-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                      <a 
+                        href={`https://www.google.com/maps/dir/?api=1&origin=${customerLocation.lat},${customerLocation.lng}&destination=${item.lat},${item.lng}&travelmode=driving`}
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center justify-center gap-0.5 px-2 py-0.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded text-[9px] font-bold transition-all text-center"
+                        title="Dẫn đường Google Maps"
+                      >
+                        Bản đồ
+                      </a>
+                      {item.type === 'Hoạt động' && (
+                        <a 
+                          href={`/datasites?search=${item.code}`}
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center justify-center gap-0.5 px-2 py-0.5 bg-blue-600 hover:bg-blue-500 text-white rounded text-[9px] font-bold transition-all text-center"
+                          title="Hồ sơ chi tiết trạm"
+                        >
+                          Chi tiết
+                        </a>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="w-full space-y-5 py-4 animate-in fade-in slide-in-from-bottom-3 duration-300">
       {/* Header Dashboard Title */}
@@ -847,7 +931,7 @@ export default function NetworkMap() {
         {/* Right Side Map Canvas & Table */}
         <div className="lg:col-span-2 space-y-4">
           {/* Map Leaflet Container */}
-          <div className="bg-slate-800 border border-slate-700/60 rounded-2xl overflow-hidden h-[450px] relative shadow-lg">
+          <div className="bg-slate-800 border border-slate-700/60 rounded-2xl overflow-hidden h-[450px] lg:h-[600px] relative shadow-lg">
             <MapContainer 
               center={mapCenter} 
               zoom={zoomLevel} 
@@ -1074,82 +1158,11 @@ export default function NetworkMap() {
             {radarScanSummaryMarkup}
           </div>
 
-          {/* Bottom Table Grid Details */}
-          {customerLocation && nearestSites.length > 0 && (
-            <div className="bg-slate-800 border border-slate-700/60 rounded-2xl overflow-hidden p-4 space-y-3 animate-in fade-in duration-300 text-slate-200">
-              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider font-sans">Danh sách trạm lân cận trong tầm phủ</h4>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse font-sans">
-                  <thead>
-                    <tr className="border-b border-slate-700/60 text-slate-400 font-semibold font-sans">
-                      <th className="py-2.5 px-3">Thứ tự</th>
-                      <th className="py-2.5 px-3">Mã Trạm</th>
-                      <th className="py-2.5 px-3">Tên trạm / Vị trí</th>
-                      <th className="py-2.5 px-3 text-right">Khoảng cách</th>
-                      <th className="py-2.5 px-3">Phân loại</th>
-                      <th className="py-2.5 px-3">Huyện / Địa bàn</th>
-                      <th className="py-2.5 px-3">Tổ quản lý</th>
-                      <th className="py-2.5 px-3 text-center">Thao tác</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-700/40 text-slate-300">
-                    {nearestSites.map((item, idx) => {
-                      return (
-                        <tr 
-                          key={item.id}
-                          className="hover:bg-slate-700/50 cursor-pointer transition-colors font-sans"
-                          onClick={() => {
-                            setMapCenter([item.lat, item.lng]);
-                            setZoomLevel(15);
-                          }}
-                        >
-                          <td className="py-3 px-3 font-semibold text-slate-500 font-sans">{idx + 1}</td>
-                          <td className="py-3 px-3 font-bold text-cyan-400 font-sans">{item.code}</td>
-                          <td className="py-3 px-3 font-medium text-slate-200 max-w-[200px] truncate font-sans">{item.name}</td>
-                          <td className={`py-3 px-3 text-right font-bold font-sans ${
-                            idx === 0 ? 'text-cyan-400 bg-cyan-500/5' : ''
-                          }`}>
-                            {formatDistance(item.distance)}
-                          </td>
-                          <td className="py-3 px-3 font-sans">
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                              item.type === 'Hoạt động' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-orange-500/10 text-orange-400 border border-orange-500/20'
-                            }`}>
-                              {item.type}
-                            </span>
-                          </td>
-                          <td className="py-3 px-3 text-slate-400 font-sans">{item.district}</td>
-                          <td className="py-3 px-3 text-slate-400 font-semibold font-sans">{item.toVT}</td>
-                          <td className="py-3 px-3 text-center font-sans">
-                            <div className="flex justify-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                              <a 
-                                href={`https://www.google.com/maps/dir/?api=1&origin=${customerLocation.lat},${customerLocation.lng}&destination=${item.lat},${item.lng}&travelmode=driving`}
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center justify-center gap-1 px-2.5 py-1 bg-cyan-600 hover:bg-cyan-500 text-white rounded text-[10px] font-bold transition-all text-center"
-                              >
-                                Bản đồ
-                              </a>
-                              {item.type === 'Hoạt động' && (
-                                <a 
-                                  href={`/datasites?search=${item.code}`}
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center justify-center gap-1 px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-[10px] font-bold transition-all text-center"
-                                >
-                                  Chi tiết
-                                </a>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
+          {/* Layout dưới bản đồ dành riêng cho Mobile (Đánh giá vùng phủ 2x2 + Bảng đầy đủ) */}
+          <div className="block lg:hidden mt-4 space-y-4">
+            {radarScanSummaryMarkup}
+            {renderNearestSitesTable(false)}
+          </div>
         </div>
       </div>
     </div>
