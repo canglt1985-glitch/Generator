@@ -96,12 +96,29 @@ export default function NetworkMap() {
     const a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
               Math.cos(phi1) * Math.cos(phi2) *
               Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-    return R * c; // in meters
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));    return R * c; // in meters
   };
 
+  // Helper to clean and format local administrative region names (commune, district)
+  const formatLocationName = (xa, huyen) => {
+    if (!xa && !huyen) return 'Chưa rõ';
+    const xaClean = xa ? xa.replace(/,?\s*Đồng\s*Nai/gi, '').trim() : '';
+    const huyenClean = huyen ? huyen.replace(/,?\s*Đồng\s*Nai/gi, '').trim() : '';
+    
+    if (xaClean && huyenClean) {
+      if (xaClean.toLowerCase().includes(huyenClean.toLowerCase())) {
+        return xaClean;
+      }
+      return `${xaClean}, ${huyenClean}`;
+    }
+    return xaClean || huyenClean;
+  };
 
+  // Helper to format management unit (defaults to Tổ VT3)
+  const formatManagementUnit = (toQL) => {
+    if (!toQL) return 'Tổ VT3';
+    return toQL;
+  };
 
   useEffect(() => {
     fetchData();
@@ -165,8 +182,8 @@ export default function NetworkMap() {
         lat: sLat,
         lng: sLng,
         type: 'Hoạt động',
-        district: site.location_info.district || site.location_info.huyen_cu || 'Chưa rõ',
-        toVT: site.management_info?.to_vt || 'Chưa rõ',
+        district: formatLocationName(site.location_info?.xa_moi, site.location_info?.huyen_cu),
+        toVT: formatManagementUnit(site.management_info?.to_ql),
         distance
       };
     });
@@ -184,7 +201,7 @@ export default function NetworkMap() {
         lng: pLng,
         type: 'Quy hoạch',
         district: 'Dự án',
-        toVT: 'TVT3',
+        toVT: 'Tổ VT3',
         distance
       };
     });
