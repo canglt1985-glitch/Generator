@@ -254,32 +254,62 @@ export default function NetworkMap() {
     else setZoomLevel(14);
   };
 
-  const handleManualSearch = (e) => {
+  const handleManualSearch = async (e) => {
     if (e) e.preventDefault();
     setValidationError('');
 
-    if (!coordinateInput.trim()) {
-      setValidationError('Vui lòng nhập tọa độ khách hàng!');
+    const inputVal = coordinateInput.trim();
+    if (!inputVal) {
+      setValidationError('Vui lòng nhập tọa độ GPS hoặc tên địa điểm, hàng quán!');
       return;
     }
 
     const coordRegex = /(-?\d+\.\d+)\s*[\s,;]\s*(-?\d+\.\d+)/;
-    const match = coordinateInput.match(coordRegex);
+    const match = inputVal.match(coordRegex);
 
-    if (!match) {
-      setValidationError('Tọa độ không hợp lệ. Hãy nhập kiểu: 11.0234, 107.1234');
-      return;
+    if (match) {
+      const lat = parseFloat(match[1]);
+      const lng = parseFloat(match[2]);
+
+      if (lat < 8 || lat > 24 || lng < 100 || lng > 111) {
+        setValidationError('Tọa độ nằm ngoài lãnh thổ Việt Nam!');
+        return;
+      }
+
+      executeScan(lat, lng);
+    } else {
+      // Nếu là tên địa điểm, cơ quan, hàng quán -> Tìm kiếm địa chỉ (Geocoding)
+      let searchQuery = inputVal;
+      if (!searchQuery.toLowerCase().includes('đồng nai')) {
+        searchQuery += ', Đồng Nai';
+      }
+
+      setLoading(true);
+      try {
+        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=1`, {
+          headers: {
+            'Accept-Language': 'vi,en'
+          }
+        });
+        if (!response.ok) throw new Error('Geocoding API error');
+        
+        const results = await response.json();
+        if (results && results.length > 0) {
+          const lat = parseFloat(results[0].lat);
+          const lng = parseFloat(results[0].lon);
+          executeScan(lat, lng);
+          // Ghi đè tọa độ GPS đã tìm thấy lên ô input để người dùng thấy trực quan
+          setCoordinateInput(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+        } else {
+          setValidationError(`Không tìm thấy địa điểm "${inputVal}" tại Đồng Nai. Hãy thử nhập chi tiết hơn.`);
+        }
+      } catch (err) {
+        console.error('Lỗi tìm kiếm địa điểm:', err);
+        setValidationError('Không thể kết nối máy chủ định vị địa điểm. Vui lòng nhập tọa độ GPS.');
+      } finally {
+        setLoading(false);
+      }
     }
-
-    const lat = parseFloat(match[1]);
-    const lng = parseFloat(match[2]);
-
-    if (lat < 8 || lat > 24 || lng < 100 || lng > 111) {
-      setValidationError('Tọa độ nằm ngoài lãnh thổ Việt Nam!');
-      return;
-    }
-
-    executeScan(lat, lng);
   };
 
   // Find site by ID/code and pan to its location (FlyTo)
@@ -351,13 +381,13 @@ export default function NetworkMap() {
             {/* 1. GPS Input form */}
             <form onSubmit={handleManualSearch} className="space-y-3">
               <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-400 uppercase font-sans">Tọa độ GPS khách hàng</label>
+                <label className="text-[11px] font-bold text-slate-400 uppercase font-sans">Tìm theo Tọa độ hoặc Địa danh</label>
                 <div className="relative">
                   <input
                     type="text"
                     value={coordinateInput}
                     onChange={(e) => setCoordinateInput(e.target.value)}
-                    placeholder="Vĩ độ, Kinh độ (ví dụ: 11.0234, 107.1234)"
+                    placeholder="Tọa độ GPS hoặc tên cơ quan, địa điểm, hàng quán..."
                     className="block w-full pr-10 pl-3 py-2 border border-slate-700 rounded-xl bg-slate-900/60 text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 text-sm transition-all font-sans"
                   />
                   <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
