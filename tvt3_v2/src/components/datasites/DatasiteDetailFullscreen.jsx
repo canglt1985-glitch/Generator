@@ -118,7 +118,7 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, on
           </div>
         );
       case 'transmission':
-        const trans = site.transmission_info || {};
+        const trans = site.technical_info || {};
         
         const InfoRowTrans = ({ label, value }) => value && String(value).trim() !== '' && String(value) !== 'KHÔNG CÓ' ? (
           <div className="flex justify-between items-start py-2 border-b border-slate-100 last:border-0 gap-4">
