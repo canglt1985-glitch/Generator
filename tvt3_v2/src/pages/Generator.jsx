@@ -719,15 +719,11 @@ export default function Generator() {
       const isXang = specs && (specs.nhien_lieu || '').toLowerCase().includes('xăng');
 
       if (isXang) {
-        // Máy xăng: Xét đổ xăng mà từ ngày đó trở đi 7 ngày không chạy thì cảnh báo luôn
+        // Máy xăng: Xét đổ xăng mà từ ngày đó trở đi 7 ngày không chạy thì cảnh báo luôn (cho phép chạy trước 3 ngày để bù xăng)
         siteRefills.forEach(refill => {
-          const refillDate = new Date(refill.date);
-          const checkEnd = new Date(refillDate);
-          checkEnd.setDate(checkEnd.getDate() + 7);
-
           const hasRun = siteLogs.some(log => {
-            const logDate = new Date(log.date);
-            return logDate >= refillDate && logDate <= checkEnd;
+            const diffDays = getDaysDiff(log.date, refill.date);
+            return diffDays >= -3 && diffDays <= 7;
           });
 
           if (!hasRun) {

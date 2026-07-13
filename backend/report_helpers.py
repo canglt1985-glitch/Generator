@@ -371,6 +371,7 @@ def get_weekly_anomaly_report(days_scan=7):
                     refill_date = datetime.strptime(tx["date"], '%Y-%m-%d').date()
                 except:
                     continue
+                check_start = refill_date - timedelta(days=3)
                 check_end = refill_date + timedelta(days=7)
                 
                 station_log_dates = logs_by_station.get(station, set())
@@ -378,7 +379,7 @@ def get_weekly_anomaly_report(days_scan=7):
                 for log_date_str in station_log_dates:
                     try:
                         ld = datetime.strptime(log_date_str, '%Y-%m-%d').date()
-                        if refill_date <= ld <= check_end:
+                        if check_start <= ld <= check_end:
                             has_run = True
                             break
                     except:
