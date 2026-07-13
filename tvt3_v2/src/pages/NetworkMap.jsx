@@ -617,20 +617,29 @@ export default function NetworkMap() {
                   </div>
 
                   <div className="pt-1 space-y-2.5">
-                    {primarySite?.distance <= 300 ? (
-                      <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3 text-emerald-400 flex gap-2">
-                        <Shield className="h-4 w-4 shrink-0 mt-0.5 text-emerald-400" />
-                        <div>
-                          <strong>Phủ sóng Tốt (3G/4G/5G):</strong> Khoảng cách dưới 300m. Thích hợp tư vấn lắp đặt MobiWifi 5G, lắp đặt gói cước mạng tốt.
+                    {closestActive ? (
+                      closestActive.distance <= 300 ? (
+                        <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3 text-emerald-400 flex gap-2">
+                          <Shield className="h-4 w-4 shrink-0 mt-0.5 text-emerald-400" />
+                          <div>
+                            <strong>Phủ sóng Tốt (3G/4G/5G):</strong> Trạm hoạt động gần nhất (<strong>{closestActive.code}</strong>) cách {formatDistance(closestActive.distance)}. Thích hợp tư vấn MobiWifi 5G tốc độ cao.
+                          </div>
                         </div>
-                      </div>
-                    ) : primarySite?.distance <= 1500 ? (
-                      <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-amber-400 flex gap-2">
-                        <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-amber-400" />
-                        <div>
-                          <strong>Phủ sóng Đạt:</strong> Khoảng cách trong khoảng 300m - 1.5km. Thiết bị MobiWifi cần đặt ở vị trí cao, thoáng hướng về trạm.
+                      ) : closestActive.distance <= 1500 ? (
+                        <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-amber-400 flex gap-2">
+                          <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-amber-400" />
+                          <div>
+                            <strong>Phủ sóng Đạt:</strong> Trạm hoạt động gần nhất (<strong>{closestActive.code}</strong>) cách {formatDistance(closestActive.distance)}. Thiết bị MobiWifi cần đặt ở vị trí cao, hướng về phía trạm.
+                          </div>
                         </div>
-                      </div>
+                      ) : (
+                        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-red-400 flex gap-2">
+                          <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-red-400" />
+                          <div>
+                            <strong>Yếu/Vùng lõm:</strong> Trạm hoạt động gần nhất (<strong>{closestActive.code}</strong>) cách xa {formatDistance(closestActive.distance)}.
+                          </div>
+                        </div>
+                      )
                     ) : (
                       <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-red-400 flex gap-2">
                         <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-red-400" />
