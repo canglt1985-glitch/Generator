@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 import { MapPin, Search, Server, Shield, Map as MapIcon, Compass, AlertCircle, Info, Radio, Layers, Filter } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, Circle, useMap, LayersControl, Tooltip } from 'react-leaflet';
@@ -85,6 +85,8 @@ export default function NetworkMap() {
   const [showProjects, setShowProjects] = useState(true);
   const [showCoverageCircle, setShowCoverageCircle] = useState(false);
   const [showTransmission, setShowTransmission] = useState(false);
+  const [useGPS, setUseGPS] = useState(false);
+  const watchIdRef = useRef(null);
 
   // Autocomplete Suggestions
   const [searchSuggestions, setSearchSuggestions] = useState([]);
@@ -262,54 +264,50 @@ export default function NetworkMap() {
     return () => window.removeEventListener('datasite-updated', handleTransUpdate);
   }, []);
 
-  // Tự động định vị GPS của người dùng khi mới vào trang (sau khi nạp xong dữ liệu trạm)
+  // Quản lý công tắc định vị GPS thực địa thời gian thực
   useEffect(() => {
-    if (activeSites.length > 0 && !customerLocation) {
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            const lat = position.coords.latitude;
-            const lng = position.coords.longitude;
-            // Chỉ chạy quét nếu toạ độ nằm trong hoặc gần Việt Nam
-            if (lat >= 8 && lat <= 24 && lng >= 100 && lng <= 111) {
-              executeScan(lat, lng);
-              setCoordinateInput(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
-            }
-          },
-          (error) => {
-            console.log('GPS tự động chưa được cấp quyền:', error.message);
-          },
-          { enableHighAccuracy: true, timeout: 6000 }
-        );
+    if (useGPS) {
+      if (!navigator.geolocation) {
+        setValidationError('Thiết bị hoặc trình duyệt của bạn không hỗ trợ định vị GPS!');
+        setUseGPS(false);
+        return;
       }
-    }
-  }, [activeSites, infraProjects]);
 
-  // Click định vị GPS thủ công
-  const handleGPSLocationClick = () => {
-    setValidationError('');
-    if (!navigator.geolocation) {
-      setValidationError('Trình duyệt của bạn không hỗ trợ định vị GPS!');
-      return;
+      setLoading(true);
+      // Sử dụng watchPosition để cập nhật bám theo vị trí liên tục thời gian thực khi di chuyển
+      watchIdRef.current = navigator.geolocation.watchPosition(
+        (position) => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          executeScan(lat, lng);
+          setCoordinateInput(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+          setLoading(false);
+          setValidationError('');
+        },
+        (error) => {
+          console.error('Lỗi định vị GPS thực địa:', error);
+          setValidationError('Không thể lấy vị trí GPS. Vui lòng bật định vị trên điện thoại và cho phép trình duyệt truy cập.');
+          setLoading(false);
+          setUseGPS(false);
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    } else {
+      // Hủy theo dõi GPS khi tắt công tắc
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+      }
+      setLoading(false);
     }
 
-    setLoading(true);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const lat = position.coords.latitude;
-        const lng = position.coords.longitude;
-        executeScan(lat, lng);
-        setCoordinateInput(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
-        setLoading(false);
-      },
-      (error) => {
-        console.error('Lỗi định vị GPS:', error);
-        setValidationError('Không thể lấy vị trí GPS. Vui lòng bật định vị trên điện thoại và cho phép trang web truy cập.');
-        setLoading(false);
-      },
-      { enableHighAccuracy: true, timeout: 8000 }
-    );
-  };
+    return () => {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+      }
+    };
+  }, [useGPS]);
 
   async function fetchData() {
     setLoading(true);
@@ -722,23 +720,34 @@ export default function NetworkMap() {
                 </div>
               )}
 
-              <div className="flex gap-2">
+              <div className="space-y-3">
                 <button
                   type="submit"
                   disabled={loading}
-                  className="flex-grow py-2.5 bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-700 text-white rounded-xl font-bold text-xs shadow-md shadow-cyan-500/10 active:scale-95 transition-all cursor-pointer font-sans"
+                  className="w-full py-2.5 bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-700 text-white rounded-xl font-bold text-xs shadow-md shadow-cyan-500/10 active:scale-95 transition-all cursor-pointer font-sans"
                 >
                   Định vị & Tìm trạm
                 </button>
-                <button
-                  type="button"
-                  onClick={handleGPSLocationClick}
-                  disabled={loading}
-                  className="px-3 py-2.5 bg-slate-700 hover:bg-slate-650 disabled:bg-slate-800 disabled:text-slate-600 text-cyan-400 rounded-xl font-bold text-xs border border-slate-600 active:scale-95 transition-all cursor-pointer font-sans flex items-center gap-1.5"
-                  title="Sử dụng GPS hiện tại của thiết bị"
-                >
-                  <Compass className="h-4 w-4" /> GPS của tôi
-                </button>
+
+                {/* Công tắc Bật/Tắt định vị GPS thực địa thời gian thực */}
+                <div className="flex items-center justify-between p-3 bg-slate-900/40 border border-slate-700/50 rounded-xl font-sans text-xs">
+                  <div className="flex items-center gap-2">
+                    <Compass className={`h-4.5 w-4.5 ${useGPS ? 'text-cyan-400 animate-spin' : 'text-slate-500'}`} style={{ animationDuration: useGPS ? '8s' : '0s' }} />
+                    <div className="text-left">
+                      <span className="font-bold text-white block">GPS Thực Địa</span>
+                      <span className="text-[10px] text-slate-400">Tự động bám theo vị trí của bạn</span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setUseGPS(!useGPS)}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${useGPS ? 'bg-cyan-600' : 'bg-slate-700'}`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${useGPS ? 'translate-x-5' : 'translate-x-0'}`}
+                    />
+                  </button>
+                </div>
               </div>
             </form>
 
