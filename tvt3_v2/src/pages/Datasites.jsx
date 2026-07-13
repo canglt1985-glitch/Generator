@@ -123,6 +123,21 @@ export default function Datasites() {
           
         if (error) throw error;
         setData(sites || []);
+
+        // Auto filter and open detail if search/site_id query parameter exists
+        const params = new URLSearchParams(window.location.search);
+        const searchParam = params.get('search') || params.get('site_id');
+        if (searchParam && sites) {
+          const query = searchParam.trim().toLowerCase();
+          setSearchQuery(searchParam);
+          const found = sites.find(s => 
+            s.site_id?.toLowerCase() === query || 
+            s.site_id_old?.toLowerCase() === query
+          );
+          if (found) {
+            setSelectedSite(found);
+          }
+        }
       } catch (err) {
         console.error("Lỗi khi tải dữ liệu trạm:", err);
       } finally {

@@ -559,14 +559,24 @@ export default function NetworkMap() {
                           {site.name && <span className="text-slate-600 block font-medium">{site.name}</span>}
                           <span className="text-slate-400 block text-[10px]">Mã trạm mới: {site.site_id}</span>
                           <span className="text-slate-400 block text-[10px]">Tọa độ: {lat.toFixed(5)}, {lng.toFixed(5)}</span>
-                          <a 
-                            href={`https://www.google.com/maps/dir/?api=1&${customerLocation ? `origin=${customerLocation.lat},${customerLocation.lng}&` : ''}destination=${lat},${lng}&travelmode=driving`}
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="mt-1.5 inline-flex items-center justify-center gap-1 px-2.5 py-1 bg-cyan-600 hover:bg-cyan-500 text-white rounded text-[10px] font-bold transition-all text-center"
-                          >
-                            Dẫn đường (Google Maps)
-                          </a>
+                          <div className="flex gap-1.5 mt-1.5">
+                            <a 
+                              href={`https://www.google.com/maps/dir/?api=1&${customerLocation ? `origin=${customerLocation.lat},${customerLocation.lng}&` : ''}destination=${lat},${lng}&travelmode=driving`}
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="flex-1 inline-flex items-center justify-center gap-1 px-2.5 py-1 bg-cyan-600 hover:bg-cyan-500 text-white rounded text-[10px] font-bold transition-all text-center"
+                            >
+                              Dẫn đường
+                            </a>
+                            <a 
+                              href={`/datasites?search=${name}`}
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="flex-1 inline-flex items-center justify-center gap-1 px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-[10px] font-bold transition-all text-center"
+                            >
+                              Datasite
+                            </a>
+                          </div>
                         </div>
                       </Popup>
                     </Marker>
@@ -664,7 +674,7 @@ export default function NetworkMap() {
                       <th className="py-2.5 px-3">Phân loại</th>
                       <th className="py-2.5 px-3">Huyện / Địa bàn</th>
                       <th className="py-2.5 px-3">Tổ quản lý</th>
-                      <th className="py-2.5 px-3 text-center">Dẫn đường</th>
+                      <th className="py-2.5 px-3 text-center">Thao tác</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-700/40 text-slate-300">
@@ -696,15 +706,26 @@ export default function NetworkMap() {
                           <td className="py-3 px-3 text-slate-400 font-sans">{item.district}</td>
                           <td className="py-3 px-3 text-slate-400 font-semibold font-sans">{item.toVT}</td>
                           <td className="py-3 px-3 text-center font-sans">
-                            <a 
-                              href={`https://www.google.com/maps/dir/?api=1&origin=${customerLocation.lat},${customerLocation.lng}&destination=${item.lat},${item.lng}&travelmode=driving`}
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center justify-center gap-1.5 px-2.5 py-1 bg-cyan-600 hover:bg-cyan-500 text-white rounded text-[10px] font-bold transition-all text-center font-sans"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              Bản đồ
-                            </a>
+                            <div className="flex justify-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                              <a 
+                                href={`https://www.google.com/maps/dir/?api=1&origin=${customerLocation.lat},${customerLocation.lng}&destination=${item.lat},${item.lng}&travelmode=driving`}
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center justify-center gap-1 px-2.5 py-1 bg-cyan-600 hover:bg-cyan-500 text-white rounded text-[10px] font-bold transition-all text-center"
+                              >
+                                Bản đồ
+                              </a>
+                              {item.type === 'Hoạt động' && (
+                                <a 
+                                  href={`/datasites?search=${item.code}`}
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center justify-center gap-1 px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-[10px] font-bold transition-all text-center"
+                                >
+                                  Chi tiết
+                                </a>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       );
