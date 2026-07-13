@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { 
   X, Edit, FileDown, Trash2, Info, Server, Radio, 
   FileText, Clock, MapPin, Building2, Navigation,
