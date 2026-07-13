@@ -148,7 +148,8 @@ def get_missing_logs_recommendations(start_date=None, end_date=None, grace_days=
             if log_date_val:
                 try:
                     log_date = datetime.strptime(log_date_val, "%Y-%m-%d").date()
-                    if 0 <= (log_date - outage_date).days <= 7:
+                    # Check if there is any generator run logged within -1 to 7 days after outage_date
+                    if -1 <= (log_date - outage_date).days <= 7:
                         has_log = True
                         break
                 except:
@@ -186,7 +187,11 @@ def get_missing_logs_recommendations(start_date=None, end_date=None, grace_days=
                 'msg': f"Cần yêu cầu nhân viên nhập bổ sung log chạy máy phát điện cho đợt cúp điện ngày {ngay_dmy} (chạy khoảng {hours} tiếng tại trạm {site_id})."
             })
                 
-    return recommendations
+    # Deduplicate: chỉ giữ lại 1 đợt cúp điện mới nhất cho mỗi trạm
+    unique_recs = {}
+    for rec in recommendations:
+        unique_recs[rec['id_tram']] = rec
+    return list(unique_recs.values())
 
 
 def get_inactive_generators(days=90):

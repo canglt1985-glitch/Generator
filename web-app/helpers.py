@@ -400,14 +400,14 @@ def get_missing_logs_recommendations(huyen_filter=None, start_date=None, end_dat
         if hours < 3.0:  # Ngưỡng cúp điện ≥ 3.0 giờ
             continue
             
-        # Check if there is any generator run logged within 0 to 7 days after outage_date
+        # Check if there is any generator run logged within -1 to 7 days after outage_date
         station_logs = logs_by_station.get(station, [])
         has_log = False
         for log in station_logs:
             if log.ngay_van_hanh:
                 try:
                     log_date = datetime.strptime(log.ngay_van_hanh, "%Y-%m-%d").date()
-                    if 0 <= (log_date - outage_date).days <= 7:
+                    if -1 <= (log_date - outage_date).days <= 7:
                         has_log = True
                         break
                 except:
@@ -444,7 +444,11 @@ def get_missing_logs_recommendations(huyen_filter=None, start_date=None, end_dat
                 'msg': f"Cần yêu cầu nhân viên nhập bổ sung log chạy máy phát điện cho đợt cúp điện ngày {ngay_dmy} (chạy khoảng {hours} tiếng tại trạm {o.id_tram.strip().upper()})."
             })
                 
-    return recommendations
+    # Deduplicate: chỉ giữ lại 1 đợt cúp điện mới nhất cho mỗi trạm
+    unique_recs = {}
+    for rec in recommendations:
+        unique_recs[rec['id_tram']] = rec
+    return list(unique_recs.values())
 
 
 def get_inactive_generators(huyen_filter=None, days=90):

@@ -38,6 +38,77 @@ export default function Datasites() {
   // State for Add menu
   const [showAddMenu, setShowAddMenu] = useState(false);
 
+  // Modals visibility states
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  
+  // Export states
+  const [exportScope, setExportScope] = useState('all'); // 'all', 'single'
+  const [exportSiteObj, setExportSiteObj] = useState(null);
+  const [exportCategories, setExportCategories] = useState({
+    general: true,
+    contract: true,
+    infra: true
+  });
+  
+  // Add Station state
+  const [addModalTab, setAddModalTab] = useState('general'); // 'general', 'contract', 'infra'
+  const [addForm, setAddForm] = useState({
+    site_id: '',
+    site_id_old: '',
+    ptm_id: '',
+    name: '',
+    status: 'ACTIVE',
+    to_ql: 'VT3',
+    qlt: '',
+    vung_phu: '',
+    tram_main: 'KHÔNG',
+    ngay_phat_song: '',
+    ma_pe: '',
+    ma_csht: '',
+    pha_ptm: '',
+    chung_cot_anten: 'KHÔNG',
+    thanh_pho: 'Tỉnh Đồng Nai',
+    huyen_cu: 'Cẩm Mỹ',
+    xa_moi: '',
+    dia_chi_cu: '',
+    vi_do: '',
+    kinh_do: '',
+    chu_csht: 'Mobifone',
+    loai_tram: '3G/4G',
+    hinh_thuc_dau_tu: 'TỰ ĐẦU TƯ',
+    
+    // Contract info
+    contract_number: '',
+    chu_the_hop_dong: '',
+    sdt_chu_nha: '',
+    dia_chi_lien_he: '',
+    ngay_ky_hd: '',
+    ngay_ket_thuc_hd: '',
+    gia_thue_co_vat: '',
+    chu_ky_thanh_toan: '3 tháng',
+    chu_tai_khoan: '',
+    so_tai_khoan: '',
+    ngan_hang: '',
+    contract_status: 'ACTIVE',
+    
+    // Infra info
+    cot_anten_loai_cot: '',
+    cot_anten_do_cao: '',
+    cot_anten_tinh_trang: 'Hoạt động tốt',
+    may_lanh_qty: '',
+    accu_qty: '',
+    may_phat_dien_ten: '',
+    tu_nguon_ten: ''
+  });
+
+  // Import states
+  const [importType, setImportType] = useState('general'); // 'general', 'contract', 'infra'
+  const [isImporting, setIsImporting] = useState(false);
+  const [importLogs, setImportLogs] = useState([]);
+
+
   // State for View Mode
   const [viewMode, setViewMode] = useState('list');
   const [statCategory, setStatCategory] = useState('');
@@ -295,6 +366,535 @@ export default function Datasites() {
     return result;
   };
 
+  const handleExportExcel = () => {
+    const selectedSiteList = exportScope === 'single' ? [exportSiteObj] : filteredData;
+    if (selectedSiteList.length === 0) {
+      alert("Không có dữ liệu trạm để xuất Excel.");
+      return;
+    }
+    
+    const wb = XLSX.utils.book_new();
+    let hasSheet = false;
+    
+    // 1. General Info
+    if (exportCategories.general) {
+      const generalData = selectedSiteList.map((site, idx) => ({
+        'STT': idx + 1,
+        'Mã trạm mới (Bắt buộc)': site.site_id,
+        'Mã trạm cũ': site.site_id_old || '',
+        'Tên trạm (Bắt buộc)': site.name || '',
+        'Trạng thái': site.status || 'ACTIVE',
+        'Tổ quản lý': site.management_info?.to_ql || '',
+        'Người QLT': site.management_info?.qlt || '',
+        'Vùng phủ': site.management_info?.vung_phu || '',
+        'Trạm Main': site.management_info?.tram_main || '',
+        'Mã CSHT': site.management_info?.ma_csht || '',
+        'Pha PTM': site.management_info?.pha_ptm || site.ptm_id || '',
+        'Mã PE': site.management_info?.ma_pe || '',
+        'Chung cột anten': site.management_info?.chung_cot_anten || '',
+        'Tỉnh/Thành phố': site.location_info?.thanh_pho || '',
+        'Quận/Huyện': site.location_info?.huyen_cu || '',
+        'Phường/Xã mới': site.location_info?.xa_moi || '',
+        'Địa chỉ': site.location_info?.dia_chi_cu || '',
+        'Vĩ độ': site.location_info?.vi_do || '',
+        'Kinh độ': site.location_info?.kinh_do || '',
+        'Chủ CSHT': site.classification?.chu_csht || '',
+        'Loại trạm': site.classification?.loai_tram || '',
+        'Hình thức đầu tư': site.classification?.hinh_thuc_dau_tu || ''
+      }));
+      const wsGeneral = XLSX.utils.json_to_sheet(generalData);
+      XLSX.utils.book_append_sheet(wb, wsGeneral, "Thông tin chung");
+      hasSheet = true;
+    }
+    
+    // 2. Contract Info
+    if (exportCategories.contract) {
+      const contractData = selectedSiteList.map((site, idx) => {
+        const c = site.contract_info || {};
+        return {
+          'STT': idx + 1,
+          'Mã trạm': site.site_id,
+          'Số hợp đồng': site.contract_number || '',
+          'Chủ thể hợp đồng': c.contractor_info?.chu_the_hop_dong || '',
+          'SĐT chủ nhà': c.contractor_info?.sdt_chu_nha || '',
+          'Địa chỉ liên hệ': c.contractor_info?.dia_chi_lien_he || '',
+          'Ngày ký HĐ': c.dates?.ngay_ky_hd || '',
+          'Ngày kết thúc HĐ': c.dates?.ngay_ket_thuc_hd || '',
+          'Giá thuê có VAT (đ/tháng)': c.financials?.gia_thue_co_vat || 0,
+          'Chu kỳ thanh toán': c.financials?.chu_ky_thanh_toan || '',
+          'Chủ tài khoản': c.bank_info?.chu_tai_khoan || '',
+          'Số tài khoản': c.bank_info?.so_tai_khoan || '',
+          'Ngân hàng': c.bank_info?.ngan_hang || '',
+          'Trạng thái hợp đồng': c.status || ''
+        };
+      });
+      const wsContract = XLSX.utils.json_to_sheet(contractData);
+      XLSX.utils.book_append_sheet(wb, wsContract, "Hợp đồng");
+      hasSheet = true;
+    }
+    
+    // 3. Infra Info
+    if (exportCategories.infra) {
+      const infraData = selectedSiteList.map((site, idx) => {
+        const infra = site.infrastructure_info || {};
+        return {
+          'STT': idx + 1,
+          'Mã trạm': site.site_id,
+          'Loại cột anten': infra.cot_anten?.loai_cot || '',
+          'Độ cao cột (m)': infra.cot_anten?.do_cao || '',
+          'Tình trạng cột': infra.cot_anten?.tinh_trang || '',
+          'Số lượng máy lạnh': infra.may_lanh?.so_luong || 0,
+          'Số lượng accu': infra.accu?.so_luong || 0,
+          'Máy phát điện': infra.may_phat_dien?.ten || '',
+          'Tủ nguồn': infra.tu_nguon?.ten || ''
+        };
+      });
+      const wsInfra = XLSX.utils.json_to_sheet(infraData);
+      XLSX.utils.book_append_sheet(wb, wsInfra, "Hạ tầng phụ trợ");
+      hasSheet = true;
+    }
+    
+    if (!hasSheet) {
+      alert("Vui lòng tích chọn ít nhất 1 hạng mục để xuất!");
+      return;
+    }
+    
+    const fileName = exportScope === 'single' 
+      ? `Datasite_${exportSiteObj.site_id}_Detail.xlsx` 
+      : `Datasites_Export_${new Date().toISOString().slice(0,10)}.xlsx`;
+      
+    XLSX.writeFile(wb, fileName);
+    setShowExportModal(false);
+  };
+
+  const handleSaveNewStation = async (e) => {
+    e.preventDefault();
+    if (!addForm.site_id || !addForm.name || !addForm.to_ql || !addForm.qlt) {
+      alert("Vui lòng điền đầy đủ các thông tin chung bắt buộc: Mã trạm mới, Tên trạm, Tổ quản lý, Người QLT.");
+      return;
+    }
+    
+    try {
+      // 1. Check if site already exists
+      const { data: existing } = await supabase
+        .from('datasites')
+        .select('site_id')
+        .eq('site_id', addForm.site_id.trim().toUpperCase())
+        .maybeSingle();
+        
+      if (existing) {
+        alert(`Mã trạm ${addForm.site_id} đã tồn tại trên hệ thống!`);
+        return;
+      }
+      
+      // 2. Build payload
+      const payload = {
+        site_id: addForm.site_id.trim().toUpperCase(),
+        site_id_old: addForm.site_id_old.trim().toUpperCase() || null,
+        ptm_id: addForm.ptm_id.trim() || null,
+        name: addForm.name.trim(),
+        status: addForm.status,
+        
+        location_info: {
+          thanh_pho: addForm.thanh_pho,
+          huyen_cu: addForm.huyen_cu,
+          xa_moi: addForm.xa_moi,
+          dia_chi_cu: addForm.dia_chi_cu,
+          vi_do: addForm.vi_do ? parseFloat(addForm.vi_do) : null,
+          kinh_do: addForm.kinh_do ? parseFloat(addForm.kinh_do) : null
+        },
+        
+        management_info: {
+          to_ql: addForm.to_ql,
+          qlt: addForm.qlt,
+          vung_phu: addForm.vung_phu,
+          tram_main: addForm.tram_main,
+          ngay_phat_song: addForm.ngay_phat_song || null,
+          ma_pe: addForm.ma_pe,
+          ma_csht: addForm.ma_csht,
+          pha_ptm: addForm.pha_ptm || addForm.ptm_id || '',
+          chung_cot_anten: addForm.chung_cot_anten
+        },
+        
+        classification: {
+          chu_csht: addForm.chu_csht,
+          loai_tram: addForm.loai_tram,
+          hinh_thuc_dau_tu: addForm.hinh_thuc_dau_tu
+        },
+        
+        // Contract fields
+        contract_number: addForm.contract_number.trim() || null,
+        contract_info: addForm.contract_number ? {
+          status: addForm.contract_status,
+          dates: {
+            ngay_ky_hd: addForm.ngay_ky_hd || null,
+            ngay_ket_thuc_hd: addForm.ngay_ket_thuc_hd || null
+          },
+          financials: {
+            gia_thue_co_vat: addForm.gia_thue_co_vat ? parseFloat(addForm.gia_thue_co_vat) : 0,
+            chu_ky_thanh_toan: addForm.chu_ky_thanh_toan
+          },
+          bank_info: {
+            chu_tai_khoan: addForm.chu_tai_khoan,
+            so_tai_khoan: addForm.so_tai_khoan,
+            ngan_hang: addForm.ngan_hang
+          },
+          contractor_info: {
+            chu_the_hop_dong: addForm.chu_the_hop_dong,
+            sdt_chu_nha: addForm.sdt_chu_nha,
+            dia_chi_lien_he: addForm.dia_chi_lien_he
+          }
+        } : {},
+        
+        // Infrastructure fields
+        infrastructure_info: {
+          cot_anten: {
+            loai_cot: addForm.cot_anten_loai_cot,
+            do_cao: addForm.cot_anten_do_cao ? parseFloat(addForm.cot_anten_do_cao) : null,
+            tinh_trang: addForm.cot_anten_tinh_trang
+          },
+          may_lanh: {
+            so_luong: addForm.may_lanh_qty ? parseInt(addForm.may_lanh_qty) : 0
+          },
+          accu: {
+            so_luong: addForm.accu_qty ? parseInt(addForm.accu_qty) : 0
+          },
+          may_phat_dien: {
+            ten: addForm.may_phat_dien_ten
+          },
+          tu_nguon: {
+            ten: addForm.tu_nguon_ten
+          }
+        }
+      };
+      
+      const { error } = await supabase
+        .from('datasites')
+        .insert([payload]);
+        
+      if (error) throw error;
+      
+      alert("Đã thêm trạm mới thành công!");
+      setShowAddModal(false);
+      
+      // Reload page data
+      const { data: updatedSites } = await supabase
+        .from('datasites')
+        .select('*')
+        .order('site_id', { ascending: true });
+      setData(updatedSites || []);
+      
+    } catch (err) {
+      alert("Không thể lưu trạm: " + err.message);
+    }
+  };
+
+  const handleImportExcel = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    setIsImporting(true);
+    setImportLogs([]);
+    const reader = new FileReader();
+    
+    reader.onload = async (event) => {
+      try {
+        const dataBytes = new Uint8Array(event.target.result);
+        const workbook = XLSX.read(dataBytes, { type: 'array' });
+        
+        let targetSheetName = "";
+        if (importType === 'general') targetSheetName = "Thông tin chung";
+        else if (importType === 'contract') targetSheetName = "Hợp đồng";
+        else if (importType === 'infra') targetSheetName = "Hạ tầng phụ trợ";
+        
+        // Find sheet
+        const sheetName = workbook.SheetNames.find(n => n.toLowerCase().includes(targetSheetName.toLowerCase()));
+        if (!sheetName) {
+          alert(`Không tìm thấy sheet "${targetSheetName}" trong file tải lên. Vui lòng kiểm tra lại.`);
+          setIsImporting(false);
+          return;
+        }
+        
+        const rawRows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+        if (rawRows.length === 0) {
+          alert("File Excel trống rỗng, không có dòng dữ liệu nào.");
+          setIsImporting(false);
+          return;
+        }
+        
+        const logs = [];
+        let successCount = 0;
+        let failCount = 0;
+        
+        for (let i = 0; i < rawRows.length; i++) {
+          const row = rawRows[i];
+          
+          if (importType === 'general') {
+            const siteId = (row['Mã trạm mới (Bắt buộc)'] || '').trim().toUpperCase();
+            const name = (row['Tên trạm (Bắt buộc)'] || '').trim();
+            const toQl = (row['Tổ quản lý'] || 'VT3').trim();
+            const qlt = (row['Người QLT'] || '').trim();
+            
+            if (!siteId || !name) {
+              logs.push(`Dòng ${i + 2}: ❌ Bỏ qua do thiếu Mã trạm mới hoặc Tên trạm.`);
+              failCount++;
+              continue;
+            }
+            
+            const payload = {
+              site_id: siteId,
+              site_id_old: row['Mã trạm cũ'] || null,
+              ptm_id: row['Pha PTM'] || null,
+              name: name,
+              status: row['Trạng thái'] || 'ACTIVE',
+              location_info: {
+                thanh_pho: row['Tỉnh/Thành phố'] || 'Tỉnh Đồng Nai',
+                huyen_cu: row['Quận/Huyện'] || 'Cẩm Mỹ',
+                xa_moi: row['Phường/Xã mới'] || '',
+                dia_chi_cu: row['Địa chỉ'] || '',
+                vi_do: row['Vĩ độ'] ? parseFloat(row['Vĩ độ']) : null,
+                kinh_do: row['Kinh độ'] ? parseFloat(row['Kinh độ']) : null
+              },
+              management_info: {
+                to_ql: toQl,
+                qlt: qlt,
+                vung_phu: row['Vùng phủ'] || '',
+                tram_main: row['Trạm Main'] || 'KHÔNG',
+                ngay_phat_song: row['Ngày phát sóng'] || null,
+                ma_pe: row['Mã PE'] || '',
+                ma_csht: row['Mã CSHT'] || '',
+                pha_ptm: row['Pha PTM'] || '',
+                chung_cot_anten: row['Chung cột anten'] || 'KHÔNG'
+              },
+              classification: {
+                chu_csht: row['Chủ CSHT'] || 'Mobifone',
+                loai_tram: row['Loại trạm'] || '3G/4G',
+                hinh_thuc_dau_tu: row['Hình thức đầu tư'] || 'TỰ ĐẦU TƯ'
+              }
+            };
+            
+            const { error } = await supabase
+              .from('datasites')
+              .upsert(payload, { onConflict: 'site_id' });
+              
+            if (error) {
+              logs.push(`Dòng ${i + 2} (${siteId}): ❌ Lỗi lưu DB - ${error.message}`);
+              failCount++;
+            } else {
+              logs.push(`Dòng ${i + 2} (${siteId}): ✅ Thành công.`);
+              successCount++;
+            }
+          }
+          
+          else if (importType === 'contract') {
+            const siteId = (row['Mã trạm'] || '').trim().toUpperCase();
+            const contractNumber = (row['Số hợp đồng'] || '').trim();
+            if (!siteId) {
+              logs.push(`Dòng ${i + 2}: ❌ Bỏ qua do thiếu Mã trạm.`);
+              failCount++;
+              continue;
+            }
+            
+            // Check if site exists
+            const { data: site } = await supabase
+              .from('datasites')
+              .select('site_id')
+              .eq('site_id', siteId)
+              .maybeSingle();
+              
+            if (!site) {
+              logs.push(`Dòng ${i + 2} (${siteId}): ❌ Trạm không tồn tại trên hệ thống. Vui lòng tạo trạm trước.`);
+              failCount++;
+              continue;
+            }
+            
+            const contractInfo = {
+              status: row['Trạng thái hợp đồng'] || 'ACTIVE',
+              dates: {
+                ngay_ky_hd: row['Ngày ký HĐ (YYYY-MM-DD)'] || row['Ngày ký HĐ'] || null,
+                ngay_ket_thuc_hd: row['Ngày kết thúc HĐ (YYYY-MM-DD)'] || row['Ngày kết thúc HĐ'] || null
+              },
+              financials: {
+                gia_thue_co_vat: row['Giá thuê có VAT (đ/tháng)'] ? parseFloat(row['Giá thuê có VAT (đ/tháng)']) : 0,
+                chu_ky_thanh_toan: row['Chu kỳ thanh toán'] || '3 tháng'
+              },
+              bank_info: {
+                chu_tai_khoan: row['Chủ tài khoản'] || '',
+                so_tai_khoan: row['Số tài khoản'] || '',
+                ngan_hang: row['Ngân hàng'] || ''
+              },
+              contractor_info: {
+                chu_the_hop_dong: row['Chủ thể hợp đồng'] || '',
+                sdt_chu_nha: row['SĐT chủ nhà'] || '',
+                dia_chi_lien_he: row['Địa chỉ liên hệ'] || ''
+              }
+            };
+            
+            const { error } = await supabase
+              .from('datasites')
+              .update({
+                contract_number: contractNumber || null,
+                contract_info: contractInfo
+              })
+              .eq('site_id', siteId);
+              
+            if (error) {
+              logs.push(`Dòng ${i + 2} (${siteId}): ❌ Lỗi - ${error.message}`);
+              failCount++;
+            } else {
+              logs.push(`Dòng ${i + 2} (${siteId}): ✅ Đã cập nhật hợp đồng.`);
+              successCount++;
+            }
+          }
+          
+          else if (importType === 'infra') {
+            const siteId = (row['Mã trạm'] || '').trim().toUpperCase();
+            if (!siteId) {
+              logs.push(`Dòng ${i + 2}: ❌ Bỏ qua do thiếu Mã trạm.`);
+              failCount++;
+              continue;
+            }
+            
+            // Check if site exists
+            const { data: site } = await supabase
+              .from('datasites')
+              .select('site_id')
+              .eq('site_id', siteId)
+              .maybeSingle();
+              
+            if (!site) {
+              logs.push(`Dòng ${i + 2} (${siteId}): ❌ Trạm không tồn tại trên hệ thống. Vui lòng tạo trạm trước.`);
+              failCount++;
+              continue;
+            }
+            
+            const infraInfo = {
+              cot_anten: {
+                loai_cot: row['Loại cột anten'] || '',
+                do_cao: row['Độ cao cột (m)'] ? parseFloat(row['Độ cao cột (m)']) : null,
+                tinh_trang: row['Tình trạng cột'] || 'Hoạt động tốt'
+              },
+              may_lanh: {
+                so_luong: row['Số lượng máy lạnh'] ? parseInt(row['Số lượng máy lạnh']) : 0
+              },
+              accu: {
+                so_luong: row['Số lượng accu'] ? parseInt(row['Số lượng accu']) : 0
+              },
+              may_phat_dien: {
+                ten: row['Máy phát điện'] || ''
+              },
+              tu_nguon: {
+                ten: row['Tủ nguồn'] || ''
+              }
+            };
+            
+            const { error } = await supabase
+              .from('datasites')
+              .update({
+                infrastructure_info: infraInfo
+              })
+              .eq('site_id', siteId);
+              
+            if (error) {
+              logs.push(`Dòng ${i + 2} (${siteId}): ❌ Lỗi - ${error.message}`);
+              failCount++;
+            } else {
+              logs.push(`Dòng ${i + 2} (${siteId}): ✅ Đã cập nhật hạ tầng phụ trợ.`);
+              successCount++;
+            }
+          }
+        }
+        
+        logs.push(`--- KẾT QUẢ: Thành công ${successCount}, Thất bại ${failCount} ---`);
+        setImportLogs(logs);
+        
+        // Reload page data
+        const { data: updatedSites } = await supabase
+          .from('datasites')
+          .select('*')
+          .order('site_id', { ascending: true });
+        setData(updatedSites || []);
+        
+      } catch (err) {
+        alert("Lỗi đọc file: " + err.message);
+      } finally {
+        setIsImporting(false);
+      }
+    };
+    
+    reader.readAsArrayBuffer(file);
+    e.target.value = null; // Clear input
+  };
+
+  const handleDownloadTemplate = () => {
+    const wb = XLSX.utils.book_new();
+    
+    // Sheet 1: Thong_tin_chung
+    const wsGeneral = XLSX.utils.json_to_sheet([
+      {
+        "Mã trạm mới (Bắt buộc)": "DNISRA99",
+        "Mã trạm cũ": "DNCM99",
+        "Tên trạm (Bắt buộc)": "Trạm Sông Ray 99",
+        "Trạng thái": "ACTIVE",
+        "Tổ quản lý": "VT3",
+        "Người QLT": "Nguyễn Văn A",
+        "Vùng phủ": "Nông thôn",
+        "Trạm Main": "KHÔNG",
+        "Mã CSHT": "CSHT99",
+        "Pha PTM": "Pha 1",
+        "Mã PE": "PE999",
+        "Chung cột anten": "KHÔNG",
+        "Tỉnh/Thành phố": "Tỉnh Đồng Nai",
+        "Quận/Huyện": "Cẩm Mỹ",
+        "Phường/Xã mới": "Xã Sông Ray",
+        "Địa chỉ": "Ấp 1, Xã Sông Ray, Huyện Cẩm Mỹ, Đồng Nai",
+        "Vĩ độ": 10.7091,
+        "Kinh độ": 107.3104,
+        "Chủ CSHT": "Mobifone",
+        "Loại trạm": "3G/4G",
+        "Hình thức đầu tư": "TỰ ĐẦU TƯ"
+      }
+    ]);
+    XLSX.utils.book_append_sheet(wb, wsGeneral, "Thông tin chung");
+    
+    // Sheet 2: Hop_dong
+    const wsContract = XLSX.utils.json_to_sheet([
+      {
+        "Mã trạm": "DNISRA99",
+        "Số hợp đồng": "HĐ/DNISRA99/2026",
+        "Chủ thể hợp đồng": "Trần Văn B",
+        "SĐT chủ nhà": "0901234567",
+        "Địa chỉ liên hệ": "Ấp 1, Xã Sông Ray, Huyện Cẩm Mỹ, Đồng Nai",
+        "Ngày ký HĐ (YYYY-MM-DD)": "2026-07-12",
+        "Ngày kết thúc HĐ (YYYY-MM-DD)": "2031-07-12",
+        "Giá thuê có VAT (đ/tháng)": 4500000,
+        "Chu kỳ thanh toán": "3 tháng",
+        "Chủ tài khoản": "Trần Văn B",
+        "Số tài khoản": "1234567890",
+        "Ngân hàng": "Vietcombank",
+        "Trạng thái hợp đồng": "ACTIVE"
+      }
+    ]);
+    XLSX.utils.book_append_sheet(wb, wsContract, "Hợp đồng");
+    
+    // Sheet 3: Ha_tang_phu_tro
+    const wsInfra = XLSX.utils.json_to_sheet([
+      {
+        "Mã trạm": "DNISRA99",
+        "Loại cột anten": "Cột anten dây co",
+        "Độ cao cột (m)": 45,
+        "Tình trạng cột": "Hoạt động tốt",
+        "Số lượng máy lạnh": 2,
+        "Số lượng accu": 2,
+        "Máy phát điện": "Vikyno 10KVA",
+        "Tủ nguồn": "Nguồn Eltek"
+      }
+    ]);
+    XLSX.utils.book_append_sheet(wb, wsInfra, "Hạ tầng phụ trợ");
+    
+    XLSX.writeFile(wb, "Template_Nhap_Tram_TVT3.xlsx");
+  };
+
   const handleExportCategoryExcel = (category, categoryName) => {
     const items = getDetailedData(category);
     if (items.length === 0) {
@@ -466,7 +1066,11 @@ export default function Datasites() {
         <div className="hidden sm:flex items-center gap-2 w-full sm:w-auto relative">
           <button 
             className="inline-flex items-center justify-center px-3 py-2 border border-slate-200 text-[13px] font-medium rounded-lg text-slate-600 bg-white hover:bg-slate-50 shadow-sm transition-colors cursor-pointer"
-            onClick={() => alert("Tính năng Xuất Excel toàn bộ danh sách đang được xây dựng!")}
+            onClick={() => {
+              setExportScope('all');
+              setExportCategories({ general: true, contract: true, infra: true });
+              setShowExportModal(true);
+            }}
           >
             <FileDown className="h-4 w-4 mr-1.5" />
             Xuất Excel
@@ -485,15 +1089,27 @@ export default function Datasites() {
               {showAddMenu && (
                 <div className="absolute right-0 mt-2 w-56 rounded-lg shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50 animate-in fade-in slide-in-from-top-2">
                   <div className="py-1" role="menu">
-                    <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700">
+                    <button 
+                      onClick={() => {
+                        setShowAddModal(true);
+                        setShowAddMenu(false);
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 cursor-pointer"
+                    >
                       ✍️ Điền Form Thủ Công
                     </button>
                     <div className="border-t border-gray-100 my-1"></div>
-                    <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 flex items-center justify-between">
+                    <button 
+                      onClick={() => {
+                        setShowImportModal(true);
+                        setShowAddMenu(false);
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 flex items-center justify-between cursor-pointer"
+                    >
                       <span><Upload className="h-4 w-4 inline mr-2 text-gray-400"/>Upload File Excel</span>
                     </button>
                     <div className="px-4 py-2 bg-slate-50 border-t border-gray-100">
-                      <a href="#" className="text-xs text-blue-600 hover:text-blue-800 font-medium underline flex items-center" onClick={(e) => { e.preventDefault(); alert('Đang tải Template.xlsx...'); }}>
+                      <a href="#" className="text-xs text-blue-600 hover:text-blue-800 font-medium underline flex items-center" onClick={(e) => { e.preventDefault(); handleDownloadTemplate(); }}>
                         📥 Tải file Template mẫu
                       </a>
                     </div>
@@ -1332,7 +1948,590 @@ export default function Datasites() {
       <DatasiteDetailFullscreen 
         site={selectedSite} 
         onClose={() => setSelectedSite(null)} 
+        onExportExcel={(site) => {
+          setExportScope('single');
+          setExportSiteObj(site);
+          setExportCategories({ general: true, contract: true, infra: true });
+          setShowExportModal(true);
+        }}
       />
+
+      {/* 1. Modal Xuất Excel */}
+      {showExportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setShowExportModal(false)} />
+          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+            <div className="p-4 md:p-6 border-b border-slate-100 flex items-center justify-between">
+              <h2 className="text-base md:text-lg font-bold text-slate-800 flex items-center gap-2">
+                <FileDown className="h-5 w-5 text-blue-600" />
+                Tùy Chọn Xuất File Excel
+              </h2>
+              <button onClick={() => setShowExportModal(false)} className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-50 cursor-pointer">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-5 text-xs md:text-sm">
+              {/* Scope Selection */}
+              <div className="space-y-2">
+                <label className="font-bold text-slate-600 block">1. Phạm vi xuất dữ liệu:</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button 
+                    onClick={() => setExportScope('all')}
+                    className={`p-3 rounded-xl border text-center font-semibold transition-all cursor-pointer ${
+                      exportScope === 'all' 
+                        ? 'border-blue-600 bg-blue-50/50 text-blue-700 font-bold shadow-sm' 
+                        : 'border-slate-200 hover:bg-slate-50 text-slate-600'
+                    }`}
+                  >
+                    📊 Lọc toàn mạng ({filteredData.length} trạm)
+                  </button>
+                  <button 
+                    onClick={() => {
+                      if (!exportSiteObj && !selectedSite) {
+                        alert("Không có trạm nào đang được chọn.");
+                        return;
+                      }
+                      setExportScope('single');
+                    }}
+                    disabled={!exportSiteObj && !selectedSite}
+                    className={`p-3 rounded-xl border text-center font-semibold transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+                      exportScope === 'single' 
+                        ? 'border-blue-600 bg-blue-50/50 text-blue-700 font-bold shadow-sm' 
+                        : 'border-slate-200 hover:bg-slate-50 text-slate-600'
+                    }`}
+                  >
+                    📍 Chỉ trạm đang chọn {exportSiteObj ? `(${exportSiteObj.site_id})` : selectedSite ? `(${selectedSite.site_id})` : ''}
+                  </button>
+                </div>
+              </div>
+
+              {/* Categories Selection */}
+              <div className="space-y-2">
+                <label className="font-bold text-slate-600 block">2. Tích chọn các hạng mục cần xuất:</label>
+                <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-3">
+                  <label className="flex items-center gap-2.5 cursor-pointer">
+                    <input 
+                      type="checkbox"
+                      checked={exportCategories.general}
+                      onChange={(e) => setExportCategories(prev => ({ ...prev, general: e.target.checked }))}
+                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-4 w-4"
+                    />
+                    <div>
+                      <span className="font-bold text-slate-700 block">Thông tin chung</span>
+                      <span className="text-[11px] text-slate-400 block">Mã trạm, địa bàn, tổ QL, người QLT, tọa độ, phân loại...</span>
+                    </div>
+                  </label>
+                  <div className="border-t border-slate-200/60 my-1" />
+                  <label className="flex items-center gap-2.5 cursor-pointer">
+                    <input 
+                      type="checkbox"
+                      checked={exportCategories.contract}
+                      onChange={(e) => setExportCategories(prev => ({ ...prev, contract: e.target.checked }))}
+                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-4 w-4"
+                    />
+                    <div>
+                      <span className="font-bold text-slate-700 block">Hợp đồng thuê mặt bằng</span>
+                      <span className="text-[11px] text-slate-400 block">Số hợp đồng, thông tin chủ nhà, giá thuê, chu kỳ, bank...</span>
+                    </div>
+                  </label>
+                  <div className="border-t border-slate-200/60 my-1" />
+                  <label className="flex items-center gap-2.5 cursor-pointer">
+                    <input 
+                      type="checkbox"
+                      checked={exportCategories.infra}
+                      onChange={(e) => setExportCategories(prev => ({ ...prev, infra: e.target.checked }))}
+                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-4 w-4"
+                    />
+                    <div>
+                      <span className="font-bold text-slate-700 block">Hạ tầng phụ trợ (Cột anten...)</span>
+                      <span className="text-[11px] text-slate-400 block">Loại cột, độ cao, máy lạnh, máy phát, accu, tủ nguồn...</span>
+                    </div>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 md:p-6 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-2">
+              <button 
+                onClick={() => setShowExportModal(false)}
+                className="px-4 py-2 border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+              >
+                Hủy bỏ
+              </button>
+              <button 
+                onClick={handleExportExcel}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow-sm transition-colors cursor-pointer"
+              >
+                Tải Xuất Excel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. Modal Thêm Mới Trạm */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setShowAddModal(false)} />
+          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200 max-h-[90vh]">
+            <div className="p-4 md:p-6 border-b border-slate-100 flex items-center justify-between">
+              <h2 className="text-base md:text-lg font-bold text-slate-800 flex items-center gap-2">
+                <Database className="h-5 w-5 text-blue-600" />
+                Thêm Mới Hồ Sơ Trạm
+              </h2>
+              <button onClick={() => setShowAddModal(false)} className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-50 cursor-pointer">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Modal Tabs */}
+            <div className="flex border-b border-slate-100 bg-slate-50/50 px-4">
+              {[
+                { id: 'general', label: '1. Thông tin chung *' },
+                { id: 'contract', label: '2. Hợp đồng thuê' },
+                { id: 'infra', label: '3. Hạ tầng phụ trợ' }
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setAddModalTab(tab.id)}
+                  className={`px-4 py-3 text-xs md:text-sm font-bold border-b-2 transition-all cursor-pointer ${
+                    addModalTab === tab.id 
+                      ? 'border-blue-600 text-blue-600' 
+                      : 'border-transparent text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            <form onSubmit={handleSaveNewStation} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 text-xs md:text-sm">
+              {addModalTab === 'general' && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2 bg-blue-50/40 p-3 rounded-lg border border-blue-100 text-[11px] text-blue-800 font-semibold leading-relaxed">
+                    💡 Hạng mục Thông tin chung là bắt buộc để khởi tạo trạm mới. Các hạng mục Hợp đồng và Hạ tầng phụ trợ có thể để trống và cập nhật bổ sung sau.
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Mã trạm mới (Site ID) *</label>
+                    <input 
+                      type="text" required
+                      value={addForm.site_id}
+                      onChange={(e) => setAddForm(p => ({ ...p, site_id: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-slate-50/30 text-slate-800 font-bold"
+                      placeholder="Ví dụ: DNISRA09"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Mã trạm cũ (nếu có)</label>
+                    <input 
+                      type="text"
+                      value={addForm.site_id_old}
+                      onChange={(e) => setAddForm(p => ({ ...p, site_id_old: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-slate-50/30 text-slate-800"
+                      placeholder="Ví dụ: DNCM09"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Tên trạm *</label>
+                    <input 
+                      type="text" required
+                      value={addForm.name}
+                      onChange={(e) => setAddForm(p => ({ ...p, name: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-slate-50/30 text-slate-800"
+                      placeholder="Ví dụ: Trạm Cẩm Mỹ 9"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Trạng thái trạm</label>
+                    <select 
+                      value={addForm.status}
+                      onChange={(e) => setAddForm(p => ({ ...p, status: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-slate-50/30 text-slate-800"
+                    >
+                      <option value="ACTIVE">ACTIVE (Đang hoạt động)</option>
+                      <option value="INACTIVE">INACTIVE (Ngừng hoạt động)</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Tổ quản lý *</label>
+                    <input 
+                      type="text" required
+                      value={addForm.to_ql}
+                      onChange={(e) => setAddForm(p => ({ ...p, to_ql: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-slate-50/30 text-slate-800"
+                      placeholder="Ví dụ: VT3"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Người QLT *</label>
+                    <input 
+                      type="text" required
+                      value={addForm.qlt}
+                      onChange={(e) => setAddForm(p => ({ ...p, qlt: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-slate-50/30 text-slate-800"
+                      placeholder="Họ tên người QLT"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Quận/Huyện</label>
+                    <select 
+                      value={addForm.huyen_cu}
+                      onChange={(e) => setAddForm(p => ({ ...p, huyen_cu: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-slate-50/30 text-slate-800"
+                    >
+                      <option value="Cẩm Mỹ">Cẩm Mỹ</option>
+                      <option value="Xuân Lộc">Xuân Lộc</option>
+                      <option value="Long Khánh">Long Khánh</option>
+                      <option value="Thống Nhất">Thống Nhất</option>
+                      <option value="Định Quán">Định Quán</option>
+                      <option value="Tân Phú">Tân Phú</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Phường/Xã mới</label>
+                    <input 
+                      type="text"
+                      value={addForm.xa_moi}
+                      onChange={(e) => setAddForm(p => ({ ...p, xa_moi: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-slate-50/30 text-slate-800"
+                      placeholder="Tên xã..."
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Vĩ độ (Lat)</label>
+                    <input 
+                      type="number" step="any"
+                      value={addForm.vi_do}
+                      onChange={(e) => setAddForm(p => ({ ...p, vi_do: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-slate-50/30 text-slate-800"
+                      placeholder="Ví dụ: 10.7091"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Kinh độ (Long)</label>
+                    <input 
+                      type="number" step="any"
+                      value={addForm.kinh_do}
+                      onChange={(e) => setAddForm(p => ({ ...p, kinh_do: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-slate-50/30 text-slate-800"
+                      placeholder="Ví dụ: 107.3104"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Hình thức đầu tư</label>
+                    <select 
+                      value={addForm.hinh_thuc_dau_tu}
+                      onChange={(e) => setAddForm(p => ({ ...p, hinh_thuc_dau_tu: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
+                    >
+                      <option value="TỰ ĐẦU TƯ">MobiFone tự đầu tư (Thuê mặt bằng)</option>
+                      <option value="TRẠM THUÊ QUA ĐỐI TÁC">Thuê CSHT đối tác dùng chung</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Chủ CSHT</label>
+                    <input 
+                      type="text"
+                      value={addForm.chu_csht}
+                      onChange={(e) => setAddForm(p => ({ ...p, chu_csht: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
+                      placeholder="Ví dụ: Mobifone, Viettel, VNPT..."
+                    />
+                  </div>
+                </div>
+              )}
+
+              {addModalTab === 'contract' && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1 col-span-2">
+                    <label className="font-bold text-slate-600">Số Hợp Đồng</label>
+                    <input 
+                      type="text"
+                      value={addForm.contract_number}
+                      onChange={(e) => setAddForm(p => ({ ...p, contract_number: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
+                      placeholder="Số HĐ thuê nhà/mặt bằng..."
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Chủ thể hợp đồng (Chủ nhà)</label>
+                    <input 
+                      type="text"
+                      value={addForm.chu_the_hop_dong}
+                      onChange={(e) => setAddForm(p => ({ ...p, chu_the_hop_dong: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
+                      placeholder="Tên chủ đất/chủ nhà..."
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Số điện thoại liên hệ</label>
+                    <input 
+                      type="text"
+                      value={addForm.sdt_chu_nha}
+                      onChange={(e) => setAddForm(p => ({ ...p, sdt_chu_nha: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
+                      placeholder="SĐT..."
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Ngày ký HĐ</label>
+                    <input 
+                      type="date"
+                      value={addForm.ngay_ky_hd}
+                      onChange={(e) => setAddForm(p => ({ ...p, ngay_ky_hd: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Ngày hết hạn HĐ</label>
+                    <input 
+                      type="date"
+                      value={addForm.ngay_ket_thuc_hd}
+                      onChange={(e) => setAddForm(p => ({ ...p, ngay_ket_thuc_hd: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Giá thuê (Có VAT)</label>
+                    <input 
+                      type="number"
+                      value={addForm.gia_thue_co_vat}
+                      onChange={(e) => setAddForm(p => ({ ...p, gia_thue_co_vat: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
+                      placeholder="đ/tháng"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Chu kỳ thanh toán</label>
+                    <input 
+                      type="text"
+                      value={addForm.chu_ky_thanh_toan}
+                      onChange={(e) => setAddForm(p => ({ ...p, chu_ky_thanh_toan: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
+                      placeholder="Ví dụ: 3 tháng, 6 tháng, 1 năm..."
+                    />
+                  </div>
+                  
+                  <div className="space-y-1 col-span-2 border-t border-slate-100 pt-3">
+                    <span className="text-[11px] font-bold text-blue-600 uppercase">Thông tin tài khoản thụ hưởng</span>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Chủ tài khoản</label>
+                    <input 
+                      type="text"
+                      value={addForm.chu_tai_khoan}
+                      onChange={(e) => setAddForm(p => ({ ...p, chu_tai_khoan: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
+                      placeholder="Tên người thụ hưởng..."
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Số tài khoản</label>
+                    <input 
+                      type="text"
+                      value={addForm.so_tai_khoan}
+                      onChange={(e) => setAddForm(p => ({ ...p, so_tai_khoan: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
+                      placeholder="Số tài khoản..."
+                    />
+                  </div>
+                  <div className="space-y-1 col-span-2">
+                    <label className="font-bold text-slate-600">Ngân hàng</label>
+                    <input 
+                      type="text"
+                      value={addForm.ngan_hang}
+                      onChange={(e) => setAddForm(p => ({ ...p, ngan_hang: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
+                      placeholder="Tên ngân hàng đầy đủ hoặc viết tắt..."
+                    />
+                  </div>
+                </div>
+              )}
+
+              {addModalTab === 'infra' && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Loại cột anten</label>
+                    <input 
+                      type="text"
+                      value={addForm.cot_anten_loai_cot}
+                      onChange={(e) => setAddForm(p => ({ ...p, cot_anten_loai_cot: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
+                      placeholder="Ví dụ: Cột dây co, cột tự đứng..."
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Độ cao cột anten (m)</label>
+                    <input 
+                      type="number"
+                      value={addForm.cot_anten_do_cao}
+                      onChange={(e) => setAddForm(p => ({ ...p, cot_anten_do_cao: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
+                      placeholder="Độ cao..."
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Tình trạng cột</label>
+                    <input 
+                      type="text"
+                      value={addForm.cot_anten_tinh_trang}
+                      onChange={(e) => setAddForm(p => ({ ...p, cot_anten_tinh_trang: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Số lượng máy lạnh</label>
+                    <input 
+                      type="number"
+                      value={addForm.may_lanh_qty}
+                      onChange={(e) => setAddForm(p => ({ ...p, may_lanh_qty: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
+                      placeholder="Số máy..."
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Số lượng Accu (Tổ)</label>
+                    <input 
+                      type="number"
+                      value={addForm.accu_qty}
+                      onChange={(e) => setAddForm(p => ({ ...p, accu_qty: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
+                      placeholder="Số tổ accu..."
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Nhãn hiệu máy phát điện</label>
+                    <input 
+                      type="text"
+                      value={addForm.may_phat_dien_ten}
+                      onChange={(e) => setAddForm(p => ({ ...p, may_phat_dien_ten: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
+                      placeholder="Ví dụ: Vikyno, Hữu Toàn..."
+                    />
+                  </div>
+                  <div className="space-y-1 col-span-2">
+                    <label className="font-bold text-slate-600">Nhãn hiệu tủ nguồn AC/DC</label>
+                    <input 
+                      type="text"
+                      value={addForm.tu_nguon_ten}
+                      onChange={(e) => setAddForm(p => ({ ...p, tu_nguon_ten: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
+                      placeholder="Ví dụ: Tủ nguồn Delta, Eltek..."
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100 bg-slate-50 -mx-6 -mb-6 p-4">
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="px-4 py-2 border border-slate-200 hover:bg-slate-100 rounded-lg text-xs font-bold text-slate-600 transition-colors cursor-pointer"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-xs font-bold text-white transition-colors shadow-sm cursor-pointer"
+                >
+                  Lưu Trạm Mới
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 3. Modal Nhập Excel */}
+      {showImportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setShowImportModal(false)} />
+          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col animate-in zoom-in-95 duration-200 max-h-[90vh]">
+            <div className="p-4 md:p-6 border-b border-slate-100 flex items-center justify-between">
+              <h2 className="text-base md:text-lg font-bold text-slate-800 flex items-center gap-2">
+                <Upload className="h-5 w-5 text-blue-600" />
+                Nhập Trạm Từ File Excel
+              </h2>
+              <button onClick={() => setShowImportModal(false)} className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-50 cursor-pointer">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 flex-1 overflow-y-auto text-xs md:text-sm">
+              <div className="space-y-1.5">
+                <label className="font-bold text-slate-600 block">1. Chọn loại hạng mục cần nhập:</label>
+                <select
+                  value={importType}
+                  onChange={(e) => setImportType(e.target.value)}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-slate-50/50 text-slate-800 font-semibold"
+                >
+                  <option value="general">📍 Sheet: Thông tin chung (Hỗ trợ Tạo trạm mới hoặc Cập nhật)</option>
+                  <option value="contract">📄 Sheet: Hợp đồng (Chỉ cập nhật cho trạm đã có sẵn)</option>
+                  <option value="infra">🔌 Sheet: Hạ tầng phụ trợ (Chỉ cập nhật cho trạm đã có sẵn)</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-bold text-slate-600 block">2. Tải tệp Excel lên:</label>
+                <div className="border-2 border-dashed border-slate-200 rounded-xl p-8 text-center bg-slate-50/30 hover:bg-slate-50 transition-colors relative">
+                  <input 
+                    type="file"
+                    accept=".xlsx, .xls"
+                    onChange={handleImportExcel}
+                    disabled={isImporting}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+                  />
+                  <Upload className="h-8 w-8 mx-auto text-slate-400 mb-2" />
+                  <span className="font-semibold text-blue-600 block mb-0.5">Click để chọn hoặc kéo thả tệp Excel vào đây</span>
+                  <span className="text-[10px] text-slate-400 block">Hỗ trợ file định dạng .xlsx hoặc .xls</span>
+                </div>
+              </div>
+
+              {isImporting && (
+                <div className="text-center py-4 flex flex-col items-center justify-center">
+                  <RefreshCw className="h-6 w-6 text-blue-600 animate-spin mb-2" />
+                  <span className="font-semibold text-slate-500">Đang đọc và xử lý dữ liệu Excel...</span>
+                </div>
+              )}
+
+              {importLogs.length > 0 && (
+                <div className="space-y-1.5">
+                  <span className="font-bold text-slate-600 block">3. Nhật ký nhập dữ liệu (Logs):</span>
+                  <div className="bg-slate-900 text-slate-300 font-mono text-[10px] p-3 rounded-lg max-h-[180px] overflow-y-auto space-y-1 leading-relaxed">
+                    {importLogs.map((log, i) => (
+                      <div key={i}>{log}</div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 md:p-6 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-4">
+              <button
+                onClick={handleDownloadTemplate}
+                className="text-xs text-blue-600 hover:text-blue-800 font-bold underline flex items-center gap-1 cursor-pointer"
+              >
+                📥 Tải File Template Mẫu
+              </button>
+              <button 
+                onClick={() => {
+                  setShowImportModal(false);
+                  setImportLogs([]);
+                }}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-bold shadow-sm transition-colors cursor-pointer"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

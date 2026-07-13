@@ -604,6 +604,15 @@ export default function Generator() {
     const anomalies = [];
     const today = new Date();
 
+    const getDaysDiff = (dateStr1, dateStr2) => {
+      if (!dateStr1 || !dateStr2) return 0;
+      const d1 = new Date(dateStr1);
+      const d2 = new Date(dateStr2);
+      const utc1 = Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate());
+      const utc2 = Date.UTC(d2.getFullYear(), d2.getMonth(), d2.getDate());
+      return Math.round((utc1 - utc2) / (1000 * 60 * 60 * 24));
+    };
+
     // 1. Phân nhóm dữ liệu theo trạm (ánh xạ mã cũ -> mã mới)
     const canonicalMap = {};
     stations.forEach(s => {
@@ -672,22 +681,16 @@ export default function Generator() {
 
           // Chỉ xét các đợt cúp điện >= 3 tiếng
           if (hours >= 3.0) {
-            const outageDate = new Date(outage.ngay_mat_dien);
-            
-            // Lọc xem trong vòng 7 ngày sau cúp điện, có log chạy máy nào không
+            // Lọc xem trong vòng 7 ngày sau cúp điện, có log chạy máy nào không (hoặc trước 1 ngày để tránh lệch giờ)
             const hasLog = siteLogs.some(log => {
-              const logDate = new Date(log.date);
-              const diffTime = logDate - outageDate;
-              const diffDays = diffTime / (1000 * 60 * 60 * 24);
-              return diffDays >= 0 && diffDays <= 7;
+              const diffDays = getDaysDiff(log.date, outage.ngay_mat_dien);
+              return diffDays >= -1 && diffDays <= 7;
             });
 
             if (!hasLog) {
               // Lọc xem trong vòng +/- 5 ngày của cúp điện có giao dịch đổ dầu/xăng nào không
               const matchingRefill = siteRefills.find(ref => {
-                const refDate = new Date(ref.date);
-                const diffTime = Math.abs(refDate - outageDate);
-                const diffDays = diffTime / (1000 * 60 * 60 * 24);
+                const diffDays = Math.abs(getDaysDiff(ref.date, outage.ngay_mat_dien));
                 return diffDays <= 5;
               });
 
@@ -844,8 +847,27 @@ export default function Generator() {
 
     });
 
-    // Sắp xếp các cảnh báo: Severity High lên trước
-    return anomalies.sort((a, b) => (a.severity === 'high' ? -1 : 1));
+    // Sắp xếp các cảnh báo: Severity High lên trước, sau đó là ngày mới nhất
+    const sortedAnomalies = anomalies.sort((a, b) => {
+      if (a.severity === 'high' && b.severity !== 'high') return -1;
+      if (a.severity !== 'high' && b.severity === 'high') return 1;
+      
+      const dateA = a.date && a.date !== 'Chưa từng chạy' ? new Date(a.date) : new Date(0);
+      const dateB = b.date && b.date !== 'Chưa từng chạy' ? new Date(b.date) : new Date(0);
+      return dateB - dateA;
+    });
+
+    // Lọc trùng theo site_id (chỉ giữ lại 1 dòng cảnh báo quan trọng/mới nhất cho mỗi trạm)
+    const uniqueAnomalies = [];
+    const seenSites = new Set();
+    for (const anom of sortedAnomalies) {
+      if (!seenSites.has(anom.site_id)) {
+        seenSites.add(anom.site_id);
+        uniqueAnomalies.push(anom);
+      }
+    }
+
+    return uniqueAnomalies;
   }, [genLogs, powerSchedules, fuelTxs, stations, activeTab]);
 
   // Handle Save Log (Manual input)

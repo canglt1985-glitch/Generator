@@ -9,7 +9,7 @@ import ContractExportButton from './ContractExportButton';
 import PaymentSchedulePanel from './PaymentSchedulePanel';
 import { useCurrentUser } from '../../utils/useCurrentUser';
 
-export default function DatasiteDetailFullscreen({ site, onClose, defaultTab }) {
+export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, onExportExcel }) {
   const { user } = useCurrentUser();
   const [activeTab, setActiveTab] = useState(defaultTab || 'general');
 
@@ -634,7 +634,10 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab }) 
         </div>
 
         <div className="hidden md:flex items-center gap-3">
-          <button className="inline-flex items-center justify-center px-4 py-2 border border-slate-200 text-sm font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 shadow-sm transition-colors cursor-pointer">
+          <button 
+            onClick={() => onExportExcel && onExportExcel(site)}
+            className="inline-flex items-center justify-center px-4 py-2 border border-slate-200 text-sm font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 shadow-sm transition-colors cursor-pointer"
+          >
             <FileDown className="h-4 w-4 mr-2" />
             Xuất Excel
           </button>
