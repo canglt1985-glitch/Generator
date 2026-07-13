@@ -37,9 +37,15 @@ export default function VhktRan() {
   // Fetch alarms from Supabase (both ACTIVE and CLEARED)
   async function fetchAlarms() {
     try {
+      // Fetch only active alarms and recently cleared alarms (last 24 hours) to avoid Supabase 1000-row limit
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toISOString();
+
       const { data } = await supabase
         .from('smartw_alarms')
-        .select('*');
+        .select('*')
+        .or(`status.eq.ACTIVE,edate.gte.${yesterdayStr}`);
       if (data) {
         setAlarms(data);
       }
