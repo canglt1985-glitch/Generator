@@ -187,16 +187,20 @@ export default function NetworkMap() {
     const chuDauTu = String(line.chu_dau_tu_cap || '').toLowerCase();
     const vanHanh = String(line.don_vi_van_hanh_cap || '').toLowerCase();
 
-    // 1. Phân biệt màu theo loại kết nối & sở hữu (Dải màu Neon High-Contrast rực rỡ)
-    let color = '#ff9100'; // Mặc định: Cam tươi Neon (Nhà mạng khác/Chưa rõ)
+    // 1. Phân biệt màu theo loại kết nối & sở hữu (Dải màu Neon rực rỡ theo đối tác thực tế)
+    let color = '#a1a1aa'; // Mặc định: Xám nhạt (Nhà mạng khác / Chưa rõ)
     if (loai.includes('viba') || loai.includes('mw')) {
       color = '#eab308'; // Vàng tươi Neon: Viba (MW)
     } else if (chuDauTu.includes('mobifone') || chuDauTu.includes('mbf')) {
-      color = '#22c55e'; // Xanh lá Neon: Mobifone
+      color = '#22c55e'; // Xanh lục Neon: Mobifone
     } else if (chuDauTu.includes('vnpt')) {
       color = '#06b6d4'; // Xanh dương Cyan Neon: VNPT
-    } else if (chuDauTu.includes('viettel') || chuDauTu.includes('vtl')) {
-      color = '#ff1744'; // Đỏ Neon: Viettel
+    } else if (chuDauTu.includes('tpcoms') || chuDauTu.includes('tpcom')) {
+      color = '#ec4899'; // Hồng Neon: TPCOMS
+    } else if (chuDauTu.includes('vtc')) {
+      color = '#f97316'; // Cam Neon: VTC
+    } else if (chuDauTu.includes('cadicom') || chuDauTu.includes('cadi')) {
+      color = '#a855f7'; // Tím Neon: CADICOM
     }
 
     // 2. Phân biệt nét vẽ theo loại backup & đơn vị vận hành
@@ -584,6 +588,91 @@ export default function NetworkMap() {
     if (meters < 1000) return `${Math.round(meters)} m`;
     return `${(meters / 1000).toFixed(2)} km`;
   };
+
+  // Đánh giá vùng phủ sóng (Memoized để render ở cả Desktop và Mobile)
+  const radarScanSummaryMarkup = useMemo(() => {
+    if (!customerLocation) return null;
+    const closestActive = nearestSites.find(item => item.type === 'Hoạt động');
+    const closestProject = nearestSites.find(item => item.type === 'Quy hoạch');
+    const primarySite = nearestSites[0];
+    
+    return (
+      <div className="bg-slate-800 border border-slate-700/60 rounded-2xl p-5 shadow-lg space-y-3 animate-in fade-in duration-300 text-slate-200">
+        <h4 className="text-xs font-bold text-white uppercase tracking-wider font-sans flex items-center gap-1.5">
+          <Shield className="h-4.5 w-4.5 text-cyan-400" />
+          Đánh giá vùng phủ sóng
+        </h4>
+        <div className="space-y-2 text-xs font-sans">
+          <div className="flex justify-between py-1.5 border-b border-slate-700/40">
+            <span className="text-slate-400">Trạm gần nhất:</span>
+            <span className="font-bold text-cyan-400">{primarySite?.code} ({primarySite?.type})</span>
+          </div>
+          <div className="flex justify-between py-1.5 border-b border-slate-700/40">
+            <span className="text-slate-400">Khoảng cách:</span>
+            <span className="font-bold text-white">{formatDistance(primarySite?.distance)}</span>
+          </div>
+          
+          {closestActive && primarySite?.id !== closestActive.id && (
+            <div className="flex justify-between py-1.5 border-b border-slate-700/40">
+              <span className="text-slate-400">Trạm hoạt động gần nhất:</span>
+              <span className="font-bold text-blue-400">{closestActive.code} ({formatDistance(closestActive.distance)})</span>
+            </div>
+          )}
+
+          <div className="flex justify-between py-1.5 border-b border-slate-700/40">
+            <span className="text-slate-400">Số trạm trong vùng quét:</span>
+            <span className="font-semibold text-slate-300">{nearestSites.length} trạm</span>
+          </div>
+
+          <div className="pt-1 space-y-2.5">
+            {closestActive ? (
+              closestActive.distance <= 300 ? (
+                <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3 text-emerald-400 flex gap-2">
+                  <Shield className="h-4 w-4 shrink-0 mt-0.5 text-emerald-400" />
+                  <div>
+                    <strong>Phủ sóng Tốt (3G/4G/5G):</strong> Trạm hoạt động gần nhất (<strong>{closestActive.code}</strong>) cách {formatDistance(closestActive.distance)}. Thích hợp tư vấn MobiWifi 5G tốc độ cao.
+                  </div>
+                </div>
+              ) : closestActive.distance <= 1500 ? (
+                <div className="bg-amber-500/10 border border-emerald-500/30 rounded-xl p-3 text-amber-400 flex gap-2">
+                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-amber-400" />
+                  <div>
+                    <strong>Phủ sóng Đạt:</strong> Trạm hoạt động gần nhất (<strong>{closestActive.code}</strong>) cách {formatDistance(closestActive.distance)}. Thiết bị MobiWifi cần đặt ở vị trí cao, hướng về phía trạm.
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-red-400 flex gap-2">
+                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-red-400" />
+                  <div>
+                    <strong>Yếu/Vùng lõm:</strong> Trạm hoạt động gần nhất (<strong>{closestActive.code}</strong>) cách xa {formatDistance(closestActive.distance)}.
+                  </div>
+                </div>
+              )
+            ) : (
+              <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-red-400 flex gap-2">
+                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-red-400" />
+                <div>
+                  <strong>Yếu/Vùng lõm:</strong> Khoảng cách lớn hơn 1.5km. Cần cân nhắc quy hoạch thêm trạm phát triển mới (PTM).
+                </div>
+              </div>
+            )}
+
+            {/* Dự báo khắc phục sóng yếu bằng trạm quy hoạch (PTM) */}
+            {closestActive && closestActive.distance > 1000 && closestProject && closestProject.distance < closestActive.distance && (
+              <div className="bg-cyan-500/10 border border-cyan-500/35 rounded-xl p-3 text-cyan-400 flex gap-2">
+                <Info className="h-4 w-4 shrink-0 mt-0.5 text-cyan-400" />
+                <div className="leading-relaxed">
+                  <strong>Dự báo Vô tuyến:</strong> Vị trí hiện tại có sóng hoạt động yếu do trạm phát sóng gần nhất (<strong>{closestActive.code}</strong>) cách xa {formatDistance(closestActive.distance)}. 
+                  Tuy nhiên, dự án PTM quy hoạch <strong>{closestProject.code}</strong> nằm cách đây chỉ <strong>{formatDistance(closestProject.distance)}</strong>. 
+                  Nếu dự án này được triển khai phát sóng, vùng phủ sóng sẽ được khắc phục triệt để đạt mức tốt!
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }, [customerLocation, nearestSites]);
 
   return (
     <div className="w-full space-y-5 py-4 animate-in fade-in slide-in-from-bottom-3 duration-300">
@@ -1123,6 +1212,11 @@ export default function NetworkMap() {
                 );
               })}
             </MapContainer>
+          </div>
+
+          {/* Radar Scan summary panel (Mobile only: block on mobile, hidden on lg) */}
+          <div className="block lg:hidden space-y-4">
+            {radarScanSummaryMarkup}
           </div>
 
           {/* Bottom Table Grid Details */}

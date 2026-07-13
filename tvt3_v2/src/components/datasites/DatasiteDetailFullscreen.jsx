@@ -452,7 +452,9 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, on
                       <option value="">-- Chưa chọn --</option>
                       <option value="MobiFone">MobiFone</option>
                       <option value="VNPT">VNPT</option>
-                      <option value="Viettel">Viettel</option>
+                      <option value="TPCOMS">TPCOMS</option>
+                      <option value="VTC">VTC</option>
+                      <option value="CADICOM">CADICOM</option>
                       <option value="Khác">Khác / Chưa rõ</option>
                     </select>
                   </div>
