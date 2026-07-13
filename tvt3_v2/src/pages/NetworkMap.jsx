@@ -597,7 +597,7 @@ export default function NetworkMap() {
       <div className="bg-slate-800/80 border border-slate-700/60 rounded-2xl overflow-hidden p-4 space-y-3 animate-in fade-in duration-300 text-slate-200">
         <h4 className="text-xs font-bold text-white uppercase tracking-wider font-sans flex items-center gap-1.5 border-b border-slate-700/40 pb-2">
           <Server size={12} className="text-cyan-400" />
-          {isCompact ? "Trạm lân cận trong tầm phủ" : "Danh sách trạm lân cận trong tầm phủ"}
+          Các trạm lân cận
         </h4>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-[11px] border-collapse font-sans">
