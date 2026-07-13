@@ -570,9 +570,7 @@ export default function NetworkMap() {
         {/* Right Side Map Canvas & Table */}
         <div className="lg:col-span-2 space-y-4">
           {/* Map Leaflet Container */}
-          <div className={`bg-slate-800 border border-slate-700/60 rounded-2xl overflow-hidden h-[450px] relative shadow-lg ${
-            customerLocation && activeTab !== 'map' ? 'hidden lg:block' : ''
-          }`}>
+          <div className="bg-slate-800 border border-slate-700/60 rounded-2xl overflow-hidden h-[450px] relative shadow-lg">
             <MapContainer 
               center={mapCenter} 
               zoom={zoomLevel} 
