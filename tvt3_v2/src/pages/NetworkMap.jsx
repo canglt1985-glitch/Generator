@@ -587,46 +587,7 @@ export default function NetworkMap() {
     return `${(meters / 1000).toFixed(2)} km`;
   };
 
-  // Đánh giá vùng phủ sóng rút gọn (nhỏ gọn để đặt ở sidebar dưới Bảng điều khiển)
-  const radarScanSummaryMarkup = useMemo(() => {
-    if (!customerLocation || nearestSites.length === 0) return null;
-    const primarySite = nearestSites[0];
-    
-    return (
-      <div className="bg-slate-800/80 border border-slate-700/50 rounded-2xl p-4 shadow-lg space-y-3 animate-in fade-in duration-300 text-slate-200">
-        <h4 className="text-xs font-bold text-white uppercase tracking-wider font-sans flex items-center gap-1.5 border-b border-slate-700/40 pb-2">
-          <Shield className="h-4 w-4 text-cyan-400" />
-          Đánh giá vùng phủ nhanh
-        </h4>
-        <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs font-sans">
-          <div>
-            <span className="text-slate-400 block text-[10px]">Trạm gần nhất:</span>
-            <span className="font-bold text-cyan-400 text-sm block truncate mt-0.5">{primarySite?.code}</span>
-          </div>
-          <div>
-            <span className="text-slate-400 block text-[10px]">Khoảng cách:</span>
-            <span className="font-bold text-white text-sm block mt-0.5">{formatDistance(primarySite?.distance)}</span>
-          </div>
-          <div>
-            <span className="text-slate-400 block text-[10px]">Phân loại:</span>
-            <span className={`font-bold block mt-0.5 ${primarySite?.type === 'Hoạt động' ? 'text-emerald-400' : 'text-amber-400'}`}>
-              {primarySite?.type}
-            </span>
-          </div>
-          <div className="flex items-end">
-            <a
-              href={`/datasites?search=${primarySite?.code}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full py-1.5 text-center bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-bold text-[10px] uppercase transition-colors block border border-cyan-500/20 active:scale-95 transition-all text-center"
-            >
-              Chi tiết trạm
-            </a>
-          </div>
-        </div>
-      </div>
-    );
-  }, [customerLocation, nearestSites]);
+
 
   // Bảng danh sách trạm lân cận (Đầy đủ hoặc Tinh gọn ở Sidebar)
   const renderNearestSitesTable = (isCompact = false) => {
@@ -1155,12 +1116,11 @@ export default function NetworkMap() {
 
           {/* Radar Scan summary panel (Mobile only: block on mobile, hidden on lg) */}
           <div className="block lg:hidden mt-4">
-            {radarScanSummaryMarkup}
+            
           </div>
 
-          {/* Layout dưới bản đồ dành riêng cho Mobile (Đánh giá vùng phủ 2x2 + Bảng đầy đủ) */}
-          <div className="block lg:hidden mt-4 space-y-4">
-            {radarScanSummaryMarkup}
+          {/* Layout dưới bản đồ dành riêng cho Mobile (Chỉ hiện bảng danh sách trạm lân cận) */}
+          <div className="block lg:hidden mt-4">
             {renderNearestSitesTable(false)}
           </div>
         </div>
