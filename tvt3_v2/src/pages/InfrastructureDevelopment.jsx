@@ -5,7 +5,7 @@ import * as XLSX from 'xlsx';
 import { generateWordDocument } from '../utils/wordGenerator';
 import { convertNumberToVietnameseWords } from '../utils/contractCalculations';
 import { 
-  Search, Filter, Plus, CheckCircle2, Clock, AlertTriangle, 
+  Search, Filter, Plus, CheckCircle2, Clock, AlertTriangle, AlertCircle, 
   MapPin, User, ChevronRight, Calendar, Info, RefreshCw,
   TrendingUp, Activity, Server, FileText, ArrowRight, ChevronLeft,
   X, HelpCircle, Check, Play, Edit3, Download, Upload
@@ -107,6 +107,7 @@ export default function InfrastructureDevelopment() {
       legal_other_desc: proj.legal_other_desc || '',
       antenna_type_survey: proj.antenna_type_survey || 'Cột monopole mặt đất',
       antenna_height_survey: proj.antenna_height_survey || '36m',
+      deployment_package: proj.deployment_package || '',
       antenna_height_other_desc: proj.antenna_height_other_desc || '',
       foundation_type: proj.foundation_type || '3 co',
       conflict_notes: proj.conflict_notes || ''
@@ -119,6 +120,8 @@ export default function InfrastructureDevelopment() {
   const [filterDistrict, setFilterDistrict] = useState('');
   const [filterStage, setFilterStage] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  const [filterPackage, setFilterPackage] = useState('');
+  const [filterContractReady, setFilterContractReady] = useState('');
   
   // Form State for new proposal
   const [newProject, setNewProject] = useState({
@@ -137,10 +140,12 @@ export default function InfrastructureDevelopment() {
     antenna_type: 'Monopole',
     priority: '1',
     approval_batch: 'Đợt 1',
-    notes: ''
+    notes: '',
+    deployment_package: ''
   });
 
   const districts = ['Cẩm Mỹ', 'Xuân Lộc', 'Long Khánh', 'Thống Nhất', 'Định Quán', 'Tân Phú'];
+  const packages = Array.from(new Set(projects.map(p => p.deployment_package).filter(Boolean)));
 
   // Haversine formula to compute distance in km
   const haversine = (lat1, lon1, lat2, lon2) => {
@@ -187,6 +192,44 @@ export default function InfrastructureDevelopment() {
     });
 
     return nearest;
+  };
+
+  // Kiểm tra điều kiện trình ký hợp đồng (11 trường thông tin)
+  const checkContractEligibility = (proj) => {
+    if (!proj) return { isEligible: false, missingFields: [] };
+    
+    // Nếu trạm không khả thi thì không làm hợp đồng
+    if (proj.survey_status === 'NOK') {
+      return { isEligible: false, missingFields: ['Trạm không khả thi (NOK)'] };
+    }
+
+    const checks = [
+      { field: 'landowner_name', label: 'Tên chủ đất/đơn vị' },
+      { field: 'landlord_phone', label: 'Số điện thoại chủ đất' },
+      { field: 'address', label: 'Địa chỉ thực tế' },
+      { field: 'latitude_survey', label: 'Vĩ độ khảo sát' },
+      { field: 'longitude_survey', label: 'Kinh độ khảo sát' },
+      { field: 'plot_number', label: 'Số thửa đất' },
+      { field: 'map_sheet', label: 'Tờ bản đồ' },
+      { field: 'leased_area', label: 'Diện tích thuê' },
+      { field: 'lease_term', label: 'Thời hạn thuê' },
+      { field: 'payment_cycle', label: 'Chu kỳ thanh toán' },
+      { field: 'bank_account', label: 'Số tài khoản ngân hàng' },
+      { field: 'bank_name', label: 'Tên ngân hàng' }
+    ];
+
+    const missingFields = [];
+    checks.forEach(c => {
+      const val = proj[c.field];
+      if (val === null || val === undefined || String(val).trim() === '' || String(val).trim() === 'nan') {
+        missingFields.push(c.label);
+      }
+    });
+
+    return {
+      isEligible: missingFields.length === 0,
+      missingFields
+    };
   };
 
   // Get old district & old ward from old ID and Address
@@ -314,7 +357,21 @@ export default function InfrastructureDevelopment() {
     const matchesDistrict = !filterDistrict || proj.district === filterDistrict;
     const matchesStage = !filterStage || proj.current_stage === filterStage;
     const matchesStatus = !filterStatus || proj.overall_status === filterStatus;
-    return matchesSearch && matchesDistrict && matchesStage && matchesStatus;
+    const matchesPackage = !filterPackage || proj.deployment_package === filterPackage;
+    
+    let matchesContractReady = true;
+    if (filterContractReady) {
+      const { isEligible } = checkContractEligibility(proj);
+      if (filterContractReady === 'ELIGIBLE') {
+        matchesContractReady = isEligible && proj.survey_status !== 'NOK';
+      } else if (filterContractReady === 'INCOMPLETE') {
+        matchesContractReady = !isEligible && proj.survey_status !== 'NOK';
+      } else if (filterContractReady === 'NOK') {
+        matchesContractReady = proj.survey_status === 'NOK';
+      }
+    }
+    
+    return matchesSearch && matchesDistrict && matchesStage && matchesStatus && matchesPackage && matchesContractReady;
   });
 
   // Handle stage transition
@@ -457,7 +514,8 @@ export default function InfrastructureDevelopment() {
         antenna_type: 'Monopole',
         priority: '1',
         approval_batch: 'Đợt 1',
-        notes: ''
+        notes: '',
+        deployment_package: ''
       });
       fetchData();
     } catch (err) {
@@ -506,6 +564,7 @@ export default function InfrastructureDevelopment() {
         antenna_height_other_desc: editForm.antenna_height_other_desc || null,
         foundation_type: editForm.foundation_type || null,
         conflict_notes: editForm.conflict_notes || null,
+        deployment_package: editForm.deployment_package || null,
         updated_at: new Date().toISOString()
       };
 
@@ -1141,7 +1200,7 @@ export default function InfrastructureDevelopment() {
                     <option value="">Tất cả Giai đoạn</option>
                     {STAGES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
                   </select>
-                  <select
+                   <select
                     value={filterStatus}
                     onChange={(e) => setFilterStatus(e.target.value)}
                     className="text-xs bg-slate-50/80 hover:bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1.5 font-semibold text-slate-600 focus:outline-none"
@@ -1150,6 +1209,24 @@ export default function InfrastructureDevelopment() {
                     <option value="PLANNING">Planning</option>
                     <option value="IN_PROGRESS">In Progress</option>
                     <option value="COMPLETED">Completed</option>
+                  </select>
+                   <select
+                    value={filterPackage}
+                    onChange={(e) => setFilterPackage(e.target.value)}
+                    className="text-xs bg-slate-50/80 hover:bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1.5 font-semibold text-slate-600 focus:outline-none"
+                  >
+                    <option value="">Tất cả Gói triển khai</option>
+                    {packages.map(pkg => <option key={pkg} value={pkg}>{pkg}</option>)}
+                  </select>
+                  <select
+                    value={filterContractReady}
+                    onChange={(e) => setFilterContractReady(e.target.value)}
+                    className="text-xs bg-slate-50/80 hover:bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1.5 font-semibold text-slate-600 focus:outline-none"
+                  >
+                    <option value="">Điều kiện trình ký (Tất cả)</option>
+                    <option value="ELIGIBLE">Đủ ĐK trình ký</option>
+                    <option value="INCOMPLETE">Chưa đủ thông tin</option>
+                    <option value="NOK">Trạm không khả thi (NOK)</option>
                   </select>
                 </div>
               </div>
@@ -1161,6 +1238,7 @@ export default function InfrastructureDevelopment() {
                     <tr className="bg-slate-50 border-b border-slate-100 text-slate-500 font-semibold">
                       <th className="py-2.5 px-3">Mã QH mới</th>
                       <th className="py-2.5 px-3">Mã QH cũ</th>
+                      <th className="py-2.5 px-3">Gói</th>
                       <th className="py-2.5 px-3">Địa bàn Quy hoạch</th>
                       <th className="py-2.5 px-3 hidden md:table-cell">Địa bàn cũ</th>
                       <th className="py-2.5 px-3 hidden lg:table-cell">Trạm gần nhất</th>
@@ -1171,6 +1249,7 @@ export default function InfrastructureDevelopment() {
                       <th className="py-2.5 px-3">Hình thức</th>
                       <th className="py-2.5 px-3">Loại cột &amp; Độ cao</th>
                       <th className="py-2.5 px-3 text-right">Giá thuê đề xuất</th>
+                      <th className="py-2.5 px-3 text-center">Trình ký</th>
                       <th className="py-2.5 px-3 text-center">Trạng thái</th>
                     </tr>
                   </thead>
@@ -1206,6 +1285,15 @@ export default function InfrastructureDevelopment() {
                                })()}
                              </td>
                             <td className="py-3 px-3 text-slate-400 font-medium">{proj.planning_id_old || '-'}</td>
+                             <td className="py-3 px-3">
+                               {proj.deployment_package ? (
+                                 <span className="px-1.5 py-0.5 text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-100 rounded">
+                                   {proj.deployment_package}
+                                 </span>
+                               ) : (
+                                 <span className="text-slate-300 italic">-</span>
+                               )}
+                             </td>
                             <td className="py-3 px-3 text-slate-600 font-semibold">
                               {proj.ward || 'Chưa xác định'}
                             </td>
@@ -1245,6 +1333,27 @@ export default function InfrastructureDevelopment() {
                             </td>
                             <td className="py-3 px-3 text-right font-bold text-slate-700">
                               {proj.proposed_rent ? `${proj.proposed_rent.toLocaleString()} đ` : '-'}
+                            </td>
+                            <td className="py-3 px-3 text-center">
+                              {(() => {
+                                const { isEligible } = checkContractEligibility(proj);
+                                if (proj.survey_status === 'NOK') {
+                                  return (
+                                    <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold text-red-700 bg-red-50 border border-red-100">
+                                      NOK
+                                    </span>
+                                  );
+                                }
+                                return isEligible ? (
+                                  <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100">
+                                    Đủ ĐK
+                                  </span>
+                                ) : (
+                                  <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold text-slate-400 bg-slate-50 border border-slate-200">
+                                    Thiếu TT
+                                  </span>
+                                );
+                              })()}
                             </td>
                             <td className="py-3 px-3 text-center">
                               <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
@@ -1914,6 +2023,16 @@ export default function InfrastructureDevelopment() {
                     )}
 
                     <div className="space-y-1 col-span-2 border-t border-slate-100 pt-3">
+                      <label className="text-[11px] font-bold text-slate-500 uppercase">Gói triển khai</label>
+                      <input 
+                        type="text"
+                        value={editForm.deployment_package}
+                        onChange={(e) => setEditForm(prev => ({ ...prev, deployment_package: e.target.value }))}
+                        className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 mb-2"
+                        placeholder="Ví dụ: Gói 1 CATP, Gói Long Khánh 2026..."
+                      />
+                    </div>
+                    <div className="space-y-1 col-span-2">
                       <label className="text-[11px] font-bold text-slate-500 uppercase">Ghi chú dự án</label>
                       <textarea 
                         value={editForm.notes}
@@ -1927,6 +2046,47 @@ export default function InfrastructureDevelopment() {
               ) : (
                 /* Read Mode details */
                 <div className="space-y-6">
+                  {(() => {
+                    const { isEligible, missingFields } = checkContractEligibility(selectedProject);
+                    if (selectedProject.survey_status === 'NOK') {
+                      return (
+                        <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-red-700 text-xs flex items-start gap-2">
+                          <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-red-600" />
+                          <div>
+                            <span className="font-bold">Trạm không khả thi (NOK):</span> Khảo sát thực tế không đạt, không thực hiện quy trình trình ký hợp đồng.
+                          </div>
+                        </div>
+                      );
+                    }
+                    if (isEligible) {
+                      return (
+                        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3.5 text-emerald-800 text-xs flex items-start gap-2 shadow-sm">
+                          <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0 text-emerald-600" />
+                          <div>
+                            <span className="font-bold block text-[13px] mb-0.5 text-emerald-950">✅ ĐỦ ĐIỀU KIỆN TRÌNH KÝ</span>
+                            Đã nhập đầy đủ 11 trường thông tin bắt buộc để xuất tờ trình và dự thảo hợp đồng thuê mặt bằng.
+                          </div>
+                        </div>
+                      );
+                    }
+                    return (
+                      <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5 text-amber-800 text-xs space-y-1.5 shadow-sm">
+                        <div className="flex items-start gap-2">
+                          <AlertCircle className="h-4 w-4 mt-0.5 shrink-0 text-amber-600" />
+                          <div>
+                            <span className="font-bold block text-[13px] text-amber-950">⚠️ CHƯA ĐỦ ĐIỀU KIỆN TRÌNH KÝ</span>
+                            Vui lòng click nút <strong className="text-amber-900">Chỉnh sửa</strong> phía dưới và bổ sung các thông tin còn thiếu để xuất tờ trình.
+                          </div>
+                        </div>
+                        <div className="bg-white/60 rounded-lg p-2 border border-amber-100 text-[11px] text-amber-900 font-medium">
+                          <strong>Các trường còn thiếu ({missingFields.length}):</strong>
+                          <ul className="list-disc pl-4 mt-1 space-y-0.5">
+                            {missingFields.map((f, i) => <li key={i}>{f}</li>)}
+                          </ul>
+                        </div>
+                      </div>
+                    );
+                  })()}
                   {/* Detailed Grid Info */}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
@@ -1956,6 +2116,14 @@ export default function InfrastructureDevelopment() {
                     <div className="space-y-1">
                       <span className="text-[10px] font-bold text-slate-400 uppercase">Địa bàn cũ (Huyện/TP cũ)</span>
                       <span className="text-sm font-semibold text-slate-700 block">{selectedProject.district || getOldLocation(selectedProject)}</span>
+                    </div>
+                    <div className="space-y-1 col-span-2 border-t border-b border-slate-100 py-2">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">Gói triển khai</span>
+                      <span className="text-sm font-semibold text-blue-600 block">
+                        {selectedProject.deployment_package || (
+                          <span className="text-slate-400 italic">Chưa đưa vào gói</span>
+                        )}
+                      </span>
                     </div>
                     {(() => {
                       const nearestSite = findNearestActiveSite(selectedProject);

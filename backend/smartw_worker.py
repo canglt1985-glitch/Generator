@@ -828,7 +828,11 @@ def send_daily_flapping_report(vhkt_data: list):
         logger.info("SmartW Worker: No TVT3 managed VHKT data to analyze, skipping report.")
         return
         
-    lines = ["📊 *CHẬP CHỜN & MLL KÉO DÀI*"]
+    report_date = ""
+    if vhkt_data:
+        report_date = vhkt_data[0].get('ngay') or ""
+    date_suffix = f" (NGÀY {report_date})" if report_date else ""
+    lines = [f"📊 *CHẬP CHỜN & MLL KÉO DÀI*{date_suffix}"]
     
     mac_lines = []
     gen_lines = []

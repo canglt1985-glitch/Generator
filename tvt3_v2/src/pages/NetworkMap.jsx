@@ -557,7 +557,7 @@ export default function NetworkMap() {
                         <div className="font-sans text-xs flex flex-col gap-1">
                           <strong className="text-blue-600 block text-sm">Trạm: {name}</strong>
                           {site.name && <span className="text-slate-600 block font-medium">{site.name}</span>}
-                          <span className="text-slate-400 block text-[10px]">Tổ quản lý: {site.management_info?.to_vt || 'Chưa rõ'}</span>
+                          <span className="text-slate-400 block text-[10px]">Mã trạm mới: {site.site_id}</span>
                           <span className="text-slate-400 block text-[10px]">Tọa độ: {lat.toFixed(5)}, {lng.toFixed(5)}</span>
                           <a 
                             href={`https://www.google.com/maps/dir/?api=1&${customerLocation ? `origin=${customerLocation.lat},${customerLocation.lng}&` : ''}destination=${lat},${lng}&travelmode=driving`}
