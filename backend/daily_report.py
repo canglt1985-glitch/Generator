@@ -385,6 +385,49 @@ def generate_daily_report_data(target_date_str=None):
             print(f"⚠️ Error querying missing logs for daily report: {missing_logs_err}")
             report_data['missing_logs'] = []
             
+        # 8. Load SLA data from vhkt_sla.json
+        sla_md_fail = 0
+        sla_mll_fail = 0
+        sla_fail_stations = []
+        try:
+            sla_path = os.path.join(current_dir, 'data', 'smartw', 'vhkt_sla.json')
+            if os.path.exists(sla_path):
+                with open(sla_path, 'r', encoding='utf-8') as f:
+                    sla_json = json.load(f)
+                
+                # Target date format in vhkt_sla.json is DD/MM/YYYY
+                target_date_ddmm = dt.strftime('%d/%m/%Y')
+                
+                sla_records = [r for r in sla_json.get("data", []) if r.get("ngay") == target_date_ddmm]
+                for r in sla_records:
+                    md_status = r.get("md_sla")
+                    mll_status = r.get("mll_sla")
+                    tram = r.get("tram")
+                    
+                    is_md_fail = (md_status == "Không đạt")
+                    is_mll_fail = (mll_status == "Không đạt")
+                    
+                    if is_md_fail:
+                        sla_md_fail += 1
+                    if is_mll_fail:
+                        sla_mll_fail += 1
+                    if is_md_fail or is_mll_fail:
+                        fail_types = []
+                        if is_md_fail:
+                            fail_types.append("MĐ")
+                        if is_mll_fail:
+                            fail_types.append("MLL")
+                        sla_fail_stations.append(f"{tram}({'+'.join(fail_types)})")
+            
+            report_data['sla_md_fail'] = sla_md_fail
+            report_data['sla_mll_fail'] = sla_mll_fail
+            report_data['sla_fail_stations'] = sla_fail_stations
+        except Exception as sla_err:
+            print(f"⚠️ Error reading SLA stats for daily report: {sla_err}")
+            report_data['sla_md_fail'] = 0
+            report_data['sla_mll_fail'] = 0
+            report_data['sla_fail_stations'] = []
+            
     except Exception as e:
         print(f"❌ Error compiling daily report statistics: {e}")
         
@@ -470,6 +513,16 @@ def format_daily_report_message(data):
         f"• Log cần duyệt: `{data['pending_approvals']}` dòng",
         f"• Hóa đơn mới nhận: `{data['new_invoices_today']}` HĐ | Đã nhận: `{data['mtd']['invoice_count']}` HĐ"
     ])
+
+    # ── SLA & VHKT Section ──
+    lines.extend([
+        "",
+        "📊 *HIỆU SUẤT SLA VẬN HÀNH (VHKT):*",
+        f"• Không đạt SLA Mất điện (MĐ): `{data.get('sla_md_fail', 0)}` trạm",
+        f"• Không đạt SLA Mất liên lạc (MLL): `{data.get('sla_mll_fail', 0)}` trạm"
+    ])
+    if data.get('sla_fail_stations'):
+        lines.append(f"• Danh sách trạm lỗi: `{', '.join(data['sla_fail_stations'])}`")
 
     lines.append(sep)
     
