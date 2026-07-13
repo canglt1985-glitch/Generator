@@ -1,6 +1,8 @@
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
-import NetworkMap from './pages/NetworkMap';
+
+const NetworkMap = React.lazy(() => import('./pages/NetworkMap'));
 import Datasites from './pages/Datasites';
 import ContractDashboard from './pages/ContractDashboard';
 import DailyWork from './pages/DailyWork';
@@ -60,8 +62,17 @@ function App() {
         
         {/* Các route trong Layout chính */}
         <Route path="/" element={<Layout />}>
-          <Route index element={<Navigate to="/network-map" replace />} />
-          <Route path="network-map" element={<NetworkMap />} />
+          <Route index element={<Navigate to="/daily-work" replace />} />
+          <Route path="network-map" element={
+            <React.Suspense fallback={
+              <div className="flex flex-col items-center justify-center min-h-[400px] text-slate-400 font-sans">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-500 mb-2"></div>
+                Đang tải bản đồ số hạ tầng...
+              </div>
+            }>
+              <NetworkMap />
+            </React.Suspense>
+          } />
           <Route path="datasites" element={<Datasites />} />
           <Route path="contracts" element={<ContractDashboard />} />
           <Route path="daily-work" element={<DailyWork />} />
