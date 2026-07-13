@@ -100,6 +100,14 @@ export default function NetworkMap() {
       if (s.site_id_old) siteMap.set(s.site_id_old.toLowerCase(), s);
     });
 
+    // Helper to parse hub ID from free-text string (e.g. "DNCM27-DNTN29" -> "DNTN29")
+    const parseHubId = (text) => {
+      if (!text) return null;
+      const matches = text.toUpperCase().match(/DN[A-Z0-9]{3,6}/g);
+      if (!matches || matches.length === 0) return null;
+      return matches[matches.length - 1].toLowerCase();
+    };
+
     activeSites.forEach(site => {
       const trans = site.technical_info;
       if (!trans) return;
@@ -108,10 +116,14 @@ export default function NetworkMap() {
       const lngDich = parseFloat(site.location_info?.kinh_do);
       if (isNaN(latDich) || isNaN(lngDich)) return;
 
+      const siteIdLower = site.site_id?.toLowerCase();
+      const siteIdOldLower = site.site_id_old?.toLowerCase();
+
       // 1. Tuyến chính
-      const primaryHubId = trans.last_mile_primary || trans.huong_ket_noi;
-      if (primaryHubId) {
-        const hub = siteMap.get(primaryHubId.trim().toLowerCase());
+      const primaryHubText = trans.last_mile_primary || trans.huong_ket_noi;
+      const primaryHubId = parseHubId(primaryHubText);
+      if (primaryHubId && primaryHubId !== siteIdLower && primaryHubId !== siteIdOldLower) {
+        const hub = siteMap.get(primaryHubId);
         if (hub) {
           const latNguon = parseFloat(hub.location_info?.vi_do);
           const lngNguon = parseFloat(hub.location_info?.kinh_do);
@@ -135,9 +147,10 @@ export default function NetworkMap() {
       }
 
       // 2. Tuyến phụ (Backup Ring)
-      const backupHubId = trans.last_mile_backup;
-      if (backupHubId) {
-        const hub = siteMap.get(backupHubId.trim().toLowerCase());
+      const backupHubText = trans.last_mile_backup;
+      const backupHubId = parseHubId(backupHubText);
+      if (backupHubId && backupHubId !== siteIdLower && backupHubId !== siteIdOldLower) {
+        const hub = siteMap.get(backupHubId);
         if (hub) {
           const latNguon = parseFloat(hub.location_info?.vi_do);
           const lngNguon = parseFloat(hub.location_info?.kinh_do);
