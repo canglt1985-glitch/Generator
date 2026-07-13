@@ -587,85 +587,41 @@ export default function NetworkMap() {
     return `${(meters / 1000).toFixed(2)} km`;
   };
 
-  // Đánh giá vùng phủ sóng (Memoized để render ở cả Desktop và Mobile)
+  // Đánh giá vùng phủ sóng rút gọn (nhỏ gọn để đặt ở sidebar dưới Bảng điều khiển)
   const radarScanSummaryMarkup = useMemo(() => {
-    if (!customerLocation) return null;
-    const closestActive = nearestSites.find(item => item.type === 'Hoạt động');
-    const closestProject = nearestSites.find(item => item.type === 'Quy hoạch');
+    if (!customerLocation || nearestSites.length === 0) return null;
     const primarySite = nearestSites[0];
     
     return (
-      <div className="bg-slate-800 border border-slate-700/60 rounded-2xl p-5 shadow-lg space-y-3 animate-in fade-in duration-300 text-slate-200">
-        <h4 className="text-xs font-bold text-white uppercase tracking-wider font-sans flex items-center gap-1.5">
-          <Shield className="h-4.5 w-4.5 text-cyan-400" />
-          Đánh giá vùng phủ sóng
+      <div className="bg-slate-800/80 border border-slate-700/50 rounded-2xl p-4 shadow-lg space-y-3 animate-in fade-in duration-300 text-slate-200">
+        <h4 className="text-xs font-bold text-white uppercase tracking-wider font-sans flex items-center gap-1.5 border-b border-slate-700/40 pb-2">
+          <Shield className="h-4 w-4 text-cyan-400" />
+          Đánh giá vùng phủ nhanh
         </h4>
-        <div className="space-y-2 text-xs font-sans">
-          <div className="flex justify-between py-1.5 border-b border-slate-700/40">
-            <span className="text-slate-400">Trạm gần nhất:</span>
-            <span className="font-bold text-cyan-400">{primarySite?.code} ({primarySite?.type})</span>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs font-sans">
+          <div>
+            <span className="text-slate-400 block text-[10px]">Trạm gần nhất:</span>
+            <span className="font-bold text-cyan-400 text-sm block truncate mt-0.5">{primarySite?.code}</span>
           </div>
-          <div className="flex justify-between py-1.5 border-b border-slate-700/40">
-            <span className="text-slate-400">Khoảng cách:</span>
-            <span className="font-bold text-white">{formatDistance(primarySite?.distance)}</span>
+          <div>
+            <span className="text-slate-400 block text-[10px]">Khoảng cách:</span>
+            <span className="font-bold text-white text-sm block mt-0.5">{formatDistance(primarySite?.distance)}</span>
           </div>
-          
-          {closestActive && primarySite?.id !== closestActive.id && (
-            <div className="flex justify-between py-1.5 border-b border-slate-700/40">
-              <span className="text-slate-400">Trạm hoạt động gần nhất:</span>
-              <span className="font-bold text-blue-400">{closestActive.code} ({formatDistance(closestActive.distance)})</span>
-            </div>
-          )}
-
-          <div className="flex justify-between py-1.5 border-b border-slate-700/40">
-            <span className="text-slate-400">Số trạm trong vùng quét:</span>
-            <span className="font-semibold text-slate-300">{nearestSites.length} trạm</span>
+          <div>
+            <span className="text-slate-400 block text-[10px]">Phân loại:</span>
+            <span className={`font-bold block mt-0.5 ${primarySite?.type === 'Hoạt động' ? 'text-emerald-400' : 'text-amber-400'}`}>
+              {primarySite?.type}
+            </span>
           </div>
-
-          <div className="pt-1 space-y-2.5">
-            {closestActive ? (
-              closestActive.distance <= 300 ? (
-                <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3 text-emerald-400 flex gap-2">
-                  <Shield className="h-4 w-4 shrink-0 mt-0.5 text-emerald-400" />
-                  <div>
-                    <strong>Phủ sóng Tốt (3G/4G/5G):</strong> Trạm hoạt động gần nhất (<strong>{closestActive.code}</strong>) cách {formatDistance(closestActive.distance)}. Thích hợp tư vấn MobiWifi 5G tốc độ cao.
-                  </div>
-                </div>
-              ) : closestActive.distance <= 1500 ? (
-                <div className="bg-amber-500/10 border border-emerald-500/30 rounded-xl p-3 text-amber-400 flex gap-2">
-                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-amber-400" />
-                  <div>
-                    <strong>Phủ sóng Đạt:</strong> Trạm hoạt động gần nhất (<strong>{closestActive.code}</strong>) cách {formatDistance(closestActive.distance)}. Thiết bị MobiWifi cần đặt ở vị trí cao, hướng về phía trạm.
-                  </div>
-                </div>
-              ) : (
-                <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-red-400 flex gap-2">
-                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-red-400" />
-                  <div>
-                    <strong>Yếu/Vùng lõm:</strong> Trạm hoạt động gần nhất (<strong>{closestActive.code}</strong>) cách xa {formatDistance(closestActive.distance)}.
-                  </div>
-                </div>
-              )
-            ) : (
-              <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-red-400 flex gap-2">
-                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-red-400" />
-                <div>
-                  <strong>Yếu/Vùng lõm:</strong> Khoảng cách lớn hơn 1.5km. Cần cân nhắc quy hoạch thêm trạm phát triển mới (PTM).
-                </div>
-              </div>
-            )}
-
-            {/* Dự báo khắc phục sóng yếu bằng trạm quy hoạch (PTM) */}
-            {closestActive && closestActive.distance > 1000 && closestProject && closestProject.distance < closestActive.distance && (
-              <div className="bg-cyan-500/10 border border-cyan-500/35 rounded-xl p-3 text-cyan-400 flex gap-2">
-                <Info className="h-4 w-4 shrink-0 mt-0.5 text-cyan-400" />
-                <div className="leading-relaxed">
-                  <strong>Dự báo Vô tuyến:</strong> Vị trí hiện tại có sóng hoạt động yếu do trạm phát sóng gần nhất (<strong>{closestActive.code}</strong>) cách xa {formatDistance(closestActive.distance)}. 
-                  Tuy nhiên, dự án PTM quy hoạch <strong>{closestProject.code}</strong> nằm cách đây chỉ <strong>{formatDistance(closestProject.distance)}</strong>. 
-                  Nếu dự án này được triển khai phát sóng, vùng phủ sóng sẽ được khắc phục triệt để đạt mức tốt!
-                </div>
-              </div>
-            )}
+          <div className="flex items-end">
+            <a
+              href={`/datasites?search=${primarySite?.code}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full py-1.5 text-center bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-bold text-[10px] uppercase transition-colors block border border-cyan-500/20 active:scale-95 transition-all text-center"
+            >
+              Chi tiết trạm
+            </a>
           </div>
         </div>
       </div>
@@ -1111,6 +1067,11 @@ export default function NetworkMap() {
                 );
               })}
             </MapContainer>
+          </div>
+
+          {/* Radar Scan summary panel (Mobile only: block on mobile, hidden on lg) */}
+          <div className="block lg:hidden mt-4">
+            {radarScanSummaryMarkup}
           </div>
 
           {/* Bottom Table Grid Details */}
