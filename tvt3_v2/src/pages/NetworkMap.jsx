@@ -922,9 +922,9 @@ export default function NetworkMap() {
             </div>
           </div>
 
-          {/* Radar Scan summary panel (Desktop only: hidden on mobile) */}
+          {/* Danh sách trạm lân cận tinh gọn ở sidebar (Desktop only: hidden on mobile) */}
           <div className="hidden lg:block">
-            {radarScanSummaryMarkup}
+            {renderNearestSitesTable(true)}
           </div>
         </div>
 
