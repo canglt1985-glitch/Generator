@@ -85,6 +85,9 @@ export default function NetworkMap() {
   const [showProjects, setShowProjects] = useState(true);
   const [showCoverageCircle, setShowCoverageCircle] = useState(false);
 
+  // Autocomplete Suggestions
+  const [searchSuggestions, setSearchSuggestions] = useState([]);
+
   // Haversine formula to compute distance in meters between two points
   const haversineMeters = (lat1, lon1, lat2, lon2) => {
     const R = 6371e3; // Earth's radius in meters
@@ -312,6 +315,53 @@ export default function NetworkMap() {
     }
   };
 
+  // Handle autocomplete query input change
+  const handleSiteSearchChange = (val) => {
+    setSiteSearchQuery(val);
+    if (!val || val.trim().length < 2) {
+      setSearchSuggestions([]);
+      return;
+    }
+    
+    const query = val.trim().toLowerCase();
+    
+    // Lọc trạm hoạt động
+    const filteredActive = activeSites
+      .filter(s => 
+        s.site_id.toLowerCase().includes(query) || 
+        (s.site_id_old && s.site_id_old.toLowerCase().includes(query)) ||
+        (s.name && s.name.toLowerCase().includes(query))
+      )
+      .map(s => ({
+        id: s.site_id,
+        code: s.site_id_old || s.site_id,
+        name: s.name || 'Chưa đặt tên',
+        lat: parseFloat(s.location_info.vi_do),
+        lng: parseFloat(s.location_info.kinh_do),
+        type: 'Hoạt động'
+      }));
+
+    // Lọc dự án CSHT quy hoạch
+    const filteredProjects = infraProjects
+      .filter(p => 
+        p.planning_id_new.toLowerCase().includes(query) || 
+        (p.planning_id_old && p.planning_id_old.toLowerCase().includes(query)) ||
+        (p.notes && p.notes.toLowerCase().includes(query))
+      )
+      .map(p => ({
+        id: p.planning_id_new,
+        code: p.planning_id_old || p.planning_id_new,
+        name: p.notes || 'Dự án CSHT',
+        lat: parseFloat(p.latitude_survey || p.latitude_plan),
+        lng: parseFloat(p.longitude_survey || p.longitude_plan),
+        type: 'Quy hoạch'
+      }));
+
+    // Gộp và giới hạn tối đa 7 gợi ý
+    const allFiltered = [...filteredActive, ...filteredProjects].slice(0, 7);
+    setSearchSuggestions(allFiltered);
+  };
+
   // Find site by ID/code and pan to its location (FlyTo)
   const handleSiteSearch = (e) => {
     if (e) e.preventDefault();
@@ -413,14 +463,14 @@ export default function NetworkMap() {
             </form>
 
             {/* 2. Site Search box */}
-            <form onSubmit={handleSiteSearch} className="space-y-2 pt-2 border-t border-slate-700/40">
+            <form onSubmit={handleSiteSearch} className="space-y-2 pt-2 border-t border-slate-700/40 relative">
               <div className="space-y-1">
                 <label className="text-[11px] font-bold text-slate-400 uppercase font-sans">Tìm nhanh mã trạm</label>
                 <div className="relative">
                   <input
                     type="text"
                     value={siteSearchQuery}
-                    onChange={(e) => setSiteSearchQuery(e.target.value)}
+                    onChange={(e) => handleSiteSearchChange(e.target.value)}
                     placeholder="Mã trạm cũ/mới (ví dụ: DNI012)"
                     className="block w-full pr-10 pl-3 py-2 border border-slate-700 rounded-xl bg-slate-900/60 text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 text-sm transition-all font-sans"
                   />
@@ -428,6 +478,47 @@ export default function NetworkMap() {
                     <Search className="h-4 w-4" />
                   </button>
                 </div>
+
+                {/* Autocomplete Suggestions Dropdown Menu */}
+                {searchSuggestions.length > 0 && (
+                  <div className="absolute left-0 right-0 z-[100] bg-slate-900 border border-slate-700/80 rounded-xl mt-1 shadow-2xl divide-y divide-slate-800/60 max-h-60 overflow-y-auto font-sans">
+                    {searchSuggestions.map((item) => {
+                      const isProject = item.type === 'Quy hoạch';
+                      const mainCode = item.code;
+                      const subCode = item.id;
+                      const hasDiffCode = subCode && subCode !== mainCode;
+                      
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => {
+                            setSiteSearchQuery(mainCode);
+                            setSearchSuggestions([]);
+                            // Zoom và pan tới trạm
+                            setMapCenter([item.lat, item.lng]);
+                            setZoomLevel(15);
+                          }}
+                          className="w-full text-left px-3.5 py-2 hover:bg-slate-800/80 transition-colors flex flex-col gap-0.5 cursor-pointer font-sans"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-cyan-400 text-xs">
+                              {hasDiffCode ? `${mainCode} ➔ ${subCode}` : mainCode}
+                            </span>
+                            <span className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded ${
+                              isProject ? 'bg-orange-500/10 text-orange-400 border border-orange-500/20' : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                            }`}>
+                              {item.type}
+                            </span>
+                          </div>
+                          <span className="text-[9px] text-slate-400 truncate max-w-[200px]">
+                            {item.name}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </form>
 
