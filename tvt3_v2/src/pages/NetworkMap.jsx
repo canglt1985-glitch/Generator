@@ -249,6 +249,15 @@ export default function NetworkMap() {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    const handleTransUpdate = (e) => {
+      const { site_id, technical_info } = e.detail;
+      setActiveSites(prev => prev.map(s => s.site_id === site_id ? { ...s, technical_info } : s));
+    };
+    window.addEventListener('datasite-updated', handleTransUpdate);
+    return () => window.removeEventListener('datasite-updated', handleTransUpdate);
+  }, []);
+
   // Tự động định vị GPS của người dùng khi mới vào trang (sau khi nạp xong dữ liệu trạm)
   useEffect(() => {
     if (activeSites.length > 0 && !customerLocation) {

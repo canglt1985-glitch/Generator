@@ -12,6 +12,103 @@ import { useCurrentUser } from '../../utils/useCurrentUser';
 export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, onExportExcel }) {
   const { user } = useCurrentUser();
   const [activeTab, setActiveTab] = useState(defaultTab || 'general');
+  const [isEditingTrans, setIsEditingTrans] = useState(false);
+  const [editedTrans, setEditedTrans] = useState({});
+  const [allSites, setAllSites] = useState([]);
+  const [savingTrans, setSavingTrans] = useState(false);
+
+  // States cho gợi ý trạm nguồn autocomplete
+  const [primarySearch, setPrimarySearch] = useState('');
+  const [primarySuggestions, setPrimarySuggestions] = useState([]);
+  const [backupSearch, setBackupSearch] = useState('');
+  const [backupSuggestions, setBackupSuggestions] = useState([]);
+
+  // Fetch danh sách trạm phục vụ gợi ý autocomplete
+  useEffect(() => {
+    if (isEditingTrans && allSites.length === 0) {
+      supabase.from('datasites')
+        .select('site_id, site_id_old, name')
+        .order('site_id', { ascending: true })
+        .then(({ data }) => {
+          if (data) setAllSites(data);
+        });
+    }
+  }, [isEditingTrans, allSites]);
+
+  // Khởi tạo form khi sửa
+  useEffect(() => {
+    if (site?.technical_info) {
+      setEditedTrans(site.technical_info);
+      setPrimarySearch(site.technical_info.last_mile_primary || site.technical_info.huong_ket_noi || '');
+      setBackupSearch(site.technical_info.last_mile_backup || '');
+    } else {
+      setEditedTrans({});
+      setPrimarySearch('');
+      setBackupSearch('');
+    }
+  }, [isEditingTrans, site]);
+
+  // Gợi ý hướng kết nối chính
+  useEffect(() => {
+    if (!primarySearch.trim() || allSites.length === 0) {
+      setPrimarySuggestions([]);
+      return;
+    }
+    const q = primarySearch.toLowerCase();
+    const filtered = allSites.filter(s => 
+      s.site_id?.toLowerCase().includes(q) || 
+      s.site_id_old?.toLowerCase().includes(q) || 
+      s.name?.toLowerCase().includes(q)
+    ).slice(0, 5);
+    setPrimarySuggestions(filtered);
+  }, [primarySearch, allSites]);
+
+  // Gợi ý hướng kết nối phụ
+  useEffect(() => {
+    if (!backupSearch.trim() || allSites.length === 0) {
+      setBackupSuggestions([]);
+      return;
+    }
+    const q = backupSearch.toLowerCase();
+    const filtered = allSites.filter(s => 
+      s.site_id?.toLowerCase().includes(q) || 
+      s.site_id_old?.toLowerCase().includes(q) || 
+      s.name?.toLowerCase().includes(q)
+    ).slice(0, 5);
+    setBackupSuggestions(filtered);
+  }, [backupSearch, allSites]);
+
+  const handleSaveTrans = async () => {
+    setSavingTrans(true);
+    try {
+      const finalTrans = {
+        ...editedTrans,
+        last_mile_primary: primarySearch,
+        last_mile_backup: backupSearch
+      };
+      
+      const { error } = await supabase
+        .from('datasites')
+        .update({ technical_info: finalTrans })
+        .eq('site_id', site.site_id);
+        
+      if (error) throw error;
+      
+      // Update local state trạm chi tiết
+      site.technical_info = finalTrans;
+      
+      // Bắn event để danh sách và bản đồ update lại
+      window.dispatchEvent(new CustomEvent('datasite-updated', { 
+        detail: { site_id: site.site_id, technical_info: finalTrans } 
+      }));
+      
+      setIsEditingTrans(false);
+    } catch (e) {
+      alert('Lỗi khi cập nhật truyền dẫn: ' + e.message);
+    } finally {
+      setSavingTrans(false);
+    }
+  };
 
   // Đọc thông tin hợp đồng trực tiếp từ site.contract_info (không cần query thêm)
   const contracts = useMemo(() => {
@@ -129,9 +226,269 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, on
 
         const hasTransData = trans && Object.keys(trans).length > 0;
 
+        if (isEditingTrans) {
+          return (
+            <div className="space-y-6 animate-in fade-in duration-300">
+              <div className="flex justify-between items-center border-b border-slate-200 pb-2">
+                <h2 className="text-lg font-bold text-slate-800">Chỉnh sửa truyền dẫn</h2>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => setIsEditingTrans(false)}
+                    disabled={savingTrans}
+                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition-all cursor-pointer border border-slate-200"
+                  >
+                    Hủy
+                  </button>
+                  <button 
+                    onClick={handleSaveTrans}
+                    disabled={savingTrans}
+                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-all shadow-md cursor-pointer flex items-center gap-1"
+                  >
+                    {savingTrans ? 'Đang lưu...' : 'Lưu thay đổi'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* 1. Hướng tuyến & Liên kết */}
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-4 font-sans text-xs">
+                  <h3 className="font-bold text-slate-800 text-sm border-b border-slate-100 pb-1.5 flex items-center gap-1">
+                    <Radio size={14} className="text-blue-600" />
+                    Hướng tuyến & Liên kết
+                  </h3>
+                  
+                  <div className="space-y-1">
+                    <label className="text-slate-500 font-semibold">Loại kết nối</label>
+                    <select 
+                      value={editedTrans.loai_ket_noi || ''} 
+                      onChange={(e) => setEditedTrans(prev => ({ ...prev, loai_ket_noi: e.target.value }))}
+                      className="w-full p-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/25 text-slate-800 bg-white"
+                    >
+                      <option value="">-- Chưa chọn --</option>
+                      <option value="FO">Cáp quang (FO)</option>
+                      <option value="MW">Vi ba (MW)</option>
+                      <option value="LL">Thuê kênh (LL)</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1 relative">
+                    <label className="text-slate-500 font-semibold">Hướng kết nối chính (Hub nguồn)</label>
+                    <input 
+                      type="text" 
+                      value={primarySearch}
+                      onChange={(e) => setPrimarySearch(e.target.value)}
+                      placeholder="Tìm trạm nguồn (ví dụ: DNLK00)"
+                      className="w-full p-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/25 text-slate-800 bg-white font-mono"
+                    />
+                    {primarySuggestions.length > 0 && (
+                      <div className="absolute z-50 w-full bg-white border border-slate-200 rounded-lg shadow-lg mt-1 max-h-40 overflow-y-auto divide-y divide-slate-100">
+                        {primarySuggestions.map(s => (
+                          <button
+                            key={s.site_id}
+                            onClick={() => {
+                              setPrimarySearch(s.site_id_old || s.site_id);
+                              setPrimarySuggestions([]);
+                            }}
+                            className="w-full text-left px-3 py-2 hover:bg-blue-50 text-slate-700 text-xs flex justify-between cursor-pointer"
+                          >
+                            <span className="font-bold text-slate-800 font-mono">{s.site_id_old || s.site_id}</span>
+                            <span className="text-slate-400 text-[10px] truncate max-w-[60%]">{s.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-1 relative">
+                    <label className="text-slate-500 font-semibold">Hướng kết nối phụ (Ring Backup)</label>
+                    <input 
+                      type="text" 
+                      value={backupSearch}
+                      onChange={(e) => setBackupSearch(e.target.value)}
+                      placeholder="Tìm trạm Ring Backup"
+                      className="w-full p-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/25 text-slate-800 bg-white font-mono"
+                    />
+                    {backupSuggestions.length > 0 && (
+                      <div className="absolute z-50 w-full bg-white border border-slate-200 rounded-lg shadow-lg mt-1 max-h-40 overflow-y-auto divide-y divide-slate-100">
+                        {backupSuggestions.map(s => (
+                          <button
+                            key={s.site_id}
+                            onClick={() => {
+                              setBackupSearch(s.site_id_old || s.site_id);
+                              setBackupSuggestions([]);
+                            }}
+                            className="w-full text-left px-3 py-2 hover:bg-blue-50 text-slate-700 text-xs flex justify-between cursor-pointer"
+                          >
+                            <span className="font-bold text-slate-800 font-mono">{s.site_id_old || s.site_id}</span>
+                            <span className="text-slate-400 text-[10px] truncate max-w-[60%]">{s.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-slate-500 font-semibold">Link Metro</label>
+                      <input 
+                        type="text" 
+                        value={editedTrans.link_metro || ''} 
+                        onChange={(e) => setEditedTrans(prev => ({ ...prev, link_metro: e.target.value }))}
+                        className="w-full p-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/25 text-slate-800"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-slate-500 font-semibold">Trạm AGG</label>
+                      <input 
+                        type="text" 
+                        value={editedTrans.agg || ''} 
+                        onChange={(e) => setEditedTrans(prev => ({ ...prev, agg: e.target.value }))}
+                        className="w-full p-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/25 text-slate-800"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-slate-500 font-semibold">Node CSG</label>
+                      <input 
+                        type="text" 
+                        value={editedTrans.csg || ''} 
+                        onChange={(e) => setEditedTrans(prev => ({ ...prev, csg: e.target.value }))}
+                        className="w-full p-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/25 text-slate-800 font-mono"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-slate-500 font-semibold">Phân loại trạm</label>
+                      <select 
+                        value={editedTrans.site_type || ''} 
+                        onChange={(e) => setEditedTrans(prev => ({ ...prev, site_type: e.target.value }))}
+                        className="w-full p-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/25 text-slate-800 bg-white"
+                      >
+                        <option value="">-- Chưa chọn --</option>
+                        <option value="Hub">Trạm Hub/Main</option>
+                        <option value="Last Mile">Trạm Last Mile</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-slate-500 font-semibold">Thông tin Viba (MW)</label>
+                    <input 
+                      type="text" 
+                      value={editedTrans.viba || ''} 
+                      onChange={(e) => setEditedTrans(prev => ({ ...prev, viba: e.target.value }))}
+                      className="w-full p-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/25 text-slate-800"
+                    />
+                  </div>
+                </div>
+
+                {/* 2. Thiết bị & Hạ tầng quang */}
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-4 font-sans text-xs">
+                  <h3 className="font-bold text-slate-800 text-sm border-b border-slate-100 pb-1.5 flex items-center gap-1">
+                    <Server size={14} className="text-blue-600" />
+                    Thiết bị & Hạ tầng quang
+                  </h3>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-slate-500 font-semibold">Core quang hạ tầng</label>
+                      <input 
+                        type="number" 
+                        value={editedTrans.core_quang_ha_tang || ''} 
+                        onChange={(e) => setEditedTrans(prev => ({ ...prev, core_quang_ha_tang: e.target.value === '' ? null : parseInt(e.target.value) }))}
+                        className="w-full p-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/25 text-slate-800"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-slate-500 font-semibold">Core quang C-RAN</label>
+                      <input 
+                        type="number" 
+                        value={editedTrans.core_quang_cran || ''} 
+                        onChange={(e) => setEditedTrans(prev => ({ ...prev, core_quang_cran: e.target.value === '' ? null : parseInt(e.target.value) }))}
+                        className="w-full p-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/25 text-slate-800"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-slate-500 font-semibold">Thiết bị CSG</label>
+                    <input 
+                      type="text" 
+                      value={editedTrans.thiet_bi_csg || ''} 
+                      onChange={(e) => setEditedTrans(prev => ({ ...prev, thiet_bi_csg: e.target.value }))}
+                      className="w-full p-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/25 text-slate-800"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-slate-500 font-semibold">Thiết bị CWDM</label>
+                      <input 
+                        type="text" 
+                        value={editedTrans.thiet_bi_cwdm || ''} 
+                        onChange={(e) => setEditedTrans(prev => ({ ...prev, thiet_bi_cwdm: e.target.value }))}
+                        className="w-full p-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/25 text-slate-800"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-slate-500 font-semibold">Hãng SX CWDM</label>
+                      <input 
+                        type="text" 
+                        value={editedTrans.thiet_bi_cwdm_hang || ''} 
+                        onChange={(e) => setEditedTrans(prev => ({ ...prev, thiet_bi_cwdm_hang: e.target.value }))}
+                        className="w-full p-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/25 text-slate-800"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-slate-500 font-semibold">Chủ sở hữu cáp (Chủ đầu tư)</label>
+                    <select 
+                      value={editedTrans.chu_dau_tu_cap || ''} 
+                      onChange={(e) => setEditedTrans(prev => ({ ...prev, chu_dau_tu_cap: e.target.value }))}
+                      className="w-full p-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/25 text-slate-800 bg-white"
+                    >
+                      <option value="">-- Chưa chọn --</option>
+                      <option value="MobiFone">MobiFone</option>
+                      <option value="VNPT">VNPT</option>
+                      <option value="Viettel">Viettel</option>
+                      <option value="Khác">Khác / Chưa rõ</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-slate-500 font-semibold">Đơn vị vận hành cáp</label>
+                    <select 
+                      value={editedTrans.don_vi_van_hanh_cap || ''} 
+                      onChange={(e) => setEditedTrans(prev => ({ ...prev, don_vi_van_hanh_cap: e.target.value }))}
+                      className="w-full p-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/25 text-slate-800 bg-white"
+                    >
+                      <option value="">-- Chưa chọn --</option>
+                      <option value="Tổ VT3">Tổ VT3 tự vận hành</option>
+                      <option value="Đối tác ngoài">Đối tác ngoài vận hành</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        }
+
         return (
           <div className="space-y-6 animate-in fade-in duration-300">
-            <h2 className="text-lg font-bold text-slate-800 border-b border-slate-200 pb-2">Thông tin Truyền dẫn</h2>
+            <div className="flex justify-between items-center border-b border-slate-200 pb-2">
+              <h2 className="text-lg font-bold text-slate-800">Thông tin Truyền dẫn</h2>
+              {user && (
+                <button 
+                  onClick={() => setIsEditingTrans(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-xs font-bold transition-all border border-blue-200/50 cursor-pointer"
+                >
+                  <Edit size={13} />
+                  Chỉnh sửa
+                </button>
+              )}
+            </div>
             
             {hasTransData ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

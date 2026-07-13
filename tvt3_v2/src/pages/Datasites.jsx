@@ -148,6 +148,16 @@ export default function Datasites() {
     fetchDatasites();
   }, []);
 
+  useEffect(() => {
+    const handleTransUpdate = (e) => {
+      const { site_id, technical_info } = e.detail;
+      setData(prev => prev.map(s => s.site_id === site_id ? { ...s, technical_info } : s));
+      setSelectedSite(prev => prev && prev.site_id === site_id ? { ...prev, technical_info } : prev);
+    };
+    window.addEventListener('datasite-updated', handleTransUpdate);
+    return () => window.removeEventListener('datasite-updated', handleTransUpdate);
+  }, []);
+
   // Tính toán danh sách bộ lọc duy nhất từ dữ liệu
   // Logic lọc dữ liệu siêu tốc trên Client bằng từ khóa tổng hợp
   const filteredData = useMemo(() => {
