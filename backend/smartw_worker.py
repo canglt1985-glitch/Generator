@@ -1585,12 +1585,9 @@ def check_and_alert_flapping(all_new_alarms: dict):
 def check_power_outage_generators():
     """
     Kiểm tra lịch cúp điện hôm nay từ power_schedule.
-    Đối chiếu với:
-      1. Danh sách cảnh báo Máy phát điện (GEN) đang active cào về từ SmartW (lưu trong kết quả quét mới nhất).
-      2. Loại nhiên liệu của trạm (Dầu: nhắc sau 30 phút, Xăng: nhắc sau 60 phút).
-    Nếu có lịch cúp điện mà sau thời gian chờ tương ứng vẫn không thấy cảnh báo GEN active,
-    đồng thời chưa có log chạy máy phát điện trong ngày hôm nay,
-    thì tiến hành gửi cảnh báo nhắc nhở lên Viber Outages Channel.
+    Nếu trạm có lịch cúp điện đã trôi qua >= 60 phút (1 giờ) và < 180 phút,
+    mà không thấy cảnh báo máy phát điện (GEN) đang active trên SmartW,
+    thì gửi cảnh báo nhắc nhở lên Viber Outages Channel (gửi 1 lần duy nhất).
     """
     if not supabase:
         return
@@ -1626,15 +1623,7 @@ def check_power_outage_generators():
         if not outages:
             return
             
-        # 3. Đọc các log chạy máy phát điện trong ngày hôm nay (generator_logs) để tránh báo trùng nếu máy đã chạy xong và tắt
-        res_logs = supabase.table("generator_logs")\
-            .select("site_id, date")\
-            .eq("date", today_str)\
-            .execute()
-        
-        logged_sites = { (item.get("site_id") or "").strip().upper() for item in (res_logs.data or []) }
-        
-        # 4. Đọc danh sách cảnh báo đã gửi để tránh spam
+        # 3. Đọc danh sách cảnh báo đã gửi để tránh spam
         state_file = os.path.join(DATA_DIR, 'outage_sent_warnings.json')
         sent_warnings = {}
         if os.path.exists(state_file):
@@ -1644,35 +1633,17 @@ def check_power_outage_generators():
             except Exception:
                 pass
                 
-        # 5. Duyệt từng lịch cúp điện
+        # 4. Duyệt từng lịch cúp điện
         warned_keys = []
         outages_token = None
         
-        # Lấy thông tin tất cả trạm để biết nhiên liệu (Dầu / Xăng)
-        res_sites = supabase.table("datasites").select("site_id, infrastructure_info").execute()
-        site_fuel_map = {}
-        for s in (res_sites.data or []):
-            s_id = (s.get("site_id") or "").strip().upper()
-            infra = s.get("infrastructure_info") or {}
-            mpd_list = infra.get("may_phat_dien", {}).get("mpd", [])
-            fuel = "Dầu" # default
-            if mpd_list and len(mpd_list) > 0:
-                fuel_val = mpd_list[0].get("nhien_lieu") or "Dầu"
-                if "xăng" in fuel_val.lower():
-                    fuel = "Xăng"
-            site_fuel_map[s_id] = fuel
-            
         for ot in outages:
             site_id = (ot.get("id_tram") or "").strip().upper()
             if not site_id:
                 continue
                 
-            # Đã có cảnh báo chạy máy active trên SmartW -> Đã chạy tốt, không cần nhắc!
+            # Nếu trạm đang có cảnh báo GEN active trên SmartW -> Đã chạy tốt, bỏ qua!
             if site_id in active_mpd_sites:
-                continue
-                
-            # Đã có log chạy máy trong generator_logs -> Đã chạy xong và kết thúc, không cần nhắc!
-            if site_id in logged_sites:
                 continue
                 
             # Phân tích thời gian cúp điện
@@ -1690,19 +1661,15 @@ def check_power_outage_generators():
                 # Tính khoảng thời gian trôi qua từ lúc cúp điện (phút)
                 diff_min = (now - cup_dt).total_seconds() / 60.0
                 
-                # Xác định thời gian chờ dựa trên loại nhiên liệu (Máy dầu: 30 phút, Máy xăng: 60 phút)
-                fuel_type = site_fuel_map.get(site_id, "Dầu")
-                wait_time = 30 if fuel_type == "Dầu" else 60
-                
                 # Điều kiện cảnh báo: 
-                # - Đã trôi qua từ wait_time phút trở lên.
-                # - Và nhỏ hơn 180 phút (3 tiếng) để tránh cảnh báo những lịch quá cũ của các buổi khác.
-                if wait_time <= diff_min < 180:
+                # - Đã trôi qua từ 60 phút (1 giờ) trở lên.
+                # - Và nhỏ hơn 180 phút (3 tiếng) để tránh nhắc nhở các lịch quá cũ.
+                if 60 <= diff_min < 180:
                     warning_key = f"{site_id}_{today_str}_{tg_cup}"
                     if warning_key not in sent_warnings:
                         # Gửi cảnh báo nhắc nhở
                         tg_co = ot.get("thoi_gian_co_dien") or "N/A"
-                        msg = f"⚠️ *NHẮC NHỞ CÚP ĐIỆN CHƯA CHẠY MÁY* ⚠️\n\nTrạm *{site_id}* (Máy phát: *{fuel_type}*) có lịch cúp điện từ *{tg_cup}* (dự kiến đến *{tg_co}*),\nđến nay đã quá *{wait_time} phút* nhưng hệ thống chưa ghi nhận cảnh báo chạy máy phát điện active trên SmartW.\n\nAnh em đi tuyến kiểm tra lại trạm nhé! 🔌"
+                        msg = f"⚠️ *NHẮC NHỞ CÚP ĐIỆN CHƯA CHẠY MÁY* ⚠️\n\nTrạm *{site_id}* có lịch cúp điện từ *{tg_cup}* (dự kiến đến *{tg_co}*),\nđến nay đã quá *1 giờ* nhưng hệ thống chưa ghi nhận cảnh báo chạy máy phát điện active trên SmartW.\n\nAnh em đi tuyến kiểm tra lại trạm nhé! 🔌"
                         
                         # Load outages token
                         if not outages_token:
@@ -1711,14 +1678,14 @@ def check_power_outage_generators():
                             outages_token = cfg.get('viber_bot_token_outages') or "56a990b99bf464bd-d406c456f5380df0-770d03e18af041d0"
                             
                         _send_viber_report([msg], token=outages_token)
-                        logger.info(f"Viber Alert: Outage warning sent for site {site_id} ({fuel_type}, outage at {tg_cup})")
+                        logger.info(f"Viber Alert: Outage warning sent for site {site_id} (outage at {tg_cup})")
                         
                         sent_warnings[warning_key] = now.isoformat()
                         warned_keys.append(warning_key)
             except Exception as ex:
                 logger.warning(f"Error parsing outage time for site {site_id}: {ex}")
                 
-        # 6. Lưu lại danh sách đã gửi
+        # 5. Lưu lại danh sách đã gửi
         if warned_keys:
             try:
                 with open(state_file, 'w', encoding='utf-8') as f:
