@@ -7,6 +7,10 @@ import { useCurrentUser } from '../utils/useCurrentUser';
 
 export default function Datasites() {
   const { user } = useCurrentUser();
+  const email = user?.email || '';
+  const displayName = user?.user_metadata?.full_name || user?.user_metadata?.name || '';
+  const displayRole = email === 'admin@mobifone.vn' || displayName.toLowerCase().includes('admin') || user?.user_metadata?.role === 'admin' ? 'Quản trị' : 'Nhân viên';
+  const isAdmin = user && displayRole === 'Quản trị';
   const formatDate = (dateString) => {
     if (!dateString || dateString === 'N/A') return 'N/A';
     try {
