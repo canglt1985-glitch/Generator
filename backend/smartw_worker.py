@@ -1324,8 +1324,14 @@ def process_pakh_alerts(pakh_list: list, job_type: str = 'pakh'):
             _send_viber_report(lines1, token=pakh_token, sender=pakh_sender)
             logger.info("Viber Alert: Sent PAKH summary (unresolved) report")
         else:
-            _send_viber_report(["⏳ *PAKH TỒN ĐỌNG*\n\n- Không có phiếu tồn đọng nào. 🎉"], token=pakh_token, sender=pakh_sender)
-            logger.info("Viber Alert: No unresolved tickets, sent empty summary report")
+            # Chỉ gửi báo cáo trống vào 7h sáng và 7h tối để tránh spam
+            import datetime
+            current_hour = datetime.datetime.now().hour
+            if current_hour in [7, 19]:
+                _send_viber_report(["⏳ *PAKH TỒN ĐỌNG*\n\n- Không có phiếu tồn đọng nào. 🎉"], token=pakh_token, sender=pakh_sender)
+                logger.info("Viber Alert: No unresolved tickets, sent empty summary report")
+            else:
+                logger.info(f"Viber Alert: No unresolved tickets, skipped empty report at hour {current_hour} to prevent spam")
 
         # Clear state variables after summary report
         state["closed_since_last_summary"] = []
