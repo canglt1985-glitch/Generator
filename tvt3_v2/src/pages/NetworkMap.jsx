@@ -890,7 +890,12 @@ export default function NetworkMap() {
             </div>
           </div>
 
-          {/* Danh sách trạm lân cận tinh gọn ở sidebar (Desktop only: hidden on mobile) */}
+          {/* Danh sách các trạm lân cận trên Mobile (Đưa lên trên bản đồ) */}
+          <div className="block lg:hidden mt-4">
+            {renderNearestSitesTable(false)}
+          </div>
+
+          {/* Danh sách trạm lân cận tinh gọn ở sidebar (Desktop only) */}
           <div className="hidden lg:block">
             {renderNearestSitesTable(true)}
           </div>
@@ -906,7 +911,7 @@ export default function NetworkMap() {
               style={{ height: '100%', width: '100%', zIndex: 10 }}
             >
               <ChangeView center={mapCenter} zoom={zoomLevel} />
-              <MapClickListener onClick={(lat, lng) => executeScan(lat, lng)} />
+              {!showTransmission && <MapClickListener onClick={(lat, lng) => executeScan(lat, lng)} />}
 
               <LayersControl position="topright">
                 <LayersControl.BaseLayer checked name="Bản đồ Đường phố">
@@ -1126,10 +1131,7 @@ export default function NetworkMap() {
             
           </div>
 
-          {/* Layout dưới bản đồ dành riêng cho Mobile (Chỉ hiện bảng danh sách trạm lân cận) */}
-          <div className="block lg:hidden mt-4">
-            {renderNearestSitesTable(false)}
-          </div>
+
         </div>
       </div>
     </div>
