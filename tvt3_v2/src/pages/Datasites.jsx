@@ -385,6 +385,21 @@ export default function Datasites() {
             ngay_da_thanh_toan_den: c.dates?.ngay_da_thanh_toan_den || 'N/A',
           });
         }
+      } else if (category === 'transmission') {
+        const tech = site.technical_info || {};
+        if (tech.huong_ket_noi_chinh || tech.huong_ket_noi_phu) {
+          result.push({
+            site_id,
+            site_id_old,
+            site_name,
+            id: `${site_id}-transmission`,
+            loai_ket_noi: tech.loai_ket_noi || 'FO',
+            chu_dau_tu_cap: tech.chu_dau_tu_cap || 'N/A',
+            don_vi_van_hanh_cap: tech.don_vi_van_hanh_cap || 'N/A',
+            huong_ket_noi_chinh: tech.huong_ket_noi_chinh || 'N/A',
+            huong_ket_noi_phu: tech.huong_ket_noi_phu || 'N/A',
+          });
+        }
       }
     });
 
@@ -850,6 +865,56 @@ export default function Datasites() {
               successCount++;
             }
           }
+          
+          else if (importType === 'transmission') {
+            const siteId = (row['Mã trạm (Bắt buộc)'] || row['Mã trạm'] || '').trim().toUpperCase();
+            if (!siteId) {
+              logs.push(`Dòng ${i + 2}: ❌ Bỏ qua do thiếu Mã trạm.`);
+              failCount++;
+              continue;
+            }
+            
+            // Check if site exists
+            const { data: site } = await supabase
+              .from('datasites')
+              .select('site_id, technical_info')
+              .eq('site_id', siteId)
+              .maybeSingle();
+              
+            if (!site) {
+              logs.push(`Dòng ${i + 2} (${siteId}): ❌ Trạm không tồn tại trên hệ thống. Vui lòng tạo trạm trước.`);
+              failCount++;
+              continue;
+            }
+            
+            const existingTech = site.technical_info || {};
+            const transInfo = {
+              ...existingTech,
+              huong_ket_noi_chinh: row['Hướng kết nối chính (MAIN)'] || row['Hướng kết nối chính'] || row['huong_ket_noi_chinh'] || '',
+              loai_ket_noi: row['Kiểu kết nối (FO/Viba)'] || row['Kiểu kết nối'] || row['loai_ket_noi'] || 'FO',
+              chu_dau_tu_cap: row['Chủ sở hữu cáp (Mobifone/VNPT/TPCOMS/VTC/CADICOM)'] || row['Chủ sở hữu cáp'] || row['chu_dau_tu_cap'] || '',
+              don_vi_van_hanh_cap: row['Đơn vị vận hành'] || row['don_vi_van_hanh_cap'] || '',
+              huong_ket_noi_phu: row['Hướng kết nối phụ (MAIN)'] || row['Hướng kết nối phụ'] || row['huong_ket_noi_phu'] || '',
+              loai_ket_noi_phu: row['Kiểu kết nối phụ'] || row['loai_ket_noi_phu'] || '',
+              chu_dau_tu_cap_phu: row['Chủ sở hữu cáp phụ'] || row['chu_dau_tu_cap_phu'] || '',
+              don_vi_van_hanh_cap_phu: row['Đơn vị vận hành phụ'] || row['don_vi_van_hanh_cap_phu'] || '',
+            };
+            
+            const { error } = await supabase
+              .from('datasites')
+              .update({
+                technical_info: transInfo
+              })
+              .eq('site_id', siteId);
+              
+            if (error) {
+              logs.push(`Dòng ${i + 2} (${siteId}): ❌ Lỗi - ${error.message}`);
+              failCount++;
+            } else {
+              logs.push(`Dòng ${i + 2} (${siteId}): ✅ Đã cập nhật truyền dẫn trạm.`);
+              successCount++;
+            }
+          }
         }
         
         logs.push(`--- KẾT QUẢ: Thành công ${successCount}, Thất bại ${failCount} ---`);
@@ -1094,6 +1159,20 @@ export default function Datasites() {
         'Ngày hết hạn': x.ngay_ket_thuc_hd,
         'Thanh toán đến': x.ngay_da_thanh_toan_den
       }));
+    } else if (category === 'transmission') {
+      dataForExcel = data.map((x, idx) => {
+        const tech = x.technical_info || {};
+        return {
+          'STT': idx + 1,
+          'Mã trạm (Bắt buộc)': x.site_id,
+          'Mã trạm cũ': x.site_id_old || '',
+          'Kiểu kết nối (FO/Viba)': tech.loai_ket_noi || 'FO',
+          'Chủ sở hữu cáp (Mobifone/VNPT/TPCOMS/VTC/CADICOM)': tech.chu_dau_tu_cap || '',
+          'Đơn vị vận hành': tech.don_vi_van_hanh_cap || '',
+          'Hướng kết nối chính (MAIN)': tech.huong_ket_noi_chinh || '',
+          'Hướng kết nối phụ (MAIN)': tech.huong_ket_noi_phu || '',
+        };
+      });
     }
 
     const worksheet = XLSX.utils.json_to_sheet(dataForExcel);
@@ -1481,6 +1560,32 @@ export default function Datasites() {
               // Hợp đồng
               if (site.contract_number) acc.contract_total++;
 
+              // Truyền dẫn
+              const tech = site.technical_info || {};
+              const hasChinh = !!tech.huong_ket_noi_chinh;
+              const hasPhu = !!tech.huong_ket_noi_phu;
+              if (hasChinh || hasPhu) {
+                acc.trans_sites++;
+                const cdt = (tech.chu_dau_tu_cap || '').trim().toLowerCase();
+                const lkn = (tech.loai_ket_noi || '').trim().toUpperCase();
+                
+                if (lkn.includes('MW') || lkn.includes('VI BA')) {
+                  acc.trans_mw++;
+                } else if (cdt.includes('mobifone')) {
+                  acc.trans_mbf++;
+                } else if (cdt.includes('vnpt')) {
+                  acc.trans_vnpt++;
+                } else if (cdt.includes('tpcoms')) {
+                  acc.trans_tpcoms++;
+                } else if (cdt.includes('vtc')) {
+                  acc.trans_vtc++;
+                } else if (cdt.includes('cadicom')) {
+                  acc.trans_cadicom++;
+                } else {
+                  acc.trans_others++;
+                }
+              }
+
               return acc;
             }, {
               mpd_total: 0, mpd_ok: 0, mpd_bad: 0, mpd_sites: 0,
@@ -1492,11 +1597,12 @@ export default function Datasites() {
               cwdm_total: 0, cwdm_sites: 0,
               nlmt_total: 0,
               contract_total: 0,
+              trans_sites: 0, trans_mbf: 0, trans_vnpt: 0, trans_tpcoms: 0, trans_vtc: 0, trans_cadicom: 0, trans_mw: 0, trans_others: 0
             });
 
             const cards = [
               {
-                icon: '⚡', title: 'Máy phát điện', color: 'orange',
+                icon: '⚡', title: 'Máy phát điện', id: 'mpd', color: 'orange',
                 bg: 'from-orange-50 to-amber-50', border: 'border-orange-200',
                 items: [
                   { label: 'Tổng MPĐ', value: stats.mpd_total, bold: true },
@@ -1508,7 +1614,7 @@ export default function Datasites() {
                 ]
               },
               {
-                icon: '🔌', title: 'Nguồn điện DC', color: 'blue',
+                icon: '🔌', title: 'Nguồn điện DC', id: 'tu_nguon', color: 'blue',
                 bg: 'from-blue-50 to-indigo-50', border: 'border-blue-200',
                 items: [
                   { label: 'Tổng tủ nguồn', value: stats.tunguon_total, bold: true },
@@ -1520,7 +1626,7 @@ export default function Datasites() {
                 ]
               },
               {
-                icon: '❄️', title: 'Máy lạnh', color: 'cyan',
+                icon: '❄️', title: 'Máy lạnh', id: 'may_lanh', color: 'cyan',
                 bg: 'from-cyan-50 to-sky-50', border: 'border-cyan-200',
                 items: [
                   { label: 'Tổng máy lạnh', value: stats.ml_total, bold: true },
@@ -1531,7 +1637,7 @@ export default function Datasites() {
                 ]
               },
               {
-                icon: '📡', title: 'CWDM', color: 'purple',
+                icon: '📡', title: 'CWDM', id: 'cwdm', color: 'purple',
                 bg: 'from-violet-50 to-fuchsia-50', border: 'border-purple-200',
                 items: [
                   { label: 'Tổng bộ CWDM', value: stats.cwdm_total, bold: true },
@@ -1539,7 +1645,7 @@ export default function Datasites() {
                 ]
               },
               {
-                icon: '☀️', title: 'Năng lượng mặt trời', color: 'yellow',
+                icon: '☀️', title: 'Năng lượng mặt trời', id: 'nlmt', color: 'yellow',
                 bg: 'from-yellow-50 to-orange-50', border: 'border-yellow-200',
                 items: [
                   { label: 'Trạm có NLMT', value: stats.nlmt_total, bold: true },
@@ -1547,12 +1653,26 @@ export default function Datasites() {
                 ]
               },
               {
-                icon: '📄', title: 'Hợp đồng thuê', color: 'emerald',
+                icon: '📄', title: 'Hợp đồng thuê', id: 'hop_dong', color: 'emerald',
                 bg: 'from-emerald-50 to-green-50', border: 'border-emerald-200',
                 items: [
                   { label: 'Có hợp đồng', value: stats.contract_total, bold: true },
                   { label: 'Chưa có HĐ', value: data.length - stats.contract_total, color: 'text-amber-600' },
                 ]
+              },
+              {
+                icon: '🔗', title: 'Truyền dẫn trạm', id: 'transmission', color: 'cyan',
+                bg: 'from-cyan-50 to-indigo-50', border: 'border-cyan-200',
+                items: [
+                  { label: 'Tổng trạm kết nối', value: stats.trans_sites, bold: true },
+                  { label: 'Cáp Mobifone', value: stats.trans_mbf, color: 'text-emerald-600' },
+                  { label: 'Cáp VNPT', value: stats.trans_vnpt, color: 'text-blue-600' },
+                  { label: 'Cáp TPCOMS', value: stats.trans_tpcoms, color: 'text-rose-500' },
+                  { label: 'Cáp VTC / CADICOM', value: stats.trans_vtc + stats.trans_cadicom },
+                  { label: 'Vi ba (MW)', value: stats.trans_mw, color: 'text-amber-600' },
+                  { label: 'Cáp đối tác khác', value: stats.trans_others },
+                ],
+                isTransmission: true
               },
             ];
 
@@ -1571,20 +1691,56 @@ export default function Datasites() {
                 {/* Stats Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {cards.map((card) => (
-                    <div key={card.title} className={`bg-gradient-to-br ${card.bg} rounded-xl border ${card.border} shadow-sm overflow-hidden`}>
-                      <div className="px-4 py-3 flex items-center gap-2 border-b border-slate-100/50">
-                        <span className="text-xl">{card.icon}</span>
-                        <h3 className="font-bold text-slate-800 text-sm">{card.title}</h3>
-                      </div>
-                      <div className="px-4 py-3 space-y-1.5">
-                        {card.items.map((item, idx) => (
-                          <div key={idx} className="flex justify-between items-center">
-                            <span className="text-[13px] text-slate-500">{item.label}</span>
-                            <span className={`text-[13px] font-semibold ${item.color || 'text-slate-800'} ${item.bold ? 'text-base' : ''}`}>
-                              {item.value}
-                            </span>
+                    <div key={card.title} className={`bg-gradient-to-br ${card.bg} rounded-xl border ${card.border} shadow-sm overflow-hidden flex flex-col justify-between`}>
+                      <div>
+                        <div className="px-4 py-3 flex items-center justify-between border-b border-slate-100/50">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xl">{card.icon}</span>
+                            <h3 className="font-bold text-slate-800 text-sm">{card.title}</h3>
                           </div>
-                        ))}
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => {
+                                const catNames = {
+                                  mpd: 'May_Phat_Dien',
+                                  tu_nguon: 'Tu_Nguon_DC',
+                                  may_lanh: 'May_Lanh',
+                                  cwdm: 'CWDM',
+                                  nlmt: 'Nang_Luong_Mat_Troi',
+                                  hop_dong: 'Hop_Dong_Thue',
+                                  transmission: 'Truyen_Dan_Tram'
+                                };
+                                handleExportCategoryExcel(card.id, catNames[card.id] || 'Hang_Muc');
+                              }}
+                              className="p-1 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors cursor-pointer"
+                              title="Tải danh sách Excel"
+                            >
+                              <FileDown size={14} />
+                            </button>
+                            {card.isTransmission && isAdmin && (
+                              <button
+                                onClick={() => {
+                                  setImportType('transmission');
+                                  setShowImportModal(true);
+                                }}
+                                className="p-1 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors cursor-pointer"
+                                title="Nhập dữ liệu Excel lớn"
+                              >
+                                <Upload size={14} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        <div className="px-4 py-3 space-y-1.5">
+                          {card.items.map((item, idx) => (
+                            <div key={idx} className="flex justify-between items-center">
+                              <span className="text-[13px] text-slate-500">{item.label}</span>
+                              <span className={`text-[13px] font-semibold ${item.color || 'text-slate-800'} ${item.bold ? 'text-base' : ''}`}>
+                                {item.value}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -1614,6 +1770,7 @@ export default function Datasites() {
                         <option value="cwdm">📡 Thiết bị CWDM</option>
                         <option value="nlmt">☀️ Năng lượng mặt trời</option>
                         <option value="hop_dong">📄 Hợp đồng thuê trạm</option>
+                        <option value="transmission">🔗 Truyền dẫn trạm</option>
                       </select>
 
                       {statCategory && (
@@ -1628,7 +1785,8 @@ export default function Datasites() {
                               to_accu: 'To_Accu_DC',
                               cwdm: 'CWDM',
                               nlmt: 'Nang_Luong_Mat_Troi',
-                              hop_dong: 'Hop_Dong_Thue'
+                              hop_dong: 'Hop_Dong_Thue',
+                              transmission: 'Truyen_Dan_Tram'
                             };
                             handleExportCategoryExcel(statCategory, catNames[statCategory] || 'Hang_Muc');
                           }}
@@ -1780,6 +1938,17 @@ export default function Datasites() {
                                     <th className="px-3 py-2 font-bold">Thanh toán đến</th>
                                   </tr>
                                 )}
+                                {statCategory === 'transmission' && (
+                                  <tr>
+                                    <th className="px-3 py-2 font-bold">Site ID</th>
+                                    <th className="px-3 py-2 font-bold">Site ID Cũ</th>
+                                    <th className="px-3 py-2 font-bold">Kiểu kết nối</th>
+                                    <th className="px-3 py-2 font-bold">Chủ sở hữu cáp</th>
+                                    <th className="px-3 py-2 font-bold">Đơn vị vận hành</th>
+                                    <th className="px-3 py-2 font-bold">Hướng kết nối chính</th>
+                                    <th className="px-3 py-2 font-bold">Hướng kết nối phụ</th>
+                                  </tr>
+                                )}
                               </thead>
                               <tbody className="divide-y divide-slate-100 bg-white">
                                 {listData.map((row) => (
@@ -1905,6 +2074,15 @@ export default function Datasites() {
                                         <td className="px-3 py-2 text-slate-600">{row.ngay_ky_hd}</td>
                                         <td className="px-3 py-2 text-slate-600">{row.ngay_ket_thuc_hd}</td>
                                         <td className="px-3 py-2 text-slate-600">{row.ngay_da_thanh_toan_den}</td>
+                                      </>
+                                    )}
+                                    {statCategory === 'transmission' && (
+                                      <>
+                                        <td className="px-3 py-2 text-slate-700 font-semibold">{row.loai_ket_noi}</td>
+                                        <td className="px-3 py-2 text-slate-600 font-medium">{row.chu_dau_tu_cap}</td>
+                                        <td className="px-3 py-2 text-slate-600">{row.don_vi_van_hanh_cap}</td>
+                                        <td className="px-3 py-2 text-slate-700 font-semibold">{row.huong_ket_noi_chinh}</td>
+                                        <td className="px-3 py-2 text-slate-700 font-semibold">{row.huong_ket_noi_phu}</td>
                                       </>
                                     )}
                                   </tr>
