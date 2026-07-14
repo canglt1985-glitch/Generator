@@ -24,7 +24,7 @@ export default function Home() {
   const displayRole = email === 'admin@mobifone.vn' || displayName.toLowerCase().includes('admin') || user?.user_metadata?.role === 'admin' ? 'Quản trị' : 'Nhân viên';
   const isAdmin = displayRole === 'Quản trị';
 
-  // Danh sách các Module chức năng
+  // Danh sách các Module chức năng với cấu trúc màu sắc tương phản cao, rực rỡ
   const modules = [
     {
       id: 'network-map',
@@ -32,9 +32,11 @@ export default function Home() {
       desc: 'Bản đồ & truyền dẫn',
       path: '/network-map',
       icon: Map,
-      color: 'text-cyan-400',
-      bgColor: 'bg-cyan-500/10 border-cyan-500/20 hover:border-cyan-400/50',
-      iconBg: 'bg-cyan-500/20'
+      color: 'text-cyan-600 dark:text-cyan-400',
+      titleColor: 'text-cyan-800 group-hover:text-cyan-900',
+      descColor: 'text-cyan-600/80',
+      bgColor: 'bg-cyan-50/70 border-cyan-100 hover:border-cyan-300 hover:bg-cyan-50',
+      iconBg: 'bg-cyan-100/60'
     },
     {
       id: 'daily-work',
@@ -42,9 +44,11 @@ export default function Home() {
       desc: 'Việc hàng ngày & nhật ký',
       path: '/daily-work',
       icon: Briefcase,
-      color: 'text-blue-400',
-      bgColor: 'bg-blue-500/10 border-blue-500/20 hover:border-blue-400/50',
-      iconBg: 'bg-blue-500/20'
+      color: 'text-blue-600 dark:text-blue-400',
+      titleColor: 'text-blue-800 group-hover:text-blue-900',
+      descColor: 'text-blue-600/80',
+      bgColor: 'bg-blue-50/70 border-blue-100 hover:border-blue-300 hover:bg-blue-50',
+      iconBg: 'bg-blue-100/60'
     },
     {
       id: 'datasites',
@@ -52,9 +56,11 @@ export default function Home() {
       desc: 'Thông tin kỹ thuật trạm',
       path: '/datasites',
       icon: Server,
-      color: 'text-rose-400',
-      bgColor: 'bg-rose-500/10 border-rose-500/20 hover:border-rose-400/50',
-      iconBg: 'bg-rose-500/20'
+      color: 'text-rose-600 dark:text-rose-400',
+      titleColor: 'text-rose-800 group-hover:text-rose-900',
+      descColor: 'text-rose-600/80',
+      bgColor: 'bg-rose-50/70 border-rose-100 hover:border-rose-300 hover:bg-rose-50',
+      iconBg: 'bg-rose-100/60'
     },
     // Chỉ hiển thị Chi phí khi đã đăng nhập
     ...(user ? [
@@ -64,9 +70,11 @@ export default function Home() {
         desc: 'Chi phí trạm & nhiên liệu',
         path: '/expenses',
         icon: DollarSign,
-        color: 'text-emerald-400',
-        bgColor: 'bg-emerald-500/10 border-emerald-500/20 hover:border-emerald-400/50',
-        iconBg: 'bg-emerald-500/20'
+        color: 'text-emerald-600 dark:text-emerald-400',
+        titleColor: 'text-emerald-800 group-hover:text-emerald-900',
+        descColor: 'text-emerald-600/80',
+        bgColor: 'bg-emerald-50/70 border-emerald-100 hover:border-emerald-300 hover:bg-emerald-50',
+        iconBg: 'bg-emerald-100/60'
       }
     ] : []),
     {
@@ -75,9 +83,11 @@ export default function Home() {
       desc: 'Alarm & Cảnh báo vô tuyến',
       path: '/vhkt-ran',
       icon: Radio,
-      color: 'text-orange-400',
-      bgColor: 'bg-orange-500/10 border-orange-500/20 hover:border-orange-400/50',
-      iconBg: 'bg-orange-500/20'
+      color: 'text-orange-600 dark:text-orange-400',
+      titleColor: 'text-orange-800 group-hover:text-orange-900',
+      descColor: 'text-orange-600/80',
+      bgColor: 'bg-orange-50/70 border-orange-100 hover:border-orange-300 hover:bg-orange-50',
+      iconBg: 'bg-orange-100/60'
     },
     {
       id: 'infrastructure',
@@ -85,9 +95,11 @@ export default function Home() {
       desc: 'Quy hoạch phát triển mới',
       path: '/infrastructure',
       icon: Layers,
-      color: 'text-amber-400',
-      bgColor: 'bg-amber-500/10 border-amber-500/20 hover:border-amber-400/50',
-      iconBg: 'bg-amber-500/20'
+      color: 'text-amber-600 dark:text-amber-400',
+      titleColor: 'text-amber-800 group-hover:text-amber-900',
+      descColor: 'text-amber-600/80',
+      bgColor: 'bg-amber-50/70 border-amber-100 hover:border-amber-300 hover:bg-amber-50',
+      iconBg: 'bg-amber-100/60'
     },
     {
       id: 'contracts',
@@ -95,9 +107,11 @@ export default function Home() {
       desc: 'Mặt bằng & hợp đồng trạm',
       path: '/contracts',
       icon: FileText,
-      color: 'text-violet-400',
-      bgColor: 'bg-violet-500/10 border-violet-500/20 hover:border-violet-400/50',
-      iconBg: 'bg-violet-500/20'
+      color: 'text-violet-600 dark:text-violet-400',
+      titleColor: 'text-violet-800 group-hover:text-violet-900',
+      descColor: 'text-violet-600/80',
+      bgColor: 'bg-violet-50/70 border-violet-100 hover:border-violet-300 hover:bg-violet-50',
+      iconBg: 'bg-violet-100/60'
     },
     // Chỉ hiển thị Máy phát điện đối với Admin
     ...(isAdmin ? [
@@ -107,9 +121,11 @@ export default function Home() {
         desc: 'Lịch chạy máy & mức dầu',
         path: '/generator',
         icon: Zap,
-        color: 'text-red-400',
-        bgColor: 'bg-red-500/10 border-red-500/20 hover:border-red-400/50',
-        iconBg: 'bg-red-500/20'
+        color: 'text-red-600 dark:text-red-400',
+        titleColor: 'text-red-800 group-hover:text-red-900',
+        descColor: 'text-red-600/80',
+        bgColor: 'bg-red-50/70 border-red-100 hover:border-red-300 hover:bg-red-50',
+        iconBg: 'bg-red-100/60'
       },
       {
         id: 'settings',
@@ -117,9 +133,11 @@ export default function Home() {
         desc: 'Cấu hình & phân quyền',
         path: '/settings',
         icon: Settings,
-        color: 'text-slate-400',
-        bgColor: 'bg-slate-500/10 border-slate-500/20 hover:border-slate-400/50',
-        iconBg: 'bg-slate-500/20'
+        color: 'text-slate-600 dark:text-slate-400',
+        titleColor: 'text-slate-800 group-hover:text-slate-900',
+        descColor: 'text-slate-600/80',
+        bgColor: 'bg-slate-50/70 border-slate-100 hover:border-slate-300 hover:bg-slate-50',
+        iconBg: 'bg-slate-100/60'
       }
     ] : [])
   ];
@@ -127,20 +145,20 @@ export default function Home() {
   return (
     <div className="min-h-[calc(100vh-140px)] flex flex-col justify-center max-w-4xl mx-auto py-6 px-4 animate-in fade-in slide-in-from-bottom-4 duration-300 font-sans">
       
-      {/* Welcome Banner */}
-      <div className="mb-8 text-center md:text-left bg-gradient-to-r from-slate-800/80 to-slate-900/50 border border-slate-700/40 rounded-3xl p-6 shadow-xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 p-8 opacity-5">
+      {/* Welcome Banner - MobiFone Premium Brand Blue Gradient */}
+      <div className="mb-8 text-center md:text-left bg-gradient-to-br from-[#003b7a] via-[#094a8f] to-[#005fb8] border border-blue-800/40 rounded-3xl p-6 shadow-xl relative overflow-hidden">
+        <div className="absolute top-0 right-0 p-8 opacity-10 text-white">
           <Server size={180} />
         </div>
-        <div className="relative z-10 space-y-2">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-cyan-500/10 border border-cyan-500/20 rounded-full text-cyan-400 text-xs font-semibold">
-            <User size={12} />
+        <div className="relative z-10 space-y-2.5">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/20 border border-white/30 rounded-full text-white text-xs font-bold uppercase tracking-wider">
+            <User size={11} className="text-yellow-300" />
             <span>{displayRole}</span>
           </div>
-          <h2 className="text-xl md:text-2xl font-bold text-white">
-            Chào anh, <span className="text-cyan-400">{displayName}</span>!
+          <h2 className="text-2xl md:text-3xl font-extrabold text-white tracking-wide">
+            Chào anh, <span className="text-yellow-300 drop-shadow-sm">{displayName}</span>!
           </h2>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-blue-100/90 font-medium">
             Hệ thống quản lý vận hành khai thác & Bản đồ số hạ tầng Tổ Viễn thông 3
           </p>
         </div>
@@ -148,7 +166,7 @@ export default function Home() {
 
       {/* Grid Menu Chức năng */}
       <div className="space-y-4">
-        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider font-sans mb-3 text-center md:text-left">
+        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider font-sans mb-3 text-center md:text-left">
           Danh mục chức năng
         </h3>
         
@@ -159,15 +177,15 @@ export default function Home() {
               <div
                 key={item.id}
                 onClick={() => navigate(item.path)}
-                className={`flex flex-col items-center justify-center text-center p-5 rounded-2xl border transition-all duration-200 cursor-pointer select-none active:scale-95 group shadow-lg ${item.bgColor}`}
+                className={`flex flex-col items-center justify-center text-center p-5 rounded-2xl border transition-all duration-200 cursor-pointer select-none active:scale-95 group shadow-sm hover:shadow-md ${item.bgColor}`}
               >
                 <div className={`p-3.5 rounded-2xl mb-3.5 transition-all duration-200 group-hover:scale-110 ${item.iconBg}`}>
                   <Icon className={`h-6 w-6 ${item.color}`} />
                 </div>
-                <h4 className="text-xs font-bold text-white tracking-wide group-hover:text-cyan-400 transition-colors uppercase font-sans">
+                <h4 className={`text-[12px] font-bold tracking-wide transition-colors uppercase font-sans ${item.titleColor}`}>
                   {item.title}
                 </h4>
-                <span className="text-[10px] text-slate-400 mt-1 max-w-[130px] line-clamp-1">
+                <span className={`text-[10px] mt-1 max-w-[130px] line-clamp-1 font-medium ${item.descColor}`}>
                   {item.desc}
                 </span>
               </div>
@@ -177,7 +195,7 @@ export default function Home() {
       </div>
 
       {/* Footer Info */}
-      <div className="mt-8 text-center text-[10px] text-slate-500 flex justify-center items-center gap-1">
+      <div className="mt-8 text-center text-[10px] text-slate-400 flex justify-center items-center gap-1">
         <ShieldAlert size={10} />
         <span>Tổ Viễn Thông 3 - MobiFone Đồng Nai © 2026</span>
       </div>
