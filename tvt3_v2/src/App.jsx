@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Layout from './components/Layout';
 
 const NetworkMap = React.lazy(() => import('./pages/NetworkMap'));
+import Home from './pages/Home';
 import Datasites from './pages/Datasites';
 import ContractDashboard from './pages/ContractDashboard';
 import DailyWork from './pages/DailyWork';
@@ -62,7 +63,7 @@ function App() {
         
         {/* Các route trong Layout chính */}
         <Route path="/" element={<Layout />}>
-          <Route index element={<Navigate to="/daily-work" replace />} />
+          <Route index element={<Home />} />
           <Route path="network-map" element={
             <React.Suspense fallback={
               <div className="flex flex-col items-center justify-center min-h-[400px] text-slate-400 font-sans">

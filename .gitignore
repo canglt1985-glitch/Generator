@@ -55,3 +55,10 @@ web-app/scripts/VH_WebApp_Service.xml
 web-app/scripts/*.log
 web-app/scripts/*.log.old
 
+# ── Backend Playwright & Virtualenvs ──
+backend/ms-playwright/
+backend/venv/
+backend/__pycache__/
+backend/*.log
+
+

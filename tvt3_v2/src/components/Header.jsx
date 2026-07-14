@@ -5,6 +5,7 @@ import { useCurrentUser } from '../utils/useCurrentUser';
 import { supabase } from '../supabaseClient';
 
 const navigation = [
+  { name: 'Trang chủ', href: '/', icon: Home },
   { name: 'Bản đồ Trạm', href: '/network-map', icon: Map },
   { name: 'Công việc', href: '/daily-work', icon: Activity },
   { name: 'Chi phí', href: '/expenses', icon: Coins },
