@@ -1,5 +1,16 @@
 # Changelog
 
+## [2026-07-14]
+### Added
+- **Dashboard Grid Tiles Landing Page**: Thiết kế trang chủ mặc định mới tại `/` dạng các ô lưới (Grid Tiles) to, rực rỡ, độ tương phản cao, mang lại trải nghiệm điều hướng nhanh vượt trội trên cả di động và máy tính.
+- **Power Outage Generator Warning (V3)**: Tích hợp logic nhắc nhở chạy máy phát điện thông minh khi cúp điện. Sau 1 giờ kể từ thời điểm cúp điện trên lịch EVN (`power_schedule`), nếu hệ thống cào SmartW không tìm thấy cảnh báo chạy máy (GEN) active, bot Viber Outages sẽ gửi tin nhắn cảnh báo nhắc nhở 1 lần duy nhất để anh em đi tuyến kiểm tra.
+- **Transmission Stats & Card Actions**: Tích hợp thống kê truyền dẫn trạm trực quan vào tab Thống kê toàn mạng ở trang Hồ sơ trạm. Bổ sung các nút bấm **Export (Tải xuống Excel)** trực tiếp trên từng card thống kê và nút **Upload (Nhập Excel)** trên Card Truyền dẫn trạm dành riêng cho Admin để cập nhật dữ liệu lớn.
+
+### Changed
+- **Mobile Map Scroll Layout**: Đẩy bảng trạm lân cận lên phía trên bản đồ, tránh kẹt cứng cuộn trang trên màn hình di động cảm ứng.
+- **VHKT PAKH Alert Spam Reduction**: Giới hạn chỉ gửi tin nhắn báo cáo PAKH trống (không có tồn đọng) 2 lần mỗi ngày (7h35 sáng và 19h35 tối), bỏ qua các khung giờ khác để chống trôi tin nhắn group.
+- **Expenses Module Security Guard**: Ẩn hoàn toàn mục Chi phí ở menu Header và Dashboard Trang chủ khi chưa đăng nhập. Đồng thời bọc route `/expenses` bằng bộ lọc quyền hạn, tự động chuyển hướng về `/login` nếu cố tình truy cập trực tiếp.
+
 ## [2026-07-11]
 ### Added
 - **CSHT Implementation Type Selection**: Bổ sung trường chọn **Hình thức triển khai** (`implementation_type`) ngay tại biểu mẫu Tạo đề xuất trạm mới, hỗ trợ chọn linh hoạt giữa MobiFone tự đầu tư hoặc Thuê dùng chung CSHT của đối tác ngay từ đầu.
