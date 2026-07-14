@@ -31,6 +31,9 @@ export default function Header() {
     if (item.href === '/generator' || item.href === '/settings') {
       return isAdmin; // Chỉ hiển thị Máy phát điện & Cài đặt cho Admin đã đăng nhập
     }
+    if (item.href === '/expenses') {
+      return !!user; // Chỉ hiển thị Chi phí khi đã đăng nhập
+    }
     return true;
   });
   

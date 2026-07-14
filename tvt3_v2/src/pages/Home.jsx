@@ -56,16 +56,19 @@ export default function Home() {
       bgColor: 'bg-rose-500/10 border-rose-500/20 hover:border-rose-400/50',
       iconBg: 'bg-rose-500/20'
     },
-    {
-      id: 'expenses',
-      title: 'Quản lý Chi phí',
-      desc: 'Chi phí trạm & nhiên liệu',
-      path: '/expenses',
-      icon: DollarSign,
-      color: 'text-emerald-400',
-      bgColor: 'bg-emerald-500/10 border-emerald-500/20 hover:border-emerald-400/50',
-      iconBg: 'bg-emerald-500/20'
-    },
+    // Chỉ hiển thị Chi phí khi đã đăng nhập
+    ...(user ? [
+      {
+        id: 'expenses',
+        title: 'Quản lý Chi phí',
+        desc: 'Chi phí trạm & nhiên liệu',
+        path: '/expenses',
+        icon: DollarSign,
+        color: 'text-emerald-400',
+        bgColor: 'bg-emerald-500/10 border-emerald-500/20 hover:border-emerald-400/50',
+        iconBg: 'bg-emerald-500/20'
+      }
+    ] : []),
     {
       id: 'vhkt-ran',
       title: 'VHKT - RAN',

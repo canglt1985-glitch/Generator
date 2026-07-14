@@ -43,6 +43,26 @@ function AdminRoute({ children }) {
   return children;
 }
 
+// Component bảo vệ Route dành cho tất cả nhân viên đã đăng nhập
+function ProtectedRoute({ children }) {
+  const { user, isLoading } = useCurrentUser();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center font-sans">
+        <RefreshCw className="h-8 w-8 text-blue-600 animate-spin mb-3" />
+        <span className="text-sm font-semibold text-slate-500">Đang kiểm tra quyền truy cập...</span>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return children;
+}
+
 function App() {
   const { isLoading } = useCurrentUser();
 
@@ -89,7 +109,11 @@ function App() {
               <Settings />
             </AdminRoute>
           } />
-          <Route path="expenses" element={<Expenses />} />
+          <Route path="expenses" element={
+            <ProtectedRoute>
+              <Expenses />
+            </ProtectedRoute>
+          } />
           <Route path="vhkt-ran" element={<VhktRan />} />
           <Route path="privacy" element={<Privacy />} />
           <Route path="terms" element={<Terms />} />
