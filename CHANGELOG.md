@@ -1,5 +1,14 @@
 # Changelog
 
+## [2026-07-15]
+### Added
+- **Excel Export Enhancement**: Bổ sung các cột thông tin `Site ID Cũ`, `Địa Chỉ Đặt Trạm`, `Vĩ Độ` và `Kinh Độ` vào file xuất Excel hợp đồng nhà trạm, giúp anh em quản lý dễ dàng tra cứu dữ liệu địa bàn của trạm.
+- **MFD Backfill (July 01 - 11)**: Quét và đồng bộ hóa thành công tổng cộng 34 log chạy máy phát điện mới từ ngày 01/07/2026 đến nay vào cơ sở dữ liệu Supabase, nâng cao tính chính xác của dữ liệu lịch sử.
+- **Robust Scrape Timeout**: Tích hợp `AbortController` với timeout 15 giây cho JS `fetch` trong Chromium để tránh worker bị treo vô hạn khi trang SmartW phản hồi chậm.
+
+### Changed
+- **Power Outage Warning Grouping (V3.1)**: Tối ưu hóa tin nhắn cảnh báo mất điện của Viber bot. Gom nhóm tất cả các trạm cúp điện quá 1 giờ chưa chạy máy phát vào 1 tin nhắn Viber duy nhất để tránh spam trôi tin nhắn group, đồng thời loại bỏ dòng chữ thừa ở cuối tin nhắn theo yêu cầu.
+
 ## [2026-07-14]
 ### Added
 - **Dashboard Grid Tiles Landing Page**: Thiết kế trang chủ mặc định mới tại `/` dạng các ô lưới (Grid Tiles) to, rực rỡ, độ tương phản cao, mang lại trải nghiệm điều hướng nhanh vượt trội trên cả di động và máy tính.

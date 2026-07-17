@@ -10,7 +10,11 @@ export const exportContractsToExcel = (contracts) => {
   const dataForExcel = contracts.map((c, index) => ({
     'STT': index + 1,
     'Site ID': c.site_id || '',
+    'Site ID Cũ': c.datasites?.site_id_old || '',
     'Tên Trạm': c.datasites?.name || '',
+    'Địa Chỉ Đặt Trạm': c.datasites?.location_info?.dia_chi_cu || '',
+    'Vĩ Độ': c.datasites?.location_info?.vi_do || '',
+    'Kinh Độ': c.datasites?.location_info?.kinh_do || '',
     'Số Hợp Đồng': c.contract_number || '',
     'Chủ Thể Hợp Đồng': c.contractor_info?.chu_the_hop_dong || '',
     'Địa Chỉ Liên Hệ': c.contractor_info?.dia_chi_lien_he || '',
@@ -29,12 +33,16 @@ export const exportContractsToExcel = (contracts) => {
   
   // Tự động điều chỉnh độ rộng cột
   const wscols = [
-    { wch: 5 }, // STT
+    { wch: 5 },  // STT
     { wch: 15 }, // Site ID
+    { wch: 15 }, // Site ID Cũ
     { wch: 30 }, // Tên Trạm
+    { wch: 40 }, // Địa Chỉ Đặt Trạm
+    { wch: 15 }, // Vĩ Độ
+    { wch: 15 }, // Kinh Độ
     { wch: 20 }, // Số HĐ
     { wch: 25 }, // Chủ thể
-    { wch: 40 }, // Địa chỉ
+    { wch: 40 }, // Địa chỉ liên hệ
     { wch: 15 }, // SĐT
     { wch: 15 }, // Giá thuê
     { wch: 15 }, // Ngày ký

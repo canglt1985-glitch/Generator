@@ -749,29 +749,37 @@ class SmartWScraper:
         # Fetch JSON via browser fetch() — keeps SSO session cookies
         result = await self._page.evaluate('''
             async (url) => {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 15000);
                 try {
-                    const res = await fetch(url, { credentials: "include" });
+                    const res = await fetch(url, { credentials: "include", signal: controller.signal });
+                    clearTimeout(timeoutId);
                     if (!res.ok) return { ok: false, status: res.status, data: "" };
                     const text = await res.text();
                     return { ok: true, status: res.status, data: text };
                 } catch(e) {
+                    clearTimeout(timeoutId);
                     return { ok: false, status: 0, data: e.message };
                 }
             }
         ''', url)
 
         if not result.get('ok'):
-            logger.error(f'SmartW MFĐ Reports: HTTP {result.get("status")} — fetch failed')
+            logger.error(f'SmartW MFĐ Reports: HTTP {result.get("status")} — fetch failed: {result.get("data")}')
             # Try re-login and retry once
             await self._handle_session_expired()
             result = await self._page.evaluate('''
                 async (url) => {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 15000);
                     try {
-                        const res = await fetch(url, { credentials: "include" });
+                        const res = await fetch(url, { credentials: "include", signal: controller.signal });
+                        clearTimeout(timeoutId);
                         if (!res.ok) return { ok: false, status: res.status, data: "" };
                         const text = await res.text();
                         return { ok: true, status: res.status, data: text };
                     } catch(e) {
+                        clearTimeout(timeoutId);
                         return { ok: false, status: 0, data: e.message };
                     }
                 }

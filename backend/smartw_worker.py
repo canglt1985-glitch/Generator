@@ -1636,6 +1636,7 @@ def check_power_outage_generators():
         # 4. Duyệt từng lịch cúp điện
         warned_keys = []
         outages_token = None
+        pending_warnings = []
         
         for ot in outages:
             site_id = (ot.get("id_tram") or "").strip().upper()
@@ -1667,25 +1668,40 @@ def check_power_outage_generators():
                 if 60 <= diff_min < 180:
                     warning_key = f"{site_id}_{today_str}_{tg_cup}"
                     if warning_key not in sent_warnings:
-                        # Gửi cảnh báo nhắc nhở
                         tg_co = ot.get("thoi_gian_co_dien") or "N/A"
-                        msg = f"⚠️ *NHẮC NHỞ CÚP ĐIỆN CHƯA CHẠY MÁY* ⚠️\n\nTrạm *{site_id}* có lịch cúp điện từ *{tg_cup}* (dự kiến đến *{tg_co}*),\nđến nay đã quá *1 giờ* nhưng hệ thống chưa ghi nhận cảnh báo chạy máy phát điện active trên SmartW.\n\nAnh em đi tuyến kiểm tra lại trạm nhé! 🔌"
-                        
-                        # Load outages token
-                        if not outages_token:
-                            from smartw.config import load_smartw_config
-                            cfg = load_smartw_config() or {}
-                            outages_token = cfg.get('viber_bot_token_outages') or "56a990b99bf464bd-d406c456f5380df0-770d03e18af041d0"
-                            
-                        _send_viber_report([msg], token=outages_token)
-                        logger.info(f"Viber Alert: Outage warning sent for site {site_id} (outage at {tg_cup})")
-                        
-                        sent_warnings[warning_key] = now.isoformat()
-                        warned_keys.append(warning_key)
+                        pending_warnings.append({
+                            "site_id": site_id,
+                            "tg_cup": tg_cup,
+                            "tg_co": tg_co,
+                            "warning_key": warning_key
+                        })
             except Exception as ex:
                 logger.warning(f"Error parsing outage time for site {site_id}: {ex}")
                 
-        # 5. Lưu lại danh sách đã gửi
+        # 5. Gom và gửi 1 tin nhắn duy nhất nếu có trạm thỏa mãn
+        if pending_warnings:
+            # Load outages token
+            from smartw.config import load_smartw_config
+            cfg = load_smartw_config() or {}
+            outages_token = cfg.get('viber_bot_token_outages') or "56a990b99bf464bd-d406c456f5380df0-770d03e18af041d0"
+            
+            # Tạo tin nhắn ngắn gọn, tổng hợp các trạm
+            msg_lines = [
+                "⚠️ *NHẮC NHỞ CÚP ĐIỆN CHƯA CHẠY MÁY* ⚠️",
+                "Đã quá 1 giờ chưa ghi nhận GEN active trên SmartW:"
+            ]
+            for item in pending_warnings:
+                msg_lines.append(f"- *{item['site_id']}* ({item['tg_cup']} - {item['tg_co']})")
+            
+            _send_viber_report(msg_lines, token=outages_token)
+            
+            for item in pending_warnings:
+                w_key = item["warning_key"]
+                sent_warnings[w_key] = now.isoformat()
+                warned_keys.append(w_key)
+                logger.info(f"Viber Alert: Outage warning compiled for site {item['site_id']} (outage at {item['tg_cup']})")
+                
+        # 6. Lưu lại danh sách đã gửi
         if warned_keys:
             try:
                 with open(state_file, 'w', encoding='utf-8') as f:

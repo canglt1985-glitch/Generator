@@ -296,10 +296,10 @@ export default function InfrastructureDevelopment() {
       if (projErr) throw projErr;
       setProjects(projData || []);
 
-      // 2. Fetch active sites for density analysis
+      // 2. Fetch active sites for density analysis and pricing reference
       const { data: siteData, error: siteErr } = await supabase
         .from('datasites')
-        .select('site_id, site_id_old, location_info, management_info');
+        .select('site_id, site_id_old, location_info, management_info, contract_info');
       if (siteErr) throw siteErr;
       setActiveSites(siteData || []);
     } catch (err) {
@@ -861,12 +861,72 @@ export default function InfrastructureDevelopment() {
         return '0';
       })();
 
+      const vhkt_chot = rentNum > 600000 ? 600000 : rentNum;
+      const mb_chot = rentNum > 600000 ? rentNum - 600000 : 0;
+
+      // Find neighboring stations in the same xã/phường & district for allowed price framework (matching xa_moi, xa_cu, or ward)
+      const siblingSites = activeSites.filter(s => 
+        s.location_info && 
+        (
+          s.location_info.xa_moi === selectedProject.ward || 
+          s.location_info.xa_cu === selectedProject.ward || 
+          s.location_info.ward === selectedProject.ward
+        ) &&
+        (s.location_info.huyen_cu === selectedProject.district || s.location_info.district === selectedProject.district)
+      );
+
+      let baseMbReg = 0;
+      if (siblingSites.length > 0) {
+        // Find the nearest station in the same xã/phường using the haversine formula
+        const currentLat = Number(selectedProject.latitude_survey) || Number(selectedProject.latitude_plan) || 0;
+        const currentLng = Number(selectedProject.longitude_survey) || Number(selectedProject.longitude_plan) || 0;
+
+        let nearestSite = null;
+        let minDistance = Infinity;
+
+        siblingSites.forEach(s => {
+          const sLat = Number(s.location_info?.vi_do);
+          const sLng = Number(s.location_info?.kinh_do);
+          if (sLat && sLng && currentLat && currentLng) {
+            const dist = haversine(currentLat, currentLng, sLat, sLng);
+            if (dist < minDistance) {
+              minDistance = dist;
+              nearestSite = s;
+            }
+          }
+        });
+
+        // Fallback to the first sibling site in the list if GPS coordinates are missing
+        if (!nearestSite) {
+          nearestSite = siblingSites[0];
+        }
+
+        if (nearestSite) {
+          const nearestMb = Number(nearestSite.contract_info?.cost_details?.mat_bang) || 0;
+          const nearestTotal = Number(nearestSite.contract_info?.financials?.gia_thue_co_vat) || 0;
+          baseMbReg = nearestMb > 0 ? nearestMb : (nearestTotal > 600000 ? nearestTotal - 600000 : nearestTotal);
+        }
+      }
+
+      // Fallback: if no neighboring stations in same ward, use current mb_chot as the allowed framework
+      const mb_qd = baseMbReg > 0 ? baseMbReg : mb_chot;
+      const tl_mb = mb_qd > 0 ? (Number((((mb_chot / mb_qd) - 1) * 100).toFixed(2)) + '%') : '0%';
+
+      const tong_qd_num = mb_qd + vhkt_chot;
+      const tl_tong = tong_qd_num > 0 ? (Number((((rentNum / tong_qd_num) - 1) * 100).toFixed(2)) + '%') : '0%';
+      
+      const fullAddress = selectedProject.address || `${selectedProject.ward || ''}, Huyện ${selectedProject.district || ''}, Tỉnh Đồng Nai`;
+      const bankAccountText = selectedProject.bank_account || '................';
+      const landlordNameText = selectedProject.landowner_name || '................';
+
       const data = {
         SITE_ID: selectedProject.planning_id_new || '',
         SITE_ID_OLD: selectedProject.planning_id_old || '',
         SITE_NAME: selectedProject.ward || '',
-        ADDRESS: selectedProject.address || `${selectedProject.ward || ''}, Huyện ${selectedProject.district || ''}, Tỉnh Đồng Nai`,
-        OWNER_NAME: selectedProject.landowner_name || '........................................................',
+        ADDRESS: fullAddress,
+        ADDRESS_OLD: fullAddress,
+        ADDRESS_NEW: fullAddress,
+        OWNER_NAME: landlordNameText,
         PHONE: selectedProject.landlord_phone || '....................................',
         PLOT_NO: selectedProject.plot_number || '............',
         MAP_SHEET: selectedProject.map_sheet || '............',
@@ -884,22 +944,62 @@ export default function InfrastructureDevelopment() {
         LATITUDE_SURVEY: selectedProject.latitude_survey ? String(selectedProject.latitude_survey) : '................',
         LONGITUDE_SURVEY: selectedProject.longitude_survey ? String(selectedProject.longitude_survey) : '................',
         CONTRACT_NO: '................',
-        OWNER_NAME_OLD: selectedProject.landowner_name || '................',
+        OWNER_NAME_OLD: landlordNameText,
         RENT_FEE_CO_VAT: rentNum > 0 ? formatCurrency(rentNum) : '................',
         NEW_PRICE: rentNum > 0 ? formatCurrency(rentNum) : '................',
         NEW_PRICE_TEXT: rentText,
+
+        // Coordinates for contract templates
+        LATITUDE: selectedProject.latitude_survey || selectedProject.latitude_plan || '................',
+        LONGITUDE: selectedProject.longitude_survey || selectedProject.longitude_plan || '................',
+        
+        // Landlord Bank & Contacts
+        CONTACT_ADDR: selectedProject.address || '................',
+        ACCOUNT_OWNER: landlordNameText,
+        ACCOUNT_NO: bankAccountText,
+        BANK_NAME: selectedProject.bank_name || '................',
+        CERTIFICATE: selectedProject.legal_status === 'Khác' ? (selectedProject.legal_other_desc || 'Khác') : (selectedProject.legal_status || 'Giấy chứng nhận QSD nhà/ đất'),
+        START_DATE: '................',
+        END_DATE: '................',
+        DEDUCTION_TEXT: '',
+        PAY_ROW: selectedProject.payment_cycle ? `Thanh toán theo chu kỳ ${selectedProject.payment_cycle}.` : '................',
+
+        // Cost details mapping for MBF đầu tư (Mặt bằng)
+        MB_QĐ02: mb_qd > 0 ? formatCurrency(mb_qd) : '................',
+        P_MB: mb_chot > 0 ? formatCurrency(mb_chot) : '................',
+        TL_MB: tl_mb,
+        P_VHKT: vhkt_chot > 0 ? formatCurrency(vhkt_chot) : '................',
+        TL_VHKT: '0%',
+
+        // Cost details mapping for Thuê CSHT dùng chung
+        COT_1245: selectedProject.implementation_type !== 'MBF đầu tư' && rentNum > 0 ? formatCurrency(rentNum) : '................',
+        COT_CHOT: selectedProject.implementation_type !== 'MBF đầu tư' && rentNum > 0 ? formatCurrency(rentNum) : '................',
+        TL_COT: '0%',
+        MFĐ_1245: '................',
+        P_MFD: '................',
+        TL_MFD: '0%',
+        PM_1245: '................',
+        P_PM: '................',
+        TL_PM: '0%',
+        GIAM_TRU: '................',
+        CSHT_LIST1: selectedProject.sharing_partner || '',
+        CSHT_LIST2: '',
+
+        // Totals
+        TONG_QD: tong_qd_num > 0 ? formatCurrency(tong_qd_num) : '................',
+        TONG_CHOT: rentNum > 0 ? formatCurrency(rentNum) : '................',
+        TL_TONG: tl_tong,
 
         // Survey details & Checkboxes
         SURVEY_DATE: selectedProject.updated_at ? new Date(selectedProject.updated_at).toLocaleDateString('vi-VN') : '................',
         SURVEYOR: selectedProject.surveyor || '................',
         CHECKER: selectedProject.checker || '................',
         COMPANY_NAME: selectedProject.sharing_partner || '................',
-        LANDLORD_NAME: selectedProject.landowner_name || '................',
+        LANDLORD_NAME: landownerNameText,
         LANDLORD_PHONE: selectedProject.landlord_phone || '................',
         LANDLORD_CCCD: selectedProject.landlord_cccd || '................',
-        BANK_ACCOUNT: selectedProject.bank_account || '................',
-        BANK_NAME: selectedProject.bank_name || '................',
-        ADDRESS_NEW: selectedProject.ward || '................',
+        BANK_ACCOUNT: bankAccountText,
+        ADDRESS_NEW: fullAddress,
         CLASSIFICATION_TYPE: selectedProject.implementation_type || '................',
         OFFSET_DISTANCE: String(offsetDist),
         IS_MAT_DAT: selectedProject.antenna_location === 'Mặt đất',
