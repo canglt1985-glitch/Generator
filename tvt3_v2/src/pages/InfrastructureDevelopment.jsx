@@ -110,7 +110,9 @@ export default function InfrastructureDevelopment() {
       deployment_package: proj.deployment_package || '',
       antenna_height_other_desc: proj.antenna_height_other_desc || '',
       foundation_type: proj.foundation_type || '3 co',
-      conflict_notes: proj.conflict_notes || ''
+      conflict_notes: proj.conflict_notes || '',
+      contract_number: proj.contract_number || '',
+      contract_date: proj.contract_date || ''
     });
     setIsEditing(false);
   };
@@ -565,6 +567,8 @@ export default function InfrastructureDevelopment() {
         foundation_type: editForm.foundation_type || null,
         conflict_notes: editForm.conflict_notes || null,
         deployment_package: editForm.deployment_package || null,
+        contract_number: editForm.contract_number || null,
+        contract_date: editForm.contract_date || null,
         updated_at: new Date().toISOString()
       };
 
@@ -919,6 +923,38 @@ export default function InfrastructureDevelopment() {
       const bankAccountText = selectedProject.bank_account || '................';
       const landlordNameText = selectedProject.landowner_name || '................';
 
+      // Parse contract start date & calculate end date dynamically based on lease term
+      const start_date = selectedProject.contract_date 
+        ? (() => {
+            const parts = selectedProject.contract_date.split('-');
+            if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+            return selectedProject.contract_date;
+          })()
+        : '................';
+
+      const end_date = (() => {
+        if (!selectedProject.contract_date || !selectedProject.lease_term) return '................';
+        try {
+          const termMatch = String(selectedProject.lease_term).match(/\d+/);
+          if (!termMatch) return '................';
+          const years = parseInt(termMatch[0], 10);
+          
+          const startDateObj = new Date(selectedProject.contract_date);
+          if (isNaN(startDateObj.getTime())) return '................';
+          
+          const endDateObj = new Date(startDateObj);
+          endDateObj.setFullYear(startDateObj.getFullYear() + years);
+          endDateObj.setDate(endDateObj.getDate() - 1);
+          
+          const dd = String(endDateObj.getDate()).padStart(2, '0');
+          const mm = String(endDateObj.getMonth() + 1).padStart(2, '0');
+          const yyyy = endDateObj.getFullYear();
+          return `${dd}/${mm}/${yyyy}`;
+        } catch (e) {
+          return '................';
+        }
+      })();
+
       const data = {
         SITE_ID: selectedProject.planning_id_new || '',
         SITE_ID_OLD: selectedProject.planning_id_old || '',
@@ -943,7 +979,7 @@ export default function InfrastructureDevelopment() {
         LONGITUDE_PLAN: selectedProject.longitude_plan ? String(selectedProject.longitude_plan) : '................',
         LATITUDE_SURVEY: selectedProject.latitude_survey ? String(selectedProject.latitude_survey) : '................',
         LONGITUDE_SURVEY: selectedProject.longitude_survey ? String(selectedProject.longitude_survey) : '................',
-        CONTRACT_NO: '................',
+        CONTRACT_NO: selectedProject.contract_number || '................',
         OWNER_NAME_OLD: landlordNameText,
         RENT_FEE_CO_VAT: rentNum > 0 ? formatCurrency(rentNum) : '................',
         NEW_PRICE: rentNum > 0 ? formatCurrency(rentNum) : '................',
@@ -959,8 +995,8 @@ export default function InfrastructureDevelopment() {
         ACCOUNT_NO: bankAccountText,
         BANK_NAME: selectedProject.bank_name || '................',
         CERTIFICATE: selectedProject.legal_status === 'Khác' ? (selectedProject.legal_other_desc || 'Khác') : (selectedProject.legal_status || 'Giấy chứng nhận QSD nhà/ đất'),
-        START_DATE: '................',
-        END_DATE: '................',
+        START_DATE: start_date,
+        END_DATE: end_date,
         DEDUCTION_TEXT: '',
         PAY_ROW: selectedProject.payment_cycle ? `Thanh toán theo chu kỳ ${selectedProject.payment_cycle}.` : '................',
 
@@ -995,7 +1031,7 @@ export default function InfrastructureDevelopment() {
         SURVEYOR: selectedProject.surveyor || '................',
         CHECKER: selectedProject.checker || '................',
         COMPANY_NAME: selectedProject.sharing_partner || '................',
-        LANDLORD_NAME: landownerNameText,
+        LANDLORD_NAME: landlordNameText,
         LANDLORD_PHONE: selectedProject.landlord_phone || '................',
         LANDLORD_CCCD: selectedProject.landlord_cccd || '................',
         BANK_ACCOUNT: bankAccountText,
@@ -1968,7 +2004,7 @@ export default function InfrastructureDevelopment() {
                         </div>
 
                         <div className="space-y-1 col-span-2 border-t border-slate-100 pt-3">
-                          <span className="text-[11px] font-bold text-blue-600 uppercase">Thông tin điều khoản thuê</span>
+                          <span className="text-[11px] font-bold text-blue-600 uppercase">Thông tin điều khoản thuê &amp; Hợp đồng</span>
                         </div>
                         <div className="space-y-1">
                           <label className="text-[11px] font-bold text-slate-500 uppercase">Thời hạn thuê (ví dụ: 5 năm)</label>
@@ -1993,6 +2029,25 @@ export default function InfrastructureDevelopment() {
                             <option value="12 tháng">12 tháng/lần</option>
                             <option value="Khác">Chu kỳ khác</option>
                           </select>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-bold text-slate-500 uppercase">Số hợp đồng</label>
+                          <input 
+                            type="text"
+                            value={editForm.contract_number || ''}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, contract_number: e.target.value }))}
+                            className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
+                            placeholder="Ví dụ: HĐ/DNIXBA02/2026"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-bold text-slate-500 uppercase">Ngày ký hợp đồng</label>
+                          <input 
+                            type="date"
+                            value={editForm.contract_date || ''}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, contract_date: e.target.value }))}
+                            className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
+                          />
                         </div>
                       </>
                     ) : (
