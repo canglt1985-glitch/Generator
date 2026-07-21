@@ -919,9 +919,37 @@ export default function InfrastructureDevelopment() {
       const tong_qd_num = mb_qd + vhkt_chot;
       const tl_tong = tong_qd_num > 0 ? (Number((((rentNum / tong_qd_num) - 1) * 100).toFixed(2)) + '%') : '0%';
       
-      const fullAddress = selectedProject.address || `${selectedProject.ward || ''}, Huyện ${selectedProject.district || ''}, Tỉnh Đồng Nai`;
       const bankAccountText = selectedProject.bank_account || '................';
       const landlordNameText = selectedProject.landowner_name || '................';
+
+      // Find matching site in activeSites to resolve old and new ward and district
+      const matchingSite = activeSites.find(s => 
+        s.location_info && 
+        (
+          s.location_info.xa_moi === selectedProject.ward || 
+          s.location_info.xa_cu === selectedProject.ward || 
+          s.location_info.ward === selectedProject.ward
+        ) &&
+        (s.location_info.huyen_cu === selectedProject.district || s.location_info.district === selectedProject.district)
+      );
+
+      const xa_cu = matchingSite?.location_info?.xa_cu || selectedProject.ward || '';
+      const huyen_cu = matchingSite?.location_info?.huyen_cu || selectedProject.district || '';
+      const xa_moi = matchingSite?.location_info?.xa_moi || selectedProject.ward || '';
+
+      // Clean address to extract the detailed part (e.g., hamlet, alley, street)
+      let detailAddress = selectedProject.address || '';
+      if (detailAddress) {
+        detailAddress = detailAddress
+          .replace(/[-\s,]+(xã|xă|thị trấn|phường|huyện|tỉnh).*$/gi, '')
+          .trim();
+      }
+
+      // Format old address and new address
+      const addressOldText = `thửa đất số ${selectedProject.plot_number || '............'}, tờ bản đồ số ${selectedProject.map_sheet || '............'}${detailAddress ? `, ${detailAddress}` : ''}, xã ${xa_cu}, huyện ${huyen_cu}`;
+      const addressNewText = ` (${xa_moi}, Đồng Nai)`;
+      
+      const fullAddress = selectedProject.address || `${selectedProject.ward || ''}, Huyện ${selectedProject.district || ''}, Tỉnh Đồng Nai`;
 
       // Parse contract start date & calculate end date dynamically based on lease term
       const start_date = selectedProject.contract_date 
@@ -960,8 +988,8 @@ export default function InfrastructureDevelopment() {
         SITE_ID_OLD: selectedProject.planning_id_old || '',
         SITE_NAME: selectedProject.ward || '',
         ADDRESS: fullAddress,
-        ADDRESS_OLD: fullAddress,
-        ADDRESS_NEW: fullAddress,
+        ADDRESS_OLD: addressOldText,
+        ADDRESS_NEW: addressNewText,
         OWNER_NAME: landlordNameText,
         PHONE: selectedProject.landlord_phone || '....................................',
         PLOT_NO: selectedProject.plot_number || '............',
@@ -975,10 +1003,10 @@ export default function InfrastructureDevelopment() {
         SHARED_SITE_ID: selectedProject.shared_site_id || '........................',
         ANTENNA_HEIGHT: selectedProject.antenna_height ? String(selectedProject.antenna_height) : '........',
         POWER_CONSUMPTION: selectedProject.power_consumption ? String(selectedProject.power_consumption) : '........',
-        LATITUDE_PLAN: selectedProject.latitude_plan ? String(selectedProject.latitude_plan) : '................',
-        LONGITUDE_PLAN: selectedProject.longitude_plan ? String(selectedProject.longitude_plan) : '................',
-        LATITUDE_SURVEY: selectedProject.latitude_survey ? String(selectedProject.latitude_survey) : '................',
-        LONGITUDE_SURVEY: selectedProject.longitude_survey ? String(selectedProject.longitude_survey) : '................',
+        LATITUDE_PLAN: selectedProject.latitude_plan ? String(selectedProject.latitude_plan).replace('.', ',') : '................',
+        LONGITUDE_PLAN: selectedProject.longitude_plan ? String(selectedProject.longitude_plan).replace('.', ',') : '................',
+        LATITUDE_SURVEY: selectedProject.latitude_survey ? String(selectedProject.latitude_survey).replace('.', ',') : '................',
+        LONGITUDE_SURVEY: selectedProject.longitude_survey ? String(selectedProject.longitude_survey).replace('.', ',') : '................',
         CONTRACT_NO: selectedProject.contract_number || '................',
         OWNER_NAME_OLD: landlordNameText,
         RENT_FEE_CO_VAT: rentNum > 0 ? formatCurrency(rentNum) : '................',
@@ -1035,9 +1063,11 @@ export default function InfrastructureDevelopment() {
         LANDLORD_PHONE: selectedProject.landlord_phone || '................',
         LANDLORD_CCCD: selectedProject.landlord_cccd || '................',
         BANK_ACCOUNT: bankAccountText,
-        ADDRESS_NEW: fullAddress,
+        ADDRESS_NEW: addressNewText,
         CLASSIFICATION_TYPE: selectedProject.implementation_type || '................',
-        OFFSET_DISTANCE: String(offsetDist),
+        OFFSET_DISTANCE: offsetDist > 0 ? `${offsetDist}m` : '0m',
+        HEIGHT_PLAN: selectedProject.height ? `${selectedProject.height}m` : '........',
+        HEIGHT_SURVEY: selectedProject.antenna_height ? `${selectedProject.antenna_height}m` : '........',
         IS_MAT_DAT: selectedProject.antenna_location === 'Mặt đất',
         IS_MAI_NHA: selectedProject.antenna_location === 'Mái nhà',
         ROOF_SHEETS: selectedProject.roof_sheets ? String(selectedProject.roof_sheets) : '....',
