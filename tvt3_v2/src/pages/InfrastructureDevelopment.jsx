@@ -67,7 +67,10 @@ export default function InfrastructureDevelopment() {
     antenna_height_survey: '36m',
     antenna_height_other_desc: '',
     foundation_type: '3 co',
-    conflict_notes: ''
+    conflict_notes: '',
+    implementation_type: 'MBF đầu tư',
+    height: '',
+    antenna_type: 'Monopole'
   });
 
   const selectProject = (proj) => {
@@ -112,7 +115,10 @@ export default function InfrastructureDevelopment() {
       foundation_type: proj.foundation_type || '3 co',
       conflict_notes: proj.conflict_notes || '',
       contract_number: proj.contract_number || '',
-      contract_date: proj.contract_date || ''
+      contract_date: proj.contract_date || '',
+      implementation_type: proj.implementation_type || 'MBF đầu tư',
+      height: proj.height || '',
+      antenna_type: proj.antenna_type || 'Monopole'
     });
     setIsEditing(false);
   };
@@ -569,6 +575,9 @@ export default function InfrastructureDevelopment() {
         deployment_package: editForm.deployment_package || null,
         contract_number: editForm.contract_number || null,
         contract_date: editForm.contract_date || null,
+        implementation_type: editForm.implementation_type || 'MBF đầu tư',
+        height: editForm.height ? parseFloat(editForm.height) : null,
+        antenna_type: editForm.antenna_type || 'Monopole',
         updated_at: new Date().toISOString()
       };
 
@@ -1665,6 +1674,31 @@ export default function InfrastructureDevelopment() {
                   <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2">Chỉnh sửa thông tin dự án</h4>
                   
                   <div className="grid grid-cols-2 gap-4">
+                    {/* THÔNG TIN THIẾT KẾ / QUY HOẠCH */}
+                    <div className="space-y-1 col-span-2 border-t border-slate-100 pt-3">
+                      <span className="text-[11px] font-bold text-blue-600 uppercase">Thông tin Thiết kế / Quy hoạch ban đầu</span>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-500 uppercase">Loại cột quy hoạch/thiết kế</label>
+                      <input 
+                        type="text"
+                        value={editForm.antenna_type || ''}
+                        onChange={(e) => setEditForm(prev => ({ ...prev, antenna_type: e.target.value }))}
+                        className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
+                        placeholder="Ví dụ: Monopole"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-500 uppercase">Chiều cao cột quy hoạch (m)</label>
+                      <input 
+                        type="number" step="any"
+                        value={editForm.height || ''}
+                        onChange={(e) => setEditForm(prev => ({ ...prev, height: e.target.value }))}
+                        className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
+                        placeholder="Ví dụ: 42"
+                      />
+                    </div>
+
                     {/* KHẢO SÁT THỰC ĐỊA */}
                     <div className="space-y-1 col-span-2 border-t border-slate-100 pt-3">
                       <span className="text-[11px] font-bold text-blue-600 uppercase">Khảo sát &amp; Định vị thực tế</span>
