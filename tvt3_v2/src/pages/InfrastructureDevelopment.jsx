@@ -1894,80 +1894,78 @@ export default function InfrastructureDevelopment() {
                       />
                     </div>
 
-                    <div className="space-y-1">
-                      <label className="text-[11px] font-bold text-slate-500 uppercase">Pháp lý đất đai</label>
-                      <select 
-                        value={editForm.legal_status || ''}
-                        onChange={(e) => setEditForm(prev => ({ ...prev, legal_status: e.target.value }))}
-                        className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-white"
-                      >
-                        <option value="Giấy chứng nhận QSD nhà/ đất">Giấy chứng nhận QSD nhà/ đất (Sổ hồng/đỏ)</option>
-                        <option value="Hợp đồng thuê">Hợp đồng thuê giữa chủ đất & đối tác</option>
-                        <option value="Giấy chứng nhận & Hợp đồng thuê">Giấy chứng nhận &amp; Hợp đồng thuê</option>
-                        <option value="Khác">Pháp lý khác</option>
-                      </select>
-                    </div>
+                    {/* KHU VỰC PHÁP LÝ ĐẤT ĐAI */}
+                    <div className="col-span-2 border border-slate-100 rounded-xl p-3 bg-slate-50/50 space-y-3">
+                      <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider block">Pháp lý đất đai &amp; Giấy tờ đính kèm</span>
+                      
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1 col-span-2">
+                          <label className="text-[11px] font-bold text-slate-500 uppercase">Hình thức pháp lý (Loại giấy tờ)</label>
+                          <input 
+                            type="text"
+                            value={editForm.legal_status || ''}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, legal_status: e.target.value }))}
+                            className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-white"
+                            placeholder="Ví dụ: Giấy chứng nhận QSDĐ, Hợp đồng thuê, Ủy quyền..."
+                          />
+                        </div>
 
-                    {(editForm.legal_status === 'Giấy chứng nhận QSD nhà/ đất' || editForm.legal_status === 'Giấy chứng nhận & Hợp đồng thuê') && (
-                      <>
-                        <div className="space-y-1">
+                        <div className="space-y-1 col-span-2 sm:col-span-1">
                           <label className="text-[11px] font-bold text-slate-500 uppercase">Số giấy chứng nhận QSDĐ</label>
                           <input 
                             type="text"
                             value={editForm.legal_cert_no || ''}
                             onChange={(e) => setEditForm(prev => ({ ...prev, legal_cert_no: e.target.value }))}
-                            className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
+                            className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-white"
                             placeholder="Số GCN, ví dụ: CH012345"
                           />
                         </div>
-                        <div className="space-y-1">
+
+                        <div className="space-y-1 col-span-2 sm:col-span-1">
                           <label className="text-[11px] font-bold text-slate-500 uppercase">Cơ quan cấp</label>
                           <input 
                             type="text"
                             value={editForm.legal_cert_issuer || ''}
                             onChange={(e) => setEditForm(prev => ({ ...prev, legal_cert_issuer: e.target.value }))}
-                            className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
+                            className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-white"
                             placeholder="Ví dụ: UBND Huyện Cẩm Mỹ"
                           />
                         </div>
-                        <div className="space-y-1">
+
+                        <div className="space-y-1 col-span-2 sm:col-span-1">
                           <label className="text-[11px] font-bold text-slate-500 uppercase">Ngày cấp</label>
                           <input 
                             type="text"
                             value={editForm.legal_cert_date || ''}
                             onChange={(e) => setEditForm(prev => ({ ...prev, legal_cert_date: e.target.value }))}
-                            className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
+                            className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-white"
                             placeholder="Ví dụ: 15/06/2018"
                           />
                         </div>
-                      </>
-                    )}
 
-                    {(editForm.legal_status === 'Hợp đồng thuê' || editForm.legal_status === 'Giấy chứng nhận & Hợp đồng thuê') && (
-                      <div className="space-y-1 col-span-2">
-                        <label className="text-[11px] font-bold text-slate-500 uppercase">Hợp đồng thuê giữa chủ đất và người thuê</label>
-                        <textarea 
-                          value={editForm.legal_lease_contract || ''}
-                          onChange={(e) => setEditForm(prev => ({ ...prev, legal_lease_contract: e.target.value }))}
-                          rows="2"
-                          className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
-                          placeholder="Ví dụ: HĐ thuê số 12/2025/HĐ-MB ký ngày 10/01/2025..."
-                        />
-                      </div>
-                    )}
+                        <div className="space-y-1 col-span-2 sm:col-span-1">
+                          <label className="text-[11px] font-bold text-slate-500 uppercase">Mô tả chi tiết khác (Nếu có)</label>
+                          <input 
+                            type="text"
+                            value={editForm.legal_other_desc || ''}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, legal_other_desc: e.target.value }))}
+                            className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-white"
+                            placeholder="Mô tả thêm..."
+                          />
+                        </div>
 
-                    {editForm.legal_status === 'Khác' && (
-                      <div className="space-y-1 col-span-2">
-                        <label className="text-[11px] font-bold text-slate-500 uppercase">Chi tiết pháp lý khác</label>
-                        <input 
-                          type="text"
-                          value={editForm.legal_other_desc || ''}
-                          onChange={(e) => setEditForm(prev => ({ ...prev, legal_other_desc: e.target.value }))}
-                          className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
-                          placeholder="Nhập pháp lý thực tế..."
-                        />
+                        <div className="space-y-1 col-span-2">
+                          <label className="text-[11px] font-bold text-slate-500 uppercase">Hợp đồng thuê giữa chủ đất và người thuê</label>
+                          <textarea 
+                            value={editForm.legal_lease_contract || ''}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, legal_lease_contract: e.target.value }))}
+                            rows="2"
+                            className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-white"
+                            placeholder="Ví dụ: HĐ thuê số 12/2025/HĐ-MB ký ngày 10/01/2025 thời hạn 5 năm..."
+                          />
+                        </div>
                       </div>
-                    )}
+                    </div>
 
                     <div className="space-y-1">
                       <label className="text-[11px] font-bold text-slate-500 uppercase">Dạng cột dự kiến</label>
