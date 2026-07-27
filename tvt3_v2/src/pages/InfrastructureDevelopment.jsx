@@ -70,7 +70,11 @@ export default function InfrastructureDevelopment() {
     conflict_notes: '',
     implementation_type: 'MBF đầu tư',
     height: '',
-    antenna_type: 'Monopole'
+    antenna_type: 'Monopole',
+    legal_cert_no: '',
+    legal_cert_issuer: '',
+    legal_cert_date: '',
+    legal_lease_contract: ''
   });
 
   const selectProject = (proj) => {
@@ -118,7 +122,11 @@ export default function InfrastructureDevelopment() {
       contract_date: proj.contract_date || '',
       implementation_type: proj.implementation_type || 'MBF đầu tư',
       height: proj.height || '',
-      antenna_type: proj.antenna_type || 'Monopole'
+      antenna_type: proj.antenna_type || 'Monopole',
+      legal_cert_no: proj.legal_cert_no || '',
+      legal_cert_issuer: proj.legal_cert_issuer || '',
+      legal_cert_date: proj.legal_cert_date || '',
+      legal_lease_contract: proj.legal_lease_contract || ''
     });
     setIsEditing(false);
   };
@@ -578,6 +586,10 @@ export default function InfrastructureDevelopment() {
         implementation_type: editForm.implementation_type || 'MBF đầu tư',
         height: editForm.height ? parseFloat(editForm.height) : null,
         antenna_type: editForm.antenna_type || 'Monopole',
+        legal_cert_no: editForm.legal_cert_no || null,
+        legal_cert_issuer: editForm.legal_cert_issuer || null,
+        legal_cert_date: editForm.legal_cert_date || null,
+        legal_lease_contract: editForm.legal_lease_contract || null,
         updated_at: new Date().toISOString()
       };
 
@@ -1031,7 +1043,28 @@ export default function InfrastructureDevelopment() {
         ACCOUNT_OWNER: landlordNameText,
         ACCOUNT_NO: bankAccountText,
         BANK_NAME: selectedProject.bank_name || '................',
-        CERTIFICATE: selectedProject.legal_status === 'Khác' ? (selectedProject.legal_other_desc || 'Khác') : (selectedProject.legal_status || 'Giấy chứng nhận QSD nhà/ đất'),
+        CERTIFICATE: (() => {
+          const parts = [];
+          if (selectedProject.legal_status) {
+            parts.push(selectedProject.legal_status);
+          }
+          if (selectedProject.legal_cert_no) {
+            parts.push(`Số: ${selectedProject.legal_cert_no}`);
+          }
+          if (selectedProject.legal_cert_issuer) {
+            parts.push(`do ${selectedProject.legal_cert_issuer} cấp`);
+          }
+          if (selectedProject.legal_cert_date) {
+            parts.push(`ngày ${selectedProject.legal_cert_date}`);
+          }
+          if (selectedProject.legal_lease_contract) {
+            parts.push(`HĐ thuê đính kèm: ${selectedProject.legal_lease_contract}`);
+          }
+          if (selectedProject.legal_status === 'Khác' && selectedProject.legal_other_desc) {
+            parts.push(`Chi tiết: ${selectedProject.legal_other_desc}`);
+          }
+          return parts.length > 0 ? parts.join(', ') : 'Giấy chứng nhận QSD nhà/ đất';
+        })(),
         START_DATE: start_date,
         END_DATE: end_date,
         DEDUCTION_TEXT: '',
@@ -1093,8 +1126,8 @@ export default function InfrastructureDevelopment() {
         POWER_SUBSTATION: selectedProject.power_source === 'trang bị MBA riêng',
         POWER_DISTANCE: selectedProject.power_distance ? String(selectedProject.power_distance) : '........',
         FIBER_CAPABILITY: selectedProject.fiber_capability || '................',
-        LEGAL_RED_BOOK: selectedProject.legal_status === 'Giấy chứng nhận QSD nhà/ đất',
-        LEGAL_OTHER: selectedProject.legal_status === 'Khác',
+        LEGAL_RED_BOOK: selectedProject.legal_status === 'Giấy chứng nhận QSD nhà/ đất' || selectedProject.legal_status === 'Giấy chứng nhận & Hợp đồng thuê',
+        LEGAL_OTHER: selectedProject.legal_status === 'Khác' || selectedProject.legal_status === 'Hợp đồng thuê',
         LEGAL_OTHER_DESC: selectedProject.legal_other_desc || '................',
         ANTENNA_GUYED: selectedProject.antenna_type_survey === 'Dây co mặt đất',
         ANTENNA_MONOPOLE: selectedProject.antenna_type_survey === 'Cột monopole mặt đất',
@@ -1864,26 +1897,77 @@ export default function InfrastructureDevelopment() {
                     <div className="space-y-1">
                       <label className="text-[11px] font-bold text-slate-500 uppercase">Pháp lý đất đai</label>
                       <select 
-                        value={editForm.legal_status}
+                        value={editForm.legal_status || ''}
                         onChange={(e) => setEditForm(prev => ({ ...prev, legal_status: e.target.value }))}
                         className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-white"
                       >
                         <option value="Giấy chứng nhận QSD nhà/ đất">Giấy chứng nhận QSD nhà/ đất (Sổ hồng/đỏ)</option>
+                        <option value="Hợp đồng thuê">Hợp đồng thuê giữa chủ đất & đối tác</option>
+                        <option value="Giấy chứng nhận & Hợp đồng thuê">Giấy chứng nhận &amp; Hợp đồng thuê</option>
                         <option value="Khác">Pháp lý khác</option>
                       </select>
                     </div>
-                    {editForm.legal_status === 'Khác' ? (
-                      <div className="space-y-1">
+
+                    {(editForm.legal_status === 'Giấy chứng nhận QSD nhà/ đất' || editForm.legal_status === 'Giấy chứng nhận & Hợp đồng thuê') && (
+                      <>
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-bold text-slate-500 uppercase">Số giấy chứng nhận QSDĐ</label>
+                          <input 
+                            type="text"
+                            value={editForm.legal_cert_no || ''}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, legal_cert_no: e.target.value }))}
+                            className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
+                            placeholder="Số GCN, ví dụ: CH012345"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-bold text-slate-500 uppercase">Cơ quan cấp</label>
+                          <input 
+                            type="text"
+                            value={editForm.legal_cert_issuer || ''}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, legal_cert_issuer: e.target.value }))}
+                            className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
+                            placeholder="Ví dụ: UBND Huyện Cẩm Mỹ"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-bold text-slate-500 uppercase">Ngày cấp</label>
+                          <input 
+                            type="text"
+                            value={editForm.legal_cert_date || ''}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, legal_cert_date: e.target.value }))}
+                            className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
+                            placeholder="Ví dụ: 15/06/2018"
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    {(editForm.legal_status === 'Hợp đồng thuê' || editForm.legal_status === 'Giấy chứng nhận & Hợp đồng thuê') && (
+                      <div className="space-y-1 col-span-2">
+                        <label className="text-[11px] font-bold text-slate-500 uppercase">Hợp đồng thuê giữa chủ đất và người thuê</label>
+                        <textarea 
+                          value={editForm.legal_lease_contract || ''}
+                          onChange={(e) => setEditForm(prev => ({ ...prev, legal_lease_contract: e.target.value }))}
+                          rows="2"
+                          className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
+                          placeholder="Ví dụ: HĐ thuê số 12/2025/HĐ-MB ký ngày 10/01/2025..."
+                        />
+                      </div>
+                    )}
+
+                    {editForm.legal_status === 'Khác' && (
+                      <div className="space-y-1 col-span-2">
                         <label className="text-[11px] font-bold text-slate-500 uppercase">Chi tiết pháp lý khác</label>
                         <input 
                           type="text"
-                          value={editForm.legal_other_desc}
+                          value={editForm.legal_other_desc || ''}
                           onChange={(e) => setEditForm(prev => ({ ...prev, legal_other_desc: e.target.value }))}
                           className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
                           placeholder="Nhập pháp lý thực tế..."
                         />
                       </div>
-                    ) : null}
+                    )}
 
                     <div className="space-y-1">
                       <label className="text-[11px] font-bold text-slate-500 uppercase">Dạng cột dự kiến</label>
@@ -2514,6 +2598,10 @@ export default function InfrastructureDevelopment() {
                         <span className="font-semibold text-slate-700">
                           {selectedProject.legal_status || 'Chưa cập nhật'}
                           {selectedProject.legal_status === 'Khác' && ` (${selectedProject.legal_other_desc || ''})`}
+                          {selectedProject.legal_cert_no && `, Số GCN: ${selectedProject.legal_cert_no}`}
+                          {selectedProject.legal_cert_issuer && `, Cấp bởi: ${selectedProject.legal_cert_issuer}`}
+                          {selectedProject.legal_cert_date && `, Ngày: ${selectedProject.legal_cert_date}`}
+                          {selectedProject.legal_lease_contract && ` (HĐ liên kết: ${selectedProject.legal_lease_contract})`}
                         </span>
                       </div>
                       <div>
