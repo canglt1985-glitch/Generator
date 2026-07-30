@@ -1748,7 +1748,6 @@ def check_power_outage_generators():
             # Cảnh báo 1: Lịch cúp điện >= 3h (đã quá 1h chưa có GEN)
             if pending_schedule_warnings:
                 msg_lines.append("⚠️ *NHẮC NHỞ CÚP ĐIỆN CHƯA CHẠY MÁY (Lịch ≥ 3h)* ⚠️")
-                msg_lines.append("Đã quá 1 giờ chưa ghi nhận GEN active trên SmartW:")
                 for item in pending_schedule_warnings:
                     msg_lines.append(f"- *{item['site_id']}* ({item['tg_cup']} - {item['tg_co']})")
                 msg_lines.append("")
@@ -1756,7 +1755,6 @@ def check_power_outage_generators():
             # Cảnh báo 2: Mất điện AC > 2h chưa có GEN
             if pending_mac_warnings:
                 msg_lines.append("⚡ *CẢNH BÁO MẤT ĐIỆN AC > 2 GIỜ CHƯA CHẠY MÁY* ⚡")
-                msg_lines.append("Ghi nhận mất điện AC kéo dài chưa có GEN active trên SmartW:")
                 for item in pending_mac_warnings:
                     msg_lines.append(f"- *{item['site_id']}* (Mất nguồn lúc {item['time_display']}, đã trôi qua {item['hours_elapsed']} giờ)")
             
