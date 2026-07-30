@@ -1613,17 +1613,7 @@ def check_power_outage_generators():
             except Exception as ce:
                 logger.warning(f"Error reading active mpd cache: {ce}")
                 
-        # 2. Đọc lịch cúp điện của ngày hôm nay từ power_schedule
-        res = supabase.table("power_schedule")\
-            .select("id, id_tram, ngay_mat_dien, thoi_gian_cup_dien, thoi_gian_co_dien")\
-            .eq("ngay_mat_dien", today_str)\
-            .execute()
-            
-        outages = res.data or []
-        if not outages:
-            return
-            
-        # 3. Đọc danh sách cảnh báo đã gửi để tránh spam
+        # 2. Đọc danh sách cảnh báo đã gửi để tránh spam
         state_file = os.path.join(DATA_DIR, 'outage_sent_warnings.json')
         sent_warnings = {}
         if os.path.exists(state_file):
@@ -1633,43 +1623,54 @@ def check_power_outage_generators():
             except Exception:
                 pass
                 
-        # 4. Duyệt từng lịch cúp điện
-        warned_keys = []
-        outages_token = None
-        pending_warnings = []
+        pending_schedule_warnings = []
+        pending_mac_warnings = []
         
+        # 3. NHÁNH 1: Kiểm tra lịch cúp điện của ngày hôm nay từ power_schedule (chỉ nhắc nếu cúp >= 3h)
+        res = supabase.table("power_schedule")\
+            .select("id, id_tram, ngay_mat_dien, thoi_gian_cup_dien, thoi_gian_co_dien")\
+            .eq("ngay_mat_dien", today_str)\
+            .execute()
+            
+        outages = res.data or []
         for ot in outages:
             site_id = (ot.get("id_tram") or "").strip().upper()
             if not site_id:
                 continue
                 
-            # Nếu trạm đang có cảnh báo GEN active trên SmartW -> Đã chạy tốt, bỏ qua!
             if site_id in active_mpd_sites:
                 continue
                 
-            # Phân tích thời gian cúp điện
             tg_cup = ot.get("thoi_gian_cup_dien") or ""
-            if not tg_cup:
+            tg_co = ot.get("thoi_gian_co_dien") or ""
+            if not tg_cup or not tg_co:
+                continue
+                
+            # Tính thời lượng lịch cúp điện (giờ)
+            try:
+                t1 = datetime.datetime.strptime(tg_cup.strip(), "%H:%M")
+                t2 = datetime.datetime.strptime(tg_co.strip(), "%H:%M")
+                outage_duration_hours = ((t2 + datetime.timedelta(days=1) - t1).total_seconds() if t2 < t1 else (t2 - t1).total_seconds()) / 3600.0
+            except:
+                outage_duration_hours = 0.0
+                
+            # Trạm nào lịch cúp điện trên hoặc bằng 3h mới nhắc
+            if outage_duration_hours < 3.0:
                 continue
                 
             try:
-                # Định dạng thoi_gian_cup_dien: HH:MM hoặc HH:MM:SS
                 parts = tg_cup.split(':')
                 hour = int(parts[0])
                 minute = int(parts[1])
                 cup_dt = datetime.datetime(now.year, now.month, now.day, hour, minute)
                 
-                # Tính khoảng thời gian trôi qua từ lúc cúp điện (phút)
                 diff_min = (now - cup_dt).total_seconds() / 60.0
                 
-                # Điều kiện cảnh báo: 
-                # - Đã trôi qua từ 60 phút (1 giờ) trở lên.
-                # - Và nhỏ hơn 180 phút (3 tiếng) để tránh nhắc nhở các lịch quá cũ.
+                # Cảnh báo lịch cúp điện: đã quá 1h (60 phút) và < 3h (180 phút)
                 if 60 <= diff_min < 180:
-                    warning_key = f"{site_id}_{today_str}_{tg_cup}"
+                    warning_key = f"outage_{site_id}_{today_str}_{tg_cup}"
                     if warning_key not in sent_warnings:
-                        tg_co = ot.get("thoi_gian_co_dien") or "N/A"
-                        pending_warnings.append({
+                        pending_schedule_warnings.append({
                             "site_id": site_id,
                             "tg_cup": tg_cup,
                             "tg_co": tg_co,
@@ -1678,28 +1679,105 @@ def check_power_outage_generators():
             except Exception as ex:
                 logger.warning(f"Error parsing outage time for site {site_id}: {ex}")
                 
-        # 5. Gom và gửi 1 tin nhắn duy nhất nếu có trạm thỏa mãn
-        if pending_warnings:
-            # Load outages token
+        # 4. NHÁNH 2: Kiểm tra cảnh báo mất điện AC (MAC/MĐ) từ md.json
+        md_file = os.path.join(DATA_DIR, 'md.json')
+        if os.path.exists(md_file):
+            try:
+                with open(md_file, 'r', encoding='utf-8') as f:
+                    cache_md = json.load(f)
+                    md_list = cache_md.get('data', [])
+                    for alarm in md_list:
+                        site = _site_key(alarm)
+                        if not site:
+                            continue
+                        site_id = site.strip().upper()
+                        
+                        # Nếu trạm đã có GEN active, bỏ qua
+                        if site_id in active_mpd_sites:
+                            continue
+                            
+                        # Phân tích sdate của cảnh báo MAC
+                        sdate_str = alarm.get('sdateStr') or alarm.get('sdate_str') or alarm.get('sdate') or ''
+                        if not sdate_str:
+                            continue
+                            
+                        mac_start_dt = None
+                        try:
+                            if "T" in sdate_str:
+                                mac_start_dt = datetime.datetime.fromisoformat(sdate_str)
+                            else:
+                                parts = sdate_str.strip().split(" ")
+                                if len(parts) >= 2:
+                                    if "/" in parts[0] and ":" in parts[1]:
+                                        dparts = parts[0].split("/")
+                                        tparts = parts[1].split(":")
+                                        mac_start_dt = datetime.datetime(int(dparts[2]), int(dparts[1]), int(dparts[0]), int(tparts[0]), int(tparts[1]))
+                                    elif "/" in parts[1] and ":" in parts[0]:
+                                        dparts = parts[1].split("/")
+                                        tparts = parts[0].split(":")
+                                        mac_start_dt = datetime.datetime(int(dparts[2]), int(dparts[1]), int(dparts[0]), int(tparts[0]), int(tparts[1]))
+                        except Exception:
+                            pass
+                            
+                        if mac_start_dt:
+                            mac_age_min = (now - mac_start_dt).total_seconds() / 60.0
+                            # Điều kiện: mất điện AC > 2 tiếng (120 phút) và < 24 tiếng (để tránh báo các dữ liệu rác quá cũ)
+                            if 120 <= mac_age_min < 1440:
+                                warning_key = f"mac_{site_id}_{sdate_str.replace(' ', '_')}"
+                                if warning_key not in sent_warnings:
+                                    hours_elapsed = round(mac_age_min / 60.0, 1)
+                                    time_display = mac_start_dt.strftime('%H:%M')
+                                    pending_mac_warnings.append({
+                                        "site_id": site_id,
+                                        "time_display": time_display,
+                                        "hours_elapsed": hours_elapsed,
+                                        "warning_key": warning_key
+                                    })
+            except Exception as me:
+                logger.warning(f"Error reading active MAC cache for warning: {me}")
+                
+        # 5. Gom và gửi cảnh báo
+        warned_keys = []
+        if pending_schedule_warnings or pending_mac_warnings:
             from smartw.config import load_smartw_config
             cfg = load_smartw_config() or {}
             outages_token = cfg.get('viber_bot_token_outages') or "56a990b99bf464bd-d406c456f5380df0-770d03e18af041d0"
             
-            # Tạo tin nhắn ngắn gọn, tổng hợp các trạm
-            msg_lines = [
-                "⚠️ *NHẮC NHỞ CÚP ĐIỆN CHƯA CHẠY MÁY* ⚠️",
-                "Đã quá 1 giờ chưa ghi nhận GEN active trên SmartW:"
-            ]
-            for item in pending_warnings:
-                msg_lines.append(f"- *{item['site_id']}* ({item['tg_cup']} - {item['tg_co']})")
+            msg_lines = []
             
-            _send_viber_report(msg_lines, token=outages_token)
+            # Cảnh báo 1: Lịch cúp điện >= 3h (đã quá 1h chưa có GEN)
+            if pending_schedule_warnings:
+                msg_lines.append("⚠️ *NHẮC NHỞ CÚP ĐIỆN CHƯA CHẠY MÁY (Lịch ≥ 3h)* ⚠️")
+                msg_lines.append("Đã quá 1 giờ chưa ghi nhận GEN active trên SmartW:")
+                for item in pending_schedule_warnings:
+                    msg_lines.append(f"- *{item['site_id']}* ({item['tg_cup']} - {item['tg_co']})")
+                msg_lines.append("")
+                
+            # Cảnh báo 2: Mất điện AC > 2h chưa có GEN
+            if pending_mac_warnings:
+                msg_lines.append("⚡ *CẢNH BÁO MẤT ĐIỆN AC > 2 GIỜ CHƯA CHẠY MÁY* ⚡")
+                msg_lines.append("Ghi nhận mất điện AC kéo dài chưa có GEN active trên SmartW:")
+                for item in pending_mac_warnings:
+                    msg_lines.append(f"- *{item['site_id']}* (Mất nguồn lúc {item['time_display']}, đã trôi qua {item['hours_elapsed']} giờ)")
             
-            for item in pending_warnings:
+            # Gửi báo cáo
+            if msg_lines:
+                if msg_lines[-1] == "":
+                    msg_lines.pop()
+                _send_viber_report(msg_lines, token=outages_token)
+                
+            # Lưu vết các warning_key đã gửi
+            for item in pending_schedule_warnings:
                 w_key = item["warning_key"]
                 sent_warnings[w_key] = now.isoformat()
                 warned_keys.append(w_key)
-                logger.info(f"Viber Alert: Outage warning compiled for site {item['site_id']} (outage at {item['tg_cup']})")
+                logger.info(f"Viber Alert: Outage warning sent for site {item['site_id']} (outage at {item['tg_cup']})")
+                
+            for item in pending_mac_warnings:
+                w_key = item["warning_key"]
+                sent_warnings[w_key] = now.isoformat()
+                warned_keys.append(w_key)
+                logger.info(f"Viber Alert: MAC warning sent for site {item['site_id']} (active since {item['time_display']})")
                 
         # 6. Lưu lại danh sách đã gửi
         if warned_keys:
