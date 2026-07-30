@@ -1,23 +1,23 @@
 import { addMonths, differenceInDays, differenceInMonths, addDays, isBefore, isAfter } from 'date-fns';
 
 /**
- * Tính toán số tiền khấu trừ từ mốc 01/10/2025
+ * Tính toán số tiền khấu trừ từ mốc thời gian chỉ định
  * @param {number} oldPrice 
  * @param {number} newPrice 
  * @param {Date|string} paidUntilDateStr Ngày đã thanh toán đến
+ * @param {string} cutoffDateStr Ngày bắt đầu giảm giá
  * @returns {number} Số tiền khấu trừ
  */
-export function calculateDeduction(oldPrice, newPrice, paidUntilDateStr) {
+export function calculateDeduction(oldPrice, newPrice, paidUntilDateStr, cutoffDateStr = '2025-10-01') {
     if (!paidUntilDateStr || oldPrice <= newPrice) return 0;
     
-    // Mốc thời gian 01/10/2025 (Lưu ý: Tháng trong JS bắt đầu từ 0)
-    const fixedCalcStart = new Date(2025, 9, 1); 
+    const fixedCalcStart = new Date(cutoffDateStr);
     const paidUntilDate = new Date(paidUntilDateStr);
     
-    if (isNaN(paidUntilDate.getTime())) return 0;
+    if (isNaN(paidUntilDate.getTime()) || isNaN(fixedCalcStart.getTime())) return 0;
     
     if (isBefore(paidUntilDate, fixedCalcStart)) {
-        return 0; // Chưa trả lố mốc 1/10/2025
+        return 0; // Chưa trả lố mốc cutoff
     }
     
     // Effective end is paid_until + 1 day
@@ -35,10 +35,10 @@ export function calculateDeduction(oldPrice, newPrice, paidUntilDateStr) {
 }
 
 /**
- * Tính toán tiền cho một kỳ, tự động chẻ giá cũ/mới theo mốc 01/10/2025
+ * Tính toán tiền cho một kỳ, tự động chẻ giá cũ/mới theo mốc cutoff
  */
-const getPeriodAmt = (pStart, pEnd, oldPrice, newPrice) => {
-    const cutoffDate = new Date(2025, 9, 1); // 01/10/2025
+const getPeriodAmt = (pStart, pEnd, oldPrice, newPrice, cutoffDateStr = '2025-10-01') => {
+    const cutoffDate = new Date(cutoffDateStr);
     let total = 0;
     let curr = pStart;
     
@@ -64,7 +64,7 @@ const getPeriodAmt = (pStart, pEnd, oldPrice, newPrice) => {
 /**
  * Tính toán toàn bộ lịch trình thanh toán
  */
-export function generatePaymentSchedule(paidUntilDateStr, endContractStr, oldPrice, newPrice) {
+export function generatePaymentSchedule(paidUntilDateStr, endContractStr, oldPrice, newPrice, cutoffDateStr = '2025-10-01') {
     const defaultPaidUntil = new Date(2025, 11, 31); // 31/12/2025
     let paidUntilDate = paidUntilDateStr ? new Date(paidUntilDateStr) : defaultPaidUntil;
     if (isNaN(paidUntilDate.getTime())) paidUntilDate = defaultPaidUntil;
@@ -87,7 +87,7 @@ export function generatePaymentSchedule(paidUntilDateStr, endContractStr, oldPri
     let currStart = addDays(paidUntilDate, 1);
     
     // Khấu trừ
-    const deductionVal = calculateDeduction(oldPrice, newPrice, paidUntilDate);
+    const deductionVal = calculateDeduction(oldPrice, newPrice, paidUntilDate, cutoffDateStr);
     
     const periods = [];
     let totalAmount = 0;
@@ -97,7 +97,7 @@ export function generatePaymentSchedule(paidUntilDateStr, endContractStr, oldPri
     while (isBefore(currStart, endContract)) {
         let currEnd = addDays(addMonths(currStart, cycleMonths), -1);
         
-        let amt = getPeriodAmt(currStart, currEnd, oldPrice, newPrice);
+        let amt = getPeriodAmt(currStart, currEnd, oldPrice, newPrice, cutoffDateStr);
         if (cNo === 1 && deductionVal > 0) {
             amt -= deductionVal;
         }

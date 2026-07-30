@@ -1044,25 +1044,57 @@ export default function InfrastructureDevelopment() {
         ACCOUNT_NO: bankAccountText,
         BANK_NAME: selectedProject.bank_name || '................',
         CERTIFICATE: (() => {
+          const status = selectedProject.legal_status || '';
+          const certNo = selectedProject.legal_cert_no || '';
+          const issuer = selectedProject.legal_cert_issuer || '';
+          const certDate = selectedProject.legal_cert_date || '';
+          const leaseContract = selectedProject.legal_lease_contract || '';
+          const otherDesc = selectedProject.legal_status === 'Khác' ? (selectedProject.legal_other_desc || '') : '';
+
+          const formatLeaseContract = (val) => {
+            if (/ủy\s*quyền|uy\s*quyen|uq/i.test(val)) {
+              if (/^(hợp\s*đồng|giấy|văn\s*bản|hđ)/i.test(val.trim())) {
+                return val;
+              }
+              return `HĐ ủy quyền: ${val}`;
+            }
+            return `HĐ thuê đính kèm: ${val}`;
+          };
+
+          // Nếu có đầy đủ loại giấy tờ và số GCN thì ghép thành câu tự nhiên theo mẫu:
+          // "<loại giấy tờ> số <số> cấp ngày <ngày> tại <cơ quan cấp>"
+          if (status && certNo) {
+            let str = status;
+            str += ` số ${certNo}`;
+            if (certDate) {
+              str += ` cấp ngày ${certDate}`;
+            }
+            if (issuer) {
+              str += ` tại ${issuer}`;
+            }
+            const extra = [];
+            if (leaseContract) {
+              extra.push(formatLeaseContract(leaseContract));
+            }
+            if (otherDesc) {
+              extra.push(`Chi tiết: ${otherDesc}`);
+            }
+            if (extra.length > 0) {
+              str += `, ${extra.join(', ')}`;
+            }
+            return str;
+          }
+
+          // Fallback nếu thiếu thông tin
           const parts = [];
-          if (selectedProject.legal_status) {
-            parts.push(selectedProject.legal_status);
+          if (status) parts.push(status);
+          if (certNo) parts.push(`Số: ${certNo}`);
+          if (issuer) parts.push(`do ${issuer} cấp`);
+          if (certDate) parts.push(`ngày ${certDate}`);
+          if (leaseContract) {
+            parts.push(formatLeaseContract(leaseContract));
           }
-          if (selectedProject.legal_cert_no) {
-            parts.push(`Số: ${selectedProject.legal_cert_no}`);
-          }
-          if (selectedProject.legal_cert_issuer) {
-            parts.push(`do ${selectedProject.legal_cert_issuer} cấp`);
-          }
-          if (selectedProject.legal_cert_date) {
-            parts.push(`ngày ${selectedProject.legal_cert_date}`);
-          }
-          if (selectedProject.legal_lease_contract) {
-            parts.push(`HĐ thuê đính kèm: ${selectedProject.legal_lease_contract}`);
-          }
-          if (selectedProject.legal_status === 'Khác' && selectedProject.legal_other_desc) {
-            parts.push(`Chi tiết: ${selectedProject.legal_other_desc}`);
-          }
+          if (otherDesc) parts.push(`Chi tiết: ${otherDesc}`);
           return parts.length > 0 ? parts.join(', ') : 'Giấy chứng nhận QSD nhà/ đất';
         })(),
         START_DATE: start_date,
@@ -1894,78 +1926,7 @@ export default function InfrastructureDevelopment() {
                       />
                     </div>
 
-                    {/* KHU VỰC PHÁP LÝ ĐẤT ĐAI */}
-                    <div className="col-span-2 border border-slate-100 rounded-xl p-3 bg-slate-50/50 space-y-3">
-                      <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider block">Pháp lý đất đai &amp; Giấy tờ đính kèm</span>
-                      
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1 col-span-2">
-                          <label className="text-[11px] font-bold text-slate-500 uppercase">Hình thức pháp lý (Loại giấy tờ)</label>
-                          <input 
-                            type="text"
-                            value={editForm.legal_status || ''}
-                            onChange={(e) => setEditForm(prev => ({ ...prev, legal_status: e.target.value }))}
-                            className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-white"
-                            placeholder="Ví dụ: Giấy chứng nhận QSDĐ, Hợp đồng thuê, Ủy quyền..."
-                          />
-                        </div>
 
-                        <div className="space-y-1 col-span-2 sm:col-span-1">
-                          <label className="text-[11px] font-bold text-slate-500 uppercase">Số giấy chứng nhận QSDĐ</label>
-                          <input 
-                            type="text"
-                            value={editForm.legal_cert_no || ''}
-                            onChange={(e) => setEditForm(prev => ({ ...prev, legal_cert_no: e.target.value }))}
-                            className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-white"
-                            placeholder="Số GCN, ví dụ: CH012345"
-                          />
-                        </div>
-
-                        <div className="space-y-1 col-span-2 sm:col-span-1">
-                          <label className="text-[11px] font-bold text-slate-500 uppercase">Cơ quan cấp</label>
-                          <input 
-                            type="text"
-                            value={editForm.legal_cert_issuer || ''}
-                            onChange={(e) => setEditForm(prev => ({ ...prev, legal_cert_issuer: e.target.value }))}
-                            className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-white"
-                            placeholder="Ví dụ: UBND Huyện Cẩm Mỹ"
-                          />
-                        </div>
-
-                        <div className="space-y-1 col-span-2 sm:col-span-1">
-                          <label className="text-[11px] font-bold text-slate-500 uppercase">Ngày cấp</label>
-                          <input 
-                            type="text"
-                            value={editForm.legal_cert_date || ''}
-                            onChange={(e) => setEditForm(prev => ({ ...prev, legal_cert_date: e.target.value }))}
-                            className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-white"
-                            placeholder="Ví dụ: 15/06/2018"
-                          />
-                        </div>
-
-                        <div className="space-y-1 col-span-2 sm:col-span-1">
-                          <label className="text-[11px] font-bold text-slate-500 uppercase">Mô tả chi tiết khác (Nếu có)</label>
-                          <input 
-                            type="text"
-                            value={editForm.legal_other_desc || ''}
-                            onChange={(e) => setEditForm(prev => ({ ...prev, legal_other_desc: e.target.value }))}
-                            className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-white"
-                            placeholder="Mô tả thêm..."
-                          />
-                        </div>
-
-                        <div className="space-y-1 col-span-2">
-                          <label className="text-[11px] font-bold text-slate-500 uppercase">Hợp đồng thuê giữa chủ đất và người thuê</label>
-                          <textarea 
-                            value={editForm.legal_lease_contract || ''}
-                            onChange={(e) => setEditForm(prev => ({ ...prev, legal_lease_contract: e.target.value }))}
-                            rows="2"
-                            className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-white"
-                            placeholder="Ví dụ: HĐ thuê số 12/2025/HĐ-MB ký ngày 10/01/2025 thời hạn 5 năm..."
-                          />
-                        </div>
-                      </div>
-                    </div>
 
                     <div className="space-y-1">
                       <label className="text-[11px] font-bold text-slate-500 uppercase">Dạng cột dự kiến</label>
@@ -2147,6 +2108,35 @@ export default function InfrastructureDevelopment() {
                             className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
                             placeholder="Diện tích"
                           />
+                        </div>
+
+                        {/* KHU VỰC PHÁP LÝ ĐẤT ĐAI */}
+                        <div className="col-span-2 border border-slate-100 rounded-xl p-3 bg-slate-50/50 space-y-3">
+                          <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider block">Pháp lý đất đai &amp; Giấy tờ đính kèm</span>
+                          
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1 col-span-2">
+                              <label className="text-[11px] font-bold text-slate-500 uppercase">Giấy tờ chứng minh quyền sử dụng đất (Nhập chi tiết)</label>
+                              <textarea 
+                                value={editForm.legal_status || ''}
+                                onChange={(e) => setEditForm(prev => ({ ...prev, legal_status: e.target.value }))}
+                                rows="2"
+                                className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-white"
+                                placeholder="Nhập chi tiết. Ví dụ: giấy CN QSDĐ của ông Lư Nhật Thuỷ và bà Nguyễn Thị Hoàng Oanh số BE358472 cấp ngày 29/03/2011 tại UBND huyện Cẩm Mỹ"
+                              />
+                            </div>
+
+                            <div className="space-y-1 col-span-2">
+                              <label className="text-[11px] font-bold text-slate-500 uppercase">Hợp đồng thuê hoặc Hợp đồng ủy quyền liên quan (Nếu có)</label>
+                              <textarea 
+                                value={editForm.legal_lease_contract || ''}
+                                onChange={(e) => setEditForm(prev => ({ ...prev, legal_lease_contract: e.target.value }))}
+                                rows="2"
+                                className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-white"
+                                placeholder="Ví dụ: HĐ thuê số 12/2025/HĐ-MB... hoặc Hợp đồng ủy quyền số 45/2026/UQ ký ngày 15/02/2026..."
+                              />
+                            </div>
+                          </div>
                         </div>
 
                         <div className="space-y-1 col-span-2 border-t border-slate-100 pt-3">

@@ -12,6 +12,59 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
+const parseGPSCoordinates = (str) => {
+  if (!str) return null;
+  // 1. Chuẩn hóa chuỗi, đổi dấu chấm phẩy thành dấu phẩy
+  let clean = str.trim().replace(/;/g, ',');
+  
+  // 2. Kiểm tra định dạng chuẩn dấu chấm trước (Ví dụ: "11.3429, 107.4911")
+  const standardRegex = /(-?\d+\.\d+)\s*[\s,]\s*(-?\d+\.\d+)/;
+  let match = clean.match(standardRegex);
+  if (match) {
+    return {
+      lat: parseFloat(match[1]),
+      lng: parseFloat(match[2])
+    };
+  }
+  
+  // 3. Xử lý trường hợp nhập dấu phẩy làm phần thập phân (Ví dụ: "11,3429160, 107,4911210")
+  const commaParts = clean.split(',').map(p => p.trim()).filter(Boolean);
+  if (commaParts.length === 4) {
+    const latStr = `${commaParts[0]}.${commaParts[1]}`;
+    const lngStr = `${commaParts[2]}.${commaParts[3]}`;
+    const lat = parseFloat(latStr);
+    const lng = parseFloat(lngStr);
+    if (!isNaN(lat) && !isNaN(lng)) {
+      return { lat, lng };
+    }
+  }
+  
+  // 4. Xử lý trường hợp dấu cách phân tách và dấu phẩy thập phân (Ví dụ: "11,3429160  107,4911210")
+  const spaceParts = clean.split(/\s+/).map(p => p.trim()).filter(Boolean);
+  if (spaceParts.length === 2) {
+    const latStr = spaceParts[0].replace(',', '.');
+    const lngStr = spaceParts[1].replace(',', '.');
+    const lat = parseFloat(latStr);
+    const lng = parseFloat(lngStr);
+    if (!isNaN(lat) && !isNaN(lng)) {
+      return { lat, lng };
+    }
+  }
+  
+  // 5. Trích xuất khối số có chứa dấu chấm hoặc phẩy thập phân
+  const numberRegex = /(-?\d+[\.,]\d+)/g;
+  const numbers = clean.match(numberRegex);
+  if (numbers && numbers.length === 2) {
+    const lat = parseFloat(numbers[0].replace(',', '.'));
+    const lng = parseFloat(numbers[1].replace(',', '.'));
+    if (!isNaN(lat) && !isNaN(lng)) {
+      return { lat, lng };
+    }
+  }
+  
+  return null;
+};
+
 // Custom Icons with PoInThi Leaflet Color Markers
 const customerIcon = new L.Icon({
   iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
@@ -456,18 +509,16 @@ export default function NetworkMap() {
       return;
     }
 
-    const coordRegex = /(-?\d+\.\d+)\s*[\s,;]\s*(-?\d+\.\d+)/;
-    const match = inputVal.match(coordRegex);
-
-    if (match) {
-      const lat = parseFloat(match[1]);
-      const lng = parseFloat(match[2]);
-
+    const parsedCoords = parseGPSCoordinates(inputVal);
+    
+    if (parsedCoords) {
+      const { lat, lng } = parsedCoords;
+      
       if (lat < 8 || lat > 24 || lng < 100 || lng > 111) {
         setValidationError('Tọa độ nằm ngoài lãnh thổ Việt Nam!');
         return;
       }
-
+      
       executeScan(lat, lng);
     } else {
       // Nếu là tên địa điểm, cơ quan, hàng quán -> Tìm kiếm địa chỉ (Geocoding)

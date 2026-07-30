@@ -17,7 +17,6 @@ export const checkExpiry = (contract) => {
   
   if (days < 0) return { status: 'expired', days };
   if (days <= 180) return { status: 'expiring_6m', days };
-  if (days <= 365) return { status: 'expiring_12m', days };
   return { status: 'valid', days };
 };
 

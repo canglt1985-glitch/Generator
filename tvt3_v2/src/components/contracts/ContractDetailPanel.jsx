@@ -23,6 +23,7 @@ export default function ContractDetailPanel({ contract, onClose, onUpdate }) {
   const [paymentCycle, setPaymentCycle] = useState('6 tháng');
   const [priceWithVat, setPriceWithVat] = useState(0);
   const [priceWithoutVat, setPriceWithoutVat] = useState(0);
+  const [vatRate, setVatRate] = useState(0); // 0 or 10
   const [electricityPrice, setElectricityPrice] = useState(0);
   const [paidUntil, setPaidUntil] = useState('');
   const [bankNameInput, setBankNameInput] = useState('');
@@ -40,8 +41,17 @@ export default function ContractDetailPanel({ contract, onClose, onUpdate }) {
       setStartDateInput(contract.dates?.ngay_ky_hd || '');
       setEndDateInput(contract.dates?.ngay_ket_thuc_hd || '');
       setPaymentCycle(contract.dates?.chu_ky_thanh_toan || '6 tháng');
-      setPriceWithVat(contract.financials?.gia_thue_co_vat || 0);
-      setPriceWithoutVat(contract.financials?.gia_thue_khong_vat || 0);
+      
+      const priceVat = contract.financials?.gia_thue_co_vat || 0;
+      const priceNoVat = contract.financials?.gia_thue_khong_vat || 0;
+      setPriceWithVat(priceVat);
+      setPriceWithoutVat(priceNoVat);
+      if (priceVat > 0 && priceNoVat > 0 && priceVat > priceNoVat) {
+        setVatRate(10);
+      } else {
+        setVatRate(0);
+      }
+      
       setElectricityPrice(contract.financials?.gia_dien_khoan || 0);
       setPaidUntil(contract.financials?.da_thanh_toan_den || '');
       setBankNameInput(contract.bank_info?.ngan_hang || '');
@@ -52,10 +62,34 @@ export default function ContractDetailPanel({ contract, onClose, onUpdate }) {
     }
   }, [contract]);
 
-  // Auto calculate price without VAT when price with VAT changes
-  const handlePriceWithVatChange = (val) => {
+  // Synchronized price calculations when price with VAT changes
+  const handlePriceWithVatChange = (val, currentVat = vatRate) => {
     setPriceWithVat(val);
-    setPriceWithoutVat(Math.round(val / 1.1));
+    if (currentVat === 10) {
+      setPriceWithoutVat(Math.round(val / 1.1));
+    } else {
+      setPriceWithoutVat(val);
+    }
+  };
+
+  // Synchronized price calculations when price without VAT changes
+  const handlePriceWithoutVatChange = (val, currentVat = vatRate) => {
+    setPriceWithoutVat(val);
+    if (currentVat === 10) {
+      setPriceWithVat(Math.round(val * 1.1));
+    } else {
+      setPriceWithVat(val);
+    }
+  };
+
+  // Synchronized price calculations when VAT rate changes
+  const handleVatRateChange = (newVat) => {
+    setVatRate(newVat);
+    if (newVat === 10) {
+      setPriceWithoutVat(Math.round(priceWithVat / 1.1));
+    } else {
+      setPriceWithoutVat(priceWithVat);
+    }
   };
 
   const handleSave = async (e) => {
@@ -413,7 +447,7 @@ export default function ContractDetailPanel({ contract, onClose, onUpdate }) {
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
               Tài chính & Thanh toán
             </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Giá thuê có VAT (đ)</label>
                 <input 
@@ -428,9 +462,20 @@ export default function ContractDetailPanel({ contract, onClose, onUpdate }) {
                 <input 
                   type="number" 
                   value={priceWithoutVat} 
-                  onChange={(e) => setPriceWithoutVat(Number(e.target.value))}
+                  onChange={(e) => handlePriceWithoutVatChange(Number(e.target.value))}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 font-semibold text-slate-800"
                 />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Thuế suất VAT</label>
+                <select 
+                  value={vatRate} 
+                  onChange={(e) => handleVatRateChange(Number(e.target.value))}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white font-medium text-slate-800"
+                >
+                  <option value={0}>0%</option>
+                  <option value={10}>10%</option>
+                </select>
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Giá điện khoán (đ)</label>
@@ -450,7 +495,7 @@ export default function ContractDetailPanel({ contract, onClose, onUpdate }) {
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 font-medium text-slate-800"
                 />
               </div>
-              <div className="sm:col-span-4 pt-2 border-t border-slate-100 flex items-center">
+              <div className="sm:col-span-5 pt-2 border-t border-slate-100 flex items-center">
                 <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer font-bold select-none">
                   <input 
                     type="checkbox" 
