@@ -27,6 +27,7 @@ export default function Generator() {
   const [filterYear, setFilterYear] = useState(new Date().getFullYear());
   const [searchSite, setSearchSite] = useState('');
   const [searchDate, setSearchDate] = useState('');
+  const [searchStatus, setSearchStatus] = useState('');
   
   // Form states - Generator Log
   const [logDate, setLogDate] = useState(new Date().toISOString().split('T')[0]);
@@ -230,10 +231,18 @@ export default function Generator() {
           return false;
         }
       }
+
+      // 3. Filter by Status
+      if (searchStatus) {
+        const status = log.run_details?.status || 'approved';
+        if (status !== searchStatus) {
+          return false;
+        }
+      }
       
       return true;
     });
-  }, [genLogs, searchSite, searchDate, stations]);
+  }, [genLogs, searchSite, searchDate, searchStatus, stations]);
 
   // Statistics calculation for filtered logs
   const stats = useMemo(() => {
@@ -1320,7 +1329,18 @@ export default function Generator() {
                           <th className="px-2 py-1.5"></th>
                           <th className="px-2 py-1.5"></th>
                           <th className="px-2 py-1.5"></th>
-                          <th className="px-2 py-1.5"></th>
+                          <th className="px-2 py-1.5">
+                            <select
+                              className="w-full px-1 py-0.5 border border-slate-200 rounded text-[11px] font-normal focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                              value={searchStatus}
+                              onChange={(e) => setSearchStatus(e.target.value)}
+                            >
+                              <option value="">Tất cả</option>
+                              <option value="pending">Chờ duyệt</option>
+                              <option value="approved">Đã duyệt</option>
+                              <option value="rejected">Từ chối</option>
+                            </select>
+                          </th>
                           <th className="px-2 py-1.5"></th>
                         </tr>
                       </thead>
