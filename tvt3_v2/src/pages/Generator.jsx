@@ -1032,6 +1032,27 @@ export default function Generator() {
             </select>
 
             {activeTab === 'logs' && (
+              <select
+                value={searchStatus}
+                onChange={(e) => setSearchStatus(e.target.value)}
+                className={`bg-white border rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:ring-1 cursor-pointer transition-colors ${
+                  searchStatus === 'pending'
+                    ? 'border-amber-300 text-amber-700 focus:ring-amber-500'
+                    : searchStatus === 'approved'
+                    ? 'border-emerald-300 text-emerald-700 focus:ring-emerald-500'
+                    : searchStatus === 'rejected'
+                    ? 'border-red-300 text-red-700 focus:ring-red-500'
+                    : 'border-slate-200 text-slate-700 focus:ring-blue-500'
+                }`}
+              >
+                <option value="" className="text-slate-700">-- Tất cả trạng thái --</option>
+                <option value="pending" className="text-amber-700">Chờ duyệt</option>
+                <option value="approved" className="text-emerald-700">Đã duyệt</option>
+                <option value="rejected" className="text-red-700">Từ chối</option>
+              </select>
+            )}
+
+            {activeTab === 'logs' && (
               <>
                 {/* Import Excel */}
                 <button
