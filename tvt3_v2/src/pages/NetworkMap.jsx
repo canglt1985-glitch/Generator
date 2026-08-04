@@ -1035,7 +1035,7 @@ export default function NetworkMap() {
                               href={`https://www.google.com/maps/dir/?api=1&${customerLocation ? `origin=${customerLocation.lat},${customerLocation.lng}&` : ''}destination=${lat},${lng}&travelmode=driving`}
                               target="_blank" 
                               rel="noopener noreferrer"
-                              className="flex-1 inline-flex items-center justify-center gap-1 px-2.5 py-1 bg-cyan-600 hover:bg-cyan-500 text-white rounded text-[10px] font-bold transition-all text-center"
+                              className="flex-1 inline-flex items-center justify-center gap-1 px-2.5 py-1 bg-cyan-600 hover:bg-cyan-500 !text-white rounded text-[11px] font-bold transition-all text-center shadow-sm"
                             >
                               Dẫn đường
                             </a>
@@ -1043,7 +1043,7 @@ export default function NetworkMap() {
                               href={`/datasites?search=${name}`}
                               target="_blank" 
                               rel="noopener noreferrer"
-                              className="flex-1 inline-flex items-center justify-center gap-1 px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-[10px] font-bold transition-all text-center"
+                              className="flex-1 inline-flex items-center justify-center gap-1 px-2.5 py-1 bg-blue-600 hover:bg-blue-500 !text-white rounded text-[11px] font-bold transition-all text-center shadow-sm"
                             >
                               Datasite
                             </a>
@@ -1092,7 +1092,7 @@ export default function NetworkMap() {
                             href={`/datasites?search=${line.hubOldId || line.hubId}`}
                             target="_blank" 
                             rel="noopener noreferrer"
-                            className="flex-1 inline-flex items-center justify-center gap-0.5 px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[10px] font-bold transition-all text-center border border-slate-200 uppercase"
+                            className="flex-1 inline-flex items-center justify-center gap-0.5 px-2 py-1 bg-slate-100 hover:bg-slate-200 !text-slate-700 rounded text-[11px] font-bold transition-all text-center border border-slate-200 uppercase shadow-sm"
                           >
                             Trạm MAIN
                           </a>
@@ -1100,7 +1100,7 @@ export default function NetworkMap() {
                             href={`/datasites?search=${line.siteOldId || line.siteId}`}
                             target="_blank" 
                             rel="noopener noreferrer"
-                            className="flex-1 inline-flex items-center justify-center gap-0.5 px-2 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-[10px] font-bold transition-all text-center uppercase"
+                            className="flex-1 inline-flex items-center justify-center gap-0.5 px-2 py-1 bg-blue-600 hover:bg-blue-500 !text-white rounded text-[11px] font-bold transition-all text-center uppercase shadow-sm"
                           >
                             Trạm LASTMILE
                           </a>
@@ -1133,7 +1133,7 @@ export default function NetworkMap() {
                             href={`https://www.google.com/maps/dir/?api=1&${customerLocation ? `origin=${customerLocation.lat},${customerLocation.lng}&` : ''}destination=${lat},${lng}&travelmode=driving`}
                             target="_blank" 
                             rel="noopener noreferrer"
-                            className="mt-1.5 inline-flex items-center justify-center gap-1 px-2.5 py-1 bg-cyan-600 hover:bg-cyan-500 text-white rounded text-[10px] font-bold transition-all text-center"
+                            className="mt-1.5 inline-flex items-center justify-center gap-1 px-2.5 py-1 bg-cyan-600 hover:bg-cyan-500 !text-white rounded text-[11px] font-bold transition-all text-center shadow-sm"
                           >
                             Dẫn đường (Google Maps)
                           </a>
