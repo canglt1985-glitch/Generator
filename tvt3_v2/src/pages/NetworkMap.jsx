@@ -128,6 +128,7 @@ export default function NetworkMap() {
   // Map settings and state
   const [customerLocation, setCustomerLocation] = useState(null); // { lat, lng }
   const [nearestSites, setNearestSites] = useState([]); // List of { site, type, distance }
+  const [walkingRoute, setWalkingRoute] = useState(null); // { path: [[lat, lng], ...], distance, duration, targetCode }
   const [validationError, setValidationError] = useState('');
   const [mapCenter, setMapCenter] = useState([11.201, 107.221]); // Default coordinates for Dong Nai
   const [zoomLevel, setZoomLevel] = useState(11);
@@ -499,6 +500,60 @@ export default function NetworkMap() {
     else setZoomLevel(14);
   };
 
+  // Auto-fetch walking route to nearest site
+  useEffect(() => {
+    if (nearestSites && nearestSites.length > 0 && customerLocation) {
+      const nearest = nearestSites[0];
+      const getRoute = async () => {
+        try {
+          const url = `https://router.project-osrm.org/route/v1/foot/${customerLocation.lng},${customerLocation.lat};${nearest.lng},${nearest.lat}?overview=full&geometries=geojson`;
+          const response = await fetch(url);
+          const data = await response.json();
+          if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
+            const route = data.routes[0];
+            const path = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
+            setWalkingRoute({
+              path,
+              distance: route.distance,
+              duration: route.duration,
+              targetCode: nearest.code,
+              targetName: nearest.name
+            });
+          } else {
+            setWalkingRoute(null);
+          }
+        } catch {
+          setWalkingRoute(null);
+        }
+      };
+      getRoute();
+    } else {
+      setWalkingRoute(null);
+    }
+  }, [nearestSites, customerLocation]);
+
+  const handleManualWalkingRoute = async (target) => {
+    if (!customerLocation || !target) return;
+    try {
+      const url = `https://router.project-osrm.org/route/v1/foot/${customerLocation.lng},${customerLocation.lat};${target.lng},${target.lat}?overview=full&geometries=geojson`;
+      const response = await fetch(url);
+      const data = await response.json();
+      if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
+        const route = data.routes[0];
+        const path = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
+        setWalkingRoute({
+          path,
+          distance: route.distance,
+          duration: route.duration,
+          targetCode: target.code,
+          targetName: target.name
+        });
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const handleManualSearch = async (e) => {
     if (e) e.preventDefault();
     setValidationError('');
@@ -657,6 +712,24 @@ export default function NetworkMap() {
           <Server size={12} className="text-cyan-400" />
           Các trạm lân cận
         </h4>
+
+        {walkingRoute && (
+          <div className="bg-orange-950/40 border border-orange-500/30 rounded-xl p-3 text-xs space-y-1.5 animate-in slide-in-from-top-1 duration-200">
+            <div className="flex items-center justify-between text-orange-400 font-bold">
+              <span className="flex items-center gap-1">🚶 ĐƯỜNG ĐI BỘ ĐẾN {walkingRoute.targetCode}:</span>
+              <button 
+                onClick={() => setWalkingRoute(null)}
+                className="text-slate-400 hover:text-white px-1.5 py-0.5 rounded bg-slate-700/50 hover:bg-slate-700 font-sans text-[10px]"
+              >
+                Ẩn đường đi
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-300">
+              <div>Khoảng cách: <b className="text-white text-xs">{formatDistance(walkingRoute.distance)}</b></div>
+              <div>Thời gian đi bộ: <b className="text-white text-xs">{Math.round(walkingRoute.duration / 60)} phút</b></div>
+            </div>
+          </div>
+        )}
         <div className="overflow-x-auto">
           <table className="w-full text-left text-[11px] border-collapse font-sans">
             <thead>
@@ -700,6 +773,17 @@ export default function NetworkMap() {
                   {!isCompact && <td className="py-2 px-2 text-slate-400 font-semibold font-sans">{item.toVT}</td>}
                   <td className="py-2 px-2 text-center font-sans">
                     <div className="flex justify-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={() => handleManualWalkingRoute(item)}
+                        className={`inline-flex items-center justify-center gap-0.5 px-2 py-0.5 rounded text-[9px] font-bold transition-all text-center ${
+                          walkingRoute?.targetCode === item.code 
+                            ? 'bg-orange-600 text-white font-extrabold shadow-sm shadow-orange-600/20' 
+                            : 'bg-slate-700 hover:bg-slate-600 text-slate-200 hover:text-white'
+                        }`}
+                        title="Vẽ đường đi bộ ngắn nhất trên bản đồ"
+                      >
+                        🚶 Đi bộ
+                      </button>
                       <a 
                         href={`https://www.google.com/maps/dir/?api=1&origin=${customerLocation.lat},${customerLocation.lng}&destination=${item.lat},${item.lng}&travelmode=driving`}
                         target="_blank" 
@@ -1168,12 +1252,34 @@ export default function NetworkMap() {
                   >
                     <Popup>
                       <div className="text-center font-sans text-xs font-semibold">
-                        Khoảng cách đến {item.code}: {formatDistance(item.distance)}
+                        Khoảng cách chim bay đến {item.code}: {formatDistance(item.distance)}
                       </div>
                     </Popup>
                   </Polyline>
                 );
               })}
+
+              {/* Draw walking route polyline */}
+              {walkingRoute && (
+                <Polyline
+                  positions={walkingRoute.path}
+                  pathOptions={{
+                    color: '#f97316', // Orange
+                    weight: 4,
+                    opacity: 0.9,
+                    lineJoin: 'round'
+                  }}
+                >
+                  <Popup>
+                    <div className="font-sans text-xs p-1 text-slate-900">
+                      <div className="font-bold text-orange-600">🚶 Đường đi bộ ngắn nhất:</div>
+                      <div>Đến trạm: <b className="text-cyan-700">{walkingRoute.targetCode}</b></div>
+                      <div>Khoảng cách đi bộ: <b>{formatDistance(walkingRoute.distance)}</b></div>
+                      <div>Thời gian: <b>{Math.round(walkingRoute.duration / 60)} phút</b></div>
+                    </div>
+                  </Popup>
+                </Polyline>
+              )}
             </MapContainer>
           </div>
 
