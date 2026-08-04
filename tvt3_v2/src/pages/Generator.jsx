@@ -2,12 +2,12 @@ import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../supabaseClient';
 import { 
   Zap, Calendar, AlertTriangle, FileText, Search, Plus, Trash, 
-  Edit, Eye, Clock, CheckCircle2, AlertCircle, X, ExternalLink, Filter
+  Edit, Eye, Clock, CheckCircle2, AlertCircle, X, ExternalLink, Filter, RefreshCw
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 export default function Generator() {
-  const [activeTab, setActiveTab] = useState('logs'); // logs, anomalies, invoices
+  const [activeTab, setActiveTab] = useState('logs'); // logs, anomalies, invoices, transfer
   
   // Data States
   const [genLogs, setGenLogs] = useState([]);
@@ -15,6 +15,15 @@ export default function Generator() {
   const [fuelTxs, setFuelTxs] = useState([]);
   const [invoices, setInvoices] = useState([]);
   const [stations, setStations] = useState([]);
+
+  // Generator Transfer States
+  const [transSourceSiteId, setTransSourceSiteId] = useState('');
+  const [transDestSiteId, setTransDestSiteId] = useState('');
+  const [transNewDinhMuc, setTransNewDinhMuc] = useState('');
+  const [transNewDinhMucThucTe, setTransNewDinhMucThucTe] = useState('');
+  const [transOperator, setTransOperator] = useState('');
+  const [transNotes, setTransNotes] = useState('');
+  const [transmitting, setTransmitting] = useState(false);
   
   // UI & Loading States
   const [loading, setLoading] = useState(true);
@@ -504,6 +513,125 @@ export default function Generator() {
     XLSX.writeFile(workbook, `Bao_cao_bat_thuong_chay_may_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
+  // Auto-populate transfer norms when source site changes
+  useEffect(() => {
+    if (transSourceSiteId) {
+      const src = stations.find(s => s.site_id === transSourceSiteId);
+      const mpd = src?.infrastructure_info?.may_phat_dien?.mpd?.[0];
+      if (mpd) {
+        setTransNewDinhMuc(mpd.dinh_muc !== undefined && mpd.dinh_muc !== null ? String(mpd.dinh_muc) : '');
+        setTransNewDinhMucThucTe(mpd.dinh_muc_thuc_te !== undefined && mpd.dinh_muc_thuc_te !== null ? String(mpd.dinh_muc_thuc_te) : '');
+      } else {
+        setTransNewDinhMuc('');
+        setTransNewDinhMucThucTe('');
+      }
+    } else {
+      setTransNewDinhMuc('');
+      setTransNewDinhMucThucTe('');
+    }
+  }, [transSourceSiteId, stations]);
+
+  const handleTransferGenerator = async (e) => {
+    e.preventDefault();
+    if (!transSourceSiteId || !transDestSiteId) {
+      alert("Vui lòng chọn đầy đủ Trạm nguồn và Trạm nhận!");
+      return;
+    }
+    if (transSourceSiteId === transDestSiteId) {
+      alert("Trạm nhận phải khác Trạm nguồn!");
+      return;
+    }
+    if (!transNewDinhMucThucTe) {
+      alert("Vui lòng điền định mức thực tế mới!");
+      return;
+    }
+
+    const srcSite = stations.find(s => s.site_id === transSourceSiteId);
+    const destSite = stations.find(s => s.site_id === transDestSiteId);
+    if (!srcSite || !destSite) return;
+
+    const mpdToMove = srcSite.infrastructure_info?.may_phat_dien?.mpd?.[0];
+    if (!mpdToMove) {
+      alert("Trạm nguồn không có máy phát điện cố định nào để điều chuyển!");
+      return;
+    }
+
+    if (!window.confirm(`Xác nhận điều chuyển máy phát điện ${mpdToMove.nhan_hieu || ''} (S/N: ${mpdToMove.serial || 'Chưa rõ'}) từ trạm ${transSourceSiteId} sang trạm ${transDestSiteId}?\n\nĐịnh mức mới tại trạm nhận sẽ là:\n- Định mức kỹ thuật: ${transNewDinhMuc || 0} L/h\n- Định mức thực tế: ${transNewDinhMucThucTe} L/h`)) {
+      return;
+    }
+
+    setTransmitting(true);
+    try {
+      // 1. Prepare updated source station infrastructure_info
+      const srcInfra = { ...srcSite.infrastructure_info };
+      srcInfra.may_phat_dien = {
+        ten: "",
+        mpd: []
+      };
+
+      // 2. Prepare updated destination station infrastructure_info
+      const destInfra = { ...destSite.infrastructure_info };
+      
+      const newMpdObj = {
+        ...mpdToMove,
+        dinh_muc: transNewDinhMuc ? parseFloat(transNewDinhMuc) : 0,
+        dinh_muc_thuc_te: parseFloat(transNewDinhMucThucTe)
+      };
+      
+      destInfra.may_phat_dien = {
+        ten: `${newMpdObj.nhan_hieu || 'MPD'} ${newMpdObj.cong_suat ? newMpdObj.cong_suat + 'KVA' : ''}`.trim(),
+        mpd: [newMpdObj]
+      };
+
+      // 3. Save both updates to database
+      const { error: srcError } = await supabase
+        .from('datasites')
+        .update({ infrastructure_info: srcInfra })
+        .eq('site_id', transSourceSiteId);
+
+      if (srcError) throw srcError;
+
+      const { error: destError } = await supabase
+        .from('datasites')
+        .update({ infrastructure_info: destInfra })
+        .eq('site_id', transDestSiteId);
+
+      if (destError) throw destError;
+
+      // 4. Try log transfer to database
+      try {
+        await supabase
+          .from('equipment_transfers')
+          .insert([{
+            equipment_id: null,
+            from_location: transSourceSiteId,
+            to_location: transDestSiteId,
+            transfer_date: new Date().toISOString(),
+            operator: transOperator.trim() || null,
+            notes: `Điều chuyển MPĐ cố định. Cập nhật định mức thực tế mới: ${transNewDinhMucThucTe} L/h. Ghi chú: ${transNotes}`
+          }]);
+      } catch (logErr) {
+        console.warn("Could not write transfer log: ", logErr);
+      }
+
+      alert("Điều chuyển máy phát điện và cập nhật định mức nhiên liệu mới thành công!");
+      
+      // Reset form
+      setTransSourceSiteId('');
+      setTransDestSiteId('');
+      setTransOperator('');
+      setTransNotes('');
+      
+      // Refresh app data
+      await fetchData();
+    } catch (err) {
+      console.error(err);
+      alert("Lỗi khi điều chuyển máy phát: " + err.message);
+    } finally {
+      setTransmitting(false);
+    }
+  };
+
   // Recalculate generator logs
   async function handleRecalculate() {
     if (!confirm('Tính lại định mức, nhiên liệu và chi phí cho tất cả bản ghi chưa có thành tiền?')) return;
@@ -990,6 +1118,9 @@ export default function Generator() {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0);
   };
 
+  const sourceStation = stations.find(s => s.site_id === transSourceSiteId);
+  const sourceMpd = sourceStation?.infrastructure_info?.may_phat_dien?.mpd?.[0] || null;
+
   return (
     <div className="space-y-5 animate-in fade-in duration-500 relative">
       {/* Header */}
@@ -1109,11 +1240,12 @@ export default function Generator() {
       </div>
 
       {/* Navigation Cards as Tabs */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 mb-6">
         {[
           { id: 'logs', label: 'Nhật ký chạy máy', color: 'blue', icon: '⏱' },
           { id: 'anomalies', label: 'Báo cáo bất thường', color: 'red', icon: '⚠️' },
           { id: 'invoices', label: 'Hóa đơn điện tử', color: 'emerald', icon: '💳' },
+          { id: 'transfer', label: 'Điều chuyển máy phát', color: 'orange', icon: '🔄' },
         ].map(card => {
           const isActive = activeTab === card.id;
           
@@ -1121,18 +1253,21 @@ export default function Generator() {
             blue: 'border-l-blue-500',
             red: 'border-l-red-500',
             emerald: 'border-l-emerald-500',
+            orange: 'border-l-orange-500',
           };
           
           const textColors = {
             blue: 'text-blue-700',
             red: 'text-red-700',
             emerald: 'text-emerald-700',
+            orange: 'text-orange-700',
           };
 
           const ringColors = {
             blue: 'ring-blue-400',
             red: 'ring-red-400',
             emerald: 'ring-emerald-400',
+            orange: 'ring-orange-400',
           };
 
           return (
@@ -1863,6 +1998,189 @@ export default function Generator() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* 4. Tab Điều Chuyển Máy Phát Điện */}
+      {activeTab === 'transfer' && (
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 animate-in fade-in duration-300">
+          <div className="flex items-center gap-2 pb-4 mb-6 border-b border-slate-100">
+            <div className="p-2 bg-orange-50 text-orange-600 rounded-lg">
+              <RefreshCw size={20} className="animate-spin-slow" />
+            </div>
+            <div>
+              <h2 className="text-base md:text-lg font-bold text-slate-800">Điều Chuyển Máy Phát Điện Cố Định</h2>
+              <p className="text-xs text-slate-500">Thực hiện bàn giao máy phát điện từ trạm nguồn sang trạm đích và cập nhật định mức nhiên liệu thực tế theo vị trí mới.</p>
+            </div>
+          </div>
+
+          <form onSubmit={handleTransferGenerator} className="grid grid-cols-1 md:grid-cols-12 gap-6 text-xs md:text-sm">
+            {/* Cột trái: Trạm nguồn */}
+            <div className="md:col-span-5 bg-slate-50/50 rounded-xl p-5 border border-slate-200/60 space-y-4">
+              <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 mb-2">1. Trạm nguồn (Nơi chuyển đi)</h3>
+              
+              <div className="space-y-1">
+                <label className="font-bold text-slate-600 text-xs">Chọn trạm nguồn *</label>
+                <select
+                  value={transSourceSiteId}
+                  onChange={(e) => setTransSourceSiteId(e.target.value)}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-orange-500"
+                  required
+                >
+                  <option value="">-- Chọn trạm nguồn có máy phát --</option>
+                  {stations
+                    .filter(s => s.infrastructure_info?.may_phat_dien?.mpd?.length > 0)
+                    .map(s => (
+                      <option key={s.site_id} value={s.site_id}>
+                        {s.site_id} - {s.name}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              {sourceMpd ? (
+                <div className="bg-white rounded-lg p-4 border border-slate-200/50 shadow-xs space-y-2 text-xs">
+                  <div className="font-bold text-slate-700 text-sm border-b border-slate-100 pb-1.5 mb-1.5 flex justify-between">
+                    <span>📋 Thông số máy phát nguồn:</span>
+                    <span className="text-emerald-600">Sẵn sàng điều chuyển</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <span className="text-slate-400">Nhãn hiệu:</span>
+                      <p className="font-semibold text-slate-700">{sourceMpd.nhan_hieu || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <span className="text-slate-400">Công suất:</span>
+                      <p className="font-semibold text-slate-700">{sourceMpd.cong_suat ? sourceMpd.cong_suat + ' KVA' : 'N/A'}</p>
+                    </div>
+                    <div>
+                      <span className="text-slate-400">Số máy (Serial):</span>
+                      <p className="font-semibold text-slate-700">{sourceMpd.serial || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <span className="text-slate-400">Nhiên liệu:</span>
+                      <p className="font-semibold text-slate-700">{sourceMpd.nhien_lieu || 'Dầu'}</p>
+                    </div>
+                    <div className="col-span-2 border-t border-slate-100 pt-1.5 mt-1">
+                      <span className="text-slate-400">Định mức hiện tại (Kỹ thuật / Thực tế):</span>
+                      <p className="font-bold text-slate-800 text-[13px]">{sourceMpd.dinh_muc || 0} L/h  /  {sourceMpd.dinh_muc_thuc_te || 0} L/h</p>
+                    </div>
+                  </div>
+                </div>
+              ) : transSourceSiteId ? (
+                <div className="p-4 bg-amber-50 text-amber-800 rounded-lg text-xs font-medium border border-amber-100">
+                  ⚠️ Trạm này không có dữ liệu máy phát điện hợp lệ để chuyển đi.
+                </div>
+              ) : (
+                <div className="py-8 text-center text-slate-400 border border-dashed border-slate-200 rounded-lg text-xs">
+                  Chọn trạm nguồn để xem thông tin máy phát điện
+                </div>
+              )}
+            </div>
+
+            {/* Mũi tên chuyển hướng */}
+            <div className="md:col-span-2 flex items-center justify-center">
+              <div className="p-3 bg-slate-100 rounded-full text-slate-400 hidden md:block">
+                <RefreshCw size={24} className="text-orange-500 animate-spin-slow" />
+              </div>
+            </div>
+
+            {/* Cột phải: Trạm nhận */}
+            <div className="md:col-span-5 bg-slate-50/50 rounded-xl p-5 border border-slate-200/60 space-y-4">
+              <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 mb-2">2. Trạm nhận (Nơi chuyển đến)</h3>
+              
+              <div className="space-y-1">
+                <label className="font-bold text-slate-600 text-xs">Chọn trạm nhận *</label>
+                <select
+                  value={transDestSiteId}
+                  onChange={(e) => setTransDestSiteId(e.target.value)}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-orange-500"
+                  required
+                >
+                  <option value="">-- Chọn trạm nhận máy phát --</option>
+                  {stations
+                    .filter(s => s.site_id !== transSourceSiteId)
+                    .map(s => {
+                      const hasMpd = s.infrastructure_info?.may_phat_dien?.mpd?.length > 0;
+                      return (
+                        <option key={s.site_id} value={s.site_id}>
+                          {s.site_id} - {s.name} {hasMpd ? '(⚠️ Đã có MPĐ)' : '(Sẵn sàng)'}
+                        </option>
+                      );
+                    })}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-600 text-xs">Định mức kỹ thuật mới (L/h)</label>
+                  <input
+                    type="number" step="any"
+                    value={transNewDinhMuc}
+                    onChange={(e) => setTransNewDinhMuc(e.target.value)}
+                    className="w-full border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-orange-500 font-bold"
+                    placeholder="Định mức kỹ thuật..."
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-600 text-xs">Định mức thực tế mới (L/h) *</label>
+                  <input
+                    type="number" step="any" required
+                    value={transNewDinhMucThucTe}
+                    onChange={(e) => setTransNewDinhMucThucTe(e.target.value)}
+                    className="w-full border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-orange-500 font-bold text-orange-600"
+                    placeholder="Bắt buộc..."
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-bold text-slate-600 text-xs">Người thực hiện điều chuyển</label>
+                <input
+                  type="text"
+                  value={transOperator}
+                  onChange={(e) => setTransOperator(e.target.value)}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-orange-500"
+                  placeholder="Họ tên người vận hành..."
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-bold text-slate-600 text-xs">Ghi chú điều chuyển</label>
+                <textarea
+                  value={transNotes}
+                  onChange={(e) => setTransNotes(e.target.value)}
+                  rows="2"
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-orange-500"
+                  placeholder="Ghi chú bàn giao..."
+                />
+              </div>
+            </div>
+
+            {/* Action buttons footer */}
+            <div className="col-span-12 flex justify-end gap-3 pt-4 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => {
+                  setTransSourceSiteId('');
+                  setTransDestSiteId('');
+                  setTransOperator('');
+                  setTransNotes('');
+                }}
+                className="px-4 py-2 border border-slate-200 text-xs font-bold rounded-lg text-slate-600 hover:bg-slate-50 cursor-pointer"
+                disabled={transmitting}
+              >
+                Nhập lại
+              </button>
+              <button
+                type="submit"
+                className="px-5 py-2.5 bg-orange-600 hover:bg-orange-700 text-xs font-bold rounded-lg text-white transition-all shadow-sm flex items-center gap-1.5 cursor-pointer animate-in fade-in"
+                disabled={transmitting || !transSourceSiteId || !transDestSiteId || !transNewDinhMucThucTe}
+              >
+                {transmitting ? 'Đang thực hiện...' : 'Xác nhận điều chuyển máy phát'}
+              </button>
+            </div>
+          </form>
         </div>
       )}
     </div>
