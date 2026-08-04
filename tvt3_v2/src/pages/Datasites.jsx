@@ -45,6 +45,56 @@ export default function Datasites() {
   // Modals visibility states
   const [showExportModal, setShowExportModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editModalTab, setEditModalTab] = useState('general');
+  const [editForm, setEditForm] = useState({
+    site_id: '',
+    site_id_old: '',
+    ptm_id: '',
+    name: '',
+    status: 'ACTIVE',
+    to_ql: 'VT3',
+    qlt: '',
+    vung_phu: '',
+    tram_main: 'KHÔNG',
+    ngay_phat_song: '',
+    ma_pe: '',
+    ma_csht: '',
+    pha_ptm: '',
+    chung_cot_anten: 'KHÔNG',
+    thanh_pho: 'Tỉnh Đồng Nai',
+    huyen_cu: 'Cẩm Mỹ',
+    xa_moi: '',
+    dia_chi_cu: '',
+    vi_do: '',
+    kinh_do: '',
+    chu_csht: 'Mobifone',
+    loai_tram: '3G/4G',
+    hinh_thuc_dau_tu: 'TỰ ĐẦU TƯ',
+    
+    // Contract info
+    contract_number: '',
+    chu_the_hop_dong: '',
+    sdt_chu_nha: '',
+    dia_chi_lien_he: '',
+    ngay_ky_hd: '',
+    ngay_ket_thuc_hd: '',
+    gia_thue_co_vat: '',
+    chu_ky_thanh_toan: '3 tháng',
+    chu_tai_khoan: '',
+    so_tai_khoan: '',
+    ngan_hang: '',
+    contract_status: 'ACTIVE',
+    
+    // Infra info
+    cot_anten_loai_cot: '',
+    cot_anten_do_cao: '',
+    cot_anten_tinh_trang: 'Hoạt động tốt',
+    may_lanh_qty: '',
+    accu_qty: '',
+    may_phat_dien_ten: '',
+    tu_nguon_ten: ''
+  });
   const [showImportModal, setShowImportModal] = useState(false);
   
   // Export states
@@ -651,6 +701,187 @@ export default function Datasites() {
       
     } catch (err) {
       alert("Không thể lưu trạm: " + err.message);
+    }
+  };
+
+  const handleTriggerEdit = (site) => {
+    if (!site) return;
+    setEditForm({
+      site_id: site.site_id || '',
+      site_id_old: site.site_id_old || '',
+      ptm_id: site.ptm_id || '',
+      name: site.name || '',
+      status: site.status || 'ACTIVE',
+      to_ql: site.management_info?.to_ql || 'VT3',
+      qlt: site.management_info?.qlt || '',
+      vung_phu: site.management_info?.vung_phu || '',
+      tram_main: site.management_info?.tram_main || 'KHÔNG',
+      ngay_phat_song: site.management_info?.ngay_phat_song || '',
+      ma_pe: site.management_info?.ma_pe || '',
+      ma_csht: site.management_info?.ma_csht || '',
+      pha_ptm: site.management_info?.pha_ptm || site.ptm_id || '',
+      chung_cot_anten: site.management_info?.chung_cot_anten || 'KHÔNG',
+      thanh_pho: site.location_info?.thanh_pho || 'Tỉnh Đồng Nai',
+      huyen_cu: site.location_info?.huyen_cu || 'Cẩm Mỹ',
+      xa_moi: site.location_info?.xa_moi || '',
+      dia_chi_cu: site.location_info?.dia_chi_cu || '',
+      vi_do: site.location_info?.vi_do !== undefined && site.location_info?.vi_do !== null ? String(site.location_info.vi_do) : '',
+      kinh_do: site.location_info?.kinh_do !== undefined && site.location_info?.kinh_do !== null ? String(site.location_info.kinh_do) : '',
+      chu_csht: site.classification?.chu_csht || 'Mobifone',
+      loai_tram: site.classification?.loai_tram || '3G/4G',
+      hinh_thuc_dau_tu: site.classification?.hinh_thuc_dau_tu || 'TỰ ĐẦU TƯ',
+      
+      // Contract info
+      contract_number: site.contract_number || '',
+      chu_the_hop_dong: site.contract_info?.contractor_info?.chu_the_hop_dong || '',
+      sdt_chu_nha: site.contract_info?.contractor_info?.sdt_chu_nha || '',
+      dia_chi_lien_he: site.contract_info?.contractor_info?.dia_chi_lien_he || '',
+      ngay_ky_hd: site.contract_info?.dates?.ngay_ky_hd || '',
+      ngay_ket_thuc_hd: site.contract_info?.dates?.ngay_ket_thuc_hd || '',
+      gia_thue_co_vat: site.contract_info?.financials?.gia_thue_co_vat !== undefined && site.contract_info?.financials?.gia_thue_co_vat !== null ? String(site.contract_info.financials.gia_thue_co_vat) : '',
+      chu_ky_thanh_toan: site.contract_info?.financials?.chu_ky_thanh_toan || '3 tháng',
+      chu_tai_khoan: site.contract_info?.bank_info?.chu_tai_khoan || site.contract_info?.payment_method?.chu_tai_khoan || '',
+      so_tai_khoan: site.contract_info?.bank_info?.so_tai_khoan || site.contract_info?.payment_method?.so_tai_khoan || '',
+      ngan_hang: site.contract_info?.bank_info?.ngan_hang || site.contract_info?.payment_method?.ngan_hang || '',
+      contract_status: site.contract_info?.status || 'ACTIVE',
+      
+      // Infra info
+      cot_anten_loai_cot: site.infrastructure_info?.cot_anten?.loai_cot || '',
+      cot_anten_do_cao: site.infrastructure_info?.cot_anten?.do_cao !== undefined && site.infrastructure_info?.cot_anten?.do_cao !== null ? String(site.infrastructure_info.cot_anten.do_cao) : '',
+      cot_anten_tinh_trang: site.infrastructure_info?.cot_anten?.tinh_trang || 'Hoạt động tốt',
+      may_lanh_qty: site.infrastructure_info?.may_lanh?.so_luong !== undefined && site.infrastructure_info?.may_lanh?.so_luong !== null ? String(site.infrastructure_info.may_lanh.so_luong) : '',
+      accu_qty: site.infrastructure_info?.accu?.so_luong !== undefined && site.infrastructure_info?.accu?.so_luong !== null ? String(site.infrastructure_info.accu.so_luong) : '',
+      may_phat_dien_ten: site.infrastructure_info?.may_phat_dien?.ten || '',
+      tu_nguon_ten: site.infrastructure_info?.tu_nguon?.ten || ''
+    });
+    setEditModalTab('general');
+    setShowEditModal(true);
+  };
+
+  const handleSaveEditStation = async (e) => {
+    e.preventDefault();
+    if (!editForm.name || !editForm.to_ql || !editForm.qlt) {
+      alert("Vui lòng điền đầy đủ các thông tin chung bắt buộc: Tên trạm, Tổ quản lý, Người QLT.");
+      return;
+    }
+    
+    try {
+      // Build payload matching database structures
+      const payload = {
+        site_id_old: editForm.site_id_old.trim().toUpperCase() || null,
+        ptm_id: editForm.ptm_id.trim() || null,
+        name: editForm.name.trim(),
+        status: editForm.status,
+        
+        location_info: {
+          thanh_pho: editForm.thanh_pho,
+          huyen_cu: editForm.huyen_cu,
+          xa_moi: editForm.xa_moi,
+          dia_chi_cu: editForm.dia_chi_cu,
+          vi_do: editForm.vi_do ? parseFloat(editForm.vi_do) : null,
+          kinh_do: editForm.kinh_do ? parseFloat(editForm.kinh_do) : null
+        },
+        
+        management_info: {
+          to_ql: editForm.to_ql,
+          qlt: editForm.qlt,
+          vung_phu: editForm.vung_phu,
+          tram_main: editForm.tram_main,
+          ngay_phat_song: editForm.ngay_phat_song || null,
+          ma_pe: editForm.ma_pe,
+          ma_csht: editForm.ma_csht,
+          pha_ptm: editForm.pha_ptm || editForm.ptm_id || '',
+          chung_cot_anten: editForm.chung_cot_anten
+        },
+        
+        classification: {
+          chu_csht: editForm.chu_csht,
+          loai_tram: editForm.loai_tram,
+          hinh_thuc_dau_tu: editForm.hinh_thuc_dau_tu
+        },
+        
+        contract_number: editForm.contract_number.trim() || null,
+        contract_info: editForm.contract_number ? {
+          status: editForm.contract_status,
+          dates: {
+            ngay_ky_hd: editForm.ngay_ky_hd || null,
+            ngay_ket_thuc_hd: editForm.ngay_ket_thuc_hd || null
+          },
+          financials: {
+            gia_thue_co_vat: editForm.gia_thue_co_vat ? parseFloat(editForm.gia_thue_co_vat) : 0,
+            chu_ky_thanh_toan: editForm.chu_ky_thanh_toan
+          },
+          bank_info: {
+            chu_tai_khoan: editForm.chu_tai_khoan,
+            so_tai_khoan: editForm.so_tai_khoan,
+            ngan_hang: editForm.ngan_hang
+          },
+          contractor_info: {
+            chu_the_hop_dong: editForm.chu_the_hop_dong,
+            sdt_chu_nha: editForm.sdt_chu_nha,
+            dia_chi_lien_he: editForm.dia_chi_lien_he
+          }
+        } : {},
+        
+        infrastructure_info: {
+          cot_anten: {
+            loai_cot: editForm.cot_anten_loai_cot,
+            do_cao: editForm.cot_anten_do_cao ? parseFloat(editForm.cot_anten_do_cao) : null,
+            tinh_trang: editForm.cot_anten_tinh_trang
+          },
+          may_lanh: {
+            so_luong: editForm.may_lanh_qty ? parseInt(editForm.may_lanh_qty) : 0
+          },
+          accu: {
+            so_luong: editForm.accu_qty ? parseInt(editForm.accu_qty) : 0
+          },
+          may_phat_dien: {
+            ten: editForm.may_phat_dien_ten
+          },
+          tu_nguon: {
+            ten: editForm.tu_nguon_ten
+          }
+        }
+      };
+      
+      const { error } = await supabase
+        .from('datasites')
+        .update(payload)
+        .eq('site_id', editForm.site_id);
+        
+      if (error) throw error;
+      
+      // Update local states
+      const fullUpdatedSite = { ...selectedSite, ...payload };
+      setData(prev => prev.map(s => s.site_id === editForm.site_id ? fullUpdatedSite : s));
+      setSelectedSite(fullUpdatedSite);
+      
+      setShowEditModal(false);
+      alert("Đã cập nhật hồ sơ trạm thành công!");
+    } catch (err) {
+      alert("Lỗi khi cập nhật hồ sơ: " + err.message);
+    }
+  };
+
+  const handleDeleteStation = async (site) => {
+    if (!site) return;
+    if (!window.confirm(`Bạn có chắc chắn muốn xóa vĩnh viễn hồ sơ trạm ${site.site_id} (${site.name || 'chưa đặt tên'})?`)) {
+      return;
+    }
+    
+    try {
+      const { error } = await supabase
+        .from('datasites')
+        .delete()
+        .eq('site_id', site.site_id);
+        
+      if (error) throw error;
+      
+      setData(prev => prev.filter(s => s.site_id !== site.site_id));
+      setSelectedSite(null);
+      alert(`Đã xóa thành công trạm ${site.site_id}!`);
+    } catch (err) {
+      alert("Lỗi khi xóa trạm: " + err.message);
     }
   };
 
@@ -2196,6 +2427,8 @@ export default function Datasites() {
           setExportCategories({ general: true, contract: true, infra: true });
           setShowExportModal(true);
         }}
+        onEditSite={handleTriggerEdit}
+        onDeleteSite={handleDeleteStation}
       />
 
       {/* 1. Modal Xuất Excel */}
@@ -2702,6 +2935,384 @@ export default function Datasites() {
           </div>
         </div>
       )}
+
+{/* 2.1. Modal Chỉnh Sửa Trạm */}
+      {showEditModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setShowEditModal(false)} />
+          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200 max-h-[90vh]">
+            <div className="p-4 md:p-6 border-b border-slate-100 flex items-center justify-between">
+              <h2 className="text-base md:text-lg font-bold text-slate-800 flex items-center gap-2">
+                <Database className="h-5 w-5 text-blue-600" />
+                Chỉnh sửa Hồ Sơ Trạm
+              </h2>
+              <button onClick={() => setShowEditModal(false)} className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-50 cursor-pointer">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Modal Tabs */}
+            <div className="flex border-b border-slate-100 bg-slate-50/50 px-4">
+              {[
+                { id: 'general', label: '1. Thông tin chung *' },
+                { id: 'contract', label: '2. Hợp đồng thuê' },
+                { id: 'infra', label: '3. Hạ tầng phụ trợ' }
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setEditModalTab(tab.id)}
+                  className={`px-4 py-3 text-xs md:text-sm font-bold border-b-2 transition-all cursor-pointer ${
+                    editModalTab === tab.id 
+                      ? 'border-blue-600 text-blue-600' 
+                      : 'border-transparent text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            <form onSubmit={handleSaveEditStation} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 text-xs md:text-sm">
+              {editModalTab === 'general' && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2 bg-blue-50/40 p-3 rounded-lg border border-blue-100 text-[11px] text-blue-800 font-semibold leading-relaxed">
+                    💡 Hạng mục Thông tin chung là bắt buộc để khởi tạo trạm mới. Các hạng mục Hợp đồng và Hạ tầng phụ trợ có thể để trống và cập nhật bổ sung sau.
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Mã trạm mới (Site ID) *</label>
+                    <input 
+                      type="text" readOnly
+                      value={editForm.site_id}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 bg-slate-100 text-slate-500 font-bold cursor-not-allowed"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Mã trạm cũ (nếu có)</label>
+                    <input 
+                      type="text"
+                      value={editForm.site_id_old}
+                      onChange={(e) => setEditForm(p => ({ ...p, site_id_old: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-slate-50/30 text-slate-800"
+                      placeholder="Ví dụ: DNCM09"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Tên trạm *</label>
+                    <input 
+                      type="text" required
+                      value={editForm.name}
+                      onChange={(e) => setEditForm(p => ({ ...p, name: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-slate-50/30 text-slate-800"
+                      placeholder="Ví dụ: Trạm Cẩm Mỹ 9"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Trạng thái trạm</label>
+                    <select 
+                      value={editForm.status}
+                      onChange={(e) => setEditForm(p => ({ ...p, status: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-slate-50/30 text-slate-800"
+                    >
+                      <option value="ACTIVE">ACTIVE (Đang hoạt động)</option>
+                      <option value="INACTIVE">INACTIVE (Ngừng hoạt động)</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Tổ quản lý *</label>
+                    <input 
+                      type="text" required
+                      value={editForm.to_ql}
+                      onChange={(e) => setEditForm(p => ({ ...p, to_ql: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-slate-50/30 text-slate-800"
+                      placeholder="Ví dụ: VT3"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Người QLT *</label>
+                    <input 
+                      type="text" required
+                      value={editForm.qlt}
+                      onChange={(e) => setEditForm(p => ({ ...p, qlt: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-slate-50/30 text-slate-800"
+                      placeholder="Họ tên người QLT"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Quận/Huyện</label>
+                    <select 
+                      value={editForm.huyen_cu}
+                      onChange={(e) => setEditForm(p => ({ ...p, huyen_cu: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-slate-50/30 text-slate-800"
+                    >
+                      <option value="Cẩm Mỹ">Cẩm Mỹ</option>
+                      <option value="Xuân Lộc">Xuân Lộc</option>
+                      <option value="Long Khánh">Long Khánh</option>
+                      <option value="Thống Nhất">Thống Nhất</option>
+                      <option value="Định Quán">Định Quán</option>
+                      <option value="Tân Phú">Tân Phú</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Phường/Xã mới</label>
+                    <input 
+                      type="text"
+                      value={editForm.xa_moi}
+                      onChange={(e) => setEditForm(p => ({ ...p, xa_moi: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-slate-50/30 text-slate-800"
+                      placeholder="Tên xã..."
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Vĩ độ (Lat)</label>
+                    <input 
+                      type="number" step="any"
+                      value={editForm.vi_do}
+                      onChange={(e) => setEditForm(p => ({ ...p, vi_do: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-slate-50/30 text-slate-800"
+                      placeholder="Ví dụ: 10.7091"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Kinh độ (Long)</label>
+                    <input 
+                      type="number" step="any"
+                      value={editForm.kinh_do}
+                      onChange={(e) => setEditForm(p => ({ ...p, kinh_do: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-slate-50/30 text-slate-800"
+                      placeholder="Ví dụ: 107.3104"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Hình thức đầu tư</label>
+                    <select 
+                      value={editForm.hinh_thuc_dau_tu}
+                      onChange={(e) => setEditForm(p => ({ ...p, hinh_thuc_dau_tu: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
+                    >
+                      <option value="TỰ ĐẦU TƯ">MobiFone tự đầu tư (Thuê mặt bằng)</option>
+                      <option value="TRẠM THUÊ QUA ĐỐI TÁC">Thuê CSHT đối tác dùng chung</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Chủ CSHT</label>
+                    <input 
+                      type="text"
+                      value={editForm.chu_csht}
+                      onChange={(e) => setEditForm(p => ({ ...p, chu_csht: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
+                      placeholder="Ví dụ: Mobifone, Viettel, VNPT..."
+                    />
+                  </div>
+                </div>
+              )}
+
+              {editModalTab === 'contract' && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1 col-span-2">
+                    <label className="font-bold text-slate-600">Số Hợp Đồng</label>
+                    <input 
+                      type="text"
+                      value={editForm.contract_number}
+                      onChange={(e) => setEditForm(p => ({ ...p, contract_number: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
+                      placeholder="Số HĐ thuê nhà/mặt bằng..."
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Chủ thể hợp đồng (Chủ nhà)</label>
+                    <input 
+                      type="text"
+                      value={editForm.chu_the_hop_dong}
+                      onChange={(e) => setEditForm(p => ({ ...p, chu_the_hop_dong: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
+                      placeholder="Tên chủ đất/chủ nhà..."
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Số điện thoại liên hệ</label>
+                    <input 
+                      type="text"
+                      value={editForm.sdt_chu_nha}
+                      onChange={(e) => setEditForm(p => ({ ...p, sdt_chu_nha: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
+                      placeholder="SĐT..."
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Ngày ký HĐ</label>
+                    <input 
+                      type="date"
+                      value={editForm.ngay_ky_hd}
+                      onChange={(e) => setEditForm(p => ({ ...p, ngay_ky_hd: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Ngày hết hạn HĐ</label>
+                    <input 
+                      type="date"
+                      value={editForm.ngay_ket_thuc_hd}
+                      onChange={(e) => setEditForm(p => ({ ...p, ngay_ket_thuc_hd: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Giá thuê (Có VAT)</label>
+                    <input 
+                      type="number"
+                      value={editForm.gia_thue_co_vat}
+                      onChange={(e) => setEditForm(p => ({ ...p, gia_thue_co_vat: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
+                      placeholder="đ/tháng"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Chu kỳ thanh toán</label>
+                    <input 
+                      type="text"
+                      value={editForm.chu_ky_thanh_toan}
+                      onChange={(e) => setEditForm(p => ({ ...p, chu_ky_thanh_toan: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
+                      placeholder="Ví dụ: 3 tháng, 6 tháng, 1 năm..."
+                    />
+                  </div>
+                  
+                  <div className="space-y-1 col-span-2 border-t border-slate-100 pt-3">
+                    <span className="text-[11px] font-bold text-blue-600 uppercase">Thông tin tài khoản thụ hưởng</span>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Chủ tài khoản</label>
+                    <input 
+                      type="text"
+                      value={editForm.chu_tai_khoan}
+                      onChange={(e) => setEditForm(p => ({ ...p, chu_tai_khoan: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
+                      placeholder="Tên người thụ hưởng..."
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Số tài khoản</label>
+                    <input 
+                      type="text"
+                      value={editForm.so_tai_khoan}
+                      onChange={(e) => setEditForm(p => ({ ...p, so_tai_khoan: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
+                      placeholder="Số tài khoản..."
+                    />
+                  </div>
+                  <div className="space-y-1 col-span-2">
+                    <label className="font-bold text-slate-600">Ngân hàng</label>
+                    <input 
+                      type="text"
+                      value={editForm.ngan_hang}
+                      onChange={(e) => setEditForm(p => ({ ...p, ngan_hang: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
+                      placeholder="Tên ngân hàng đầy đủ hoặc viết tắt..."
+                    />
+                  </div>
+                </div>
+              )}
+
+              {editModalTab === 'infra' && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Loại cột anten</label>
+                    <input 
+                      type="text"
+                      value={editForm.cot_anten_loai_cot}
+                      onChange={(e) => setEditForm(p => ({ ...p, cot_anten_loai_cot: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
+                      placeholder="Ví dụ: Cột dây co, cột tự đứng..."
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Độ cao cột anten (m)</label>
+                    <input 
+                      type="number"
+                      value={editForm.cot_anten_do_cao}
+                      onChange={(e) => setEditForm(p => ({ ...p, cot_anten_do_cao: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
+                      placeholder="Độ cao..."
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Tình trạng cột</label>
+                    <input 
+                      type="text"
+                      value={editForm.cot_anten_tinh_trang}
+                      onChange={(e) => setEditForm(p => ({ ...p, cot_anten_tinh_trang: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Số lượng máy lạnh</label>
+                    <input 
+                      type="number"
+                      value={editForm.may_lanh_qty}
+                      onChange={(e) => setEditForm(p => ({ ...p, may_lanh_qty: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
+                      placeholder="Số máy..."
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Số lượng Accu (Tổ)</label>
+                    <input 
+                      type="number"
+                      value={editForm.accu_qty}
+                      onChange={(e) => setEditForm(p => ({ ...p, accu_qty: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
+                      placeholder="Số tổ accu..."
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Nhãn hiệu máy phát điện</label>
+                    <input 
+                      type="text"
+                      value={editForm.may_phat_dien_ten}
+                      onChange={(e) => setEditForm(p => ({ ...p, may_phat_dien_ten: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
+                      placeholder="Ví dụ: Vikyno, Hữu Toàn..."
+                    />
+                  </div>
+                  <div className="space-y-1 col-span-2">
+                    <label className="font-bold text-slate-600">Nhãn hiệu tủ nguồn AC/DC</label>
+                    <input 
+                      type="text"
+                      value={editForm.tu_nguon_ten}
+                      onChange={(e) => setEditForm(p => ({ ...p, tu_nguon_ten: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
+                      placeholder="Ví dụ: Tủ nguồn Delta, Eltek..."
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100 bg-slate-50 -mx-6 -mb-6 p-4">
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(false)}
+                  className="px-4 py-2 border border-slate-200 hover:bg-slate-100 rounded-lg text-xs font-bold text-slate-600 transition-colors cursor-pointer"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-xs font-bold text-white transition-colors shadow-sm cursor-pointer"
+                >
+                  Lưu Thay Đổi
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+
 
       {/* 3. Modal Nhập Excel */}
       {showImportModal && (

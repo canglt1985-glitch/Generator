@@ -9,7 +9,7 @@ import ContractExportButton from './ContractExportButton';
 import PaymentSchedulePanel from './PaymentSchedulePanel';
 import { useCurrentUser } from '../../utils/useCurrentUser';
 
-export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, onExportExcel }) {
+export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, onExportExcel, onEditSite, onDeleteSite }) {
   const { user } = useCurrentUser();
   const [activeTab, setActiveTab] = useState(defaultTab || 'general');
   const [isEditingTrans, setIsEditingTrans] = useState(false);
@@ -1044,10 +1044,16 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, on
           
           {user && (
             <div className="flex md:hidden items-center gap-1">
-              <button className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg">
+              <button 
+                onClick={() => onEditSite && onEditSite(site)}
+                className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer"
+              >
                 <Edit className="h-4 w-4 text-blue-600" />
               </button>
-              <button className="p-2 text-red-600 hover:bg-red-50 rounded-lg">
+              <button 
+                onClick={() => onDeleteSite && onDeleteSite(site)}
+                className="p-2 text-red-600 hover:bg-red-50 rounded-lg cursor-pointer"
+              >
                 <Trash2 className="h-4 w-4" />
               </button>
             </div>
@@ -1064,11 +1070,17 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, on
           </button>
           {user && (
             <>
-              <button className="inline-flex items-center justify-center px-4 py-2 border border-slate-200 text-sm font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 shadow-sm transition-colors cursor-pointer">
+              <button 
+                onClick={() => onEditSite && onEditSite(site)}
+                className="inline-flex items-center justify-center px-4 py-2 border border-slate-200 text-sm font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 shadow-sm transition-colors cursor-pointer"
+              >
                 <Edit className="h-4 w-4 mr-2 text-blue-600" />
                 Chỉnh sửa
               </button>
-              <button className="inline-flex items-center justify-center px-4 py-2 border border-red-200 text-sm font-medium rounded-lg text-red-600 bg-red-50 hover:bg-red-100 shadow-sm transition-colors cursor-pointer">
+              <button 
+                onClick={() => onDeleteSite && onDeleteSite(site)}
+                className="inline-flex items-center justify-center px-4 py-2 border border-red-200 text-sm font-medium rounded-lg text-red-600 bg-red-50 hover:bg-red-100 shadow-sm transition-colors cursor-pointer"
+              >
                 <Trash2 className="h-4 w-4 mr-2" />
                 Xóa
               </button>
