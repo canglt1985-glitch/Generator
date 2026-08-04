@@ -16,9 +16,12 @@ export default function Generator() {
   const [invoices, setInvoices] = useState([]);
   const [stations, setStations] = useState([]);
 
-  // Generator Transfer States
+  // Generator & Asset Transfer States
   const [transSourceSiteId, setTransSourceSiteId] = useState('');
   const [transDestSiteId, setTransDestSiteId] = useState('');
+  const [transEquipType, setTransEquipType] = useState('mpd'); // 'mpd', 'may_lanh', 'to_accu', 'tu_nguon'
+  const [transEquipIndex, setTransEquipIndex] = useState('');
+  const [transDate, setTransDate] = useState(new Date().toISOString().split('T')[0]);
   const [transNewDinhMuc, setTransNewDinhMuc] = useState('');
   const [transNewDinhMucThucTe, setTransNewDinhMucThucTe] = useState('');
   const [transOperator, setTransOperator] = useState('');
@@ -172,21 +175,32 @@ export default function Generator() {
     return { xang, dau };
   };
 
-  // Tính định mức từ cấu hình trạm
-  const getStationSpecs = (siteId) => {
+  // Tính định mức từ cấu hình trạm (có xét ngày điều chuyển thực tế)
+  const getStationSpecs = (siteId, logDate) => {
     if (!siteId) return null;
     const sId = siteId.trim().toUpperCase();
     const st = stations.find(s => s.site_id === sId || (s.site_id_old && s.site_id_old.trim().toUpperCase() === sId));
     if (st && st.infrastructure_info?.may_phat_dien?.mpd) {
-      const mpd = st.infrastructure_info.may_phat_dien.mpd[0];
-      if (mpd) {
+      const mpds = st.infrastructure_info.may_phat_dien.mpd;
+      if (mpds.length > 0) {
+        let mpd = mpds[0];
+        if (logDate) {
+          // Lọc máy phát điện hoạt động tại thời điểm logDate
+          const match = mpds.find(m => {
+            const start = m.ngay_bat_dau;
+            const end = m.ngay_ket_thuc;
+            return (!start || logDate >= start) && (!end || logDate <= end);
+          });
+          if (match) mpd = match;
+        }
         return {
           dinh_muc: parseFloat(mpd.dinh_muc) || 0,
           dinh_muc_thuc_te: parseFloat(mpd.dinh_muc_thuc_te) || 0,
           dung_tich: parseFloat(mpd.dung_tich) || 0,
           nhan_hieu: mpd.nhan_hieu || '',
           cong_suat: mpd.cong_suat || '',
-          nhien_lieu: mpd.nhien_lieu || ''
+          nhien_lieu: mpd.nhien_lieu || '',
+          serial: mpd.serial || ''
         };
       }
     }
@@ -211,13 +225,13 @@ export default function Generator() {
   // Tự động tính định mức thực tế & đề xuất lượng tiêu hao khi đổi trạm hoặc số giờ chạy
   useEffect(() => {
     if (logSiteId && logRuntime) {
-      const specs = getStationSpecs(logSiteId);
+      const specs = getStationSpecs(logSiteId, logDate);
       if (specs && specs.dinh_muc_thuc_te) {
         const estFuel = parseFloat(logRuntime) * specs.dinh_muc_thuc_te;
         setLogFuel(estFuel.toFixed(1));
       }
     }
-  }, [logSiteId, logRuntime]);
+  }, [logSiteId, logRuntime, logDate]);
 
   // Search Filter - Logs (refined with inline filters)
   const filteredLogs = useMemo(() => {
@@ -513,11 +527,12 @@ export default function Generator() {
     XLSX.writeFile(workbook, `Bao_cao_bat_thuong_chay_may_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
-  // Auto-populate transfer norms when source site changes
+  // Auto-populate transfer norms when source site or equipment index changes
   useEffect(() => {
-    if (transSourceSiteId) {
+    if (transSourceSiteId && transEquipType === 'mpd' && transEquipIndex !== '') {
       const src = stations.find(s => s.site_id === transSourceSiteId);
-      const mpd = src?.infrastructure_info?.may_phat_dien?.mpd?.[0];
+      const mpds = src?.infrastructure_info?.may_phat_dien?.mpd || [];
+      const mpd = mpds[parseInt(transEquipIndex)];
       if (mpd) {
         setTransNewDinhMuc(mpd.dinh_muc !== undefined && mpd.dinh_muc !== null ? String(mpd.dinh_muc) : '');
         setTransNewDinhMucThucTe(mpd.dinh_muc_thuc_te !== undefined && mpd.dinh_muc_thuc_te !== null ? String(mpd.dinh_muc_thuc_te) : '');
@@ -529,7 +544,7 @@ export default function Generator() {
       setTransNewDinhMuc('');
       setTransNewDinhMucThucTe('');
     }
-  }, [transSourceSiteId, stations]);
+  }, [transSourceSiteId, transEquipType, transEquipIndex, stations]);
 
   const handleTransferGenerator = async (e) => {
     e.preventDefault();
@@ -1119,7 +1134,59 @@ export default function Generator() {
   };
 
   const sourceStation = stations.find(s => s.site_id === transSourceSiteId);
-  const sourceMpd = sourceStation?.infrastructure_info?.may_phat_dien?.mpd?.[0] || null;
+  
+  const getSourceItems = () => {
+    if (!transSourceSiteId || !transEquipType) return [];
+    const src = stations.find(s => s.site_id === transSourceSiteId);
+    const infra = src?.infrastructure_info || {};
+
+    if (transEquipType === 'mpd') {
+      const mpds = infra.may_phat_dien?.mpd || [];
+      return mpds.map((m, idx) => ({
+        value: String(idx),
+        label: `${m.ten || 'Máy phát'} - ${m.nhan_hieu || ''} (${m.cong_suat || ''} KVA) - S/N: ${m.serial || 'N/A'} [Trạng thái: ${m.tinh_trang || 'Hoạt động tốt'}]`,
+        tinh_trang: m.tinh_trang,
+        dinh_muc: m.dinh_muc,
+        dinh_muc_thuc_te: m.dinh_muc_thuc_te,
+        raw: m
+      }));
+    } else if (transEquipType === 'may_lanh') {
+      const aircons = infra.may_lanh || [];
+      return aircons.map((m, idx) => ({
+        value: String(idx),
+        label: `${m.ten || 'Máy lạnh'} - ${m.nhan_hieu || ''} (${m.cong_suat || ''}) - S/N: ${m.serial || 'N/A'} [Trạng thái: ${m.tinh_trang || 'Hoạt động tốt'}]`,
+        tinh_trang: m.tinh_trang,
+        raw: m
+      }));
+    } else if (transEquipType === 'tu_nguon') {
+      const cabinets = infra.nguon_dien?.tu_nguon || [];
+      return cabinets.map((m, idx) => ({
+        value: String(idx),
+        label: `${m.ten || 'Tủ nguồn'} - ${m.nhan_hieu || ''} - S/N: ${m.serial || 'N/A'} [Trạng thái: ${m.tinh_trang || 'Hoạt động tốt'}]`,
+        tinh_trang: m.tinh_trang,
+        raw: m
+      }));
+    } else if (transEquipType === 'to_accu') {
+      const cabinets = infra.nguon_dien?.tu_nguon || [];
+      const list = [];
+      cabinets.forEach((cab, cabIdx) => {
+        const accus = cab.to_accu || [];
+        accus.forEach((acc, accuIdx) => {
+          list.push({
+            value: `${cabIdx}-${accuIdx}`,
+            label: `${acc.ten || 'Tổ accu'} - thuộc ${cab.ten || 'Tủ nguồn'} - ${acc.nhan_hieu || ''} (${acc.dung_luong || ''}) - S/N: ${acc.serial || 'N/A'} [Trạng thái: ${acc.tinh_trang || 'Hoạt động tốt'}]`,
+            tinh_trang: acc.tinh_trang,
+            raw: acc
+          });
+        });
+      });
+      return list;
+    }
+    return [];
+  };
+
+  const availableSourceItems = getSourceItems().filter(item => item.tinh_trang !== "ĐÃ ĐIỀU CHUYỂN");
+  const selectedMpdToMove = transEquipType === 'mpd' && transEquipIndex !== '' ? availableSourceItems.find(item => item.value === transEquipIndex)?.raw : null;
 
   return (
     <div className="space-y-5 animate-in fade-in duration-500 relative">
@@ -2001,7 +2068,7 @@ export default function Generator() {
         </div>
       )}
 
-      {/* 4. Tab Điều Chuyển Máy Phát Điện */}
+      {/* 4. Tab Điều Chuyển Thiết Bị & Tài Sản Cố Định */}
       {activeTab === 'transfer' && (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 animate-in fade-in duration-300">
           <div className="flex items-center gap-2 pb-4 mb-6 border-b border-slate-100">
@@ -2009,12 +2076,48 @@ export default function Generator() {
               <RefreshCw size={20} className="animate-spin-slow" />
             </div>
             <div>
-              <h2 className="text-base md:text-lg font-bold text-slate-800">Điều Chuyển Máy Phát Điện Cố Định</h2>
-              <p className="text-xs text-slate-500">Thực hiện bàn giao máy phát điện từ trạm nguồn sang trạm đích và cập nhật định mức nhiên liệu thực tế theo vị trí mới.</p>
+              <h2 className="text-base md:text-lg font-bold text-slate-800">Điều Chuyển Tài Sản & Thiết Bị Cố Định</h2>
+              <p className="text-xs text-slate-500">Thực hiện bàn giao máy phát điện, máy lạnh, accu, tủ nguồn giữa các trạm. Lưu lịch sử và ngày áp dụng định mức nhiên liệu thực tế.</p>
             </div>
           </div>
 
-          <form onSubmit={handleTransferGenerator} className="grid grid-cols-1 md:grid-cols-12 gap-6 text-xs md:text-sm">
+          <form onSubmit={handleTransferEquipment} className="grid grid-cols-1 md:grid-cols-12 gap-6 text-xs md:text-sm">
+            {/* Hàng chọn loại thiết bị */}
+            <div className="col-span-12 grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-50/40 p-4 rounded-xl border border-slate-200/50">
+              <div className="space-y-1">
+                <label className="font-bold text-slate-600 text-xs">Loại thiết bị cần điều chuyển *</label>
+                <select
+                  value={transEquipType}
+                  onChange={(e) => {
+                    setTransEquipType(e.target.value);
+                    setTransEquipIndex('');
+                  }}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-orange-500 font-bold"
+                  required
+                >
+                  <option value="mpd">⚙️ Máy phát điện cố định</option>
+                  <option value="may_lanh">❄️ Máy lạnh trạm</option>
+                  <option value="to_accu">🔋 Tổ Ắc quy (Accu)</option>
+                  <option value="tu_nguon">🔌 Tủ nguồn AC/DC</option>
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-bold text-slate-600 text-xs">Ngày điều chuyển thực tế *</label>
+                <input
+                  type="date"
+                  value={transDate}
+                  onChange={(e) => setTransDate(e.target.value)}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-orange-500 font-bold"
+                  required
+                />
+              </div>
+
+              <div className="flex items-end text-[11px] text-blue-600 font-semibold leading-relaxed bg-blue-50/50 p-2.5 rounded-lg border border-blue-100">
+                💡 Định mức nhiên liệu của trạm chạy máy phát sẽ tự động áp dụng định mức mới từ đúng ngày điều chuyển đã chọn.
+              </div>
+            </div>
+
             {/* Cột trái: Trạm nguồn */}
             <div className="md:col-span-5 bg-slate-50/50 rounded-xl p-5 border border-slate-200/60 space-y-4">
               <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 mb-2">1. Trạm nguồn (Nơi chuyển đi)</h3>
@@ -2023,22 +2126,56 @@ export default function Generator() {
                 <label className="font-bold text-slate-600 text-xs">Chọn trạm nguồn *</label>
                 <select
                   value={transSourceSiteId}
-                  onChange={(e) => setTransSourceSiteId(e.target.value)}
+                  onChange={(e) => {
+                    setTransSourceSiteId(e.target.value);
+                    setTransEquipIndex('');
+                  }}
                   className="w-full border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-orange-500"
                   required
                 >
-                  <option value="">-- Chọn trạm nguồn có máy phát --</option>
-                  {stations
-                    .filter(s => s.infrastructure_info?.may_phat_dien?.mpd?.length > 0)
-                    .map(s => (
+                  <option value="">-- Chọn trạm nguồn có thiết bị --</option>
+                  {stations.map(s => {
+                    const infra = s.infrastructure_info || {};
+                    let hasAsset = false;
+                    if (transEquipType === 'mpd') {
+                      hasAsset = (infra.may_phat_dien?.mpd || []).some(m => m.tinh_trang !== "ĐÃ ĐIỀU CHUYỂN");
+                    } else if (transEquipType === 'may_lanh') {
+                      hasAsset = (infra.may_lanh || []).some(m => m.tinh_trang !== "ĐÃ ĐIỀU CHUYỂN");
+                    } else if (transEquipType === 'tu_nguon') {
+                      hasAsset = (infra.nguon_dien?.tu_nguon || []).some(m => m.tinh_trang !== "ĐÃ ĐIỀU CHUYỂN");
+                    } else if (transEquipType === 'to_accu') {
+                      hasAsset = (infra.nguon_dien?.tu_nguon || []).some(c => (c.to_accu || []).some(a => a.tinh_trang !== "ĐÃ ĐIỀU CHUYỂN"));
+                    }
+                    if (!hasAsset) return null;
+                    return (
                       <option key={s.site_id} value={s.site_id}>
                         {s.site_id} - {s.name}
                       </option>
-                    ))}
+                    );
+                  })}
                 </select>
               </div>
 
-              {sourceMpd ? (
+              {transSourceSiteId && (
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-600 text-xs">Chọn thiết bị cụ thể *</label>
+                  <select
+                    value={transEquipIndex}
+                    onChange={(e) => setTransEquipIndex(e.target.value)}
+                    className="w-full border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-orange-500 font-semibold"
+                    required
+                  >
+                    <option value="">-- Chọn một thiết bị cụ thể --</option>
+                    {availableSourceItems.map(item => (
+                      <option key={item.value} value={item.value}>
+                        {item.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {selectedMpdToMove && (
                 <div className="bg-white rounded-lg p-4 border border-slate-200/50 shadow-xs space-y-2 text-xs">
                   <div className="font-bold text-slate-700 text-sm border-b border-slate-100 pb-1.5 mb-1.5 flex justify-between">
                     <span>📋 Thông số máy phát nguồn:</span>
@@ -2047,33 +2184,25 @@ export default function Generator() {
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <span className="text-slate-400">Nhãn hiệu:</span>
-                      <p className="font-semibold text-slate-700">{sourceMpd.nhan_hieu || 'N/A'}</p>
+                      <p className="font-semibold text-slate-700">{selectedMpdToMove.nhan_hieu || 'N/A'}</p>
                     </div>
                     <div>
                       <span className="text-slate-400">Công suất:</span>
-                      <p className="font-semibold text-slate-700">{sourceMpd.cong_suat ? sourceMpd.cong_suat + ' KVA' : 'N/A'}</p>
+                      <p className="font-semibold text-slate-700">{selectedMpdToMove.cong_suat ? selectedMpdToMove.cong_suat + ' KVA' : 'N/A'}</p>
                     </div>
                     <div>
                       <span className="text-slate-400">Số máy (Serial):</span>
-                      <p className="font-semibold text-slate-700">{sourceMpd.serial || 'N/A'}</p>
+                      <p className="font-semibold text-slate-700">{selectedMpdToMove.serial || 'N/A'}</p>
                     </div>
                     <div>
                       <span className="text-slate-400">Nhiên liệu:</span>
-                      <p className="font-semibold text-slate-700">{sourceMpd.nhien_lieu || 'Dầu'}</p>
+                      <p className="font-semibold text-slate-700">{selectedMpdToMove.nhien_lieu || 'Dầu'}</p>
                     </div>
                     <div className="col-span-2 border-t border-slate-100 pt-1.5 mt-1">
                       <span className="text-slate-400">Định mức hiện tại (Kỹ thuật / Thực tế):</span>
-                      <p className="font-bold text-slate-800 text-[13px]">{sourceMpd.dinh_muc || 0} L/h  /  {sourceMpd.dinh_muc_thuc_te || 0} L/h</p>
+                      <p className="font-bold text-slate-800 text-[13px]">{selectedMpdToMove.dinh_muc || 0} L/h  /  {selectedMpdToMove.dinh_muc_thuc_te || 0} L/h</p>
                     </div>
                   </div>
-                </div>
-              ) : transSourceSiteId ? (
-                <div className="p-4 bg-amber-50 text-amber-800 rounded-lg text-xs font-medium border border-amber-100">
-                  ⚠️ Trạm này không có dữ liệu máy phát điện hợp lệ để chuyển đi.
-                </div>
-              ) : (
-                <div className="py-8 text-center text-slate-400 border border-dashed border-slate-200 rounded-lg text-xs">
-                  Chọn trạm nguồn để xem thông tin máy phát điện
                 </div>
               )}
             </div>
@@ -2097,42 +2226,48 @@ export default function Generator() {
                   className="w-full border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-orange-500"
                   required
                 >
-                  <option value="">-- Chọn trạm nhận máy phát --</option>
+                  <option value="">-- Chọn trạm nhận --</option>
                   {stations
                     .filter(s => s.site_id !== transSourceSiteId)
                     .map(s => {
-                      const hasMpd = s.infrastructure_info?.may_phat_dien?.mpd?.length > 0;
+                      const infra = s.infrastructure_info || {};
+                      let hasAsset = false;
+                      if (transEquipType === 'mpd') {
+                        hasAsset = (infra.may_phat_dien?.mpd || []).some(m => m.tinh_trang !== "ĐÃ ĐIỀU CHUYỂN");
+                      }
                       return (
                         <option key={s.site_id} value={s.site_id}>
-                          {s.site_id} - {s.name} {hasMpd ? '(⚠️ Đã có MPĐ)' : '(Sẵn sàng)'}
+                          {s.site_id} - {s.name} {hasAsset ? '(⚠️ Đã có MPĐ)' : '(Trống)'}
                         </option>
                       );
                     })}
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="font-bold text-slate-600 text-xs">Định mức kỹ thuật mới (L/h)</label>
-                  <input
-                    type="number" step="any"
-                    value={transNewDinhMuc}
-                    onChange={(e) => setTransNewDinhMuc(e.target.value)}
-                    className="w-full border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-orange-500 font-bold"
-                    placeholder="Định mức kỹ thuật..."
-                  />
+              {transEquipType === 'mpd' && (
+                <div className="grid grid-cols-2 gap-4 animate-in slide-in-from-top-1 duration-200">
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600 text-xs">Định mức kỹ thuật mới (L/h)</label>
+                    <input
+                      type="number" step="any"
+                      value={transNewDinhMuc}
+                      onChange={(e) => setTransNewDinhMuc(e.target.value)}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-orange-500 font-bold"
+                      placeholder="Định mức kỹ thuật..."
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600 text-xs">Định mức thực tế mới (L/h) *</label>
+                    <input
+                      type="number" step="any" required
+                      value={transNewDinhMucThucTe}
+                      onChange={(e) => setTransNewDinhMucThucTe(e.target.value)}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-orange-500 font-bold text-orange-600"
+                      placeholder="Bắt buộc..."
+                    />
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <label className="font-bold text-slate-600 text-xs">Định mức thực tế mới (L/h) *</label>
-                  <input
-                    type="number" step="any" required
-                    value={transNewDinhMucThucTe}
-                    onChange={(e) => setTransNewDinhMucThucTe(e.target.value)}
-                    className="w-full border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-orange-500 font-bold text-orange-600"
-                    placeholder="Bắt buộc..."
-                  />
-                </div>
-              </div>
+              )}
 
               <div className="space-y-1">
                 <label className="font-bold text-slate-600 text-xs">Người thực hiện điều chuyển</label>
@@ -2152,7 +2287,7 @@ export default function Generator() {
                   onChange={(e) => setTransNotes(e.target.value)}
                   rows="2"
                   className="w-full border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-orange-500"
-                  placeholder="Ghi chú bàn giao..."
+                  placeholder="Lý do điều chuyển, tình trạng thiết bị..."
                 />
               </div>
             </div>
@@ -2164,6 +2299,7 @@ export default function Generator() {
                 onClick={() => {
                   setTransSourceSiteId('');
                   setTransDestSiteId('');
+                  setTransEquipIndex('');
                   setTransOperator('');
                   setTransNotes('');
                 }}
@@ -2175,9 +2311,9 @@ export default function Generator() {
               <button
                 type="submit"
                 className="px-5 py-2.5 bg-orange-600 hover:bg-orange-700 text-xs font-bold rounded-lg text-white transition-all shadow-sm flex items-center gap-1.5 cursor-pointer animate-in fade-in"
-                disabled={transmitting || !transSourceSiteId || !transDestSiteId || !transNewDinhMucThucTe}
+                disabled={transmitting || !transSourceSiteId || !transDestSiteId || transEquipIndex === ''}
               >
-                {transmitting ? 'Đang thực hiện...' : 'Xác nhận điều chuyển máy phát'}
+                {transmitting ? 'Đang thực hiện...' : 'Xác nhận điều chuyển thiết bị'}
               </button>
             </div>
           </form>
