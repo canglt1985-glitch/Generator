@@ -2743,19 +2743,20 @@ export default function Datasites() {
                       <option value="MACRO">MACRO</option>
                       <option value="REMOTE">REMOTE</option>
                       <option value="SMALL CELL">SMALL CELL</option>
+                      <option value="CRAN OUT DOOR">CRAN OUT DOOR</option>
+                      <option value="AGG">AGG</option>
+                      <option value="IBC">IBC</option>
                     </select>
                   </div>
                   <div className="space-y-1">
                     <label className="font-bold text-slate-600">Loại trạm</label>
-                    <select 
+                    <input 
+                      type="text"
                       value={addForm.loai_tram}
                       onChange={(e) => setAddForm(p => ({ ...p, loai_tram: e.target.value }))}
                       className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
-                    >
-                      <option value="3G/4G">3G/4G</option>
-                      <option value="5G">5G</option>
-                      <option value="2G/3G/4G">2G/3G/4G</option>
-                    </select>
+                      placeholder="Ví dụ: 3G/4G, 3G/4G/5G/CSG..."
+                    />
                   </div>
                   <div className="space-y-1">
                     <label className="font-bold text-slate-600">Ngày phát sóng</label>
@@ -3183,19 +3184,20 @@ export default function Datasites() {
                       <option value="MACRO">MACRO</option>
                       <option value="REMOTE">REMOTE</option>
                       <option value="SMALL CELL">SMALL CELL</option>
+                      <option value="CRAN OUT DOOR">CRAN OUT DOOR</option>
+                      <option value="AGG">AGG</option>
+                      <option value="IBC">IBC</option>
                     </select>
                   </div>
                   <div className="space-y-1">
                     <label className="font-bold text-slate-600">Loại trạm</label>
-                    <select 
+                    <input 
+                      type="text"
                       value={editForm.loai_tram}
                       onChange={(e) => setEditForm(p => ({ ...p, loai_tram: e.target.value }))}
                       className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
-                    >
-                      <option value="3G/4G">3G/4G</option>
-                      <option value="5G">5G</option>
-                      <option value="2G/3G/4G">2G/3G/4G</option>
-                    </select>
+                      placeholder="Ví dụ: 3G/4G, 3G/4G/5G/CSG..."
+                    />
                   </div>
                   <div className="space-y-1">
                     <label className="font-bold text-slate-600">Ngày phát sóng</label>
