@@ -128,7 +128,7 @@ export default function NetworkMap() {
   // Map settings and state
   const [customerLocation, setCustomerLocation] = useState(null); // { lat, lng }
   const [nearestSites, setNearestSites] = useState([]); // List of { site, type, distance }
-  const [walkingRoute, setWalkingRoute] = useState(null); // { path: [[lat, lng], ...], distance, duration, targetCode }
+  const [cableRoute, setCableRoute] = useState(null); // { path: [[lat, lng], ...], distance, duration, targetCode }
   const [validationError, setValidationError] = useState('');
   const [mapCenter, setMapCenter] = useState([11.201, 107.221]); // Default coordinates for Dong Nai
   const [zoomLevel, setZoomLevel] = useState(11);
@@ -500,39 +500,40 @@ export default function NetworkMap() {
     else setZoomLevel(14);
   };
 
-  // Auto-fetch walking route to nearest site
+  // Auto-fetch fiber optic cable route to nearest site
   useEffect(() => {
     if (nearestSites && nearestSites.length > 0 && customerLocation) {
       const nearest = nearestSites[0];
       const getRoute = async () => {
         try {
+          // Sử dụng route đường bộ đi bộ (foot) vì cáp quang treo cột điện đi được cả vào ngõ hẻm/lối đi bộ
           const url = `https://router.project-osrm.org/route/v1/foot/${customerLocation.lng},${customerLocation.lat};${nearest.lng},${nearest.lat}?overview=full&geometries=geojson`;
           const response = await fetch(url);
           const data = await response.json();
           if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
             const route = data.routes[0];
             const path = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
-            setWalkingRoute({
+            setCableRoute({
               path,
               distance: route.distance,
-              duration: route.duration,
+              cableLength: route.distance * 1.05, // Cộng 5% độ võng cáp dự phòng tiêu chuẩn
               targetCode: nearest.code,
               targetName: nearest.name
             });
           } else {
-            setWalkingRoute(null);
+            setCableRoute(null);
           }
         } catch {
-          setWalkingRoute(null);
+          setCableRoute(null);
         }
       };
       getRoute();
     } else {
-      setWalkingRoute(null);
+      setCableRoute(null);
     }
   }, [nearestSites, customerLocation]);
 
-  const handleManualWalkingRoute = async (target) => {
+  const handleManualCableRoute = async (target) => {
     if (!customerLocation || !target) return;
     try {
       const url = `https://router.project-osrm.org/route/v1/foot/${customerLocation.lng},${customerLocation.lat};${target.lng},${target.lat}?overview=full&geometries=geojson`;
@@ -541,10 +542,10 @@ export default function NetworkMap() {
       if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
         const route = data.routes[0];
         const path = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
-        setWalkingRoute({
+        setCableRoute({
           path,
           distance: route.distance,
-          duration: route.duration,
+          cableLength: route.distance * 1.05, // Cộng 5% độ võng cáp dự phòng tiêu chuẩn
           targetCode: target.code,
           targetName: target.name
         });
@@ -713,20 +714,20 @@ export default function NetworkMap() {
           Các trạm lân cận
         </h4>
 
-        {walkingRoute && (
-          <div className="bg-orange-950/40 border border-orange-500/30 rounded-xl p-3 text-xs space-y-1.5 animate-in slide-in-from-top-1 duration-200">
-            <div className="flex items-center justify-between text-orange-400 font-bold">
-              <span className="flex items-center gap-1">🚶 ĐƯỜNG ĐI BỘ ĐẾN {walkingRoute.targetCode}:</span>
+        {cableRoute && (
+          <div className="bg-purple-950/40 border border-purple-500/35 rounded-xl p-3 text-xs space-y-1.5 animate-in slide-in-from-top-1 duration-200">
+            <div className="flex items-center justify-between text-purple-400 font-bold">
+              <span className="flex items-center gap-1">🔌 TUYẾN KÉO CÁP QUANG ĐẾN {cableRoute.targetCode}:</span>
               <button 
-                onClick={() => setWalkingRoute(null)}
+                onClick={() => setCableRoute(null)}
                 className="text-slate-400 hover:text-white px-1.5 py-0.5 rounded bg-slate-700/50 hover:bg-slate-700 font-sans text-[10px]"
               >
-                Ẩn đường đi
+                Ẩn tuyến cáp
               </button>
             </div>
             <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-300">
-              <div>Khoảng cách: <b className="text-white text-xs">{formatDistance(walkingRoute.distance)}</b></div>
-              <div>Thời gian đi bộ: <b className="text-white text-xs">{Math.round(walkingRoute.duration / 60)} phút</b></div>
+              <div>Chiều dài tuyến đường: <b className="text-white text-xs">{formatDistance(cableRoute.distance)}</b></div>
+              <div>Cáp thực tế (+5% võng): <b className="text-emerald-400 text-xs font-bold">{formatDistance(cableRoute.cableLength)}</b></div>
             </div>
           </div>
         )}
@@ -774,15 +775,15 @@ export default function NetworkMap() {
                   <td className="py-2 px-2 text-center font-sans">
                     <div className="flex justify-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                       <button
-                        onClick={() => handleManualWalkingRoute(item)}
+                        onClick={() => handleManualCableRoute(item)}
                         className={`inline-flex items-center justify-center gap-0.5 px-2 py-0.5 rounded text-[9px] font-bold transition-all text-center ${
-                          walkingRoute?.targetCode === item.code 
-                            ? 'bg-orange-600 text-white font-extrabold shadow-sm shadow-orange-600/20' 
+                          cableRoute?.targetCode === item.code 
+                            ? 'bg-purple-600 text-white font-extrabold shadow-sm shadow-purple-600/20' 
                             : 'bg-slate-700 hover:bg-slate-600 text-slate-200 hover:text-white'
                         }`}
-                        title="Vẽ đường đi bộ ngắn nhất trên bản đồ"
+                        title="Tính toán đường kéo cáp quang dọc hành lang đường bộ"
                       >
-                        🚶 Đi bộ
+                        🔌 Kéo cáp
                       </button>
                       <a 
                         href={`https://www.google.com/maps/dir/?api=1&origin=${customerLocation.lat},${customerLocation.lng}&destination=${item.lat},${item.lng}&travelmode=driving`}
@@ -1259,23 +1260,23 @@ export default function NetworkMap() {
                 );
               })}
 
-              {/* Draw walking route polyline */}
-              {walkingRoute && (
+              {/* Draw fiber optic cable route polyline */}
+              {cableRoute && (
                 <Polyline
-                  positions={walkingRoute.path}
+                  positions={cableRoute.path}
                   pathOptions={{
-                    color: '#f97316', // Orange
+                    color: '#a855f7', // Purple Neon for Fiber Optic Laser
                     weight: 4,
-                    opacity: 0.9,
+                    opacity: 0.95,
                     lineJoin: 'round'
                   }}
                 >
                   <Popup>
-                    <div className="font-sans text-xs p-1 text-slate-900">
-                      <div className="font-bold text-orange-600">🚶 Đường đi bộ ngắn nhất:</div>
-                      <div>Đến trạm: <b className="text-cyan-700">{walkingRoute.targetCode}</b></div>
-                      <div>Khoảng cách đi bộ: <b>{formatDistance(walkingRoute.distance)}</b></div>
-                      <div>Thời gian: <b>{Math.round(walkingRoute.duration / 60)} phút</b></div>
+                    <div className="font-sans text-xs p-1.5 text-slate-900">
+                      <div className="font-bold text-purple-700 flex items-center gap-1">🔌 Tuyến kéo cáp quang dự kiến:</div>
+                      <div className="mt-1">Trạm đích: <b className="text-cyan-700">{cableRoute.targetCode}</b></div>
+                      <div>Chiều dài tuyến: <b>{formatDistance(cableRoute.distance)}</b></div>
+                      <div>Chiều dài cáp (+5% võng): <b className="text-emerald-600">{formatDistance(cableRoute.cableLength)}</b></div>
                     </div>
                   </Popup>
                 </Polyline>
