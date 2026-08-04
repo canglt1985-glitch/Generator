@@ -2732,6 +2732,70 @@ export default function Datasites() {
                       placeholder="Ví dụ: Mobifone, Viettel, VNPT..."
                     />
                   </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Vùng phủ</label>
+                    <select 
+                      value={addForm.vung_phu}
+                      onChange={(e) => setAddForm(p => ({ ...p, vung_phu: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
+                    >
+                      <option value="">-- Chọn vùng phủ --</option>
+                      <option value="MACRO">MACRO</option>
+                      <option value="REMOTE">REMOTE</option>
+                      <option value="SMALL CELL">SMALL CELL</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Loại trạm</label>
+                    <select 
+                      value={addForm.loai_tram}
+                      onChange={(e) => setAddForm(p => ({ ...p, loai_tram: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
+                    >
+                      <option value="3G/4G">3G/4G</option>
+                      <option value="5G">5G</option>
+                      <option value="2G/3G/4G">2G/3G/4G</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Ngày phát sóng</label>
+                    <input 
+                      type="date"
+                      value={addForm.ngay_phat_song}
+                      onChange={(e) => setAddForm(p => ({ ...p, ngay_phat_song: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Mã CSHT</label>
+                    <input 
+                      type="text"
+                      value={addForm.ma_csht}
+                      onChange={(e) => setAddForm(p => ({ ...p, ma_csht: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
+                      placeholder="Mã CSHT nếu có..."
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Pha PTM</label>
+                    <input 
+                      type="text"
+                      value={addForm.pha_ptm}
+                      onChange={(e) => setAddForm(p => ({ ...p, pha_ptm: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
+                      placeholder="Ví dụ: 25DNHT070..."
+                    />
+                  </div>
+                  <div className="space-y-1 col-span-2">
+                    <label className="font-bold text-slate-600">Địa chỉ cũ/chi tiết</label>
+                    <input 
+                      type="text"
+                      value={addForm.dia_chi_cu}
+                      onChange={(e) => setAddForm(p => ({ ...p, dia_chi_cu: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
+                      placeholder="Địa chỉ chi tiết..."
+                    />
+                  </div>
                 </div>
               )}
 
@@ -3106,6 +3170,70 @@ export default function Datasites() {
                       onChange={(e) => setEditForm(p => ({ ...p, chu_csht: e.target.value }))}
                       className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
                       placeholder="Ví dụ: Mobifone, Viettel, VNPT..."
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Vùng phủ</label>
+                    <select 
+                      value={editForm.vung_phu}
+                      onChange={(e) => setEditForm(p => ({ ...p, vung_phu: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
+                    >
+                      <option value="">-- Chọn vùng phủ --</option>
+                      <option value="MACRO">MACRO</option>
+                      <option value="REMOTE">REMOTE</option>
+                      <option value="SMALL CELL">SMALL CELL</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Loại trạm</label>
+                    <select 
+                      value={editForm.loai_tram}
+                      onChange={(e) => setEditForm(p => ({ ...p, loai_tram: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
+                    >
+                      <option value="3G/4G">3G/4G</option>
+                      <option value="5G">5G</option>
+                      <option value="2G/3G/4G">2G/3G/4G</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Ngày phát sóng</label>
+                    <input 
+                      type="date"
+                      value={editForm.ngay_phat_song}
+                      onChange={(e) => setEditForm(p => ({ ...p, ngay_phat_song: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Mã CSHT</label>
+                    <input 
+                      type="text"
+                      value={editForm.ma_csht}
+                      onChange={(e) => setEditForm(p => ({ ...p, ma_csht: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
+                      placeholder="Mã CSHT nếu có..."
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600">Pha PTM</label>
+                    <input 
+                      type="text"
+                      value={editForm.pha_ptm}
+                      onChange={(e) => setEditForm(p => ({ ...p, pha_ptm: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
+                      placeholder="Ví dụ: 25DNHT070..."
+                    />
+                  </div>
+                  <div className="space-y-1 col-span-2">
+                    <label className="font-bold text-slate-600">Địa chỉ cũ/chi tiết</label>
+                    <input 
+                      type="text"
+                      value={editForm.dia_chi_cu}
+                      onChange={(e) => setEditForm(p => ({ ...p, dia_chi_cu: e.target.value }))}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none bg-slate-50/30 text-slate-800"
+                      placeholder="Địa chỉ chi tiết..."
                     />
                   </div>
                 </div>
