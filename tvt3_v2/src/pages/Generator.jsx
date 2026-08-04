@@ -183,28 +183,42 @@ export default function Generator() {
     if (st && st.infrastructure_info?.may_phat_dien?.mpd) {
       const mpds = st.infrastructure_info.may_phat_dien.mpd;
       if (mpds.length > 0) {
-        let mpd = mpds[0];
+        let match = null;
         if (logDate) {
-          // Lọc máy phát điện hoạt động tại thời điểm logDate
-          const match = mpds.find(m => {
+          match = mpds.find(m => {
             const start = m.ngay_bat_dau;
             const end = m.ngay_ket_thuc;
-            return (!start || logDate >= start) && (!end || logDate <= end);
+            return (!start || logDate >= start) && (!end || logDate <= end) && m.tinh_trang !== "ĐÃ ĐIỀU CHUYỂN";
           });
-          if (match) mpd = match;
+        } else {
+          match = mpds.find(m => m.tinh_trang !== "ĐÃ ĐIỀU CHUYỂN");
         }
-        return {
-          dinh_muc: parseFloat(mpd.dinh_muc) || 0,
-          dinh_muc_thuc_te: parseFloat(mpd.dinh_muc_thuc_te) || 0,
-          dung_tich: parseFloat(mpd.dung_tich) || 0,
-          nhan_hieu: mpd.nhan_hieu || '',
-          cong_suat: mpd.cong_suat || '',
-          nhien_lieu: mpd.nhien_lieu || '',
-          serial: mpd.serial || ''
-        };
+        
+        if (match) {
+          return {
+            dinh_muc: parseFloat(match.dinh_muc) || 0,
+            dinh_muc_thuc_te: parseFloat(match.dinh_muc_thuc_te) || 0,
+            dung_tich: parseFloat(match.dung_tich) || 0,
+            nhan_hieu: match.nhan_hieu || '',
+            cong_suat: match.cong_suat || '',
+            nhien_lieu: match.nhien_lieu || '',
+            serial: match.serial || ''
+          };
+        }
       }
     }
-    return null;
+    
+    // Nếu trạm không có máy phát điện cố định hoạt động vào thời điểm này,
+    // mặc định là chạy máy xăng lưu động
+    return {
+      dinh_muc: 2.0,
+      dinh_muc_thuc_te: 2.0,
+      dung_tich: 15,
+      nhan_hieu: 'MÁY XĂNG LƯU ĐỘNG',
+      cong_suat: '5 KVA',
+      nhien_lieu: 'XĂNG',
+      serial: 'LƯU ĐỘNG'
+    };
   };
 
   // Tính thời gian hoạt động từ giờ bắt đầu & kết thúc
@@ -2244,27 +2258,12 @@ export default function Generator() {
                 </select>
               </div>
 
-              {transEquipType === 'mpd' && (
-                <div className="grid grid-cols-2 gap-4 animate-in slide-in-from-top-1 duration-200">
-                  <div className="space-y-1">
-                    <label className="font-bold text-slate-600 text-xs">Định mức kỹ thuật mới (L/h)</label>
-                    <input
-                      type="number" step="any"
-                      value={transNewDinhMuc}
-                      onChange={(e) => setTransNewDinhMuc(e.target.value)}
-                      className="w-full border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-orange-500 font-bold"
-                      placeholder="Định mức kỹ thuật..."
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="font-bold text-slate-600 text-xs">Định mức thực tế mới (L/h) *</label>
-                    <input
-                      type="number" step="any" required
-                      value={transNewDinhMucThucTe}
-                      onChange={(e) => setTransNewDinhMucThucTe(e.target.value)}
-                      className="w-full border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-orange-500 font-bold text-orange-600"
-                      placeholder="Bắt buộc..."
-                    />
+              {transEquipType === 'mpd' && selectedMpdToMove && (
+                <div className="p-3 bg-blue-50/50 rounded-lg border border-blue-100 text-xs space-y-1.5 animate-in fade-in">
+                  <span className="font-bold text-blue-800">💡 Định mức nhiên liệu đi kèm máy phát này:</span>
+                  <div className="grid grid-cols-2 gap-2 text-slate-700">
+                    <div>Định mức kỹ thuật: <b className="text-slate-900">{selectedMpdToMove.dinh_muc || 0} L/h</b></div>
+                    <div>Định mức thực tế: <b className="text-orange-600">{selectedMpdToMove.dinh_muc_thuc_te || 0} L/h</b></div>
                   </div>
                 </div>
               )}

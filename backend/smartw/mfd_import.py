@@ -69,7 +69,7 @@ def get_pretax_price(fuel_type: str, date_str: str = None) -> float:
             return round(raw / 1.08)
     return 0
 
-def get_station_info(site_id: str) -> dict | None:
+def get_station_info(site_id: str, date_str: str = None) -> dict | None:
     """
     Lookup station info from V2 datasites table, parsing the infrastructure_info JSONB.
     """
@@ -91,19 +91,47 @@ def get_station_info(site_id: str) -> dict | None:
         infra = station.get("infrastructure_info") or {}
         mpd_list = infra.get("may_phat_dien", {}).get("mpd", [])
         
-        dinh_muc = 0
-        loai_nhien_lieu = 'Dầu'
-        may_phat_dien = 'MLĐ'
-        loai_may = ''
-        cong_suat_may = ''
+        active_mpd = None
+        if mpd_list:
+            if date_str:
+                for m in mpd_list:
+                    start = m.get("ngay_bat_dau")
+                    end = m.get("ngay_ket_thuc")
+                    tinh_trang = m.get("tinh_trang")
+                    
+                    if tinh_trang == "ĐÃ ĐIỀU CHUYỂN":
+                        continue
+                        
+                    is_active = True
+                    if start and date_str < start:
+                        is_active = False
+                    if end and date_str > end:
+                        is_active = False
+                        
+                    if is_active:
+                        active_mpd = m
+                        break
+            
+            if not active_mpd:
+                active_mpds = [m for m in mpd_list if m.get("tinh_trang") != "ĐÃ ĐIỀU CHUYỂN"]
+                if active_mpds:
+                    active_mpd = active_mpds[0]
+                elif len(mpd_list) > 0:
+                    active_mpd = mpd_list[0]
+                    
+        # Mặc định chạy máy xăng lưu động nếu không có máy cố định
+        dinh_muc = 2.0
+        loai_nhien_lieu = 'Xăng'
+        may_phat_dien = 'MÁY XĂNG LƯU ĐỘNG'
+        loai_may = 'MÁY XĂNG LƯU ĐỘNG'
+        cong_suat_may = '5 KVA'
         
-        if mpd_list and len(mpd_list) > 0:
-            mp = mpd_list[0]
-            dinh_muc = float(mp.get("dinh_muc") or 0)
-            loai_nhien_lieu = mp.get("nhien_lieu") or 'Dầu'
-            may_phat_dien = mp.get("ten") or 'MLĐ'
-            loai_may = mp.get("nhan_hieu") or ''
-            cong_suat_may = str(mp.get("cong_suat") or '')
+        if active_mpd:
+            dinh_muc = float(active_mpd.get("dinh_muc_thuc_te") or active_mpd.get("dinh_muc") or 2.0)
+            loai_nhien_lieu = active_mpd.get("nhien_lieu") or 'Dầu'
+            may_phat_dien = active_mpd.get("ten") or 'MLĐ'
+            loai_may = active_mpd.get("nhan_hieu") or ''
+            cong_suat_may = str(active_mpd.get("cong_suat") or '')
             
         return {
             'dinh_muc': dinh_muc,
@@ -273,7 +301,7 @@ def import_mfd_data(raw_data: list[dict]) -> dict:
         gio_bd = start_dt.strftime('%H:%M') if start_dt else None
         gio_kt = end_dt.strftime('%H:%M') if end_dt else None
 
-        station_info = get_station_info(site)
+        station_info = get_station_info(site, date_str=ngay)
         site_id = site
         
         dinh_muc = 0
