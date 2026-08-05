@@ -73,9 +73,11 @@ export default function Sran5gProject() {
   const scopes = useMemo(() => {
     const set = new Set();
     data.forEach(item => {
+      if (item.scope_3g4g) set.add(item.scope_3g4g);
+      if (item.scope_5g) set.add(item.scope_5g);
       if (item.unique_id) set.add(item.unique_id);
     });
-    return Array.from(set).sort();
+    return Array.from(set).filter(Boolean).sort();
   }, [data]);
 
   // Helper to check if item belongs to TVT3
@@ -100,7 +102,9 @@ export default function Sran5gProject() {
         (item.config_3g4g && item.config_3g4g.toLowerCase().includes(q)) ||
         (item.config_5g && item.config_5g.toLowerCase().includes(q)) ||
         (item.equip_solution && item.equip_solution.toLowerCase().includes(q)) ||
-        (item.unique_id && item.unique_id.toLowerCase().includes(q))
+        (item.unique_id && item.unique_id.toLowerCase().includes(q)) ||
+        (item.scope_3g4g && item.scope_3g4g.toLowerCase().includes(q)) ||
+        (item.scope_5g && item.scope_5g.toLowerCase().includes(q))
       );
 
       // District match enhancement for Xuan Loc (DNXL), Long Khanh (DNLK), Dinh Quan (DNDQ), etc.
@@ -127,7 +131,20 @@ export default function Sran5gProject() {
         }
       }
 
-      const matchScope = selectedScope === 'ALL' || item.unique_id === selectedScope;
+      // Scope match enhancement for 3G4G Scope (Swap 4G) & 5G Scope (Swap SRAN, Add 5G)
+      let matchScope = selectedScope === 'ALL';
+      if (!matchScope) {
+        const sel = selectedScope.toLowerCase().trim();
+        const uId = (item.unique_id || '').toLowerCase();
+        const s3g4g = (item.scope_3g4g || '').toLowerCase();
+        const s5g = (item.scope_5g || '').toLowerCase();
+
+        if (sel === 'swap 4g') {
+          matchScope = s3g4g.includes('swap 4g') || uId.includes('swap');
+        } else {
+          matchScope = uId.includes(sel) || s3g4g.includes(sel) || s5g.includes(sel);
+        }
+      }
 
       let matchStatus = true;
       if (selectedStatus === 'TSSR_APPROVED') matchStatus = !!item.tssr_sub_date || !!item.ie_app_date;
@@ -487,13 +504,20 @@ export default function Sran5gProject() {
                     </td>
 
                     <td className="py-3 px-4">
-                      <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
-                        item.unique_id?.includes('Add 5G') 
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                          : 'bg-blue-50 text-blue-700 border-blue-200'
-                      }`}>
-                        {item.unique_id || 'Swap SRAN'}
-                      </span>
+                      <div className="flex flex-col gap-1 items-start">
+                        <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
+                          item.unique_id?.includes('Add 5G') 
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : 'bg-blue-50 text-blue-700 border-blue-200'
+                        }`}>
+                          {item.unique_id || 'Swap SRAN'}
+                        </span>
+                        {item.scope_3g4g && (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 text-slate-600 border border-slate-200">
+                            3G/4G: {item.scope_3g4g}
+                          </span>
+                        )}
+                      </div>
                     </td>
 
                     <td className="py-3 px-4 max-w-xs">
