@@ -1947,14 +1947,14 @@ def run_alarm_poll():
                     status['last_alarm_poll'] = datetime.now().isoformat()
                     return
 
-                lines = []
+                lines_active = []
 
                 # --- 1. ACTIVE SECTION ---
                 if new_md or new_mpd or new_mll:
-                    lines.append("🚨 *ACTIVE*")
+                    lines_active.append("🚨 *ACTIVE*")
                     
                     if new_md:
-                        lines.append("*MAC:*")
+                        lines_active.append("*MAC:*")
                         mac_groups = {}
                         for alarm in new_md:
                             site = _site_key(alarm)
@@ -1966,10 +1966,10 @@ def run_alarm_poll():
                                 mac_groups[site]['nets'].append(net)
                         for site, grp in mac_groups.items():
                             net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
-                            lines.append(f"  • {grp['label']}{net_part} - {grp['t']}")
+                            lines_active.append(f"  • {grp['label']}{net_part} - {grp['t']}")
                     
                     if new_mpd:
-                        lines.append("*GEN:*")
+                        lines_active.append("*GEN:*")
                         mpd_groups = {}
                         for alarm in new_mpd:
                             site = _site_key(alarm)
@@ -1981,10 +1981,10 @@ def run_alarm_poll():
                                 mpd_groups[site]['nets'].append(net)
                         for site, grp in mpd_groups.items():
                             net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
-                            lines.append(f"  • {grp['label']}{net_part} - {grp['t']}")
+                            lines_active.append(f"  • {grp['label']}{net_part} - {grp['t']}")
 
                     if new_mll:
-                        lines.append("*MLL:*")
+                        lines_active.append("*MLL:*")
                         mll_groups = {}
                         for alarm in new_mll:
                             site = _site_key(alarm)
@@ -1996,18 +1996,48 @@ def run_alarm_poll():
                                 mll_groups[site]['nets'].append(net)
                         for site, grp in mll_groups.items():
                             net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
-                            lines.append(f"  • {grp['label']}{net_part} - {grp['t']}")
+                            lines_active.append(f"  • {grp['label']}{net_part} - {grp['t']}")
 
-                # --- 2. CLEARED SECTION ---
-                if cl_md or cl_mpd or cl_mll:
-                    if lines:
-                        lines.append("") # Empty line separator instead of divider
-                    lines.append("✅ *CLEARED*")
+                    _send_viber_report(lines_active)
 
-                    if cl_md:
-                        lines.append("*MAC:*")
+                # --- 2. CLEARED SECTION (with state-file deduplication) ---
+                # Load sent cleared cache to prevent double sending across polling processes
+                cleared_state_file = os.path.join(DATA_DIR, 'sent_cleared_alarms.json')
+                sent_cleared = {}
+                if os.path.exists(cleared_state_file):
+                    try:
+                        with open(cleared_state_file, 'r', encoding='utf-8') as sf:
+                            sent_cleared = json.load(sf)
+                    except Exception:
+                        sent_cleared = {}
+
+                # Purge entries older than 6 hours (21,600s)
+                now_ts = datetime.now().timestamp()
+                sent_cleared = {k: v for k, v in sent_cleared.items() if isinstance(v, (int, float)) and (now_ts - v) < 21600}
+
+                def _filter_unsent(alarm_list, table_type):
+                    unsent = []
+                    for a in alarm_list:
+                        site = _site_key(a)
+                        sdate = str(a.get('sdateStr') or a.get('sdate_str') or a.get('sdate') or '')
+                        clear_t = str(a.get('clear_time') or a.get('edateStr') or a.get('edate') or '')
+                        alarm_id = str(a.get('id') or a.get('ukAlarmKey') or '')
+                        ckey = f"{table_type}_{site}_{sdate}_{clear_t}_{alarm_id}"
+                        if ckey not in sent_cleared:
+                            unsent.append((a, ckey))
+                    return unsent
+
+                unsent_cl_md = _filter_unsent(cl_md, 'md')
+                unsent_cl_mpd = _filter_unsent(cl_mpd, 'mpd')
+                unsent_cl_mll = _filter_unsent(cl_mll, 'mll')
+
+                if unsent_cl_md or unsent_cl_mpd or unsent_cl_mll:
+                    lines_cleared = ["✅ *CLEARED*"]
+
+                    if unsent_cl_md:
+                        lines_cleared.append("*MAC:*")
                         cl_mac_groups = {}
-                        for alarm in cl_md:
+                        for alarm, _ in unsent_cl_md:
                             site = _site_key(alarm)
                             net = _norm_net(alarm.get('network') or '')
                             clear_t = _fmt_sdate(alarm.get('clear_time') or alarm.get('edateStr') or '', full=False)
@@ -2017,12 +2047,12 @@ def run_alarm_poll():
                                 cl_mac_groups[site]['nets'].append(net)
                         for site, grp in cl_mac_groups.items():
                             net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
-                            lines.append(f"  • {grp['label']}{net_part} - {grp['t']}")
+                            lines_cleared.append(f"  • {grp['label']}{net_part} - {grp['t']}")
 
-                    if cl_mpd:
-                        lines.append("*GEN:*")
+                    if unsent_cl_mpd:
+                        lines_cleared.append("*GEN:*")
                         cl_mpd_groups = {}
-                        for alarm in cl_mpd:
+                        for alarm, _ in unsent_cl_mpd:
                             site = _site_key(alarm)
                             net = _norm_net(alarm.get('network') or '')
                             clear_t = _fmt_sdate(alarm.get('clear_time') or alarm.get('edateStr') or '', full=False)
@@ -2032,12 +2062,12 @@ def run_alarm_poll():
                                 cl_mpd_groups[site]['nets'].append(net)
                         for site, grp in cl_mpd_groups.items():
                             net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
-                            lines.append(f"  • {grp['label']}{net_part} - {grp['t']}")
+                            lines_cleared.append(f"  • {grp['label']}{net_part} - {grp['t']}")
 
-                    if cl_mll:
-                        lines.append("*MLL:*")
+                    if unsent_cl_mll:
+                        lines_cleared.append("*MLL:*")
                         mll_cl_groups = {}
-                        for alarm in cl_mll:
+                        for alarm, _ in unsent_cl_mll:
                             site = _site_key(alarm)
                             net = _norm_net(alarm.get('network') or '')
                             clear_t = _fmt_sdate(alarm.get('clear_time') or alarm.get('edateStr') or '', full=False)
@@ -2047,9 +2077,20 @@ def run_alarm_poll():
                                 mll_cl_groups[site]['nets'].append(net)
                         for site, grp in mll_cl_groups.items():
                             net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
-                            lines.append(f"  • {grp['label']}{net_part} - {grp['t']}")
+                            lines_cleared.append(f"  • {grp['label']}{net_part} - {grp['t']}")
 
-                _send_viber_report(lines)
+                    _send_viber_report(lines_cleared)
+
+                    # Mark keys as sent in state file
+                    for _, ckey in unsent_cl_md + unsent_cl_mpd + unsent_cl_mll:
+                        sent_cleared[ckey] = now_ts
+
+                    try:
+                        os.makedirs(DATA_DIR, exist_ok=True)
+                        with open(cleared_state_file, 'w', encoding='utf-8') as sf:
+                            json.dump(sent_cleared, sf, ensure_ascii=False, indent=2)
+                    except Exception as fe:
+                        logger.warning(f"Failed to save sent_cleared_alarms.json: {fe}")
 
         # Kiểm tra lịch cúp điện chưa chạy máy phát điện
         try:
