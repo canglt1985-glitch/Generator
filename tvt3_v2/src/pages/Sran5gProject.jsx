@@ -134,16 +134,21 @@ export default function Sran5gProject() {
         }
       }
 
-      // Scope match enhancement for 3G4G Scope (Swap 4G) & 5G Scope (Swap SRAN, Add 5G)
+      // Scope match enhancement for 3G4G Scope (Swap 4G Only vs Swap 3G4G Both) & 5G Scope (Swap SRAN, Add 5G)
       let matchScope = selectedScope === 'ALL';
       if (!matchScope) {
         const sel = selectedScope.toLowerCase().trim();
         const uId = (item.unique_id || '').toLowerCase();
         const s3g4g = (item.scope_3g4g || '').toLowerCase();
         const s5g = (item.scope_5g || '').toLowerCase();
+        const cfg3g4g = (item.config_3g4g || '').toLowerCase();
 
-        if (sel === 'swap 4g') {
-          matchScope = s3g4g.includes('swap 4g') || uId.includes('swap');
+        if (selectedScope === 'SWAP_4G_ONLY') {
+          matchScope = cfg3g4g.includes('tháo dỡ 4g only') || cfg3g4g.includes('4g only');
+        } else if (selectedScope === 'SWAP_3G4G_BOTH') {
+          matchScope = !cfg3g4g.includes('tháo dỡ 4g only') && !cfg3g4g.includes('4g only');
+        } else if (selectedScope === 'ADD_5G' || sel.includes('add 5g')) {
+          matchScope = s5g.includes('add 5g') || uId.includes('add 5g');
         } else {
           matchScope = uId.includes(sel) || s3g4g.includes(sel) || s5g.includes(sel);
         }
@@ -165,6 +170,8 @@ export default function Sran5gProject() {
     const activeDataset = tvt3Only ? data.filter(isTvt3Item) : data;
     const activeTotal = activeDataset.length;
     const overallTotal = data.length;
+    const swap4gOnly = activeDataset.filter(d => d.config_3g4g && (d.config_3g4g.includes('Tháo dỡ 4G Only') || d.config_3g4g.includes('4G Only'))).length;
+    const swapBoth3g4g = activeTotal - swap4gOnly;
     const add5g = activeDataset.filter(d => (d.unique_id && d.unique_id.includes('Add 5G')) || (d.scope_5g && d.scope_5g.includes('Add 5G'))).length;
     const tssrApproved = activeDataset.filter(d => d.ie_app_date || d.rf_app_date || d.tssr_sub_date).length;
     const rfDesignApproved = activeDataset.filter(d => d.rf_design_date).length;
@@ -172,7 +179,7 @@ export default function Sran5gProject() {
     const whPickup = activeDataset.filter(d => d.wh_pickup_date).length;
     const onair = activeDataset.filter(d => d.onair_date).length;
 
-    return { activeTotal, overallTotal, add5g, tssrApproved, rfDesignApproved, augTarget, whPickup, onair };
+    return { activeTotal, overallTotal, swap4gOnly, swapBoth3g4g, add5g, tssrApproved, rfDesignApproved, augTarget, whPickup, onair };
   }, [data, tvt3Only, tvt3SiteIds]);
 
   // Excel File Upload Handler
@@ -353,13 +360,31 @@ export default function Sran5gProject() {
           </div>
         </div>
 
-        <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
-          <div className="flex items-center justify-between text-slate-500 text-xs font-semibold mb-1">
-            <span>LẮP MỚI 5G</span>
-            <Zap className="h-4 w-4 text-emerald-500" />
+        <div className="bg-white p-3.5 rounded-xl border border-blue-200 bg-blue-50/20 shadow-sm">
+          <div className="flex items-center justify-between text-blue-700 text-xs font-semibold mb-1">
+            <span>SWAP 4G ONLY</span>
+            <Radio className="h-4 w-4 text-blue-600" />
           </div>
-          <div className="text-2xl font-black text-emerald-600">{stats.add5g}</div>
-          <div className="text-[11px] text-emerald-700 mt-1">Add 5G NR26 / NR38</div>
+          <div className="text-2xl font-black text-blue-700">{stats.swap4gOnly}</div>
+          <div className="text-[11px] text-blue-600 mt-1">Tháo dỡ 4G Only ({stats.activeTotal > 0 ? ((stats.swap4gOnly / stats.activeTotal) * 100).toFixed(1) : 0}%)</div>
+        </div>
+
+        <div className="bg-white p-3.5 rounded-xl border border-cyan-200 bg-cyan-50/20 shadow-sm">
+          <div className="flex items-center justify-between text-cyan-700 text-xs font-semibold mb-1">
+            <span>SWAP CẢ 3G & 4G</span>
+            <Server className="h-4 w-4 text-cyan-600" />
+          </div>
+          <div className="text-2xl font-black text-cyan-700">{stats.swapBoth3g4g}</div>
+          <div className="text-[11px] text-cyan-600 mt-1">Swap SRAN cả 3G/4G ({stats.activeTotal > 0 ? ((stats.swapBoth3g4g / stats.activeTotal) * 100).toFixed(1) : 0}%)</div>
+        </div>
+
+        <div className="bg-white p-3.5 rounded-xl border border-emerald-200 bg-emerald-50/20 shadow-sm">
+          <div className="flex items-center justify-between text-emerald-700 text-xs font-semibold mb-1">
+            <span>LẮP MỚI 5G</span>
+            <Zap className="h-4 w-4 text-emerald-600" />
+          </div>
+          <div className="text-2xl font-black text-emerald-700">{stats.add5g}</div>
+          <div className="text-[11px] text-emerald-600 mt-1">Add 5G NR26 ({stats.activeTotal > 0 ? ((stats.add5g / stats.activeTotal) * 100).toFixed(1) : 0}%)</div>
         </div>
 
         <div className="bg-white p-3.5 rounded-xl border border-purple-200 bg-purple-50/20 shadow-sm">
@@ -389,24 +414,6 @@ export default function Sran5gProject() {
           </div>
           <div className="text-2xl font-black text-amber-600">{stats.rfDesignApproved}</div>
           <div className="text-[11px] text-amber-700 mt-1">Duyệt thiết kế RF</div>
-        </div>
-
-        <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
-          <div className="flex items-center justify-between text-slate-500 text-xs font-semibold mb-1">
-            <span>NHẬN KHO (WH)</span>
-            <Package className="h-4 w-4 text-pink-500" />
-          </div>
-          <div className="text-2xl font-black text-pink-600">{stats.whPickup}</div>
-          <div className="text-[11px] text-pink-700 mt-1">Vật tư đã về trạm</div>
-        </div>
-
-        <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
-          <div className="flex items-center justify-between text-slate-500 text-xs font-semibold mb-1">
-            <span>ONAIR / SWAP</span>
-            <Radio className="h-4 w-4 text-teal-500" />
-          </div>
-          <div className="text-2xl font-black text-teal-600">{stats.onair}</div>
-          <div className="text-[11px] text-teal-700 mt-1">Đã phát sóng</div>
         </div>
       </div>
 
@@ -442,6 +449,9 @@ export default function Sran5gProject() {
               className="px-3 py-2 text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="ALL">⚡ Tất cả Phân loại Scope</option>
+              <option value="SWAP_4G_ONLY">🔄 Swap 4G Only ({stats.swap4gOnly} trạm)</option>
+              <option value="SWAP_3G4G_BOTH">🔄 Swap Cả 3G & 4G ({stats.swapBoth3g4g} trạm)</option>
+              <option value="ADD_5G">⚡ Swap SRAN + Add 5G ({stats.add5g} trạm)</option>
               {scopes.map(s => (
                 <option key={s} value={s}>{s}</option>
               ))}
