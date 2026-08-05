@@ -142,15 +142,15 @@ export default function Sran5gProject() {
   // Stats calculation
   const stats = useMemo(() => {
     const activeDataset = tvt3Only ? data.filter(isTvt3Item) : data;
-    const total = activeDataset.length;
-    const tvt3Sites = activeDataset.filter(d => d.pack_po && d.pack_po.includes('S4-PO1.3')).length;
+    const activeTotal = activeDataset.length;
+    const overallTotal = data.length;
     const add5g = activeDataset.filter(d => d.unique_id && d.unique_id.includes('Add 5G')).length;
-    const tssrApproved = activeDataset.filter(d => d.ie_app_date || d.rf_app_date).length;
+    const tssrApproved = activeDataset.filter(d => d.ie_app_date || d.rf_app_date || d.tssr_sub_date).length;
     const rfDesignApproved = activeDataset.filter(d => d.rf_design_date).length;
     const whPickup = activeDataset.filter(d => d.wh_pickup_date).length;
     const onair = activeDataset.filter(d => d.onair_date).length;
 
-    return { total, tvt3Sites, add5g, tssrApproved, rfDesignApproved, whPickup, onair };
+    return { activeTotal, overallTotal, add5g, tssrApproved, rfDesignApproved, whPickup, onair };
   }, [data, tvt3Only, tvt3SiteIds]);
 
   // Excel File Upload Handler
@@ -303,7 +303,7 @@ export default function Sran5gProject() {
                 : 'bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700'
             }`}
           >
-            🎯 Chỉ xem 389 Trạm TVT3 Quản lý
+            🎯 Chỉ xem {tvt3SiteIds.size || 392} Trạm TVT3 Quản lý
           </button>
           <button
             onClick={() => setTvt3Only(false)}
@@ -313,7 +313,7 @@ export default function Sran5gProject() {
                 : 'bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700'
             }`}
           >
-            🌐 Xem Tất cả 668 Trạm Đồng Nai
+            🌐 Xem Tất cả {stats.overallTotal || 668} Trạm Đồng Nai
           </button>
         </div>
       </div>
@@ -322,11 +322,13 @@ export default function Sran5gProject() {
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
           <div className="flex items-center justify-between text-slate-500 text-xs font-semibold mb-1">
-            <span>TỔNG TRẠM PO1.3</span>
+            <span>{tvt3Only ? 'TỔNG TRẠM TVT3' : 'TỔNG TRẠM ĐỒNG NAI'}</span>
             <Database className="h-4 w-4 text-blue-500" />
           </div>
-          <div className="text-2xl font-black text-slate-800">{stats.tvt3Sites}</div>
-          <div className="text-[11px] text-slate-500 mt-1">Toàn tỉnh: {stats.total} trạm</div>
+          <div className="text-2xl font-black text-slate-800">{stats.activeTotal}</div>
+          <div className="text-[11px] text-slate-500 mt-1">
+            {tvt3Only ? `Toàn tỉnh: ${stats.overallTotal} trạm` : `TVT3 quản lý: ${tvt3SiteIds.size || 392} trạm`}
+          </div>
         </div>
 
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
@@ -345,7 +347,7 @@ export default function Sran5gProject() {
           </div>
           <div className="text-2xl font-black text-indigo-600">{stats.tssrApproved}</div>
           <div className="text-[11px] text-indigo-700 mt-1">
-            {stats.total > 0 ? ((stats.tssrApproved / stats.total) * 100).toFixed(1) : 0}% hoàn thành
+            {stats.activeTotal > 0 ? ((stats.tssrApproved / stats.activeTotal) * 100).toFixed(1) : 0}% hoàn thành
           </div>
         </div>
 
