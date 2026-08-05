@@ -16,6 +16,7 @@ export default function Sran5gProject() {
   const [selectedStatus, setSelectedStatus] = useState('ALL');
   const [tvt3Only, setTvt3Only] = useState(true);
   const [tvt3SiteIds, setTvt3SiteIds] = useState(new Set());
+  const [tvt3SiteCount, setTvt3SiteCount] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState(null);
   const [selectedSite, setSelectedSite] = useState(null);
@@ -26,6 +27,7 @@ export default function Sran5gProject() {
       .select('site_id, site_id_old')
       .then(({ data: siteList }) => {
         if (siteList) {
+          setTvt3SiteCount(siteList.length);
           const ids = new Set();
           siteList.forEach(s => {
             if (s.site_id) ids.add(String(s.site_id).trim().toUpperCase());
@@ -320,7 +322,7 @@ export default function Sran5gProject() {
                 : 'bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700'
             }`}
           >
-            🎯 Chỉ xem {tvt3SiteIds.size || 392} Trạm TVT3 Quản lý
+            🎯 Chỉ xem {tvt3SiteCount || 399} Trạm TVT3 Quản lý
           </button>
           <button
             onClick={() => setTvt3Only(false)}
@@ -330,7 +332,7 @@ export default function Sran5gProject() {
                 : 'bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700'
             }`}
           >
-            🌐 Xem Tất cả {stats.overallTotal || 668} Trạm Đồng Nai
+            🌐 Xem Tất cả {stats.overallTotal || 1031} Trạm Đồng Nai
           </button>
         </div>
       </div>
@@ -344,7 +346,7 @@ export default function Sran5gProject() {
           </div>
           <div className="text-2xl font-black text-slate-800">{stats.activeTotal}</div>
           <div className="text-[11px] text-slate-500 mt-1">
-            {tvt3Only ? `Toàn tỉnh: ${stats.overallTotal} trạm` : `TVT3 quản lý: ${tvt3SiteIds.size || 392} trạm`}
+            {tvt3Only ? `Toàn tỉnh: ${stats.overallTotal} trạm` : `TVT3 quản lý: ${tvt3SiteCount || 399} trạm`}
           </div>
         </div>
 
