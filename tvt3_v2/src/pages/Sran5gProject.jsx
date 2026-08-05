@@ -14,9 +14,27 @@ export default function Sran5gProject() {
   const [selectedDistrict, setSelectedDistrict] = useState('ALL');
   const [selectedScope, setSelectedScope] = useState('ALL');
   const [selectedStatus, setSelectedStatus] = useState('ALL');
+  const [tvt3Only, setTvt3Only] = useState(true);
+  const [tvt3SiteIds, setTvt3SiteIds] = useState(new Set());
   const [uploading, setUploading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState(null);
   const [selectedSite, setSelectedSite] = useState(null);
+
+  // Fetch TVT3 managed site_ids from Supabase datasites table
+  useEffect(() => {
+    supabase.from('datasites')
+      .select('site_id, site_id_old')
+      .then(({ data: siteList }) => {
+        if (siteList) {
+          const ids = new Set();
+          siteList.forEach(s => {
+            if (s.site_id) ids.add(String(s.site_id).trim().toUpperCase());
+            if (s.site_id_old) ids.add(String(s.site_id_old).trim().toUpperCase());
+          });
+          setTvt3SiteIds(ids);
+        }
+      });
+  }, []);
 
   // Load data from Supabase sran_5g_tracker table
   const fetchSranData = async () => {
@@ -60,9 +78,20 @@ export default function Sran5gProject() {
     return Array.from(set).sort();
   }, [data]);
 
+  // Helper to check if item belongs to TVT3
+  const isTvt3Item = (item) => {
+    if (!tvt3Only) return true;
+    if (tvt3SiteIds.size === 0) return true; // fallback
+    const s1 = item.site_id ? String(item.site_id).trim().toUpperCase() : '';
+    const s2 = item.site_id_old ? String(item.site_id_old).trim().toUpperCase() : '';
+    return tvt3SiteIds.has(s1) || tvt3SiteIds.has(s2);
+  };
+
   // Filtered dataset
   const filteredData = useMemo(() => {
     return data.filter(item => {
+      if (!isTvt3Item(item)) return false;
+
       const q = searchTerm.toLowerCase().trim();
       const matchQuery = !q || (
         (item.site_id && item.site_id.toLowerCase().includes(q)) ||
@@ -85,20 +114,21 @@ export default function Sran5gProject() {
 
       return matchQuery && matchDistrict && matchScope && matchStatus;
     });
-  }, [data, searchTerm, selectedDistrict, selectedScope, selectedStatus]);
+  }, [data, searchTerm, selectedDistrict, selectedScope, selectedStatus, tvt3Only, tvt3SiteIds]);
 
   // Stats calculation
   const stats = useMemo(() => {
-    const total = data.length;
-    const tvt3Sites = data.filter(d => d.pack_po && d.pack_po.includes('S4-PO1.3')).length;
-    const add5g = data.filter(d => d.unique_id && d.unique_id.includes('Add 5G')).length;
-    const tssrApproved = data.filter(d => d.ie_app_date || d.rf_app_date).length;
-    const rfDesignApproved = data.filter(d => d.rf_design_date).length;
-    const whPickup = data.filter(d => d.wh_pickup_date).length;
-    const onair = data.filter(d => d.onair_date).length;
+    const activeDataset = tvt3Only ? data.filter(isTvt3Item) : data;
+    const total = activeDataset.length;
+    const tvt3Sites = activeDataset.filter(d => d.pack_po && d.pack_po.includes('S4-PO1.3')).length;
+    const add5g = activeDataset.filter(d => d.unique_id && d.unique_id.includes('Add 5G')).length;
+    const tssrApproved = activeDataset.filter(d => d.ie_app_date || d.rf_app_date).length;
+    const rfDesignApproved = activeDataset.filter(d => d.rf_design_date).length;
+    const whPickup = activeDataset.filter(d => d.wh_pickup_date).length;
+    const onair = activeDataset.filter(d => d.onair_date).length;
 
     return { total, tvt3Sites, add5g, tssrApproved, rfDesignApproved, whPickup, onair };
-  }, [data]);
+  }, [data, tvt3Only, tvt3SiteIds]);
 
   // Excel File Upload Handler
   const handleFileUpload = (e) => {
@@ -238,6 +268,31 @@ export default function Sran5gProject() {
             <button onClick={() => setUploadMessage(null)} className="text-slate-400 hover:text-white text-xs">Đóng</button>
           </div>
         )}
+
+        {/* Chế độ xem Toggle Pill */}
+        <div className="flex items-center gap-2 mt-4 pt-3 border-t border-slate-700/60">
+          <span className="text-xs text-slate-400 font-semibold mr-1">Chế độ xem:</span>
+          <button
+            onClick={() => setTvt3Only(true)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+              tvt3Only 
+                ? 'bg-blue-600 text-white shadow-md ring-2 ring-blue-400/40' 
+                : 'bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700'
+            }`}
+          >
+            🎯 Chỉ xem 389 Trạm TVT3 Quản lý
+          </button>
+          <button
+            onClick={() => setTvt3Only(false)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+              !tvt3Only 
+                ? 'bg-indigo-600 text-white shadow-md ring-2 ring-indigo-400/40' 
+                : 'bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700'
+            }`}
+          >
+            🌐 Xem Tất cả 668 Trạm Đồng Nai
+          </button>
+        </div>
       </div>
 
       {/* KPI Stat Cards */}
