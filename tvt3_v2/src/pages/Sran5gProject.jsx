@@ -265,6 +265,21 @@ export default function Sran5gProject() {
     setTimeout(() => setCopiedReport(false), 3000);
   };
 
+  // Interactive Jump to Filtered Table View
+  const handleFilterJump = (statusKey = 'ALL', scopeKey = 'ALL') => {
+    setSelectedStatus(statusKey);
+    setSelectedScope(scopeKey);
+    setTvt3Only(true);
+    setActiveViewTab('table');
+  };
+
+  const handleDistrictJump = (districtName, statusKey = 'ALL') => {
+    setSelectedDistrict(districtName);
+    setSelectedStatus(statusKey);
+    setTvt3Only(true);
+    setActiveViewTab('table');
+  };
+
   // Excel File Upload Handler
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
