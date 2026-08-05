@@ -174,7 +174,7 @@ export default function Sran5gProject() {
       }
 
       let matchStatus = true;
-      if (selectedStatus === 'TARGET_AUG') matchStatus = item.monthly_target_im === 'Target_in_Aug';
+      if (selectedStatus === 'TARGET_AUG') matchStatus = item.monthly_target_im && String(item.monthly_target_im).includes('Aug');
       else if (selectedStatus === 'TSSR_APPROVED') matchStatus = !!item.tssr_sub_date || !!item.ie_app_date;
       else if (selectedStatus === 'RF_DESIGN_APPROVED') matchStatus = !!item.rf_design_date;
       else if (selectedStatus === 'WH_PICKUP') matchStatus = !!item.wh_pickup_date;
@@ -194,7 +194,7 @@ export default function Sran5gProject() {
     const add5g = activeDataset.filter(d => (d.unique_id && d.unique_id.includes('Add 5G')) || (d.scope_5g && d.scope_5g.includes('Add 5G'))).length;
     const tssrApproved = activeDataset.filter(d => d.ie_app_date || d.rf_app_date || d.tssr_sub_date).length;
     const rfDesignApproved = activeDataset.filter(d => d.rf_design_date).length;
-    const augTarget = activeDataset.filter(d => d.monthly_target_im === 'Target_in_Aug').length;
+    const augTarget = activeDataset.filter(d => d.monthly_target_im && String(d.monthly_target_im).includes('Aug')).length;
     const whPickup = activeDataset.filter(d => d.wh_pickup_date).length;
     const onair = activeDataset.filter(d => d.onair_date).length;
 
@@ -257,6 +257,7 @@ export default function Sran5gProject() {
             equip_solution: rowObj['Equip_Solution'],
             power_solution: rowObj['3G4G_Power_Solution'] || rowObj['5G_Power_Solution'],
             antenna_solution: rowObj['3G4G_Antenna_Solution'] || rowObj['5G_Air_Solution'],
+            monthly_target_im: rowObj['Monthly_Target_IM'] ? String(rowObj['Monthly_Target_IM']).trim() : null,
             survey_date: rowObj['Survey_Actual_Date'] ? String(rowObj['Survey_Actual_Date']).substring(0, 10) : null,
             tssr_sub_date: rowObj['SSR_1st_Submitted_Date'] ? String(rowObj['SSR_1st_Submitted_Date']).substring(0, 10) : null,
             ie_app_date: rowObj['SSR_Checked_By_Eric_IE_Date'] ? String(rowObj['SSR_Checked_By_Eric_IE_Date']).substring(0, 10) : null,
