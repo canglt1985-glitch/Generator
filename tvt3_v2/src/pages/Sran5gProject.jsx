@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Radio, Search, Filter, RefreshCw, Upload, CheckCircle2, Clock, 
   AlertTriangle, Server, Zap, ChevronRight, FileSpreadsheet, Eye, 
-  Layers, MapPin, Database
+  Layers, MapPin, Database, Calendar, Package
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import * as XLSX from 'xlsx';
@@ -45,6 +45,7 @@ export default function Sran5gProject() {
       const { data: trackerData, error } = await supabase
         .from('sran_5g_tracker')
         .select('*')
+        .range(0, 5000)
         .order('site_id', { ascending: true });
 
       if (error) {
@@ -149,7 +150,8 @@ export default function Sran5gProject() {
       }
 
       let matchStatus = true;
-      if (selectedStatus === 'TSSR_APPROVED') matchStatus = !!item.tssr_sub_date || !!item.ie_app_date;
+      if (selectedStatus === 'TARGET_AUG') matchStatus = item.monthly_target_im === 'Target_in_Aug';
+      else if (selectedStatus === 'TSSR_APPROVED') matchStatus = !!item.tssr_sub_date || !!item.ie_app_date;
       else if (selectedStatus === 'RF_DESIGN_APPROVED') matchStatus = !!item.rf_design_date;
       else if (selectedStatus === 'WH_PICKUP') matchStatus = !!item.wh_pickup_date;
       else if (selectedStatus === 'ONAIR') matchStatus = !!item.onair_date;
@@ -163,13 +165,14 @@ export default function Sran5gProject() {
     const activeDataset = tvt3Only ? data.filter(isTvt3Item) : data;
     const activeTotal = activeDataset.length;
     const overallTotal = data.length;
-    const add5g = activeDataset.filter(d => d.unique_id && d.unique_id.includes('Add 5G')).length;
+    const add5g = activeDataset.filter(d => (d.unique_id && d.unique_id.includes('Add 5G')) || (d.scope_5g && d.scope_5g.includes('Add 5G'))).length;
     const tssrApproved = activeDataset.filter(d => d.ie_app_date || d.rf_app_date || d.tssr_sub_date).length;
     const rfDesignApproved = activeDataset.filter(d => d.rf_design_date).length;
+    const augTarget = activeDataset.filter(d => d.monthly_target_im === 'Target_in_Aug').length;
     const whPickup = activeDataset.filter(d => d.wh_pickup_date).length;
     const onair = activeDataset.filter(d => d.onair_date).length;
 
-    return { activeTotal, overallTotal, add5g, tssrApproved, rfDesignApproved, whPickup, onair };
+    return { activeTotal, overallTotal, add5g, tssrApproved, rfDesignApproved, augTarget, whPickup, onair };
   }, [data, tvt3Only, tvt3SiteIds]);
 
   // Excel File Upload Handler
@@ -338,8 +341,8 @@ export default function Sran5gProject() {
       </div>
 
       {/* KPI Stat Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+        <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
           <div className="flex items-center justify-between text-slate-500 text-xs font-semibold mb-1">
             <span>{tvt3Only ? 'TỔNG TRẠM TVT3' : 'TỔNG TRẠM ĐỒNG NAI'}</span>
             <Database className="h-4 w-4 text-blue-500" />
@@ -350,7 +353,7 @@ export default function Sran5gProject() {
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+        <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
           <div className="flex items-center justify-between text-slate-500 text-xs font-semibold mb-1">
             <span>LẮP MỚI 5G</span>
             <Zap className="h-4 w-4 text-emerald-500" />
@@ -359,7 +362,16 @@ export default function Sran5gProject() {
           <div className="text-[11px] text-emerald-700 mt-1">Add 5G NR26 / NR38</div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+        <div className="bg-white p-3.5 rounded-xl border border-purple-200 bg-purple-50/20 shadow-sm">
+          <div className="flex items-center justify-between text-purple-700 text-xs font-semibold mb-1">
+            <span>TARGET THÁNG 8</span>
+            <Calendar className="h-4 w-4 text-purple-600" />
+          </div>
+          <div className="text-2xl font-black text-purple-700">{stats.augTarget}</div>
+          <div className="text-[11px] text-purple-600 mt-1">Mục tiêu T8 (Col AY)</div>
+        </div>
+
+        <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
           <div className="flex items-center justify-between text-slate-500 text-xs font-semibold mb-1">
             <span>DUYỆT TSSR</span>
             <CheckCircle2 className="h-4 w-4 text-indigo-500" />
@@ -370,7 +382,7 @@ export default function Sran5gProject() {
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+        <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
           <div className="flex items-center justify-between text-slate-500 text-xs font-semibold mb-1">
             <span>RF DESIGN DUYỆT</span>
             <Layers className="h-4 w-4 text-amber-500" />
@@ -379,16 +391,16 @@ export default function Sran5gProject() {
           <div className="text-[11px] text-amber-700 mt-1">Duyệt thiết kế RF</div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+        <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
           <div className="flex items-center justify-between text-slate-500 text-xs font-semibold mb-1">
             <span>NHẬN KHO (WH)</span>
-            <Server className="h-4 w-4 text-purple-500" />
+            <Package className="h-4 w-4 text-pink-500" />
           </div>
-          <div className="text-2xl font-black text-purple-600">{stats.whPickup}</div>
-          <div className="text-[11px] text-purple-700 mt-1">Vật tư đã về trạm</div>
+          <div className="text-2xl font-black text-pink-600">{stats.whPickup}</div>
+          <div className="text-[11px] text-pink-700 mt-1">Vật tư đã về trạm</div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+        <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
           <div className="flex items-center justify-between text-slate-500 text-xs font-semibold mb-1">
             <span>ONAIR / SWAP</span>
             <Radio className="h-4 w-4 text-teal-500" />
@@ -441,6 +453,7 @@ export default function Sran5gProject() {
               className="px-3 py-2 text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="ALL">📈 Tất cả Trạng thái Tiến độ</option>
+              <option value="TARGET_AUG">🎯 Target Tháng 8 (Col AY)</option>
               <option value="TSSR_APPROVED">✅ Đã Duyệt TSSR</option>
               <option value="RF_DESIGN_APPROVED">🎨 Đã Duyệt RF Design</option>
               <option value="WH_PICKUP">📦 Đã Nhận Kho</option>
@@ -534,25 +547,32 @@ export default function Sran5gProject() {
                     </td>
 
                     <td className="py-3 px-4">
-                      {item.onair_date ? (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                          <CheckCircle2 className="h-3 w-3" /> Onair {item.onair_date}
-                        </span>
-                      ) : item.wh_pickup_date ? (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200">
-                          <Clock className="h-3 w-3" /> Nhận kho {item.wh_pickup_date}
-                        </span>
-                      ) : item.rf_design_date ? (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
-                          <Layers className="h-3 w-3" /> RF Design {item.rf_design_date}
-                        </span>
-                      ) : item.ie_app_date ? (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
-                          <CheckCircle2 className="h-3 w-3" /> TSSR App {item.ie_app_date}
-                        </span>
-                      ) : (
-                        <span className="text-slate-400 text-[11px]">Đang khảo sát</span>
-                      )}
+                      <div className="flex flex-col gap-1 items-start">
+                        {item.monthly_target_im === 'Target_in_Aug' && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-md border border-purple-300 shadow-sm">
+                            <Calendar className="h-3 w-3 text-purple-600" /> Target Tháng 8
+                          </span>
+                        )}
+                        {item.onair_date ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                            <CheckCircle2 className="h-3 w-3" /> Onair {item.onair_date}
+                          </span>
+                        ) : item.wh_pickup_date ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200">
+                            <Package className="h-3 w-3" /> Nhận kho {item.wh_pickup_date}
+                          </span>
+                        ) : item.rf_design_date ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                            <Layers className="h-3 w-3" /> RF Design {item.rf_design_date}
+                          </span>
+                        ) : item.ie_app_date || item.rf_app_date ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-200">
+                            <CheckCircle2 className="h-3 w-3" /> Duyệt TSSR
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 text-[11px]">Đang triển khai</span>
+                        )}
+                      </div>
                     </td>
 
                     <td className="py-3 px-4 text-center">
