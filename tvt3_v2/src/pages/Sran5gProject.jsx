@@ -38,20 +38,39 @@ export default function Sran5gProject() {
       });
   }, []);
 
-  // Load data from Supabase sran_5g_tracker table
+  // Load data from Supabase sran_5g_tracker table with pagination (bypassing 1000 row PostgREST limit)
   const fetchSranData = async () => {
     setLoading(true);
     try {
-      const { data: trackerData, error } = await supabase
-        .from('sran_5g_tracker')
-        .select('*')
-        .range(0, 5000)
-        .order('site_id', { ascending: true });
+      let allData = [];
+      let page = 0;
+      const pageSize = 1000;
+      let hasMore = true;
 
-      if (error) {
-        console.error('Error fetching sran_5g_tracker:', error);
-      } else if (trackerData && trackerData.length > 0) {
-        setData(trackerData);
+      while (hasMore) {
+        const { data: chunk, error } = await supabase
+          .from('sran_5g_tracker')
+          .select('*')
+          .range(page * pageSize, (page + 1) * pageSize - 1)
+          .order('site_id', { ascending: true });
+
+        if (error) {
+          console.error('Error fetching sran_5g_tracker:', error);
+          hasMore = false;
+        } else if (chunk && chunk.length > 0) {
+          allData = [...allData, ...chunk];
+          if (chunk.length < pageSize) {
+            hasMore = false;
+          } else {
+            page++;
+          }
+        } else {
+          hasMore = false;
+        }
+      }
+
+      if (allData.length > 0) {
+        setData(allData);
       }
     } catch (err) {
       console.error('Fetch exception:', err);
