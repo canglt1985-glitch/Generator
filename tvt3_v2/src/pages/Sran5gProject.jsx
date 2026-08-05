@@ -103,7 +103,30 @@ export default function Sran5gProject() {
         (item.unique_id && item.unique_id.toLowerCase().includes(q))
       );
 
-      const matchDistrict = selectedDistrict === 'ALL' || item.district === selectedDistrict;
+      // District match enhancement for Xuan Loc (DNXL), Long Khanh (DNLK), Dinh Quan (DNDQ), etc.
+      let matchDistrict = selectedDistrict === 'ALL';
+      if (!matchDistrict && item.district) {
+        if (item.district === selectedDistrict) {
+          matchDistrict = true;
+        } else if (selectedDistrict === 'Xuân Lộc' && (item.district === 'Xuân Lộc' || (item.site_id_old && item.site_id_old.startsWith('DNXL')))) {
+          matchDistrict = true;
+        } else if (selectedDistrict === 'Định Quán' && (item.district === 'Định Quán' || (item.site_id_old && item.site_id_old.startsWith('DNDQ')))) {
+          matchDistrict = true;
+        } else if (selectedDistrict === 'Long Khánh' && (item.district === 'Long Khánh' || (item.site_id_old && item.site_id_old.startsWith('DNLK')))) {
+          matchDistrict = true;
+        } else if (selectedDistrict === 'Cẩm Mỹ' && (item.district === 'Cẩm Mỹ' || (item.site_id_old && item.site_id_old.startsWith('DNCM')))) {
+          matchDistrict = true;
+        } else if (selectedDistrict === 'Thống Nhất' && (item.district === 'Thống Nhất' || (item.site_id_old && item.site_id_old.startsWith('DNTN')))) {
+          matchDistrict = true;
+        } else if (selectedDistrict === 'Tân Phú' && (item.district === 'Tân Phú' || (item.site_id_old && item.site_id_old.startsWith('DNTP')))) {
+          matchDistrict = true;
+        } else if (selectedDistrict === 'Vĩnh Cửu' && (item.district === 'Vĩnh Cửu' || (item.site_id_old && item.site_id_old.startsWith('DNVC')))) {
+          matchDistrict = true;
+        } else if (selectedDistrict === 'Trảng Bom' && (item.district === 'Trảng Bom' || (item.site_id_old && item.site_id_old.startsWith('DNTB')))) {
+          matchDistrict = true;
+        }
+      }
+
       const matchScope = selectedScope === 'ALL' || item.unique_id === selectedScope;
 
       let matchStatus = true;
