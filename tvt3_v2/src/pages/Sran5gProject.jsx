@@ -175,9 +175,13 @@ export default function Sran5gProject() {
 
       let matchStatus = true;
       if (selectedStatus === 'TARGET_AUG') matchStatus = item.monthly_target_im && String(item.monthly_target_im).includes('Aug');
-      else if (selectedStatus === 'TSSR_APPROVED') matchStatus = !!item.tssr_sub_date || !!item.ie_app_date;
+      else if (selectedStatus === 'SURVEY_DONE') matchStatus = !!item.survey_date;
+      else if (selectedStatus === 'TSSR_APPROVED') matchStatus = !!item.tssr_sub_date || !!item.ie_app_date || !!item.rf_app_date;
       else if (selectedStatus === 'RF_DESIGN_APPROVED') matchStatus = !!item.rf_design_date;
       else if (selectedStatus === 'WH_PICKUP') matchStatus = !!item.wh_pickup_date;
+      else if (selectedStatus === 'DELIVERY') matchStatus = !!item.delivery_date;
+      else if (selectedStatus === 'INSTALL') matchStatus = !!item.install_date;
+      else if (selectedStatus === 'INTEGRATION') matchStatus = !!item.integration_date;
       else if (selectedStatus === 'ONAIR') matchStatus = !!item.onair_date;
 
       return matchQuery && matchDistrict && matchScope && matchStatus;
@@ -484,10 +488,14 @@ export default function Sran5gProject() {
             >
               <option value="ALL">📈 Tất cả Trạng thái Tiến độ</option>
               <option value="TARGET_AUG">🎯 Target Tháng 8 (Col AY)</option>
+              <option value="SURVEY_DONE">📋 Đã Khảo Sát TSSR</option>
               <option value="TSSR_APPROVED">✅ Đã Duyệt TSSR</option>
               <option value="RF_DESIGN_APPROVED">🎨 Đã Duyệt RF Design</option>
-              <option value="WH_PICKUP">📦 Đã Nhận Kho</option>
-              <option value="ONAIR">🚀 Đã Onair</option>
+              <option value="WH_PICKUP">📦 Đã Nhận Kho (WH Pickup)</option>
+              <option value="DELIVERY">🚚 Đã Giao Hàng (Delivery)</option>
+              <option value="INSTALL">🛠️ Đã Lắp Đặt (Installation)</option>
+              <option value="INTEGRATION">⚙️ Đã Tích Hợp (Integration)</option>
+              <option value="ONAIR">🚀 Đã Onair (Phát Sóng)</option>
             </select>
           </div>
         </div>
@@ -585,7 +593,19 @@ export default function Sran5gProject() {
                         )}
                         {item.onair_date ? (
                           <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                            <CheckCircle2 className="h-3 w-3" /> Onair {item.onair_date}
+                            <Radio className="h-3 w-3" /> Onair {item.onair_date}
+                          </span>
+                        ) : item.integration_date ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-teal-600 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">
+                            <Server className="h-3 w-3" /> Tích hợp {item.integration_date}
+                          </span>
+                        ) : item.install_date ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
+                            <Zap className="h-3 w-3" /> Lắp đặt {item.install_date}
+                          </span>
+                        ) : item.delivery_date ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-cyan-600 bg-cyan-50 px-2 py-0.5 rounded-md border border-cyan-200">
+                            <Package className="h-3 w-3" /> Giao hàng {item.delivery_date}
                           </span>
                         ) : item.wh_pickup_date ? (
                           <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200">
@@ -598,6 +618,10 @@ export default function Sran5gProject() {
                         ) : item.ie_app_date || item.rf_app_date ? (
                           <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-200">
                             <CheckCircle2 className="h-3 w-3" /> Duyệt TSSR
+                          </span>
+                        ) : item.survey_date ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
+                            <Clock className="h-3 w-3" /> Khảo sát {item.survey_date}
                           </span>
                         ) : (
                           <span className="text-slate-400 text-[11px]">Đang triển khai</span>
