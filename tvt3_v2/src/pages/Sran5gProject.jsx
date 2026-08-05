@@ -431,40 +431,60 @@ export default function Sran5gProject() {
         </div>
       </div>
 
-      {/* View Tab Navigation */}
+      {/* 3 Main View Tabs Navigation */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
-            onClick={() => setActiveViewTab('dashboard')}
+            onClick={() => {
+              setActiveViewTab('dashboard');
+            }}
             className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
               activeViewTab === 'dashboard'
-                ? 'bg-blue-600 text-white shadow-md ring-2 ring-blue-400/40'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                ? 'bg-slate-900 text-white shadow-md ring-2 ring-slate-400/40'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
             }`}
           >
-            <Layers className="h-4 w-4" />
-            📊 Dashboard Báo Cáo Tiến Độ (9 Nấc Thi Công)
+            <Layers className="h-4 w-4 text-blue-400" />
+            📊 1. Báo Cáo Tổng Quan (Dashboard)
           </button>
 
           <button
-            onClick={() => setActiveViewTab('table')}
+            onClick={() => {
+              setTvt3Only(true);
+              setActiveViewTab('table');
+            }}
             className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-              activeViewTab === 'table'
+              activeViewTab === 'table' && tvt3Only
                 ? 'bg-blue-600 text-white shadow-md ring-2 ring-blue-400/40'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
             }`}
           >
-            <Search className="h-4 w-4" />
-            📋 Tra Cứu Danh Sách Trạm Chi Tiết ({filteredData.length})
+            <Search className="h-4 w-4 text-emerald-400" />
+            🎯 2. Chi Tiết Trạm TVT3 ({stats.activeTotal || 390} trạm)
+          </button>
+
+          <button
+            onClick={() => {
+              setTvt3Only(false);
+              setActiveViewTab('table');
+            }}
+            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+              activeViewTab === 'table' && !tvt3Only
+                ? 'bg-indigo-600 text-white shadow-md ring-2 ring-indigo-400/40'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+            }`}
+          >
+            <Database className="h-4 w-4 text-purple-400" />
+            🌐 3. Chi Tiết Cả Tỉnh ({stats.overallTotal || 1108} trạm)
           </button>
         </div>
 
         <button
           onClick={copyQuickReport}
-          className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-2 transition-all shadow-sm active:scale-95 shrink-0"
+          className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-2 transition-all shadow-sm active:scale-95 shrink-0"
         >
           <CheckCircle2 className="h-4 w-4" />
-          {copiedReport ? '✓ Đã Sao Chép Báo Cáo Nhanh (Zalo/Viber)!' : '📋 Copy Báo Cáo Nhanh (Zalo/Viber)'}
+          {copiedReport ? '✓ Đã Sao Chép Báo Cáo Zalo/Viber!' : '📋 Copy Báo Cáo Nhanh Zalo/Viber'}
         </button>
       </div>
 
@@ -472,42 +492,60 @@ export default function Sran5gProject() {
         <div className="space-y-6">
           {/* Executive Overview Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-3">
-            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-              <div className="flex items-center justify-between text-slate-500 text-xs font-semibold mb-1">
+            <div 
+              onClick={() => handleFilterJump('ALL', 'ALL')}
+              className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm cursor-pointer hover:border-blue-400 hover:shadow-md transition-all group"
+            >
+              <div className="flex items-center justify-between text-slate-500 text-xs font-semibold mb-1 group-hover:text-blue-600">
                 <span>{tvt3Only ? 'TỔNG TRẠM TVT3' : 'TỔNG TRẠM ĐỒNG NAI'}</span>
                 <Database className="h-4 w-4 text-blue-500" />
               </div>
               <div className="text-3xl font-black text-slate-800">{stats.activeTotal}</div>
-              <div className="text-[11px] text-slate-500 mt-1">
-                {tvt3Only ? `Toàn tỉnh: ${stats.overallTotal} trạm` : `TVT3 quản lý: ${tvt3SiteCount || 399} trạm`}
+              <div className="text-[11px] text-blue-600 mt-1 font-semibold flex items-center gap-1">
+                <span>Click xem danh sách chi tiết</span> &rarr;
               </div>
             </div>
 
-            <div className="bg-white p-4 rounded-xl border border-blue-200 bg-blue-50/20 shadow-sm">
+            <div 
+              onClick={() => handleFilterJump('ALL', 'SWAP_4G_ONLY')}
+              className="bg-white p-4 rounded-xl border border-blue-200 bg-blue-50/20 shadow-sm cursor-pointer hover:border-blue-500 hover:shadow-md transition-all group"
+            >
               <div className="flex items-center justify-between text-blue-700 text-xs font-semibold mb-1">
                 <span>SWAP 4G ONLY</span>
                 <Radio className="h-4 w-4 text-blue-600" />
               </div>
               <div className="text-3xl font-black text-blue-700">{stats.swap4gOnly}</div>
-              <div className="text-[11px] text-blue-600 mt-1">Tháo dỡ 4G Only ({stats.activeTotal > 0 ? ((stats.swap4gOnly / stats.activeTotal) * 100).toFixed(1) : 0}%)</div>
+              <div className="text-[11px] text-blue-600 mt-1 font-semibold flex items-center gap-1">
+                <span>Lọc trạm Tháo dỡ 4G Only</span> &rarr;
+              </div>
             </div>
 
-            <div className="bg-white p-4 rounded-xl border border-cyan-200 bg-cyan-50/20 shadow-sm">
+            <div 
+              onClick={() => handleFilterJump('ALL', 'SWAP_3G4G_BOTH')}
+              className="bg-white p-4 rounded-xl border border-cyan-200 bg-cyan-50/20 shadow-sm cursor-pointer hover:border-cyan-500 hover:shadow-md transition-all group"
+            >
               <div className="flex items-center justify-between text-cyan-700 text-xs font-semibold mb-1">
                 <span>SWAP CẢ 3G & 4G</span>
                 <Server className="h-4 w-4 text-cyan-600" />
               </div>
               <div className="text-3xl font-black text-cyan-700">{stats.swapBoth3g4g}</div>
-              <div className="text-[11px] text-cyan-600 mt-1">Swap SRAN 3G/4G ({stats.activeTotal > 0 ? ((stats.swapBoth3g4g / stats.activeTotal) * 100).toFixed(1) : 0}%)</div>
+              <div className="text-[11px] text-cyan-600 mt-1 font-semibold flex items-center gap-1">
+                <span>Lọc trạm Swap 3G/4G cả 2</span> &rarr;
+              </div>
             </div>
 
-            <div className="bg-white p-4 rounded-xl border border-emerald-200 bg-emerald-50/20 shadow-sm">
+            <div 
+              onClick={() => handleFilterJump('ALL', 'ADD_5G')}
+              className="bg-white p-4 rounded-xl border border-emerald-200 bg-emerald-50/20 shadow-sm cursor-pointer hover:border-emerald-500 hover:shadow-md transition-all group"
+            >
               <div className="flex items-center justify-between text-emerald-700 text-xs font-semibold mb-1">
                 <span>LẮP MỚI 5G (ADD 5G)</span>
                 <Zap className="h-4 w-4 text-emerald-600" />
               </div>
               <div className="text-3xl font-black text-emerald-700">{stats.add5g}</div>
-              <div className="text-[11px] text-emerald-600 mt-1">Bổ sung 5G NR26 ({stats.activeTotal > 0 ? ((stats.add5g / stats.activeTotal) * 100).toFixed(1) : 0}%)</div>
+              <div className="text-[11px] text-emerald-600 mt-1 font-semibold flex items-center gap-1">
+                <span>Lọc trạm Lắp 5G NR26</span> &rarr;
+              </div>
             </div>
           </div>
 
@@ -515,89 +553,119 @@ export default function Sran5gProject() {
           <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
             <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
               <Layers className="h-4 w-4 text-blue-600" />
-              <span>Thống Kê Tiến Độ Theo 9 Nấc Thi Công Trạm</span>
+              <span>Thống Kê Tiến Độ Theo 9 Nấc Thi Công Trạm (Click để xem danh sách trạm chi tiết)</span>
             </h3>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-              <div className="p-3 bg-purple-50 rounded-xl border border-purple-200">
+              <div 
+                onClick={() => handleFilterJump('TARGET_AUG')}
+                className="p-3 bg-purple-50 hover:bg-purple-100 rounded-xl border border-purple-200 cursor-pointer transition-all hover:scale-[1.02] shadow-sm"
+              >
                 <div className="text-[11px] font-semibold text-purple-700 flex items-center gap-1">
                   <Calendar className="h-3.5 w-3.5" /> Target Tháng 8
                 </div>
-                <div className="text-xl font-black text-purple-800 mt-1">{stats.augTarget}</div>
-                <div className="text-[10px] text-purple-600 mt-0.5">{stats.activeTotal > 0 ? ((stats.augTarget/stats.activeTotal)*100).toFixed(1) : 0}% tổng số trạm</div>
+                <div className="text-2xl font-black text-purple-800 mt-1">{stats.augTarget}</div>
+                <div className="text-[10px] text-purple-600 mt-0.5 font-bold">Xem {stats.augTarget} trạm &rarr;</div>
               </div>
 
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+              <div 
+                onClick={() => handleFilterJump('SURVEY_DONE')}
+                className="p-3 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 cursor-pointer transition-all hover:scale-[1.02] shadow-sm"
+              >
                 <div className="text-[11px] font-semibold text-slate-600 flex items-center gap-1">
                   <Clock className="h-3.5 w-3.5" /> Đã Khảo Sát TSSR
                 </div>
-                <div className="text-xl font-black text-slate-800 mt-1">{stats.surveyDone}</div>
-                <div className="text-[10px] text-slate-500 mt-0.5">{stats.activeTotal > 0 ? ((stats.surveyDone/stats.activeTotal)*100).toFixed(1) : 0}% hoàn thành</div>
+                <div className="text-2xl font-black text-slate-800 mt-1">{stats.surveyDone}</div>
+                <div className="text-[10px] text-slate-500 mt-0.5 font-bold">Xem {stats.surveyDone} trạm &rarr;</div>
               </div>
 
-              <div className="p-3 bg-indigo-50 rounded-xl border border-indigo-200">
+              <div 
+                onClick={() => handleFilterJump('TSSR_APPROVED')}
+                className="p-3 bg-indigo-50 hover:bg-indigo-100 rounded-xl border border-indigo-200 cursor-pointer transition-all hover:scale-[1.02] shadow-sm"
+              >
                 <div className="text-[11px] font-semibold text-indigo-700 flex items-center gap-1">
                   <CheckCircle2 className="h-3.5 w-3.5" /> Đã Duyệt TSSR
                 </div>
-                <div className="text-xl font-black text-indigo-800 mt-1">{stats.tssrApproved}</div>
-                <div className="text-[10px] text-indigo-600 mt-0.5">{stats.activeTotal > 0 ? ((stats.tssrApproved/stats.activeTotal)*100).toFixed(1) : 0}% hoàn thành</div>
+                <div className="text-2xl font-black text-indigo-800 mt-1">{stats.tssrApproved}</div>
+                <div className="text-[10px] text-indigo-600 mt-0.5 font-bold">Xem {stats.tssrApproved} trạm &rarr;</div>
               </div>
 
-              <div className="p-3 bg-amber-50 rounded-xl border border-amber-200">
+              <div 
+                onClick={() => handleFilterJump('RF_DESIGN_APPROVED')}
+                className="p-3 bg-amber-50 hover:bg-amber-100 rounded-xl border border-amber-200 cursor-pointer transition-all hover:scale-[1.02] shadow-sm"
+              >
                 <div className="text-[11px] font-semibold text-amber-700 flex items-center gap-1">
                   <Layers className="h-3.5 w-3.5" /> Duyệt RF Design
                 </div>
-                <div className="text-xl font-black text-amber-800 mt-1">{stats.rfDesignApproved}</div>
-                <div className="text-[10px] text-amber-600 mt-0.5">{stats.activeTotal > 0 ? ((stats.rfDesignApproved/stats.activeTotal)*100).toFixed(1) : 0}% hoàn thành</div>
+                <div className="text-2xl font-black text-amber-800 mt-1">{stats.rfDesignApproved}</div>
+                <div className="text-[10px] text-amber-600 mt-0.5 font-bold">Xem {stats.rfDesignApproved} trạm &rarr;</div>
               </div>
 
-              <div className="p-3 bg-pink-50 rounded-xl border border-pink-200">
+              <div 
+                onClick={() => handleFilterJump('WH_PICKUP')}
+                className="p-3 bg-pink-50 hover:bg-pink-100 rounded-xl border border-pink-200 cursor-pointer transition-all hover:scale-[1.02] shadow-sm"
+              >
                 <div className="text-[11px] font-semibold text-pink-700 flex items-center gap-1">
                   <Package className="h-3.5 w-3.5" /> Đã Nhận Kho (WH)
                 </div>
-                <div className="text-xl font-black text-pink-800 mt-1">{stats.whPickup}</div>
-                <div className="text-[10px] text-pink-600 mt-0.5">{stats.activeTotal > 0 ? ((stats.whPickup/stats.activeTotal)*100).toFixed(1) : 0}% về kho trạm</div>
+                <div className="text-2xl font-black text-pink-800 mt-1">{stats.whPickup}</div>
+                <div className="text-[10px] text-pink-600 mt-0.5 font-bold">Xem {stats.whPickup} trạm &rarr;</div>
               </div>
 
-              <div className="p-3 bg-cyan-50 rounded-xl border border-cyan-200">
+              <div 
+                onClick={() => handleFilterJump('DELIVERY')}
+                className="p-3 bg-cyan-50 hover:bg-cyan-100 rounded-xl border border-cyan-200 cursor-pointer transition-all hover:scale-[1.02] shadow-sm"
+              >
                 <div className="text-[11px] font-semibold text-cyan-700 flex items-center gap-1">
                   <Package className="h-3.5 w-3.5" /> Đã Giao Hàng
                 </div>
-                <div className="text-xl font-black text-cyan-800 mt-1">{stats.deliveryDone}</div>
-                <div className="text-[10px] text-cyan-600 mt-0.5">Delivery complete</div>
+                <div className="text-2xl font-black text-cyan-800 mt-1">{stats.deliveryDone}</div>
+                <div className="text-[10px] text-cyan-600 mt-0.5 font-bold">Xem {stats.deliveryDone} trạm &rarr;</div>
               </div>
 
-              <div className="p-3 bg-blue-50 rounded-xl border border-blue-200">
+              <div 
+                onClick={() => handleFilterJump('INSTALL')}
+                className="p-3 bg-blue-50 hover:bg-blue-100 rounded-xl border border-blue-200 cursor-pointer transition-all hover:scale-[1.02] shadow-sm"
+              >
                 <div className="text-[11px] font-semibold text-blue-700 flex items-center gap-1">
                   <Zap className="h-3.5 w-3.5" /> Đã Lắp Đặt (Install)
                 </div>
-                <div className="text-xl font-black text-blue-800 mt-1">{stats.installDone}</div>
-                <div className="text-[10px] text-blue-600 mt-0.5">Installation complete</div>
+                <div className="text-2xl font-black text-blue-800 mt-1">{stats.installDone}</div>
+                <div className="text-[10px] text-blue-600 mt-0.5 font-bold">Xem {stats.installDone} trạm &rarr;</div>
               </div>
 
-              <div className="p-3 bg-teal-50 rounded-xl border border-teal-200">
+              <div 
+                onClick={() => handleFilterJump('INTEGRATION')}
+                className="p-3 bg-teal-50 hover:bg-teal-100 rounded-xl border border-teal-200 cursor-pointer transition-all hover:scale-[1.02] shadow-sm"
+              >
                 <div className="text-[11px] font-semibold text-teal-700 flex items-center gap-1">
                   <Server className="h-3.5 w-3.5" /> Đã Tích Hợp
                 </div>
-                <div className="text-xl font-black text-teal-800 mt-1">{stats.integrationDone}</div>
-                <div className="text-[10px] text-teal-600 mt-0.5">Integrated</div>
+                <div className="text-2xl font-black text-teal-800 mt-1">{stats.integrationDone}</div>
+                <div className="text-[10px] text-teal-600 mt-0.5 font-bold">Xem {stats.integrationDone} trạm &rarr;</div>
               </div>
 
-              <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 col-span-2 sm:col-span-1">
+              <div 
+                onClick={() => handleFilterJump('ONAIR')}
+                className="p-3 bg-emerald-50 hover:bg-emerald-100 rounded-xl border border-emerald-200 col-span-2 sm:col-span-1 cursor-pointer transition-all hover:scale-[1.02] shadow-sm"
+              >
                 <div className="text-[11px] font-semibold text-emerald-700 flex items-center gap-1">
                   <Radio className="h-3.5 w-3.5" /> Đã Onair (Phát Sóng)
                 </div>
-                <div className="text-xl font-black text-emerald-800 mt-1">{stats.onair}</div>
-                <div className="text-[10px] text-emerald-600 mt-0.5">Onair live</div>
+                <div className="text-2xl font-black text-emerald-800 mt-1">{stats.onair}</div>
+                <div className="text-[10px] text-emerald-600 mt-0.5 font-bold">Xem {stats.onair} trạm &rarr;</div>
               </div>
             </div>
           </div>
 
           {/* District Milestone Matrix */}
           <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
-              <Database className="h-4 w-4 text-blue-600" />
-              <span>Tiến Độ Chi Tiết Theo Từng Địa Bàn Huyện / Thị Xã ({districtBreakdown.length} huyện)</span>
+            <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <Database className="h-4 w-4 text-blue-600" />
+                <span>Tiến Độ Chi Tiết Theo Từng Địa Bàn Huyện / Thị Xã ({districtBreakdown.length} huyện)</span>
+              </span>
+              <span className="text-xs text-slate-400 font-normal">Click vào con số bất kỳ để mở danh sách trạm chi tiết</span>
             </h3>
 
             <div className="overflow-x-auto">
@@ -620,17 +688,22 @@ export default function Sran5gProject() {
                 <tbody className="divide-y divide-slate-100">
                   {districtBreakdown.map(d => (
                     <tr key={d.district} className="hover:bg-slate-50 font-medium">
-                      <td className="py-2.5 px-3 font-bold text-slate-800">{d.district}</td>
-                      <td className="py-2.5 px-3 text-center font-bold text-blue-700">{d.total}</td>
-                      <td className="py-2.5 px-3 text-center text-slate-600">{d.swap4g}</td>
-                      <td className="py-2.5 px-3 text-center text-emerald-600 font-semibold">{d.add5g}</td>
-                      <td className="py-2.5 px-3 text-center text-purple-700 font-bold">{d.augTarget}</td>
-                      <td className="py-2.5 px-3 text-center text-slate-600">{d.survey}</td>
-                      <td className="py-2.5 px-3 text-center text-indigo-600 font-semibold">{d.tssr}</td>
-                      <td className="py-2.5 px-3 text-center text-amber-600">{d.rfDesign}</td>
-                      <td className="py-2.5 px-3 text-center text-pink-600">{d.wh}</td>
-                      <td className="py-2.5 px-3 text-center text-blue-600">{d.install}</td>
-                      <td className="py-2.5 px-3 text-center text-emerald-600 font-bold">{d.onair}</td>
+                      <td 
+                        onClick={() => handleDistrictJump(d.district, 'ALL')}
+                        className="py-2.5 px-3 font-bold text-slate-800 cursor-pointer hover:text-blue-600 underline decoration-dotted"
+                      >
+                        {d.district}
+                      </td>
+                      <td onClick={() => handleDistrictJump(d.district, 'ALL')} className="py-2.5 px-3 text-center font-bold text-blue-700 cursor-pointer hover:bg-blue-100">{d.total}</td>
+                      <td onClick={() => handleDistrictJump(d.district, 'ALL')} className="py-2.5 px-3 text-center text-slate-600 cursor-pointer hover:bg-slate-100">{d.swap4g}</td>
+                      <td onClick={() => handleDistrictJump(d.district, 'ALL')} className="py-2.5 px-3 text-center text-emerald-600 font-semibold cursor-pointer hover:bg-emerald-100">{d.add5g}</td>
+                      <td onClick={() => handleDistrictJump(d.district, 'TARGET_AUG')} className="py-2.5 px-3 text-center text-purple-700 font-bold cursor-pointer hover:bg-purple-100">{d.augTarget}</td>
+                      <td onClick={() => handleDistrictJump(d.district, 'SURVEY_DONE')} className="py-2.5 px-3 text-center text-slate-600 cursor-pointer hover:bg-slate-100">{d.survey}</td>
+                      <td onClick={() => handleDistrictJump(d.district, 'TSSR_APPROVED')} className="py-2.5 px-3 text-center text-indigo-600 font-semibold cursor-pointer hover:bg-indigo-100">{d.tssr}</td>
+                      <td onClick={() => handleDistrictJump(d.district, 'RF_DESIGN_APPROVED')} className="py-2.5 px-3 text-center text-amber-600 cursor-pointer hover:bg-amber-100">{d.rfDesign}</td>
+                      <td onClick={() => handleDistrictJump(d.district, 'WH_PICKUP')} className="py-2.5 px-3 text-center text-pink-600 cursor-pointer hover:bg-pink-100">{d.wh}</td>
+                      <td onClick={() => handleDistrictJump(d.district, 'INSTALL')} className="py-2.5 px-3 text-center text-blue-600 cursor-pointer hover:bg-blue-100">{d.install}</td>
+                      <td onClick={() => handleDistrictJump(d.district, 'ONAIR')} className="py-2.5 px-3 text-center text-emerald-600 font-bold cursor-pointer hover:bg-emerald-100">{d.onair}</td>
                     </tr>
                   ))}
                 </tbody>
