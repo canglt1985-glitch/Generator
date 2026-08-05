@@ -11,6 +11,7 @@ const navigation = [
   { name: 'Chi phí', href: '/expenses', icon: Coins },
   { name: 'VHKT-RAN', href: '/vhkt-ran', icon: Radio },
   { name: 'Dự án CSHT', href: '/infrastructure', icon: Server },
+  { name: 'Dự án 5G & SRAN', href: '/sran-5g', icon: Radio },
   { name: 'Danh sách Trạm', href: '/datasites', icon: Database },
   { name: 'Hợp đồng', href: '/contracts', icon: FileText, desktopOnly: true },
   { name: 'Máy phát', href: '/generator', icon: Zap },

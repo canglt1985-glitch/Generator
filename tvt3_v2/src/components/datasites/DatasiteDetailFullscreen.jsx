@@ -16,6 +16,21 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, on
   const [editedTrans, setEditedTrans] = useState({});
   const [allSites, setAllSites] = useState([]);
   const [savingTrans, setSavingTrans] = useState(false);
+  const [sranInfo, setSranInfo] = useState(null);
+
+  useEffect(() => {
+    if (site?.site_id) {
+      const q = site.site_id_old ? `site_id.eq.${site.site_id},site_id_old.eq.${site.site_id_old}` : `site_id.eq.${site.site_id}`;
+      supabase.from('sran_5g_tracker')
+        .select('*')
+        .or(q)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data) setSranInfo(data);
+          else setSranInfo(null);
+        });
+    }
+  }, [site]);
 
   // States cho gợi ý trạm nguồn autocomplete
   const [primarySearch, setPrimarySearch] = useState('');
@@ -153,6 +168,7 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, on
     { id: 'transmission', label: 'Truyền dẫn trạm', icon: Radio },
     { id: 'infrastructure', label: 'Hạ tầng phụ trợ', icon: Server },
     { id: 'legal', label: 'Pháp lý & Hợp đồng', icon: FileText },
+    { id: 'sran5g', label: 'Dự án SRAN 5G', icon: Zap },
     { id: 'history', label: 'Nhật ký & Lịch sử', icon: Clock },
   ];
 
@@ -997,6 +1013,58 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, on
                 </div>
               </div>
             ))}
+          </div>
+        );
+      case 'sran5g':
+        return (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <h2 className="text-lg font-bold text-slate-800 border-b border-slate-200 pb-2">Dự Án SRAN 5G & Master Tracker</h2>
+            {sranInfo ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-2">
+                    <span className="text-xs font-bold text-blue-600 uppercase">⚡ Phương Án Kỹ Thuật Swap & Scope</span>
+                    <div className="text-sm font-extrabold text-slate-900">{sranInfo.unique_id || 'Swap SRAN'}</div>
+                    <div className="text-xs text-slate-600">3G/4G: <b>{sranInfo.config_3g4g || '-'}</b></div>
+                    <div className="text-xs text-slate-600">5G: <b>{sranInfo.config_5g || '-'}</b></div>
+                    <div className="text-xs text-slate-500 mt-1">Gói thầu: {sranInfo.pack_po} | Huyện: {sranInfo.district}</div>
+                  </div>
+
+                  <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-2">
+                    <span className="text-xs font-bold text-emerald-600 uppercase">⚙️ Giải Pháp Thiết Bị & Nguồn</span>
+                    <div className="text-xs font-medium text-slate-700">{sranInfo.equip_solution || 'Chưa có thông tin'}</div>
+                    <div className="text-xs text-slate-600">Anten: {sranInfo.antenna_solution || '-'}</div>
+                    <div className="text-xs text-slate-600">Nguồn: {sranInfo.power_solution || '-'}</div>
+                  </div>
+                </div>
+
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                  <span className="text-xs font-bold text-indigo-600 uppercase">📈 Mốc Tiến Độ Thi Công (11 Bước)</span>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 text-xs">
+                    <div className="p-2 bg-slate-50 rounded-lg">Khảo sát: <b>{sranInfo.survey_date || '-'}</b></div>
+                    <div className="p-2 bg-slate-50 rounded-lg">Nộp TSSR: <b>{sranInfo.tssr_sub_date || '-'}</b></div>
+                    <div className="p-2 bg-slate-50 rounded-lg">IE Approved: <b>{sranInfo.ie_app_date || '-'}</b></div>
+                    <div className="p-2 bg-slate-50 rounded-lg">RF Approved: <b>{sranInfo.rf_app_date || '-'}</b></div>
+                    <div className="p-2 bg-slate-50 rounded-lg">RF Design: <b>{sranInfo.rf_design_date || '-'}</b></div>
+                    <div className="p-2 bg-slate-50 rounded-lg">Script Ready: <b>{sranInfo.script_date || '-'}</b></div>
+                    <div className="p-2 bg-slate-50 rounded-lg">WH Pickup: <b>{sranInfo.wh_pickup_date || '-'}</b></div>
+                    <div className="p-2 bg-slate-50 rounded-lg">Delivery: <b>{sranInfo.delivery_date || '-'}</b></div>
+                    <div className="p-2 bg-emerald-50 rounded-lg text-emerald-800 font-bold">Onair: <b>{sranInfo.onair_date || '-'}</b></div>
+                  </div>
+                </div>
+
+                {sranInfo.remarks && (
+                  <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900">
+                    <b>Ghi chú & Tồn đọng:</b> {sranInfo.remarks}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="bg-white p-8 rounded-xl border border-slate-200 text-center text-slate-400">
+                <Radio className="h-10 w-10 mx-auto mb-2 text-slate-300" />
+                <p className="text-sm font-medium">Trạm này không nằm trong danh sách Gói thầu S4-PO1.3 hoặc chưa có dữ liệu Master Tracker.</p>
+              </div>
+            )}
           </div>
         );
       case 'history':

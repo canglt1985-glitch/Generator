@@ -12,6 +12,7 @@ import Settings from './pages/Settings';
 import Expenses from './pages/Expenses';
 import VhktRan from './pages/VhktRan';
 import InfrastructureDevelopment from './pages/InfrastructureDevelopment';
+import Sran5gProject from './pages/Sran5gProject';
 import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
 import Login from './pages/Login';
@@ -98,6 +99,7 @@ function App() {
           <Route path="contracts" element={<ContractDashboard />} />
           <Route path="daily-work" element={<DailyWork />} />
           <Route path="infrastructure" element={<InfrastructureDevelopment />} />
+          <Route path="sran-5g" element={<Sran5gProject />} />
           {/* Chỉ Admin được phép truy cập module máy phát điện */}
           <Route path="generator" element={
             <AdminRoute>
