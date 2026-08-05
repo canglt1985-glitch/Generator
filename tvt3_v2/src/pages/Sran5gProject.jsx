@@ -93,10 +93,17 @@ export default function Sran5gProject() {
     return tvt3SiteIds.has(s1) || tvt3SiteIds.has(s2);
   };
 
+  // Clean and normalize district names (e.g. merge Xuan Thanh into Xuan Loc)
+  const getCleanDistrict = (d) => {
+    if (!d) return 'Khác';
+    if (d === 'Xuân Thành') return 'Xuân Lộc';
+    return d;
+  };
+
   // Districts list for filter dropdown
   const districts = useMemo(() => {
     const activeDataset = tvt3Only ? data.filter(isTvt3Item) : data;
-    const set = new Set(activeDataset.map(d => d.district).filter(Boolean));
+    const set = new Set(activeDataset.map(d => getCleanDistrict(d.district)).filter(Boolean));
     return Array.from(set).sort();
   }, [data, tvt3Only, tvt3SiteIds]);
 
@@ -130,19 +137,24 @@ export default function Sran5gProject() {
 
       let matchDistrict = selectedDistrict === 'ALL';
       if (!matchDistrict) {
-        if (selectedDistrict === item.district) {
+        const itemDist = getCleanDistrict(item.district);
+        if (selectedDistrict === itemDist) {
           matchDistrict = true;
-        } else if (selectedDistrict === 'Xuân Lộc' && (item.district === 'Xuân Lộc' || (item.site_id_old && (item.site_id_old.startsWith('DNIXLO') || item.site_id_old.startsWith('DNIXHO') || item.site_id_old.startsWith('DNIXTC') || item.site_id_old.startsWith('DNIXDI') || item.site_id_old.startsWith('DNIXPH') || item.site_id_old.startsWith('DNIXBA') || item.site_id_old.startsWith('DNXL'))))) {
+        } else if (selectedDistrict === 'Xuân Lộc' && (itemDist === 'Xuân Lộc' || (item.site_id_old && (item.site_id_old.startsWith('DNIXLO') || item.site_id_old.startsWith('DNIXHO') || item.site_id_old.startsWith('DNIXTC') || item.site_id_old.startsWith('DNIXDI') || item.site_id_old.startsWith('DNIXPH') || item.site_id_old.startsWith('DNIXBA') || item.site_id_old.startsWith('DNIXTH') || item.site_id_old.startsWith('DNXL'))))) {
           matchDistrict = true;
-        } else if (selectedDistrict === 'Định Quán' && (item.district === 'Định Quán' || (item.site_id_old && item.site_id_old.startsWith('DNIDGI')))) {
+        } else if (selectedDistrict === 'Định Quán' && (itemDist === 'Định Quán' || (item.site_id_old && item.site_id_old.startsWith('DNIDGI')))) {
           matchDistrict = true;
-        } else if (selectedDistrict === 'Long Khánh' && (item.district === 'Long Khánh' || (item.site_id_old && item.site_id_old.startsWith('DNILKH')))) {
+        } else if (selectedDistrict === 'Long Khánh' && (itemDist === 'Long Khánh' || (item.site_id_old && item.site_id_old.startsWith('DNILKH')))) {
           matchDistrict = true;
-        } else if (selectedDistrict === 'Cẩm Mỹ' && (item.district === 'Cẩm Mỹ' || (item.site_id_old && item.site_id_old.startsWith('DNICMY')))) {
+        } else if (selectedDistrict === 'Cẩm Mỹ' && (itemDist === 'Cẩm Mỹ' || (item.site_id_old && item.site_id_old.startsWith('DNICMY')))) {
           matchDistrict = true;
-        } else if (selectedDistrict === 'Thống Nhất' && (item.district === 'Thống Nhất' || (item.site_id_old && item.site_id_old.startsWith('DNTN')))) {
+        } else if (selectedDistrict === 'Thống Nhất' && (itemDist === 'Thống Nhất' || (item.site_id_old && item.site_id_old.startsWith('DNTN')))) {
           matchDistrict = true;
-        } else if (selectedDistrict === 'Tân Phú' && (item.district === 'Tân Phú' || (item.site_id_old && item.site_id_old.startsWith('DNTP')))) {
+        } else if (selectedDistrict === 'Tân Phú' && (itemDist === 'Tân Phú' || (item.site_id_old && item.site_id_old.startsWith('DNTP')))) {
+          matchDistrict = true;
+        } else if (selectedDistrict === 'Vĩnh Cửu' && (itemDist === 'Vĩnh Cửu' || (item.site_id_old && item.site_id_old.startsWith('DNVC')))) {
+          matchDistrict = true;
+        } else if (selectedDistrict === 'Trảng Bom' && (itemDist === 'Trảng Bom' || (item.site_id_old && item.site_id_old.startsWith('DNTB')))) {
           matchDistrict = true;
         }
       }
@@ -202,12 +214,12 @@ export default function Sran5gProject() {
     return { activeTotal, overallTotal, swap4gOnly, swapBoth3g4g, add5g, surveyDone, tssrApproved, rfDesignApproved, augTarget, whPickup, deliveryDone, installDone, integrationDone, onair };
   }, [data, tvt3Only, tvt3SiteIds]);
 
-  // District Breakdown for Executive Dashboard
+  // District Breakdown for Executive Dashboard (gộp Xuân Thành vào Xuân Lộc)
   const districtBreakdown = useMemo(() => {
     const activeDataset = tvt3Only ? data.filter(isTvt3Item) : data;
     const distMap = {};
     activeDataset.forEach(item => {
-      const d = item.district || 'Khác';
+      const d = getCleanDistrict(item.district);
       if (!distMap[d]) {
         distMap[d] = { district: d, total: 0, swap4g: 0, add5g: 0, augTarget: 0, survey: 0, tssr: 0, rfDesign: 0, wh: 0, delivery: 0, install: 0, onair: 0 };
       }
