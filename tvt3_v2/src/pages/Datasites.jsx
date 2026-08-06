@@ -1522,7 +1522,10 @@ export default function Datasites() {
           return (
             <button
               key={tab.id}
-              onClick={() => setViewMode(tab.id)}
+              onClick={() => {
+                setViewMode(tab.id);
+                if (tab.id === 'stats' && !statCategory) setStatCategory('transmission');
+              }}
               className={`
                 bg-white rounded-xl p-3.5 text-left transition-all border-l-4 border-y border-r border-y-slate-200 border-r-slate-200
                 hover:shadow-md cursor-pointer flex items-center gap-2.5
@@ -1744,46 +1747,46 @@ export default function Datasites() {
               const nguon = infra.nguon_dien || {};
 
               // MPĐ
-              const mpdList = mpd.mpd || [];
+              const mpdList = Array.isArray(mpd.mpd) ? mpd.mpd : [];
               acc.mpd_total += mpdList.length;
-              acc.mpd_ok += mpdList.filter(m => m.tinh_trang?.toUpperCase().includes('TỐT')).length;
-              acc.mpd_bad += mpdList.filter(m => m.tinh_trang?.toUpperCase().includes('HỎNG')).length;
+              acc.mpd_ok += mpdList.filter(m => (m.tinh_trang || '').toUpperCase().includes('TỐT')).length;
+              acc.mpd_bad += mpdList.filter(m => (m.tinh_trang || '').toUpperCase().includes('HỎNG')).length;
               if (mpdList.length > 0) acc.mpd_sites++;
 
               // Accu đề & ATS con lồng bên trong MPĐ
               mpdList.forEach(m => {
-                const accuDe = m.accu_de || [];
+                const accuDe = Array.isArray(m.accu_de) ? m.accu_de : [];
                 acc.accu_de_total += accuDe.length;
-                acc.accu_de_ok += accuDe.filter(a => a.tinh_trang?.toUpperCase().includes('TỐT')).length;
-                acc.accu_de_bad += accuDe.filter(a => a.tinh_trang?.toUpperCase().includes('HỎNG')).length;
+                acc.accu_de_ok += accuDe.filter(a => (a.tinh_trang || '').toUpperCase().includes('TỐT')).length;
+                acc.accu_de_bad += accuDe.filter(a => (a.tinh_trang || '').toUpperCase().includes('HỎNG')).length;
 
-                const ats = m.ats || [];
+                const ats = Array.isArray(m.ats) ? m.ats : [];
                 acc.ats_total += ats.length;
               });
 
               // Tủ nguồn
-              const tn = nguon.tu_nguon || [];
+              const tn = Array.isArray(nguon.tu_nguon) ? nguon.tu_nguon : [];
               acc.tunguon_total += tn.length;
-              acc.tunguon_ok += tn.filter(t => t.tinh_trang?.toUpperCase().includes('TỐT')).length;
+              acc.tunguon_ok += tn.filter(t => (t.tinh_trang || '').toUpperCase().includes('TỐT')).length;
               if (tn.length > 0) acc.tunguon_sites++;
 
               // Tổ accu con lồng bên trong Tủ nguồn
               tn.forEach(t => {
-                const ta = t.to_accu || [];
+                const ta = Array.isArray(t.to_accu) ? t.to_accu : [];
                 acc.toaccu_total += ta.length;
-                acc.toaccu_ok += ta.filter(x => x.tinh_trang?.toUpperCase().includes('TỐT')).length;
-                acc.toaccu_bad += ta.filter(x => x.tinh_trang?.toUpperCase().includes('HỎNG')).length;
+                acc.toaccu_ok += ta.filter(x => (x.tinh_trang || '').toUpperCase().includes('TỐT')).length;
+                acc.toaccu_bad += ta.filter(x => (x.tinh_trang || '').toUpperCase().includes('HỎNG')).length;
               });
 
               // Máy lạnh
-              const ml = infra.may_lanh || [];
+              const ml = Array.isArray(infra.may_lanh) ? infra.may_lanh : [];
               acc.ml_total += ml.length;
-              acc.ml_ok += ml.filter(m => m.tinh_trang?.toUpperCase().includes('TỐT')).length;
-              acc.ml_bad += ml.filter(m => m.tinh_trang?.toUpperCase().includes('HỎNG')).length;
+              acc.ml_ok += ml.filter(m => (m.tinh_trang || '').toUpperCase().includes('TỐT')).length;
+              acc.ml_bad += ml.filter(m => (m.tinh_trang || '').toUpperCase().includes('HỎNG')).length;
               if (ml.length > 0) acc.ml_sites++;
 
               // CWDM
-              const cw = infra.cwdm || [];
+              const cw = Array.isArray(infra.cwdm) ? infra.cwdm : [];
               acc.cwdm_total += cw.length;
               if (cw.length > 0) acc.cwdm_sites++;
 
@@ -1884,7 +1887,7 @@ export default function Datasites() {
                 bg: 'from-yellow-50 to-orange-50', border: 'border-yellow-200',
                 items: [
                   { label: 'Trạm có NLMT', value: stats.nlmt_total, bold: true },
-                  { label: 'Tỷ lệ', value: `${((stats.nlmt_total / data.length) * 100).toFixed(1)}%` },
+                  { label: 'Tỷ lệ', value: `${data.length > 0 ? ((stats.nlmt_total / data.length) * 100).toFixed(1) : 0}%` },
                 ]
               },
               {
@@ -1926,14 +1929,18 @@ export default function Datasites() {
                 {/* Stats Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {cards.map((card) => (
-                    <div key={card.title} className={`bg-gradient-to-br ${card.bg} rounded-xl border ${card.border} shadow-sm overflow-hidden flex flex-col justify-between`}>
+                    <div 
+                      key={card.title} 
+                      onClick={() => setStatCategory(card.id)}
+                      className={`bg-gradient-to-br ${card.bg} rounded-xl border ${card.border} shadow-sm overflow-hidden flex flex-col justify-between cursor-pointer hover:shadow-md transition-all ${statCategory === card.id ? 'ring-2 ring-blue-500' : ''}`}
+                    >
                       <div>
                         <div className="px-4 py-3 flex items-center justify-between border-b border-slate-100/50">
                           <div className="flex items-center gap-2">
                             <span className="text-xl">{card.icon}</span>
                             <h3 className="font-bold text-slate-800 text-sm">{card.title}</h3>
                           </div>
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                             <button
                               onClick={() => {
                                 const catNames = {
