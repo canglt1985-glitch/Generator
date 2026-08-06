@@ -266,10 +266,10 @@ export default function Sran5gProject() {
   };
 
   // Interactive Jump to Filtered Table View
-  const handleFilterJump = (statusKey = 'ALL', scopeKey = 'ALL') => {
+  const handleFilterJump = (statusKey = 'ALL', scopeKey = 'ALL', forceTvt3 = true) => {
     setSelectedStatus(statusKey);
     setSelectedScope(scopeKey);
-    setTvt3Only(true);
+    if (forceTvt3) setTvt3Only(true);
     setActiveViewTab('table');
   };
 
@@ -466,6 +466,10 @@ export default function Sran5gProject() {
           <button
             onClick={() => {
               setTvt3Only(true);
+              setSelectedDistrict('ALL');
+              setSelectedScope('ALL');
+              setSelectedStatus('ALL');
+              setSearchTerm('');
               setActiveViewTab('table');
             }}
             className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
@@ -481,6 +485,10 @@ export default function Sran5gProject() {
           <button
             onClick={() => {
               setTvt3Only(false);
+              setSelectedDistrict('ALL');
+              setSelectedScope('ALL');
+              setSelectedStatus('ALL');
+              setSearchTerm('');
               setActiveViewTab('table');
             }}
             className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
