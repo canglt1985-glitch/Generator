@@ -61,8 +61,8 @@ const SPECIAL_SITES_SET = new Set([
 export function isSpecial67Site(siteId, siteIdOld, stations = []) {
   if (!siteId && !siteIdOld) return false;
   
-  const id1 = (siteId || '').trim().upperCase ? siteId.trim().toUpperCase() : '';
-  const id2 = (siteIdOld || '').trim().upperCase ? siteIdOld.trim().toUpperCase() : '';
+  const id1 = typeof siteId === 'string' ? siteId.trim().toUpperCase() : '';
+  const id2 = typeof siteIdOld === 'string' ? siteIdOld.trim().toUpperCase() : '';
   
   if (id1 && SPECIAL_SITES_SET.has(id1)) return true;
   if (id2 && SPECIAL_SITES_SET.has(id2)) return true;
