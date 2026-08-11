@@ -17,6 +17,11 @@ export default function Generator() {
   const [stations, setStations] = useState([]);
 
   // Generator & Asset Transfer States
+  const [mobileEquipments, setMobileEquipments] = useState([]);
+  const [equipmentTransfers, setEquipmentTransfers] = useState([]);
+  const [transferSubTab, setTransferSubTab] = useState('list'); // 'list' | 'form'
+  const [transferSearch, setTransferSearch] = useState('');
+
   const [transSourceSiteId, setTransSourceSiteId] = useState('');
   const [transDestSiteId, setTransDestSiteId] = useState('');
   const [transEquipType, setTransEquipType] = useState('mpd'); // 'mpd', 'may_lanh', 'to_accu', 'tu_nguon'
@@ -113,6 +118,13 @@ export default function Generator() {
         const { data, error } = await query.order('invoice_date', { ascending: false });
         if (error) throw error;
         setInvoices(data || []);
+      } else if (activeTab === 'transfer') {
+        const [equipRes, transRes] = await Promise.all([
+          supabase.from('mobile_equipment').select('*').order('type', { ascending: true }).order('equipment_code', { ascending: true }),
+          supabase.from('equipment_transfers').select('*').order('transfer_date', { ascending: false }).limit(250)
+        ]);
+        if (equipRes.data) setMobileEquipments(equipRes.data);
+        if (transRes.data) setEquipmentTransfers(transRes.data);
       }
     } catch (err) {
       console.error("Lỗi khi tải dữ liệu:", err);
@@ -2082,240 +2094,484 @@ export default function Generator() {
         </div>
       )}
 
-      {/* 4. Tab Điều Chuyển Thiết Bị & Tài Sản Cố Định */}
+      {/* 4. Tab Điều Chuyển Thiết Bị & MPĐ Lưu Động */}
       {activeTab === 'transfer' && (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 animate-in fade-in duration-300">
-          <div className="flex items-center gap-2 pb-4 mb-6 border-b border-slate-100">
-            <div className="p-2 bg-orange-50 text-orange-600 rounded-lg">
-              <RefreshCw size={20} className="animate-spin-slow" />
+        <div className="space-y-6 animate-in fade-in duration-300">
+          {/* Sub-tab Selection Header */}
+          <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-orange-100 text-orange-600 rounded-xl">
+                <RefreshCw size={22} className="animate-spin-slow" />
+              </div>
+              <div>
+                <h2 className="text-base md:text-lg font-bold text-slate-800">Quản Lý & Điều Chuyển Thiết Bị Lưu Động</h2>
+                <p className="text-xs text-slate-500">Tra cứu vị trí hiện tại của MPĐ/Pin lưu động, xem nhật ký điều chuyển và thực hiện bàn giao giữa các trạm.</p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-base md:text-lg font-bold text-slate-800">Điều Chuyển Tài Sản & Thiết Bị Cố Định</h2>
-              <p className="text-xs text-slate-500">Thực hiện bàn giao máy phát điện, máy lạnh, accu, tủ nguồn giữa các trạm. Lưu lịch sử và ngày áp dụng định mức nhiên liệu thực tế.</p>
+
+            <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-xl w-full sm:w-auto">
+              <button
+                onClick={() => setTransferSubTab('list')}
+                className={`flex-1 sm:flex-none px-4 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                  transferSubTab === 'list'
+                    ? 'bg-white text-orange-600 shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <span>📋 Danh Sách & Lịch Sử ({equipmentTransfers.length})</span>
+              </button>
+
+              <button
+                onClick={() => setTransferSubTab('form')}
+                className={`flex-1 sm:flex-none px-4 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                  transferSubTab === 'form'
+                    ? 'bg-orange-600 text-white shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Plus size={14} />
+                <span>➕ Tạo Lệnh Điều Chuyển</span>
+              </button>
             </div>
           </div>
 
-          <form onSubmit={handleTransferEquipment} className="grid grid-cols-1 md:grid-cols-12 gap-6 text-xs md:text-sm">
-            {/* Hàng chọn loại thiết bị */}
-            <div className="col-span-12 grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-50/40 p-4 rounded-xl border border-slate-200/50">
-              <div className="space-y-1">
-                <label className="font-bold text-slate-600 text-xs">Loại thiết bị cần điều chuyển *</label>
-                <select
-                  value={transEquipType}
-                  onChange={(e) => {
-                    setTransEquipType(e.target.value);
-                    setTransEquipIndex('');
-                  }}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-orange-500 font-bold"
-                  required
-                >
-                  <option value="mpd">⚙️ Máy phát điện cố định</option>
-                  <option value="may_lanh">❄️ Máy lạnh trạm</option>
-                  <option value="to_accu">🔋 Tổ Ắc quy (Accu)</option>
-                  <option value="tu_nguon">🔌 Tủ nguồn AC/DC</option>
-                </select>
+          {/* Sub-tab 1: Danh sách & Lịch sử Điều chuyển */}
+          {transferSubTab === 'list' && (
+            <div className="space-y-6">
+              {/* Stat Summary Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                  <div className="text-xs font-bold text-slate-500 mb-1">MÁY PHÁT LƯU ĐỘNG</div>
+                  <div className="text-2xl font-black text-orange-600">
+                    {mobileEquipments.filter(e => (e.type || '').toUpperCase().includes('MPĐ') || (e.equipment_code || '').includes('MPD')).length}
+                  </div>
+                  <div className="text-[11px] text-slate-400 mt-1 font-medium">MPD-01, MPD-02, MPD-03...</div>
+                </div>
+
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                  <div className="text-xs font-bold text-slate-500 mb-1">PIN LƯU ĐỘNG</div>
+                  <div className="text-2xl font-black text-blue-600">
+                    {mobileEquipments.filter(e => (e.type || '').toUpperCase().includes('PIN') || (e.equipment_code || '').includes('PIN')).length}
+                  </div>
+                  <div className="text-[11px] text-slate-400 mt-1 font-medium">Pin Postef 48V-100Ah</div>
+                </div>
+
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                  <div className="text-xs font-bold text-slate-500 mb-1">ĐANG Ở THỰC ĐỊA / TRẠM</div>
+                  <div className="text-2xl font-black text-emerald-600">
+                    {mobileEquipments.filter(e => e.current_location && e.current_location !== 'KHO').length}
+                  </div>
+                  <div className="text-[11px] text-emerald-600 mt-1 font-semibold">Đang phục vụ sự cố điện</div>
+                </div>
+
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                  <div className="text-xs font-bold text-slate-500 mb-1">LƯỢT ĐIỀU CHUYỂN</div>
+                  <div className="text-2xl font-black text-purple-600">{equipmentTransfers.length}</div>
+                  <div className="text-[11px] text-purple-600 mt-1 font-semibold">Nhật ký điều động lưu trữ</div>
+                </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="font-bold text-slate-600 text-xs">Ngày điều chuyển thực tế *</label>
-                <input
-                  type="date"
-                  value={transDate}
-                  onChange={(e) => setTransDate(e.target.value)}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-orange-500 font-bold"
-                  required
-                />
+              {/* Search & Filter Bar */}
+              <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                <div className="relative">
+                  <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Tìm kiếm theo mã trạm (DNCM08, DNDQ49), mã thiết bị (MPD-01, PIN 04), người thực hiện (Lê Thành Thái)..."
+                    value={transferSearch}
+                    onChange={(e) => setTransferSearch(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:bg-white transition-all text-slate-800"
+                  />
+                </div>
               </div>
 
-              <div className="flex items-end text-[11px] text-blue-600 font-semibold leading-relaxed bg-blue-50/50 p-2.5 rounded-lg border border-blue-100">
-                💡 Định mức nhiên liệu của trạm chạy máy phát sẽ tự động áp dụng định mức mới từ đúng ngày điều chuyển đã chọn.
+              {/* Section A: Bảng vị trí hiện tại của Thiết bị Lưu động */}
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="px-5 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Zap className="h-4 w-4 text-orange-500" />
+                    <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                      1. Ghi Nhận Vị Trí Hiện Tại Của Thiết Bị Lưu Động ({mobileEquipments.length} thiết bị)
+                    </h3>
+                  </div>
+                  <span className="text-[11px] text-slate-400 font-medium">Cập nhật thực tế từ nhật ký điều động</span>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs text-slate-700">
+                    <thead className="bg-slate-100/70 text-slate-500 font-bold uppercase text-[11px] border-b border-slate-200">
+                      <tr>
+                        <th className="py-3 px-4">Mã Thiết Bị</th>
+                        <th className="py-3 px-4">Loại</th>
+                        <th className="py-3 px-4">Thông Số Kỹ Thuật</th>
+                        <th className="py-3 px-4">Vị Trí Hiện Tại</th>
+                        <th className="py-3 px-4 text-center">Tình Trạng</th>
+                        <th className="py-3 px-4">Ghi Chú</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {mobileEquipments
+                        .filter(item => {
+                          if (!transferSearch) return true;
+                          const q = transferSearch.toLowerCase();
+                          return (
+                            (item.equipment_code || '').toLowerCase().includes(q) ||
+                            (item.current_location || '').toLowerCase().includes(q) ||
+                            (item.specifications || '').toLowerCase().includes(q) ||
+                            (item.notes || '').toLowerCase().includes(q)
+                          );
+                        })
+                        .map(item => (
+                          <tr key={item.id} className="hover:bg-slate-50 transition-colors font-medium">
+                            <td className="py-3 px-4 font-black text-slate-900 flex items-center gap-2">
+                              <span className="p-1 bg-orange-50 text-orange-600 rounded">⚙️</span>
+                              <span>{item.equipment_code}</span>
+                            </td>
+                            <td className="py-3 px-4 text-slate-600 font-semibold">{item.type}</td>
+                            <td className="py-3 px-4 text-slate-600">{item.specifications || 'N/A'}</td>
+                            <td className="py-3 px-4">
+                              <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold ${
+                                item.current_location === 'KHO'
+                                  ? 'bg-slate-100 text-slate-700 border border-slate-200'
+                                  : item.current_location?.includes('NHÀ')
+                                  ? 'bg-purple-50 text-purple-700 border border-purple-200'
+                                  : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              }`}>
+                                📍 {getSiteLabel(item.current_location)}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800">
+                                {item.status || 'Tốt'}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4 text-slate-500 text-[11px]">{item.notes || '—'}</td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Section B: Bảng Lịch sử Điều chuyển Chi tiết */}
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="px-5 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-purple-500" />
+                    <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                      2. Nhật Ký Lịch Sử Điều Chuyển & Bàn Giao ({equipmentTransfers.length} lượt)
+                    </h3>
+                  </div>
+                  <span className="text-[11px] text-slate-400 font-medium">Sắp xếp theo thời gian mới nhất</span>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs text-slate-700">
+                    <thead className="bg-slate-100/70 text-slate-500 font-bold uppercase text-[11px] border-b border-slate-200">
+                      <tr>
+                        <th className="py-3 px-4">Thời Gian</th>
+                        <th className="py-3 px-4">Thiết Bị</th>
+                        <th className="py-3 px-4">Từ Vị Trí (Nguồn)</th>
+                        <th className="py-3 px-4">Đến Vị Trí (Đích)</th>
+                        <th className="py-3 px-4">Người Thực Hiện</th>
+                        <th className="py-3 px-4">Ghi Chú & Chi Tiết</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {equipmentTransfers
+                        .filter(item => {
+                          if (!transferSearch) return true;
+                          const q = transferSearch.toLowerCase();
+                          const eq = mobileEquipments.find(e => e.id === item.equipment_id);
+                          const eqCode = eq ? eq.equipment_code.toLowerCase() : '';
+                          return (
+                            (item.from_location || '').toLowerCase().includes(q) ||
+                            (item.to_location || '').toLowerCase().includes(q) ||
+                            (item.operator || '').toLowerCase().includes(q) ||
+                            (item.notes || '').toLowerCase().includes(q) ||
+                            eqCode.includes(q)
+                          );
+                        })
+                        .map(item => {
+                          const eq = mobileEquipments.find(e => e.id === item.equipment_id);
+                          const dateStr = item.transfer_date ? new Date(item.transfer_date).toLocaleString('vi-VN', {
+                            day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                          }) : 'N/A';
+
+                          return (
+                            <tr key={item.id} className="hover:bg-slate-50 transition-colors font-medium">
+                              <td className="py-3 px-4 text-slate-600 font-semibold whitespace-nowrap">{dateStr}</td>
+                              <td className="py-3 px-4 font-black text-slate-900">
+                                {eq ? (
+                                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-orange-50 text-orange-700 border border-orange-200 font-bold">
+                                    ⚙️ {eq.equipment_code} ({eq.type})
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-500 font-medium">Thiết bị cố định / Khác</span>
+                                )}
+                              </td>
+                              <td className="py-3 px-4 font-semibold text-slate-600">
+                                <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700">
+                                  {getSiteLabel(item.from_location)}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4 font-bold text-emerald-700">
+                                <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                  ➔ {getSiteLabel(item.to_location)}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4 font-bold text-slate-800">{item.operator || '—'}</td>
+                              <td className="py-3 px-4 text-slate-500 text-[11px]">{item.notes || '—'}</td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
+          )}
 
-            {/* Cột trái: Trạm nguồn */}
-            <div className="md:col-span-5 bg-slate-50/50 rounded-xl p-5 border border-slate-200/60 space-y-4">
-              <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 mb-2">1. Trạm nguồn (Nơi chuyển đi)</h3>
-              
-              <div className="space-y-1">
-                <label className="font-bold text-slate-600 text-xs">Chọn trạm nguồn *</label>
-                <select
-                  value={transSourceSiteId}
-                  onChange={(e) => {
-                    setTransSourceSiteId(e.target.value);
-                    setTransEquipIndex('');
-                  }}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-orange-500"
-                  required
+          {/* Sub-tab 2: Form Tạo lệnh Điều chuyển */}
+          {transferSubTab === 'form' && (
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+              <div className="flex items-center justify-between pb-4 mb-6 border-b border-slate-100">
+                <div>
+                  <h3 className="text-base font-bold text-slate-800">Tạo Lệnh Điều Chuyển Thiết Bị & Tài Sản Cố Định</h3>
+                  <p className="text-xs text-slate-500">Thực hiện bàn giao máy phát điện, máy lạnh, accu, tủ nguồn giữa các trạm.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setTransferSubTab('list')}
+                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-all"
                 >
-                  <option value="">-- Chọn trạm nguồn có thiết bị --</option>
-                  {stations.map(s => {
-                    const infra = s.infrastructure_info || {};
-                    let hasAsset = false;
-                    if (transEquipType === 'mpd') {
-                      hasAsset = (infra.may_phat_dien?.mpd || []).some(m => m.tinh_trang !== "ĐÃ ĐIỀU CHUYỂN");
-                    } else if (transEquipType === 'may_lanh') {
-                      hasAsset = (infra.may_lanh || []).some(m => m.tinh_trang !== "ĐÃ ĐIỀU CHUYỂN");
-                    } else if (transEquipType === 'tu_nguon') {
-                      hasAsset = (infra.nguon_dien?.tu_nguon || []).some(m => m.tinh_trang !== "ĐÃ ĐIỀU CHUYỂN");
-                    } else if (transEquipType === 'to_accu') {
-                      hasAsset = (infra.nguon_dien?.tu_nguon || []).some(c => (c.to_accu || []).some(a => a.tinh_trang !== "ĐÃ ĐIỀU CHUYỂN"));
-                    }
-                    if (!hasAsset) return null;
-                    return (
-                      <option key={s.site_id} value={s.site_id}>
-                        {s.site_id} - {s.name}
-                      </option>
-                    );
-                  })}
-                </select>
+                  &larr; Quay lại danh sách
+                </button>
               </div>
 
-              {transSourceSiteId && (
-                <div className="space-y-1">
-                  <label className="font-bold text-slate-600 text-xs">Chọn thiết bị cụ thể *</label>
-                  <select
-                    value={transEquipIndex}
-                    onChange={(e) => setTransEquipIndex(e.target.value)}
-                    className="w-full border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-orange-500 font-semibold"
-                    required
+              <form onSubmit={handleTransferEquipment} className="grid grid-cols-1 md:grid-cols-12 gap-6 text-xs md:text-sm">
+                {/* Hàng chọn loại thiết bị */}
+                <div className="col-span-12 grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-50/40 p-4 rounded-xl border border-slate-200/50">
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600 text-xs">Loại thiết bị cần điều chuyển *</label>
+                    <select
+                      value={transEquipType}
+                      onChange={(e) => {
+                        setTransEquipType(e.target.value);
+                        setTransEquipIndex('');
+                      }}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-orange-500 font-bold"
+                      required
+                    >
+                      <option value="mpd">⚙️ Máy phát điện cố định</option>
+                      <option value="may_lanh">❄️ Máy lạnh trạm</option>
+                      <option value="to_accu">🔋 Tổ Ắc quy (Accu)</option>
+                      <option value="tu_nguon">🔌 Tủ nguồn AC/DC</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600 text-xs">Ngày điều chuyển thực tế *</label>
+                    <input
+                      type="date"
+                      value={transDate}
+                      onChange={(e) => setTransDate(e.target.value)}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-orange-500 font-bold"
+                      required
+                    />
+                  </div>
+
+                  <div className="flex items-end text-[11px] text-blue-600 font-semibold leading-relaxed bg-blue-50/50 p-2.5 rounded-lg border border-blue-100">
+                    💡 Định mức nhiên liệu của trạm chạy máy phát sẽ tự động áp dụng định mức mới từ đúng ngày điều chuyển đã chọn.
+                  </div>
+                </div>
+
+                {/* Cột trái: Trạm nguồn */}
+                <div className="md:col-span-5 bg-slate-50/50 rounded-xl p-5 border border-slate-200/60 space-y-4">
+                  <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 mb-2">1. Trạm nguồn (Nơi chuyển đi)</h3>
+                  
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600 text-xs">Chọn trạm nguồn *</label>
+                    <select
+                      value={transSourceSiteId}
+                      onChange={(e) => {
+                        setTransSourceSiteId(e.target.value);
+                        setTransEquipIndex('');
+                      }}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-orange-500"
+                      required
+                    >
+                      <option value="">-- Chọn trạm nguồn có thiết bị --</option>
+                      {stations.map(s => {
+                        const infra = s.infrastructure_info || {};
+                        let hasAsset = false;
+                        if (transEquipType === 'mpd') {
+                          hasAsset = (infra.may_phat_dien?.mpd || []).some(m => m.tinh_trang !== "ĐÃ ĐIỀU CHUYỂN");
+                        } else if (transEquipType === 'may_lanh') {
+                          hasAsset = (infra.may_lanh || []).some(m => m.tinh_trang !== "ĐÃ ĐIỀU CHUYỂN");
+                        } else if (transEquipType === 'tu_nguon') {
+                          hasAsset = (infra.nguon_dien?.tu_nguon || []).some(m => m.tinh_trang !== "ĐÃ ĐIỀU CHUYỂN");
+                        } else if (transEquipType === 'to_accu') {
+                          hasAsset = (infra.nguon_dien?.tu_nguon || []).some(c => (c.to_accu || []).some(a => a.tinh_trang !== "ĐÃ ĐIỀU CHUYỂN"));
+                        }
+                        if (!hasAsset) return null;
+                        return (
+                          <option key={s.site_id} value={s.site_id}>
+                            {s.site_id} - {s.name}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+
+                  {transSourceSiteId && (
+                    <div className="space-y-1">
+                      <label className="font-bold text-slate-600 text-xs">Chọn thiết bị cụ thể *</label>
+                      <select
+                        value={transEquipIndex}
+                        onChange={(e) => setTransEquipIndex(e.target.value)}
+                        className="w-full border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-orange-500 font-semibold"
+                        required
+                      >
+                        <option value="">-- Chọn một thiết bị cụ thể --</option>
+                        {availableSourceItems.map(item => (
+                          <option key={item.value} value={item.value}>
+                            {item.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {selectedMpdToMove && (
+                    <div className="bg-white rounded-lg p-4 border border-slate-200/50 shadow-xs space-y-2 text-xs">
+                      <div className="font-bold text-slate-700 text-sm border-b border-slate-100 pb-1.5 mb-1.5 flex justify-between">
+                        <span>📋 Thông số máy phát nguồn:</span>
+                        <span className="text-emerald-600">Sẵn sàng điều chuyển</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <span className="text-slate-400">Nhãn hiệu:</span>
+                          <p className="font-semibold text-slate-700">{selectedMpdToMove.nhan_hieu || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <span className="text-slate-400">Công suất:</span>
+                          <p className="font-semibold text-slate-700">{selectedMpdToMove.cong_suat ? selectedMpdToMove.cong_suat + ' KVA' : 'N/A'}</p>
+                        </div>
+                        <div>
+                          <span className="text-slate-400">Số máy (Serial):</span>
+                          <p className="font-semibold text-slate-700">{selectedMpdToMove.serial || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <span className="text-slate-400">Nhiên liệu:</span>
+                          <p className="font-semibold text-slate-700">{selectedMpdToMove.nhien_lieu || 'Dầu'}</p>
+                        </div>
+                        <div className="col-span-2 border-t border-slate-100 pt-1.5 mt-1">
+                          <span className="text-slate-400">Định mức hiện tại (Kỹ thuật / Thực tế):</span>
+                          <p className="font-bold text-slate-800 text-[13px]">{selectedMpdToMove.dinh_muc || 0} L/h  /  {selectedMpdToMove.dinh_muc_thuc_te || 0} L/h</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Mũi tên chuyển hướng */}
+                <div className="md:col-span-2 flex items-center justify-center">
+                  <div className="p-3 bg-slate-100 rounded-full text-slate-400 hidden md:block">
+                    <RefreshCw size={24} className="text-orange-500 animate-spin-slow" />
+                  </div>
+                </div>
+
+                {/* Cột phải: Trạm nhận */}
+                <div className="md:col-span-5 bg-slate-50/50 rounded-xl p-5 border border-slate-200/60 space-y-4">
+                  <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 mb-2">2. Trạm nhận (Nơi chuyển đến)</h3>
+                  
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600 text-xs">Chọn trạm nhận *</label>
+                    <select
+                      value={transDestSiteId}
+                      onChange={(e) => setTransDestSiteId(e.target.value)}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-orange-500"
+                      required
+                    >
+                      <option value="">-- Chọn trạm nhận --</option>
+                      {stations
+                        .filter(s => s.site_id !== transSourceSiteId)
+                        .map(s => {
+                          const infra = s.infrastructure_info || {};
+                          let hasAsset = false;
+                          if (transEquipType === 'mpd') {
+                            hasAsset = (infra.may_phat_dien?.mpd || []).some(m => m.tinh_trang !== "ĐÃ ĐIỀU CHUYỂN");
+                          }
+                          return (
+                            <option key={s.site_id} value={s.site_id}>
+                              {s.site_id} - {s.name} {hasAsset ? '(⚠️ Đã có MPĐ)' : '(Trống)'}
+                            </option>
+                          );
+                        })}
+                    </select>
+                  </div>
+
+                  {transEquipType === 'mpd' && selectedMpdToMove && (
+                    <div className="p-3 bg-blue-50/50 rounded-lg border border-blue-100 text-xs space-y-1.5 animate-in fade-in">
+                      <span className="font-bold text-blue-800">💡 Định mức nhiên liệu đi kèm máy phát này:</span>
+                      <div className="grid grid-cols-2 gap-2 text-slate-700">
+                        <div>Định mức kỹ thuật: <b className="text-slate-900">{selectedMpdToMove.dinh_muc || 0} L/h</b></div>
+                        <div>Định mức thực tế: <b className="text-orange-600">{selectedMpdToMove.dinh_muc_thuc_te || 0} L/h</b></div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600 text-xs">Người thực hiện điều chuyển</label>
+                    <input
+                      type="text"
+                      value={transOperator}
+                      onChange={(e) => setTransOperator(e.target.value)}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-orange-500"
+                      placeholder="Họ tên người vận hành..."
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-600 text-xs">Ghi chú điều chuyển</label>
+                    <textarea
+                      value={transNotes}
+                      onChange={(e) => setTransNotes(e.target.value)}
+                      rows="2"
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-orange-500"
+                      placeholder="Lý do điều chuyển, tình trạng thiết bị..."
+                    />
+                  </div>
+                </div>
+
+                {/* Action buttons footer */}
+                <div className="col-span-12 flex justify-end gap-3 pt-4 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTransSourceSiteId('');
+                      setTransDestSiteId('');
+                      setTransEquipIndex('');
+                      setTransOperator('');
+                      setTransNotes('');
+                    }}
+                    className="px-4 py-2 border border-slate-200 text-xs font-bold rounded-lg text-slate-600 hover:bg-slate-50 cursor-pointer"
+                    disabled={transmitting}
                   >
-                    <option value="">-- Chọn một thiết bị cụ thể --</option>
-                    {availableSourceItems.map(item => (
-                      <option key={item.value} value={item.value}>
-                        {item.label}
-                      </option>
-                    ))}
-                  </select>
+                    Nhập lại
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2.5 bg-orange-600 hover:bg-orange-700 text-xs font-bold rounded-lg text-white transition-all shadow-sm flex items-center gap-1.5 cursor-pointer animate-in fade-in"
+                    disabled={transmitting || !transSourceSiteId || !transDestSiteId || transEquipIndex === ''}
+                  >
+                    {transmitting ? 'Đang thực hiện...' : 'Xác nhận điều chuyển thiết bị'}
+                  </button>
                 </div>
-              )}
-
-              {selectedMpdToMove && (
-                <div className="bg-white rounded-lg p-4 border border-slate-200/50 shadow-xs space-y-2 text-xs">
-                  <div className="font-bold text-slate-700 text-sm border-b border-slate-100 pb-1.5 mb-1.5 flex justify-between">
-                    <span>📋 Thông số máy phát nguồn:</span>
-                    <span className="text-emerald-600">Sẵn sàng điều chuyển</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <span className="text-slate-400">Nhãn hiệu:</span>
-                      <p className="font-semibold text-slate-700">{selectedMpdToMove.nhan_hieu || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <span className="text-slate-400">Công suất:</span>
-                      <p className="font-semibold text-slate-700">{selectedMpdToMove.cong_suat ? selectedMpdToMove.cong_suat + ' KVA' : 'N/A'}</p>
-                    </div>
-                    <div>
-                      <span className="text-slate-400">Số máy (Serial):</span>
-                      <p className="font-semibold text-slate-700">{selectedMpdToMove.serial || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <span className="text-slate-400">Nhiên liệu:</span>
-                      <p className="font-semibold text-slate-700">{selectedMpdToMove.nhien_lieu || 'Dầu'}</p>
-                    </div>
-                    <div className="col-span-2 border-t border-slate-100 pt-1.5 mt-1">
-                      <span className="text-slate-400">Định mức hiện tại (Kỹ thuật / Thực tế):</span>
-                      <p className="font-bold text-slate-800 text-[13px]">{selectedMpdToMove.dinh_muc || 0} L/h  /  {selectedMpdToMove.dinh_muc_thuc_te || 0} L/h</p>
-                    </div>
-                  </div>
-                </div>
-              )}
+              </form>
             </div>
-
-            {/* Mũi tên chuyển hướng */}
-            <div className="md:col-span-2 flex items-center justify-center">
-              <div className="p-3 bg-slate-100 rounded-full text-slate-400 hidden md:block">
-                <RefreshCw size={24} className="text-orange-500 animate-spin-slow" />
-              </div>
-            </div>
-
-            {/* Cột phải: Trạm nhận */}
-            <div className="md:col-span-5 bg-slate-50/50 rounded-xl p-5 border border-slate-200/60 space-y-4">
-              <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 mb-2">2. Trạm nhận (Nơi chuyển đến)</h3>
-              
-              <div className="space-y-1">
-                <label className="font-bold text-slate-600 text-xs">Chọn trạm nhận *</label>
-                <select
-                  value={transDestSiteId}
-                  onChange={(e) => setTransDestSiteId(e.target.value)}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-orange-500"
-                  required
-                >
-                  <option value="">-- Chọn trạm nhận --</option>
-                  {stations
-                    .filter(s => s.site_id !== transSourceSiteId)
-                    .map(s => {
-                      const infra = s.infrastructure_info || {};
-                      let hasAsset = false;
-                      if (transEquipType === 'mpd') {
-                        hasAsset = (infra.may_phat_dien?.mpd || []).some(m => m.tinh_trang !== "ĐÃ ĐIỀU CHUYỂN");
-                      }
-                      return (
-                        <option key={s.site_id} value={s.site_id}>
-                          {s.site_id} - {s.name} {hasAsset ? '(⚠️ Đã có MPĐ)' : '(Trống)'}
-                        </option>
-                      );
-                    })}
-                </select>
-              </div>
-
-              {transEquipType === 'mpd' && selectedMpdToMove && (
-                <div className="p-3 bg-blue-50/50 rounded-lg border border-blue-100 text-xs space-y-1.5 animate-in fade-in">
-                  <span className="font-bold text-blue-800">💡 Định mức nhiên liệu đi kèm máy phát này:</span>
-                  <div className="grid grid-cols-2 gap-2 text-slate-700">
-                    <div>Định mức kỹ thuật: <b className="text-slate-900">{selectedMpdToMove.dinh_muc || 0} L/h</b></div>
-                    <div>Định mức thực tế: <b className="text-orange-600">{selectedMpdToMove.dinh_muc_thuc_te || 0} L/h</b></div>
-                  </div>
-                </div>
-              )}
-
-              <div className="space-y-1">
-                <label className="font-bold text-slate-600 text-xs">Người thực hiện điều chuyển</label>
-                <input
-                  type="text"
-                  value={transOperator}
-                  onChange={(e) => setTransOperator(e.target.value)}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-orange-500"
-                  placeholder="Họ tên người vận hành..."
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="font-bold text-slate-600 text-xs">Ghi chú điều chuyển</label>
-                <textarea
-                  value={transNotes}
-                  onChange={(e) => setTransNotes(e.target.value)}
-                  rows="2"
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-orange-500"
-                  placeholder="Lý do điều chuyển, tình trạng thiết bị..."
-                />
-              </div>
-            </div>
-
-            {/* Action buttons footer */}
-            <div className="col-span-12 flex justify-end gap-3 pt-4 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => {
-                  setTransSourceSiteId('');
-                  setTransDestSiteId('');
-                  setTransEquipIndex('');
-                  setTransOperator('');
-                  setTransNotes('');
-                }}
-                className="px-4 py-2 border border-slate-200 text-xs font-bold rounded-lg text-slate-600 hover:bg-slate-50 cursor-pointer"
-                disabled={transmitting}
-              >
-                Nhập lại
-              </button>
-              <button
-                type="submit"
-                className="px-5 py-2.5 bg-orange-600 hover:bg-orange-700 text-xs font-bold rounded-lg text-white transition-all shadow-sm flex items-center gap-1.5 cursor-pointer animate-in fade-in"
-                disabled={transmitting || !transSourceSiteId || !transDestSiteId || transEquipIndex === ''}
-              >
-                {transmitting ? 'Đang thực hiện...' : 'Xác nhận điều chuyển thiết bị'}
-              </button>
-            </div>
-          </form>
+          )}
         </div>
       )}
     </div>

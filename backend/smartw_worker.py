@@ -1666,16 +1666,32 @@ def check_power_outage_generators():
                 
                 diff_min = (now - cup_dt).total_seconds() / 60.0
                 
-                # Cảnh báo lịch cúp điện: đã quá 1h (60 phút) và < 3h (180 phút)
-                if 60 <= diff_min < 180:
-                    warning_key = f"outage_{site_id}_{today_str}_{tg_cup}"
-                    if warning_key not in sent_warnings:
-                        pending_schedule_warnings.append({
-                            "site_id": site_id,
-                            "tg_cup": tg_cup,
-                            "tg_co": tg_co,
-                            "warning_key": warning_key
-                        })
+                # Khung giờ gom tin cúp điện ca sáng (quanh 09:00 AM, từ 08:50 - 09:15)
+                is_morning_consolidated_window = (now.hour == 9 and now.minute <= 20) or (now.hour == 8 and now.minute >= 50)
+                is_morning_outage = (hour < 9)
+
+                if is_morning_outage:
+                    # Lịch cúp điện ca sáng (bắt đầu cúp trước 9h): Gom lại và chỉ nhắn 1 lần tập trung lúc ~09:00 AM
+                    if is_morning_consolidated_window and diff_min >= 30:
+                        warning_key = f"outage_{site_id}_{today_str}_{tg_cup}"
+                        if warning_key not in sent_warnings:
+                            pending_schedule_warnings.append({
+                                "site_id": site_id,
+                                "tg_cup": tg_cup,
+                                "tg_co": tg_co,
+                                "warning_key": warning_key
+                            })
+                else:
+                    # Lịch cúp điện ca chiều/tối: Quét bình thường sau 60 phút cúp
+                    if 60 <= diff_min < 180:
+                        warning_key = f"outage_{site_id}_{today_str}_{tg_cup}"
+                        if warning_key not in sent_warnings:
+                            pending_schedule_warnings.append({
+                                "site_id": site_id,
+                                "tg_cup": tg_cup,
+                                "tg_co": tg_co,
+                                "warning_key": warning_key
+                            })
             except Exception as ex:
                 logger.warning(f"Error parsing outage time for site {site_id}: {ex}")
                 
@@ -1748,6 +1764,7 @@ def check_power_outage_generators():
             # Cảnh báo 1: Lịch cúp điện >= 3h (đã quá 1h chưa có GEN)
             if pending_schedule_warnings:
                 msg_lines.append("⚠️ *NHẮC NHỞ CÚP ĐIỆN CHƯA CHẠY MÁY (Lịch ≥ 3h)* ⚠️")
+                msg_lines.append("Đã quá thời gian cúp điện theo lịch chưa ghi nhận GEN active trên SmartW:")
                 for item in pending_schedule_warnings:
                     msg_lines.append(f"- *{item['site_id']}* ({item['tg_cup']} - {item['tg_co']})")
                 msg_lines.append("")
@@ -2261,6 +2278,116 @@ def run_vhkt_poll(target_date: str = None):
         save_vhkt_to_local_json(vhkt_raw)
 
 
+def auto_sync_mpd_alarms_fallback() -> int:
+    """Fallback helper to sync CLEARED mpd alarms from smartw_alarms into generator_logs.
+    Ensures no generator running events are missed even if VHKT hasn't submitted a manual report on SmartW.
+    """
+    if not supabase:
+        return 0
+
+    try:
+        res_alarms = supabase.table("smartw_alarms").select("*").eq("alarm_type", "mpd").eq("status", "CLEARED").execute()
+        all_alarms = res_alarms.data or []
+        
+        yesterday_str = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+        today_str = datetime.now().strftime("%Y-%m-%d")
+        
+        alarms = [a for a in all_alarms if a.get("sdate") and (yesterday_str in str(a.get("sdate")) or today_str in str(a.get("sdate")))]
+        if not alarms:
+            return 0
+
+        res_sites = supabase.table("datasites").select("site_id, site_id_old, infrastructure_info").execute()
+        site_map = {}
+        for s in (res_sites.data or []):
+            canonical = s.get("site_id")
+            if canonical:
+                site_map[canonical.upper()] = s
+            if s.get("site_id_old"):
+                site_map[s.get("site_id_old").upper()] = s
+
+        synced = 0
+        for alarm in alarms:
+            raw_site = (alarm.get("site") or "").strip().upper()
+            station = site_map.get(raw_site)
+            canonical_id = station.get("site_id") if station else raw_site
+
+            sdate_iso = str(alarm.get("sdate") or "")
+            edate_iso = str(alarm.get("edate") or "")
+            if not sdate_iso or not edate_iso:
+                continue
+
+            try:
+                clean_s = sdate_iso.replace('+00:00', '').replace('Z', '').strip()
+                clean_e = edate_iso.replace('+00:00', '').replace('Z', '').strip()
+                dt_start = datetime.fromisoformat(clean_s)
+                dt_end = datetime.fromisoformat(clean_e)
+            except Exception:
+                continue
+
+            date_label = dt_start.strftime("%Y-%m-%d")
+            start_time = dt_start.strftime("%H:%M")
+            end_time = dt_end.strftime("%H:%M")
+
+            duration_min = int((dt_end - dt_start).total_seconds() / 60)
+            if duration_min < 10:
+                continue
+
+            hours = round(duration_min / 60, 2)
+            res_exist = supabase.table("generator_logs").select("gen_log_id").eq("site_id", canonical_id).eq("date", date_label).eq("run_details->>gio_bat_dau", start_time).execute()
+
+            if res_exist.data:
+                continue
+
+            infra = (station.get("infrastructure_info") or {}) if station else {}
+            mpd_list = infra.get("may_phat_dien", {}).get("mpd", [])
+            dinh_muc = 3.0
+            loai_nhien_lieu = "Dầu"
+            loai_may = "MLĐ"
+            cong_suat_may = "8.5"
+
+            if mpd_list and len(mpd_list) > 0:
+                mp = mpd_list[0]
+                dinh_muc = float(mp.get("dinh_muc") or 3.0)
+                loai_nhien_lieu = mp.get("nhien_lieu") or "Dầu"
+                loai_may = mp.get("nhan_hieu") or "MLĐ"
+                cong_suat_may = str(mp.get("cong_suat") or "")
+
+            nhien_lieu = round(hours * dinh_muc, 2)
+            don_gia = 27540
+            thanh_tien = round(nhien_lieu * don_gia)
+
+            run_details = {
+                "gio_bat_dau": start_time,
+                "gio_ket_thuc": end_time,
+                "thoi_gian_hoat_dong": hours,
+                "nhien_lieu_tieu_hao": nhien_lieu,
+                "don_gia": don_gia,
+                "thanh_tien": thanh_tien,
+                "ghi_chu": "",
+                "loai_may": loai_may,
+                "cong_suat_may": cong_suat_may,
+                "dinh_muc": dinh_muc,
+                "nhien_lieu_loai": loai_nhien_lieu,
+                "status": "approved",
+                "source": "smartw",
+                "smartw_alarm_id": f"{raw_site}__{alarm.get('sdate_str') or ''}"
+            }
+
+            supabase.table("generator_logs").insert({
+                "site_id": canonical_id,
+                "date": date_label,
+                "run_details": run_details
+            }).execute()
+
+            synced += 1
+
+        logger.info(f"SmartW Worker: Fallback auto-synced {synced} MPD alarms into generator_logs")
+        return synced
+    except Exception as err:
+        logger.error(f"auto_sync_mpd_alarms_fallback error: {err}")
+        return 0
+
+
 def run_mfd_import_poll(target_date: str = None):
     """Daily MFĐ reports scrape + auto-import into GeneratorLog.
     Called by APScheduler at 6:00 AM (scrapes yesterday's data).
@@ -2429,6 +2556,13 @@ def run_mfd_import_poll(target_date: str = None):
 
             except Exception as prev_err:
                 logger.warning(f'SmartW Worker: MFD prev-day processing error: {prev_err}')
+
+        # Step 4: Fallback auto-sync CLEARED MPD alarms directly from smartw_alarms to generator_logs
+        try:
+            fallback_synced = auto_sync_mpd_alarms_fallback()
+            logger.info(f'SmartW Worker: Fallback auto-synced {fallback_synced} MPD alarms into generator_logs')
+        except Exception as fb_err:
+            logger.warning(f'SmartW Worker: Fallback MPD sync failed: {fb_err}')
 
         status['last_mfd_import'] = datetime.now().isoformat()
 

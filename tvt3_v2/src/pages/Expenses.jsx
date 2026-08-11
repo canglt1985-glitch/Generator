@@ -383,6 +383,8 @@ export default function Expenses() {
     const cutoff_cx222 = paymentGroups.cx222.da_thanh_toan_den;
 
     transactions.forEach(t => {
+      if (selectedMonth && (!t.date || !t.date.startsWith(selectedMonth))) return;
+
       const isAccum = t.date >= accum_start;
       const isNewMN = cutoff_mua_ngoai && t.date > cutoff_mua_ngoai;
       const isNewCX = cutoff_cx222 && t.date > cutoff_cx222;
@@ -422,7 +424,7 @@ export default function Expenses() {
       mua_ngoai_new,
       cx222_new
     };
-  }, [transactions, paymentGroups]);
+  }, [transactions, paymentGroups, selectedMonth]);
 
   // 4. Tính toán Bảng Thanh Toán
   const paymentTableData = useMemo(() => {
@@ -431,6 +433,7 @@ export default function Expenses() {
 
     transactions.forEach(t => {
       if (t.date < accum_start) return;
+      if (selectedMonth && (!t.date || !t.date.startsWith(selectedMonth))) return;
 
       // Giao dịch nhiên liệu
       if (t.fuel_tracking && Object.keys(t.fuel_tracking).length > 0) {
@@ -491,7 +494,7 @@ export default function Expenses() {
     });
 
     return data;
-  }, [transactions, employeePaymentRecords]);
+  }, [transactions, employeePaymentRecords, selectedMonth]);
 
   // Search & Month filter
   const filteredFuelTxs = useMemo(() => {
@@ -1025,51 +1028,50 @@ export default function Expenses() {
           })}
         </div>
 
-        {/* Search & Month Filter (only for fuel and other expense tabs) */}
-        {activeTab !== 'summary' && (
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3 md:p-4 flex flex-col md:flex-row gap-4 items-stretch md:items-center">
-            <div className="relative flex-1">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-4 w-4 text-slate-400" />
-              </div>
-              <input
-                type="text"
-                className="block w-full pl-10 pr-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-slate-50/50 placeholder-slate-400 transition-colors hover:bg-white"
-                placeholder={
-                  activeTab === 'fuel' ? "Tìm theo mã trạm, người thực hiện, nhà cung cấp..." :
-                  "Tìm theo nội dung chi, dự án, người chi..."
-                }
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+        {/* Search & Month Filter */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3 md:p-4 flex flex-col md:flex-row gap-4 items-stretch md:items-center">
+          <div className="relative flex-1">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search className="h-4 w-4 text-slate-400" />
             </div>
+            <input
+              type="text"
+              className="block w-full pl-10 pr-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-slate-50/50 placeholder-slate-400 transition-colors hover:bg-white"
+              placeholder={
+                activeTab === 'fuel' ? "Tìm theo mã trạm, người thực hiện, nhà cung cấp..." :
+                activeTab === 'other' ? "Tìm theo nội dung chi, dự án, người chi..." :
+                "Tìm theo tên nhân viên..."
+              }
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
 
-            <div className="flex items-center gap-3 shrink-0 justify-between sm:justify-start border-t border-slate-100 md:border-t-0 pt-3 md:pt-0">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-slate-400 shrink-0" />
-                <span className="text-[13px] font-semibold text-slate-600 whitespace-nowrap">Lọc theo tháng:</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="month"
-                  className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-slate-50/50 outline-none transition-colors hover:bg-white"
-                  value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(e.target.value)}
-                />
-                {selectedMonth && (
-                  <button
-                    type="button"
-                    onClick={() => setSelectedMonth('')}
-                    className="px-3 py-1.5 border border-red-200 hover:border-red-300 text-[11px] font-bold rounded-lg text-red-600 hover:bg-red-50 cursor-pointer transition-colors whitespace-nowrap"
-                    title="Xem toàn bộ giao dịch"
-                  >
-                    Tất cả
-                  </button>
-                )}
-              </div>
+          <div className="flex items-center gap-3 shrink-0 justify-between sm:justify-start border-t border-slate-100 md:border-t-0 pt-3 md:pt-0">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-slate-400 shrink-0" />
+              <span className="text-[13px] font-semibold text-slate-600 whitespace-nowrap">Lọc theo tháng:</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="month"
+                className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-slate-50/50 outline-none transition-colors hover:bg-white"
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+              />
+              {selectedMonth && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedMonth('')}
+                  className="px-3 py-1.5 border border-red-200 hover:border-red-300 text-[11px] font-bold rounded-lg text-red-600 hover:bg-red-50 cursor-pointer transition-colors whitespace-nowrap"
+                  title="Xem toàn bộ giao dịch"
+                >
+                  Tất cả
+                </button>
+              )}
             </div>
           </div>
-        )}
+        </div>
       </div>
 
       {/* Main Table Card */}
@@ -1408,7 +1410,7 @@ export default function Expenses() {
                           <span className="font-bold text-blue-600">{formatCurrency(paymentGroups.mua_ngoai.tong_tien_nhan)}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span>Lũy kế phát sinh (tất cả):</span>
+                          <span>Lũy kế phát sinh ({selectedMonth ? `Tháng ${selectedMonth.split('-')[1]}/${selectedMonth.split('-')[0]}` : 'tất cả'}):</span>
                           <span className="font-bold text-slate-800">{formatCurrency(accumTotals.mua_ngoai_accum)}</span>
                         </div>
                         <div className="flex justify-between">
@@ -1505,7 +1507,7 @@ export default function Expenses() {
                           <span className="font-bold text-blue-600">{formatCurrency(paymentGroups.cx222.tong_tien_nhan)}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span>Lũy kế phát sinh (tất cả):</span>
+                          <span>Lũy kế phát sinh ({selectedMonth ? `Tháng ${selectedMonth.split('-')[1]}/${selectedMonth.split('-')[0]}` : 'tất cả'}):</span>
                           <span className="font-bold text-slate-800">{formatCurrency(accumTotals.cx222_accum)}</span>
                         </div>
                         <div className="flex justify-between">
@@ -1591,9 +1593,9 @@ export default function Expenses() {
 
                   {/* Bảng Thanh Toán */}
                   <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mt-6">
-                    <div className="bg-slate-50 px-4 py-3 border-b border-slate-200">
+                    <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex items-center justify-between">
                       <h3 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
-                        <FileText className="text-emerald-600 w-4 h-4" /> Bảng Thanh Toán
+                        <FileText className="text-emerald-600 w-4 h-4" /> Bảng Thanh Toán {selectedMonth && <span className="text-xs font-normal text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 ml-1">Lọc Tháng {selectedMonth.split('-')[1]}/{selectedMonth.split('-')[0]}</span>}
                       </h3>
                     </div>
                     <div className="overflow-x-auto w-full">
@@ -1610,14 +1612,19 @@ export default function Expenses() {
                           </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-100 text-[13px] text-slate-700">
-                          {Object.keys(paymentTableData).length === 0 ? (
+                          {Object.keys(paymentTableData).filter(name => !searchQuery.trim() || name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 ? (
                             <tr>
                               <td colSpan={user ? 7 : 6} className="text-center py-10 text-slate-400">
-                                Chưa có phát sinh chi phí nào từ ngày 16/02/2026.
+                                {selectedMonth 
+                                  ? `Chưa có phát sinh chi phí nào trong Tháng ${selectedMonth.split('-')[1]}/${selectedMonth.split('-')[0]}.`
+                                  : 'Chưa có phát sinh chi phí nào từ ngày 16/02/2026.'}
                               </td>
                             </tr>
                           ) : (
-                            Object.keys(paymentTableData).sort().map((name) => {
+                            Object.keys(paymentTableData)
+                              .filter(name => !searchQuery.trim() || name.toLowerCase().includes(searchQuery.toLowerCase()))
+                              .sort()
+                              .map((name) => {
                               const d = paymentTableData[name];
                               return (
                                 <tr key={name} className="hover:bg-slate-50/50 transition-colors">
@@ -1649,24 +1656,24 @@ export default function Expenses() {
                             })
                           )}
                         </tbody>
-                        {Object.keys(paymentTableData).length > 0 && (
+                        {Object.keys(paymentTableData).filter(name => !searchQuery.trim() || name.toLowerCase().includes(searchQuery.toLowerCase())).length > 0 && (
                           <tfoot className="bg-gray-50 text-[13px] font-bold text-slate-700 border-t border-slate-200">
                             <tr>
                               <td className="px-4 py-3">Tổng cộng:</td>
                               <td className="px-4 py-3 text-right font-mono">
-                                {formatCurrency(Object.values(paymentTableData).reduce((sum, d) => sum + d.mua_le, 0))}
+                                {formatCurrency(Object.keys(paymentTableData).filter(name => !searchQuery.trim() || name.toLowerCase().includes(searchQuery.toLowerCase())).reduce((sum, name) => sum + paymentTableData[name].mua_le, 0))}
                               </td>
                               <td className="px-4 py-3 text-right font-mono text-slate-500">
-                                {formatCurrency(Object.values(paymentTableData).reduce((sum, d) => sum + d.cx222, 0))}
+                                {formatCurrency(Object.keys(paymentTableData).filter(name => !searchQuery.trim() || name.toLowerCase().includes(searchQuery.toLowerCase())).reduce((sum, name) => sum + paymentTableData[name].cx222, 0))}
                               </td>
                               <td className="px-4 py-3 text-right font-mono">
-                                {formatCurrency(Object.values(paymentTableData).reduce((sum, d) => sum + d.vnpt_vtl, 0))}
+                                {formatCurrency(Object.keys(paymentTableData).filter(name => !searchQuery.trim() || name.toLowerCase().includes(searchQuery.toLowerCase())).reduce((sum, name) => sum + paymentTableData[name].vnpt_vtl, 0))}
                               </td>
                               <td className="px-4 py-3 text-right font-mono">
-                                {formatCurrency(Object.values(paymentTableData).reduce((sum, d) => sum + d.other_exp, 0))}
+                                {formatCurrency(Object.keys(paymentTableData).filter(name => !searchQuery.trim() || name.toLowerCase().includes(searchQuery.toLowerCase())).reduce((sum, name) => sum + paymentTableData[name].other_exp, 0))}
                               </td>
                               <td className="px-4 py-3 text-right font-mono text-blue-700">
-                                {formatCurrency(Object.values(paymentTableData).reduce((sum, d) => sum + d.can_ck, 0))}
+                                {formatCurrency(Object.keys(paymentTableData).filter(name => !searchQuery.trim() || name.toLowerCase().includes(searchQuery.toLowerCase())).reduce((sum, name) => sum + paymentTableData[name].can_ck, 0))}
                               </td>
                               {user && <td></td>}
                             </tr>

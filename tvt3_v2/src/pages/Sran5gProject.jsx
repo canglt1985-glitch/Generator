@@ -14,15 +14,47 @@ export default function Sran5gProject() {
   const [selectedDistrict, setSelectedDistrict] = useState('ALL');
   const [selectedScope, setSelectedScope] = useState('ALL');
   const [selectedStatus, setSelectedStatus] = useState('ALL');
+  const [selectedVkd, setSelectedVkd] = useState('ALL'); // ALL, VKD 5, VKD 4, VKD 3
   const [tvt3Only, setTvt3Only] = useState(true);
   const [tvt3SiteIds, setTvt3SiteIds] = useState(new Set());
   const [tvt3SiteCount, setTvt3SiteCount] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState(null);
+  const [importReport, setImportReport] = useState(null);
   const [selectedSite, setSelectedSite] = useState(null);
 
   const [activeViewTab, setActiveViewTab] = useState('dashboard');
   const [copiedReport, setCopiedReport] = useState(false);
+
+  // Helper classification for Vùng Kinh Doanh (VKD)
+  const getVungKinhDoanh = (item) => {
+    const s1 = item.site_id ? String(item.site_id).trim().toUpperCase() : '';
+    const s2 = item.site_id_old ? String(item.site_id_old).trim().toUpperCase() : '';
+
+    if (
+      s1.startsWith('DNCM') || s1.startsWith('DNXL') || s1.startsWith('DNLT') ||
+      s2.startsWith('DNCM') || s2.startsWith('DNXL') || s2.startsWith('DNLT') ||
+      s2.startsWith('DNIXLO') || s2.startsWith('DNIXHO') || s2.startsWith('DNIXTC') || 
+      s2.startsWith('DNIXDI') || s2.startsWith('DNIXPH') || s2.startsWith('DNIXBA') || 
+      s2.startsWith('DNIXTH') || s2.startsWith('DNICMY') || s2.startsWith('DNIXDO')
+    ) {
+      return 'Vùng Kinh Doanh 5 (Cẩm Mỹ, Xuân Lộc, Long Thành)';
+    }
+    if (
+      s1.startsWith('DNTN') || s1.startsWith('DNLK') ||
+      s2.startsWith('DNTN') || s2.startsWith('DNLK') || s2.startsWith('DNILKH')
+    ) {
+      return 'Vùng Kinh Doanh 4 (Thống Nhất, Long Khánh)';
+    }
+    return 'Vùng Kinh Doanh 3 (Khu vực còn lại)';
+  };
+
+  const getVungKinhDoanhShort = (item) => {
+    const vkd = getVungKinhDoanh(item);
+    if (vkd.includes('5')) return 'VKD 5';
+    if (vkd.includes('4')) return 'VKD 4';
+    return 'VKD 3';
+  };
 
   // Fetch TVT3 managed site_ids from Supabase datasites table
   useEffect(() => {
@@ -132,8 +164,15 @@ export default function Sran5gProject() {
         (item.scope_3g4g && item.scope_3g4g.toLowerCase().includes(q)) ||
         (item.scope_5g && item.scope_5g.toLowerCase().includes(q)) ||
         (item.config_3g4g && item.config_3g4g.toLowerCase().includes(q)) ||
-        (item.config_5g && item.config_5g.toLowerCase().includes(q))
+        (item.config_5g && item.config_5g.toLowerCase().includes(q)) ||
+        getVungKinhDoanh(item).toLowerCase().includes(q)
       );
+
+      let matchVkd = selectedVkd === 'ALL';
+      if (!matchVkd) {
+        const shortVkd = getVungKinhDoanhShort(item);
+        if (selectedVkd === shortVkd) matchVkd = true;
+      }
 
       let matchDistrict = selectedDistrict === 'ALL';
       if (!matchDistrict) {
@@ -161,20 +200,16 @@ export default function Sran5gProject() {
 
       let matchScope = selectedScope === 'ALL';
       if (!matchScope) {
-        const sel = selectedScope.toLowerCase().trim();
-        const uId = (item.unique_id || '').toLowerCase();
-        const s3g4g = (item.scope_3g4g || '').toLowerCase();
-        const s5g = (item.scope_5g || '').toLowerCase();
-        const cfg3g4g = (item.config_3g4g || '').toLowerCase();
+        const is5gItem = (item.scope_5g && item.scope_5g.toUpperCase().includes('5G') && !item.scope_5g.toUpperCase().includes('NONE')) || (item.unique_id && item.unique_id.toUpperCase().includes('5G'));
+        const isSinglebandItem = !is5gItem && item.config_3g4g && (item.config_3g4g.toLowerCase().includes('4g only') || item.config_3g4g.toLowerCase().includes('tháo dỡ 4g'));
+        const isDualbandItem = !is5gItem && !isSinglebandItem;
 
-        if (selectedScope === 'SWAP_4G_ONLY') {
-          matchScope = cfg3g4g.includes('tháo dỡ 4g only') || cfg3g4g.includes('4g only');
+        if (selectedScope === 'ADD_5G') {
+          matchScope = is5gItem;
         } else if (selectedScope === 'SWAP_3G4G_BOTH') {
-          matchScope = !cfg3g4g.includes('tháo dỡ 4g only') && !cfg3g4g.includes('4g only');
-        } else if (selectedScope === 'ADD_5G' || sel.includes('add 5g')) {
-          matchScope = s5g.includes('add 5g') || uId.includes('add 5g');
-        } else {
-          matchScope = uId.includes(sel) || s3g4g.includes(sel) || s5g.includes(sel);
+          matchScope = isDualbandItem;
+        } else if (selectedScope === 'SWAP_4G_ONLY') {
+          matchScope = isSinglebandItem;
         }
       }
 
@@ -189,18 +224,31 @@ export default function Sran5gProject() {
       else if (selectedStatus === 'INTEGRATION') matchStatus = !!item.integration_date;
       else if (selectedStatus === 'ONAIR') matchStatus = !!item.onair_date;
 
-      return matchQuery && matchDistrict && matchScope && matchStatus;
+      return matchQuery && matchVkd && matchDistrict && matchScope && matchStatus;
     });
-  }, [data, searchTerm, selectedDistrict, selectedScope, selectedStatus, tvt3Only, tvt3SiteIds]);
+  }, [data, searchTerm, selectedVkd, selectedDistrict, selectedScope, selectedStatus, tvt3Only, tvt3SiteIds]);
 
   // Stats calculation
   const stats = useMemo(() => {
     const activeDataset = tvt3Only ? data.filter(isTvt3Item) : data;
     const activeTotal = activeDataset.length;
     const overallTotal = data.length;
-    const swap4gOnly = activeDataset.filter(d => d.config_3g4g && (d.config_3g4g.includes('Tháo dỡ 4G Only') || d.config_3g4g.includes('4G Only'))).length;
-    const swapBoth3g4g = activeTotal - swap4gOnly;
-    const add5g = activeDataset.filter(d => (d.unique_id && d.unique_id.includes('Add 5G')) || (d.scope_5g && d.scope_5g.includes('Add 5G'))).length;
+
+    const add5g = activeDataset.filter(d => 
+      (d.scope_5g && d.scope_5g.toUpperCase().includes('5G') && !d.scope_5g.toUpperCase().includes('NONE')) || 
+      (d.unique_id && d.unique_id.toUpperCase().includes('5G'))
+    ).length;
+
+    const swap4gOnly = activeDataset.filter(d => 
+      !((d.scope_5g && d.scope_5g.toUpperCase().includes('5G') && !d.scope_5g.toUpperCase().includes('NONE')) || (d.unique_id && d.unique_id.toUpperCase().includes('5G'))) &&
+      d.config_3g4g && (d.config_3g4g.toLowerCase().includes('4g only') || d.config_3g4g.toLowerCase().includes('tháo dỡ 4g'))
+    ).length;
+
+    const swapBoth3g4g = activeDataset.filter(d => 
+      !((d.scope_5g && d.scope_5g.toUpperCase().includes('5G') && !d.scope_5g.toUpperCase().includes('NONE')) || (d.unique_id && d.unique_id.toUpperCase().includes('5G'))) &&
+      (!d.config_3g4g || (!d.config_3g4g.toLowerCase().includes('4g only') && !d.config_3g4g.toLowerCase().includes('tháo dỡ 4g')))
+    ).length;
+
     const surveyDone = activeDataset.filter(d => d.survey_date).length;
     const tssrApproved = activeDataset.filter(d => d.ie_app_date || d.rf_app_date || d.tssr_sub_date).length;
     const rfDesignApproved = activeDataset.filter(d => d.rf_design_date).length;
@@ -212,6 +260,57 @@ export default function Sran5gProject() {
     const onair = activeDataset.filter(d => d.onair_date).length;
 
     return { activeTotal, overallTotal, swap4gOnly, swapBoth3g4g, add5g, surveyDone, tssrApproved, rfDesignApproved, augTarget, whPickup, deliveryDone, installDone, integrationDone, onair };
+  }, [data, tvt3Only, tvt3SiteIds]);
+
+  // Filtered dataset milestone breakdown (Live progress card for active filter e.g. Target Tháng 8)
+  const filteredStats = useMemo(() => {
+    const total = filteredData.length;
+    if (total === 0) return null;
+
+    const survey = filteredData.filter(d => d.survey_date).length;
+    const tssr = filteredData.filter(d => d.ie_app_date || d.rf_app_date || d.tssr_sub_date).length;
+    const rf = filteredData.filter(d => d.rf_design_date).length;
+    const wh = filteredData.filter(d => d.wh_pickup_date).length;
+    const delivery = filteredData.filter(d => d.delivery_date).length;
+    const install = filteredData.filter(d => d.install_date).length;
+    const integration = filteredData.filter(d => d.integration_date).length;
+    const onair = filteredData.filter(d => d.onair_date).length;
+
+    return { total, survey, tssr, rf, wh, delivery, install, integration, onair };
+  }, [filteredData]);
+
+  // VKD Progress Breakdown (Vùng Kinh Doanh 5, VKD 4, VKD 3)
+  const vkdBreakdown = useMemo(() => {
+    const activeDataset = tvt3Only ? data.filter(isTvt3Item) : data;
+    const vkdMap = {
+      'VKD 5': { vkd: 'VKD 5', fullName: 'Vùng Kinh Doanh 5', desc: 'DNCM, DNXL, DNLT (Cẩm Mỹ, Xuân Lộc, Long Thành)', total: 0, swap4g: 0, swapDual: 0, add5g: 0, augTarget: 0, survey: 0, tssr: 0, rfDesign: 0, wh: 0, delivery: 0, install: 0, integration: 0, onair: 0, badgeColor: 'amber' },
+      'VKD 4': { vkd: 'VKD 4', fullName: 'Vùng Kinh Doanh 4', desc: 'DNTN, DNLK (Thống Nhất, Long Khánh)', total: 0, swap4g: 0, swapDual: 0, add5g: 0, augTarget: 0, survey: 0, tssr: 0, rfDesign: 0, wh: 0, delivery: 0, install: 0, integration: 0, onair: 0, badgeColor: 'blue' },
+      'VKD 3': { vkd: 'VKD 3', fullName: 'Vùng Kinh Doanh 3', desc: 'Các khu vực còn lại (DNIC, DNIX, DNBC...)', total: 0, swap4g: 0, swapDual: 0, add5g: 0, augTarget: 0, survey: 0, tssr: 0, rfDesign: 0, wh: 0, delivery: 0, install: 0, integration: 0, onair: 0, badgeColor: 'purple' }
+    };
+
+    activeDataset.forEach(item => {
+      const key = getVungKinhDoanhShort(item);
+      const target = vkdMap[key];
+      if (target) {
+        target.total++;
+        const is5g = (item.scope_5g && item.scope_5g.toUpperCase().includes('5G') && !item.scope_5g.toUpperCase().includes('NONE')) || (item.unique_id && item.unique_id.toUpperCase().includes('5G'));
+        const isSingle = !is5g && item.config_3g4g && (item.config_3g4g.toLowerCase().includes('4g only') || item.config_3g4g.toLowerCase().includes('tháo dỡ 4g'));
+        if (is5g) target.add5g++;
+        else if (isSingle) target.swap4g++;
+        else target.swapDual++;
+
+        if (item.monthly_target_im && String(item.monthly_target_im).includes('Aug')) target.augTarget++;
+        if (item.survey_date) target.survey++;
+        if (item.tssr_sub_date || item.ie_app_date || item.rf_app_date) target.tssr++;
+        if (item.rf_design_date) target.rfDesign++;
+        if (item.wh_pickup_date) target.wh++;
+        if (item.delivery_date) target.delivery++;
+        if (item.install_date) target.install++;
+        if (item.integration_date) target.integration++;
+        if (item.onair_date) target.onair++;
+      }
+    });
+    return Object.values(vkdMap);
   }, [data, tvt3Only, tvt3SiteIds]);
 
   // District Breakdown for Executive Dashboard (gộp Xuân Thành vào Xuân Lộc)
@@ -276,8 +375,76 @@ export default function Sran5gProject() {
   const handleDistrictJump = (districtName, statusKey = 'ALL') => {
     setSelectedDistrict(districtName);
     setSelectedStatus(statusKey);
+    setSelectedVkd('ALL');
     setTvt3Only(true);
     setActiveViewTab('table');
+  };
+
+  const handleVkdJump = (vkdShort, statusKey = 'ALL') => {
+    setSelectedVkd(vkdShort);
+    setSelectedStatus(statusKey);
+    setSelectedDistrict('ALL');
+    setTvt3Only(true);
+    setActiveViewTab('table');
+  };
+
+  // Export Filtered Dataset to Excel
+  const exportFilteredToExcel = () => {
+    if (!filteredData || filteredData.length === 0) {
+      alert("Không có dữ liệu trạm nào trong danh sách đang lọc để xuất Excel!");
+      return;
+    }
+
+    const excelData = filteredData.map((item, index) => ({
+      'STT': index + 1,
+      'Vùng Kinh Doanh': getVungKinhDoanh(item),
+      'Vùng KD': getVungKinhDoanhShort(item),
+      'Mã trạm mới (Site ID)': item.site_id || '',
+      'Mã trạm cũ (Old Site ID)': item.site_id_old || '',
+      'Địa bàn Huyện': item.district || '',
+      'Phân loại (Unique ID)': item.unique_id || '',
+      'Scope 3G/4G': item.scope_3g4g || '',
+      'Scope 5G': item.scope_5g || '',
+      'Cấu hình 3G/4G': item.config_3g4g || '',
+      'Cấu hình 5G': item.config_5g || '',
+      'Giải pháp Thiết bị (Equip Solution)': item.equip_solution || '',
+      'Giải pháp Anten (Antenna Solution)': item.antenna_solution || '',
+      'Giải pháp Nguồn (Power Solution)': item.power_solution || '',
+      'Target Tháng 8': item.monthly_target_im || '',
+      'Ngày Khảo sát TSSR': item.survey_date || '',
+      'Ngày Nộp TSSR': item.tssr_sub_date || '',
+      'Ngày Duyệt IE': item.ie_app_date || '',
+      'Ngày Duyệt RF': item.rf_app_date || '',
+      'Ngày Duyệt RF Design': item.rf_design_date || '',
+      'Ngày Script Ready': item.script_date || '',
+      'Ngày Nhận Kho (WH Pickup)': item.wh_pickup_date || '',
+      'Ngày Giao Hàng (Delivery)': item.delivery_date || '',
+      'Ngày Lắp Đặt (Installation)': item.install_date || '',
+      'Ngày Tích Hợp (Integration)': item.integration_date || '',
+      'Ngày Phát Sóng (Onair)': item.onair_date || '',
+      'Vấn đề / Vướng mắc (Issue Type)': item.issue_type || '',
+      'Ghi chú': item.remarks || ''
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+    
+    // Auto column widths
+    const colWidths = Object.keys(excelData[0] || {}).map(key => ({
+      wch: Math.max(key.length + 3, 16)
+    }));
+    worksheet['!cols'] = colWidths;
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'DS_Tram_SRAN_5G');
+
+    const timestamp = new Date().toISOString().slice(0, 10);
+    const scopeLabel = selectedScope !== 'ALL' ? `_${selectedScope}` : '';
+    const statusLabel = selectedStatus !== 'ALL' ? `_${selectedStatus}` : '';
+    const districtLabel = selectedDistrict !== 'ALL' ? `_${selectedDistrict}` : '';
+    const modeLabel = tvt3Only ? 'TVT3' : 'ToanTinh';
+    
+    const fileName = `SRAN_5G_${modeLabel}${districtLabel}${scopeLabel}${statusLabel}_${timestamp}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
   };
 
   // Excel File Upload Handler
@@ -315,10 +482,10 @@ export default function Sran5gProject() {
             if (h) rowObj[h] = r[idx];
           });
 
-          const site_id = rowObj['Site_ID (New)'] ? String(rowObj['Site_ID (New)']).trim() : null;
-          if (!site_id) return;
-
+          const site_id_new = rowObj['Site_ID (New)'] ? String(rowObj['Site_ID (New)']).trim() : null;
           const site_id_old = rowObj['Radio_ID'] || rowObj['Baseband_ID'] || rowObj['New_SiteID'];
+          const site_id = (site_id_new && site_id_new !== '0') ? site_id_new : (site_id_old ? String(site_id_old).trim() : null);
+          if (!site_id) return;
           
           newRecords.push({
             site_id: site_id,
@@ -359,7 +526,25 @@ export default function Sran5gProject() {
             console.error('Upsert error:', error);
             setUploadMessage(`⚠️ Đã trích xuất ${newRecords.length} trạm (Lỗi CSDL: ${error.message})`);
           } else {
-            setUploadMessage(`🎉 Đã cập nhật thành công ${newRecords.length} trạm vào hệ thống!`);
+            const onairCount = newRecords.filter(r => r.onair_date).length;
+            const integrationCount = newRecords.filter(r => r.integration_date).length;
+            const installCount = newRecords.filter(r => r.install_date).length;
+            const deliveryCount = newRecords.filter(r => r.delivery_date).length;
+            const surveyCount = newRecords.filter(r => r.survey_date).length;
+            const augustCount = newRecords.filter(r => r.monthly_target_im && String(r.monthly_target_im).toLowerCase().includes('aug')).length;
+
+            setImportReport({
+              total: newRecords.length,
+              onair: onairCount,
+              integration: integrationCount,
+              install: installCount,
+              delivery: deliveryCount,
+              survey: surveyCount,
+              augustTarget: augustCount,
+              timestamp: new Date().toLocaleTimeString('vi-VN')
+            });
+
+            setUploadMessage(`🎉 Đã cập nhật thành công ${newRecords.length} trạm vào hệ thống! Chi tiết báo cáo tiến độ bên dưới.`);
             fetchSranData();
           }
         }
@@ -417,6 +602,52 @@ export default function Sran5gProject() {
           <div className="mt-4 p-3 rounded-xl bg-slate-800/80 border border-blue-500/30 text-sm text-blue-200 flex items-center justify-between">
             <span>{uploadMessage}</span>
             <button onClick={() => setUploadMessage(null)} className="text-slate-400 hover:text-white text-xs">Đóng</button>
+          </div>
+        )}
+
+        {/* 📊 Báo Cáo Cập Nhật Tiến Độ Chi Tiết */}
+        {importReport && (
+          <div className="mt-4 bg-slate-900/95 border border-emerald-500/40 rounded-xl p-4 text-slate-200 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="flex items-center justify-between border-b border-slate-700/60 pb-2 mb-3">
+              <div className="flex items-center gap-2">
+                <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-400 animate-ping" />
+                <span className="text-emerald-300 font-bold text-xs md:text-sm tracking-wide">
+                  📊 BÁO CÁO CẬP NHẬT TIẾN ĐỘ THỜI GIAN THỰC ({importReport.timestamp})
+                </span>
+              </div>
+              <button 
+                onClick={() => setImportReport(null)} 
+                className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white text-xs transition-colors"
+              >
+                ✕ Đóng báo cáo
+              </button>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5 text-center">
+              <div className="bg-slate-800/90 p-2.5 rounded-lg border border-slate-700">
+                <div className="text-[11px] text-slate-400 font-semibold">Tổng Trạm Import</div>
+                <div className="text-lg font-extrabold text-white">{importReport.total}</div>
+              </div>
+              <div className="bg-emerald-950/60 p-2.5 rounded-lg border border-emerald-500/40">
+                <div className="text-[11px] text-emerald-400 font-semibold">🚀 Đã Onair</div>
+                <div className="text-lg font-extrabold text-emerald-300">{importReport.onair}</div>
+              </div>
+              <div className="bg-cyan-950/60 p-2.5 rounded-lg border border-cyan-500/40">
+                <div className="text-[11px] text-cyan-400 font-semibold">⚡ Tích Hợp (Integ)</div>
+                <div className="text-lg font-extrabold text-cyan-300">{importReport.integration}</div>
+              </div>
+              <div className="bg-blue-950/60 p-2.5 rounded-lg border border-blue-500/40">
+                <div className="text-[11px] text-blue-400 font-semibold">🛠️ Đã Lắp Đặt</div>
+                <div className="text-lg font-extrabold text-blue-300">{importReport.install}</div>
+              </div>
+              <div className="bg-purple-950/60 p-2.5 rounded-lg border border-purple-500/40">
+                <div className="text-[11px] text-purple-400 font-semibold">📦 Đã Giao Hàng</div>
+                <div className="text-lg font-extrabold text-purple-300">{importReport.delivery}</div>
+              </div>
+              <div className="bg-amber-950/60 p-2.5 rounded-lg border border-amber-500/40">
+                <div className="text-[11px] text-amber-400 font-semibold">🎯 Target Tháng 8</div>
+                <div className="text-lg font-extrabold text-amber-300">{importReport.augustTarget}</div>
+              </div>
+            </div>
           </div>
         )}
 
@@ -502,13 +733,24 @@ export default function Sran5gProject() {
           </button>
         </div>
 
-        <button
-          onClick={copyQuickReport}
-          className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-2 transition-all shadow-sm active:scale-95 shrink-0"
-        >
-          <CheckCircle2 className="h-4 w-4" />
-          {copiedReport ? '✓ Đã Sao Chép Báo Cáo Zalo/Viber!' : '📋 Copy Báo Cáo Nhanh Zalo/Viber'}
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={exportFilteredToExcel}
+            className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-2 transition-all shadow-sm active:scale-95 hover:scale-105"
+            title="Xuất file Excel cho danh sách đang lọc"
+          >
+            <FileSpreadsheet className="h-4 w-4" />
+            <span>Xuất Excel ({filteredData.length})</span>
+          </button>
+
+          <button
+            onClick={copyQuickReport}
+            className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs flex items-center gap-2 transition-all shadow-sm active:scale-95"
+          >
+            <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+            {copiedReport ? '✓ Đã Sao Chép Báo Cáo!' : '📋 Copy Báo Cáo Nhanh'}
+          </button>
+        </div>
       </div>
 
       {activeViewTab === 'dashboard' ? (
@@ -681,6 +923,143 @@ export default function Sran5gProject() {
             </div>
           </div>
 
+          {/* 🏢 VKD Milestone Matrix & Progress Cards */}
+          <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 p-5 rounded-2xl text-white shadow-xl border border-slate-700/60 space-y-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-white/10 pb-3">
+              <div>
+                <h3 className="text-base font-extrabold text-white flex items-center gap-2">
+                  <span className="text-xl">🏢</span>
+                  <span>TIẾN ĐỘ THI CÔNG DỰ ÁN SRAN 5G PHÂN THEO VÙNG KINH DOANH (TVT3)</span>
+                </h3>
+                <p className="text-xs text-slate-300 mt-0.5">
+                  Quy hoạch phân khu: VKD 5 (DNCM, DNXL, DNLT) | VKD 4 (DNTN, DNLK) | VKD 3 (Các khu vực còn lại)
+                </p>
+              </div>
+              <span className="text-[11px] bg-blue-500/20 text-blue-300 px-3 py-1 rounded-full border border-blue-400/30 font-semibold shrink-0">
+                Lọc & Sắp xếp theo Vùng KD
+              </span>
+            </div>
+
+            {/* 3 VKD Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {vkdBreakdown.map((vkdItem) => {
+                const isVkd5 = vkdItem.vkd === 'VKD 5';
+                const isVkd4 = vkdItem.vkd === 'VKD 4';
+                const colorClasses = isVkd5 
+                  ? 'from-amber-950/60 to-slate-900 border-amber-500/40 hover:border-amber-400' 
+                  : isVkd4 
+                  ? 'from-blue-950/60 to-slate-900 border-blue-500/40 hover:border-blue-400' 
+                  : 'from-purple-950/60 to-slate-900 border-purple-500/40 hover:border-purple-400';
+
+                const badgeBg = isVkd5 ? 'bg-amber-500 text-slate-950' : isVkd4 ? 'bg-blue-500 text-white' : 'bg-purple-500 text-white';
+
+                return (
+                  <div
+                    key={vkdItem.vkd}
+                    onClick={() => handleVkdJump(vkdItem.vkd, 'ALL')}
+                    className={`bg-gradient-to-b ${colorClasses} p-4 rounded-xl border shadow-lg cursor-pointer transition-all hover:scale-[1.02] group`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-black uppercase tracking-wider ${badgeBg}`}>
+                        {vkdItem.vkd}
+                      </span>
+                      <span className="text-2xl font-black text-white">{vkdItem.total} <span className="text-xs font-normal text-slate-400">trạm</span></span>
+                    </div>
+
+                    <div className="text-xs font-semibold text-slate-300 mb-3 truncate" title={vkdItem.desc}>
+                      {vkdItem.desc}
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2 text-center text-xs bg-black/30 p-2 rounded-lg border border-white/10 mb-3">
+                      <div>
+                        <div className="text-[10px] text-purple-300 font-medium">Target T8</div>
+                        <div className="font-extrabold text-purple-200 mt-0.5">{vkdItem.augTarget}</div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] text-emerald-300 font-medium">Lắp 5G</div>
+                        <div className="font-extrabold text-emerald-200 mt-0.5">{vkdItem.add5g}</div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] text-cyan-300 font-medium">Onair</div>
+                        <div className="font-extrabold text-cyan-200 mt-0.5">{vkdItem.onair}</div>
+                      </div>
+                    </div>
+
+                    {/* Progress bar */}
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-[11px] font-semibold text-slate-300">
+                        <span>Tiến độ Khảo sát:</span>
+                        <span className="text-emerald-400 font-bold">
+                          {vkdItem.total > 0 ? ((vkdItem.survey / vkdItem.total) * 100).toFixed(0) : 0}% ({vkdItem.survey}/{vkdItem.total})
+                        </span>
+                      </div>
+                      <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden border border-white/10">
+                        <div 
+                          className="bg-gradient-to-r from-emerald-500 to-cyan-400 h-full rounded-full transition-all duration-500" 
+                          style={{ width: `${vkdItem.total > 0 ? ((vkdItem.survey / vkdItem.total) * 100) : 0}%` }} 
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mt-3 text-right text-[11px] font-bold text-blue-400 group-hover:text-blue-300 flex items-center justify-end gap-1">
+                      <span>Xem chi tiết danh sách {vkdItem.vkd}</span> &rarr;
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* VKD Side-by-Side Breakdown Table */}
+            <div className="bg-slate-900/90 rounded-xl border border-white/10 p-3 overflow-x-auto">
+              <table className="w-full text-left text-xs text-slate-200">
+                <thead className="bg-slate-800 text-slate-400 font-bold uppercase text-[11px] border-b border-slate-700">
+                  <tr>
+                    <th className="py-2 px-3">Vùng Kinh Doanh</th>
+                    <th className="py-2 px-3 text-center">Tổng Trạm</th>
+                    <th className="py-2 px-3 text-center">Target T8</th>
+                    <th className="py-2 px-3 text-center">Khảo Sát</th>
+                    <th className="py-2 px-3 text-center">Duyệt TSSR</th>
+                    <th className="py-2 px-3 text-center">RF Design</th>
+                    <th className="py-2 px-3 text-center">Nhận Kho</th>
+                    <th className="py-2 px-3 text-center">Lắp Đặt</th>
+                    <th className="py-2 px-3 text-center text-emerald-400">Onair</th>
+                    <th className="py-2 px-3 text-right">Tỷ lệ Onair</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800 font-medium">
+                  {vkdBreakdown.map(v => (
+                    <tr key={v.vkd} className="hover:bg-slate-800/60 transition-colors">
+                      <td 
+                        onClick={() => handleVkdJump(v.vkd, 'ALL')} 
+                        className="py-2.5 px-3 font-bold text-white cursor-pointer hover:text-blue-400"
+                      >
+                        <span className={`px-2 py-0.5 rounded text-[11px] font-black mr-2 ${
+                          v.vkd === 'VKD 5' ? 'bg-amber-500/30 text-amber-300 border border-amber-500/40' :
+                          v.vkd === 'VKD 4' ? 'bg-blue-500/30 text-blue-300 border border-blue-500/40' :
+                          'bg-purple-500/30 text-purple-300 border border-purple-500/40'
+                        }`}>
+                          {v.vkd}
+                        </span>
+                        <span>{v.desc}</span>
+                      </td>
+                      <td onClick={() => handleVkdJump(v.vkd, 'ALL')} className="py-2.5 px-3 text-center font-bold text-blue-300 cursor-pointer hover:bg-slate-800">{v.total}</td>
+                      <td onClick={() => handleVkdJump(v.vkd, 'TARGET_AUG')} className="py-2.5 px-3 text-center font-bold text-purple-300 cursor-pointer hover:bg-slate-800">{v.augTarget}</td>
+                      <td onClick={() => handleVkdJump(v.vkd, 'SURVEY_DONE')} className="py-2.5 px-3 text-center text-slate-300 cursor-pointer hover:bg-slate-800">{v.survey}</td>
+                      <td onClick={() => handleVkdJump(v.vkd, 'TSSR_APPROVED')} className="py-2.5 px-3 text-center text-indigo-300 cursor-pointer hover:bg-slate-800">{v.tssr}</td>
+                      <td onClick={() => handleVkdJump(v.vkd, 'RF_DESIGN_APPROVED')} className="py-2.5 px-3 text-center text-amber-300 cursor-pointer hover:bg-slate-800">{v.rfDesign}</td>
+                      <td onClick={() => handleVkdJump(v.vkd, 'WH_PICKUP')} className="py-2.5 px-3 text-center text-pink-300 cursor-pointer hover:bg-slate-800">{v.wh}</td>
+                      <td onClick={() => handleVkdJump(v.vkd, 'INSTALL')} className="py-2.5 px-3 text-center text-blue-300 cursor-pointer hover:bg-slate-800">{v.install}</td>
+                      <td onClick={() => handleVkdJump(v.vkd, 'ONAIR')} className="py-2.5 px-3 text-center font-extrabold text-emerald-400 cursor-pointer hover:bg-slate-800">{v.onair}</td>
+                      <td className="py-2.5 px-3 text-right font-extrabold text-emerald-300">
+                        {v.total > 0 ? ((v.onair / v.total) * 100).toFixed(1) : 0}%
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
           {/* District Milestone Matrix */}
           <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center justify-between">
@@ -749,40 +1128,49 @@ export default function Sran5gProject() {
               </div>
             </div>
 
-            <div className="bg-white p-3.5 rounded-xl border border-blue-200 bg-blue-50/20 shadow-sm">
-              <div className="flex items-center justify-between text-blue-700 text-xs font-semibold mb-1">
-                <span>SWAP 4G ONLY</span>
-                <Radio className="h-4 w-4 text-blue-600" />
-              </div>
-              <div className="text-2xl font-black text-blue-700">{stats.swap4gOnly}</div>
-              <div className="text-[11px] text-blue-600 mt-1">Tháo dỡ 4G Only ({stats.activeTotal > 0 ? ((stats.swap4gOnly / stats.activeTotal) * 100).toFixed(1) : 0}%)</div>
-            </div>
-
-            <div className="bg-white p-3.5 rounded-xl border border-cyan-200 bg-cyan-50/20 shadow-sm">
-              <div className="flex items-center justify-between text-cyan-700 text-xs font-semibold mb-1">
-                <span>SWAP CẢ 3G & 4G</span>
-                <Server className="h-4 w-4 text-cyan-600" />
-              </div>
-              <div className="text-2xl font-black text-cyan-700">{stats.swapBoth3g4g}</div>
-              <div className="text-[11px] text-cyan-600 mt-1">Swap SRAN cả 3G/4G ({stats.activeTotal > 0 ? ((stats.swapBoth3g4g / stats.activeTotal) * 100).toFixed(1) : 0}%)</div>
-            </div>
-
             <div className="bg-white p-3.5 rounded-xl border border-emerald-200 bg-emerald-50/20 shadow-sm">
-              <div className="flex items-center justify-between text-emerald-700 text-xs font-semibold mb-1">
-                <span>LẮP MỚI 5G</span>
+              <div className="flex items-center justify-between text-emerald-700 text-xs font-bold mb-1">
+                <span>⚡ 1. PHÁT SÓNG 5G</span>
                 <Zap className="h-4 w-4 text-emerald-600" />
               </div>
               <div className="text-2xl font-black text-emerald-700">{stats.add5g}</div>
-              <div className="text-[11px] text-emerald-600 mt-1">Add 5G NR26 ({stats.activeTotal > 0 ? ((stats.add5g / stats.activeTotal) * 100).toFixed(1) : 0}%)</div>
+              <div className="text-[11px] text-emerald-600 mt-1 font-medium">Add 5G NR26 / Swap 5G ({stats.activeTotal > 0 ? ((stats.add5g / stats.activeTotal) * 100).toFixed(1) : 0}%)</div>
             </div>
 
-            <div className="bg-white p-3.5 rounded-xl border border-purple-200 bg-purple-50/20 shadow-sm">
-              <div className="flex items-center justify-between text-purple-700 text-xs font-semibold mb-1">
-                <span>TARGET THÁNG 8</span>
-                <Calendar className="h-4 w-4 text-purple-600" />
+            <div className="bg-white p-3.5 rounded-xl border border-cyan-200 bg-cyan-50/20 shadow-sm">
+              <div className="flex items-center justify-between text-cyan-700 text-xs font-bold mb-1">
+                <span>🔄 2. SWAP DUALBAND (3G/4G)</span>
+                <Server className="h-4 w-4 text-cyan-600" />
+              </div>
+              <div className="text-2xl font-black text-cyan-700">{stats.swapBoth3g4g}</div>
+              <div className="text-[11px] text-cyan-600 mt-1 font-medium">Swap SRAN cả 3G & 4G ({stats.activeTotal > 0 ? ((stats.swapBoth3g4g / stats.activeTotal) * 100).toFixed(1) : 0}%)</div>
+            </div>
+
+            <div className="bg-white p-3.5 rounded-xl border border-blue-200 bg-blue-50/20 shadow-sm">
+              <div className="flex items-center justify-between text-blue-700 text-xs font-bold mb-1">
+                <span>📱 3. SWAP SINGLEBAND (4G ONLY)</span>
+                <Radio className="h-4 w-4 text-blue-600" />
+              </div>
+              <div className="text-2xl font-black text-blue-700">{stats.swap4gOnly}</div>
+              <div className="text-[11px] text-blue-600 mt-1 font-medium">Chỉ Swap 4G Singleband ({stats.activeTotal > 0 ? ((stats.swap4gOnly / stats.activeTotal) * 100).toFixed(1) : 0}%)</div>
+            </div>
+
+            <div 
+              onClick={() => {
+                setSelectedStatus('TARGET_AUG');
+                setActiveViewTab('table');
+              }}
+              className="bg-white p-3.5 rounded-xl border border-purple-200 bg-purple-50/30 shadow-sm cursor-pointer hover:border-purple-500 hover:shadow-md transition-all active:scale-95 group"
+              title="Click để xem danh sách trạm Target Tháng 8"
+            >
+              <div className="flex items-center justify-between text-purple-700 text-xs font-bold mb-1">
+                <span>🎯 TARGET THÁNG 8</span>
+                <Calendar className="h-4 w-4 text-purple-600 group-hover:scale-110 transition-transform" />
               </div>
               <div className="text-2xl font-black text-purple-700">{stats.augTarget}</div>
-              <div className="text-[11px] text-purple-600 mt-1">Mục tiêu T8 (Col AY)</div>
+              <div className="text-[11px] text-purple-600 mt-1 font-semibold flex items-center gap-1">
+                <span>Xem {stats.augTarget} trạm T8 ➔</span>
+              </div>
             </div>
 
             <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
@@ -813,7 +1201,7 @@ export default function Sran5gProject() {
                 <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
                 <input
                   type="text"
-                  placeholder="Nhập mã trạm cũ/mới (DNIXDO00, DNCM02), huyện, cấu hình, thiết bị..."
+                  placeholder="Nhập mã trạm cũ/mới (DNIXDO00, DNCM02), VKD, huyện, cấu hình, thiết bị..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all font-medium text-slate-800"
@@ -821,6 +1209,17 @@ export default function Sran5gProject() {
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
+                <select
+                  value={selectedVkd}
+                  onChange={(e) => setSelectedVkd(e.target.value)}
+                  className="px-3 py-2 text-xs font-bold bg-amber-50/80 border border-amber-200 rounded-xl text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-sm"
+                >
+                  <option value="ALL">🏢 Tất cả Vùng Kinh Doanh ({stats.activeTotal} trạm)</option>
+                  <option value="VKD 5">🏢 VKD 5 (DNCM, DNXL, DNLT)</option>
+                  <option value="VKD 4">🏢 VKD 4 (DNTN, DNLK)</option>
+                  <option value="VKD 3">🏢 VKD 3 (Khu vực còn lại)</option>
+                </select>
+
                 <select
                   value={selectedDistrict}
                   onChange={(e) => setSelectedDistrict(e.target.value)}
@@ -835,15 +1234,12 @@ export default function Sran5gProject() {
                 <select
                   value={selectedScope}
                   onChange={(e) => setSelectedScope(e.target.value)}
-                  className="px-3 py-2 text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="px-3 py-2 text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
                 >
-                  <option value="ALL">⚡ Tất cả Phân loại Scope</option>
-                  <option value="SWAP_4G_ONLY">🔄 Swap 4G Only ({stats.swap4gOnly} trạm)</option>
-                  <option value="SWAP_3G4G_BOTH">🔄 Swap Cả 3G & 4G ({stats.swapBoth3g4g} trạm)</option>
-                  <option value="ADD_5G">⚡ Swap SRAN + Add 5G ({stats.add5g} trạm)</option>
-                  {scopes.map(s => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
+                  <option value="ALL">⚡ Tất cả Phân loại Scope ({stats.activeTotal} trạm)</option>
+                  <option value="ADD_5G">⚡ 1. Phát sóng 5G / Lắp 5G ({stats.add5g} trạm)</option>
+                  <option value="SWAP_3G4G_BOTH">🔄 2. Swap 3G/4G Dualband ({stats.swapBoth3g4g} trạm)</option>
+                  <option value="SWAP_4G_ONLY">📱 3. Swap 4G Only Singleband ({stats.swap4gOnly} trạm)</option>
                 </select>
 
                 <select
@@ -862,18 +1258,115 @@ export default function Sran5gProject() {
                   <option value="INTEGRATION">⚙️ Đã Tích Hợp (Integration)</option>
                   <option value="ONAIR">🚀 Đã Onair (Phát Sóng)</option>
                 </select>
+
+                <button
+                  onClick={exportFilteredToExcel}
+                  className="px-3.5 py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl flex items-center gap-1.5 shadow-sm transition-all hover:scale-105 active:scale-95 shrink-0"
+                  title="Xuất file Excel cho danh sách đang lọc"
+                >
+                  <FileSpreadsheet className="h-4 w-4" />
+                  <span>Xuất Excel ({filteredData.length})</span>
+                </button>
               </div>
             </div>
           </div>
         </>
       )}
 
+      {/* Live Filter Progress Summary Banner (Target Tháng 8 Progress Tracker) */}
+      {filteredStats && (selectedStatus !== 'ALL' || selectedDistrict !== 'ALL' || selectedScope !== 'ALL' || searchTerm) && (
+        <div className={`p-4 rounded-2xl text-white shadow-lg space-y-3 transition-all ${
+          selectedStatus === 'TARGET_AUG'
+            ? 'bg-gradient-to-r from-purple-950 via-indigo-900 to-slate-900 border-2 border-purple-500/50 ring-4 ring-purple-500/20'
+            : 'bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 border border-slate-700'
+        }`}>
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-2.5">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-purple-400 animate-bounce" />
+              <span className="font-black text-sm tracking-wide text-white">
+                {selectedStatus === 'TARGET_AUG' 
+                  ? `🎯 THỐNG KÊ TIẾN ĐỘ THI CÔNG ${filteredStats.total} TRẠM TARGET THÁNG 8`
+                  : `📊 THỐNG KÊ TIẾN ĐỘ THI CÔNG DANH SÁCH ĐANG LỌC (${filteredStats.total} TRẠM)`}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] bg-purple-500/30 px-3 py-1 rounded-full text-purple-200 border border-purple-400/30 font-bold">
+                {selectedStatus === 'TARGET_AUG' ? 'Kế hoạch hoàn thành T8/2026' : 'Tự động tính theo bộ lọc'}
+              </span>
+              <button
+                onClick={exportFilteredToExcel}
+                className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg shadow-sm flex items-center gap-1.5 transition-all hover:scale-105 active:scale-95"
+              >
+                <FileSpreadsheet className="h-3.5 w-3.5" />
+                <span>Xuất Báo Cáo Excel ({filteredStats.total})</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2 text-center text-xs">
+            <div className="bg-white/10 p-2.5 rounded-xl border border-white/10 hover:bg-white/15 transition-all">
+              <div className="text-slate-300 text-[10px] font-semibold">1. Khảo Sát TSSR</div>
+              <div className="font-black text-white text-base mt-0.5">{filteredStats.survey} / {filteredStats.total}</div>
+              <div className="text-[10px] text-emerald-400 font-extrabold mt-0.5">{((filteredStats.survey / filteredStats.total) * 100).toFixed(0)}% hoàn thành</div>
+            </div>
+
+            <div className="bg-white/10 p-2.5 rounded-xl border border-white/10 hover:bg-white/15 transition-all">
+              <div className="text-slate-300 text-[10px] font-semibold">2. Duyệt TSSR</div>
+              <div className="font-black text-white text-base mt-0.5">{filteredStats.tssr} / {filteredStats.total}</div>
+              <div className="text-[10px] text-indigo-400 font-extrabold mt-0.5">{((filteredStats.tssr / filteredStats.total) * 100).toFixed(0)}% hoàn thành</div>
+            </div>
+
+            <div className="bg-white/10 p-2.5 rounded-xl border border-white/10 hover:bg-white/15 transition-all">
+              <div className="text-slate-300 text-[10px] font-semibold">3. Duyệt RF Design</div>
+              <div className="font-black text-white text-base mt-0.5">{filteredStats.rf} / {filteredStats.total}</div>
+              <div className="text-[10px] text-amber-400 font-extrabold mt-0.5">{((filteredStats.rf / filteredStats.total) * 100).toFixed(0)}% hoàn thành</div>
+            </div>
+
+            <div className="bg-white/10 p-2.5 rounded-xl border border-white/10 hover:bg-white/15 transition-all">
+              <div className="text-slate-300 text-[10px] font-semibold">4. Giao Hàng (WH)</div>
+              <div className="font-black text-white text-base mt-0.5">{filteredStats.delivery} / {filteredStats.total}</div>
+              <div className="text-[10px] text-cyan-400 font-extrabold mt-0.5">{((filteredStats.delivery / filteredStats.total) * 100).toFixed(0)}% hoàn thành</div>
+            </div>
+
+            <div className="bg-white/10 p-2.5 rounded-xl border border-white/10 hover:bg-white/15 transition-all">
+              <div className="text-slate-300 text-[10px] font-semibold">5. Lắp Đặt (Install)</div>
+              <div className="font-black text-white text-base mt-0.5">{filteredStats.install} / {filteredStats.total}</div>
+              <div className="text-[10px] text-blue-400 font-extrabold mt-0.5">{((filteredStats.install / filteredStats.total) * 100).toFixed(0)}% hoàn thành</div>
+            </div>
+
+            <div className="bg-white/10 p-2.5 rounded-xl border border-white/10 hover:bg-white/15 transition-all">
+              <div className="text-slate-300 text-[10px] font-semibold">6. Tích Hợp</div>
+              <div className="font-black text-white text-base mt-0.5">{filteredStats.integration} / {filteredStats.total}</div>
+              <div className="text-[10px] text-teal-400 font-extrabold mt-0.5">{((filteredStats.integration / filteredStats.total) * 100).toFixed(0)}% hoàn thành</div>
+            </div>
+
+            <div className="bg-emerald-500/20 p-2.5 rounded-xl border border-emerald-400/40 col-span-2 sm:col-span-1 hover:bg-emerald-500/30 transition-all">
+              <div className="text-emerald-200 text-[10px] font-bold">7. Onair (Phát Sóng)</div>
+              <div className="font-black text-emerald-300 text-base mt-0.5">{filteredStats.onair} / {filteredStats.total}</div>
+              <div className="text-[10px] text-emerald-400 font-extrabold mt-0.5">{((filteredStats.onair / filteredStats.total) * 100).toFixed(0)}% phát sóng</div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Data Table */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-          <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-            Danh sách Trạm ({filteredData.length} kết quả)
-          </span>
+        <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+              Danh sách Trạm ({filteredData.length} kết quả)
+            </span>
+            {filteredData.length > 0 && (
+              <button
+                onClick={exportFilteredToExcel}
+                className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm flex items-center gap-1.5 transition-all hover:scale-105 active:scale-95"
+                title="Tải về file Excel chứa danh sách đang lọc"
+              >
+                <FileSpreadsheet className="h-3.5 w-3.5" />
+                <span>Xuất Excel</span>
+              </button>
+            )}
+          </div>
           <span className="text-xs text-slate-500">
             Hiển thị tra cứu nhanh thông số kỹ thuật & tiến độ
           </span>
@@ -895,6 +1388,7 @@ export default function Sran5gProject() {
               <thead>
                 <tr className="bg-slate-100/70 border-b border-slate-200 text-[11px] font-bold text-slate-600 uppercase">
                   <th className="py-3 px-4">Mã Trạm Mới / Cũ</th>
+                  <th className="py-3 px-4">Vùng KD</th>
                   <th className="py-3 px-4">Địa Bàn Huyện</th>
                   <th className="py-3 px-4">Phân Loại Scope</th>
                   <th className="py-3 px-4">Cấu Hình 3G/4G & 5G</th>
@@ -915,6 +1409,18 @@ export default function Sran5gProject() {
                           </span>
                         )}
                       </div>
+                    </td>
+
+                    <td className="py-3 px-4">
+                      <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-black border ${
+                        getVungKinhDoanhShort(item) === 'VKD 5'
+                          ? 'bg-amber-100 text-amber-900 border-amber-300'
+                          : getVungKinhDoanhShort(item) === 'VKD 4'
+                          ? 'bg-blue-100 text-blue-900 border-blue-300'
+                          : 'bg-purple-100 text-purple-900 border-purple-300'
+                      }`} title={getVungKinhDoanh(item)}>
+                        {getVungKinhDoanhShort(item)}
+                      </span>
                     </td>
 
                     <td className="py-3 px-4">
