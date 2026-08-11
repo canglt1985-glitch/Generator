@@ -460,6 +460,108 @@ export default function Generator() {
     };
   }, [filteredInvoices]);
 
+  // Overall Group Comparison Statistics (for Option 3 Side-by-Side Interactive Cards)
+  const groupComparisonStats = useMemo(() => {
+    if (!isFromAug2026) return null;
+
+    let g1_runs = 0, g1_hours = 0, g1_consumed_dau = 0, g1_consumed_xang = 0;
+    let g2_runs = 0, g2_hours = 0, g2_consumed_dau = 0, g2_consumed_xang = 0;
+
+    genLogs.forEach(log => {
+      const stationObj = stations.find(s => s.site_id === log.site_id);
+      const siteIdOld = stationObj?.site_id_old || '';
+      const isG1 = isSpecial67Site(log.site_id, siteIdOld, stations);
+
+      const runtime = parseFloat(log.run_details?.thoi_gian_hoat_dong) || 0;
+      const fuel = parseFloat(log.run_details?.nhien_lieu_tieu_hao) || 0;
+      const fuelTypeUpper = (log.run_details?.nhien_lieu_loai || log.run_details?.nhien_lieu || 'DẦU').toUpperCase();
+      const isXang = fuelTypeUpper.includes('XĂNG') || fuelTypeUpper.includes('XANG');
+
+      if (isG1) {
+        g1_runs++;
+        g1_hours += runtime;
+        if (isXang) g1_consumed_xang += fuel;
+        else g1_consumed_dau += fuel;
+      } else {
+        g2_runs++;
+        g2_hours += runtime;
+        if (isXang) g2_consumed_xang += fuel;
+        else g2_consumed_dau += fuel;
+      }
+    });
+
+    let g1_inv_count = 0, g1_inv_dau = 0, g1_inv_xang = 0, g1_inv_amount = 0;
+    let g2_inv_count = 0, g2_inv_dau = 0, g2_inv_xang = 0, g2_inv_amount = 0;
+
+    invoices.forEach(inv => {
+      const mst = (inv.buyer_mst || '').trim();
+      const bname = (inv.buyer_name || '').toUpperCase();
+      const isG1 = mst.includes('0100686209-129') || bname.includes('ĐỒNG NAI') || bname.includes('DONG NAI');
+      const total = parseFloat(inv.total_amount) || 0;
+
+      let itemsList = [];
+      if (inv.items) {
+        if (typeof inv.items === 'string') {
+          try { itemsList = JSON.parse(inv.items); } catch (e) { itemsList = []; }
+        } else if (Array.isArray(inv.items)) {
+          itemsList = inv.items;
+        }
+      }
+
+      let invDau = 0;
+      let invXang = 0;
+      if (Array.isArray(itemsList)) {
+        itemsList.forEach(item => {
+          const qty = parseFloat(item.sl || item.quantity) || 0;
+          const name = (item.ten || item.name || '').toLowerCase();
+          const isD = name.includes('dầu') || name.includes('dau') || name.includes('diesel') || name.includes('điêzen') || /\bdo\b/.test(name);
+          const isX = name.includes('xăng') || name.includes('xang') || name.includes('ron') || name.includes('e5') || name.includes('a95');
+          if (isD) invDau += qty;
+          else if (isX) invXang += qty;
+        });
+      }
+
+      if (isG1) {
+        g1_inv_count++;
+        g1_inv_amount += total;
+        g1_inv_dau += invDau;
+        g1_inv_xang += invXang;
+      } else {
+        g2_inv_count++;
+        g2_inv_amount += total;
+        g2_inv_dau += invDau;
+        g2_inv_xang += invXang;
+      }
+    });
+
+    return {
+      g1: {
+        runs: g1_runs,
+        hours: parseFloat(g1_hours.toFixed(1)),
+        consumedDau: parseFloat(g1_consumed_dau.toFixed(1)),
+        consumedXang: parseFloat(g1_consumed_xang.toFixed(1)),
+        invCount: g1_inv_count,
+        invDau: parseFloat(g1_inv_dau.toFixed(1)),
+        invXang: parseFloat(g1_inv_xang.toFixed(1)),
+        invAmount: g1_inv_amount,
+        diffDau: parseFloat((g1_inv_dau - g1_consumed_dau).toFixed(1)),
+        diffXang: parseFloat((g1_inv_xang - g1_consumed_xang).toFixed(1))
+      },
+      g2: {
+        runs: g2_runs,
+        hours: parseFloat(g2_hours.toFixed(1)),
+        consumedDau: parseFloat(g2_consumed_dau.toFixed(1)),
+        consumedXang: parseFloat(g2_consumed_xang.toFixed(1)),
+        invCount: g2_inv_count,
+        invDau: parseFloat(g2_inv_dau.toFixed(1)),
+        invXang: parseFloat(g2_inv_xang.toFixed(1)),
+        invAmount: g2_inv_amount,
+        diffDau: parseFloat((g2_inv_dau - g2_consumed_dau).toFixed(1)),
+        diffXang: parseFloat((g2_inv_xang - g2_consumed_xang).toFixed(1))
+      }
+    };
+  }, [genLogs, invoices, stations, isFromAug2026]);
+
   // Export to Excel
   const exportToExcel = () => {
     const formatLog = (log) => {
@@ -1426,39 +1528,201 @@ export default function Generator() {
         )}
       </div>
 
-      {/* Buyer / Invoice Unit Info Banner (Effective >= Aug 2026) */}
-      {isFromAug2026 && selectedGroupFilter !== 'all' && (
-        <div className={`p-3.5 rounded-xl border flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-sm ${
-          selectedGroupFilter === 'group1' 
-            ? 'bg-amber-50/80 border-amber-200 text-amber-950' 
-            : 'bg-blue-50/80 border-blue-200 text-blue-950'
-        }`}>
-          <div className="flex items-start gap-3">
-            <div className={`p-2 rounded-lg text-white font-bold text-xs shrink-0 ${
-              selectedGroupFilter === 'group1' ? 'bg-amber-600' : 'bg-blue-600'
-            }`}>
-              {selectedGroupFilter === 'group1' ? '📌 NHÓM 1' : '🏢 NHÓM 2'}
-            </div>
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="font-bold text-sm">
-                  {selectedGroupFilter === 'group1' ? GROUP_1_BUYER_INFO.companyName : GROUP_2_BUYER_INFO.companyName}
+      {/* OPTION 3: Interactive Side-by-Side Comparison Cards (Effective >= Aug 2026) */}
+      {isFromAug2026 && groupComparisonStats && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 mb-2">
+          {/* CARD 1: GROUP 1 (67 TRẠM ĐẶC THÙ) */}
+          <div 
+            onClick={() => setSelectedGroupFilter(selectedGroupFilter === 'group1' ? 'all' : 'group1')}
+            className={`p-3.5 rounded-xl border-2 transition-all cursor-pointer shadow-sm relative overflow-hidden ${
+              selectedGroupFilter === 'group1' 
+                ? 'bg-amber-50/95 border-amber-500 ring-2 ring-amber-400/50 shadow-md scale-[1.005]' 
+                : 'bg-white border-amber-200 hover:border-amber-400 hover:bg-amber-50/30'
+            }`}
+          >
+            <div className="flex items-center justify-between gap-2 mb-1.5">
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-0.5 bg-amber-600 text-white font-bold text-xs rounded-md shadow-sm">
+                  📌 NHÓM 1
                 </span>
-                <span className={`text-[11px] px-2 py-0.5 rounded-md font-semibold border ${
-                  selectedGroupFilter === 'group1' 
-                    ? 'bg-amber-100 border-amber-300 text-amber-800' 
-                    : 'bg-blue-100 border-blue-300 text-blue-800'
-                }`}>
-                  MST: {selectedGroupFilter === 'group1' ? GROUP_1_BUYER_INFO.taxCode : GROUP_2_BUYER_INFO.taxCode}
+                <span className="font-bold text-slate-800 text-sm">
+                  MobiFone Đồng Nai <span className="text-xs text-slate-500 font-normal">(67 Trạm)</span>
                 </span>
               </div>
-              <p className="text-xs text-slate-600 mt-0.5">
-                📍 Địa chỉ: {selectedGroupFilter === 'group1' ? GROUP_1_BUYER_INFO.address : GROUP_2_BUYER_INFO.address}
-              </p>
+              <span className="text-[11px] font-bold text-amber-900 bg-amber-100 px-2 py-0.5 rounded border border-amber-300">
+                MST: {GROUP_1_BUYER_INFO.taxCode}
+              </span>
+            </div>
+
+            <p className="text-[11px] text-slate-500 mb-2.5 truncate">
+              📍 {GROUP_1_BUYER_INFO.address}
+            </p>
+
+            {/* Stats Grid */}
+            <div className="grid grid-cols-2 gap-2 text-xs bg-amber-100/50 p-2.5 rounded-lg border border-amber-200/70 mb-2">
+              {/* Dầu */}
+              <div>
+                <div className="flex justify-between items-center font-semibold text-slate-700 mb-1">
+                  <span>🛢️ Tiêu hao Dầu:</span>
+                  <span className="font-bold text-amber-900">{groupComparisonStats.g1.consumedDau} L</span>
+                </div>
+                <div className="flex justify-between items-center text-slate-600 text-[11px] mb-1">
+                  <span>Hóa đơn Dầu:</span>
+                  <span className="font-bold text-blue-700">{groupComparisonStats.g1.invDau} L</span>
+                </div>
+                <div className="flex justify-between items-center font-bold text-[11px] pt-1 border-t border-amber-200">
+                  <span>Đối chiếu:</span>
+                  {groupComparisonStats.g1.consumedDau === 0 && groupComparisonStats.g1.invDau === 0 ? (
+                    <span className="text-slate-500 font-normal">⚪ Không nổ</span>
+                  ) : groupComparisonStats.g1.diffDau >= 0 ? (
+                    <span className="text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded border border-emerald-300">
+                      🟢 Thừa +{groupComparisonStats.g1.diffDau}L
+                    </span>
+                  ) : (
+                    <span className="text-red-700 bg-red-100 px-1.5 py-0.5 rounded border border-red-300">
+                      🔴 Thiếu {groupComparisonStats.g1.diffDau}L
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Xăng */}
+              <div className="border-l border-amber-200/80 pl-2.5">
+                <div className="flex justify-between items-center font-semibold text-slate-700 mb-1">
+                  <span>⛽ Tiêu hao Xăng:</span>
+                  <span className="font-bold text-amber-900">{groupComparisonStats.g1.consumedXang} L</span>
+                </div>
+                <div className="flex justify-between items-center text-slate-600 text-[11px] mb-1">
+                  <span>Hóa đơn Xăng:</span>
+                  <span className="font-bold text-blue-700">{groupComparisonStats.g1.invXang} L</span>
+                </div>
+                <div className="flex justify-between items-center font-bold text-[11px] pt-1 border-t border-amber-200">
+                  <span>Đối chiếu:</span>
+                  {groupComparisonStats.g1.consumedXang === 0 && groupComparisonStats.g1.invXang === 0 ? (
+                    <span className="text-slate-500 font-normal">⚪ Không nổ</span>
+                  ) : groupComparisonStats.g1.diffXang >= 0 ? (
+                    <span className="text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded border border-emerald-300">
+                      🟢 Thừa +{groupComparisonStats.g1.diffXang}L
+                    </span>
+                  ) : (
+                    <span className="text-red-700 bg-red-100 px-1.5 py-0.5 rounded border border-red-300">
+                      🔴 Thiếu {groupComparisonStats.g1.diffXang}L
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Footer Prompt */}
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-slate-500">
+                📊 {groupComparisonStats.g1.runs} lượt chạy ({groupComparisonStats.g1.hours}h) | {groupComparisonStats.g1.invCount} HĐ
+              </span>
+              <span className={`px-2 py-0.5 rounded text-[10px] font-bold transition-colors ${
+                selectedGroupFilter === 'group1' 
+                  ? 'bg-amber-600 text-white shadow-sm' 
+                  : 'bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200'
+              }`}>
+                {selectedGroupFilter === 'group1' ? '✓ Đang lọc Nhóm 1' : '👉 Click để lọc'}
+              </span>
             </div>
           </div>
-          <div className="text-right text-xs font-semibold text-slate-500 shrink-0">
-            Áp dụng từ Tháng 08/2026
+
+          {/* CARD 2: GROUP 2 (CÁC TRẠM CÒN LẠI) */}
+          <div 
+            onClick={() => setSelectedGroupFilter(selectedGroupFilter === 'group2' ? 'all' : 'group2')}
+            className={`p-3.5 rounded-xl border-2 transition-all cursor-pointer shadow-sm relative overflow-hidden ${
+              selectedGroupFilter === 'group2' 
+                ? 'bg-blue-50/95 border-blue-500 ring-2 ring-blue-400/50 shadow-md scale-[1.005]' 
+                : 'bg-white border-blue-200 hover:border-blue-400 hover:bg-blue-50/30'
+            }`}
+          >
+            <div className="flex items-center justify-between gap-2 mb-1.5">
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-0.5 bg-blue-600 text-white font-bold text-xs rounded-md shadow-sm">
+                  🏢 NHÓM 2
+                </span>
+                <span className="font-bold text-slate-800 text-sm">
+                  MobiFone Toàn Cầu <span className="text-xs text-slate-500 font-normal">(Các trạm còn lại)</span>
+                </span>
+              </div>
+              <span className="text-[11px] font-bold text-blue-900 bg-blue-100 px-2 py-0.5 rounded border border-blue-300">
+                MST: {GROUP_2_BUYER_INFO.taxCode}
+              </span>
+            </div>
+
+            <p className="text-[11px] text-slate-500 mb-2.5 truncate">
+              📍 {GROUP_2_BUYER_INFO.address}
+            </p>
+
+            {/* Stats Grid */}
+            <div className="grid grid-cols-2 gap-2 text-xs bg-blue-100/50 p-2.5 rounded-lg border border-blue-200/70 mb-2">
+              {/* Dầu */}
+              <div>
+                <div className="flex justify-between items-center font-semibold text-slate-700 mb-1">
+                  <span>🛢️ Tiêu hao Dầu:</span>
+                  <span className="font-bold text-blue-950">{groupComparisonStats.g2.consumedDau} L</span>
+                </div>
+                <div className="flex justify-between items-center text-slate-600 text-[11px] mb-1">
+                  <span>Hóa đơn Dầu:</span>
+                  <span className="font-bold text-blue-700">{groupComparisonStats.g2.invDau} L</span>
+                </div>
+                <div className="flex justify-between items-center font-bold text-[11px] pt-1 border-t border-blue-200">
+                  <span>Đối chiếu:</span>
+                  {groupComparisonStats.g2.consumedDau === 0 && groupComparisonStats.g2.invDau === 0 ? (
+                    <span className="text-slate-500 font-normal">⚪ Không nổ</span>
+                  ) : groupComparisonStats.g2.diffDau >= 0 ? (
+                    <span className="text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded border border-emerald-300">
+                      🟢 Thừa +{groupComparisonStats.g2.diffDau}L
+                    </span>
+                  ) : (
+                    <span className="text-red-700 bg-red-100 px-1.5 py-0.5 rounded border border-red-300">
+                      🔴 Thiếu {groupComparisonStats.g2.diffDau}L
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Xăng */}
+              <div className="border-l border-blue-200/80 pl-2.5">
+                <div className="flex justify-between items-center font-semibold text-slate-700 mb-1">
+                  <span>⛽ Tiêu hao Xăng:</span>
+                  <span className="font-bold text-blue-950">{groupComparisonStats.g2.consumedXang} L</span>
+                </div>
+                <div className="flex justify-between items-center text-slate-600 text-[11px] mb-1">
+                  <span>Hóa đơn Xăng:</span>
+                  <span className="font-bold text-blue-700">{groupComparisonStats.g2.invXang} L</span>
+                </div>
+                <div className="flex justify-between items-center font-bold text-[11px] pt-1 border-t border-blue-200">
+                  <span>Đối chiếu:</span>
+                  {groupComparisonStats.g2.consumedXang === 0 && groupComparisonStats.g2.invXang === 0 ? (
+                    <span className="text-slate-500 font-normal">⚪ Không nổ</span>
+                  ) : groupComparisonStats.g2.diffXang >= 0 ? (
+                    <span className="text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded border border-emerald-300">
+                      🟢 Thừa +{groupComparisonStats.g2.diffXang}L
+                    </span>
+                  ) : (
+                    <span className="text-red-700 bg-red-100 px-1.5 py-0.5 rounded border border-red-300">
+                      🔴 Thiếu {groupComparisonStats.g2.diffDau}L
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Footer Prompt */}
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-slate-500">
+                📊 {groupComparisonStats.g2.runs} lượt chạy ({groupComparisonStats.g2.hours}h) | {groupComparisonStats.g2.invCount} HĐ
+              </span>
+              <span className={`px-2 py-0.5 rounded text-[10px] font-bold transition-colors ${
+                selectedGroupFilter === 'group2' 
+                  ? 'bg-blue-600 text-white shadow-sm' 
+                  : 'bg-blue-100 text-blue-900 border border-blue-300 hover:bg-blue-200'
+              }`}>
+                {selectedGroupFilter === 'group2' ? '✓ Đang lọc Nhóm 2' : '👉 Click để lọc'}
+              </span>
+            </div>
           </div>
         </div>
       )}
