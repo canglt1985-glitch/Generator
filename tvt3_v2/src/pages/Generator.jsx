@@ -325,11 +325,11 @@ export default function Generator() {
       const runtime = parseFloat(log.run_details?.thoi_gian_hoat_dong) || 0;
       const fuel = parseFloat(log.run_details?.nhien_lieu_tieu_hao) || 0;
       const thanhTien = parseFloat(log.run_details?.thanh_tien) || 0;
-      const fuelType = log.run_details?.nhien_lieu_loai || log.run_details?.nhien_lieu || 'Dầu';
+      const fuelTypeUpper = (log.run_details?.nhien_lieu_loai || log.run_details?.nhien_lieu || 'Dầu').toUpperCase();
       const status = log.run_details?.status || 'approved';
 
       hours += runtime;
-      if (fuelType.includes('Xăng')) {
+      if (fuelTypeUpper.includes('XĂNG') || fuelTypeUpper.includes('XANG')) {
         fuelXang += fuel;
       } else {
         fuelDau += fuel;
