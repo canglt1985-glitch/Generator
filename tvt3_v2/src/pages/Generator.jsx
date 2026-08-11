@@ -78,23 +78,29 @@ export default function Generator() {
       if (!sitesErr) setStations(sites || []);
 
       if (activeTab === 'logs') {
-        let query = supabase.from('generator_logs').select('*');
+        let logsQuery = supabase.from('generator_logs').select('*');
+        let invQuery = supabase.from('parsed_invoices').select('*');
         
         if (filterYear) {
           if (filterMonth) {
             const startStr = `${filterYear}-${String(filterMonth).padStart(2, '0')}-01`;
             const lastDay = new Date(filterYear, filterMonth, 0).getDate();
             const endStr = `${filterYear}-${String(filterMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-            query = query.gte('date', startStr).lte('date', endStr);
+            logsQuery = logsQuery.gte('date', startStr).lte('date', endStr);
+            invQuery = invQuery.gte('invoice_date', startStr).lte('invoice_date', endStr);
           } else {
-            // Cả năm
-            query = query.gte('date', `${filterYear}-01-01`).lte('date', `${filterYear}-12-31`);
+            logsQuery = logsQuery.gte('date', `${filterYear}-01-01`).lte('date', `${filterYear}-12-31`);
+            invQuery = invQuery.gte('invoice_date', `${filterYear}-01-01`).lte('invoice_date', `${filterYear}-12-31`);
           }
         }
         
-        const { data, error } = await query.order('date', { ascending: false });
-        if (error) throw error;
-        setGenLogs(data || []);
+        const [logsRes, invRes] = await Promise.all([
+          logsQuery.order('date', { ascending: false }),
+          invQuery.order('invoice_date', { ascending: false })
+        ]);
+        
+        if (logsRes.data) setGenLogs(logsRes.data);
+        if (invRes.data) setInvoices(invRes.data);
       } else if (activeTab === 'anomalies') {
         // Tải 3 nguồn dữ liệu của 90 ngày gần nhất để phân tích bất thường
         const scanStartDate = new Date();
@@ -111,20 +117,29 @@ export default function Generator() {
         setPowerSchedules(powerRes.data || []);
         setFuelTxs(fuelRes.data || []);
       } else if (activeTab === 'invoices') {
-        let query = supabase.from('parsed_invoices').select('*');
+        let invQuery = supabase.from('parsed_invoices').select('*');
+        let logsQuery = supabase.from('generator_logs').select('*');
+
         if (filterYear) {
           if (filterMonth) {
             const startStr = `${filterYear}-${String(filterMonth).padStart(2, '0')}-01`;
             const lastDay = new Date(filterYear, filterMonth, 0).getDate();
             const endStr = `${filterYear}-${String(filterMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-            query = query.gte('invoice_date', startStr).lte('invoice_date', endStr);
+            invQuery = invQuery.gte('invoice_date', startStr).lte('invoice_date', endStr);
+            logsQuery = logsQuery.gte('date', startStr).lte('date', endStr);
           } else {
-            query = query.gte('invoice_date', `${filterYear}-01-01`).lte('invoice_date', `${filterYear}-12-31`);
+            invQuery = invQuery.gte('invoice_date', `${filterYear}-01-01`).lte('invoice_date', `${filterYear}-12-31`);
+            logsQuery = logsQuery.gte('date', `${filterYear}-01-01`).lte('date', `${filterYear}-12-31`);
           }
         }
-        const { data, error } = await query.order('invoice_date', { ascending: false });
-        if (error) throw error;
-        setInvoices(data || []);
+
+        const [invRes, logsRes] = await Promise.all([
+          invQuery.order('invoice_date', { ascending: false }),
+          logsQuery.order('date', { ascending: false })
+        ]);
+
+        if (invRes.data) setInvoices(invRes.data);
+        if (logsRes.data) setGenLogs(logsRes.data);
       } else if (activeTab === 'transfer') {
         const [equipRes, transRes] = await Promise.all([
           supabase.from('mobile_equipment').select('*').order('type', { ascending: true }).order('equipment_code', { ascending: true }),
