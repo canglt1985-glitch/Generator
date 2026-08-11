@@ -1543,8 +1543,8 @@ export default function Generator() {
         )}
       </div>
 
-      {/* OPTION 3: Interactive Side-by-Side Comparison Cards (Effective >= Aug 2026) */}
-      {isFromAug2026 && groupComparisonStats && (
+      {/* OPTION 3: Interactive Side-by-Side Comparison Cards (Effective >= Aug 2026, Invoices tab only) */}
+      {isFromAug2026 && activeTab === 'invoices' && groupComparisonStats && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 mb-2">
           {/* CARD 1: GROUP 1 (67 TRẠM ĐẶC THÙ) */}
           <div 
