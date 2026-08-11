@@ -268,8 +268,8 @@ export default function Generator() {
 
   // Search Filter - Logs (refined with inline filters)
   const isFromAug2026 = useMemo(() => {
-    return filterYear > 2026 || (filterYear === 2026 && filterMonth >= 8);
-  }, [filterYear, filterMonth]);
+    return filterYear >= 2026;
+  }, [filterYear]);
 
   const filteredLogs = useMemo(() => {
     return genLogs.filter(log => {
