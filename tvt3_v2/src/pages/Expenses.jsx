@@ -47,7 +47,31 @@ export default function Expenses() {
   
   // UI & Search States
   const [searchQuery, setSearchQuery] = useState('');
+  const [filterMonthVal, setFilterMonthVal] = useState('');
+  const [filterYearVal, setFilterYearVal] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState('');
+
+  const handleMonthYearChange = (month, year) => {
+    setFilterMonthVal(month);
+    setFilterYearVal(year);
+    if (month === '') {
+      setSelectedMonth('');
+    } else {
+      setSelectedMonth(`${year}-${String(month).padStart(2, '0')}`);
+    }
+  };
+
+  const formatMonthLabel = (monthStr) => {
+    if (!monthStr || typeof monthStr !== 'string') return 'tất cả';
+    if (monthStr.includes('-')) {
+      const parts = monthStr.split('-');
+      if (parts.length >= 2) {
+        return `Tháng ${parts[1]}/${parts[0]}`;
+      }
+    }
+    return monthStr;
+  };
+
   const [showAddFuelModal, setShowAddFuelModal] = useState(false);
   const [editingFuel, setEditingFuel] = useState(null);
   const [showAddOtherModal, setShowAddOtherModal] = useState(false);
@@ -1053,17 +1077,41 @@ export default function Expenses() {
               <span className="text-[13px] font-semibold text-slate-600 whitespace-nowrap">Lọc theo tháng:</span>
             </div>
             <div className="flex items-center gap-2">
-              <input
-                type="month"
-                className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-slate-50/50 outline-none transition-colors hover:bg-white"
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(e.target.value)}
-              />
+              <select
+                value={filterMonthVal}
+                onChange={(e) => {
+                  const m = e.target.value === '' ? '' : Number(e.target.value);
+                  handleMonthYearChange(m, filterYearVal);
+                }}
+                className="bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer shadow-sm"
+              >
+                <option value="">-- Cả năm --</option>
+                {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                  <option key={m} value={m}>Tháng {m}</option>
+                ))}
+              </select>
+
+              <select
+                value={filterYearVal}
+                onChange={(e) => {
+                  const y = Number(e.target.value);
+                  handleMonthYearChange(filterMonthVal, y);
+                }}
+                className="bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer shadow-sm"
+              >
+                {[2024, 2025, 2026, 2027].map(y => (
+                  <option key={y} value={y}>Năm {y}</option>
+                ))}
+              </select>
+
               {selectedMonth && (
                 <button
                   type="button"
-                  onClick={() => setSelectedMonth('')}
-                  className="px-3 py-1.5 border border-red-200 hover:border-red-300 text-[11px] font-bold rounded-lg text-red-600 hover:bg-red-50 cursor-pointer transition-colors whitespace-nowrap"
+                  onClick={() => {
+                    setFilterMonthVal('');
+                    setSelectedMonth('');
+                  }}
+                  className="px-2.5 py-1.5 border border-red-200 hover:border-red-300 text-[11px] font-bold rounded-lg text-red-600 hover:bg-red-50 cursor-pointer transition-colors whitespace-nowrap"
                   title="Xem toàn bộ giao dịch"
                 >
                   Tất cả
@@ -1410,7 +1458,7 @@ export default function Expenses() {
                           <span className="font-bold text-blue-600">{formatCurrency(paymentGroups.mua_ngoai.tong_tien_nhan)}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span>Lũy kế phát sinh ({selectedMonth ? `Tháng ${selectedMonth.split('-')[1]}/${selectedMonth.split('-')[0]}` : 'tất cả'}):</span>
+                          <span>Lũy kế phát sinh ({selectedMonth ? formatMonthLabel(selectedMonth) : 'tất cả'}):</span>
                           <span className="font-bold text-slate-800">{formatCurrency(accumTotals.mua_ngoai_accum)}</span>
                         </div>
                         <div className="flex justify-between">
@@ -1507,7 +1555,7 @@ export default function Expenses() {
                           <span className="font-bold text-blue-600">{formatCurrency(paymentGroups.cx222.tong_tien_nhan)}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span>Lũy kế phát sinh ({selectedMonth ? `Tháng ${selectedMonth.split('-')[1]}/${selectedMonth.split('-')[0]}` : 'tất cả'}):</span>
+                          <span>Lũy kế phát sinh ({selectedMonth ? formatMonthLabel(selectedMonth) : 'tất cả'}):</span>
                           <span className="font-bold text-slate-800">{formatCurrency(accumTotals.cx222_accum)}</span>
                         </div>
                         <div className="flex justify-between">
@@ -1595,7 +1643,7 @@ export default function Expenses() {
                   <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mt-6">
                     <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex items-center justify-between">
                       <h3 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
-                        <FileText className="text-emerald-600 w-4 h-4" /> Bảng Thanh Toán {selectedMonth && <span className="text-xs font-normal text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 ml-1">Lọc Tháng {selectedMonth.split('-')[1]}/{selectedMonth.split('-')[0]}</span>}
+                        <FileText className="text-emerald-600 w-4 h-4" /> Bảng Thanh Toán {selectedMonth && <span className="text-xs font-normal text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 ml-1">Lọc {formatMonthLabel(selectedMonth)}</span>}
                       </h3>
                     </div>
                     <div className="overflow-x-auto w-full">
@@ -1616,7 +1664,7 @@ export default function Expenses() {
                             <tr>
                               <td colSpan={user ? 7 : 6} className="text-center py-10 text-slate-400">
                                 {selectedMonth 
-                                  ? `Chưa có phát sinh chi phí nào trong Tháng ${selectedMonth.split('-')[1]}/${selectedMonth.split('-')[0]}.`
+                                  ? `Chưa có phát sinh chi phí nào trong ${formatMonthLabel(selectedMonth)}.`
                                   : 'Chưa có phát sinh chi phí nào từ ngày 16/02/2026.'}
                               </td>
                             </tr>
