@@ -6,6 +6,12 @@ import {
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
+import { 
+  GROUP_1_BUYER_INFO, 
+  GROUP_2_BUYER_INFO, 
+  isSpecial67Site 
+} from '../utils/siteGroups';
+
 export default function Generator() {
   const [activeTab, setActiveTab] = useState('logs'); // logs, anomalies, invoices, transfer
   
@@ -42,6 +48,7 @@ export default function Generator() {
   // Date & Column Filters for Logs
   const [filterMonth, setFilterMonth] = useState(new Date().getMonth() + 1); // 1-12
   const [filterYear, setFilterYear] = useState(new Date().getFullYear());
+  const [selectedGroupFilter, setSelectedGroupFilter] = useState('all'); // 'all' | 'group1' | 'group2'
   const [searchSite, setSearchSite] = useState('');
   const [searchDate, setSearchDate] = useState('');
   const [searchStatus, setSearchStatus] = useState('');
@@ -260,16 +267,28 @@ export default function Generator() {
   }, [logSiteId, logRuntime, logDate]);
 
   // Search Filter - Logs (refined with inline filters)
+  const isFromAug2026 = useMemo(() => {
+    return filterYear > 2026 || (filterYear === 2026 && filterMonth >= 8);
+  }, [filterYear, filterMonth]);
+
   const filteredLogs = useMemo(() => {
     return genLogs.filter(log => {
       const stationObj = stations.find(s => s.site_id === log.site_id);
-      const siteIdOld = (stationObj?.site_id_old || '').toLowerCase();
-      const siteIdNew = (log.site_id || '').toLowerCase();
+      const siteIdOld = stationObj?.site_id_old || '';
       
+      // Group Filter (Effective >= Aug 2026)
+      if (isFromAug2026 && selectedGroupFilter !== 'all') {
+        const isG1 = isSpecial67Site(log.site_id, siteIdOld, stations);
+        if (selectedGroupFilter === 'group1' && !isG1) return false;
+        if (selectedGroupFilter === 'group2' && isG1) return false;
+      }
+
       // 1. Filter by Site (checks both Old and New Site IDs)
       if (searchSite.trim()) {
-        const q = searchSite.toLowerCase();
-        if (!siteIdOld.includes(q) && !siteIdNew.includes(q)) {
+        const q = searchSite.toLowerCase().trim();
+        const siteIdOldLower = siteIdOld.toLowerCase();
+        const siteIdNewLower = (log.site_id || '').toLowerCase();
+        if (!siteIdOldLower.includes(q) && !siteIdNewLower.includes(q)) {
           return false;
         }
       }
@@ -291,7 +310,7 @@ export default function Generator() {
       
       return true;
     });
-  }, [genLogs, searchSite, searchDate, searchStatus, stations]);
+  }, [genLogs, searchSite, searchDate, searchStatus, stations, isFromAug2026, selectedGroupFilter]);
 
   // Statistics calculation for filtered logs
   const stats = useMemo(() => {
@@ -343,14 +362,24 @@ export default function Generator() {
 
   // Search Filter - Invoices
   const filteredInvoices = useMemo(() => {
-    if (!searchQuery.trim()) return invoices;
+    let result = invoices;
+    if (isFromAug2026 && selectedGroupFilter !== 'all') {
+      result = result.filter(inv => {
+        const mst = (inv.buyer_mst || '').trim();
+        const bname = (inv.buyer_name || '').toUpperCase();
+        const isG1 = mst.includes('0100686209-129') || bname.includes('ĐỒNG NAI') || bname.includes('DONG NAI');
+        return selectedGroupFilter === 'group1' ? isG1 : !isG1;
+      });
+    }
+
+    if (!searchQuery.trim()) return result;
     const q = searchQuery.toLowerCase();
-    return invoices.filter(inv => 
+    return result.filter(inv => 
       (inv.invoice_number || '').toLowerCase().includes(q) ||
       (inv.seller_name || '').toLowerCase().includes(q) ||
       (inv.seller_mst || '').toLowerCase().includes(q)
     );
-  }, [invoices, searchQuery]);
+  }, [invoices, searchQuery, isFromAug2026, selectedGroupFilter]);
 
   // Statistics calculation for filtered invoices
   const invoiceStats = useMemo(() => {
@@ -433,7 +462,7 @@ export default function Generator() {
 
   // Export to Excel
   const exportToExcel = () => {
-    const dataForExcel = filteredLogs.map(log => {
+    const formatLog = (log) => {
       const stationObj = stations.find(s => s.site_id === log.site_id);
       const siteIdOld = stationObj ? (stationObj.site_id_old || '') : '';
       
@@ -454,19 +483,46 @@ export default function Generator() {
         'Nhiên liệu': log.run_details?.nhien_lieu_loai || log.run_details?.nhien_lieu || 'Dầu',
         'Ghi chú': log.run_details?.ghi_chu || ''
       };
-    });
+    };
 
-    const worksheet = XLSX.utils.json_to_sheet(dataForExcel);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
-    
     const monthStr = filterMonth ? `T${filterMonth}` : 'Ca_Nam';
-    const fileName = `Thoi_gian_chay_may_${monthStr}_${filterYear}.xlsx`;
+    const fileName = `Bang_Ke_Chay_May_${monthStr}_${filterYear}.xlsx`;
+
+    if (isFromAug2026) {
+      // Split into 2 Worksheets for >= August 2026
+      const g1Logs = genLogs.filter(log => {
+        const stationObj = stations.find(s => s.site_id === log.site_id);
+        const siteIdOld = stationObj?.site_id_old || '';
+        return isSpecial67Site(log.site_id, siteIdOld, stations);
+      });
+
+      const g2Logs = genLogs.filter(log => {
+        const stationObj = stations.find(s => s.site_id === log.site_id);
+        const siteIdOld = stationObj?.site_id_old || '';
+        return !isSpecial67Site(log.site_id, siteIdOld, stations);
+      });
+
+      // Sheet 1: 67 Trạm Đặc Thù
+      const dataG1 = g1Logs.map(formatLog);
+      const ws1 = XLSX.utils.json_to_sheet(dataG1);
+      XLSX.utils.book_append_sheet(workbook, ws1, '67_Tram_Dac_Thu');
+
+      // Sheet 2: Các Trạm Còn Lại
+      const dataG2 = g2Logs.map(formatLog);
+      const ws2 = XLSX.utils.json_to_sheet(dataG2);
+      XLSX.utils.book_append_sheet(workbook, ws2, 'Tram_Con_Lai');
+    } else {
+      const dataForExcel = filteredLogs.map(formatLog);
+      const worksheet = XLSX.utils.json_to_sheet(dataForExcel);
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
+    }
+    
     XLSX.writeFile(workbook, fileName);
   };
 
   const exportInvoicesToExcel = () => {
-    const dataForExcel = filteredInvoices.map((inv, idx) => {
+    const formatInvoice = (inv, idx) => {
       const items = Array.isArray(inv.items) ? inv.items : [];
       let qtyD = '';
       let priceD = '';
@@ -519,12 +575,37 @@ export default function Generator() {
         'Trạng Thái': inv.status === 'Approved' ? 'Đã duyệt' : inv.status === 'Discarded' ? 'Từ chối' : 'Chờ duyệt',
         'Nguồn Thu Thập': inv.source || 'Upload'
       };
-    });
+    };
 
-    const worksheet = XLSX.utils.json_to_sheet(dataForExcel);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'HoaDonDienTu');
-    XLSX.writeFile(workbook, `Danh_sach_hoa_don_${new Date().toISOString().split('T')[0]}.xlsx`);
+    const monthStr = filterMonth ? `T${filterMonth}` : 'Ca_Nam';
+    const fileName = `Danh_sach_hoa_don_${monthStr}_${filterYear}.xlsx`;
+
+    if (isFromAug2026) {
+      const g1Invoices = invoices.filter(inv => {
+        const mst = (inv.buyer_mst || '').trim();
+        const bname = (inv.buyer_name || '').toUpperCase();
+        return mst.includes('0100686209-129') || bname.includes('ĐỒNG NAI') || bname.includes('DONG NAI');
+      });
+
+      const g2Invoices = invoices.filter(inv => {
+        const mst = (inv.buyer_mst || '').trim();
+        const bname = (inv.buyer_name || '').toUpperCase();
+        return !(mst.includes('0100686209-129') || bname.includes('ĐỒNG NAI') || bname.includes('DONG NAI'));
+      });
+
+      const ws1 = XLSX.utils.json_to_sheet(g1Invoices.map(formatInvoice));
+      XLSX.utils.book_append_sheet(workbook, ws1, 'Hoa_Don_67_Tram');
+
+      const ws2 = XLSX.utils.json_to_sheet(g2Invoices.map(formatInvoice));
+      XLSX.utils.book_append_sheet(workbook, ws2, 'Hoa_Don_Tram_Con_Lai');
+    } else {
+      const dataForExcel = filteredInvoices.map(formatInvoice);
+      const worksheet = XLSX.utils.json_to_sheet(dataForExcel);
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'HoaDonDienTu');
+    }
+
+    XLSX.writeFile(workbook, fileName);
   };
 
   // Export Anomalies to Excel
@@ -1255,6 +1336,19 @@ export default function Generator() {
               ))}
             </select>
 
+            {/* Group Filter Select for >= August 2026 */}
+            {isFromAug2026 && (
+              <select
+                value={selectedGroupFilter}
+                onChange={(e) => setSelectedGroupFilter(e.target.value)}
+                className="bg-amber-50 border border-amber-300 text-amber-900 rounded-lg px-2.5 py-1.5 text-xs font-bold focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer shadow-sm"
+              >
+                <option value="all">📊 Tất cả nhóm (Tổng hợp)</option>
+                <option value="group1">📌 Nhóm 1: 67 Trạm Đặc Thù</option>
+                <option value="group2">🏢 Nhóm 2: Các Trạm Còn Lại</option>
+              </select>
+            )}
+
             {activeTab === 'logs' && (
               <select
                 value={searchStatus}
@@ -1331,6 +1425,43 @@ export default function Generator() {
           </div>
         )}
       </div>
+
+      {/* Buyer / Invoice Unit Info Banner (Effective >= Aug 2026) */}
+      {isFromAug2026 && selectedGroupFilter !== 'all' && (
+        <div className={`p-3.5 rounded-xl border flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-sm ${
+          selectedGroupFilter === 'group1' 
+            ? 'bg-amber-50/80 border-amber-200 text-amber-950' 
+            : 'bg-blue-50/80 border-blue-200 text-blue-950'
+        }`}>
+          <div className="flex items-start gap-3">
+            <div className={`p-2 rounded-lg text-white font-bold text-xs shrink-0 ${
+              selectedGroupFilter === 'group1' ? 'bg-amber-600' : 'bg-blue-600'
+            }`}>
+              {selectedGroupFilter === 'group1' ? '📌 NHÓM 1' : '🏢 NHÓM 2'}
+            </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-bold text-sm">
+                  {selectedGroupFilter === 'group1' ? GROUP_1_BUYER_INFO.companyName : GROUP_2_BUYER_INFO.companyName}
+                </span>
+                <span className={`text-[11px] px-2 py-0.5 rounded-md font-semibold border ${
+                  selectedGroupFilter === 'group1' 
+                    ? 'bg-amber-100 border-amber-300 text-amber-800' 
+                    : 'bg-blue-100 border-blue-300 text-blue-800'
+                }`}>
+                  MST: {selectedGroupFilter === 'group1' ? GROUP_1_BUYER_INFO.taxCode : GROUP_2_BUYER_INFO.taxCode}
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 mt-0.5">
+                📍 Địa chỉ: {selectedGroupFilter === 'group1' ? GROUP_1_BUYER_INFO.address : GROUP_2_BUYER_INFO.address}
+              </p>
+            </div>
+          </div>
+          <div className="text-right text-xs font-semibold text-slate-500 shrink-0">
+            Áp dụng từ Tháng 08/2026
+          </div>
+        </div>
+      )}
 
       {/* Navigation Cards as Tabs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 mb-6">
