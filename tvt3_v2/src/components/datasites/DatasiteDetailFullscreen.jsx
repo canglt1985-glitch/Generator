@@ -8,7 +8,7 @@ import { supabase } from '../../supabaseClient';
 import ContractExportButton from './ContractExportButton';
 import PaymentSchedulePanel from './PaymentSchedulePanel';
 import { useCurrentUser } from '../../utils/useCurrentUser';
-import { exportB4RepairProposal } from '../../utils/b4RepairExporter';
+import { exportB4RepairProposal, B4_REPAIR_CATEGORIES } from '../../utils/b4RepairExporter';
 
 export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, onExportExcel, onEditSite, onDeleteSite }) {
   const { user } = useCurrentUser();
@@ -19,6 +19,52 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, on
   const [savingTrans, setSavingTrans] = useState(false);
   const [sranInfo, setSranInfo] = useState(null);
   const [showB4Dropdown, setShowB4Dropdown] = useState(false);
+  
+  // States cho modal Thêm vào Danh sách Báo Hỏng B4
+  const [showAddB4Modal, setShowAddB4Modal] = useState(false);
+  const [b4DeviceType, setB4DeviceType] = useState('MPD_CO_DINH');
+  const [b4CategoryIdx, setB4CategoryIdx] = useState(0);
+  const [b4Description, setB4Description] = useState('');
+  const [b4Saving, setB4Saving] = useState(false);
+
+  const handleSaveB4Defect = async (e) => {
+    e.preventDefault();
+    if (!b4Description.trim()) {
+      alert('Vui lòng nhập mô tả chi tiết hư hỏng!');
+      return;
+    }
+    setB4Saving(true);
+    try {
+      const reporterName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Kỹ sư Tổ 3';
+      const payload = {
+        site_id: site.site_id,
+        date: new Date().toISOString().split('T')[0],
+        existing_issues: {
+          category: b4DeviceType === 'DHKK' ? 'Máy lạnh' : 'Máy phát điện',
+          description: b4Description.trim(),
+          status: 'Chưa XL',
+          reporter: reporterName,
+          device_type: b4DeviceType,
+          b4_category_idx: parseInt(b4CategoryIdx) || 0
+        },
+        proposed_solutions: {}
+      };
+
+      const { error } = await supabase
+        .from('operation_defects_logs')
+        .insert([payload]);
+
+      if (error) throw error;
+
+      alert(`✅ Đã thêm trạm ${site.site_id} vào Danh sách Tồn tại / Báo hỏng B4!\nBạn có thể vào [Công việc hàng ngày] -> [Quản lý tồn tại] để chọn và xuất file B4 tổng hợp.`);
+      setShowAddB4Modal(false);
+      setB4Description('');
+    } catch (err) {
+      alert('Lỗi khi lưu báo hỏng: ' + err.message);
+    } finally {
+      setB4Saving(false);
+    }
+  };
 
   useEffect(() => {
     if (site?.site_id) {
@@ -1167,42 +1213,14 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, on
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="relative">
-            <button 
-              onClick={() => setShowB4Dropdown(!showB4Dropdown)}
-              className="inline-flex items-center justify-center px-3 py-2 border border-emerald-300 text-xs font-bold rounded-lg text-emerald-800 bg-emerald-50 hover:bg-emerald-100 shadow-sm transition-colors cursor-pointer gap-1.5"
-              title="Lập Biểu mẫu B4 Đề nghị Sửa chữa MPĐ/ĐHKK cho trạm này"
-            >
-              <FileText className="h-4 w-4 text-emerald-600" />
-              <span>📄 Lập Báo Hỏng (B4)</span>
-            </button>
-
-            {showB4Dropdown && (
-              <div className="absolute right-0 mt-1.5 w-60 bg-white border border-slate-200 rounded-xl shadow-xl z-50 p-2 space-y-1 text-left">
-                <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100">
-                  Chọn loại biểu mẫu B4:
-                </div>
-                <button
-                  onClick={() => {
-                    handleExportB4SingleSite('MPD_CO_DINH');
-                    setShowB4Dropdown(false);
-                  }}
-                  className="w-full text-left px-3 py-2 text-xs font-bold text-slate-700 hover:bg-emerald-50 hover:text-emerald-800 rounded-lg flex items-center gap-2 cursor-pointer"
-                >
-                  ⚡ 1. Sửa chữa Máy Phát Điện (B4)
-                </button>
-                <button
-                  onClick={() => {
-                    handleExportB4SingleSite('DHKK');
-                    setShowB4Dropdown(false);
-                  }}
-                  className="w-full text-left px-3 py-2 text-xs font-bold text-slate-700 hover:bg-cyan-50 hover:text-cyan-800 rounded-lg flex items-center gap-2 cursor-pointer"
-                >
-                  ❄️ 2. Sửa chữa Điều Hòa (B4)
-                </button>
-              </div>
-            )}
-          </div>
+          <button 
+            onClick={() => setShowAddB4Modal(true)}
+            className="inline-flex items-center justify-center px-3 py-2 border border-amber-300 text-xs font-bold rounded-lg text-amber-900 bg-amber-50 hover:bg-amber-100 shadow-sm transition-colors cursor-pointer gap-1.5"
+            title="Thêm trạm này vào Danh sách Tồn tại / Báo hỏng B4 để gom xuất file tổng hợp"
+          >
+            <FileText className="h-4 w-4 text-amber-600" />
+            <span>➕ Thêm vào Báo Hỏng (B4)</span>
+          </button>
 
           <button 
             onClick={() => onExportExcel && onExportExcel(site)}
@@ -1265,6 +1283,94 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, on
           </div>
         </div>
       </div>
+
+      {/* Modal Thêm vào Danh sách Báo Hỏng B4 */}
+      {showAddB4Modal && (
+        <div className="fixed inset-0 z-[200] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200">
+            <div className="bg-gradient-to-r from-amber-500 to-amber-600 px-5 py-4 text-white flex justify-between items-center">
+              <h2 className="font-bold text-base flex items-center gap-2">
+                <FileText size={18} /> Thêm trạm {site.site_id} vào Báo hỏng B4
+              </h2>
+              <button 
+                onClick={() => setShowAddB4Modal(false)}
+                className="p-1 hover:bg-white/10 rounded-full transition-colors text-white/80 hover:text-white cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveB4Defect} className="p-5 space-y-4 text-left">
+              <div>
+                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1">Mã trạm báo hỏng</label>
+                <input 
+                  type="text" 
+                  disabled
+                  className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-sm font-bold text-slate-800"
+                  value={`${site.site_id} ${site.name ? `(${site.name})` : ''}`}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1">Loại thiết bị B4</label>
+                <select
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm font-bold bg-white text-slate-800 focus:ring-1 focus:ring-amber-500"
+                  value={b4DeviceType}
+                  onChange={(e) => {
+                    setB4DeviceType(e.target.value);
+                    setB4CategoryIdx(0);
+                  }}
+                >
+                  <option value="MPD_CO_DINH">⚡ MPĐ Cố định</option>
+                  <option value="MPD_DI_DONG">🚗 MPĐ Di động / Nổ xăng</option>
+                  <option value="DHKK">❄️ Điều hòa thông gió</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1">Hạng mục sửa chữa chuẩn B4</label>
+                <select
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white text-slate-800 focus:ring-1 focus:ring-amber-500"
+                  value={b4CategoryIdx}
+                  onChange={(e) => setB4CategoryIdx(Number(e.target.value))}
+                >
+                  {(B4_REPAIR_CATEGORIES[b4DeviceType] || []).map((cat, idx) => (
+                    <option key={cat.id} value={idx}>{cat.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1">Mô tả hiện trạng hư hỏng</label>
+                <textarea 
+                  rows="3" 
+                  placeholder="Nhập mô tả sự cố hư hỏng cần đề xuất sửa chữa..."
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
+                  value={b4Description}
+                  onChange={(e) => setB4Description(e.target.value)}
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowAddB4Modal(false)}
+                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  disabled={b4Saving}
+                  className="px-4 py-2 text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-lg shadow-sm transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  {b4Saving ? 'Đang lưu...' : '➕ Thêm vào Danh sách Báo Hỏng B4'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
