@@ -1251,6 +1251,20 @@ export default function DailyWork() {
                         <table className="min-w-full divide-y divide-gray-200 text-left">
                           <thead className="bg-slate-50 text-xs font-bold text-slate-500 uppercase tracking-wider">
                             <tr>
+                              <th scope="col" className="px-3 py-3 w-10 text-center">
+                                <input 
+                                  type="checkbox"
+                                  className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                  checked={filteredDefectsLogs.length > 0 && selectedIssueIds.length === filteredDefectsLogs.length}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setSelectedIssueIds(filteredDefectsLogs.map(i => i.log_id));
+                                    } else {
+                                      setSelectedIssueIds([]);
+                                    }
+                                  }}
+                                />
+                              </th>
                               <th scope="col" className="px-4 py-3">Ngày phát hiện</th>
                               <th scope="col" className="px-4 py-3">Site ID cũ</th>
                               <th scope="col" className="px-4 py-3">Site ID mới</th>
@@ -1270,6 +1284,20 @@ export default function DailyWork() {
                               const siteIds = getSiteIds(issue.site_id);
                               return (
                                 <tr key={issue.log_id} className={`hover:bg-slate-50/50 transition-colors ${isResolved ? 'bg-emerald-50/10' : ''}`}>
+                                  <td className="px-3 py-3 text-center">
+                                    <input 
+                                      type="checkbox"
+                                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                      checked={selectedIssueIds.includes(issue.log_id)}
+                                      onChange={(e) => {
+                                        if (e.target.checked) {
+                                          setSelectedIssueIds(prev => [...prev, issue.log_id]);
+                                        } else {
+                                          setSelectedIssueIds(prev => prev.filter(id => id !== issue.log_id));
+                                        }
+                                      }}
+                                    />
+                                  </td>
                                   <td className="px-4 py-3 whitespace-nowrap text-slate-500 font-mono">{issue.date}</td>
                                   <td className="px-4 py-3 whitespace-nowrap font-bold text-slate-900">{siteIds.oldId}</td>
                                   <td className="px-4 py-3 whitespace-nowrap">
