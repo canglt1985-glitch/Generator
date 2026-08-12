@@ -18,6 +18,7 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, on
   const [allSites, setAllSites] = useState([]);
   const [savingTrans, setSavingTrans] = useState(false);
   const [sranInfo, setSranInfo] = useState(null);
+  const [showB4Dropdown, setShowB4Dropdown] = useState(false);
 
   useEffect(() => {
     if (site?.site_id) {
@@ -1165,20 +1166,49 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, on
           )}
         </div>
 
-        <div className="hidden md:flex items-center gap-3">
-          <button 
-            onClick={() => handleExportB4SingleSite('MPD_CO_DINH')}
-            className="inline-flex items-center justify-center px-3.5 py-2 border border-emerald-300 text-xs font-bold rounded-lg text-emerald-800 bg-emerald-50 hover:bg-emerald-100 shadow-sm transition-colors cursor-pointer"
-            title="Lập Biểu mẫu B4 Đề nghị Sửa chữa MPĐ cho trạm này"
-          >
-            <FileText className="h-4 w-4 mr-1.5 text-emerald-600" />
-            📄 Lập Báo Hỏng (B4)
-          </button>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <button 
+              onClick={() => setShowB4Dropdown(!showB4Dropdown)}
+              className="inline-flex items-center justify-center px-3 py-2 border border-emerald-300 text-xs font-bold rounded-lg text-emerald-800 bg-emerald-50 hover:bg-emerald-100 shadow-sm transition-colors cursor-pointer gap-1.5"
+              title="Lập Biểu mẫu B4 Đề nghị Sửa chữa MPĐ/ĐHKK cho trạm này"
+            >
+              <FileText className="h-4 w-4 text-emerald-600" />
+              <span>📄 Lập Báo Hỏng (B4)</span>
+            </button>
+
+            {showB4Dropdown && (
+              <div className="absolute right-0 mt-1.5 w-60 bg-white border border-slate-200 rounded-xl shadow-xl z-50 p-2 space-y-1 text-left">
+                <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100">
+                  Chọn loại biểu mẫu B4:
+                </div>
+                <button
+                  onClick={() => {
+                    handleExportB4SingleSite('MPD_CO_DINH');
+                    setShowB4Dropdown(false);
+                  }}
+                  className="w-full text-left px-3 py-2 text-xs font-bold text-slate-700 hover:bg-emerald-50 hover:text-emerald-800 rounded-lg flex items-center gap-2 cursor-pointer"
+                >
+                  ⚡ 1. Sửa chữa Máy Phát Điện (B4)
+                </button>
+                <button
+                  onClick={() => {
+                    handleExportB4SingleSite('DHKK');
+                    setShowB4Dropdown(false);
+                  }}
+                  className="w-full text-left px-3 py-2 text-xs font-bold text-slate-700 hover:bg-cyan-50 hover:text-cyan-800 rounded-lg flex items-center gap-2 cursor-pointer"
+                >
+                  ❄️ 2. Sửa chữa Điều Hòa (B4)
+                </button>
+              </div>
+            )}
+          </div>
+
           <button 
             onClick={() => onExportExcel && onExportExcel(site)}
-            className="inline-flex items-center justify-center px-4 py-2 border border-slate-200 text-sm font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 shadow-sm transition-colors cursor-pointer"
+            className="inline-flex items-center justify-center px-3.5 py-2 border border-slate-200 text-xs font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 shadow-sm transition-colors cursor-pointer"
           >
-            <FileDown className="h-4 w-4 mr-2" />
+            <FileDown className="h-4 w-4 mr-1.5" />
             Xuất Excel
           </button>
           {user && (
