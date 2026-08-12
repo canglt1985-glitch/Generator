@@ -2,12 +2,13 @@ import { useState, useMemo, useEffect } from 'react';
 import { 
   X, Edit, FileDown, Trash2, Info, Server, Radio, 
   FileText, Clock, MapPin, Building2, Navigation,
-  FileSignature, Building, Wallet, CreditCard, Calculator, ExternalLink 
+  FileSignature, Building, Wallet, CreditCard, Calculator, ExternalLink, Zap
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import ContractExportButton from './ContractExportButton';
 import PaymentSchedulePanel from './PaymentSchedulePanel';
 import { useCurrentUser } from '../../utils/useCurrentUser';
+import { exportB4RepairProposal } from '../../utils/b4RepairExporter';
 
 export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, onExportExcel, onEditSite, onDeleteSite }) {
   const { user } = useCurrentUser();
@@ -37,6 +38,34 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, on
   const [primarySuggestions, setPrimarySuggestions] = useState([]);
   const [backupSearch, setBackupSearch] = useState('');
   const [backupSuggestions, setBackupSuggestions] = useState([]);
+
+  const handleExportB4SingleSite = (targetCategory = 'MPD_CO_DINH') => {
+    if (!site?.site_id) return;
+    const infra = site.infrastructure_info || {};
+    const mpdList = infra.may_phat_dien?.mpd || [];
+    const dhkkList = infra.may_lanh?.dhkk || [];
+    const equip = (targetCategory === 'DHKK' ? dhkkList[0] : mpdList[0]) || {};
+
+    const item = {
+      site_id: site.site_id,
+      description: `Báo hỏng đề nghị sửa chữa thiết bị tại trạm ${site.site_id}`,
+      hinh_thuc_so_huu: 'Hiện vật',
+      device_name: targetCategory === 'DHKK' ? 'Điều hòa nhiệt độ' : 'Máy phát điện',
+      ma_vat_tu: equip.ma_vat_tu_14 || equip.ma_vat_tu || '',
+      ma_tscd_moi: equip.ma_tscd_15 || equip.ma_tscd || '',
+      ngay_su_dung: equip.ngay_su_dung || '2024-01-01',
+      nhan_hieu: equip.nhan_hieu || equip.brand || 'KIBII',
+      cong_suat: equip.cong_suat || '12',
+      b4_category_idx: 0
+    };
+
+    exportB4RepairProposal({
+      items: [item],
+      datasites: [site],
+      targetCategory: targetCategory,
+      customFileName: `TVT3_B4_Bao_Hong_${site.site_id}_${targetCategory}_${new Date().toISOString().substring(0, 10).replace(/-/g, '')}.xlsx`
+    });
+  };
 
   // Fetch danh sách trạm phục vụ gợi ý autocomplete
   useEffect(() => {
@@ -127,18 +156,26 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, on
 
   // Đọc thông tin hợp đồng trực tiếp từ site.contract_info (không cần query thêm)
   const contracts = useMemo(() => {
-    if (!site?.contract_info || !site?.contract_number) return [];
+    if (!site?.contract_info && !site?.contract_number) return [];
+    const info = site?.contract_info || {};
     return [{
       contract_id: site.site_id,
-      contract_number: site.contract_number,
-      contractor_info: site.contract_info?.contractor_info || {},
-      dates: site.contract_info?.dates || {},
-      erp_info: site.contract_info?.erp_info || {},
-      financials: site.contract_info?.financials || {},
-      bank_info: site.contract_info?.bank_info || {},
-      cost_details: site.contract_info?.cost_details || {},
-      appendix_info: site.contract_info?.appendix_info || {},
-      status: site.contract_info?.status || null,
+      contract_number: site.contract_number || info.contract_number || `HĐ_${site.site_id}`,
+      contractor_info: info.contractor_info || {},
+      dates: {
+        ngay_ky_hd: info.dates?.ngay_ky_hd || info.dates?.ngay_ky || '',
+        ngay_ket_thuc_hd: info.dates?.ngay_ket_thuc_hd || info.dates?.ngay_ket_thuc || '',
+        ngay_thanh_toan_den: info.dates?.ngay_thanh_toan_den || ''
+      },
+      erp_info: info.erp_info || {},
+      financials: {
+        gia_thue_co_vat: info.financials?.gia_thue_co_vat || info.financials?.don_gia_vat || 0,
+        chu_ky_thanh_toan: info.financials?.chu_ky_thanh_toan || ''
+      },
+      bank_info: info.bank_info || {},
+      cost_details: info.cost_details || {},
+      appendix_info: info.appendix_info || {},
+      status: info.status || null,
     }];
   }, [site]);
 
@@ -1129,6 +1166,14 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, on
         </div>
 
         <div className="hidden md:flex items-center gap-3">
+          <button 
+            onClick={() => handleExportB4SingleSite('MPD_CO_DINH')}
+            className="inline-flex items-center justify-center px-3.5 py-2 border border-emerald-300 text-xs font-bold rounded-lg text-emerald-800 bg-emerald-50 hover:bg-emerald-100 shadow-sm transition-colors cursor-pointer"
+            title="Lập Biểu mẫu B4 Đề nghị Sửa chữa MPĐ cho trạm này"
+          >
+            <FileText className="h-4 w-4 mr-1.5 text-emerald-600" />
+            📄 Lập Báo Hỏng (B4)
+          </button>
           <button 
             onClick={() => onExportExcel && onExportExcel(site)}
             className="inline-flex items-center justify-center px-4 py-2 border border-slate-200 text-sm font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 shadow-sm transition-colors cursor-pointer"

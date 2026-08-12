@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import DatasiteDetailFullscreen from '../components/datasites/DatasiteDetailFullscreen';
 import { useCurrentUser } from '../utils/useCurrentUser';
+import { exportB4RepairProposal, B4_REPAIR_CATEGORIES } from '../utils/b4RepairExporter';
 import * as XLSX from 'xlsx';
 
 const getTodayDMY = () => {
@@ -106,6 +107,10 @@ export default function DailyWork() {
   const [issueCategory, setIssueCategory] = useState('Cột anten');
   const [issueDescription, setIssueDescription] = useState('');
   const [issueReporter, setIssueReporter] = useState(user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'admin');
+  const [issueDeviceType, setIssueDeviceType] = useState('MPD_CO_DINH');
+  const [issueB4CategoryIdx, setIssueB4CategoryIdx] = useState(0);
+  const [selectedIssueIds, setSelectedIssueIds] = useState([]);
+  const [showB4ExportDropdown, setShowB4ExportDropdown] = useState(false);
   
   // Edit issue states
   const [editingIssue, setEditingIssue] = useState(null);
@@ -158,7 +163,7 @@ export default function DailyWork() {
       if (stations.length === 0) {
         const { data: sites, error: sitesErr } = await supabase
           .from('datasites')
-          .select('site_id, site_id_old, name')
+          .select('site_id, site_id_old, name, infrastructure_info')
           .order('site_id', { ascending: true });
         if (!sitesErr) setStations(sites || []);
       }
@@ -452,7 +457,9 @@ export default function DailyWork() {
           category: issueCategory,
           description: issueDescription.trim(),
           status: issueStatus,
-          reporter: issueReporter.trim()
+          reporter: issueReporter.trim(),
+          device_type: issueDeviceType,
+          b4_category_idx: parseInt(issueB4CategoryIdx) || 0
         };
         const updatedSolutions = issueStatus === "Đã XL" 
           ? { resolved_at: issueResolvedAt || new Date().toISOString().split('T')[0] }
@@ -480,7 +487,9 @@ export default function DailyWork() {
             category: issueCategory,
             description: issueDescription.trim(),
             status: "Chưa XL",
-            reporter: issueReporter.trim()
+            reporter: issueReporter.trim(),
+            device_type: issueDeviceType,
+            b4_category_idx: parseInt(issueB4CategoryIdx) || 0
           },
           proposed_solutions: {}
         };
@@ -543,6 +552,8 @@ export default function DailyWork() {
     setEditingIssue(null);
     setIssueStatus('Chưa XL');
     setIssueResolvedAt('');
+    setIssueDeviceType('MPD_CO_DINH');
+    setIssueB4CategoryIdx(0);
   }
 
   function handleStartEditIssue(issue) {
@@ -557,8 +568,42 @@ export default function DailyWork() {
     setIssueReporter(dataDetail.reporter || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'admin');
     setIssueStatus(dataDetail.status || 'Chưa XL');
     setIssueResolvedAt(solutions.resolved_at || '');
+    setIssueDeviceType(dataDetail.device_type || 'MPD_CO_DINH');
+    setIssueB4CategoryIdx(dataDetail.b4_category_idx !== undefined ? dataDetail.b4_category_idx : 0);
     
     setShowAddIssueModal(true);
+  }
+
+  function handleExportB4Repair(deviceType = 'MPD_CO_DINH') {
+    let targetLogs = filteredDefectsLogs;
+    if (selectedIssueIds.length > 0) {
+      targetLogs = filteredDefectsLogs.filter(issue => selectedIssueIds.includes(issue.log_id));
+    }
+
+    if (targetLogs.length === 0) {
+      alert("Không có tồn tại nào được chọn để xuất Biểu mẫu B4!");
+      return;
+    }
+
+    const exportItems = targetLogs.map(log => {
+      const dataDetail = log.existing_issues || {};
+      return {
+        site_id: log.site_id,
+        description: dataDetail.description || 'Hư hỏng cần sửa chữa',
+        category: dataDetail.category,
+        reporter: dataDetail.reporter,
+        b4_category_idx: dataDetail.b4_category_idx !== undefined ? dataDetail.b4_category_idx : 0,
+        device_type: dataDetail.device_type || deviceType
+      };
+    });
+
+    exportB4RepairProposal({
+      items: exportItems,
+      datasites: stations,
+      targetCategory: deviceType,
+      customFileName: `TVT3_De_Nghi_Sua_Chua_B4_${deviceType}_${new Date().toISOString().substring(0, 10).replace(/-/g, '')}.xlsx`
+    });
+    setShowB4ExportDropdown(false);
   }
 
   function handleExportIssuesExcel() {
@@ -781,12 +826,51 @@ export default function DailyWork() {
           )}
 
           {activeTab === 'issues' && (
-            <button 
-              onClick={handleExportIssuesExcel}
-              className="inline-flex items-center justify-center px-4 py-2 text-[13px] font-bold rounded-lg text-emerald-700 bg-white border border-emerald-300 hover:bg-emerald-50 shadow-sm transition-colors cursor-pointer h-[34px]"
-            >
-              Xuất Excel
-            </button>
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <button 
+                  onClick={() => setShowB4ExportDropdown(!showB4ExportDropdown)}
+                  className="inline-flex items-center justify-center px-3.5 py-1.5 text-[13px] font-bold rounded-lg text-emerald-800 bg-emerald-50 border border-emerald-300 hover:bg-emerald-100 shadow-sm transition-colors cursor-pointer h-[34px] gap-1.5"
+                  title="Xuất Biểu mẫu B4 Đề nghị Sửa chữa MPĐ/ĐHKK chuẩn 15 cột"
+                >
+                  <ClipboardList className="h-4 w-4 text-emerald-600" />
+                  <span>📄 Xuất Biểu Mẫu B4</span>
+                </button>
+
+                {showB4ExportDropdown && (
+                  <div className="absolute right-0 mt-1.5 w-64 bg-white border border-slate-200 rounded-xl shadow-xl z-50 p-2 space-y-1 text-left">
+                    <div className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100">
+                      Chọn loại biểu mẫu B4:
+                    </div>
+                    <button
+                      onClick={() => handleExportB4Repair('MPD_CO_DINH')}
+                      className="w-full text-left px-3 py-2 text-xs font-bold text-slate-700 hover:bg-emerald-50 hover:text-emerald-800 rounded-lg flex items-center gap-2 cursor-pointer"
+                    >
+                      ⚡ 1. MPĐ Cố Định (B4)
+                    </button>
+                    <button
+                      onClick={() => handleExportB4Repair('MPD_DI_DONG')}
+                      className="w-full text-left px-3 py-2 text-xs font-bold text-slate-700 hover:bg-amber-50 hover:text-amber-800 rounded-lg flex items-center gap-2 cursor-pointer"
+                    >
+                      🚗 2. MPĐ Di Động / Nổ Xăng (B4)
+                    </button>
+                    <button
+                      onClick={() => handleExportB4Repair('DHKK')}
+                      className="w-full text-left px-3 py-2 text-xs font-bold text-slate-700 hover:bg-cyan-50 hover:text-cyan-800 rounded-lg flex items-center gap-2 cursor-pointer"
+                    >
+                      ❄️ 3. Điều Hòa Thông Gió (B4)
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <button 
+                onClick={handleExportIssuesExcel}
+                className="inline-flex items-center justify-center px-3.5 py-1.5 text-[13px] font-bold rounded-lg text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 shadow-sm transition-colors cursor-pointer h-[34px]"
+              >
+                Xuất Excel Thường
+              </button>
+            </div>
           )}
 
           {user && (
@@ -1710,7 +1794,7 @@ export default function DailyWork() {
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Hạng mục tồn tại</label>
                   <select 
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-red-500 focus:border-red-500 bg-white"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-red-500 focus:border-red-500 bg-white font-medium"
                     value={issueCategory}
                     onChange={(e) => setIssueCategory(e.target.value)}
                   >
@@ -1728,6 +1812,43 @@ export default function DailyWork() {
                     value={issueReporter}
                     onChange={(e) => setIssueReporter(e.target.value)}
                   />
+                </div>
+              </div>
+
+              {/* B4 Repair Proposal Category Selector */}
+              <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-xl space-y-3">
+                <div className="text-xs font-bold text-amber-900 uppercase tracking-wider flex items-center gap-1.5">
+                  <ClipboardList className="h-4 w-4 text-amber-600" />
+                  <span>Cấu hình Biểu mẫu B4 (Phục vụ Đề xuất Sửa chữa)</span>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-amber-800 mb-1">Loại thiết bị B4</label>
+                    <select
+                      className="w-full px-2.5 py-1.5 border border-amber-200 rounded-lg text-xs font-bold bg-white text-amber-900 focus:ring-1 focus:ring-amber-500"
+                      value={issueDeviceType}
+                      onChange={(e) => {
+                        setIssueDeviceType(e.target.value);
+                        setIssueB4CategoryIdx(0);
+                      }}
+                    >
+                      <option value="MPD_CO_DINH">⚡ MPĐ Cố định</option>
+                      <option value="MPD_DI_DONG">🚗 MPĐ Di động / Nổ xăng</option>
+                      <option value="DHKK">❄️ Điều hòa thông gió</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-amber-800 mb-1">Hạng mục sửa chữa chuẩn hóa B4</label>
+                    <select
+                      className="w-full px-2.5 py-1.5 border border-amber-200 rounded-lg text-xs font-medium bg-white text-slate-800 focus:ring-1 focus:ring-amber-500"
+                      value={issueB4CategoryIdx}
+                      onChange={(e) => setIssueB4CategoryIdx(Number(e.target.value))}
+                    >
+                      {(B4_REPAIR_CATEGORIES[issueDeviceType] || []).map((cat, idx) => (
+                        <option key={cat.id} value={idx}>{cat.label}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </div>
 
