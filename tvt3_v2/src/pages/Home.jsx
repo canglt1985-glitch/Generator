@@ -102,6 +102,18 @@ export default function Home() {
       iconBg: 'bg-amber-100/60'
     },
     {
+      id: 'sran-5g',
+      title: 'Dự án 5G & SRAN',
+      desc: 'Tiến độ phát sóng 5G & Swap SRAN',
+      path: '/sran-5g',
+      icon: Radio,
+      color: 'text-indigo-600 dark:text-indigo-400',
+      titleColor: 'text-indigo-800 group-hover:text-indigo-900',
+      descColor: 'text-indigo-600/80',
+      bgColor: 'bg-indigo-50/70 border-indigo-100 hover:border-indigo-300 hover:bg-indigo-50',
+      iconBg: 'bg-indigo-100/60'
+    },
+    {
       id: 'contracts',
       title: 'Quản lý Hợp đồng',
       desc: 'Mặt bằng & hợp đồng trạm',
