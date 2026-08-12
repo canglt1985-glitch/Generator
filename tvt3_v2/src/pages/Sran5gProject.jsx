@@ -239,21 +239,33 @@ export default function Sran5gProject() {
       (d.unique_id && d.unique_id.toUpperCase().includes('5G'))
     ).length;
 
+    const checkIsSingleband = (d) => {
+      const swapSol = (d.swap_solution || '').toLowerCase();
+      const equipSol = (d.equip_solution || '').toLowerCase();
+      const cfg3g4g = (d.config_3g4g || '').toLowerCase();
+      const scope3g4g = (d.scope_3g4g || '').toLowerCase();
+
+      if (equipSol.includes('single') || swapSol.includes('single') || scope3g4g.includes('single')) return true;
+      if (equipSol.includes('dual') || swapSol.includes('dual') || scope3g4g.includes('dual')) return false;
+
+      return swapSol.includes('4g only') || 
+             swapSol.includes('chỉ swap 4g') || 
+             (swapSol.includes('swap 4g') && !swapSol.includes('3g')) || 
+             cfg3g4g.includes('4g only') || 
+             cfg3g4g.includes('tháo dỡ 4g') ||
+             (scope3g4g.includes('swap 4g') && !scope3g4g.includes('3g'));
+    };
+
     const swap4gOnly = activeDataset.filter(d => {
       const is5g = (d.scope_5g && d.scope_5g.toUpperCase().includes('5G') && !d.scope_5g.toUpperCase().includes('NONE')) || (d.unique_id && d.unique_id.toUpperCase().includes('5G'));
       if (is5g) return false;
-      const swapSol = (d.swap_solution || '').toLowerCase();
-      const cfg3g4g = (d.config_3g4g || '').toLowerCase();
-      return swapSol.includes('4g only') || swapSol.includes('chỉ swap 4g') || (swapSol.includes('swap 4g') && !swapSol.includes('3g')) || cfg3g4g.includes('4g only') || cfg3g4g.includes('tháo dỡ 4g');
+      return checkIsSingleband(d);
     }).length;
 
     const swapBoth3g4g = activeDataset.filter(d => {
       const is5g = (d.scope_5g && d.scope_5g.toUpperCase().includes('5G') && !d.scope_5g.toUpperCase().includes('NONE')) || (d.unique_id && d.unique_id.toUpperCase().includes('5G'));
       if (is5g) return false;
-      const swapSol = (d.swap_solution || '').toLowerCase();
-      const cfg3g4g = (d.config_3g4g || '').toLowerCase();
-      const isSingle4g = swapSol.includes('4g only') || swapSol.includes('chỉ swap 4g') || (swapSol.includes('swap 4g') && !swapSol.includes('3g')) || cfg3g4g.includes('4g only') || cfg3g4g.includes('tháo dỡ 4g');
-      return !isSingle4g;
+      return !checkIsSingleband(d);
     }).length;
 
     const surveyDone = activeDataset.filter(d => d.survey_date).length;
