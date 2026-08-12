@@ -222,6 +222,39 @@ def _old_id(site_id) -> str:
     return site_id
 
 
+def _get_all_site_aliases(item) -> set:
+    """Return a set of all normalized site aliases (V1 ID, V2 ID, NE name, etc.) for a site or alarm dict."""
+    aliases = set()
+    if isinstance(item, dict):
+        for k in ['site_id', 'site', 'tram', 'ne', 'id_tram']:
+            val = str(item.get(k) or '').strip().upper()
+            if val and val != 'UNKNOWN':
+                aliases.add(val)
+    elif isinstance(item, str):
+        val = item.strip().upper()
+        if val and val != 'UNKNOWN':
+            aliases.add(val)
+
+    expanded = set(aliases)
+    for a in list(aliases):
+        old_id = _old_id(a)
+        if old_id:
+            expanded.add(old_id.strip().upper())
+        try:
+            data = _get_datasites_list()
+            for s in data:
+                s_id = (s.get("site_id") or "").strip().upper()
+                s_old = (s.get("site_id_old") or "").strip().upper()
+                if a == s_id or a == s_old:
+                    if s_id: expanded.add(s_id)
+                    if s_old: expanded.add(s_old)
+        except Exception:
+            pass
+
+    return expanded
+
+
+
 def _fmt_sdate(sdate_str: str, full: bool = False) -> str:
     """Format sdateStr 'DD/MM/YYYY HH:MM:SS' or ISO -> 'DD/MM HH:MM' or 'HH:MM'.
     Args:
@@ -1607,9 +1640,8 @@ def check_power_outage_generators():
                     cache_data = json.load(f)
                     mpd_list = cache_data.get('data', [])
                     for alarm in mpd_list:
-                        site = _site_key(alarm)
-                        if site:
-                            active_mpd_sites.add(site.strip().upper())
+                        aliases = _get_all_site_aliases(alarm)
+                        active_mpd_sites.update(aliases)
             except Exception as ce:
                 logger.warning(f"Error reading active mpd cache: {ce}")
                 
@@ -1638,7 +1670,8 @@ def check_power_outage_generators():
             if not site_id:
                 continue
                 
-            if site_id in active_mpd_sites:
+            site_aliases = _get_all_site_aliases(site_id)
+            if site_aliases & active_mpd_sites:
                 continue
                 
             tg_cup = ot.get("thoi_gian_cup_dien") or ""
@@ -1708,9 +1741,11 @@ def check_power_outage_generators():
                             continue
                         site_id = site.strip().upper()
                         
-                        # Nếu trạm đã có GEN active, bỏ qua
-                        if site_id in active_mpd_sites:
+                        # Nếu trạm (hoặc bất kỳ bí danh V1/V2 nào của trạm) đã có GEN active, bỏ qua
+                        site_aliases = _get_all_site_aliases(alarm)
+                        if site_aliases & active_mpd_sites:
                             continue
+
                             
                         # Phân tích sdate của cảnh báo MAC
                         sdate_str = alarm.get('sdateStr') or alarm.get('sdate_str') or alarm.get('sdate') or ''
@@ -1740,7 +1775,7 @@ def check_power_outage_generators():
                             # Điều kiện: mất điện AC > 2 tiếng (120 phút) và < 24 tiếng (để tránh báo các dữ liệu rác quá cũ)
                             if 120 <= mac_age_min < 1440:
                                 warning_key = f"mac_{site_id}_{sdate_str.replace(' ', '_')}"
-                                if warning_key not in sent_warnings:
+                                if warning_key not in sent_warnings and not any(p['warning_key'] == warning_key or p['site_id'] == site_id for p in pending_mac_warnings):
                                     hours_elapsed = round(mac_age_min / 60.0, 1)
                                     time_display = mac_start_dt.strftime('%H:%M')
                                     pending_mac_warnings.append({
@@ -2278,6 +2313,31 @@ def run_vhkt_poll(target_date: str = None):
         save_vhkt_to_local_json(vhkt_raw)
 
 
+def _parse_alarm_date_str(sdate_raw):
+    if not sdate_raw:
+        return None
+    s_str = str(sdate_raw).strip()
+    if "T" in s_str or "-" in s_str[:10]:
+        try:
+            return datetime.fromisoformat(s_str.replace("Z", "+00:00")).strftime("%Y-%m-%d")
+        except:
+            pass
+    if "/" in s_str:
+        try:
+            parts = s_str.split(" ")[0].split("/")
+            if len(parts) == 3:
+                return f"{parts[2]}-{int(parts[1]):02d}-{int(parts[0]):02d}"
+        except:
+            pass
+    try:
+        ts = float(s_str)
+        if ts > 1e11:
+            ts /= 1000.0
+        return datetime.fromtimestamp(ts).strftime("%Y-%m-%d")
+    except:
+        pass
+    return None
+
 def auto_sync_mpd_alarms_fallback() -> int:
     """Fallback helper to sync CLEARED mpd alarms from smartw_alarms into generator_logs.
     Ensures no generator running events are missed even if VHKT hasn't submitted a manual report on SmartW.
@@ -2289,10 +2349,13 @@ def auto_sync_mpd_alarms_fallback() -> int:
         res_alarms = supabase.table("smartw_alarms").select("*").eq("alarm_type", "mpd").eq("status", "CLEARED").execute()
         all_alarms = res_alarms.data or []
         
-        yesterday_str = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
-        today_str = datetime.now().strftime("%Y-%m-%d")
+        target_dates = {
+            (datetime.now() - timedelta(days=2)).strftime("%Y-%m-%d"),
+            (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d"),
+            datetime.now().strftime("%Y-%m-%d")
+        }
         
-        alarms = [a for a in all_alarms if a.get("sdate") and (yesterday_str in str(a.get("sdate")) or today_str in str(a.get("sdate")))]
+        alarms = [a for a in all_alarms if _parse_alarm_date_str(a.get("sdate") or a.get("sdateStr")) in target_dates]
         if not alarms:
             return 0
 

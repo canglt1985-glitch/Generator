@@ -239,15 +239,22 @@ export default function Sran5gProject() {
       (d.unique_id && d.unique_id.toUpperCase().includes('5G'))
     ).length;
 
-    const swap4gOnly = activeDataset.filter(d => 
-      !((d.scope_5g && d.scope_5g.toUpperCase().includes('5G') && !d.scope_5g.toUpperCase().includes('NONE')) || (d.unique_id && d.unique_id.toUpperCase().includes('5G'))) &&
-      d.config_3g4g && (d.config_3g4g.toLowerCase().includes('4g only') || d.config_3g4g.toLowerCase().includes('tháo dỡ 4g'))
-    ).length;
+    const swap4gOnly = activeDataset.filter(d => {
+      const is5g = (d.scope_5g && d.scope_5g.toUpperCase().includes('5G') && !d.scope_5g.toUpperCase().includes('NONE')) || (d.unique_id && d.unique_id.toUpperCase().includes('5G'));
+      if (is5g) return false;
+      const swapSol = (d.swap_solution || '').toLowerCase();
+      const cfg3g4g = (d.config_3g4g || '').toLowerCase();
+      return swapSol.includes('4g only') || swapSol.includes('chỉ swap 4g') || (swapSol.includes('swap 4g') && !swapSol.includes('3g')) || cfg3g4g.includes('4g only') || cfg3g4g.includes('tháo dỡ 4g');
+    }).length;
 
-    const swapBoth3g4g = activeDataset.filter(d => 
-      !((d.scope_5g && d.scope_5g.toUpperCase().includes('5G') && !d.scope_5g.toUpperCase().includes('NONE')) || (d.unique_id && d.unique_id.toUpperCase().includes('5G'))) &&
-      (!d.config_3g4g || (!d.config_3g4g.toLowerCase().includes('4g only') && !d.config_3g4g.toLowerCase().includes('tháo dỡ 4g')))
-    ).length;
+    const swapBoth3g4g = activeDataset.filter(d => {
+      const is5g = (d.scope_5g && d.scope_5g.toUpperCase().includes('5G') && !d.scope_5g.toUpperCase().includes('NONE')) || (d.unique_id && d.unique_id.toUpperCase().includes('5G'));
+      if (is5g) return false;
+      const swapSol = (d.swap_solution || '').toLowerCase();
+      const cfg3g4g = (d.config_3g4g || '').toLowerCase();
+      const isSingle4g = swapSol.includes('4g only') || swapSol.includes('chỉ swap 4g') || (swapSol.includes('swap 4g') && !swapSol.includes('3g')) || cfg3g4g.includes('4g only') || cfg3g4g.includes('tháo dỡ 4g');
+      return !isSingle4g;
+    }).length;
 
     const surveyDone = activeDataset.filter(d => d.survey_date).length;
     const tssrApproved = activeDataset.filter(d => d.ie_app_date || d.rf_app_date || d.tssr_sub_date).length;
@@ -499,7 +506,7 @@ export default function Sran5gProject() {
             config_3g4g: rowObj['3G4G Config'],
             scope_5g: rowObj['5G_Scope'],
             config_5g: rowObj['5G_Config'],
-            swap_solution: rowObj['Swap_Solution'] || rowObj['Solution_Remark'],
+            swap_solution: rowObj['Swap_Solution'] || rowObj['Solution_Remark'] || rowObj['Phương án swap thiết bị'] || rowObj['Phương án swap'] || rowObj['Phương án Swap'] || rowObj['Phương Án Swap'] || rowObj['Swap_solution'] || (r[115] ? String(r[115]).trim() : null),
             equip_solution: rowObj['Equip_Solution'],
             power_solution: rowObj['3G4G_Power_Solution'] || rowObj['5G_Power_Solution'],
             antenna_solution: rowObj['3G4G_Antenna_Solution'] || rowObj['5G_Air_Solution'],
@@ -1438,7 +1445,16 @@ export default function Sran5gProject() {
                         }`}>
                           {item.unique_id || 'Swap SRAN'}
                         </span>
-                        {item.scope_3g4g && (
+                        {item.swap_solution && (
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                            item.swap_solution.toLowerCase().includes('4g only') || item.swap_solution.toLowerCase().includes('chỉ swap 4g') || (item.swap_solution.toLowerCase().includes('swap 4g') && !item.swap_solution.toLowerCase().includes('3g'))
+                              ? 'bg-sky-100 text-sky-800 border-sky-300'
+                              : 'bg-indigo-100 text-indigo-800 border-indigo-300'
+                          }`} title={`Cột DL: ${item.swap_solution}`}>
+                            🔄 PA Swap (DL): {item.swap_solution}
+                          </span>
+                        )}
+                        {item.scope_3g4g && !item.swap_solution && (
                           <span className="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 text-slate-600 border border-slate-200">
                             3G/4G: {item.scope_3g4g}
                           </span>
