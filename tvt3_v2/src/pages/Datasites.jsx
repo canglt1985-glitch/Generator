@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Search, Filter, MapPin, Radio, Building2, FileDown, X, Navigation, ChevronDown, Upload, List, BarChart2, Eye, Database } from 'lucide-react';
+import { Search, Filter, MapPin, Radio, Building2, FileDown, X, Navigation, ChevronDown, Upload, List, BarChart2, Eye, Database, RefreshCw } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import DatasiteDetailFullscreen from '../components/datasites/DatasiteDetailFullscreen';
+import DatasiteExportModal from '../components/datasites/DatasiteExportModal';
+import DatasiteImportModal from '../components/datasites/DatasiteImportModal';
 import * as XLSX from 'xlsx';
 import { useCurrentUser } from '../utils/useCurrentUser';
 
@@ -2439,131 +2441,18 @@ export default function Datasites() {
       />
 
       {/* 1. Modal Xuất Excel */}
-      {showExportModal && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setShowExportModal(false)} />
-          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
-            <div className="p-4 md:p-6 border-b border-slate-100 flex items-center justify-between">
-              <h2 className="text-base md:text-lg font-bold text-slate-800 flex items-center gap-2">
-                <FileDown className="h-5 w-5 text-blue-600" />
-                Tùy Chọn Xuất File Excel
-              </h2>
-              <button onClick={() => setShowExportModal(false)} className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-50 cursor-pointer">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            
-            <div className="p-6 space-y-5 text-xs md:text-sm">
-              {/* Scope Selection */}
-              <div className="space-y-2">
-                <label className="font-bold text-slate-600 block">1. Phạm vi xuất dữ liệu:</label>
-                <div className="grid grid-cols-2 gap-3">
-                  <button 
-                    onClick={() => setExportScope('all')}
-                    className={`p-3 rounded-xl border text-center font-semibold transition-all cursor-pointer ${
-                      exportScope === 'all' 
-                        ? 'border-blue-600 bg-blue-50/50 text-blue-700 font-bold shadow-sm' 
-                        : 'border-slate-200 hover:bg-slate-50 text-slate-600'
-                    }`}
-                  >
-                    📊 Lọc toàn mạng ({filteredData.length} trạm)
-                  </button>
-                  <button 
-                    onClick={() => {
-                      if (!exportSiteObj && !selectedSite) {
-                        alert("Không có trạm nào đang được chọn.");
-                        return;
-                      }
-                      setExportScope('single');
-                    }}
-                    disabled={!exportSiteObj && !selectedSite}
-                    className={`p-3 rounded-xl border text-center font-semibold transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
-                      exportScope === 'single' 
-                        ? 'border-blue-600 bg-blue-50/50 text-blue-700 font-bold shadow-sm' 
-                        : 'border-slate-200 hover:bg-slate-50 text-slate-600'
-                    }`}
-                  >
-                    📍 Chỉ trạm đang chọn {exportSiteObj ? `(${exportSiteObj.site_id})` : selectedSite ? `(${selectedSite.site_id})` : ''}
-                  </button>
-                </div>
-              </div>
-
-              {/* Categories Selection */}
-              <div className="space-y-2">
-                <label className="font-bold text-slate-600 block">2. Tích chọn các hạng mục cần xuất:</label>
-                <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-3">
-                  <label className="flex items-center gap-2.5 cursor-pointer">
-                    <input 
-                      type="checkbox"
-                      checked={exportCategories.general}
-                      onChange={(e) => setExportCategories(prev => ({ ...prev, general: e.target.checked }))}
-                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-4 w-4"
-                    />
-                    <div>
-                      <span className="font-bold text-slate-700 block">Thông tin chung</span>
-                      <span className="text-[11px] text-slate-400 block">Mã trạm, địa bàn, tổ QL, người QLT, tọa độ, phân loại...</span>
-                    </div>
-                  </label>
-                  <div className="border-t border-slate-200/60 my-1" />
-                  <label className="flex items-center gap-2.5 cursor-pointer">
-                    <input 
-                      type="checkbox"
-                      checked={exportCategories.contract}
-                      onChange={(e) => setExportCategories(prev => ({ ...prev, contract: e.target.checked }))}
-                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-4 w-4"
-                    />
-                    <div>
-                      <span className="font-bold text-slate-700 block">Hợp đồng thuê mặt bằng</span>
-                      <span className="text-[11px] text-slate-400 block">Số hợp đồng, thông tin chủ nhà, giá thuê, chu kỳ, bank...</span>
-                    </div>
-                  </label>
-                  <div className="border-t border-slate-200/60 my-1" />
-                  <label className="flex items-center gap-2.5 cursor-pointer">
-                    <input 
-                      type="checkbox"
-                      checked={exportCategories.infra}
-                      onChange={(e) => setExportCategories(prev => ({ ...prev, infra: e.target.checked }))}
-                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-4 w-4"
-                    />
-                    <div>
-                      <span className="font-bold text-slate-700 block">Hạ tầng phụ trợ (Cột anten...)</span>
-                      <span className="text-[11px] text-slate-400 block">Loại cột, độ cao, máy lạnh, máy phát, accu, tủ nguồn...</span>
-                    </div>
-                  </label>
-                  <div className="border-t border-slate-200/60 my-1" />
-                  <label className="flex items-center gap-2.5 cursor-pointer">
-                    <input 
-                      type="checkbox"
-                      checked={exportCategories.transmission}
-                      onChange={(e) => setExportCategories(prev => ({ ...prev, transmission: e.target.checked }))}
-                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-4 w-4"
-                    />
-                    <div>
-                      <span className="font-bold text-slate-700 block">Truyền dẫn trạm</span>
-                      <span className="text-[11px] text-slate-400 block">Kiểu kết nối, chủ cáp, đơn vị vận hành, hướng kết nối MAIN/LASTMILE...</span>
-                    </div>
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-4 md:p-6 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-2">
-              <button 
-                onClick={() => setShowExportModal(false)}
-                className="px-4 py-2 border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 rounded-lg text-xs font-bold transition-colors cursor-pointer"
-              >
-                Hủy bỏ
-              </button>
-              <button 
-                onClick={handleExportExcel}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow-sm transition-colors cursor-pointer"
-              >
-                Tải Xuất Excel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <DatasiteExportModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        exportScope={exportScope}
+        setExportScope={setExportScope}
+        exportSiteObj={exportSiteObj}
+        selectedSite={selectedSite}
+        filteredDataLength={filteredData.length}
+        exportCategories={exportCategories}
+        setExportCategories={setExportCategories}
+        handleExecuteExport={handleExportExcel}
+      />
 
       {/* 2. Modal Thêm Mới Trạm */}
       {showAddModal && (
@@ -3452,90 +3341,17 @@ export default function Datasites() {
 
 
       {/* 3. Modal Nhập Excel */}
-      {showImportModal && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setShowImportModal(false)} />
-          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col animate-in zoom-in-95 duration-200 max-h-[90vh]">
-            <div className="p-4 md:p-6 border-b border-slate-100 flex items-center justify-between">
-              <h2 className="text-base md:text-lg font-bold text-slate-800 flex items-center gap-2">
-                <Upload className="h-5 w-5 text-blue-600" />
-                Nhập Trạm Từ File Excel
-              </h2>
-              <button onClick={() => setShowImportModal(false)} className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-50 cursor-pointer">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-4 flex-1 overflow-y-auto text-xs md:text-sm">
-              <div className="space-y-1.5">
-                <label className="font-bold text-slate-600 block">1. Chọn loại hạng mục cần nhập:</label>
-                <select
-                  value={importType}
-                  onChange={(e) => setImportType(e.target.value)}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-slate-50/50 text-slate-800 font-semibold"
-                >
-                  <option value="general">📍 Sheet: Thông tin chung (Hỗ trợ Tạo trạm mới hoặc Cập nhật)</option>
-                  <option value="contract">📄 Sheet: Hợp đồng (Chỉ cập nhật cho trạm đã có sẵn)</option>
-                  <option value="infra">🔌 Sheet: Hạ tầng phụ trợ (Chỉ cập nhật cho trạm đã có sẵn)</option>
-                  <option value="transmission">🔗 Sheet: Truyền dẫn trạm (Chỉ cập nhật truyền dẫn cho trạm đã có sẵn)</option>
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="font-bold text-slate-600 block">2. Tải tệp Excel lên:</label>
-                <div className="border-2 border-dashed border-slate-200 rounded-xl p-8 text-center bg-slate-50/30 hover:bg-slate-50 transition-colors relative">
-                  <input 
-                    type="file"
-                    accept=".xlsx, .xls"
-                    onChange={handleImportExcel}
-                    disabled={isImporting}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
-                  />
-                  <Upload className="h-8 w-8 mx-auto text-slate-400 mb-2" />
-                  <span className="font-semibold text-blue-600 block mb-0.5">Click để chọn hoặc kéo thả tệp Excel vào đây</span>
-                  <span className="text-[10px] text-slate-400 block">Hỗ trợ file định dạng .xlsx hoặc .xls</span>
-                </div>
-              </div>
-
-              {isImporting && (
-                <div className="text-center py-4 flex flex-col items-center justify-center">
-                  <RefreshCw className="h-6 w-6 text-blue-600 animate-spin mb-2" />
-                  <span className="font-semibold text-slate-500">Đang đọc và xử lý dữ liệu Excel...</span>
-                </div>
-              )}
-
-              {importLogs.length > 0 && (
-                <div className="space-y-1.5">
-                  <span className="font-bold text-slate-600 block">3. Nhật ký nhập dữ liệu (Logs):</span>
-                  <div className="bg-slate-900 text-slate-300 font-mono text-[10px] p-3 rounded-lg max-h-[180px] overflow-y-auto space-y-1 leading-relaxed">
-                    {importLogs.map((log, i) => (
-                      <div key={i}>{log}</div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="p-4 md:p-6 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-4">
-              <button
-                onClick={handleDownloadTemplate}
-                className="text-xs text-blue-600 hover:text-blue-800 font-bold underline flex items-center gap-1 cursor-pointer"
-              >
-                📥 Tải File Template Mẫu
-              </button>
-              <button 
-                onClick={() => {
-                  setShowImportModal(false);
-                  setImportLogs([]);
-                }}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-bold shadow-sm transition-colors cursor-pointer"
-              >
-                Đóng
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <DatasiteImportModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        importType={importType}
+        setImportType={setImportType}
+        handleImportExcel={handleImportExcel}
+        isImporting={isImporting}
+        importLogs={importLogs}
+        setImportLogs={setImportLogs}
+        handleDownloadTemplate={handleDownloadTemplate}
+      />
     </div>
   );
 }

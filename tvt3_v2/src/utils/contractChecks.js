@@ -9,14 +9,21 @@ const daysBetween = (date1, date2) => {
 
 // 1. Check Expiry
 export const checkExpiry = (contract) => {
-  if (!contract?.dates?.ngay_ket_thuc_hd) return { status: 'unknown', days: 0 };
+  const dateStr = contract?.dates?.ngay_ket_thuc_hd || 
+                  contract?.dates?.ngay_ket_thuc || 
+                  contract?.dates?.ngay_thanh_toan_den ||
+                  contract?._raw_contract_info?.dates?.ngay_ket_thuc;
+
+  if (!dateStr) return { status: 'unknown', days: 0 };
   
-  const endDate = new Date(contract.dates.ngay_ket_thuc_hd);
+  const endDate = new Date(dateStr);
+  if (isNaN(endDate.getTime())) return { status: 'unknown', days: 0 };
+
   const now = new Date();
   const days = daysBetween(endDate, now);
   
   if (days < 0) return { status: 'expired', days };
-  if (days <= 180) return { status: 'expiring_6m', days };
+  if (days <= 365) return { status: 'expiring_6m', days };
   return { status: 'valid', days };
 };
 
@@ -64,11 +71,16 @@ export const checkAccountMatch = (contract) => {
 
 // 4. Check Payment Status
 export const checkPaymentStatus = (contract) => {
-  if (!contract?.financials?.da_thanh_toan_den) {
+  const paidDateStr = contract?.financials?.da_thanh_toan_den || contract?.dates?.ngay_thanh_toan_den;
+  if (!paidDateStr) {
     return { paid: false, overdueDays: 0, missingData: true };
   }
   
-  const paidUntil = new Date(contract.financials.da_thanh_toan_den);
+  const paidUntil = new Date(paidDateStr);
+  if (isNaN(paidUntil.getTime())) {
+    return { paid: false, overdueDays: 0, missingData: true };
+  }
+
   const now = new Date();
   const days = daysBetween(paidUntil, now);
   
@@ -81,14 +93,25 @@ export const checkPaymentStatus = (contract) => {
 };
 
 // Helper to check if a contract's price has been approved/paid (no negotiation needed)
-const isApprovedPrice = (status) => {
-  if (!status) return false;
-  const s = status.trim().toUpperCase();
-  if (s === 'OK') return true;
-  if (s === 'NOK') return false;
-  if (s.includes('KHÔNG ĐẠT') || s.includes('KHONG DAT')) return false;
-  if (s.includes('ĐẠT') || s.includes('DAT') || s.includes('OK')) return true;
-  if (s === 'DONG_Y_CHUA_PL' || s === 'DONG_Y_DA_TRINH_PL' || s === 'DA_HOAN_TAT') return true;
+export const isApprovedPrice = (contract) => {
+  const status = contract?.status || contract?._raw_contract_info?.status || '';
+  const remarks = contract?.remarks || contract?._raw_contract_info?.remarks || '';
+  const note = contract?.note || contract?._raw_contract_info?.note || contract?._raw_contract_info?.ghi_chu || '';
+  
+  const combined = `${status} ${remarks} ${note}`.toUpperCase().trim();
+  if (!combined) return false;
+
+  if (combined.includes('KHÔNG ĐẠT') || combined.includes('KHONG DAT')) return false;
+  if (
+    combined.includes('ĐẠT') || combined.includes('DAT') || combined.includes('OK') || 
+    combined.includes('ĐÃ TRÌNH') || combined.includes('DA TRINH') || 
+    combined.includes('THỎA') || combined.includes('THOA') ||
+    combined.includes('DONG Y') || combined.includes('ĐỒNG Ý') ||
+    combined.includes('HOÀN TẤT') || combined.includes('HOAN TAT') ||
+    combined.includes('ĐÃ KÝ') || combined.includes('DA KY')
+  ) {
+    return true;
+  }
   return false;
 };
 
@@ -96,63 +119,63 @@ const isApprovedPrice = (status) => {
 export const getContractFlags = (contract) => {
   const flags = [];
   
-  // Phân loại trạm VNPT, CSHT, MobiFone
-  const cl = contract?.datasites?.classification || {};
-  const chuThe = (contract?.contractor_info?.chu_the_hop_dong || '').trim().toLowerCase();
-  const isVnpt = chuThe.includes('viễn thông đồng nai');
-  const isMbf = cl.hinh_thuc_dau_tu === 'TRẠM MOBIFONE';
-  
+  const chuThe = (contract?.contractor_info?.chu_the_hop_dong || contract?.contractor_info?.chu_nha || '').trim().toLowerCase();
+  const loaiHinhDauTu = (contract?.datasites?.classification?.hinh_thuc_dau_tu || '').toUpperCase();
+
+  const isVnpt = chuThe.includes('viễn thông đồng nai') || chuThe.includes('vnpt') || loaiHinhDauTu.includes('VNPT');
+  const isCsht = loaiHinhDauTu.includes('CSHT') || loaiHinhDauTu.includes('ĐỐI TÁC');
+  const isMbf = !isVnpt && !isCsht;
+
   if (isVnpt) {
     flags.push('tram_vnpt');
-    return flags; // Trạm thuê VNPT chỉ để biết, không kiểm tra đàm phán, thanh toán, gia hạn
   }
-  
-  // Expiry
+
+  // Expiry check - Cần gia hạn nếu hết hạn hoặc sắp hết hạn
   const expiry = checkExpiry(contract);
   if (expiry.status === 'expired' || expiry.status === 'expiring_6m') {
     flags.push('can_gia_han');
-    if (isMbf) {
-      flags.push('mb_can_gia_han'); // Trạm thuê mặt bằng cần gia hạn
+    if (isMbf || !isVnpt) {
+      flags.push('mb_can_gia_han');
     }
   }
-  
-  // Price Frame
+
+  // Price Frame check
   const price = checkPriceFrame(contract);
+  const isApproved = isApprovedPrice(contract);
+  const isChuaHetKhauHao = contract.chua_het_khau_hao || contract._raw_contract_info?.chua_het_khau_hao || false;
+
   if (!price.inFrame) {
-    const isChuaHetKhauHao = contract.chua_het_khau_hao || contract._raw_contract_info?.chua_het_khau_hao || false;
-    if (isApprovedPrice(contract.status) || isChuaHetKhauHao) {
+    if (isApproved || isChuaHetKhauHao) {
       flags.push('ngoai_khung_da_duyet');
     } else {
       flags.push('ngoai_khung_gia');
-      if (!isMbf) {
-        flags.push('csht_can_dam_phan'); // Trạm CSHT cần đàm phán
+      if (isCsht) {
+        flags.push('csht_can_dam_phan');
       }
     }
   }
-  
+
   // Account Match
   const account = checkAccountMatch(contract);
   if (!account.matched) {
     flags.push('lech_tai_khoan');
   }
-  
-  // Payment
+
+  // Payment Status
   const payment = checkPaymentStatus(contract);
   if (!payment.paid) {
     flags.push('chua_thanh_toan');
   }
-  
-  // Manual Status
-  if (contract.status === 'dong_y_chua_pl') {
+
+  // Manual Status / Approved status
+  const rawStatus = (contract.status || '').toLowerCase();
+  if (rawStatus.includes('dong_y_chua_pl') || rawStatus.includes('đồng ý, chưa pl')) {
     flags.push('dong_y_chua_pl');
-  }
-  if (contract.status === 'dong_y_da_trinh_pl') {
+  } else if (rawStatus.includes('dong_y_da_trinh_pl') || rawStatus.includes('đã trình')) {
     flags.push('dong_y_da_trinh_pl');
-  }
-  if (contract.status === 'da_hoan_tat' || 
-     (expiry.status === 'valid' && price.inFrame && payment.paid)) {
+  } else if (isApproved || rawStatus.includes('da_hoan_tat') || (expiry.status === 'valid' && price.inFrame && payment.paid)) {
     flags.push('da_hoan_tat');
   }
-  
+
   return flags;
 };

@@ -203,15 +203,16 @@ export default function ContractDashboard() {
       // Compute attributes for the contract
       const flags = getContractFlags(c);
       const cl = c.datasites?.classification || {};
-      const isMbf = cl.hinh_thuc_dau_tu === 'TRẠM MOBIFONE';
-      const chuThe = (c.contractor_info?.chu_the_hop_dong || '').trim().toLowerCase();
-      const isVnpt = chuThe.includes('viễn thông đồng nai');
-      const isCsht = !isMbf && !isVnpt;
+      const chuThe = (c.contractor_info?.chu_the_hop_dong || c.contractor_info?.chu_nha || '').trim().toLowerCase();
+      const loaiHinhDauTu = (cl.hinh_thuc_dau_tu || '').toUpperCase();
+      const isVnpt = flags.includes('tram_vnpt') || chuThe.includes('viễn thông đồng nai') || chuThe.includes('vnpt') || loaiHinhDauTu.includes('VNPT');
+      const isCsht = loaiHinhDauTu.includes('CSHT') || loaiHinhDauTu.includes('ĐỐI TÁC');
+      const isMbf = !isVnpt && !isCsht;
 
-      const inFrame = !flags.includes('ngoai_khung_gia') && !flags.includes('ngoai_khung_da_duyet');
+      const inFrame = !flags.includes('ngoai_khung_gia');
       const isExpiredOrExpiring = flags.includes('can_gia_han') || flags.includes('mb_can_gia_han');
       
-      const isApproved = flags.includes('da_hoan_tat') || c.status === 'da_hoan_tat';
+      const isApproved = flags.includes('da_hoan_tat') || flags.includes('ngoai_khung_da_duyet') || c.status === 'da_hoan_tat';
       const isDongYChuaPL = flags.includes('dong_y_chua_pl') || c.status === 'dong_y_chua_pl';
       const isDongYDaTrinhPL = flags.includes('dong_y_da_trinh_pl') || c.status === 'dong_y_da_trinh_pl';
       const isChuaDuyet = !isApproved && !isDongYChuaPL && !isDongYDaTrinhPL;
