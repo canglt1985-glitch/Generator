@@ -11,6 +11,7 @@ import {
   GROUP_2_BUYER_INFO, 
   isSpecial67Site 
 } from '../utils/siteGroups';
+import { getFuelPriceForDate } from '../utils/fuelPrice';
 
 export default function Generator() {
   const [activeTab, setActiveTab] = useState('logs'); // logs, anomalies, invoices, transfer
@@ -930,17 +931,7 @@ export default function Generator() {
           
           let price = parseFloat(runDetails.don_gia) || 0;
           if (price === 0) {
-            const isXang = fuelType && fuelType.includes('Xăng');
-            if (log.date >= '2026-04-29') {
-              price = isXang ? 23040 : 27850;
-            } else if (log.date >= '2026-02-26') {
-              price = isXang ? 20150 : 19270;
-            } else {
-              price = isXang ? 21000 : 20000;
-            }
-            if (log.date < '2026-03-26') {
-              price = Math.round(price / 1.08);
-            }
+            price = getFuelPriceForDate(log.date, fuelType);
             runDetails.don_gia = price;
             changed = true;
           }
