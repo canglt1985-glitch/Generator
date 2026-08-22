@@ -1,21 +1,21 @@
-import { Bell, Search, User, Menu, Home, Database, FileText, Settings, Activity, Zap, Coins, Radio, X, LogOut, Server, Map } from 'lucide-react';
+import { Bell, Search, User, Menu, Home, Database, FileText, Settings, Activity, Zap, Coins, Radio, X, LogOut, Server, Map, Wifi } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useState } from 'react';
 import { useCurrentUser } from '../utils/useCurrentUser';
 import { supabase } from '../supabaseClient';
 
 const navigation = [
-  { name: 'Trang chủ', href: '/', icon: Home },
-  { name: 'Bản đồ Trạm', href: '/network-map', icon: Map },
-  { name: 'Công việc', href: '/daily-work', icon: Activity },
-  { name: 'Chi phí', href: '/expenses', icon: Coins },
-  { name: 'VHKT-RAN', href: '/vhkt-ran', icon: Radio },
-  { name: 'Dự án CSHT', href: '/infrastructure', icon: Server },
-  { name: 'Dự án 5G & SRAN', href: '/sran-5g', icon: Radio },
-  { name: 'Danh sách Trạm', href: '/datasites', icon: Database },
-  { name: 'Hợp đồng', href: '/contracts', icon: FileText, desktopOnly: true },
-  { name: 'Máy phát', href: '/generator', icon: Zap },
-  { name: 'Cài đặt', href: '/settings', icon: Settings },
+  { name: 'Trang chủ', shortName: 'Trang chủ', href: '/', icon: Home },
+  { name: 'Bản đồ Trạm', shortName: 'Bản đồ', href: '/network-map', icon: Map },
+  { name: 'Lịch công việc', shortName: 'Công việc', href: '/daily-work', icon: Activity },
+  { name: 'Chi phí', shortName: 'Chi phí', href: '/expenses', icon: Coins },
+  { name: 'VHKT-RAN', shortName: 'VHKT-RAN', href: '/vhkt-ran', icon: Radio },
+  { name: 'Dự án CSHT', shortName: 'CSHT', href: '/infrastructure', icon: Server },
+  { name: 'Dự án 5G & SRAN', shortName: '5G & SRAN', href: '/sran-5g', icon: Wifi },
+  { name: 'Danh sách Trạm', shortName: 'Hồ sơ Trạm', href: '/datasites', icon: Database },
+  { name: 'Hợp đồng', shortName: 'Hợp đồng', href: '/contracts', icon: FileText, desktopOnly: true },
+  { name: 'Máy phát', shortName: 'Máy phát', href: '/generator', icon: Zap },
+  { name: 'Cài đặt', shortName: 'Cài đặt', href: '/settings', icon: Settings },
 ];
 
 export default function Header() {
@@ -48,19 +48,19 @@ export default function Header() {
 
   return (
     <>
-    <header className="bg-[#1e2736] sticky top-0 z-50 shadow-lg">
-      <div className="w-full px-4 md:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-14 md:h-16">
+    <header className="bg-[#1e2736] sticky top-0 z-50 shadow-lg border-b border-slate-700/40">
+      <div className="w-full px-3 md:px-5 lg:px-6">
+        <div className="flex items-center justify-between h-14 md:h-16 gap-2">
           {/* Logo & Mobile Menu Button */}
-          <div className="flex items-center gap-3 lg:gap-5">
+          <div className="flex items-center gap-2.5 lg:gap-3 shrink-0">
             <button 
               onClick={() => setMobileMenuOpen(true)}
               className="lg:hidden p-2 -ml-2 rounded-lg text-slate-400 hover:bg-white/10 hover:text-white transition-colors"
             >
               <Menu className="h-5 w-5" />
             </button>
-            <Link to="/" className="flex-shrink-0 flex items-center gap-2.5 group">
-              <div className="w-9 h-9 md:w-10 md:h-10 rounded-full overflow-hidden shrink-0 ring-2 ring-cyan-400/40 shadow-md shadow-cyan-500/10 group-hover:ring-cyan-400/70 transition-all">
+            <Link to="/" className="flex-shrink-0 flex items-center gap-2 group">
+              <div className="w-8 h-8 md:w-9 md:h-9 rounded-full overflow-hidden shrink-0 ring-2 ring-cyan-400/40 shadow-md shadow-cyan-500/10 group-hover:ring-cyan-400/70 transition-all">
                 <img 
                   src="/logo-mobifone-5g.png" 
                   alt="MobiFone 5G Đồng Nai" 
@@ -68,46 +68,47 @@ export default function Header() {
                 />
               </div>
               <div className="flex flex-col justify-center">
-                <span className="text-sm md:text-[15px] font-bold text-white tracking-wide leading-tight">
+                <span className="text-xs md:text-sm font-bold text-white tracking-wide leading-tight whitespace-nowrap">
                   Tổ Viễn Thông 3
                 </span>
-                <span className="text-[10px] font-medium text-cyan-400/80 leading-tight tracking-wider">MobiFone Đồng Nai</span>
+                <span className="text-[9px] md:text-[10px] font-medium text-cyan-400/80 leading-tight tracking-wider whitespace-nowrap">MobiFone Đồng Nai</span>
               </div>
             </Link>
-            
-            {/* Desktop Navigation */}
-            <nav className="hidden lg:flex items-center ml-4">
-              <div className="flex items-center bg-slate-800/50 rounded-lg p-0.5">
-                {visibleNavigation.map((item) => {
-                  const isActive = location.pathname === item.href;
-                  const Icon = item.icon;
-                  return (
-                    <Link
-                      key={item.name}
-                      to={item.href}
-                      className={`flex items-center px-1.5 xl:px-2.5 py-1.5 rounded-md text-[11px] xl:text-[12px] 2xl:text-[13px] font-medium transition-all duration-200 whitespace-nowrap ${
-                        isActive
-                          ? 'bg-white/10 text-white shadow-sm'
-                          : 'text-slate-400 hover:text-slate-200'
-                      }`}
-                    >
-                      <Icon className={`mr-1.5 h-3.5 w-3.5 ${isActive ? 'text-cyan-400' : 'text-slate-500'}`} />
-                      {item.name}
-                    </Link>
-                  );
-                })}
-              </div>
-            </nav>
           </div>
+          
+          {/* Desktop Navigation - Responsive & No-Overlap */}
+          <nav className="hidden lg:flex items-center min-w-0 flex-1 overflow-x-auto scrollbar-none py-1 mx-2">
+            <div className="flex items-center bg-slate-800/60 rounded-lg p-0.5 min-w-max">
+              {visibleNavigation.map((item) => {
+                const isActive = location.pathname === item.href;
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.name}
+                    to={item.href}
+                    className={`flex items-center px-2 xl:px-2.5 py-1.5 rounded-md text-[11px] xl:text-[12px] font-medium transition-all duration-200 whitespace-nowrap shrink-0 ${
+                      isActive
+                        ? 'bg-white/15 text-white shadow-sm font-semibold'
+                        : 'text-slate-300 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    <Icon className={`mr-1.5 h-3.5 w-3.5 shrink-0 ${isActive ? 'text-cyan-400' : 'text-slate-400'}`} />
+                    <span className="hidden xl:inline">{item.name}</span>
+                    <span className="inline xl:hidden">{item.shortName || item.name}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </nav>
 
           {/* Right Section */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="relative hidden md:block">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0 ml-auto">
+            <div className="relative hidden md:block shrink-0">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-3.5 w-3.5 text-slate-500" />
+                <Search className="h-3.5 w-3.5 text-slate-400" />
               </div>
               <input
-                className="block w-40 xl:w-52 pl-9 pr-3 py-1.5 border border-slate-700/50 rounded-lg leading-5 bg-slate-800/30 text-slate-200 placeholder-slate-500 focus:outline-none focus:bg-slate-800/60 focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/30 text-[13px] transition-all"
+                className="block w-32 xl:w-44 2xl:w-52 pl-9 pr-3 py-1.5 border border-slate-700/60 rounded-lg leading-5 bg-slate-800/40 text-slate-200 placeholder-slate-400 focus:outline-none focus:bg-slate-800 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30 text-[12px] xl:text-[13px] transition-all"
                 placeholder="Tìm nhanh..."
                 type="search"
               />

@@ -11,7 +11,8 @@ import {
   Zap, 
   Settings,
   User,
-  ShieldAlert
+  ShieldAlert,
+  Wifi
 } from 'lucide-react';
 import { useCurrentUser } from '../utils/useCurrentUser';
 
@@ -106,12 +107,13 @@ export default function Home() {
       title: 'Dự án 5G & SRAN',
       desc: 'Tiến độ phát sóng 5G & Swap SRAN',
       path: '/sran-5g',
-      icon: Radio,
+      icon: Wifi,
+      badge: '5G HOT',
       color: 'text-indigo-600 dark:text-indigo-400',
       titleColor: 'text-indigo-800 group-hover:text-indigo-900',
       descColor: 'text-indigo-600/80',
-      bgColor: 'bg-indigo-50/70 border-indigo-100 hover:border-indigo-300 hover:bg-indigo-50',
-      iconBg: 'bg-indigo-100/60'
+      bgColor: 'bg-indigo-50/80 border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 shadow-sm hover:shadow-md ring-1 ring-indigo-300/40',
+      iconBg: 'bg-indigo-100'
     },
     {
       id: 'contracts',
@@ -155,7 +157,7 @@ export default function Home() {
   ];
 
   return (
-    <div className="min-h-[calc(100vh-140px)] flex flex-col justify-center max-w-4xl mx-auto py-6 px-4 animate-in fade-in slide-in-from-bottom-4 duration-300 font-sans">
+    <div className="min-h-[calc(100vh-140px)] flex flex-col justify-center max-w-5xl mx-auto py-6 px-4 animate-in fade-in slide-in-from-bottom-4 duration-300 font-sans">
       
       {/* Welcome Banner - MobiFone Premium Brand Blue Gradient */}
       <div className="mb-8 text-center md:text-left bg-gradient-to-br from-[#003b7a] via-[#094a8f] to-[#005fb8] border border-blue-800/40 rounded-3xl p-6 shadow-xl relative overflow-hidden">
@@ -182,15 +184,20 @@ export default function Home() {
           Danh mục chức năng
         </h3>
         
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
           {modules.map((item) => {
             const Icon = item.icon;
             return (
               <div
                 key={item.id}
                 onClick={() => navigate(item.path)}
-                className={`flex flex-col items-center justify-center text-center p-5 rounded-2xl border transition-all duration-200 cursor-pointer select-none active:scale-95 group shadow-sm hover:shadow-md ${item.bgColor}`}
+                className={`relative flex flex-col items-center justify-center text-center p-5 rounded-2xl border transition-all duration-200 cursor-pointer select-none active:scale-95 group shadow-sm hover:shadow-md ${item.bgColor}`}
               >
+                {item.badge && (
+                  <span className="absolute -top-2 -right-2 px-2 py-0.5 text-[9px] font-extrabold text-white bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full shadow-md animate-pulse">
+                    {item.badge}
+                  </span>
+                )}
                 <div className={`p-3.5 rounded-2xl mb-3.5 transition-all duration-200 group-hover:scale-110 ${item.iconBg}`}>
                   <Icon className={`h-6 w-6 ${item.color}`} />
                 </div>
@@ -214,3 +221,4 @@ export default function Home() {
     </div>
   );
 }
+

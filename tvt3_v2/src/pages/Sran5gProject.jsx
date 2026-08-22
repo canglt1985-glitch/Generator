@@ -14,6 +14,7 @@ export default function Sran5gProject() {
   const [selectedDistrict, setSelectedDistrict] = useState('ALL');
   const [selectedScope, setSelectedScope] = useState('ALL');
   const [selectedStatus, setSelectedStatus] = useState('ALL');
+  const [selectedPower, setSelectedPower] = useState('ALL');
   const [selectedVkd, setSelectedVkd] = useState('ALL'); // ALL, VKD 5, VKD 4, VKD 3
   const [tvt3Only, setTvt3Only] = useState(true);
   const [tvt3SiteIds, setTvt3SiteIds] = useState(new Set());
@@ -224,9 +225,23 @@ export default function Sran5gProject() {
       else if (selectedStatus === 'INTEGRATION') matchStatus = !!item.integration_date;
       else if (selectedStatus === 'ONAIR') matchStatus = !!item.onair_date;
 
-      return matchQuery && matchVkd && matchDistrict && matchScope && matchStatus;
+      let matchPower = true;
+      if (selectedPower !== 'ALL') {
+        const ps = (item.power_solution || '').toLowerCase();
+        if (selectedPower === 'NEW_CABINET') {
+          matchPower = ps.includes('lắp tủ nguồn') || ps.includes('p8') || ps.includes('thay tủ');
+        } else if (selectedPower === 'ADD_RECT') {
+          matchPower = ps.includes('rect');
+        } else if (selectedPower === 'ADD_DC_BOX') {
+          matchPower = ps.includes('dc box') || ps.includes('p5') || ps.includes('p7');
+        } else if (selectedPower === 'REUSE_CB') {
+          matchPower = ps.includes('cb') || ps.includes('p1') || ps.includes('p2');
+        }
+      }
+
+      return matchQuery && matchVkd && matchDistrict && matchScope && matchStatus && matchPower;
     });
-  }, [data, searchTerm, selectedVkd, selectedDistrict, selectedScope, selectedStatus, tvt3Only, tvt3SiteIds]);
+  }, [data, searchTerm, selectedVkd, selectedDistrict, selectedScope, selectedStatus, selectedPower, tvt3Only, tvt3SiteIds]);
 
   // Stats calculation
   const stats = useMemo(() => {
@@ -339,7 +354,7 @@ export default function Sran5gProject() {
     activeDataset.forEach(item => {
       const d = getCleanDistrict(item.district);
       if (!distMap[d]) {
-        distMap[d] = { district: d, total: 0, swap4g: 0, add5g: 0, augTarget: 0, survey: 0, tssr: 0, rfDesign: 0, wh: 0, delivery: 0, install: 0, onair: 0 };
+        distMap[d] = { district: d, total: 0, swap4g: 0, add5g: 0, augTarget: 0, survey: 0, tssr: 0, rfDesign: 0, wh: 0, delivery: 0, install: 0, integration: 0, onair: 0 };
       }
       distMap[d].total++;
       if (item.config_3g4g && (item.config_3g4g.includes('Tháo dỡ 4G Only') || item.config_3g4g.includes('4G Only'))) distMap[d].swap4g++;
@@ -351,6 +366,7 @@ export default function Sran5gProject() {
       if (item.wh_pickup_date) distMap[d].wh++;
       if (item.delivery_date) distMap[d].delivery++;
       if (item.install_date) distMap[d].install++;
+      if (item.integration_date) distMap[d].integration++;
       if (item.onair_date) distMap[d].onair++;
     });
     return Object.values(distMap).sort((a, b) => b.total - a.total);
@@ -519,9 +535,16 @@ export default function Sran5gProject() {
             scope_5g: rowObj['5G_Scope'],
             config_5g: rowObj['5G_Config'],
             swap_solution: rowObj['Swap_Solution'] || rowObj['Solution_Remark'] || rowObj['Phương án swap thiết bị'] || rowObj['Phương án swap'] || rowObj['Phương án Swap'] || rowObj['Phương Án Swap'] || rowObj['Swap_solution'] || (r[115] ? String(r[115]).trim() : null),
-            equip_solution: rowObj['Equip_Solution'],
-            power_solution: rowObj['3G4G_Power_Solution'] || rowObj['5G_Power_Solution'],
-            antenna_solution: rowObj['3G4G_Antenna_Solution'] || rowObj['5G_Air_Solution'],
+            power_solution: (() => {
+              const ps_sol = rowObj['Power_Solution'] || rowObj['3G4G_Power_Solution'] || rowObj['5G_Power_Solution'] || '';
+              const newCab = rowObj['New_Power_Cabinet'] || rowObj['MBF_Add_Power_Cabinet'] || rowObj['MBF_Swap_Power_Cabinet'];
+              const newRect = rowObj['New_Rectifier'] || rowObj['MBF_Add_Rectifier'];
+              const parts = [];
+              if (ps_sol) parts.push(String(ps_sol).trim());
+              if (String(newCab).trim() === '1') parts.push('Lắp Tủ Nguồn Mới');
+              if (newRect && String(newRect).trim() !== '0' && String(newRect).trim() !== '') parts.push(`Thêm Rectifier (+${newRect})`);
+              return parts.length > 0 ? parts.join(' | ') : null;
+            })(),
             monthly_target_im: rowObj['Monthly_Target_IM'] ? String(rowObj['Monthly_Target_IM']).trim() : null,
             survey_date: rowObj['Survey_Actual_Date'] ? String(rowObj['Survey_Actual_Date']).substring(0, 10) : null,
             tssr_sub_date: rowObj['SSR_1st_Submitted_Date'] ? String(rowObj['SSR_1st_Submitted_Date']).substring(0, 10) : null,
@@ -1278,6 +1301,18 @@ export default function Sran5gProject() {
                   <option value="ONAIR">🚀 Đã Onair (Phát Sóng)</option>
                 </select>
 
+                <select
+                  value={selectedPower}
+                  onChange={(e) => setSelectedPower(e.target.value)}
+                  className="px-3 py-2 text-xs font-bold bg-amber-50/80 border border-amber-200 rounded-xl text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-sm"
+                >
+                  <option value="ALL">⚡ Phương Án Nguồn: Tất Cả</option>
+                  <option value="NEW_CABINET">⚡ Lắp Tủ Nguồn Mới</option>
+                  <option value="ADD_RECT">⚡ Thêm Rectifier</option>
+                  <option value="ADD_DC_BOX">⚡ Bổ sung DC Box</option>
+                  <option value="REUSE_CB">⚡ Tận dụng CB / Nguồn cũ</option>
+                </select>
+
                 <button
                   onClick={exportFilteredToExcel}
                   className="px-3.5 py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl flex items-center gap-1.5 shadow-sm transition-all hover:scale-105 active:scale-95 shrink-0"
@@ -1481,8 +1516,31 @@ export default function Sran5gProject() {
                       )}
                     </td>
 
-                    <td className="py-3 px-4 max-w-xs truncate text-slate-600" title={item.equip_solution}>
-                      {item.equip_solution || item.antenna_solution || '-'}
+                    <td className="py-3 px-4 max-w-xs">
+                      <div className="text-slate-700 truncate" title={item.equip_solution || item.antenna_solution}>
+                        {item.equip_solution || item.antenna_solution || '-'}
+                      </div>
+                      {item.power_solution && (
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {item.power_solution.toLowerCase().includes('lắp tủ nguồn') ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-100 border border-amber-300 px-1.5 py-0.5 rounded shadow-2xs" title={item.power_solution}>
+                              ⚡ Lắp Tủ Nguồn Mới
+                            </span>
+                          ) : item.power_solution.toLowerCase().includes('rect') ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-cyan-800 bg-cyan-100 border border-cyan-300 px-1.5 py-0.5 rounded shadow-2xs" title={item.power_solution}>
+                              ⚡ Thêm Rectifier
+                            </span>
+                          ) : item.power_solution.toLowerCase().includes('dc box') ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-700 bg-slate-100 border border-slate-300 px-1.5 py-0.5 rounded" title={item.power_solution}>
+                              ⚡ Add DC Box
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-slate-500 truncate max-w-[160px]" title={item.power_solution}>
+                              ⚡ {item.power_solution}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </td>
 
                     <td className="py-3 px-4">
