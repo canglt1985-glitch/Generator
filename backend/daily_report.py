@@ -680,6 +680,130 @@ def send_daily_report(target_date_str=None):
     return daily_sent
 
 
+def generate_monthly_expense_report_message(year=None, month=None):
+    """Generate monthly expense report message in compact format."""
+    now = datetime.now()
+    if year is None: year = now.year
+    if month is None: month = now.month
+    
+    start_date = f"{year}-{month:02d}-01"
+    if month in [1, 3, 5, 7, 8, 10, 12]:
+        end_date = f"{year}-{month:02d}-31"
+    elif month in [4, 6, 9, 11]:
+        end_date = f"{year}-{month:02d}-30"
+    else:
+        end_date = f"{year}-{month:02d}-28"
+
+    from collections import defaultdict
+    res_exp = supabase.table("fuel_and_expenses").select("*").gte("date", start_date).lte("date", end_date).execute()
+    records = res_exp.data or []
+
+    emp_data = defaultdict(lambda: {
+        'fuel_mua_ngoai': {'qty': 0.0, 'amount': 0.0, 'count': 0},
+        'fuel_vnpt_vtl': {'qty': 0.0, 'amount': 0.0, 'count': 0},
+        'other_expenses': {'amount': 0.0, 'count': 0},
+        'total_personal': 0.0
+    })
+    cx222_total = {'qty': 0.0, 'amount': 0.0, 'count': 0}
+
+    for r in records:
+        ft = r.get("fuel_tracking") or {}
+        oe = r.get("other_expenses") or {}
+
+        if ft and (ft.get("total_amount") or ft.get("thanh_tien") or ft.get("quantity")):
+            vendor = str(ft.get("vendor") or "").strip()
+            operator = str(ft.get("operator") or ft.get("person") or "Chưa rõ").strip()
+            qty = float(ft.get("quantity") or 0)
+            amt = float(ft.get("total_amount") or ft.get("thanh_tien") or 0)
+
+            if "222" in vendor:
+                cx222_total['qty'] += qty
+                cx222_total['amount'] += amt
+                cx222_total['count'] += 1
+            elif "VNPT" in vendor or "VTL" in vendor:
+                emp_data[operator]['fuel_vnpt_vtl']['qty'] += qty
+                emp_data[operator]['fuel_vnpt_vtl']['amount'] += amt
+                emp_data[operator]['fuel_vnpt_vtl']['count'] += 1
+                emp_data[operator]['total_personal'] += amt
+            else:
+                emp_data[operator]['fuel_mua_ngoai']['qty'] += qty
+                emp_data[operator]['fuel_mua_ngoai']['amount'] += amt
+                emp_data[operator]['fuel_mua_ngoai']['count'] += 1
+                emp_data[operator]['total_personal'] += amt
+
+        if oe and (oe.get("amount") or oe.get("content")):
+            person = str(oe.get("advance_person") or oe.get("person") or "Chưa rõ").strip()
+            amt = float(oe.get("amount") or 0)
+            emp_data[person]['other_expenses']['amount'] += amt
+            emp_data[person]['other_expenses']['count'] += 1
+            emp_data[person]['total_personal'] += amt
+
+    lines = []
+    lines.append(f"📊 <b>BÁO CÁO CHI PHÍ THÁNG {month:02d}/{year} - TVT3</b>")
+    lines.append(f"<i>(Thời gian đối soát: {start_date} ➔ {end_date})</i>\n")
+    lines.append("━━━━━━━━━━━━━━━━━━━━")
+    lines.append("👤 <b>CHI PHÍ THEO TỪNG NHÂN VIÊN (QUYẾT TOÁN / HOÀN ỨNG)</b>")
+    lines.append("━━━━━━━━━━━━━━━━━━━━")
+
+    total_mua_ngoai_all = 0.0
+    total_vnpt_vtl_all = 0.0
+    total_other_all = 0.0
+    total_personal_all = 0.0
+    sorted_emps = sorted(emp_data.items(), key=lambda x: x[1]['total_personal'], reverse=True)
+
+    for idx, (emp_name, d_emp) in enumerate(sorted_emps, 1):
+        mn = d_emp['fuel_mua_ngoai']
+        vv = d_emp['fuel_vnpt_vtl']
+        ot = d_emp['other_expenses']
+        tot = d_emp['total_personal']
+        total_mua_ngoai_all += mn['amount']
+        total_vnpt_vtl_all += vv['amount']
+        total_other_all += ot['amount']
+        total_personal_all += tot
+
+        if tot > 0 and emp_name.upper() != 'SYSTEM':
+            lines.append(f"{idx}. {emp_name}: <code>{tot:,.0f} đ</code>")
+
+    lines.append("━━━━━━━━━━━━━━━━━━━━")
+    lines.append("⛽️ <b>CÔNG NỢ CÂY XĂNG 222 (CX 222)</b>")
+    lines.append("━━━━━━━━━━━━━━━━━━━━")
+    lines.append(f"• Tổng số lần đổ: <b>{cx222_total['count']} lần</b>")
+    lines.append(f"• Tổng số lít: <b>{cx222_total['qty']:,.1f} lít</b>")
+    lines.append(f"• <b>Tổng tiền CX 222:</b> <code>{cx222_total['amount']:,.0f} đ</code>")
+
+    lines.append("━━━━━━━━━━━━━━━━━━━━")
+    lines.append("🎯 <b>TỔNG HỢP TOÀN BỘ CHI PHÍ THÁNG</b>")
+    lines.append("━━━━━━━━━━━━━━━━━━━━")
+    lines.append(f"1. ⛽️ Nhiên liệu Mua ngoài: <b>{total_mua_ngoai_all:,.0f} đ</b>")
+    lines.append(f"2. 📡 Nhiên liệu VNPT/VTL:  <b>{total_vnpt_vtl_all:,.0f} đ</b>")
+    lines.append(f"3. 💼 Chi phí khác:        <b>{total_other_all:,.0f} đ</b>")
+    lines.append(f"👉 <b>TỔNG HOÀN ỨNG NHÂN VIÊN:</b> <code>{total_personal_all:,.0f} đ</code>")
+    lines.append(f"4. 🏢 Công nợ Cây xăng 222: <b>{cx222_total['amount']:,.0f} đ</b>")
+    grand_total = total_personal_all + cx222_total['amount']
+    lines.append(f"🔥 <b>TỔNG CỘNG TOÀN BỘ TVT3:</b> <code>{grand_total:,.0f} VNĐ</code>")
+
+    return "\n".join(lines)
+
+
+def send_monthly_expense_report(year=None, month=None):
+    """Send monthly expense report to Telegram."""
+    token, chat_id = get_telegram_config()
+    if not chat_id or not token:
+        print("⚠️ Telegram config missing. Skip sending.")
+        return False
+    msg = generate_monthly_expense_report_message(year, month)
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    payload = {"chat_id": chat_id, "text": msg, "parse_mode": "HTML"}
+    try:
+        r = requests.post(url, json=payload, timeout=15)
+        print(f"Telegram Monthly Expense Report status: {r.status_code}")
+        return (r.status_code == 200)
+    except Exception as e:
+        print(f"❌ Failed to send monthly expense report: {e}")
+        return False
+
+
 if __name__ == "__main__":
     print("Running Daily Report generation and dispatch...")
     send_daily_report()
+

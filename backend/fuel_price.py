@@ -33,9 +33,15 @@ FUEL_PRICE_HISTORY_FILE = os.path.join(DATA_DIR, 'fuel_prices_history.json')
 
 # Map product names to standard keys
 PRODUCT_MAP = {
+    'Xăng sinh học E10 RON 95-III': 'xang_ron95',
+    'Xăng E10 RON 95-III': 'xang_ron95',
+    'E10 RON 95-III': 'xang_ron95',
+    'Xăng sinh học E10 RON 95-V': 'xang_ron95_v',
+    'E10 RON 95-V': 'xang_ron95_v',
     'Xăng RON 95-III': 'xang_ron95',
     'RON 95-III': 'xang_ron95',
     'Dầu DO 0,05S-II': 'dau_do',
+    'Điêzen 0,05S-II': 'dau_do',
     'DO 0,05S-II': 'dau_do',
 }
 
@@ -130,14 +136,18 @@ def scrape_pvoil_prices():
                     except ValueError:
                         continue
 
-                    if product_name in ('E10 RON 95-III', 'Xăng E10 RON 95-III'):
-                        if not prices.get('_found_e10'):
+                    p_lower = product_name.lower()
+
+                    # Match E10 / RON95 Gasoline
+                    if 'e10' in p_lower or 'ron 95' in p_lower or 'ron95' in p_lower:
+                        if 'e10' in p_lower:
                             prices['xang_ron95'] = price_val
                             prices['_found_e10'] = True
-                    elif product_name in ('RON 95-III', 'Xăng RON 95-III') and not prices.get('_found_e10'):
-                        if 'xang_ron95' not in prices:
+                        elif not prices.get('_found_e10') and 'xang_ron95' not in prices:
                             prices['xang_ron95'] = price_val
-                    elif product_name in ('DO 0,05S-II', 'Dầu DO 0,05S-II'):
+
+                    # Match Diesel / DO
+                    elif any(k in p_lower for k in ['do 0', 'dầu do', 'điêzen', 'diezen', '0,05s']):
                         if 'dau_do' not in prices:
                             prices['dau_do'] = price_val
 

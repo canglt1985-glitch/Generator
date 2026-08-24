@@ -773,15 +773,167 @@ def poll_telegram_updates():
                                     "parse_mode": "Markdown"
                                 })
 
-                        # 6. Hướng dẫn sử dụng (/start hoặc /help)
+                        # 6. Báo cáo tổng hợp chi phí tháng (/chiphi [thang] [nam])
+                        elif text.lower().startswith("/chiphi"):
+                            parts = text.split(" ")
+                            now = datetime.now()
+                            req_month = now.month
+                            req_year = now.year
+                            
+                            if len(parts) > 1:
+                                p1 = parts[1].strip()
+                                if "/" in p1:
+                                    m_parts = p1.split("/")
+                                    try:
+                                        req_month = int(m_parts[0])
+                                        req_year = int(m_parts[1])
+                                    except ValueError:
+                                        pass
+                                else:
+                                    try:
+                                        req_month = int(p1)
+                                        if len(parts) > 2:
+                                            req_year = int(parts[2].strip())
+                                    except ValueError:
+                                        pass
+                            else:
+                                # Nếu gõ /chiphi ở ngày 1-5 đầu tháng, mặc định xem tháng trước
+                                if now.day <= 5:
+                                    if now.month == 1:
+                                        req_month = 12
+                                        req_year = now.year - 1
+                                    else:
+                                        req_month = now.month - 1
+                                        req_year = now.year
+
+                            from collections import defaultdict
+                            start_date = f"{req_year}-{req_month:02d}-01"
+                            if req_month in [1, 3, 5, 7, 8, 10, 12]:
+                                end_date = f"{req_year}-{req_month:02d}-31"
+                            elif req_month in [4, 6, 9, 11]:
+                                end_date = f"{req_year}-{req_month:02d}-30"
+                            else:
+                                end_date = f"{req_year}-{req_month:02d}-28"
+
+                            try:
+                                res_exp = supabase.table("fuel_and_expenses").select("*").gte("date", start_date).lte("date", end_date).execute()
+                                records = res_exp.data or []
+                                
+                                emp_data = defaultdict(lambda: {
+                                    'fuel_mua_ngoai': {'qty': 0.0, 'amount': 0.0, 'count': 0, 'items': []},
+                                    'fuel_vnpt_vtl': {'qty': 0.0, 'amount': 0.0, 'count': 0, 'items': []},
+                                    'other_expenses': {'amount': 0.0, 'count': 0, 'items': []},
+                                    'total_personal': 0.0
+                                })
+                                cx222_total = {'qty': 0.0, 'amount': 0.0, 'count': 0, 'emp_breakdown': defaultdict(float)}
+
+                                for r in records:
+                                    d_rec = r.get("date")
+                                    sid = r.get("site_id") or ""
+                                    ft = r.get("fuel_tracking") or {}
+                                    oe = r.get("other_expenses") or {}
+
+                                    if ft and (ft.get("total_amount") or ft.get("thanh_tien") or ft.get("quantity")):
+                                        vendor = str(ft.get("vendor") or "").strip()
+                                        operator = str(ft.get("operator") or ft.get("person") or "Chưa rõ").strip()
+                                        qty = float(ft.get("quantity") or 0)
+                                        amt = float(ft.get("total_amount") or ft.get("thanh_tien") or 0)
+
+                                        if "222" in vendor:
+                                            cx222_total['qty'] += qty
+                                            cx222_total['amount'] += amt
+                                            cx222_total['count'] += 1
+                                            cx222_total['emp_breakdown'][operator] += amt
+                                        elif "VNPT" in vendor or "VTL" in vendor:
+                                            emp_data[operator]['fuel_vnpt_vtl']['qty'] += qty
+                                            emp_data[operator]['fuel_vnpt_vtl']['amount'] += amt
+                                            emp_data[operator]['fuel_vnpt_vtl']['count'] += 1
+                                            emp_data[operator]['fuel_vnpt_vtl']['items'].append(f"{d_rec}: {sid} ({qty}L - {amt:,.0f}đ)")
+                                            emp_data[operator]['total_personal'] += amt
+                                        else:
+                                            emp_data[operator]['fuel_mua_ngoai']['qty'] += qty
+                                            emp_data[operator]['fuel_mua_ngoai']['amount'] += amt
+                                            emp_data[operator]['fuel_mua_ngoai']['count'] += 1
+                                            emp_data[operator]['fuel_mua_ngoai']['items'].append(f"{d_rec}: {sid} ({qty}L - {amt:,.0f}đ)")
+                                            emp_data[operator]['total_personal'] += amt
+
+                                    if oe and (oe.get("amount") or oe.get("content")):
+                                        person = str(oe.get("advance_person") or oe.get("person") or "Chưa rõ").strip()
+                                        amt = float(oe.get("amount") or 0)
+                                        content = oe.get("content") or oe.get("project") or "Chi phí khác"
+                                        emp_data[person]['other_expenses']['amount'] += amt
+                                        emp_data[person]['other_expenses']['count'] += 1
+                                        emp_data[person]['other_expenses']['items'].append(f"{d_rec}: {content} ({amt:,.0f}đ)")
+                                        emp_data[person]['total_personal'] += amt
+
+                                lines = []
+                                lines.append(f"📊 <b>BÁO CÁO CHI PHÍ THÁNG {req_month:02d}/{req_year} - TVT3</b>")
+                                lines.append(f"<i>(Thời gian đối soát: {start_date} ➔ {end_date})</i>\n")
+                                lines.append("━━━━━━━━━━━━━━━━━━━━")
+                                lines.append("👤 <b>CHI PHÍ THEO TỪNG NHÂN VIÊN (QUYẾT TOÁN / HOÀN ỨNG)</b>")
+                                lines.append("━━━━━━━━━━━━━━━━━━━━")
+
+                                total_mua_ngoai_all = 0.0
+                                total_vnpt_vtl_all = 0.0
+                                total_other_all = 0.0
+                                total_personal_all = 0.0
+                                sorted_emps = sorted(emp_data.items(), key=lambda x: x[1]['total_personal'], reverse=True)
+
+                                for idx, (emp_name, d_emp) in enumerate(sorted_emps, 1):
+                                    mn = d_emp['fuel_mua_ngoai']
+                                    vv = d_emp['fuel_vnpt_vtl']
+                                    ot = d_emp['other_expenses']
+                                    tot = d_emp['total_personal']
+                                    total_mua_ngoai_all += mn['amount']
+                                    total_vnpt_vtl_all += vv['amount']
+                                    total_other_all += ot['amount']
+                                    total_personal_all += tot
+
+                                    if tot > 0 and emp_name.upper() != 'SYSTEM':
+                                        lines.append(f"{idx}. {emp_name}: <code>{tot:,.0f} đ</code>")
+
+                                lines.append("━━━━━━━━━━━━━━━━━━━━")
+                                lines.append("⛽️ <b>CÔNG NỢ CÂY XĂNG 222 (CX 222)</b>")
+                                lines.append("━━━━━━━━━━━━━━━━━━━━")
+                                lines.append(f"• Tổng số lần đổ: <b>{cx222_total['count']} lần</b>")
+                                lines.append(f"• Tổng số lít: <b>{cx222_total['qty']:,.1f} lít</b>")
+                                lines.append(f"• <b>Tổng tiền CX 222:</b> <code>{cx222_total['amount']:,.0f} đ</code>")
+
+                                lines.append("━━━━━━━━━━━━━━━━━━━━")
+                                lines.append("🎯 <b>TỔNG HỢP TOÀN BỘ CHI PHÍ THÁNG</b>")
+                                lines.append("━━━━━━━━━━━━━━━━━━━━")
+                                lines.append(f"1. ⛽️ Nhiên liệu Mua ngoài: <b>{total_mua_ngoai_all:,.0f} đ</b>")
+                                lines.append(f"2. 📡 Nhiên liệu VNPT/VTL:  <b>{total_vnpt_vtl_all:,.0f} đ</b>")
+                                lines.append(f"3. 💼 Chi phí khác:        <b>{total_other_all:,.0f} đ</b>")
+                                lines.append(f"👉 <b>TỔNG HOÀN ỨNG NHÂN VIÊN:</b> <code>{total_personal_all:,.0f} đ</code>")
+                                lines.append(f"4. 🏢 Công nợ Cây xăng 222: <b>{cx222_total['amount']:,.0f} đ</b>")
+                                grand_total = total_personal_all + cx222_total['amount']
+                                lines.append(f"🔥 <b>TỔNG CỘNG TOÀN BỘ TVT3:</b> <code>{grand_total:,.0f} VNĐ</code>")
+
+                                msg_text = "\n".join(lines)
+                                requests.post(f"{api_url}/sendMessage", json={
+                                    "chat_id": chat_id,
+                                    "text": msg_text,
+                                    "parse_mode": "HTML"
+                                })
+                            except Exception as e:
+                                logger.error(f"Error generating expense report: {e}")
+                                requests.post(f"{api_url}/sendMessage", json={
+                                    "chat_id": chat_id,
+                                    "text": f"❌ Lỗi xuất báo cáo chi phí: {e}",
+                                    "parse_mode": "Markdown"
+                                })
+
+                        # 7. Hướng dẫn sử dụng (/start hoặc /help)
                         elif text.lower().startswith("/start") or text.lower().startswith("/help"):
                             help_text = (
                                 "👋 Chào mừng bạn đến với **VHKT RAN Generator Bot V2**!\n\n"
                                 "Các lệnh khả dụng:\n"
                                 "• `/tram <site_id>` : Xem thông tin kỹ thuật, thiết bị & tồn dầu trạm\n"
                                 "• `/log <site_id> <gio_chay>` : Báo cáo nhật ký chạy máy phát điện (chờ duyệt)\n"
-                                "• `/refill <site_id> <lit> [gia]` : Báo cáo mua/đổ dầu đổ trực tiếp cho trạm\n"
+                                "• `/refill <site_id> <lit> [gia]` : Báo cáo mua/đổ dầu trực tiếp cho trạm\n"
                                 "• `/stock <site_id> <ton_thuc_te>` : Hiệu chỉnh tồn kho thực tế tại trạm\n"
+                                "• `/chiphi [thang] [nam]` : Báo cáo chi phí mua ngoài, VNPT/VTL, chi phí khác từng nhân viên\n"
                                 "• `/register` : Đăng ký chat group/channel hiện tại nhận báo cáo ngày & duyệt log\n"
                                 "• `/help` : Hiện tin nhắn hướng dẫn này"
                             )

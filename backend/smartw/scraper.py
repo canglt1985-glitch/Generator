@@ -975,6 +975,170 @@ class SmartWScraper:
         _, cell = await self.scrape_mll_all()
         return cell
 
+    async def scrape_mll_cause_audit(self, date_str: str = None) -> dict:
+        """Scrape SmartW MLL Cause Import page (import-rp-site-mll/listDetail.htm)
+        for ENDED incidents in past days (default: today-3 days to yesterday 23:59)
+        and detect incidents missing 3 levels of cause for Đồng Nai / TVT3.
+        """
+        await self._ensure_login()
+        now = datetime.now()
+
+        # Target window: today - 3 days 00:00 to yesterday 23:59:59
+        if not date_str:
+            sdate_start = datetime(now.year, now.month, now.day) - timedelta(days=3)
+            edate_end = datetime(now.year, now.month, now.day) - timedelta(seconds=1)
+        else:
+            sdate_start = datetime.strptime(f'{date_str} 00:00', '%d/%m/%Y %H:%M')
+            edate_end = datetime.strptime(f'{date_str} 23:59:59', '%d/%m/%Y %H:%M:%S')
+
+        sdate_str = sdate_start.strftime('%d/%m/%Y 00:00')
+        edate_str = edate_end.strftime('%d/%m/%Y 23:59')
+
+        params = {
+            'sdate': sdate_str,
+            'edate': edate_str,
+            'mien': REGION,
+            'tinh': PROVINCE,
+            'dept': 'MBF_MN_DONG_NAI_PVT',
+            'team': 'MBF_MN_DONG_NAI_PVT_TVT3',
+            'pagenum': '0',
+            'pagesize': '1000',
+            'recordstartindex': '0',
+            'recordendindex': '1000'
+        }
+        data_url = f'{BASE_URL}/smartw/import-rp-site-mll/dataDetail.htm?' + urlencode(params)
+        page_url = f'{BASE_URL}/smartw/import-rp-site-mll/listDetail.htm?' + urlencode(params)
+
+        logger.info(f'SmartW Scrape MLL Cause Audit TVT3 (Ended Incidents {sdate_str} -> {edate_str}): {data_url[:100]}...')
+
+        records = []
+        try:
+            raw_data = await self._fetch_alarm_data(data_url, {})
+            if isinstance(raw_data, list) and raw_data:
+                records = raw_data
+        except Exception as e:
+            logger.warning(f'SmartW MLL Cause JSON fetch failed: {e}')
+
+        if not records:
+            logger.info('SmartW MLL Cause: Falling back to page navigation parse')
+            await self._page.goto(page_url, wait_until='domcontentloaded', timeout=60000)
+            await self._handle_session_expired()
+
+            try:
+                search_btn = self._page.locator('button:has-text("Tìm kiếm"), input[value="Tìm kiếm"]')
+                if await search_btn.count() > 0:
+                    await search_btn.first.click(timeout=5000)
+                    await self._page.wait_for_timeout(3000)
+            except Exception:
+                pass
+
+            columns = {
+                'Site ID': 'site_id',
+                'Trạm': 'site_id',
+                'Tên trạm': 'site_id',
+                'Bắt đầu': 'bat_dau',
+                'Kết thúc': 'ket_thuc',
+                'Số phút': 'so_phut',
+                'Tổ viễn thông': 'to_vt',
+                'Tổ VT': 'to_vt',
+                'Cấp 1': 'nguyen_nhan_1',
+                'Cấp 2': 'nguyen_nhan_2',
+                'Cấp 3': 'nguyen_nhan_3',
+                'Nguyên nhân 1': 'nguyen_nhan_1',
+                'Nguyên nhân 2': 'nguyen_nhan_2',
+                'Nguyên nhân 3': 'nguyen_nhan_3',
+            }
+            records = await self._parse_table(self._page, columns)
+
+        def _parse_time(t_str):
+            if not t_str: return None
+            formats = ['%b %d, %Y %I:%M:%S %p', '%d/%m/%Y %H:%M:%S', '%d/%m/%Y %H:%M', '%Y-%m-%d %H:%M:%S']
+            for fmt in formats:
+                try: return datetime.strptime(str(t_str).strip(), fmt)
+                except Exception: pass
+            if isinstance(t_str, (int, float)):
+                try: return datetime.fromtimestamp(t_str / 1000.0)
+                except Exception: pass
+            return None
+
+        def _fmt_time(val):
+            if not val:
+                return 'N/A'
+            dt = _parse_time(val)
+            if dt:
+                return dt.strftime('%d/%m/%Y %H:%M')
+            return str(val).strip()
+
+        missing_records = []
+        ended_scanned_count = 0
+
+        for r in records:
+            # 1. Filter ONLY Mobifone Đồng Nai TVT3 (MBF_MN_DONG_NAI_PVT_TVT3)
+            ma_to = (r.get('maToXl') or r.get('to_vt') or r.get('team') or r.get('maPhongXl') or '').upper()
+            prov = (r.get('province') or r.get('tinh') or '').upper()
+            site_raw = (r.get('siteId') or r.get('site_id') or r.get('site') or '').upper()
+
+            is_dn_tvt3 = (
+                ('DONG_NAI' in ma_to or 'ĐỒNG NAI' in ma_to or 'DONG_NAI' in prov or 'ĐỒNG NAI' in prov or site_raw.startswith('DNI'))
+                and ('TVT3' in ma_to or 'TVT 3' in ma_to or 'DONG_NAI_PVT_TVT3' in ma_to or 'ĐỒNG NAI 3' in ma_to)
+            )
+            if not is_dn_tvt3:
+                continue
+
+            # 2. Filter ONLY ENDED / CLEARED incidents (edate is not empty/null)
+            edate_raw = r.get('edate') or r.get('ket_thuc') or r.get('edateStr')
+            if not edate_raw or str(edate_raw).strip() in ('', 'null', 'None', 'N/A'):
+                continue  # Skip ongoing active incidents
+
+            edate_dt = _parse_time(edate_raw)
+            if edate_dt:
+                if not (sdate_start <= edate_dt <= edate_end):
+                    continue  # Skip incidents outside window (today - 3 to yesterday 23:59)
+
+            ended_scanned_count += 1
+
+            to_vt = (r.get('maToXl') or r.get('to_vt') or r.get('team') or r.get('maPhongXl') or 'TVT Đồng Nai 3').strip()
+
+            c1 = (r.get('nnCap1') or r.get('nguyen_nhan_1') or r.get('nguyenNhan1') or r.get('causeby1') or r.get('causeby') or r.get('c1') or '').strip()
+            c2 = (r.get('nnCap2') or r.get('nguyen_nhan_2') or r.get('nguyenNhan2') or r.get('causeby2') or r.get('c2') or '').strip()
+            c3 = (r.get('nnCap3') or r.get('nguyen_nhan_3') or r.get('nguyenNhan3') or r.get('causeby3') or r.get('c3') or '').strip()
+
+            missing = []
+            if not c1: missing.append('Cấp 1')
+            if not c2: missing.append('Cấp 2')
+            if not c3: missing.append('Cấp 3')
+
+            if missing:
+                site_id = (r.get('siteId') or r.get('site_id') or r.get('site') or r.get('tenTram') or r.get('trạm') or 'N/A').strip()
+                raw_sdate = r.get('sdateStr') or r.get('sdate') or r.get('bat_dau') or r.get('ngay')
+                bat_dau = _fmt_time(raw_sdate)
+                ket_thuc = _fmt_time(edate_raw)
+
+                missing_records.append({
+                    'site_id': site_id,
+                    'bat_dau': bat_dau,
+                    'ket_thuc': ket_thuc,
+                    'to_vt': to_vt,
+                    'c1': c1,
+                    'c2': c2,
+                    'c3': c3,
+                    'missing_levels': missing,
+                    'missing_str': ', '.join(missing)
+                })
+
+        res = {
+            'total_scanned': len(records),
+            'ended_scanned': ended_scanned_count,
+            'missing_count': len(missing_records),
+            'missing_records': missing_records,
+            'date_range': f'{sdate_start.strftime("%d/%m/%Y")} -> {edate_end.strftime("%d/%m/%Y")}',
+            'scraped_at': datetime.now().isoformat()
+        }
+
+        self._save_json(res, 'mll_cause_missing.json')
+        return res
+
+
     async def scrape_vhkt(self, date_str: str = None) -> list[dict]:
         """Scrape VHKT (Đánh Giá Tổng Hợp) — typically run once/morning.
 

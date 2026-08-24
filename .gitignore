@@ -59,6 +59,12 @@ web-app/scripts/*.log.old
 backend/ms-playwright/
 backend/venv/
 backend/__pycache__/
-backend/*.log
+# ── Debug screenshots & Temp data ──
+backend/data/smartw/*.png
+backend/data/smartw/*.json
+scratch/
+backup_tvt3_v2_before_refactor.zip
+*.bak
+
 
 

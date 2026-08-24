@@ -181,8 +181,8 @@ def main():
                 last_run["smartw_pakh_key"] = pakh_key
                 run_job("smartw_pakh", [python_exe, os.path.join(current_dir, "smartw_worker.py"), "--job", "pakh_delta"])
 
-            # Job C: SmartW MFD Oil Import (Once daily at 06:00 AM)
-            if now.hour == 6 and now.minute == 0 and last_run.get("smartw_mfd_key") != today_str:
+            # Job C: SmartW MFD Oil Import (Once daily at 07:00 AM for all completed runs of yesterday)
+            if now.hour == 7 and now.minute == 0 and last_run.get("smartw_mfd_key") != today_str:
                 last_run["smartw_mfd_key"] = today_str
                 run_job("smartw_mfd", [python_exe, os.path.join(current_dir, "smartw_worker.py"), "--job", "mfd"])
 
@@ -224,10 +224,28 @@ def main():
                 last_run["weekly_report_key"] = today_str
                 run_job("weekly_report", [python_exe, os.path.join(current_dir, "weekly_report.py")])
 
+            # Job L: SmartW MLL Cause Audit (Once daily at 07:50 AM)
+            if now.hour == 7 and now.minute == 50 and last_run.get("smartw_mll_cause_key") != today_str:
+                last_run["smartw_mll_cause_key"] = today_str
+                run_job("smartw_mll_cause", [python_exe, os.path.join(current_dir, "smartw_worker.py"), "--job", "mll_cause"])
+
             # Job J: Gmail Invoice Scanner (Once daily at 03:00 AM)
             if now.hour == 3 and now.minute == 0 and last_run.get("invoice_scanner_key") != today_str:
                 last_run["invoice_scanner_key"] = today_str
                 run_job("invoice_scanner", [python_exe, os.path.join(current_dir, "invoice_worker.py")])
+
+            # Job K: Monthly Expense Report (Once monthly on the 1st of every month at 08:00 AM)
+            month_key = f"{now.year}_{now.month:02d}_monthly_expense"
+            if now.day == 1 and now.hour == 8 and now.minute == 0 and last_run.get("monthly_expense_key") != month_key:
+                last_run["monthly_expense_key"] = month_key
+                # Determine previous month
+                prev_year = now.year if now.month > 1 else now.year - 1
+                prev_month = now.month - 1 if now.month > 1 else 12
+                logger.info(f"📊 Triggering Monthly Expense Report for {prev_month:02d}/{prev_year}...")
+                run_job("monthly_expense", [
+                    python_exe, "-c", 
+                    f"import sys; sys.path.append('{current_dir}'); from daily_report import send_monthly_expense_report; send_monthly_expense_report({prev_year}, {prev_month})"
+                ])
 
             # Job H: Sync configs from Supabase (Every 2 minutes)
             if (now - last_run.get("config_sync_time", datetime.min)).total_seconds() >= 2 * 60:

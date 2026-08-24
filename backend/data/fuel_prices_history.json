@@ -1,50 +1,99 @@
 [
   {
-    "effective_date": "2026-06-17",
+    "effective_date": "2026-05-28",
+    "xang_ron95": 24150,
+    "xang_v2": 24630,
+    "dau_do": 27650,
+    "dau_v2": 28200,
+    "source": "petrolimex"
+  },
+  {
+    "effective_date": "2026-06-04",
+    "xang_ron95": 22330,
+    "xang_v2": 22770,
+    "dau_do": 26860,
+    "dau_v2": 27390,
+    "source": "petrolimex"
+  },
+  {
+    "effective_date": "2026-06-11",
     "xang_ron95": 22060,
+    "xang_v2": 22500,
     "dau_do": 25870,
-    "source": "pvoil"
+    "dau_v2": 26380,
+    "source": "petrolimex"
   },
   {
-    "effective_date": "2026-06-19",
+    "effective_date": "2026-06-18",
     "xang_ron95": 20750,
+    "xang_v2": 21160,
     "dau_do": 23530,
-    "source": "pvoil"
+    "dau_v2": 24000,
+    "source": "petrolimex"
   },
   {
-    "effective_date": "2026-06-20",
-    "xang_ron95": 20750,
-    "dau_do": 23530,
-    "source": "pvoil"
+    "effective_date": "2026-06-25",
+    "xang_ron95": 19910,
+    "xang_v2": 20300,
+    "dau_do": 21860,
+    "dau_v2": 22290,
+    "source": "petrolimex"
   },
   {
-    "effective_date": "2026-06-21",
-    "xang_ron95": 20750,
-    "dau_do": 23530,
-    "source": "pvoil"
+    "effective_date": "2026-07-01",
+    "xang_ron95": 21200,
+    "xang_v2": 21620,
+    "dau_do": 21860,
+    "dau_v2": 22290,
+    "source": "petrolimex_e10_switch",
+    "note": "Petrolimex áp dụng Xăng sinh học E10 RON 95-III từ 00h00 01/07/2026"
   },
   {
-    "effective_date": "2026-06-22",
-    "xang_ron95": 20750,
-    "dau_do": 23530,
-    "source": "pvoil"
-  },
-  {
-    "effective_date": "2026-06-23",
-    "xang_ron95": 20750,
-    "dau_do": 23530,
-    "source": "pvoil"
-  },
-  {
-    "effective_date": "2026-07-04",
+    "effective_date": "2026-07-02",
     "xang_ron95": 20410,
+    "xang_v2": 20810,
     "dau_do": 21170,
-    "source": "pvoil"
+    "dau_v2": 21590,
+    "source": "petrolimex"
   },
   {
-    "effective_date": "2026-07-13",
+    "effective_date": "2026-07-09",
     "xang_ron95": 20000,
+    "xang_v2": 20400,
     "dau_do": 21740,
-    "source": "pvoil"
+    "dau_v2": 22170,
+    "source": "petrolimex"
+  },
+  {
+    "effective_date": "2026-07-16",
+    "xang_ron95": 20550,
+    "xang_v2": 20960,
+    "dau_do": 23320,
+    "dau_v2": 23780,
+    "source": "petrolimex"
+  },
+  {
+    "effective_date": "2026-07-23",
+    "xang_ron95": 21430,
+    "xang_v2": 21850,
+    "dau_do": 25760,
+    "dau_v2": 26270,
+    "source": "petrolimex"
+  },
+  {
+    "effective_date": "2026-07-30",
+    "xang_ron95": 22850,
+    "xang_v2": 23300,
+    "dau_do": 27620,
+    "dau_v2": 28170,
+    "source": "petrolimex"
+  },
+  {
+    "effective_date": "2026-08-13",
+    "xang_ron95": 22320,
+    "xang_v2": 22760,
+    "dau_do": 27540,
+    "dau_v2": 28090,
+    "source": "petrolimex"
   }
 ]

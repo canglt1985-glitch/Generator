@@ -2773,16 +2773,125 @@ def send_periodic_full_report():
         logger.info("SmartW Worker: 🏠 No active alarms, skipping periodic report.")
 
 
+def _get_district_code(site_id: str) -> str:
+    s = (site_id or '').upper().strip()
+    if 'DNLT' in s or 'DNIH' in s: return 'DNLT'
+    if 'DNTN' in s or 'DNTB' in s or 'DNIT' in s: return 'DNTN'
+    if 'DNCM' in s or 'DNIC' in s: return 'DNCM'
+    if 'DNLK' in s or 'DNIL' in s: return 'DNLK'
+    if 'DNXL' in s or 'DNIX' in s: return 'DNXL'
+    if 'DNTP' in s or 'DNIP' in s: return 'DNTP'
+    if 'DNDQ' in s or 'DNID' in s: return 'DNDQ'
+    if 'DNVC' in s or 'DNBI' in s or 'DNBH' in s: return 'DNVC'
+    return s[:4] if len(s) >= 4 else 'Khác'
+
+
+def _send_mll_cause_viber_report(audit_result: dict):
+    """Format and send district-aggregated MLL Cause Audit report for TVT3 to Viber group TVT3-Giám sát Ran."""
+    missing_records = audit_result.get('missing_records', [])
+    missing_count = audit_result.get('missing_count', 0)
+    date_range = audit_result.get('date_range', '')
+
+    lines = [
+        "🚨 *BỔ SUNG NN MLL*",
+        f"📅 {date_range}",
+        f"📊 Tổng số sự cố: *{missing_count}* sự cố",
+        "───────────────"
+    ]
+
+    if missing_count == 0:
+        lines.append("🎉 *Tất cả các sự cố MLL của TVT3 đều đã cập nhật ĐẦY ĐỦ 3 cấp nguyên nhân!*")
+    else:
+        # Group missing records by District Code & Date
+        from collections import defaultdict
+        dist_counts = defaultdict(lambda: defaultdict(int))
+        dist_totals = defaultdict(int)
+
+        def _parse_time(t_str):
+            if not t_str: return None
+            formats = ['%d/%m/%Y %H:%M', '%b %d, %Y %I:%M:%S %p', '%d/%m/%Y %H:%M:%S', '%Y-%m-%d %H:%M:%S']
+            for fmt in formats:
+                try: return datetime.strptime(str(t_str).strip(), fmt)
+                except Exception: pass
+            return None
+
+        for r in missing_records:
+            dist = _get_district_code(r.get('site_id'))
+            edate_dt = _parse_time(r.get('ket_thuc'))
+            date_str = edate_dt.strftime('%d/%m') if edate_dt else 'Gần đây'
+            dist_counts[dist][date_str] += 1
+            dist_totals[dist] += 1
+
+        target_districts = ['DNLT', 'DNTN', 'DNCM', 'DNLK', 'DNXL', 'DNTP', 'DNDQ', 'DNVC']
+        for dist in target_districts:
+            tot = dist_totals[dist]
+            if tot > 0:
+                dates = sorted(dist_counts[dist].keys(), reverse=True)
+                date_breakdown = ' | '.join(f'{d}: {dist_counts[dist][d]}' for d in dates)
+                lines.append(f"🔹 *{dist}:* *{tot}* sự cố ({date_breakdown})")
+
+    # Send to Viber group TVT3-Giám sát Ran (uses viber_bot_token_alarms)
+    _send_viber_report(lines)
+
+
+def run_mll_cause_poll(target_date: str = None):
+    """Audit SmartW MLL incidents for missing cause levels and send report to Viber group TVT3-Giám sát Ran."""
+    if not _acquire_lock():
+        return {'error': 'Worker busy'}
+
+    from smartw.config import load_smartw_config
+    config = load_smartw_config()
+    if not config:
+        logger.warning('SmartW Worker: Not configured, skipping MLL cause poll')
+        return {'error': 'SmartW not configured'}
+
+    # Circuit breaker
+    status = _load_status()
+    fail_count = status.get('login_fail_count', 0)
+    if fail_count >= MAX_LOGIN_FAILURES:
+        logger.warning(f'SmartW Worker: ⛔ MLL cause polling PAUSED — {fail_count} login failures.')
+        return {'error': 'Login paused'}
+
+    _is_running = True
+
+    async def _do_poll():
+        scraper = await _get_or_create_scraper(config['username'], config['password'])
+        if not scraper:
+            return {'error': 'Login failed'}
+        try:
+            await scraper._ensure_login()
+            res = await scraper.scrape_mll_cause_audit(target_date)
+            return res
+        except Exception as e:
+            logger.error(f'SmartW MLL Cause Scrape Error: {e}')
+            await _destroy_scraper()
+            return {'error': str(e)}
+
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        res = loop.run_until_complete(_do_poll())
+    finally:
+        loop.close()
+        _release_lock()
+
+    if isinstance(res, dict) and 'missing_count' in res:
+        logger.info(f"SmartW Worker: MLL Cause Audit complete. Total scanned: {res['total_scanned']}, Missing: {res['missing_count']}")
+        _send_mll_cause_viber_report(res)
+    else:
+        logger.error(f"SmartW MLL Cause Poll failed: {res.get('error') if isinstance(res, dict) else res}")
+
+
 if __name__ == '__main__':
     import argparse
     # Configure basic logging if running as a script
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     
     parser = argparse.ArgumentParser(description="SmartW Worker")
-    parser.add_argument('--job', type=str, default='alarm', choices=['alarm', 'vhkt', 'mfd', 'report', 'pakh', 'pakh_delta', 'pakh_summary'],
-                        help="Job to run (alarm, vhkt, mfd, report, pakh, pakh_delta, pakh_summary)")
+    parser.add_argument('--job', type=str, default='alarm', choices=['alarm', 'vhkt', 'mfd', 'report', 'pakh', 'pakh_delta', 'pakh_summary', 'mll_cause'],
+                        help="Job to run (alarm, vhkt, mfd, report, pakh, pakh_delta, pakh_summary, mll_cause)")
     parser.add_argument('--date', type=str, default=None,
-                        help="Target date for mfd job (YYYY-MM-DD)")
+                        help="Target date for mfd/mll_cause job (YYYY-MM-DD or DD/MM/YYYY)")
     args = parser.parse_args()
     
     if args.job == 'alarm':
@@ -2818,6 +2927,21 @@ if __name__ == '__main__':
                 sys.exit(1)
         logger.info(f"Executing MFD import job with date={target_date}...")
         run_mfd_import_poll(target_date)
+    elif args.job == 'mll_cause':
+        target_date = None
+        if args.date:
+            try:
+                if '-' in args.date:
+                    from datetime import datetime as _dt
+                    target_date = _dt.strptime(args.date, '%Y-%m-%d').strftime('%d/%m/%Y')
+                else:
+                    target_date = args.date
+            except Exception as e:
+                logger.error(f"Error parsing date {args.date} for MLL Cause: {e}")
+                import sys
+                sys.exit(1)
+        logger.info(f"Executing MLL Cause audit job with date={target_date}...")
+        run_mll_cause_poll(target_date)
     elif args.job == 'report':
         logger.info("Executing periodic report job...")
         send_periodic_full_report()
@@ -2830,3 +2954,4 @@ if __name__ == '__main__':
     elif args.job == 'pakh_summary':
         logger.info("Executing PAKH summary poll job...")
         run_pakh_poll('pakh_summary')
+
