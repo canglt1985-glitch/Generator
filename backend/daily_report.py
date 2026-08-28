@@ -181,6 +181,22 @@ def generate_daily_report_data(target_date_str=None):
         }
     }
  
+    report_data['mtd_groups'] = {
+        'g1': {'consumed_dau': 0.0, 'consumed_xang': 0.0, 'inv_dau': 0.0, 'inv_xang': 0.0, 'inv_count': 0},
+        'g2': {'consumed_dau': 0.0, 'consumed_xang': 0.0, 'inv_dau': 0.0, 'inv_xang': 0.0, 'inv_count': 0}
+    }
+    
+    site_map_local = get_site_id_mapping()
+    g1_all_set = set()
+    for s in SPECIAL_67_SITES_SET:
+        s_up = s.upper()
+        g1_all_set.add(s_up)
+        old = site_map_local.get(s_up)
+        if old: g1_all_set.add(old.upper())
+    for k, v in site_map_local.items():
+        if v.upper() in SPECIAL_67_SITES_SET:
+            g1_all_set.add(k.upper())
+ 
     try:
         # 1. Fetch runs for the month (both MTD and target day)
         res_runs = supabase.table("generator_logs")\
@@ -192,7 +208,10 @@ def generate_daily_report_data(target_date_str=None):
         station_hours = {}
         for row in (res_runs.data or []):
             dt_str = row.get("date")
-            site_id = row.get("site_id")
+            site_id = (row.get("site_id") or "").strip().upper()
+            old_sid = site_map_local.get(site_id, "")
+            is_g1 = (site_id in g1_all_set or old_sid in g1_all_set)
+            
             details = row.get("run_details") or {}
             
             duration = float(details.get("thoi_gian_hoat_dong") or 0.0)
@@ -201,6 +220,7 @@ def generate_daily_report_data(target_date_str=None):
             cross_check = details.get("ket_qua_doi_soat")
             fuel_type = details.get("nhien_lieu_loai") or details.get("nhien_lieu") or "Dầu"
             fuel_type_lower = str(fuel_type).lower()
+            is_xang = ('xăng' in fuel_type_lower or 'xang' in fuel_type_lower)
             
             is_daily = (dt_str == target_date_str)
             
@@ -221,10 +241,18 @@ def generate_daily_report_data(target_date_str=None):
             report_data['mtd']['run_hours'] += duration
             report_data['mtd']['run_revenue'] += revenue
             
-            if 'xăng' in fuel_type_lower or 'xang' in fuel_type_lower:
+            if is_xang:
                 report_data['mtd']['consumed_xang_qty'] += fuel
+                if is_g1:
+                    report_data['mtd_groups']['g1']['consumed_xang'] += fuel
+                else:
+                    report_data['mtd_groups']['g2']['consumed_xang'] += fuel
             else:
                 report_data['mtd']['consumed_dau_qty'] += fuel
+                if is_g1:
+                    report_data['mtd_groups']['g1']['consumed_dau'] += fuel
+                else:
+                    report_data['mtd_groups']['g2']['consumed_dau'] += fuel
 
         if station_hours:
             top_st = max(station_hours, key=station_hours.get)
@@ -322,7 +350,7 @@ def generate_daily_report_data(target_date_str=None):
         
         # 4b. MTD Invoices
         res_invoices = supabase.table("parsed_invoices")\
-            .select("items, total_amount, status")\
+            .select("buyer_mst, buyer_name, items, total_amount, status")\
             .gte("invoice_date", start_of_month)\
             .lte("invoice_date", end_of_month_limit)\
             .execute()
@@ -343,9 +371,16 @@ def generate_daily_report_data(target_date_str=None):
                 
             tong_tien = float(row.get("total_amount") or 0.0)
             items = row.get("items") or []
+            b_mst = str(row.get("buyer_mst") or "").strip()
+            b_name = str(row.get("buyer_name") or "").upper()
+            is_inv_g1 = ('0100686209-129' in b_mst or 'ĐỒNG NAI' in b_name)
             
             report_data['mtd']['invoice_count'] += 1
             report_data['mtd']['invoice_total_cost'] += tong_tien
+            if is_inv_g1:
+                report_data['mtd_groups']['g1']['inv_count'] += 1
+            else:
+                report_data['mtd_groups']['g2']['inv_count'] += 1
             
             if isinstance(items, str):
                 try:
@@ -375,6 +410,12 @@ def generate_daily_report_data(target_date_str=None):
 
             report_data['mtd']['invoice_dau_qty'] += qty_d
             report_data['mtd']['invoice_xang_qty'] += qty_x
+            if is_inv_g1:
+                report_data['mtd_groups']['g1']['inv_dau'] += qty_d
+                report_data['mtd_groups']['g1']['inv_xang'] += qty_x
+            else:
+                report_data['mtd_groups']['g2']['inv_dau'] += qty_d
+                report_data['mtd_groups']['g2']['inv_xang'] += qty_x
 
         # 5. Pending approvals count
         res_pending_logs = supabase.table("generator_logs").select("gen_log_id").eq("run_details->>status", "pending").execute()
@@ -401,49 +442,6 @@ def generate_daily_report_data(target_date_str=None):
         except Exception as missing_logs_err:
             print(f"⚠️ Error querying missing logs for daily report: {missing_logs_err}")
             report_data['missing_logs'] = []
-            
-        # 8. Load SLA data from vhkt_sla.json
-        sla_md_fail = 0
-        sla_mll_fail = 0
-        sla_fail_stations = []
-        try:
-            sla_path = os.path.join(current_dir, 'data', 'smartw', 'vhkt_sla.json')
-            if os.path.exists(sla_path):
-                with open(sla_path, 'r', encoding='utf-8') as f:
-                    sla_json = json.load(f)
-                
-                # Target date format in vhkt_sla.json is DD/MM/YYYY
-                target_date_ddmm = dt.strftime('%d/%m/%Y')
-                
-                sla_records = [r for r in sla_json.get("data", []) if r.get("ngay") == target_date_ddmm]
-                for r in sla_records:
-                    md_status = r.get("md_sla")
-                    mll_status = r.get("mll_sla")
-                    tram = r.get("tram")
-                    
-                    is_md_fail = (md_status == "Không đạt")
-                    is_mll_fail = (mll_status == "Không đạt")
-                    
-                    if is_md_fail:
-                        sla_md_fail += 1
-                    if is_mll_fail:
-                        sla_mll_fail += 1
-                    if is_md_fail or is_mll_fail:
-                        fail_types = []
-                        if is_md_fail:
-                            fail_types.append("MĐ")
-                        if is_mll_fail:
-                            fail_types.append("MLL")
-                        sla_fail_stations.append(f"{tram}({'+'.join(fail_types)})")
-            
-            report_data['sla_md_fail'] = sla_md_fail
-            report_data['sla_mll_fail'] = sla_mll_fail
-            report_data['sla_fail_stations'] = sla_fail_stations
-        except Exception as sla_err:
-            print(f"⚠️ Error reading SLA stats for daily report: {sla_err}")
-            report_data['sla_md_fail'] = 0
-            report_data['sla_mll_fail'] = 0
-            report_data['sla_fail_stations'] = []
             
     except Exception as e:
         print(f"❌ Error compiling daily report statistics: {e}")
@@ -507,41 +505,46 @@ def format_daily_report_message(data):
     if not has_daily_purchase:
         lines.append("• Không phát sinh mua nhiên liệu.")
  
-    mtd_purchase_dau = (
-        data['mtd']['purchased_cx222_dau_qty'] + 
-        data['mtd']['purchased_vnpt_vtl_dau_qty'] + 
-        data['mtd']['purchased_mua_le_dau_qty']
-    )
-    mtd_purchase_xang = (
-        data['mtd']['purchased_cx222_xang_qty'] + 
-        data['mtd']['purchased_vnpt_vtl_xang_qty'] + 
-        data['mtd']['purchased_mua_le_xang_qty']
-    )
+    g1 = data.get('mtd_groups', {}).get('g1', {})
+    g2 = data.get('mtd_groups', {}).get('g2', {})
+    
+    g1_c_dau = round(g1.get('consumed_dau', 0.0), 1)
+    g1_c_xang = round(g1.get('consumed_xang', 0.0), 1)
+    g1_i_dau = round(g1.get('inv_dau', 0.0), 1)
+    g1_i_xang = round(g1.get('inv_xang', 0.0), 1)
+    g1_diff_dau = round(g1_i_dau - g1_c_dau, 1)
+    g1_diff_xang = round(g1_i_xang - g1_c_xang, 1)
+    g1_dau_str = f"🔴 Thiếu {g1_diff_dau}L" if g1_diff_dau < 0 else f"🟢 Thừa +{g1_diff_dau}L"
+    g1_xang_str = f"🔴 Thiếu {g1_diff_xang}L" if g1_diff_xang < 0 else f"🟢 Thừa +{g1_diff_xang}L"
+
+    g2_c_dau = round(g2.get('consumed_dau', 0.0), 1)
+    g2_c_xang = round(g2.get('consumed_xang', 0.0), 1)
+    g2_i_dau = round(g2.get('inv_dau', 0.0), 1)
+    g2_i_xang = round(g2.get('inv_xang', 0.0), 1)
+    g2_diff_dau = round(g2_i_dau - g2_c_dau, 1)
+    g2_diff_xang = round(g2_i_xang - g2_c_xang, 1)
+    g2_dau_str = f"🔴 Thiếu {g2_diff_dau}L" if g2_diff_dau < 0 else f"🟢 Thừa +{g2_diff_dau}L"
+    g2_xang_str = f"🔴 Thiếu {g2_diff_xang}L" if g2_diff_xang < 0 else f"🟢 Thừa +{g2_diff_xang}L"
 
     lines.extend([
         f"➡️ *Tổng chi trong ngày:* `{data['total_purchase_cost']:,.0f}` VND",
         "",
-        "📊 *LŨY KẾ THÁNG (MTD):*",
-        f"• Tiêu hao: Dầu `{round(data['mtd']['consumed_dau_qty'], 1)}`L | Xăng `{round(data['mtd']['consumed_xang_qty'], 1)}`L",
-        f"• Ledger mua: Dầu `{round(mtd_purchase_dau, 1)}`L | Xăng `{round(mtd_purchase_xang, 1)}`L",
-        f"• Hóa đơn: Dầu `{round(data['mtd']['invoice_dau_qty'], 1)}`L | Xăng `{round(data['mtd']['invoice_xang_qty'], 1)}`L",
+        "📊 *LŨY KẾ THÁNG (MTD) - THEO 2 HỒ SƠ:*",
+        "🏢 *Nhóm 1: MobiFone ĐN (67 trạm)*",
+        f"• Tiêu hao: Dầu `{g1_c_dau:,.1f}`L | Xăng `{g1_c_xang:,.1f}`L",
+        f"• Hóa đơn:  Dầu `{g1_i_dau:,.1f}`L | Xăng `{g1_i_xang:,.1f}`L",
+        f"• Đối chiếu: Dầu `{g1_dau_str}` | Xăng `{g1_xang_str}`",
+        "",
+        "🏢 *Nhóm 2: MobiFone Toàn Cầu (Còn lại)*",
+        f"• Tiêu hao: Dầu `{g2_c_dau:,.1f}`L | Xăng `{g2_c_xang:,.1f}`L",
+        f"• Hóa đơn:  Dầu `{g2_i_dau:,.1f}`L | Xăng `{g2_i_xang:,.1f}`L",
+        f"• Đối chiếu: Dầu `{g2_dau_str}` | Xăng `{g2_xang_str}`",
         "",
         "⏳ *CHỜ PHÊ DUYỆT:*",
         f"• Log cần duyệt: `{data['pending_approvals']}` dòng",
-        f"• Hóa đơn mới nhận: `{data['new_invoices_today']}` HĐ | Đã nhận: `{data['mtd']['invoice_count']}` HĐ"
+        f"• Hóa đơn mới nhận: `{data['new_invoices_today']}` HĐ | Đã nhận: `{data['mtd']['invoice_count']}` HĐ",
+        sep
     ])
-
-    # ── SLA & VHKT Section ──
-    lines.extend([
-        "",
-        "📊 *HIỆU SUẤT SLA VẬN HÀNH (VHKT):*",
-        f"• Không đạt SLA Mất điện (MĐ): `{data.get('sla_md_fail', 0)}` trạm",
-        f"• Không đạt SLA Mất liên lạc (MLL): `{data.get('sla_mll_fail', 0)}` trạm"
-    ])
-    if data.get('sla_fail_stations'):
-        lines.append(f"• Danh sách trạm lỗi: `{', '.join(data['sla_fail_stations'])}`")
-
-    lines.append(sep)
     
     return "\n".join(lines)
 
