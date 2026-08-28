@@ -110,37 +110,89 @@ def _get_datasites_list():
 
 
 
+def _resolve_base_site_and_tech(raw_input: str, raw_network: str = '') -> tuple[str, str, str]:
+    """
+    Parse a raw site ID from SmartW into:
+    1. base_new_id (8 chars, e.g. 'DNIDGI28')
+    2. base_old_id (6 chars, e.g. 'DNTN55')
+    3. detected_tech (e.g. '4G SRAN', '4G', '5G', '3G', '2G')
+    """
+    if not raw_input:
+        return "", "", _norm_net(raw_network)
+    
+    s = str(raw_input).strip().upper()
+    base_part, sep_suffix = _split_site_id(s)
+    s_clean = base_part.strip().upper()
+    
+    data = _get_datasites_list()
+    matched_new = ""
+    matched_old = ""
+    suffix = ""
+    
+    for item in data:
+        s_id = (item.get("site_id") or "").upper()
+        s_old = (item.get("site_id_old") or "").upper()
+        if s_clean == s_id or s_clean == s_old:
+            matched_new = s_id
+            matched_old = s_old
+            break
+            
+    if not matched_new:
+        for item in data:
+            s_id = (item.get("site_id") or "").upper()
+            s_old = (item.get("site_id_old") or "").upper()
+            if s_id and s_clean.startswith(s_id):
+                matched_new = s_id
+                matched_old = s_old
+                suffix = s_clean[len(s_id):]
+                break
+            if s_old and s_clean.startswith(s_old):
+                matched_new = s_id
+                matched_old = s_old
+                suffix = s_clean[len(s_old):]
+                break
+                
+    if not matched_new:
+        if len(s_clean) >= 8 and (s_clean.startswith("DN") or s_clean.startswith("26")):
+            matched_new = s_clean[:8]
+            suffix = s_clean[8:]
+        elif len(s_clean) >= 6 and s_clean.startswith("DN"):
+            matched_old = s_clean[:6]
+            suffix = s_clean[6:]
+        else:
+            matched_new = s_clean
+            
+    tech = ""
+    if suffix == "UL":
+        tech = "4G SRAN"
+    elif suffix == "L":
+        tech = "4G"
+    elif suffix == "N":
+        tech = "5G"
+    elif suffix == "GL":
+        tech = "2G/4G"
+    elif suffix == "U":
+        tech = "3G"
+    elif suffix == "G":
+        tech = "2G"
+        
+    if not tech and raw_network:
+        tech = _norm_net(raw_network)
+        
+    return matched_new or matched_old or s, matched_old, tech
+
+
 def _get_site_label(site_id) -> str:
-    """Return '*ID_MOI* (ID_CU)' label for Viber display on V2."""
+    """Return '*ID_MOI* (ID_CU)' label (8 chars new, 6 chars old) for Viber display on V2."""
     if not site_id:
         return ""
-    site_str = str(site_id).strip().upper()
-    base_id, suffix = _split_site_id(site_str)
-    site_upper = base_id.strip().upper()
-    try:
-        data = _get_datasites_list()
-        # Sort by site_id length desc to match the most specific prefix first
-        sorted_data = sorted(data, key=lambda x: len(x.get('site_id') or ''), reverse=True)
-        for s in sorted_data:
-            s_id = (s.get("site_id") or "").upper()
-            s_old = (s.get("site_id_old") or "").upper()
-            
-            matched = False
-            # Check exact match on base
-            if site_upper == s_id or site_upper == s_old:
-                matched = True
-            # Or prefix match on full string (supporting tech suffixes like DNIBLC12CM4CC)
-            elif (s_id and site_str.startswith(s_id)) or (s_old and site_str.startswith(s_old)):
-                matched = True
-                matched_prefix = s_id if (s_id and site_str.startswith(s_id)) else s_old
-                suffix = site_str[len(matched_prefix):]
-                
-            if matched:
-                if s.get("site_id_old") and s.get("site_id") != s.get("site_id_old"):
-                    return f"*{s.get('site_id')}{suffix}* ({s.get('site_id_old')}{suffix})"
-                return f"*{s.get('site_id')}{suffix}*"
-    except Exception as e:
-        logger.error(f'SmartW _get_site_label V2 error: {e}')
+    matched_new, matched_old, _ = _resolve_base_site_and_tech(site_id)
+    if matched_new and matched_old and matched_new != matched_old:
+        return f"*{matched_new}* ({matched_old})"
+    if matched_new:
+        return f"*{matched_new}*"
+    if matched_old:
+        return f"*{matched_old}*"
     return f"*{site_id}*"
 
 
@@ -1781,23 +1833,21 @@ def run_alarm_poll():
                     status['last_alarm_poll'] = datetime.now().isoformat()
                     return
 
-                lines_active = []
-
                 # --- 1. ACTIVE SECTION ---
                 if new_md or new_mpd or new_mll:
-                    lines_active.append("🚨 *ACTIVE*")
+                    lines_active = ["🚨 *ACTIVE*"]
                     
                     if new_md:
                         lines_active.append("*MAC:*")
                         mac_groups = {}
                         for alarm in new_md:
-                            site = _site_key(alarm)
-                            net = _norm_net(alarm.get('network') or '')
+                            raw_site = _site_key(alarm)
+                            base_id, old_id, tech = _resolve_base_site_and_tech(raw_site, alarm.get('network') or '')
                             t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '', full=False)
-                            if site not in mac_groups:
-                                mac_groups[site] = {'label': _get_site_label(site), 'nets': [], 't': t}
-                            if net and net not in mac_groups[site]['nets']:
-                                mac_groups[site]['nets'].append(net)
+                            if base_id not in mac_groups:
+                                mac_groups[base_id] = {'label': _get_site_label(base_id), 'nets': [], 't': t}
+                            if tech and tech not in mac_groups[base_id]['nets']:
+                                mac_groups[base_id]['nets'].append(tech)
                         for site, grp in mac_groups.items():
                             net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
                             lines_active.append(f"  • {grp['label']}{net_part} - {grp['t']}")
@@ -1806,13 +1856,13 @@ def run_alarm_poll():
                         lines_active.append("*GEN:*")
                         mpd_groups = {}
                         for alarm in new_mpd:
-                            site = _site_key(alarm)
-                            net = _norm_net(alarm.get('network') or '')
+                            raw_site = _site_key(alarm)
+                            base_id, old_id, tech = _resolve_base_site_and_tech(raw_site, alarm.get('network') or '')
                             t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '', full=False)
-                            if site not in mpd_groups:
-                                mpd_groups[site] = {'label': _get_site_label(site), 'nets': [], 't': t}
-                            if net and net not in mpd_groups[site]['nets']:
-                                mpd_groups[site]['nets'].append(net)
+                            if base_id not in mpd_groups:
+                                mpd_groups[base_id] = {'label': _get_site_label(base_id), 'nets': [], 't': t}
+                            if tech and tech not in mpd_groups[base_id]['nets']:
+                                mpd_groups[base_id]['nets'].append(tech)
                         for site, grp in mpd_groups.items():
                             net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
                             lines_active.append(f"  • {grp['label']}{net_part} - {grp['t']}")
@@ -1821,13 +1871,13 @@ def run_alarm_poll():
                         lines_active.append("*MLL:*")
                         mll_groups = {}
                         for alarm in new_mll:
-                            site = _site_key(alarm)
-                            net = _norm_net(alarm.get('network') or '')
+                            raw_site = _site_key(alarm)
+                            base_id, old_id, tech = _resolve_base_site_and_tech(raw_site, alarm.get('network') or '')
                             t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '', full=False)
-                            if site not in mll_groups:
-                                mll_groups[site] = {'label': _get_site_label(site), 'nets': [], 't': t}
-                            if net and net not in mll_groups[site]['nets']:
-                                mll_groups[site]['nets'].append(net)
+                            if base_id not in mll_groups:
+                                mll_groups[base_id] = {'label': _get_site_label(base_id), 'nets': [], 't': t}
+                            if tech and tech not in mll_groups[base_id]['nets']:
+                                mll_groups[base_id]['nets'].append(tech)
                         for site, grp in mll_groups.items():
                             net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
                             lines_active.append(f"  • {grp['label']}{net_part} - {grp['t']}")
@@ -1862,7 +1912,7 @@ def run_alarm_poll():
                     return unsent
 
                 unsent_cl_md = _filter_unsent(cl_md, 'md')
-                unsent_cl_mpd = _filter_unsent(cl_mpd, 'mpd')
+                unsent_cl_mpd = _filter_cl_mpd = _filter_unsent(cl_mpd, 'mpd')
                 unsent_cl_mll = _filter_unsent(cl_mll, 'mll')
 
                 if unsent_cl_md or unsent_cl_mpd or unsent_cl_mll:
@@ -1872,13 +1922,13 @@ def run_alarm_poll():
                         lines_cleared.append("*MAC:*")
                         cl_mac_groups = {}
                         for alarm, _ in unsent_cl_md:
-                            site = _site_key(alarm)
-                            net = _norm_net(alarm.get('network') or '')
+                            raw_site = _site_key(alarm)
+                            base_id, old_id, tech = _resolve_base_site_and_tech(raw_site, alarm.get('network') or '')
                             clear_t = _fmt_sdate(alarm.get('clear_time') or alarm.get('edateStr') or '', full=False)
-                            if site not in cl_mac_groups:
-                                cl_mac_groups[site] = {'label': _get_site_label(site), 'nets': [], 't': clear_t}
-                            if net and net not in cl_mac_groups[site]['nets']:
-                                cl_mac_groups[site]['nets'].append(net)
+                            if base_id not in cl_mac_groups:
+                                cl_mac_groups[base_id] = {'label': _get_site_label(base_id), 'nets': [], 't': clear_t}
+                            if tech and tech not in cl_mac_groups[base_id]['nets']:
+                                cl_mac_groups[base_id]['nets'].append(tech)
                         for site, grp in cl_mac_groups.items():
                             net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
                             lines_cleared.append(f"  • {grp['label']}{net_part} - {grp['t']}")
@@ -1887,13 +1937,13 @@ def run_alarm_poll():
                         lines_cleared.append("*GEN:*")
                         cl_mpd_groups = {}
                         for alarm, _ in unsent_cl_mpd:
-                            site = _site_key(alarm)
-                            net = _norm_net(alarm.get('network') or '')
+                            raw_site = _site_key(alarm)
+                            base_id, old_id, tech = _resolve_base_site_and_tech(raw_site, alarm.get('network') or '')
                             clear_t = _fmt_sdate(alarm.get('clear_time') or alarm.get('edateStr') or '', full=False)
-                            if site not in cl_mpd_groups:
-                                cl_mpd_groups[site] = {'label': _get_site_label(site), 'nets': [], 't': clear_t}
-                            if net and net not in cl_mpd_groups[site]['nets']:
-                                cl_mpd_groups[site]['nets'].append(net)
+                            if base_id not in cl_mpd_groups:
+                                cl_mpd_groups[base_id] = {'label': _get_site_label(base_id), 'nets': [], 't': clear_t}
+                            if tech and tech not in cl_mpd_groups[base_id]['nets']:
+                                cl_mpd_groups[base_id]['nets'].append(tech)
                         for site, grp in cl_mpd_groups.items():
                             net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
                             lines_cleared.append(f"  • {grp['label']}{net_part} - {grp['t']}")
@@ -1902,13 +1952,13 @@ def run_alarm_poll():
                         lines_cleared.append("*MLL:*")
                         mll_cl_groups = {}
                         for alarm, _ in unsent_cl_mll:
-                            site = _site_key(alarm)
-                            net = _norm_net(alarm.get('network') or '')
+                            raw_site = _site_key(alarm)
+                            base_id, old_id, tech = _resolve_base_site_and_tech(raw_site, alarm.get('network') or '')
                             clear_t = _fmt_sdate(alarm.get('clear_time') or alarm.get('edateStr') or '', full=False)
-                            if site not in mll_cl_groups:
-                                mll_cl_groups[site] = {'label': _get_site_label(site), 'nets': [], 't': clear_t}
-                            if net and net not in mll_cl_groups[site]['nets']:
-                                mll_cl_groups[site]['nets'].append(net)
+                            if base_id not in mll_cl_groups:
+                                mll_cl_groups[base_id] = {'label': _get_site_label(base_id), 'nets': [], 't': clear_t}
+                            if tech and tech not in mll_cl_groups[base_id]['nets']:
+                                mll_cl_groups[base_id]['nets'].append(tech)
                         for site, grp in mll_cl_groups.items():
                             net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
                             lines_cleared.append(f"  • {grp['label']}{net_part} - {grp['t']}")
