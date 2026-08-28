@@ -293,7 +293,19 @@ export default function Sran5gProject() {
     const integrationDone = activeDataset.filter(d => d.integration_date).length;
     const onair = activeDataset.filter(d => d.onair_date).length;
 
-    return { activeTotal, overallTotal, swap4gOnly, swapBoth3g4g, add5g, surveyDone, tssrApproved, rfDesignApproved, augTarget, whPickup, deliveryDone, installDone, integrationDone, onair };
+    // Separated 5G specific milestones
+    const is5gSite = (d) => (d.scope_5g && d.scope_5g.toUpperCase().includes('5G') && !d.scope_5g.toUpperCase().includes('NONE')) || (d.unique_id && d.unique_id.toUpperCase().includes('5G'));
+    const onair5g = activeDataset.filter(d => d.onair_date && is5gSite(d)).length;
+    const integration5g = activeDataset.filter(d => d.integration_date && is5gSite(d)).length;
+    const total4gSwap = swap4gOnly + swapBoth3g4g + (activeTotal - swap4gOnly - swapBoth3g4g - add5g >= 0 ? 0 : 0);
+
+    return { 
+      activeTotal, overallTotal, swap4gOnly, swapBoth3g4g, add5g, 
+      total4gSwap: (swap4gOnly + swapBoth3g4g) > 0 ? (swap4gOnly + swapBoth3g4g + add5g) : activeTotal,
+      surveyDone, tssrApproved, rfDesignApproved, augTarget, 
+      whPickup, deliveryDone, installDone, integrationDone, onair,
+      onair5g, integration5g
+    };
   }, [data, tvt3Only, tvt3SiteIds]);
 
   // Filtered dataset milestone breakdown (Live progress card for active filter e.g. Target Tháng 8)
@@ -310,16 +322,21 @@ export default function Sran5gProject() {
     const integration = filteredData.filter(d => d.integration_date).length;
     const onair = filteredData.filter(d => d.onair_date).length;
 
-    return { total, survey, tssr, rf, wh, delivery, install, integration, onair };
+    const is5gSite = (d) => (d.scope_5g && d.scope_5g.toUpperCase().includes('5G') && !d.scope_5g.toUpperCase().includes('NONE')) || (d.unique_id && d.unique_id.toUpperCase().includes('5G'));
+    const total5g = filteredData.filter(is5gSite).length;
+    const onair5g = filteredData.filter(d => d.onair_date && is5gSite(d)).length;
+    const integration5g = filteredData.filter(d => d.integration_date && is5gSite(d)).length;
+
+    return { total, survey, tssr, rf, wh, delivery, install, integration, onair, total5g, onair5g, integration5g };
   }, [filteredData]);
 
   // VKD Progress Breakdown (Vùng Kinh Doanh 5, VKD 4, VKD 3)
   const vkdBreakdown = useMemo(() => {
     const activeDataset = tvt3Only ? data.filter(isTvt3Item) : data;
     const vkdMap = {
-      'VKD 5': { vkd: 'VKD 5', fullName: 'Vùng Kinh Doanh 5', desc: 'DNCM, DNXL, DNLT (Cẩm Mỹ, Xuân Lộc, Long Thành)', total: 0, swap4g: 0, swapDual: 0, add5g: 0, augTarget: 0, survey: 0, tssr: 0, rfDesign: 0, wh: 0, delivery: 0, install: 0, integration: 0, onair: 0, badgeColor: 'amber' },
-      'VKD 4': { vkd: 'VKD 4', fullName: 'Vùng Kinh Doanh 4', desc: 'DNTN, DNLK (Thống Nhất, Long Khánh)', total: 0, swap4g: 0, swapDual: 0, add5g: 0, augTarget: 0, survey: 0, tssr: 0, rfDesign: 0, wh: 0, delivery: 0, install: 0, integration: 0, onair: 0, badgeColor: 'blue' },
-      'VKD 3': { vkd: 'VKD 3', fullName: 'Vùng Kinh Doanh 3', desc: 'Các khu vực còn lại (DNIC, DNIX, DNBC...)', total: 0, swap4g: 0, swapDual: 0, add5g: 0, augTarget: 0, survey: 0, tssr: 0, rfDesign: 0, wh: 0, delivery: 0, install: 0, integration: 0, onair: 0, badgeColor: 'purple' }
+      'VKD 5': { vkd: 'VKD 5', fullName: 'Vùng Kinh Doanh 5', desc: 'DNCM, DNXL, DNLT (Cẩm Mỹ, Xuân Lộc, Long Thành)', total: 0, swap4g: 0, swapDual: 0, add5g: 0, augTarget: 0, survey: 0, tssr: 0, rfDesign: 0, wh: 0, delivery: 0, install: 0, integration: 0, onair: 0, onair5g: 0, integration5g: 0, badgeColor: 'amber' },
+      'VKD 4': { vkd: 'VKD 4', fullName: 'Vùng Kinh Doanh 4', desc: 'DNTN, DNLK (Thống Nhất, Long Khánh)', total: 0, swap4g: 0, swapDual: 0, add5g: 0, augTarget: 0, survey: 0, tssr: 0, rfDesign: 0, wh: 0, delivery: 0, install: 0, integration: 0, onair: 0, onair5g: 0, integration5g: 0, badgeColor: 'blue' },
+      'VKD 3': { vkd: 'VKD 3', fullName: 'Vùng Kinh Doanh 3', desc: 'Các khu vực còn lại (DNIC, DNIX, DNBC...)', total: 0, swap4g: 0, swapDual: 0, add5g: 0, augTarget: 0, survey: 0, tssr: 0, rfDesign: 0, wh: 0, delivery: 0, install: 0, integration: 0, onair: 0, onair5g: 0, integration5g: 0, badgeColor: 'purple' }
     };
 
     activeDataset.forEach(item => {
@@ -340,8 +357,14 @@ export default function Sran5gProject() {
         if (item.wh_pickup_date) target.wh++;
         if (item.delivery_date) target.delivery++;
         if (item.install_date) target.install++;
-        if (item.integration_date) target.integration++;
-        if (item.onair_date) target.onair++;
+        if (item.integration_date) {
+          target.integration++;
+          if (is5g) target.integration5g++;
+        }
+        if (item.onair_date) {
+          target.onair++;
+          if (is5g) target.onair5g++;
+        }
       }
     });
     return Object.values(vkdMap);
@@ -354,11 +377,12 @@ export default function Sran5gProject() {
     activeDataset.forEach(item => {
       const d = getCleanDistrict(item.district);
       if (!distMap[d]) {
-        distMap[d] = { district: d, total: 0, swap4g: 0, add5g: 0, augTarget: 0, survey: 0, tssr: 0, rfDesign: 0, wh: 0, delivery: 0, install: 0, integration: 0, onair: 0 };
+        distMap[d] = { district: d, total: 0, swap4g: 0, add5g: 0, augTarget: 0, survey: 0, tssr: 0, rfDesign: 0, wh: 0, delivery: 0, install: 0, integration: 0, onair: 0, onair5g: 0, integration5g: 0 };
       }
       distMap[d].total++;
+      const is5g = (item.scope_5g && item.scope_5g.toUpperCase().includes('5G') && !item.scope_5g.toUpperCase().includes('NONE')) || (item.unique_id && item.unique_id.toUpperCase().includes('5G'));
       if (item.config_3g4g && (item.config_3g4g.includes('Tháo dỡ 4G Only') || item.config_3g4g.includes('4G Only'))) distMap[d].swap4g++;
-      if ((item.unique_id && item.unique_id.includes('Add 5G')) || (item.scope_5g && item.scope_5g.includes('Add 5G'))) distMap[d].add5g++;
+      if (is5g) distMap[d].add5g++;
       if (item.monthly_target_im && String(item.monthly_target_im).includes('Aug')) distMap[d].augTarget++;
       if (item.survey_date) distMap[d].survey++;
       if (item.tssr_sub_date || item.ie_app_date || item.rf_app_date) distMap[d].tssr++;
@@ -366,8 +390,14 @@ export default function Sran5gProject() {
       if (item.wh_pickup_date) distMap[d].wh++;
       if (item.delivery_date) distMap[d].delivery++;
       if (item.install_date) distMap[d].install++;
-      if (item.integration_date) distMap[d].integration++;
-      if (item.onair_date) distMap[d].onair++;
+      if (item.integration_date) {
+        distMap[d].integration++;
+        if (is5g) distMap[d].integration5g++;
+      }
+      if (item.onair_date) {
+        distMap[d].onair++;
+        if (is5g) distMap[d].onair5g++;
+      }
     });
     return Object.values(distMap).sort((a, b) => b.total - a.total);
   }, [data, tvt3Only, tvt3SiteIds]);
@@ -377,22 +407,27 @@ export default function Sran5gProject() {
     const reportText = `📊 BÁO CÁO TIẾN ĐỘ THI CÔNG DỰ ÁN SRAN 5G (${tvt3Only ? 'TVT3 QUẢN LÝ' : 'TOÀN TỈNH ĐỒNG NAI'})
 🗓️ Cập nhật: ${new Date().toLocaleDateString('vi-VN')}
 
-🌐 TỔNG QUAN HẠNG MỤC:
-- Tổng số trạm: ${stats.activeTotal} trạm
-- Swap 4G Only: ${stats.swap4gOnly} trạm (${stats.activeTotal > 0 ? ((stats.swap4gOnly/stats.activeTotal)*100).toFixed(1) : 0}%)
-- Swap SRAN Cả 3G/4G: ${stats.swapBoth3g4g} trạm (${stats.activeTotal > 0 ? ((stats.swapBoth3g4g/stats.activeTotal)*100).toFixed(1) : 0}%)
-- Lắp mới 5G Add 5G: ${stats.add5g} trạm (${stats.activeTotal > 0 ? ((stats.add5g/stats.activeTotal)*100).toFixed(1) : 0}%)
+🌐 1. QUY MÔ HẠNG MỤC:
+• Tổng số trạm trong dự án: ${stats.activeTotal} trạm
+• Quy mô Swap 4G: ${stats.activeTotal} trạm (100% mạng lưới)
+  - Swap 4G Only: ${stats.swap4gOnly} trạm (${stats.activeTotal > 0 ? ((stats.swap4gOnly/stats.activeTotal)*100).toFixed(1) : 0}%)
+  - Swap SRAN Cả 3G/4G: ${stats.swapBoth3g4g} trạm (${stats.activeTotal > 0 ? ((stats.swapBoth3g4g/stats.activeTotal)*100).toFixed(1) : 0}%)
+• Quy mô Phát sóng 5G mới (Scope 5G): ${stats.add5g} trạm (${stats.activeTotal > 0 ? ((stats.add5g/stats.activeTotal)*100).toFixed(1) : 0}%)
 
-📈 TÌNH HÌNH THI CÔNG 9 NẤC TIẾN ĐỘ:
-🎯 1. Target Tháng 8 (Col AY): ${stats.augTarget} / ${stats.activeTotal} trạm (${stats.activeTotal > 0 ? ((stats.augTarget/stats.activeTotal)*100).toFixed(1) : 0}%)
-📋 2. Đã Khảo Sát TSSR: ${stats.surveyDone} / ${stats.activeTotal} trạm (${stats.activeTotal > 0 ? ((stats.surveyDone/stats.activeTotal)*100).toFixed(1) : 0}%)
-✅ 3. Đã Duyệt TSSR: ${stats.tssrApproved} / ${stats.activeTotal} trạm (${stats.activeTotal > 0 ? ((stats.tssrApproved/stats.activeTotal)*100).toFixed(1) : 0}%)
-🎨 4. Đã Duyệt RF Design: ${stats.rfDesignApproved} / ${stats.activeTotal} trạm (${stats.activeTotal > 0 ? ((stats.rfDesignApproved/stats.activeTotal)*100).toFixed(1) : 0}%)
-📦 5. Đã Nhận Kho (WH Pickup): ${stats.whPickup} / ${stats.activeTotal} trạm (${stats.activeTotal > 0 ? ((stats.whPickup/stats.activeTotal)*100).toFixed(1) : 0}%)
-🚚 6. Đã Giao Hàng (Delivery): ${stats.deliveryDone} / ${stats.activeTotal} trạm (${stats.activeTotal > 0 ? ((stats.deliveryDone/stats.activeTotal)*100).toFixed(1) : 0}%)
-🛠️ 7. Đã Lắp Đặt (Installation): ${stats.installDone} / ${stats.activeTotal} trạm (${stats.activeTotal > 0 ? ((stats.installDone/stats.activeTotal)*100).toFixed(1) : 0}%)
-⚙️ 8. Đã Tích Hợp (Integration): ${stats.integrationDone} / ${stats.activeTotal} trạm (${stats.activeTotal > 0 ? ((stats.integrationDone/stats.activeTotal)*100).toFixed(1) : 0}%)
-🚀 9. Đã Onair (Phát Sóng): ${stats.onair} / ${stats.activeTotal} trạm (${stats.activeTotal > 0 ? ((stats.onair/stats.activeTotal)*100).toFixed(1) : 0}%)`;
+🚀 2. TIẾN ĐỘ PHÁT SÓNG 5G (Scope: ${stats.add5g} trạm):
+• Đã Tích hợp 5G: ${stats.onair5g > 0 ? stats.integration5g : stats.integrationDone} / ${stats.add5g} trạm (${stats.add5g > 0 ? ((stats.integrationDone/stats.add5g)*100).toFixed(1) : 0}%)
+• Đã Onair 5G (Phát sóng): ${stats.onair} / ${stats.add5g} trạm (${stats.add5g > 0 ? ((stats.onair/stats.add5g)*100).toFixed(1) : 0}%)
+
+🔄 3. TIẾN ĐỘ THI CÔNG SWAP 4G (Scope: ${stats.activeTotal} trạm):
+• 📋 1. Đã Khảo Sát TSSR: ${stats.surveyDone} / ${stats.activeTotal} trạm (${stats.activeTotal > 0 ? ((stats.surveyDone/stats.activeTotal)*100).toFixed(1) : 0}%)
+• ✅ 2. Đã Duyệt TSSR: ${stats.tssrApproved} / ${stats.activeTotal} trạm (${stats.activeTotal > 0 ? ((stats.tssrApproved/stats.activeTotal)*100).toFixed(1) : 0}%)
+• 🎨 3. Đã Duyệt RF Design: ${stats.rfDesignApproved} / ${stats.activeTotal} trạm (${stats.activeTotal > 0 ? ((stats.rfDesignApproved/stats.activeTotal)*100).toFixed(1) : 0}%)
+• 📦 4. Đã Nhận Kho (WH Pickup): ${stats.whPickup} / ${stats.activeTotal} trạm (${stats.activeTotal > 0 ? ((stats.whPickup/stats.activeTotal)*100).toFixed(1) : 0}%)
+• 🚚 5. Đã Giao Hàng (Delivery): ${stats.deliveryDone} / ${stats.activeTotal} trạm (${stats.activeTotal > 0 ? ((stats.deliveryDone/stats.activeTotal)*100).toFixed(1) : 0}%)
+• 🛠️ 6. Đã Lắp Đặt (Install): ${stats.installDone} / ${stats.activeTotal} trạm (${stats.activeTotal > 0 ? ((stats.installDone/stats.activeTotal)*100).toFixed(1) : 0}%)
+• ⚙️ 7. Đã Tích Hợp Swap: ${stats.integrationDone} / ${stats.activeTotal} trạm (${stats.activeTotal > 0 ? ((stats.integrationDone/stats.activeTotal)*100).toFixed(1) : 0}%)
+• 🚀 8. Đã Hoàn Tất Swap & Onair: ${stats.onair} / ${stats.activeTotal} trạm (${stats.activeTotal > 0 ? ((stats.onair/stats.activeTotal)*100).toFixed(1) : 0}%)
+🎯 Target Tháng 8 (Col AY): ${stats.augTarget} / ${stats.activeTotal} trạm`;
 
     navigator.clipboard.writeText(reportText);
     setCopiedReport(true);
@@ -945,22 +980,28 @@ export default function Sran5gProject() {
                 onClick={() => handleFilterJump('INTEGRATION')}
                 className="p-3 bg-teal-50 hover:bg-teal-100 rounded-xl border border-teal-200 cursor-pointer transition-all hover:scale-[1.02] shadow-sm"
               >
-                <div className="text-[11px] font-semibold text-teal-700 flex items-center gap-1">
-                  <Server className="h-3.5 w-3.5" /> Đã Tích Hợp
+                <div className="text-[11px] font-semibold text-teal-700 flex items-center justify-between">
+                  <span className="flex items-center gap-1"><Server className="h-3.5 w-3.5" /> Đã Tích Hợp</span>
+                  <span className="text-[10px] bg-teal-200/60 text-teal-900 px-1.5 py-0.2 rounded font-bold">{stats.add5g > 0 ? `${((stats.integrationDone/stats.add5g)*100).toFixed(0)}% 5G` : ''}</span>
                 </div>
                 <div className="text-2xl font-black text-teal-800 mt-1">{stats.integrationDone}</div>
-                <div className="text-[10px] text-teal-600 mt-0.5 font-bold">Xem {stats.integrationDone} trạm &rarr;</div>
+                <div className="text-[10px] text-teal-600 mt-0.5 font-bold">
+                  {stats.add5g > 0 ? `${stats.integrationDone}/${stats.add5g} trạm 5G` : `Xem ${stats.integrationDone} trạm`} &rarr;
+                </div>
               </div>
 
               <div 
                 onClick={() => handleFilterJump('ONAIR')}
-                className="p-3 bg-emerald-50 hover:bg-emerald-100 rounded-xl border border-emerald-200 col-span-2 sm:col-span-1 cursor-pointer transition-all hover:scale-[1.02] shadow-sm"
+                className="p-3 bg-emerald-50 hover:bg-emerald-100 rounded-xl border border-emerald-300 col-span-2 sm:col-span-1 cursor-pointer transition-all hover:scale-[1.02] shadow-sm ring-2 ring-emerald-500/20"
               >
-                <div className="text-[11px] font-semibold text-emerald-700 flex items-center gap-1">
-                  <Radio className="h-3.5 w-3.5" /> Đã Onair (Phát Sóng)
+                <div className="text-[11px] font-semibold text-emerald-800 flex items-center justify-between">
+                  <span className="flex items-center gap-1"><Radio className="h-3.5 w-3.5 text-emerald-600 animate-pulse" /> Đã Onair 5G</span>
+                  <span className="text-[10px] bg-emerald-200 text-emerald-900 px-1.5 py-0.2 rounded font-bold">{stats.add5g > 0 ? `${((stats.onair/stats.add5g)*100).toFixed(1)}%` : ''}</span>
                 </div>
                 <div className="text-2xl font-black text-emerald-800 mt-1">{stats.onair}</div>
-                <div className="text-[10px] text-emerald-600 mt-0.5 font-bold">Xem {stats.onair} trạm &rarr;</div>
+                <div className="text-[10px] text-emerald-700 mt-0.5 font-bold">
+                  {stats.add5g > 0 ? `${stats.onair}/${stats.add5g} trạm 5G` : `Xem ${stats.onair} trạm`} &rarr;
+                </div>
               </div>
             </div>
           </div>
