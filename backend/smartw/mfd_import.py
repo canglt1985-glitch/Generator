@@ -116,21 +116,25 @@ def get_station_info(site_id: str, date_str: str = None) -> dict | None:
                     active_mpd = mpd_list[0]
                     
         # Mặc định chạy máy xăng lưu động nếu không có máy cố định
-        dinh_muc = 2.0
-        loai_nhien_lieu = 'Xăng'
-        may_phat_dien = 'MÁY XĂNG LƯU ĐỘNG'
-        loai_may = 'MÁY XĂNG LƯU ĐỘNG'
-        cong_suat_may = '5 KVA'
+        dinh_muc_quy_chuan = 2.3
+        dinh_muc_thuc_te = 2.0
+        loai_nhien_lieu = 'Dầu'
+        may_phat_dien = 'MÁY PHÁT ĐIỆN'
+        loai_may = 'MÁY PHÁT ĐIỆN'
+        cong_suat_may = '8.5 KVA'
         
         if active_mpd:
-            dinh_muc = float(active_mpd.get("dinh_muc_thuc_te") or active_mpd.get("dinh_muc") or 2.0)
+            dinh_muc_quy_chuan = float(active_mpd.get("dinh_muc") or 2.3)
+            dinh_muc_thuc_te = float(active_mpd.get("dinh_muc_thuc_te") or active_mpd.get("dinh_muc") or 2.3)
             loai_nhien_lieu = active_mpd.get("nhien_lieu") or 'Dầu'
             may_phat_dien = active_mpd.get("ten") or 'MLĐ'
             loai_may = active_mpd.get("nhan_hieu") or ''
             cong_suat_may = str(active_mpd.get("cong_suat") or '')
             
         return {
-            'dinh_muc': dinh_muc,
+            'dinh_muc': dinh_muc_quy_chuan,
+            'dinh_muc_quy_chuan': dinh_muc_quy_chuan,
+            'dinh_muc_thuc_te': dinh_muc_thuc_te,
             'loai_nhien_lieu': loai_nhien_lieu,
             'may_phat_dien': may_phat_dien,
             'loai_may': loai_may,
@@ -336,8 +340,12 @@ def import_mfd_data(raw_data: list[dict]) -> dict:
         if not station_info and status == 'approved':
             status = 'pending'
 
+        dinh_muc_quy_chuan = station_info.get('dinh_muc_quy_chuan') or dinh_muc
+        dinh_muc_thuc_te = station_info.get('dinh_muc_thuc_te') or dinh_muc
+
         hours = round(duration_min / 60, 2)
-        nhien_lieu = round(hours * dinh_muc, 2)
+        nhien_lieu = round(hours * dinh_muc_quy_chuan, 2)
+        nhien_lieu_thuc_te = round(hours * dinh_muc_thuc_te, 2)
         don_gia = get_pretax_price(loai_nhien_lieu, date_str=ngay)
         thanh_tien = round(nhien_lieu * don_gia)
 
@@ -346,12 +354,15 @@ def import_mfd_data(raw_data: list[dict]) -> dict:
             "gio_ket_thuc": gio_kt or '',
             "thoi_gian_hoat_dong": hours,
             "nhien_lieu_tieu_hao": nhien_lieu,
+            "nhien_lieu_tieu_hao_thuc_te": nhien_lieu_thuc_te,
             "don_gia": don_gia,
             "thanh_tien": thanh_tien,
             "ghi_chu": '(Chạy qua đêm)' if gio_kt and gio_bd and datetime.strptime(gio_kt, '%H:%M').time() < datetime.strptime(gio_bd, '%H:%M').time() else '',
             "loai_may": loai_may,
             "cong_suat_may": cong_suat_may,
-            "dinh_muc": dinh_muc,
+            "dinh_muc": dinh_muc_quy_chuan,
+            "dinh_muc_quy_chuan": dinh_muc_quy_chuan,
+            "dinh_muc_thuc_te": dinh_muc_thuc_te,
             "nhien_lieu_loai": loai_nhien_lieu,
             "status": status,
             "source": 'smartw',
