@@ -12,6 +12,7 @@ import {
   isSpecial67Site 
 } from '../utils/siteGroups';
 import { getFuelPriceForDate } from '../utils/fuelPrice';
+import { exportOfficialMFDReport, buildHDWorksheet, build02AWorksheet } from '../utils/mfdStatementExporter';
 
 export default function Generator() {
   const [activeTab, setActiveTab] = useState('logs'); // logs, anomalies, invoices, transfer
@@ -695,152 +696,27 @@ export default function Generator() {
     };
   }, [genLogs, invoices, stations, isFromAug2026]);
 
-  // Export to Excel
+  // Export to Official Statement Excel (Mẫu 02A-TTNB_NLMPD & HD)
   const exportToExcel = () => {
-    const formatLog = (log) => {
-      const stationObj = stations.find(s => s.site_id === log.site_id);
-      const siteIdOld = stationObj ? (stationObj.site_id_old || '') : '';
-      
-      return {
-        'Site ID cũ': siteIdOld,
-        'Site ID mới': log.site_id || '',
-        'Công suất máy (KVA)': log.run_details?.cong_suat_may || '',
-        'Loại máy': log.run_details?.loai_may || '',
-        'Định mức (Lít/Giờ)': log.run_details?.dinh_muc || '',
-        'Ngày vận hành': log.date || '',
-        'Giờ bắt đầu': log.run_details?.gio_bat_dau || '',
-        'Giờ kết thúc': log.run_details?.gio_ket_thuc || '',
-        'Thời gian chạy máy (Giờ)': log.run_details?.thoi_gian_hoat_dong || 0,
-        'Nhiên liệu tiêu hao (Lít)': log.run_details?.nhien_lieu_tieu_hao || 0,
-        'Đơn giá': log.run_details?.don_gia || 0,
-        'Thành tiền': log.run_details?.thanh_tien || 0,
-        'Kết quả đối soát': log.run_details?.ket_qua_doi_soat || '',
-        'Nhiên liệu': log.run_details?.nhien_lieu_loai || log.run_details?.nhien_lieu || 'Dầu',
-        'Ghi chú': log.run_details?.ghi_chu || ''
-      };
-    };
-
-    const workbook = XLSX.utils.book_new();
-    const monthStr = filterMonth ? `T${filterMonth}` : 'Ca_Nam';
-    const fileName = `Bang_Ke_Chay_May_${monthStr}_${filterYear}.xlsx`;
-
-    if (isFromAug2026) {
-      // Split into 2 Worksheets for >= August 2026
-      const g1Logs = genLogs.filter(log => {
-        const stationObj = stations.find(s => s.site_id === log.site_id);
-        const siteIdOld = stationObj?.site_id_old || '';
-        return isSpecial67Site(log.site_id, siteIdOld, stations);
-      });
-
-      const g2Logs = genLogs.filter(log => {
-        const stationObj = stations.find(s => s.site_id === log.site_id);
-        const siteIdOld = stationObj?.site_id_old || '';
-        return !isSpecial67Site(log.site_id, siteIdOld, stations);
-      });
-
-      // Sheet 1: 67 Trạm Đặc Thù
-      const dataG1 = g1Logs.map(formatLog);
-      const ws1 = XLSX.utils.json_to_sheet(dataG1);
-      XLSX.utils.book_append_sheet(workbook, ws1, '67_Tram_Dac_Thu');
-
-      // Sheet 2: Các Trạm Còn Lại
-      const dataG2 = g2Logs.map(formatLog);
-      const ws2 = XLSX.utils.json_to_sheet(dataG2);
-      XLSX.utils.book_append_sheet(workbook, ws2, 'Tram_Con_Lai');
-    } else {
-      const dataForExcel = filteredLogs.map(formatLog);
-      const worksheet = XLSX.utils.json_to_sheet(dataForExcel);
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
-    }
-    
-    XLSX.writeFile(workbook, fileName);
+    exportOfficialMFDReport({
+      logs: genLogs,
+      stations,
+      invoices,
+      month: filterMonth,
+      year: filterYear,
+      isFromAug2026,
+      selectedGroupFilter,
+      isSpecial67Site
+    });
   };
 
   const exportInvoicesToExcel = () => {
-    const formatInvoice = (inv, idx) => {
-      const items = Array.isArray(inv.items) ? inv.items : [];
-      let qtyD = '';
-      let priceD = '';
-      let amountD = '';
-      let qtyX = '';
-      let priceX = '';
-      let amountX = '';
-      let loaiNl = '';
-
-      items.forEach(item => {
-        const name = (item.ten || '').toLowerCase();
-        const qty = item.sl || '';
-        const price = item.dg || '';
-        const amount = item.tt || '';
-
-        if (name.includes('dầu') || name.includes('điêzen') || name.includes('diezen')) {
-          qtyD = qty;
-          priceD = price;
-          amountD = amount;
-          loaiNl = 'Dầu';
-        } else if (name.includes('xăng') || name.includes('ron')) {
-          qtyX = qty;
-          priceX = price;
-          amountX = amount;
-          loaiNl = 'Xăng';
-        }
-      });
-
-      return {
-        'STT': idx + 1,
-        'Cửa hàng xăng dầu': inv.seller_name || '',
-        'Link Tra Cứu': inv.invoice_url || '',
-        'Mã Tra Cứu': inv.ma_tra_cuu || '',
-        'Loại NL': loaiNl,
-        'Mã Số Thuế': inv.seller_mst || '',
-        'Ký Hiệu HĐ': inv.kh_hd || '',
-        'Số Hóa Đơn': inv.invoice_number || '',
-        'Ngày Lập': inv.invoice_date || '',
-        'Số lượng D (lít)': qtyD,
-        'Đơn giá D': priceD,
-        'Thành tiền D': amountD,
-        'Số lượng X (lít)': qtyX,
-        'Đơn giá X': priceX,
-        'Thành tiền X': amountX,
-        'Cộng chưa VAT': inv.sub_total || 0,
-        'Thuế VAT': inv.vat_amount || 0,
-        'Tổng Tiền': inv.total_amount || 0,
-        'Người Mua Hàng': inv.buyer_name || '',
-        'MST Người Mua': inv.buyer_mst || '',
-        'Trạng Thái': inv.status === 'Approved' ? 'Đã duyệt' : inv.status === 'Discarded' ? 'Từ chối' : 'Chờ duyệt',
-        'Nguồn Thu Thập': inv.source || 'Upload'
-      };
-    };
-
-    const workbook = XLSX.utils.book_new();
-    const monthStr = filterMonth ? `T${filterMonth}` : 'Ca_Nam';
-    const fileName = `Danh_sach_hoa_don_${monthStr}_${filterYear}.xlsx`;
-
-    if (isFromAug2026) {
-      const g1Invoices = invoices.filter(inv => {
-        const mst = (inv.buyer_mst || '').trim();
-        const bname = (inv.buyer_name || '').toUpperCase();
-        return mst.includes('0100686209-129') || bname.includes('ĐỒNG NAI') || bname.includes('DONG NAI');
-      });
-
-      const g2Invoices = invoices.filter(inv => {
-        const mst = (inv.buyer_mst || '').trim();
-        const bname = (inv.buyer_name || '').toUpperCase();
-        return !(mst.includes('0100686209-129') || bname.includes('ĐỒNG NAI') || bname.includes('DONG NAI'));
-      });
-
-      const ws1 = XLSX.utils.json_to_sheet(g1Invoices.map(formatInvoice));
-      XLSX.utils.book_append_sheet(workbook, ws1, 'Hoa_Don_67_Tram');
-
-      const ws2 = XLSX.utils.json_to_sheet(g2Invoices.map(formatInvoice));
-      XLSX.utils.book_append_sheet(workbook, ws2, 'Hoa_Don_Tram_Con_Lai');
-    } else {
-      const dataForExcel = filteredInvoices.map(formatInvoice);
-      const worksheet = XLSX.utils.json_to_sheet(dataForExcel);
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'HoaDonDienTu');
-    }
-
-    XLSX.writeFile(workbook, fileName);
+    const wb = XLSX.utils.book_new();
+    const monthStr = filterMonth ? `T${String(filterMonth).padStart(2, '0')}` : 'Ca_Nam';
+    const groupLabel = selectedGroupFilter === 'group1' ? 'MobiFone Đồng Nai' : selectedGroupFilter === 'group2' ? 'MobiFone Toàn Cầu' : '';
+    const ws = buildHDWorksheet(filteredInvoices, filterMonth, filterYear, groupLabel);
+    XLSX.utils.book_append_sheet(wb, ws, 'HD');
+    XLSX.writeFile(wb, `Bang_Ke_Hoa_Don_Mau_HD_${monthStr}_${filterYear}.xlsx`);
   };
 
   // Export Anomalies to Excel
@@ -1614,9 +1490,10 @@ export default function Generator() {
                 {/* Export */}
                 <button
                   onClick={exportToExcel}
-                  className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg text-blue-600 border border-blue-200 bg-white hover:bg-slate-50 shadow-sm transition-colors cursor-pointer"
+                  className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg text-blue-700 border border-blue-200 bg-white hover:bg-blue-50 shadow-sm transition-colors cursor-pointer"
+                  title="Xuất trọn bộ hồ sơ đối soát chạy máy & hóa đơn theo mẫu chuẩn 02A-TTNB"
                 >
-                  <ExternalLink className="h-3.5 w-3.5 mr-1" /> Xuất {filterMonth ? `T${filterMonth}/${filterYear}` : `${filterYear}`}
+                  <ExternalLink className="h-3.5 w-3.5 mr-1" /> Xuất Hồ Sơ 02A ({filterMonth ? `T${filterMonth}/${filterYear}` : `${filterYear}`})
                 </button>
                 {/* Add manual log */}
                 <button 
@@ -1632,8 +1509,9 @@ export default function Generator() {
               <button
                 onClick={exportInvoicesToExcel}
                 className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg text-emerald-700 border border-emerald-200 bg-white hover:bg-emerald-50 shadow-sm transition-colors cursor-pointer"
+                title="Xuất bảng kê hóa đơn điện tử theo mẫu chuẩn HD"
               >
-                <ExternalLink className="h-3.5 w-3.5 mr-1" /> Xuất Excel
+                <ExternalLink className="h-3.5 w-3.5 mr-1" /> Xuất Bảng Kê HD ({filterMonth ? `T${filterMonth}/${filterYear}` : `${filterYear}`})
               </button>
             )}
           </div>
