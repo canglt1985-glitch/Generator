@@ -2028,22 +2028,27 @@ export default function Generator() {
 
                         {/* Smart Pruning Suggestion */}
                         {wd.suggestion && (
-                          <div className="bg-black/30 border border-red-400/30 rounded-md p-2 text-[11px] space-y-1 mt-2">
-                            <div className="font-bold text-amber-200 border-b border-white/10 pb-1">
-                              💡 Đề xuất tối ưu (&lt; 5tr/ngày):
+                          <div className="bg-black/30 border border-red-400/30 rounded-md p-2 text-[11px] space-y-1.5 mt-2">
+                            <div className="font-bold text-amber-200 border-b border-white/10 pb-1 flex items-center justify-between">
+                              <span>💡 Phương án xử lý tối ưu:</span>
                             </div>
                             {wd.suggestion.kept.length > 0 && (
                               <div className="text-emerald-300">
-                                <span className="font-bold">🟢 Giữ lại ({formatCurrency(wd.suggestion.keptSum)}):</span>{' '}
-                                {wd.suggestion.kept.map(k => `#${k.invoice_number}`).join(', ')}
+                                <span className="font-bold">🟢 Giữ lại (&le; 5tr):</span>{' '}
+                                <span className="font-bold font-mono">{formatCurrency(wd.suggestion.keptSum)}</span>{' '}
+                                ({wd.suggestion.kept.map(k => `#${k.invoice_number}`).join(', ')})
                               </div>
                             )}
                             {wd.suggestion.toRemove.length > 0 && (
                               <div className="text-rose-200">
-                                <span className="font-bold">✂️ Gợi ý bỏ/chuyển ({formatCurrency(wd.suggestion.removeSum)}):</span>{' '}
-                                {wd.suggestion.toRemove.map(k => `#${k.invoice_number} (${formatCurrency(k.total_amount)})`).join(', ')}
+                                <span className="font-bold">✂️ Gợi ý bỏ/tách:</span>{' '}
+                                <span className="font-bold font-mono">{formatCurrency(wd.suggestion.removeSum)}</span>{' '}
+                                ({wd.suggestion.toRemove.map(k => `#${k.invoice_number}`).join(', ')})
                               </div>
                             )}
+                            <div className="text-[10px] text-amber-200/90 pt-1 border-t border-white/10 italic">
+                              ⚠️ Nếu không thể bỏ hóa đơn (để đảm bảo đủ nhiên liệu đối soát) &rarr; <span className="font-bold text-white uppercase underline">Bắt buộc chuyển khoản ngân hàng</span> toàn bộ {formatCurrency(wd.amount)}.
+                            </div>
                           </div>
                         )}
                       </div>
