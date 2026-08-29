@@ -425,8 +425,36 @@ export default function Generator() {
           displayDate = `${parts[2]}/${parts[1]}/${parts[0]}`;
         }
       }
-      
-      amountByDate[displayDate] = (amountByDate[displayDate] || 0) + total;
+
+      // Resolve Seller & Buyer for tax non-cash payment threshold check
+      let rawSeller = (inv.seller_name || 'Cây xăng chưa rõ').trim();
+      let sellerName = rawSeller;
+      const sUp = rawSeller.toUpperCase();
+      if (sUp.includes('NAM TRUNG PHONG')) sellerName = 'CTY TNHH MTV TM XĂNG DẦU NAM TRUNG PHONG';
+      else if (sUp.includes('TÍN NGHĨA')) sellerName = 'CÔNG TY CP XĂNG DẦU TÍN NGHĨA';
+      else if (sUp.includes('THÀNH MINH PHÁT')) sellerName = 'CTY TNHH TM & DV THÀNH MINH PHÁT';
+
+      const bMst = (inv.buyer_mst || '').trim();
+      const bName = (inv.buyer_name || '').toUpperCase();
+      let buyerName = 'MobiFone Toàn Cầu';
+      if (bMst.includes('0100686209-129') || bName.includes('ĐỒNG NAI')) {
+        buyerName = 'MobiFone Đồng Nai';
+      }
+
+      const groupKey = `${displayDate}__${sellerName}__${buyerName}`;
+      if (!amountByDate[groupKey]) {
+        amountByDate[groupKey] = {
+          date: displayDate,
+          sellerName,
+          buyerName,
+          amount: 0,
+          invoiceNumbers: []
+        };
+      }
+      amountByDate[groupKey].amount += total;
+      if (inv.invoice_number && !amountByDate[groupKey].invoiceNumbers.includes(inv.invoice_number)) {
+        amountByDate[groupKey].invoiceNumbers.push(inv.invoice_number);
+      }
 
       // Parse items for fuel qty
       let itemsList = [];
@@ -459,9 +487,9 @@ export default function Generator() {
     });
 
     const warningDays = [];
-    Object.keys(amountByDate).forEach(d => {
-      if (amountByDate[d] > 5000000) {
-        warningDays.push({ date: d, amount: amountByDate[d] });
+    Object.values(amountByDate).forEach(item => {
+      if (item.amount > 5000000) {
+        warningDays.push(item);
       }
     });
 
@@ -1856,17 +1884,29 @@ export default function Generator() {
           {invoiceStats.warningDays.length > 0 && (
             <div className="bg-red-600 border border-red-700 text-white rounded-xl p-4 shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
               <div className="flex items-start gap-3">
-                <AlertTriangle className="w-5 h-5 mt-0.5 text-white animate-pulse" />
-                <div>
-                  <h4 className="font-extrabold text-sm uppercase tracking-wider">CẢNH BÁO THANH TOÁN (TỔNG NGÀY VƯỢT QUÁ 5 TRIỆU ĐỒNG)</h4>
-                  <p className="text-xs text-red-100 mt-1">Các ngày sau đây có tổng cộng hóa đơn vượt quá 5,000,000đ. Vui lòng thực hiện chuyển khoản (không dùng tiền mặt) để đảm bảo điều kiện khấu trừ thuế:</p>
-                  <ul className="list-disc list-inside mt-2 text-xs font-bold space-y-1">
-                    {invoiceStats.warningDays.map(wd => (
-                      <li key={wd.date}>
-                        Ngày {wd.date}: Tổng cộng {formatCurrency(wd.amount)}
-                      </li>
+                <AlertTriangle className="w-5 h-5 mt-0.5 text-white animate-pulse shrink-0" />
+                <div className="flex-1">
+                  <h4 className="font-extrabold text-sm uppercase tracking-wider">CẢNH BÁO THANH TOÁN (THEO CÂY XĂNG & PHÁP NHÂN TRONG NGÀY VƯỢT 5 TRIỆU ĐỒNG)</h4>
+                  <p className="text-xs text-red-100 mt-1">Các giao dịch sau đây từ cùng một cây xăng cho cùng một pháp nhân trong ngày vượt quá 5,000,000đ. Vui lòng thực hiện chuyển khoản (không dùng tiền mặt) để đảm bảo điều kiện khấu trừ thuế:</p>
+                  <div className="mt-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                    {invoiceStats.warningDays.map((wd, idx) => (
+                      <div key={idx} className="bg-red-800/80 border border-red-400/40 rounded-lg p-2.5 text-xs shadow-inner">
+                        <div className="flex items-center justify-between gap-1 border-b border-red-700/60 pb-1.5 mb-1.5">
+                          <span className="font-bold text-amber-300">📅 Ngày {wd.date}</span>
+                          <span className="font-black text-white text-xs bg-red-950 px-2 py-0.5 rounded border border-red-600">
+                            {formatCurrency(wd.amount)}
+                          </span>
+                        </div>
+                        <div className="space-y-1 text-[11px] text-red-100">
+                          <div>⛽ <span className="font-semibold text-white">Cây xăng:</span> {wd.sellerName}</div>
+                          <div>🏢 <span className="font-semibold text-white">Pháp nhân:</span> <span className={wd.buyerName.includes('Đồng Nai') ? 'text-amber-300 font-bold' : 'text-cyan-200 font-bold'}>{wd.buyerName}</span></div>
+                          {wd.invoiceNumbers && wd.invoiceNumbers.length > 0 && (
+                            <div className="text-red-200">🗒 HĐ: {wd.invoiceNumbers.join(', ')}</div>
+                          )}
+                        </div>
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 </div>
               </div>
             </div>
