@@ -555,11 +555,6 @@ def parse_invoice_from_pdf(pdf_bytes, source_name="Gmail PDF"):
                     })
                     break
         
-        if not items:
-            items = [{"ten": f"Hóa đơn xăng dầu số {so_hd}", "sl": 1.0, "dg": tong_tien, "tt": tong_tien}]
-            
-        loai_chi_phi = "Mua dầu" if has_fuel or any(k in seller_name.lower() or k in text.lower() for k in ["xăng", "dầu", "diesel", "fuel", "do", "dầu do"]) else "Chi phí khác"
-
         # Extract invoice lookup URL
         invoice_url = ""
         url_matches = re.findall(r'(https?://[^\s\)]+)', text)
@@ -570,6 +565,52 @@ def parse_invoice_from_pdf(pdf_bytes, source_name="Gmail PDF"):
                 break
         if not invoice_url and url_matches:
             invoice_url = url_matches[0].rstrip('.,;:')
+
+        # Deep parse from easyinvoice URL if items not found in PDF text
+        if invoice_url and ('easyinvoice' in invoice_url or 'InvData' in invoice_url):
+            try:
+                import requests
+                from bs4 import BeautifulSoup
+                r = requests.get(invoice_url, headers={"User-Agent": "Mozilla/5.0"}, verify=False, timeout=10)
+                if r.status_code == 200:
+                    detail_soup = BeautifulSoup(r.text, 'html.parser')
+                    inv_data_elem = detail_soup.find(id="InvData")
+                    if inv_data_elem:
+                        val = inv_data_elem.get('value', '')
+                        data_dict = json.loads(val)
+                        embedded_html = data_dict.get('str', '')
+                        sub_soup = BeautifulSoup(embedded_html, 'html.parser')
+                        url_items = []
+                        for row in sub_soup.find_all('tr'):
+                            cells = [c.get_text(strip=True) for c in row.find_all(['td', 'th'])]
+                            if len(cells) == 6 and cells[0].isdigit():
+                                name = cells[1]
+                                unit = cells[2]
+                                qty_str = cells[3].replace(".", "").replace(",", ".").strip()
+                                price_str = cells[4].replace(".", "").replace(",", ".").strip()
+                                total_str = cells[5].replace(".", "").replace(",", ".").strip()
+                                try:
+                                    qty = float(qty_str)
+                                    price = float(price_str)
+                                    total = float(total_str)
+                                    url_items.append({
+                                        "ten": name,
+                                        "sl": qty,
+                                        "dg": price,
+                                        "tt": total,
+                                        "dvt": unit
+                                    })
+                                except:
+                                    pass
+                        if url_items:
+                            items = url_items
+            except Exception as e:
+                logger.error(f"Error deep parsing from PDF invoice_url: {e}")
+
+        if not items:
+            items = [{"ten": f"Hóa đơn xăng dầu số {so_hd}", "sl": 1.0, "dg": tong_tien, "tt": tong_tien}]
+            
+        loai_chi_phi = "Mua dầu" if has_fuel or any(k in seller_name.lower() or k in text.lower() for k in ["xăng", "dầu", "diesel", "fuel", "do", "dầu do"]) else "Chi phí khác"
 
         ma_tra_cuu = ""
         ma_tra_cuu_patterns = [
