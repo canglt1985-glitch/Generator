@@ -448,7 +448,9 @@ export default function Generator() {
           sellerName,
           buyerName,
           amount: 0,
-          invoiceNumbers: []
+          invoiceNumbers: [],
+          fuelDau: 0,
+          fuelXang: 0
         };
       }
       amountByDate[groupKey].amount += total;
@@ -479,8 +481,10 @@ export default function Generator() {
 
           if (isDau) {
             fuelDau += qty;
+            amountByDate[groupKey].fuelDau += qty;
           } else if (isXang) {
             fuelXang += qty;
+            amountByDate[groupKey].fuelXang += qty;
           }
         });
       }
@@ -1900,6 +1904,22 @@ export default function Generator() {
                         <div className="space-y-1 text-[11px] text-red-100">
                           <div>⛽ <span className="font-semibold text-white">Cây xăng:</span> {wd.sellerName}</div>
                           <div>🏢 <span className="font-semibold text-white">Pháp nhân:</span> <span className={wd.buyerName.includes('Đồng Nai') ? 'text-amber-300 font-bold' : 'text-cyan-200 font-bold'}>{wd.buyerName}</span></div>
+                          <div className="flex flex-wrap gap-2 text-white/90 font-medium">
+                            <span>📦 <span className="font-semibold text-white">Nhiên liệu:</span></span>
+                            {wd.fuelDau > 0 && (
+                              <span className="bg-orange-950/80 text-orange-300 px-1.5 py-0.2 rounded border border-orange-700/60 font-semibold">
+                                🛢 Dầu: {wd.fuelDau.toFixed(1)} L
+                              </span>
+                            )}
+                            {wd.fuelXang > 0 && (
+                              <span className="bg-rose-950/80 text-rose-300 px-1.5 py-0.2 rounded border border-rose-700/60 font-semibold">
+                                ⛽ Xăng: {wd.fuelXang.toFixed(1)} L
+                              </span>
+                            )}
+                            {wd.fuelDau === 0 && wd.fuelXang === 0 && (
+                              <span className="text-red-200 italic">Hóa đơn xăng dầu</span>
+                            )}
+                          </div>
                           {wd.invoiceNumbers && wd.invoiceNumbers.length > 0 && (
                             <div className="text-red-200">🗒 HĐ: {wd.invoiceNumbers.join(', ')}</div>
                           )}
