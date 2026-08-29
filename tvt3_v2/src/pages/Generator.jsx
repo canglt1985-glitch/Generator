@@ -539,7 +539,9 @@ export default function Generator() {
     });
 
     let g1_inv_count = 0, g1_inv_dau = 0, g1_inv_xang = 0, g1_inv_amount = 0;
+    let g1_inv_dau_amount = 0, g1_inv_xang_amount = 0;
     let g2_inv_count = 0, g2_inv_dau = 0, g2_inv_xang = 0, g2_inv_amount = 0;
+    let g2_inv_dau_amount = 0, g2_inv_xang_amount = 0;
 
     invoices.forEach(inv => {
       const mst = (inv.buyer_mst || '').trim();
@@ -558,14 +560,23 @@ export default function Generator() {
 
       let invDau = 0;
       let invXang = 0;
+      let invDauAmount = 0;
+      let invXangAmount = 0;
+
       if (Array.isArray(itemsList)) {
         itemsList.forEach(item => {
           const qty = parseFloat(item.sl || item.quantity) || 0;
+          const tt = parseFloat(item.tt || item.total_amount || item.total) || (qty * (parseFloat(item.dg || item.unit_price) || 0));
           const name = (item.ten || item.name || '').toLowerCase();
           const isD = name.includes('dầu') || name.includes('dau') || name.includes('diesel') || name.includes('điêzen') || /\bdo\b/.test(name);
           const isX = name.includes('xăng') || name.includes('xang') || name.includes('ron') || name.includes('e5') || name.includes('a95');
-          if (isD) invDau += qty;
-          else if (isX) invXang += qty;
+          if (isD) {
+            invDau += qty;
+            invDauAmount += tt;
+          } else if (isX) {
+            invXang += qty;
+            invXangAmount += tt;
+          }
         });
       }
 
@@ -574,13 +585,27 @@ export default function Generator() {
         g1_inv_amount += total;
         g1_inv_dau += invDau;
         g1_inv_xang += invXang;
+        g1_inv_dau_amount += invDauAmount;
+        g1_inv_xang_amount += invXangAmount;
       } else {
         g2_inv_count++;
         g2_inv_amount += total;
         g2_inv_dau += invDau;
         g2_inv_xang += invXang;
+        g2_inv_dau_amount += invDauAmount;
+        g2_inv_xang_amount += invXangAmount;
       }
     });
+
+    const g1_avg_price_dau = g1_inv_dau > 0 ? (g1_inv_dau_amount / g1_inv_dau) : 27540;
+    const g1_avg_price_xang = g1_inv_xang > 0 ? (g1_inv_xang_amount / g1_inv_xang) : 22320;
+    const g1_diff_dau = parseFloat((g1_inv_dau - g1_consumed_dau).toFixed(1));
+    const g1_diff_xang = parseFloat((g1_inv_xang - g1_consumed_xang).toFixed(1));
+
+    const g2_avg_price_dau = g2_inv_dau > 0 ? (g2_inv_dau_amount / g2_inv_dau) : 27540;
+    const g2_avg_price_xang = g2_inv_xang > 0 ? (g2_inv_xang_amount / g2_inv_xang) : 22320;
+    const g2_diff_dau = parseFloat((g2_inv_dau - g2_consumed_dau).toFixed(1));
+    const g2_diff_xang = parseFloat((g2_inv_xang - g2_consumed_xang).toFixed(1));
 
     return {
       g1: {
@@ -592,8 +617,10 @@ export default function Generator() {
         invDau: parseFloat(g1_inv_dau.toFixed(1)),
         invXang: parseFloat(g1_inv_xang.toFixed(1)),
         invAmount: g1_inv_amount,
-        diffDau: parseFloat((g1_inv_dau - g1_consumed_dau).toFixed(1)),
-        diffXang: parseFloat((g1_inv_xang - g1_consumed_xang).toFixed(1))
+        diffDau: g1_diff_dau,
+        diffXang: g1_diff_xang,
+        diffDauMoney: Math.round(g1_diff_dau * g1_avg_price_dau),
+        diffXangMoney: Math.round(g1_diff_xang * g1_avg_price_xang)
       },
       g2: {
         runs: g2_runs,
@@ -604,8 +631,10 @@ export default function Generator() {
         invDau: parseFloat(g2_inv_dau.toFixed(1)),
         invXang: parseFloat(g2_inv_xang.toFixed(1)),
         invAmount: g2_inv_amount,
-        diffDau: parseFloat((g2_inv_dau - g2_consumed_dau).toFixed(1)),
-        diffXang: parseFloat((g2_inv_xang - g2_consumed_xang).toFixed(1))
+        diffDau: g2_diff_dau,
+        diffXang: g2_diff_xang,
+        diffDauMoney: Math.round(g2_diff_dau * g2_avg_price_dau),
+        diffXangMoney: Math.round(g2_diff_xang * g2_avg_price_xang)
       }
     };
   }, [genLogs, invoices, stations, isFromAug2026]);
@@ -1614,11 +1643,11 @@ export default function Generator() {
                     <span className="text-slate-500 font-normal">⚪ Không nổ</span>
                   ) : groupComparisonStats.g1.diffDau >= 0 ? (
                     <span className="text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded border border-emerald-300">
-                      🟢 Thừa +{groupComparisonStats.g1.diffDau}L
+                      🟢 Thừa +{groupComparisonStats.g1.diffDau}L (+{formatCurrency(groupComparisonStats.g1.diffDauMoney)})
                     </span>
                   ) : (
                     <span className="text-red-700 bg-red-100 px-1.5 py-0.5 rounded border border-red-300">
-                      🔴 Thiếu {groupComparisonStats.g1.diffDau}L
+                      🔴 Thiếu {groupComparisonStats.g1.diffDau}L ({formatCurrency(groupComparisonStats.g1.diffDauMoney)})
                     </span>
                   )}
                 </div>
@@ -1640,11 +1669,11 @@ export default function Generator() {
                     <span className="text-slate-500 font-normal">⚪ Không nổ</span>
                   ) : groupComparisonStats.g1.diffXang >= 0 ? (
                     <span className="text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded border border-emerald-300">
-                      🟢 Thừa +{groupComparisonStats.g1.diffXang}L
+                      🟢 Thừa +{groupComparisonStats.g1.diffXang}L (+{formatCurrency(groupComparisonStats.g1.diffXangMoney)})
                     </span>
                   ) : (
                     <span className="text-red-700 bg-red-100 px-1.5 py-0.5 rounded border border-red-300">
-                      🔴 Thiếu {groupComparisonStats.g1.diffXang}L
+                      🔴 Thiếu {groupComparisonStats.g1.diffXang}L ({formatCurrency(groupComparisonStats.g1.diffXangMoney)})
                     </span>
                   )}
                 </div>
@@ -1711,11 +1740,11 @@ export default function Generator() {
                     <span className="text-slate-500 font-normal">⚪ Không nổ</span>
                   ) : groupComparisonStats.g2.diffDau >= 0 ? (
                     <span className="text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded border border-emerald-300">
-                      🟢 Thừa +{groupComparisonStats.g2.diffDau}L
+                      🟢 Thừa +{groupComparisonStats.g2.diffDau}L (+{formatCurrency(groupComparisonStats.g2.diffDauMoney)})
                     </span>
                   ) : (
                     <span className="text-red-700 bg-red-100 px-1.5 py-0.5 rounded border border-red-300">
-                      🔴 Thiếu {groupComparisonStats.g2.diffDau}L
+                      🔴 Thiếu {groupComparisonStats.g2.diffDau}L ({formatCurrency(groupComparisonStats.g2.diffDauMoney)})
                     </span>
                   )}
                 </div>
@@ -1737,11 +1766,11 @@ export default function Generator() {
                     <span className="text-slate-500 font-normal">⚪ Không nổ</span>
                   ) : groupComparisonStats.g2.diffXang >= 0 ? (
                     <span className="text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded border border-emerald-300">
-                      🟢 Thừa +{groupComparisonStats.g2.diffXang}L
+                      🟢 Thừa +{groupComparisonStats.g2.diffXang}L (+{formatCurrency(groupComparisonStats.g2.diffXangMoney)})
                     </span>
                   ) : (
                     <span className="text-red-700 bg-red-100 px-1.5 py-0.5 rounded border border-red-300">
-                      🔴 Thiếu {groupComparisonStats.g2.diffDau}L
+                      🔴 Thiếu {groupComparisonStats.g2.diffXang}L ({formatCurrency(groupComparisonStats.g2.diffXangMoney)})
                     </span>
                   )}
                 </div>
