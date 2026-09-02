@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../supabaseClient';
 import { 
   Zap, Calendar, AlertTriangle, FileText, Search, Plus, Trash, 
-  Edit, Eye, Clock, CheckCircle2, AlertCircle, X, ExternalLink, Filter, RefreshCw
+  Edit, Eye, Clock, CheckCircle2, CheckCircle, CheckCheck, AlertCircle, X, ExternalLink, Filter, RefreshCw
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
@@ -55,6 +55,40 @@ export default function Generator() {
   const [searchSite, setSearchSite] = useState('');
   const [searchDate, setSearchDate] = useState('');
   const [searchStatus, setSearchStatus] = useState('');
+  
+  // Anomaly dismissal & resolution states
+  const [anomalyStatusFilter, setAnomalyStatusFilter] = useState('pending'); // 'pending' | 'resolved' | 'all'
+  const [dismissedAnomalies, setDismissedAnomalies] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('tvt3_dismissed_anomalies') || '[]');
+    } catch {
+      return [];
+    }
+  });
+
+  const toggleDismissAnomaly = (anomKey) => {
+    setDismissedAnomalies(prev => {
+      const next = prev.includes(anomKey) ? prev.filter(k => k !== anomKey) : [...prev, anomKey];
+      try {
+        localStorage.setItem('tvt3_dismissed_anomalies', JSON.stringify(next));
+      } catch (e) {
+        console.error(e);
+      }
+      return next;
+    });
+  };
+
+  const dismissAllAnomalies = (keys) => {
+    setDismissedAnomalies(prev => {
+      const next = Array.from(new Set([...prev, ...keys]));
+      try {
+        localStorage.setItem('tvt3_dismissed_anomalies', JSON.stringify(next));
+      } catch (e) {
+        console.error(e);
+      }
+      return next;
+    });
+  };
   
   // Form states - Generator Log
   const [logDate, setLogDate] = useState(new Date().toISOString().split('T')[0]);
@@ -1120,14 +1154,16 @@ export default function Generator() {
                 const fType = (matchingRefill.fuel_tracking?.fuel_type || specs?.nhien_lieu || '').toLowerCase();
                 const isXang = fType.includes('xăng') || fType.includes('xang');
                 const fuelLabel = isXang ? 'xăng' : 'dầu';
+                const anomId = `MISSING_LOG_${site.site_id}_${outage.ngay_mat_dien}`;
 
                 anomalies.push({
+                  id: anomId,
                   type: 'MISSING_LOG',
                   severity: 'high',
                   site_id: site.site_id,
                   date: outage.ngay_mat_dien,
                   title: 'Thiếu log chạy máy phát điện',
-                  desc: `Trạm cúp điện ngày ${outage.ngay_mat_dien} trong ${hours.toFixed(1)} giờ, ghi nhận có đổ ${fuelLabel} ngày ${matchingRefill.date} (${matchingRefill.fuel_tracking.quantity}L), nhưng không ghi nhận log chạy máy phát trong vòng 7 ngày sau đó.`
+                  desc: `Trạm cúp điện ngày ${outage.ngay_mat_dien} trong ${hours.toFixed(1)} giờ, ghi nhận có đổ ${fuelLabel} ngày ${matchingRefill.date} (${matchingRefill.fuel_tracking?.quantity || ''}L), nhưng không ghi nhận log chạy máy phát trong vòng 7 ngày sau đó.`
                 });
               }
             }
@@ -1141,28 +1177,34 @@ export default function Generator() {
       const isXang = specs && (specs.nhien_lieu || '').toLowerCase().includes('xăng');
 
       if (isXang) {
-        // Máy xăng: Xét đổ xăng mà từ ngày đó trở đi 7 ngày không chạy thì cảnh báo luôn (cho phép chạy trước 3 ngày để bù xăng)
+        // Máy xăng: Chỉ cảnh báo nếu sau ngày đổ nhiên liệu >= 7 ngày mà trạm không có bất kỳ log chạy máy nào trong chu kỳ đối soát (+-15 ngày)
         siteRefills.forEach(refill => {
-          const hasRun = siteLogs.some(log => {
-            const diffDays = getDaysDiff(log.date, refill.date);
-            return diffDays >= -3 && diffDays <= 7;
-          });
+          const refillDate = new Date(refill.date);
+          const daysSince = Math.floor((today - refillDate) / (1000 * 60 * 60 * 24));
 
-          if (!hasRun) {
-            anomalies.push({
-              type: 'CONSECUTIVE_REFILL', // Giữ nguyên type để đồng bộ UI
-              severity: 'high',
-              site_id: site.site_id,
-              date: refill.date,
-              title: 'Đổ xăng không chạy máy',
-              desc: `Ghi nhận đổ xăng ngày ${refill.date} (${refill.fuel_tracking.quantity}L) nhưng không chạy máy phát trong vòng 7 ngày tiếp theo.`
+          if (daysSince >= 7) {
+            const hasRun = siteLogs.some(log => {
+              const diffDays = getDaysDiff(log.date, refill.date);
+              return diffDays >= -15 && diffDays <= 30;
             });
+
+            if (!hasRun) {
+              const anomId = `CONSECUTIVE_REFILL_${site.site_id}_${refill.date}`;
+              anomalies.push({
+                id: anomId,
+                type: 'CONSECUTIVE_REFILL',
+                severity: 'high',
+                site_id: site.site_id,
+                date: refill.date,
+                title: 'Đổ xăng không chạy máy',
+                desc: `Ghi nhận đổ xăng ngày ${refill.date} (${refill.fuel_tracking?.quantity || ''}L) nhưng không ghi nhận chạy máy phát điện trong chu kỳ đối soát.`
+              });
+            }
           }
         });
       } else {
         // Máy dầu: Giữ nguyên quy tắc đổ dầu liên tiếp không chạy máy
         if (siteRefills.length >= 2) {
-          // Sắp xếp các giao dịch đổ dầu theo ngày tăng dần
           const sortedRefills = [...siteRefills].sort((a, b) => new Date(a.date) - new Date(b.date));
           
           for (let i = 0; i < sortedRefills.length - 1; i++) {
@@ -1172,9 +1214,7 @@ export default function Generator() {
             const d2 = new Date(r2.date);
             const diffDays = (d2 - d1) / (1000 * 60 * 60 * 24);
 
-            // Nếu đổ nhiên liệu 2 lần liên tiếp cách nhau <= 7 ngày
             if (diffDays <= 7) {
-              // Kiểm tra xem trong khoảng từ ngày đổ thứ 1 (d1) đến ngày đổ thứ 2 (d2) cộng thêm 7 ngày nữa, có chạy máy phát không
               const checkEnd = new Date(d2);
               checkEnd.setDate(checkEnd.getDate() + 7);
 
@@ -1184,9 +1224,11 @@ export default function Generator() {
               });
 
               if (!hasRun) {
-                const totalQty = (parseFloat(r1.fuel_tracking.quantity) || 0) + (parseFloat(r2.fuel_tracking.quantity) || 0);
+                const totalQty = (parseFloat(r1.fuel_tracking?.quantity) || 0) + (parseFloat(r2.fuel_tracking?.quantity) || 0);
+                const anomId = `CONSECUTIVE_REFILL_${site.site_id}_${r2.date}`;
 
                 anomalies.push({
+                  id: anomId,
                   type: 'CONSECUTIVE_REFILL',
                   severity: 'high',
                   site_id: site.site_id,
@@ -1194,7 +1236,7 @@ export default function Generator() {
                   title: 'Đổ dầu liên tiếp không chạy máy',
                   desc: `Đổ dầu 2 lần liên tiếp (${totalQty}L từ ${r1.date} đến ${r2.date}) nhưng không chạy máy phát trong vòng 7 ngày tiếp theo.`
                 });
-                break; // Chỉ cần cảnh báo 1 lần gần nhất
+                break;
               }
             }
           }
@@ -1207,7 +1249,7 @@ export default function Generator() {
         const isXang = fuel.includes('xăng') || fuel.includes('xang');
         const fuelLabel = isXang ? 'xăng' : 'dầu';
 
-        const q_refuels = siteRefills.reduce((sum, r) => sum + (parseFloat(r.fuel_tracking.quantity) || 0), 0);
+        const q_refuels = siteRefills.reduce((sum, r) => sum + (parseFloat(r.fuel_tracking?.quantity) || 0), 0);
         
         // Tính tiêu hao thực tế từ log chạy máy = nhiên liệu tiêu hao trực tiếp từ log hoặc (số giờ * định mức)
         const q_consumes = siteLogs.reduce((sum, l) => {
@@ -1222,7 +1264,9 @@ export default function Generator() {
         
         // Nếu chênh lệch đổ nhiên liệu nhiều hơn chạy máy trên 50 lít trong 90 ngày qua
         if (q_refuels > 0 && diff < -50.0) {
+          const anomId = `QUARTERLY_DISCREPANCY_${site.site_id}_${today.toISOString().split('T')[0]}`;
           anomalies.push({
+            id: anomId,
             type: 'QUARTERLY_DISCREPANCY',
             severity: 'medium',
             site_id: site.site_id,
@@ -1239,7 +1283,6 @@ export default function Generator() {
         const isDiesel = fuel.includes('dầu') || fuel.includes('dau') || fuel.includes('diesel') || fuel === '';
 
         if (isDiesel) {
-          // Tìm ngày chạy máy gần nhất
           let lastRunDate = null;
           if (siteLogs.length > 0) {
             const sortedLogs = [...siteLogs].sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -1248,10 +1291,12 @@ export default function Generator() {
 
           const daysInactive = lastRunDate 
             ? Math.floor((today - lastRunDate) / (1000 * 60 * 60 * 24))
-            : 999; // Chưa từng chạy
+            : 999;
 
           if (daysInactive >= 90) {
+            const anomId = `INACTIVE_GEN_${site.site_id}_${lastRunDate ? lastRunDate.toISOString().split('T')[0] : 'never'}`;
             anomalies.push({
+              id: anomId,
               type: 'INACTIVE_GEN',
               severity: 'medium',
               site_id: site.site_id,
@@ -2360,108 +2405,200 @@ export default function Generator() {
               )}
 
               {/* TAB 2: ANOMALY REPORTS */}
-              {activeTab === 'anomalies' && (
-                <div className="p-4">
-                  {anomaliesList.length === 0 ? (
-                    <div className="text-center py-20 text-slate-400">🎉 Tuyệt vời! Không phát hiện chạy máy bất thường nào trong 90 ngày qua.</div>
-                  ) : (
-                    <>
-                      {/* Desktop View Table */}
-                      <div className="hidden lg:block w-full overflow-x-auto border border-slate-100 rounded-xl bg-white shadow-sm">
-                        <table className="min-w-full divide-y divide-gray-200 text-left">
-                          <thead className="bg-slate-50 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                            <tr>
-                              <th scope="col" className="px-4 py-3">Trạm</th>
-                              <th scope="col" className="px-4 py-3">Mức độ</th>
-                              <th scope="col" className="px-4 py-3">Loại cảnh báo</th>
-                              <th scope="col" className="px-4 py-3">Tiêu đề</th>
-                              <th scope="col" className="px-4 py-3">Chi tiết bất thường</th>
-                              <th scope="col" className="px-4 py-3">Ngày phát hiện</th>
-                            </tr>
-                          </thead>
-                          <tbody className="bg-white divide-y divide-gray-100 text-[13px] text-gray-700">
-                            {anomaliesList.map((anom, idx) => {
-                              const isHigh = anom.severity === 'high';
-                              return (
-                                <tr key={idx} className={`hover:bg-slate-50/50 transition-colors ${isHigh ? 'bg-red-50/5' : ''}`}>
-                                  <td className="px-4 py-3 whitespace-nowrap font-bold text-slate-900">
-                                    {getSiteLabel(anom.site_id)}
-                                  </td>
-                                  <td className="px-4 py-3 whitespace-nowrap">
-                                    <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 w-max ${
+              {activeTab === 'anomalies' && (() => {
+                const pendingAnomalies = anomaliesList.filter(a => !dismissedAnomalies.includes(a.id));
+                const resolvedAnomalies = anomaliesList.filter(a => dismissedAnomalies.includes(a.id));
+                
+                const displayedAnomalies = anomalyStatusFilter === 'pending' 
+                  ? pendingAnomalies 
+                  : anomalyStatusFilter === 'resolved' 
+                    ? resolvedAnomalies 
+                    : anomaliesList;
+
+                return (
+                  <div className="p-4 space-y-4">
+                    {/* Header & Sub-filter controls */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/80 p-3 rounded-xl border border-slate-200">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setAnomalyStatusFilter('pending')}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                            anomalyStatusFilter === 'pending'
+                              ? 'bg-red-600 text-white shadow-sm'
+                              : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                          }`}
+                        >
+                          <span className="w-2 h-2 rounded-full bg-amber-300 animate-pulse"></span>
+                          Tồn đọng ({pendingAnomalies.length})
+                        </button>
+                        <button
+                          onClick={() => setAnomalyStatusFilter('resolved')}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                            anomalyStatusFilter === 'resolved'
+                              ? 'bg-emerald-600 text-white shadow-sm'
+                              : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                          }`}
+                        >
+                          <CheckCircle size={13} />
+                          Đã xử lý / Đã Clear ({resolvedAnomalies.length})
+                        </button>
+                        <button
+                          onClick={() => setAnomalyStatusFilter('all')}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                            anomalyStatusFilter === 'all'
+                              ? 'bg-slate-800 text-white shadow-sm'
+                              : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                          }`}
+                        >
+                          Tất cả ({anomaliesList.length})
+                        </button>
+                      </div>
+
+                      {pendingAnomalies.length > 0 && anomalyStatusFilter === 'pending' && (
+                        <button
+                          onClick={() => dismissAllAnomalies(pendingAnomalies.map(a => a.id))}
+                          className="px-3 py-1.5 rounded-lg text-xs font-bold bg-white text-blue-700 border border-blue-200 hover:bg-blue-50 transition-all flex items-center gap-1 self-end sm:self-auto"
+                          title="Xác nhận đã xử lý toàn bộ các cảnh báo đang tồn đọng"
+                        >
+                          <CheckCheck size={14} />
+                          Clear tất cả ({pendingAnomalies.length})
+                        </button>
+                      )}
+                    </div>
+
+                    {displayedAnomalies.length === 0 ? (
+                      <div className="text-center py-16 bg-white rounded-xl border border-dashed border-slate-200">
+                        <CheckCircle size={40} className="mx-auto text-emerald-500 mb-2" />
+                        <div className="font-bold text-slate-700 text-sm">
+                          {anomalyStatusFilter === 'pending' 
+                            ? '🎉 Tuyệt vời! Không còn bất thường nào tồn đọng.' 
+                            : anomalyStatusFilter === 'resolved' 
+                              ? 'Chưa có cảnh báo nào được chuyển vào danh sách đã xử lý.'
+                              : 'Không phát hiện bất thường nào.'}
+                        </div>
+                        <p className="text-xs text-slate-400 mt-1">Hệ thống đang hoạt động ổn định và an toàn.</p>
+                      </div>
+                    ) : (
+                      <>
+                        {/* Desktop View Table */}
+                        <div className="hidden lg:block w-full overflow-x-auto border border-slate-100 rounded-xl bg-white shadow-sm">
+                          <table className="min-w-full divide-y divide-gray-200 text-left">
+                            <thead className="bg-slate-50 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                              <tr>
+                                <th scope="col" className="px-4 py-3">Trạm</th>
+                                <th scope="col" className="px-4 py-3">Mức độ</th>
+                                <th scope="col" className="px-4 py-3">Loại cảnh báo</th>
+                                <th scope="col" className="px-4 py-3">Tiêu đề</th>
+                                <th scope="col" className="px-4 py-3">Chi tiết bất thường</th>
+                                <th scope="col" className="px-4 py-3">Ngày phát hiện</th>
+                                <th scope="col" className="px-4 py-3 text-right">Thao tác</th>
+                              </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-100 text-[13px] text-gray-700">
+                              {displayedAnomalies.map((anom) => {
+                                const isHigh = anom.severity === 'high';
+                                const isDismissed = dismissedAnomalies.includes(anom.id);
+                                return (
+                                  <tr key={anom.id} className={`hover:bg-slate-50/50 transition-colors ${isDismissed ? 'opacity-60 bg-slate-50/30' : isHigh ? 'bg-red-50/5' : ''}`}>
+                                    <td className="px-4 py-3 whitespace-nowrap font-bold text-slate-900">
+                                      {getSiteLabel(anom.site_id)}
+                                    </td>
+                                    <td className="px-4 py-3 whitespace-nowrap">
+                                      <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 w-max ${
+                                        isHigh ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-800'
+                                      }`}>
+                                        <AlertTriangle size={10} />
+                                        {isHigh ? 'Đỏ (Nguy cơ cao)' : 'Vàng (Cần lưu ý)'}
+                                      </span>
+                                    </td>
+                                    <td className="px-4 py-3 whitespace-nowrap font-semibold text-blue-700 text-xs">
+                                      {anom.type === 'MISSING_LOG' && 'Thiếu log chạy máy'}
+                                      {anom.type === 'CONSECUTIVE_REFILL' && (anom.title.includes('xăng') || anom.desc.includes('xăng') ? 'Đổ xăng không chạy' : 'Đổ dầu không chạy')}
+                                      {anom.type === 'QUARTERLY_DISCREPANCY' && 'Lệch nhiên liệu quý'}
+                                      {anom.type === 'INACTIVE_GEN' && 'Máy phát ngủ quên'}
+                                    </td>
+                                    <td className="px-4 py-3 whitespace-nowrap font-bold text-slate-800">{anom.title}</td>
+                                    <td className="px-4 py-3 max-w-sm truncate text-slate-500" title={anom.desc}>{anom.desc}</td>
+                                    <td className="px-4 py-3 whitespace-nowrap font-mono text-xs text-slate-500">
+                                      {anom.date !== 'Chưa từng chạy' ? anom.date : 'Chưa từng chạy'}
+                                    </td>
+                                    <td className="px-4 py-3 whitespace-nowrap text-right">
+                                      <button
+                                        onClick={() => toggleDismissAnomaly(anom.id)}
+                                        className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ml-auto ${
+                                          isDismissed
+                                            ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                            : 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
+                                        }`}
+                                        title={isDismissed ? 'Mở lại cảnh báo này' : 'Đánh dấu đã xử lý xong cảnh báo này'}
+                                      >
+                                        <CheckCircle size={12} />
+                                        {isDismissed ? 'Hoàn tác' : '✓ Đã xử lý'}
+                                      </button>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+
+                        {/* Mobile View Card Grid */}
+                        <div className="lg:hidden grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {displayedAnomalies.map((anom) => {
+                            const isHigh = anom.severity === 'high';
+                            const isDismissed = dismissedAnomalies.includes(anom.id);
+                            return (
+                              <div 
+                                key={anom.id} 
+                                className={`rounded-xl border p-4 shadow-sm flex flex-col justify-between transition-all hover:shadow-md ${
+                                  isDismissed ? 'opacity-60 bg-slate-50 border-slate-200' : isHigh ? 'bg-red-50/20 border-red-100' : 'bg-amber-50/10 border-amber-100'
+                                }`}
+                              >
+                                <div>
+                                  <div className="flex justify-between items-start mb-3">
+                                    <span className="font-bold text-slate-800 text-sm flex items-center gap-1">
+                                      {getSiteLabel(anom.site_id)}
+                                    </span>
+                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${
                                       isHigh ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-800'
                                     }`}>
                                       <AlertTriangle size={10} />
-                                      {isHigh ? 'Đỏ (Nguy cơ cao)' : 'Vàng (Cần lưu ý)'}
+                                      {isHigh ? 'Cảnh báo Đỏ' : 'Cảnh báo Vàng'}
                                     </span>
-                                  </td>
-                                  <td className="px-4 py-3 whitespace-nowrap font-semibold text-blue-700 text-xs">
-                                    {anom.type === 'MISSING_LOG' && 'Thiếu log chạy máy'}
-                                    {anom.type === 'CONSECUTIVE_REFILL' && (anom.title.includes('xăng') || anom.desc.includes('xăng') ? 'Đổ xăng không chạy' : 'Đổ dầu không chạy')}
-                                    {anom.type === 'QUARTERLY_DISCREPANCY' && 'Lệch nhiên liệu quý'}
-                                    {anom.type === 'INACTIVE_GEN' && 'Máy phát ngủ quên'}
-                                  </td>
-                                  <td className="px-4 py-3 whitespace-nowrap font-bold text-slate-800">{anom.title}</td>
-                                  <td className="px-4 py-3 max-w-sm truncate text-slate-500" title={anom.desc}>{anom.desc}</td>
-                                  <td className="px-4 py-3 whitespace-nowrap font-mono text-xs text-slate-500">
-                                    {anom.date !== 'Chưa từng chạy' ? anom.date : 'Chưa từng chạy'}
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
+                                  </div>
 
-                      {/* Mobile View Card Grid */}
-                      <div className="lg:hidden grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {anomaliesList.map((anom, idx) => {
-                          const isHigh = anom.severity === 'high';
-                          return (
-                            <div 
-                              key={idx} 
-                              className={`rounded-xl border p-4 shadow-sm flex flex-col justify-between transition-all hover:shadow-md ${
-                                isHigh ? 'bg-red-50/20 border-red-100' : 'bg-amber-50/10 border-amber-100'
-                              }`}
-                            >
-                              <div>
-                                <div className="flex justify-between items-start mb-3">
-                                  <span className="font-bold text-slate-800 text-sm flex items-center gap-1">
-                                    {getSiteLabel(anom.site_id)}
-                                  </span>
-                                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${
-                                    isHigh ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-800'
-                                  }`}>
-                                    <AlertTriangle size={10} />
-                                    {isHigh ? 'Cảnh báo Đỏ' : 'Cảnh báo Vàng'}
-                                  </span>
+                                  <div className="space-y-1.5">
+                                    <div className="text-[13px] font-extrabold text-slate-700">{anom.title}</div>
+                                    <p className="text-[12px] text-slate-500 leading-relaxed">{anom.desc}</p>
+                                  </div>
                                 </div>
 
-                                <div className="space-y-1.5">
-                                  <div className="text-[13px] font-extrabold text-slate-700">{anom.title}</div>
-                                  <p className="text-[12px] text-slate-500 leading-relaxed">{anom.desc}</p>
+                                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
+                                  <span className="flex items-center gap-1 font-mono text-[11px]">
+                                    {anom.date !== 'Chưa từng chạy' ? anom.date : 'Lịch sử: Chưa từng chạy'}
+                                  </span>
+                                  <button
+                                    onClick={() => toggleDismissAnomaly(anom.id)}
+                                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
+                                      isDismissed
+                                        ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                        : 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
+                                    }`}
+                                  >
+                                    <CheckCircle size={12} />
+                                    {isDismissed ? 'Hoàn tác' : '✓ Đã xử lý'}
+                                  </button>
                                 </div>
                               </div>
-
-                              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
-                                <span className="flex items-center gap-1 font-mono text-[11px]">
-                                  {anom.date !== 'Chưa từng chạy' ? `Phát hiện: ${anom.date}` : 'Lịch sử: Chưa từng chạy'}
-                                </span>
-                                <span className="text-[11px] font-bold text-blue-600 flex items-center gap-0.5">
-                                  {anom.type === 'MISSING_LOG' && 'Yêu cầu bổ sung'}
-                                  {anom.type === 'CONSECUTIVE_REFILL' && 'Kiểm tra thất thoát'}
-                                  {anom.type === 'QUARTERLY_DISCREPANCY' && 'Đối soát lệch kho'}
-                                  {anom.type === 'INACTIVE_GEN' && 'Cần bảo dưỡng máy'}
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
+                            );
+                          })}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* TAB 3: INVOICES */}
               {activeTab === 'invoices' && (
