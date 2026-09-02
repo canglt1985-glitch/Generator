@@ -318,73 +318,91 @@
                                 class="fas fa-plus me-1"></i>Thêm</button>
                     </div>
                 </div>
-                {% set ns = namespace(total=0, hours=0, fuel_xang=0, fuel_dau=0, vat=0) %}
+                {% set g1_sites = ['DNCM11', 'DNCM14', 'DNCM15', 'DNCM23', 'DNCM45', 'DNDQ03', 'DNDQ31', 'DNDQ51', 'DNDQ58', 'DNIDQN1', 'DNLK40', 'DNLK42', 'DNLK27', 'DNLK71', 'DNLK73', 'DNLT20', 'DNLT29', 'DNLT64', 'DNLT87', 'DNLT91', 'DNLT98', 'DNLTA1', 'DNLTA3', 'DNLTA8', 'DNLTC8', 'DNLTX5', 'DNNT82SR01', 'DNNTA5', 'DNTN24', 'DNTN43', 'DNTNL2', 'DNTP03', 'DNTP08', 'DNTP30', 'DNTP42', 'DNTP44', 'DNTP53', 'DNXL37', 'DNXL45', 'DNXL49', 'DNXL65', 'DNXL75', 'DNXL77', 'DNINTR49', 'DNINTR64', 'DNIAPH29', 'DNIAPH30', 'DNIAPH35', 'DNIAPH28', 'DNIAPH24', 'DNIAPH12', 'DNIAPH26', 'DNIAPH32', 'DNIBAN03', 'DNIBAN10', 'DNILTH10'] %}
+                {% set ns = namespace(total=0, hours=0, fuel_xang=0, fuel_dau=0, vat=0, count=0) %}
+                {% set ns_g1 = namespace(total=0, hours=0, fuel_xang=0, fuel_dau=0, vat=0, count=0) %}
+                {% set ns_g2 = namespace(total=0, hours=0, fuel_xang=0, fuel_dau=0, vat=0, count=0) %}
+
                 {% for log in logs %}
-                {% set ns.total = ns.total + (log.thanh_tien or 0) %}
-                {% set ns.hours = ns.hours + (log.thoi_gian_hoat_dong or 0) %}
-                {% if log.nhien_lieu and 'Xăng' in log.nhien_lieu %}
-                {% set ns.fuel_xang = ns.fuel_xang + (log.nhien_lieu_tieu_hao or 0) %}
+                {% set tt = (log.thanh_tien or 0) %}
+                {% set hrs = (log.thoi_gian_hoat_dong or 0) %}
+                {% set fuel = (log.nhien_lieu_tieu_hao or 0) %}
+                {% set is_xang = log.nhien_lieu and 'Xăng' in log.nhien_lieu %}
+                {% set is_vat_0 = log.ngay_van_hanh and log.ngay_van_hanh >= '2026-03-26' %}
+                {% set vat = 0 if is_vat_0 else ((tt * 0.08)|round(0)|int) %}
+
+                {% set site_curr = (log.id_tram or log.site_id or '')|upper|trim %}
+                {% set site_old = (log.id_tram_cu or log.site_id_old or '')|upper|trim %}
+                {% set is_g1 = (site_curr in g1_sites or site_old in g1_sites) %}
+
+                {% set ns.count = ns.count + 1 %}
+                {% set ns.total = ns.total + tt %}
+                {% set ns.hours = ns.hours + hrs %}
+                {% set ns.vat = ns.vat + vat %}
+                {% if is_xang %}{% set ns.fuel_xang = ns.fuel_xang + fuel %}{% else %}{% set ns.fuel_dau = ns.fuel_dau + fuel %}{% endif %}
+
+                {% if is_g1 %}
+                {% set ns_g1.count = ns_g1.count + 1 %}
+                {% set ns_g1.total = ns_g1.total + tt %}
+                {% set ns_g1.hours = ns_g1.hours + hrs %}
+                {% set ns_g1.vat = ns_g1.vat + vat %}
+                {% if is_xang %}{% set ns_g1.fuel_xang = ns_g1.fuel_xang + fuel %}{% else %}{% set ns_g1.fuel_dau = ns_g1.fuel_dau + fuel %}{% endif %}
                 {% else %}
-                {% set ns.fuel_dau = ns.fuel_dau + (log.nhien_lieu_tieu_hao or 0) %}
-                {% endif %}
-                {% if log.ngay_van_hanh and log.ngay_van_hanh >= '2026-03-26' %}
-                {# VAT 0% #}
-                {% else %}
-                {% set ns.vat = ns.vat + ((log.thanh_tien or 0) * 0.08)|round(0)|int %}
+                {% set ns_g2.count = ns_g2.count + 1 %}
+                {% set ns_g2.total = ns_g2.total + tt %}
+                {% set ns_g2.hours = ns_g2.hours + hrs %}
+                {% set ns_g2.vat = ns_g2.vat + vat %}
+                {% if is_xang %}{% set ns_g2.fuel_xang = ns_g2.fuel_xang + fuel %}{% else %}{% set ns_g2.fuel_dau = ns_g2.fuel_dau + fuel %}{% endif %}
                 {% endif %}
                 {% endfor %}
-                {% set total_thanh_tien = ns.total %}
-                {% set total_vat = ns.vat %}
-                {% set total_cong = (total_thanh_tien + total_vat)|int %}
-                <div class="row g-2 mb-3">
+
+                <!-- Dòng 1: Nhóm 1 - MobiFone Đồng Nai (67 Trạm) -->
+                <div class="row g-2 mb-2 align-items-center bg-warning-lt p-2 rounded border border-warning shadow-xs">
                     <div class="col-auto">
-                        <div class="card card-sm bg-primary-lt">
-                            <div class="card-body py-2 px-3">
-                                <div class="text-muted small">Records</div>
-                                <div class="fw-bold">{{ logs|length }}</div>
-                            </div>
-                        </div>
+                        <span class="badge bg-warning text-dark fw-bold uppercase">📌 Nhóm 1</span>
+                        <span class="fw-bold text-dark small ms-1">MobiFone Đồng Nai (67 Trạm)</span>
                     </div>
+                    <div class="col-auto ms-auto d-flex gap-2 flex-wrap">
+                        <span class="badge bg-white text-dark border">Records: <strong>{{ ns_g1.count }}</strong></span>
+                        <span class="badge bg-white text-info border">⏱ Giờ: <strong>{{ "{:,.1f}".format(ns_g1.hours) }}h</strong></span>
+                        <span class="badge bg-white text-danger border">⛽ Xăng: <strong>{{ "{:,.1f}".format(ns_g1.fuel_xang) }}L</strong></span>
+                        <span class="badge bg-white text-dark border">🛢 Dầu: <strong>{{ "{:,.1f}".format(ns_g1.fuel_dau) }}L</strong></span>
+                        <span class="badge bg-white text-primary border">💰 Tiền: <strong>{{ "{:,.0f}".format(ns_g1.total) }}đ</strong></span>
+                        <span class="badge bg-warning text-dark font-black">🏆 Tổng: <strong>{{ "{:,.0f}".format(ns_g1.total + ns_g1.vat) }}đ</strong></span>
+                    </div>
+                </div>
+
+                <!-- Dòng 2: Nhóm 2 - MobiFone Toàn Cầu (Các trạm còn lại) -->
+                <div class="row g-2 mb-2 align-items-center bg-blue-lt p-2 rounded border border-blue shadow-xs">
                     <div class="col-auto">
-                        <div class="card card-sm bg-cyan-lt">
-                            <div class="card-body py-2 px-3">
-                                <div class="text-muted small">⏱ Giờ chạy</div>
-                                <div class="fw-bold text-info">{{ "{:,.1f}".format(ns.hours) }}h</div>
-                            </div>
-                        </div>
+                        <span class="badge bg-primary text-white fw-bold uppercase">🏢 Nhóm 2</span>
+                        <span class="fw-bold text-dark small ms-1">MobiFone Toàn Cầu (Trạm còn lại)</span>
                     </div>
+                    <div class="col-auto ms-auto d-flex gap-2 flex-wrap">
+                        <span class="badge bg-white text-dark border">Records: <strong>{{ ns_g2.count }}</strong></span>
+                        <span class="badge bg-white text-info border">⏱ Giờ: <strong>{{ "{:,.1f}".format(ns_g2.hours) }}h</strong></span>
+                        <span class="badge bg-white text-danger border">⛽ Xăng: <strong>{{ "{:,.1f}".format(ns_g2.fuel_xang) }}L</strong></span>
+                        <span class="badge bg-white text-dark border">🛢 Dầu: <strong>{{ "{:,.1f}".format(ns_g2.fuel_dau) }}L</strong></span>
+                        <span class="badge bg-white text-primary border">💰 Tiền: <strong>{{ "{:,.0f}".format(ns_g2.total) }}đ</strong></span>
+                        <span class="badge bg-primary text-white font-black">🏆 Tổng: <strong>{{ "{:,.0f}".format(ns_g2.total + ns_g2.vat) }}đ</strong></span>
+                    </div>
+                </div>
+
+                <!-- Dòng 3: TỔNG CỘNG CẢ 2 NHÓM -->
+                <div class="row g-2 mb-3 align-items-center bg-light p-2 rounded border shadow-xs">
                     <div class="col-auto">
-                        <div class="card card-sm bg-red-lt">
-                            <div class="card-body py-2 px-3">
-                                <div class="text-muted small">⛽ Xăng</div>
-                                <div class="fw-bold text-red">{{ "{:,.1f}".format(ns.fuel_xang) }}L</div>
-                            </div>
-                        </div>
+                        <span class="badge bg-dark text-white fw-bold uppercase">📊 TỔNG CỘNG</span>
+                        <span class="fw-bold text-dark small ms-1">Tất cả 2 Nhóm (Tổng hợp)</span>
                     </div>
-                    <div class="col-auto">
-                        <div class="card card-sm bg-orange-lt">
-                            <div class="card-body py-2 px-3">
-                                <div class="text-muted small">🛢 Dầu</div>
-                                <div class="fw-bold text-orange">{{ "{:,.1f}".format(ns.fuel_dau) }}L</div>
-                            </div>
-                        </div>
+                    <div class="col-auto ms-auto d-flex gap-2 flex-wrap">
+                        <span class="badge bg-white text-dark border">Records: <strong>{{ ns.count }}</strong></span>
+                        <span class="badge bg-white text-info border">⏱ Giờ: <strong>{{ "{:,.1f}".format(ns.hours) }}h</strong></span>
+                        <span class="badge bg-white text-danger border">⛽ Xăng: <strong>{{ "{:,.1f}".format(ns.fuel_xang) }}L</strong></span>
+                        <span class="badge bg-white text-dark border">🛢 Dầu: <strong>{{ "{:,.1f}".format(ns.fuel_dau) }}L</strong></span>
+                        <span class="badge bg-white text-primary border">💰 Tiền: <strong>{{ "{:,.0f}".format(ns.total) }}đ</strong></span>
+                        <span class="badge bg-success text-white font-black">🏆 Tổng: <strong>{{ "{:,.0f}".format(ns.total + ns.vat) }}đ</strong></span>
                     </div>
-                    <div class="col-auto">
-                        <div class="card card-sm bg-blue-lt">
-                            <div class="card-body py-2 px-3">
-                                <div class="text-muted small">💰 Thành tiền</div>
-                                <div class="fw-bold text-primary">{{ "{:,.0f}".format(total_thanh_tien) }}đ</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-auto">
-                        <div class="card card-sm bg-yellow-lt">
-                            <div class="card-body py-2 px-3">
-                                <div class="text-muted small">VAT</div>
-                                <div class="fw-bold text-warning">{{ "{:,.0f}".format(total_vat) }}đ</div>
-                            </div>
-                        </div>
-                    </div>
+                </div>
                     <div class="col-auto">
                         <div class="card card-sm bg-green-lt">
                             <div class="card-body py-2 px-3">
