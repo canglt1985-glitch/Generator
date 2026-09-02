@@ -5,12 +5,14 @@ import { saveAs } from 'file-saver';
  * Helper to determine fuel type from log or equipment
  */
 function getFuelTypeFromLog(log, stationObj) {
-  const loaiNl = (log.run_details?.nhien_lieu_loai || log.run_details?.nhien_lieu || '').toLowerCase();
+  const loaiNl = (log.run_details?.nhien_lieu_loai || log.run_details?.nhien_lieu || stationObj?.nhien_lieu || '').toLowerCase();
   const loaiMay = (log.run_details?.loai_may || stationObj?.loai_may || '').toLowerCase();
   
-  if (loaiNl.includes('xăng') || loaiNl.includes('xang') || loaiMay.includes('kibi') || loaiMay.includes('hyundai') || loaiMay.includes('xăng') || loaiMay.includes('xang')) {
+  // Máy xăng chỉ bao gồm các bản ghi ghi rõ XĂNG hoặc máy xăng di động (Honda, Elemax)
+  if (loaiNl.includes('xăng') || loaiNl.includes('xang') || loaiMay.includes('honda') || loaiMay.includes('elemax')) {
     return 'Xăng';
   }
+  // Mặc định các dòng máy phát KIBII, SBM, VIETGEN, HỮU TOÀN, CAPO, FG WILSON, DENYO... đều là MÁY DẦU
   return 'Dầu';
 }
 

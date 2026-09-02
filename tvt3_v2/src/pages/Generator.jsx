@@ -1195,11 +1195,13 @@ export default function Generator() {
 
         const q_refuels = siteRefills.reduce((sum, r) => sum + (parseFloat(r.fuel_tracking.quantity) || 0), 0);
         
-        // Tính tiêu hao thực tế từ log chạy máy = số giờ hoạt động * định mức thực tế của trạm
+        // Tính tiêu hao thực tế từ log chạy máy = nhiên liệu tiêu hao trực tiếp từ log hoặc (số giờ * định mức)
         const q_consumes = siteLogs.reduce((sum, l) => {
-          const runtime = parseFloat(l.run_details.thoi_gian_hoat_dong) || 0;
-          const consumption = runtime * specs.dinh_muc_thuc_te;
-          return sum + consumption;
+          const directFuel = parseFloat(l.run_details?.nhien_lieu_tieu_hao) || 0;
+          if (directFuel > 0) return sum + directFuel;
+          const runtime = parseFloat(l.run_details?.thoi_gian_hoat_dong) || 0;
+          const quota = parseFloat(l.run_details?.dinh_muc) || parseFloat(specs?.dinh_muc_thuc_te) || parseFloat(specs?.dinh_muc) || 2.0;
+          return sum + (runtime * quota);
         }, 0);
 
         const diff = q_consumes - q_refuels;

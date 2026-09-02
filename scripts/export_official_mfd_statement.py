@@ -115,9 +115,9 @@ def create_styled_workbook(month=8, year=2026, output_path=None):
         for l in target_logs:
             rd = l.get('run_details') or {}
             st = sites.get(l.get('site_id')) or {}
-            nl = (rd.get('nhien_lieu_loai') or rd.get('nhien_lieu') or '').lower()
+            nl = (rd.get('nhien_lieu_loai') or rd.get('nhien_lieu') or st.get('nhien_lieu') or '').lower()
             lm = (rd.get('loai_may') or st.get('loai_may') or '').lower()
-            if 'xăng' in nl or 'xang' in nl or 'kibi' in lm or 'hyundai' in lm:
+            if 'xăng' in nl or 'xang' in nl or 'honda' in lm or 'elemax' in lm:
                 xang_list.append((l, rd, st))
             else:
                 dau_list.append((l, rd, st))
