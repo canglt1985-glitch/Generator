@@ -593,14 +593,14 @@ export async function exportOfficialMFDReport({
 
     // 2. Split invoices into 2 groups
     const g1Invoices = invoices.filter(inv => {
-      const mst = (inv.buyer_mst || '').trim();
-      const bname = (inv.buyer_name || '').toUpperCase();
-      return mst.includes('0100686209-129') || bname.includes('ĐỒNG NAI') || bname.includes('DONG NAI');
+      const mst = (inv.buyer_mst || inv.buyer_tax_code || '').trim();
+      const bname = (inv.buyer_name || inv.buyer_legal_name || '').toUpperCase();
+      return mst.includes('0100686209-129') || bname.includes('ĐỒNG NAI') || bname.includes('DONG NAI') || bname.includes('KHU VỰC 8');
     });
     const g2Invoices = invoices.filter(inv => {
-      const mst = (inv.buyer_mst || '').trim();
-      const bname = (inv.buyer_name || '').toUpperCase();
-      return !(mst.includes('0100686209-129') || bname.includes('ĐỒNG NAI') || bname.includes('DONG NAI'));
+      const mst = (inv.buyer_mst || inv.buyer_tax_code || '').trim();
+      const bname = (inv.buyer_name || inv.buyer_legal_name || '').toUpperCase();
+      return !(mst.includes('0100686209-129') || bname.includes('ĐỒNG NAI') || bname.includes('DONG NAI') || bname.includes('KHU VỰC 8'));
     });
 
     // Sheet 1: 02A Nhóm 1
