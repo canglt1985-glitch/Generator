@@ -399,6 +399,9 @@ export default function Expenses() {
     const accum_start = "2026-02-16";
     let mua_ngoai_accum = 0;
     let cx222_accum = 0;
+
+    let mua_ngoai_all_accum = 0;
+    let cx222_all_accum = 0;
     
     let mua_ngoai_new = 0;
     let cx222_new = 0;
@@ -407,7 +410,8 @@ export default function Expenses() {
     const cutoff_cx222 = paymentGroups.cx222.da_thanh_toan_den;
 
     transactions.forEach(t => {
-      if (selectedMonth && (!t.date || !t.date.startsWith(selectedMonth))) return;
+      if (!t.date) return;
+      const isSelectedMonth = !selectedMonth || t.date.startsWith(selectedMonth);
 
       const isAccum = t.date >= accum_start;
       const isNewMN = cutoff_mua_ngoai && t.date > cutoff_mua_ngoai;
@@ -422,10 +426,16 @@ export default function Expenses() {
           const isCX = vendor.includes('CX') || vendor.includes('CÂY XĂNG') || vendor.includes('CX222') || vendor.includes('CX 222');
           
           if (isCX) {
-            if (isAccum) cx222_accum += amount;
+            if (isAccum) {
+              cx222_all_accum += amount;
+              if (isSelectedMonth) cx222_accum += amount;
+            }
             if (isNewCX) cx222_new += amount;
           } else {
-            if (isAccum) mua_ngoai_accum += amount;
+            if (isAccum) {
+              mua_ngoai_all_accum += amount;
+              if (isSelectedMonth) mua_ngoai_accum += amount;
+            }
             if (isNewMN) mua_ngoai_new += amount;
           }
         }
@@ -436,7 +446,10 @@ export default function Expenses() {
         const content = t.other_expenses.content || '';
         if (!content.startsWith('SYSTEM_')) {
           const amount = parseFloat(t.other_expenses.amount) || 0;
-          if (isAccum) mua_ngoai_accum += amount;
+          if (isAccum) {
+            mua_ngoai_all_accum += amount;
+            if (isSelectedMonth) mua_ngoai_accum += amount;
+          }
           if (isNewMN) mua_ngoai_new += amount;
         }
       }
@@ -445,6 +458,8 @@ export default function Expenses() {
     return {
       mua_ngoai_accum,
       cx222_accum,
+      mua_ngoai_all_accum,
+      cx222_all_accum,
       mua_ngoai_new,
       cx222_new
     };
@@ -1492,8 +1507,8 @@ export default function Expenses() {
                         <div className="flex justify-between">
                           <span>Cần CK thêm (Phát sinh - Tạm ứng):</span>
                           <span className="font-bold">
-                            {accumTotals.mua_ngoai_accum - paymentGroups.mua_ngoai.tong_tien_nhan > 0 ? (
-                              <span className="text-red-600">{formatCurrency(accumTotals.mua_ngoai_accum - paymentGroups.mua_ngoai.tong_tien_nhan)}</span>
+                            {accumTotals.mua_ngoai_all_accum - paymentGroups.mua_ngoai.tong_tien_nhan > 0 ? (
+                              <span className="text-red-600">{formatCurrency(accumTotals.mua_ngoai_all_accum - paymentGroups.mua_ngoai.tong_tien_nhan)}</span>
                             ) : (
                               <span className="text-emerald-600">0 (Đã đủ tạm ứng) ✅</span>
                             )}
@@ -1503,8 +1518,8 @@ export default function Expenses() {
                         <div className="flex justify-between text-sm font-bold text-slate-800">
                           <span>Còn phải trả:</span>
                           <span>
-                            {accumTotals.mua_ngoai_accum - paymentGroups.mua_ngoai.so_tien_da_tt > 0 ? (
-                              <span className="text-red-600">{formatCurrency(accumTotals.mua_ngoai_accum - paymentGroups.mua_ngoai.so_tien_da_tt)}</span>
+                            {accumTotals.mua_ngoai_all_accum - paymentGroups.mua_ngoai.so_tien_da_tt > 0 ? (
+                              <span className="text-red-600">{formatCurrency(accumTotals.mua_ngoai_all_accum - paymentGroups.mua_ngoai.so_tien_da_tt)}</span>
                             ) : (
                               <span className="text-emerald-600">Đã TT hết ✅</span>
                             )}
@@ -1589,8 +1604,8 @@ export default function Expenses() {
                         <div className="flex justify-between">
                           <span>Cần CK thêm (Phát sinh - Tạm ứng):</span>
                           <span className="font-bold">
-                            {accumTotals.cx222_accum - paymentGroups.cx222.tong_tien_nhan > 0 ? (
-                              <span className="text-red-600">{formatCurrency(accumTotals.cx222_accum - paymentGroups.cx222.tong_tien_nhan)}</span>
+                            {accumTotals.cx222_all_accum - paymentGroups.cx222.tong_tien_nhan > 0 ? (
+                              <span className="text-red-600">{formatCurrency(accumTotals.cx222_all_accum - paymentGroups.cx222.tong_tien_nhan)}</span>
                             ) : (
                               <span className="text-emerald-600">0 (Đã đủ tạm ứng) ✅</span>
                             )}
@@ -1600,8 +1615,8 @@ export default function Expenses() {
                         <div className="flex justify-between text-sm font-bold text-slate-800">
                           <span>Còn phải trả:</span>
                           <span>
-                            {accumTotals.cx222_accum - paymentGroups.cx222.so_tien_da_tt > 0 ? (
-                              <span className="text-red-600">{formatCurrency(accumTotals.cx222_accum - paymentGroups.cx222.so_tien_da_tt)}</span>
+                            {accumTotals.cx222_all_accum - paymentGroups.cx222.so_tien_da_tt > 0 ? (
+                              <span className="text-red-600">{formatCurrency(accumTotals.cx222_all_accum - paymentGroups.cx222.so_tien_da_tt)}</span>
                             ) : (
                               <span className="text-emerald-600">Đã TT hết ✅</span>
                             )}
