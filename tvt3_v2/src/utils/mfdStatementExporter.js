@@ -432,7 +432,9 @@ export function exportOfficialMFDReport({
   const wb = XLSX.utils.book_new();
   const monthStr = month ? `T${String(month).padStart(2, '0')}` : 'Ca_Nam';
 
-  if (isFromAug2026 && selectedGroupFilter === 'all') {
+  const isAug2026OrLater = isFromAug2026 || Number(year) > 2026 || (Number(year) === 2026 && Number(month) >= 8);
+
+  if (isAug2026OrLater && (selectedGroupFilter === 'all' || !selectedGroupFilter)) {
     // 1. Split logs into 2 groups
     const g1Logs = logs.filter(log => {
       const st = stations.find(s => s.site_id === log.site_id);

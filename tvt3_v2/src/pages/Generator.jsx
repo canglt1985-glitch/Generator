@@ -286,8 +286,8 @@ export default function Generator() {
 
   // Search Filter - Logs (refined with inline filters)
   const isFromAug2026 = useMemo(() => {
-    return filterYear >= 2026;
-  }, [filterYear]);
+    return Number(filterYear) > 2026 || (Number(filterYear) === 2026 && Number(filterMonth) >= 8);
+  }, [filterYear, filterMonth]);
 
   const filteredLogs = useMemo(() => {
     return genLogs.filter(log => {
@@ -698,10 +698,35 @@ export default function Generator() {
 
   // Export to Official Statement Excel (Mẫu 02A-TTNB_NLMPD & HD)
   const exportToExcel = () => {
+    const targetMonth = Number(filterMonth);
+    const targetYear = Number(filterYear);
+
+    const logsForExport = genLogs.filter(log => {
+      if (!log.date) return false;
+      const parts = String(log.date).split('-');
+      if (parts.length >= 2) {
+        const y = Number(parts[0]);
+        const m = Number(parts[1]);
+        return y === targetYear && (targetMonth ? m === targetMonth : true);
+      }
+      return true;
+    });
+
+    const invoicesForExport = invoices.filter(inv => {
+      if (!inv.invoice_date) return false;
+      const parts = String(inv.invoice_date).split('-');
+      if (parts.length >= 2) {
+        const y = Number(parts[0]);
+        const m = Number(parts[1]);
+        return y === targetYear && (targetMonth ? m === targetMonth : true);
+      }
+      return true;
+    });
+
     exportOfficialMFDReport({
-      logs: genLogs,
+      logs: logsForExport.length > 0 ? logsForExport : genLogs,
       stations,
-      invoices,
+      invoices: invoicesForExport.length > 0 ? invoicesForExport : invoices,
       month: filterMonth,
       year: filterYear,
       isFromAug2026,
