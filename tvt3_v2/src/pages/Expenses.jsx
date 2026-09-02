@@ -1472,9 +1472,11 @@ export default function Expenses() {
                           <span>Tổng tiền đã tạm ứng:</span>
                           <span className="font-bold text-blue-600">{formatCurrency(paymentGroups.mua_ngoai.tong_tien_nhan)}</span>
                         </div>
-                        <div className="flex justify-between">
-                          <span>Lũy kế phát sinh ({selectedMonth ? formatMonthLabel(selectedMonth) : 'tất cả'}):</span>
-                          <span className="font-bold text-slate-800">{formatCurrency(accumTotals.mua_ngoai_accum)}</span>
+                        <div className="flex justify-between bg-amber-50/60 p-1.5 rounded border border-amber-100/80">
+                          <span className="font-semibold text-amber-900">
+                            Phát sinh {selectedMonth ? formatMonthLabel(selectedMonth) : 'toàn bộ'}:
+                          </span>
+                          <span className="font-bold text-amber-900">{formatCurrency(accumTotals.mua_ngoai_accum)}</span>
                         </div>
                         <div className="flex justify-between">
                           <span>Đã TT đến ngày:</span>
@@ -1489,23 +1491,23 @@ export default function Expenses() {
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span>Số tiền đã TT:</span>
+                          <span>Số tiền đã TT đợt trước:</span>
                           <span className="font-bold text-emerald-600">{formatCurrency(paymentGroups.mua_ngoai.so_tien_da_tt)}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span>Phát sinh mới (sau TT):</span>
-                          <span className="font-semibold text-orange-600">
+                          <span>Nợ phát sinh chưa TT (sau {paymentGroups.mua_ngoai.da_thanh_toan_den || 'TT'}):</span>
+                          <span className="font-bold text-orange-600">
                             {accumTotals.mua_ngoai_new > 0 ? `+${formatCurrency(accumTotals.mua_ngoai_new)}` : '—'}
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span>Số dư quỹ (Thái):</span>
+                          <span>Số dư quỹ tạm ứng (Thái):</span>
                           <span className={`font-bold ${paymentGroups.mua_ngoai.tong_tien_nhan - paymentGroups.mua_ngoai.so_tien_da_tt >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                             {formatCurrency(paymentGroups.mua_ngoai.tong_tien_nhan - paymentGroups.mua_ngoai.so_tien_da_tt)}
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span>Cần CK thêm (Phát sinh - Tạm ứng):</span>
+                          <span>Cần CK thêm (Cân đối quỹ):</span>
                           <span className="font-bold">
                             {accumTotals.mua_ngoai_all_accum - paymentGroups.mua_ngoai.tong_tien_nhan > 0 ? (
                               <span className="text-red-600">{formatCurrency(accumTotals.mua_ngoai_all_accum - paymentGroups.mua_ngoai.tong_tien_nhan)}</span>
@@ -1516,7 +1518,7 @@ export default function Expenses() {
                         </div>
                         <hr className="border-slate-100 my-1" />
                         <div className="flex justify-between text-sm font-bold text-slate-800">
-                          <span>Còn phải trả:</span>
+                          <span>Tổng còn phải trả (Nợ tồn dồn):</span>
                           <span>
                             {accumTotals.mua_ngoai_all_accum - paymentGroups.mua_ngoai.so_tien_da_tt > 0 ? (
                               <span className="text-red-600">{formatCurrency(accumTotals.mua_ngoai_all_accum - paymentGroups.mua_ngoai.so_tien_da_tt)}</span>
@@ -1569,9 +1571,11 @@ export default function Expenses() {
                           <span>Tổng tiền đã tạm ứng:</span>
                           <span className="font-bold text-blue-600">{formatCurrency(paymentGroups.cx222.tong_tien_nhan)}</span>
                         </div>
-                        <div className="flex justify-between">
-                          <span>Lũy kế phát sinh ({selectedMonth ? formatMonthLabel(selectedMonth) : 'tất cả'}):</span>
-                          <span className="font-bold text-slate-800">{formatCurrency(accumTotals.cx222_accum)}</span>
+                        <div className="flex justify-between bg-blue-50/60 p-1.5 rounded border border-blue-100/80">
+                          <span className="font-semibold text-blue-900">
+                            Phát sinh {selectedMonth ? formatMonthLabel(selectedMonth) : 'toàn bộ'}:
+                          </span>
+                          <span className="font-bold text-blue-900">{formatCurrency(accumTotals.cx222_accum)}</span>
                         </div>
                         <div className="flex justify-between">
                           <span>Đã TT đến ngày:</span>
@@ -1586,12 +1590,12 @@ export default function Expenses() {
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span>Số tiền đã TT:</span>
+                          <span>Số tiền đã TT đợt trước:</span>
                           <span className="font-bold text-emerald-600">{formatCurrency(paymentGroups.cx222.so_tien_da_tt)}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span>Phát sinh mới (sau TT):</span>
-                          <span className="font-semibold text-orange-600">
+                          <span>Nợ phát sinh chưa TT (sau {paymentGroups.cx222.da_thanh_toan_den || 'TT'}):</span>
+                          <span className="font-bold text-orange-600">
                             {accumTotals.cx222_new > 0 ? `+${formatCurrency(accumTotals.cx222_new)}` : '—'}
                           </span>
                         </div>
@@ -1602,7 +1606,7 @@ export default function Expenses() {
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span>Cần CK thêm (Phát sinh - Tạm ứng):</span>
+                          <span>Cần CK thêm (Cân đối quỹ):</span>
                           <span className="font-bold">
                             {accumTotals.cx222_all_accum - paymentGroups.cx222.tong_tien_nhan > 0 ? (
                               <span className="text-red-600">{formatCurrency(accumTotals.cx222_all_accum - paymentGroups.cx222.tong_tien_nhan)}</span>
@@ -1613,7 +1617,7 @@ export default function Expenses() {
                         </div>
                         <hr className="border-slate-100 my-1" />
                         <div className="flex justify-between text-sm font-bold text-slate-800">
-                          <span>Còn phải trả:</span>
+                          <span>Tổng còn phải trả (Nợ tồn dồn):</span>
                           <span>
                             {accumTotals.cx222_all_accum - paymentGroups.cx222.so_tien_da_tt > 0 ? (
                               <span className="text-red-600">{formatCurrency(accumTotals.cx222_all_accum - paymentGroups.cx222.so_tien_da_tt)}</span>
