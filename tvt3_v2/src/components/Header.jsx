@@ -76,9 +76,9 @@ export default function Header() {
             </Link>
           </div>
           
-          {/* Desktop Navigation - Responsive & No-Overlap */}
-          <nav className="hidden lg:flex items-center min-w-0 flex-1 overflow-x-auto scrollbar-none py-1 mx-2">
-            <div className="flex items-center bg-slate-800/60 rounded-lg p-0.5 min-w-max">
+          {/* Desktop Navigation - Responsive & High-Contrast */}
+          <nav className="hidden lg:flex items-center flex-1 min-w-0 overflow-x-auto scrollbar-none py-1 mx-1.5">
+            <div className="flex items-center bg-slate-800/80 border border-slate-700/50 rounded-xl p-1 min-w-max gap-0.5">
               {visibleNavigation.map((item) => {
                 const isActive = location.pathname === item.href;
                 const Icon = item.icon;
@@ -86,15 +86,16 @@ export default function Header() {
                   <Link
                     key={item.name}
                     to={item.href}
-                    className={`flex items-center px-2 xl:px-2.5 py-1.5 rounded-md text-[11px] xl:text-[12px] font-medium transition-all duration-200 whitespace-nowrap shrink-0 ${
+                    title={item.name}
+                    className={`flex items-center px-2 2xl:px-2.5 py-1.5 rounded-lg text-[11px] xl:text-[12px] 2xl:text-[12.5px] font-medium transition-all duration-200 whitespace-nowrap shrink-0 ${
                       isActive
-                        ? 'bg-white/15 text-white shadow-sm font-semibold'
-                        : 'text-slate-300 hover:text-white hover:bg-white/5'
+                        ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-md shadow-cyan-500/20 font-bold'
+                        : 'text-slate-100 hover:text-white hover:bg-white/10'
                     }`}
                   >
-                    <Icon className={`mr-1.5 h-3.5 w-3.5 shrink-0 ${isActive ? 'text-cyan-400' : 'text-slate-400'}`} />
-                    <span className="hidden xl:inline">{item.name}</span>
-                    <span className="inline xl:hidden">{item.shortName || item.name}</span>
+                    <Icon className={`mr-1.5 h-3.5 w-3.5 shrink-0 ${isActive ? 'text-white' : 'text-cyan-400'}`} />
+                    <span className="hidden 2xl:inline">{item.name}</span>
+                    <span className="inline 2xl:hidden">{item.shortName || item.name}</span>
                   </Link>
                 );
               })}
@@ -102,13 +103,13 @@ export default function Header() {
           </nav>
 
           {/* Right Section */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0 ml-auto">
+          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0 ml-auto">
             <div className="relative hidden md:block shrink-0">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
                 <Search className="h-3.5 w-3.5 text-slate-400" />
               </div>
               <input
-                className="block w-32 xl:w-44 2xl:w-52 pl-9 pr-3 py-1.5 border border-slate-700/60 rounded-lg leading-5 bg-slate-800/40 text-slate-200 placeholder-slate-400 focus:outline-none focus:bg-slate-800 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30 text-[12px] xl:text-[13px] transition-all"
+                className="block w-28 focus:w-48 xl:w-36 xl:focus:w-52 2xl:w-44 pl-8 pr-3 py-1.5 border border-slate-700/60 rounded-lg leading-5 bg-slate-800/60 text-slate-100 placeholder-slate-400 focus:outline-none focus:bg-slate-800 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/40 text-[12px] xl:text-[13px] transition-all duration-300"
                 placeholder="Tìm nhanh..."
                 type="search"
               />
