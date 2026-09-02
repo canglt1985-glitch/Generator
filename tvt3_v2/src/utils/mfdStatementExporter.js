@@ -473,7 +473,8 @@ export function exportOfficialMFDReport({
     const ws4 = buildHDWorksheet(g2Invoices, month, year, 'MobiFone Toàn Cầu');
     XLSX.utils.book_append_sheet(wb, ws4, 'HD_ToanCau');
 
-    const fileName = `Ho_So_Doi_Soat_NLMPD_${monthStr}_${year}_2_Nhom.xlsx`;
+    const mStr = month ? String(month).padStart(2, '0') : '08';
+    const fileName = `Ho_So_Thanh_Toan_Chuan_Mau_${mStr}_${year}.xlsx`;
     XLSX.writeFile(wb, fileName);
   } else {
     // Single Group or < August 2026
@@ -489,7 +490,8 @@ export function exportOfficialMFDReport({
     const wsHD = buildHDWorksheet(invoices, month, year, groupLabel);
     XLSX.utils.book_append_sheet(wb, wsHD, 'HD');
 
-    const fileName = `Ho_So_Thanh_Toan_NLMPD_${monthStr}_${year}${groupLabel ? `_${selectedGroupFilter}` : ''}.xlsx`;
+    const mStr = month ? String(month).padStart(2, '0') : '08';
+    const fileName = `Ho_So_Thanh_Toan_Chuan_Mau_${mStr}_${year}${groupLabel ? `_${selectedGroupFilter}` : ''}.xlsx`;
     XLSX.writeFile(wb, fileName);
   }
 }
