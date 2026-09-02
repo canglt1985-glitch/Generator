@@ -1949,6 +1949,49 @@ export default function Generator() {
                   </div>
                 </div>
               </div>
+
+              {/* Row 3: Grand Total Summary Row */}
+              <div className="bg-slate-100 border border-slate-300 rounded-xl p-2 px-3 shadow-2xs flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 min-w-[200px]">
+                  <span className="bg-slate-800 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase shadow-2xs">
+                    📊 TỔNG CỘNG
+                  </span>
+                  <span className="text-xs font-bold text-slate-800 truncate">
+                    Tất cả 2 Nhóm (Tổng hợp)
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                  <div className="bg-white border border-slate-200 px-2 py-1 rounded-lg">
+                    <span className="text-[10px] text-slate-500 font-semibold mr-1 uppercase">RECORDS:</span>
+                    <span className="font-extrabold text-blue-700">{stats.records}</span>
+                  </div>
+                  <div className="bg-white border border-slate-200 px-2 py-1 rounded-lg">
+                    <span className="text-[10px] text-slate-500 font-semibold mr-1 uppercase">⏱ GIỜ CHẠY:</span>
+                    <span className="font-extrabold text-sky-700">{stats.hours}h</span>
+                  </div>
+                  <div className="bg-white border border-slate-200 px-2 py-1 rounded-lg">
+                    <span className="text-[10px] text-slate-500 font-semibold mr-1 uppercase">⛽ XĂNG:</span>
+                    <span className="font-extrabold text-red-600">{stats.fuelXang}L</span>
+                  </div>
+                  <div className="bg-white border border-slate-200 px-2 py-1 rounded-lg">
+                    <span className="text-[10px] text-slate-500 font-semibold mr-1 uppercase">🛢 DẦU:</span>
+                    <span className="font-extrabold text-slate-700">{stats.fuelDau}L</span>
+                  </div>
+                  <div className="bg-white border border-slate-200 px-2 py-1 rounded-lg">
+                    <span className="text-[10px] text-slate-500 font-semibold mr-1 uppercase">💰 THÀNH TIỀN:</span>
+                    <span className="font-extrabold text-amber-800">{formatCurrency(stats.totalThanhTien)}</span>
+                  </div>
+                  <div className="bg-white border border-slate-200 px-2 py-1 rounded-lg">
+                    <span className="text-[10px] text-slate-500 font-semibold mr-1 uppercase">VAT:</span>
+                    <span className="font-extrabold text-orange-600">{formatCurrency(stats.totalVat)}</span>
+                  </div>
+                  <div className="bg-emerald-600 text-white px-2.5 py-1 rounded-lg font-bold">
+                    <span className="text-[10px] uppercase mr-1 opacity-90">🏆 TỔNG CỘNG:</span>
+                    <span>{formatCurrency(stats.totalCong)}</span>
+                  </div>
+                </div>
+              </div>
             </>
           ) : (
             /* Single Row for specific group or < Aug 2026 */
