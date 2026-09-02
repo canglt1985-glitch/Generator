@@ -339,32 +339,53 @@ export default function Generator() {
     let totalVat = 0;
     let pendingCount = 0;
 
+    const g1 = { records: 0, hours: 0, fuelXang: 0, fuelDau: 0, totalThanhTien: 0, totalVat: 0, totalCong: 0 };
+    const g2 = { records: 0, hours: 0, fuelXang: 0, fuelDau: 0, totalThanhTien: 0, totalVat: 0, totalCong: 0 };
+
     filteredLogs.forEach(log => {
+      const stationObj = stations.find(s => s.site_id === log.site_id);
+      const siteIdOld = stationObj?.site_id_old || '';
+      const isG1 = isSpecial67Site(log.site_id, siteIdOld, stations);
+
       const runtime = parseFloat(log.run_details?.thoi_gian_hoat_dong) || 0;
       const fuel = parseFloat(log.run_details?.nhien_lieu_tieu_hao) || 0;
       const thanhTien = parseFloat(log.run_details?.thanh_tien) || 0;
       const fuelTypeUpper = (log.run_details?.nhien_lieu_loai || log.run_details?.nhien_lieu || 'Dầu').toUpperCase();
       const status = log.run_details?.status || 'approved';
+      const isXang = fuelTypeUpper.includes('XĂNG') || fuelTypeUpper.includes('XANG');
+      const vat = (log.date && log.date >= '2026-03-26') ? 0 : Math.round(thanhTien * 0.08);
 
       hours += runtime;
-      if (fuelTypeUpper.includes('XĂNG') || fuelTypeUpper.includes('XANG')) {
+      if (isXang) {
         fuelXang += fuel;
       } else {
         fuelDau += fuel;
       }
       totalThanhTien += thanhTien;
-
-      // VAT logic: if date >= '2026-03-26' -> VAT is 0%, else 8%
-      if (log.date && log.date >= '2026-03-26') {
-        // VAT 0%
-      } else {
-        totalVat += Math.round(thanhTien * 0.08);
-      }
+      totalVat += vat;
 
       if (status === 'pending') {
         pendingCount++;
       }
+
+      // Group breakdown
+      const targetG = isG1 ? g1 : g2;
+      targetG.records++;
+      targetG.hours += runtime;
+      if (isXang) targetG.fuelXang += fuel;
+      else targetG.fuelDau += fuel;
+      targetG.totalThanhTien += thanhTien;
+      targetG.totalVat += vat;
+      targetG.totalCong += (thanhTien + vat);
     });
+
+    g1.hours = parseFloat(g1.hours.toFixed(1));
+    g1.fuelXang = parseFloat(g1.fuelXang.toFixed(1));
+    g1.fuelDau = parseFloat(g1.fuelDau.toFixed(1));
+
+    g2.hours = parseFloat(g2.hours.toFixed(1));
+    g2.fuelXang = parseFloat(g2.fuelXang.toFixed(1));
+    g2.fuelDau = parseFloat(g2.fuelDau.toFixed(1));
 
     return {
       records: filteredLogs.length,
@@ -374,9 +395,11 @@ export default function Generator() {
       totalThanhTien,
       totalVat,
       totalCong: totalThanhTien + totalVat,
-      pendingCount
+      pendingCount,
+      g1,
+      g2
     };
-  }, [filteredLogs]);
+  }, [filteredLogs, stations]);
 
   // Search & Buyer Filter - Invoices
   const filteredInvoices = useMemo(() => {
@@ -1838,47 +1861,132 @@ export default function Generator() {
 
       {/* Statistics Row for Logs tab */}
       {activeTab === 'logs' && (
-        <div className="flex flex-wrap gap-2 animate-in fade-in slide-in-from-top-2 duration-300">
-          {/* Records */}
-          <div className="bg-blue-50 border border-blue-100 rounded-xl p-2 px-3 min-w-[70px] shadow-sm">
-            <div className="text-slate-500 text-[10px] font-semibold uppercase">Records</div>
-            <div className="font-extrabold text-blue-700 text-sm">{stats.records}</div>
-          </div>
-          {/* Giờ chạy */}
-          <div className="bg-sky-50 border border-sky-100 rounded-xl p-2 px-3 min-w-[90px] shadow-sm">
-            <div className="text-slate-500 text-[10px] font-semibold uppercase">⏱ Giờ chạy</div>
-            <div className="font-extrabold text-sky-700 text-sm">{stats.hours}h</div>
-          </div>
-          {/* Xăng */}
-          <div className="bg-red-50 border border-red-100 rounded-xl p-2 px-3 min-w-[80px] shadow-sm">
-            <div className="text-slate-500 text-[10px] font-semibold uppercase">⛽ Xăng</div>
-            <div className="font-extrabold text-red-600 text-sm">{stats.fuelXang}L</div>
-          </div>
-          {/* Dầu */}
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-2 px-3 min-w-[80px] shadow-sm">
-            <div className="text-slate-500 text-[10px] font-semibold uppercase">🛢 Dầu</div>
-            <div className="font-extrabold text-slate-700 text-sm">{stats.fuelDau}L</div>
-          </div>
-          {/* Thành tiền */}
-          <div className="bg-amber-50/50 border border-amber-100 rounded-xl p-2 px-3 min-w-[110px] shadow-sm">
-            <div className="text-slate-500 text-[10px] font-semibold uppercase">💰 Thành tiền</div>
-            <div className="font-extrabold text-amber-700 text-sm">{formatCurrency(stats.totalThanhTien)}</div>
-          </div>
-          {/* VAT */}
-          <div className="bg-orange-50 border border-orange-100 rounded-xl p-2 px-3 min-w-[95px] shadow-sm">
-            <div className="text-slate-500 text-[10px] font-semibold uppercase">VAT</div>
-            <div className="font-extrabold text-orange-600 text-sm">{formatCurrency(stats.totalVat)}</div>
-          </div>
-          {/* Tổng cộng */}
-          <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-2 px-4 min-w-[120px] shadow-sm">
-            <div className="text-slate-500 text-[10px] font-semibold uppercase">🏆 Tổng cộng</div>
-            <div className="font-extrabold text-emerald-700 text-sm">{formatCurrency(stats.totalCong)}</div>
-          </div>
-          {/* Chờ duyệt */}
-          {stats.pendingCount > 0 && (
-            <div className="bg-yellow-50 border border-yellow-300 rounded-xl p-2 px-3 min-w-[85px] shadow-sm">
-              <div className="text-amber-800 text-[10px] font-semibold uppercase">⏳ Chờ duyệt</div>
-              <div className="font-extrabold text-amber-800 text-sm">{stats.pendingCount}</div>
+        <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+          {isFromAug2026 && selectedGroupFilter === 'all' ? (
+            <>
+              {/* Row 1: Nhóm 1 - MobiFone Đồng Nai (67 Trạm) */}
+              <div className="bg-amber-50/70 border border-amber-200/80 rounded-xl p-2 px-3 shadow-xs flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 min-w-[200px]">
+                  <span className="bg-amber-600 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase shadow-2xs">
+                    📌 Nhóm 1
+                  </span>
+                  <span className="text-xs font-bold text-amber-950 truncate" title="MobiFone Đồng Nai (67 Trạm Đặc Thù)">
+                    MobiFone Đồng Nai (67 Trạm)
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                  <div className="bg-white border border-amber-200/80 px-2 py-1 rounded-lg">
+                    <span className="text-[10px] text-slate-500 font-semibold mr-1 uppercase">Records:</span>
+                    <span className="font-extrabold text-blue-700">{stats.g1.records}</span>
+                  </div>
+                  <div className="bg-white border border-amber-200/80 px-2 py-1 rounded-lg">
+                    <span className="text-[10px] text-slate-500 font-semibold mr-1 uppercase">⏱ Giờ chạy:</span>
+                    <span className="font-extrabold text-sky-700">{stats.g1.hours}h</span>
+                  </div>
+                  <div className="bg-white border border-amber-200/80 px-2 py-1 rounded-lg">
+                    <span className="text-[10px] text-slate-500 font-semibold mr-1 uppercase">⛽ Xăng:</span>
+                    <span className="font-extrabold text-red-600">{stats.g1.fuelXang}L</span>
+                  </div>
+                  <div className="bg-white border border-amber-200/80 px-2 py-1 rounded-lg">
+                    <span className="text-[10px] text-slate-500 font-semibold mr-1 uppercase">🛢 Dầu:</span>
+                    <span className="font-extrabold text-slate-700">{stats.g1.fuelDau}L</span>
+                  </div>
+                  <div className="bg-white border border-amber-200/80 px-2 py-1 rounded-lg">
+                    <span className="text-[10px] text-slate-500 font-semibold mr-1 uppercase">💰 Thành tiền:</span>
+                    <span className="font-extrabold text-amber-800">{formatCurrency(stats.g1.totalThanhTien)}</span>
+                  </div>
+                  <div className="bg-white border border-amber-200/80 px-2 py-1 rounded-lg">
+                    <span className="text-[10px] text-slate-500 font-semibold mr-1 uppercase">VAT:</span>
+                    <span className="font-extrabold text-orange-600">{formatCurrency(stats.g1.totalVat)}</span>
+                  </div>
+                  <div className="bg-amber-600 text-white px-2.5 py-1 rounded-lg font-bold">
+                    <span className="text-[10px] uppercase mr-1 opacity-90">🏆 Tổng:</span>
+                    <span>{formatCurrency(stats.g1.totalCong)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Row 2: Nhóm 2 - MobiFone Toàn Cầu (Các trạm còn lại) */}
+              <div className="bg-blue-50/70 border border-blue-200/80 rounded-xl p-2 px-3 shadow-xs flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 min-w-[200px]">
+                  <span className="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase shadow-2xs">
+                    🏢 Nhóm 2
+                  </span>
+                  <span className="text-xs font-bold text-blue-950 truncate" title="MobiFone Toàn Cầu (Các Trạm Còn Lại)">
+                    MobiFone Toàn Cầu (Trạm còn lại)
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                  <div className="bg-white border border-blue-200/80 px-2 py-1 rounded-lg">
+                    <span className="text-[10px] text-slate-500 font-semibold mr-1 uppercase">Records:</span>
+                    <span className="font-extrabold text-blue-700">{stats.g2.records}</span>
+                  </div>
+                  <div className="bg-white border border-blue-200/80 px-2 py-1 rounded-lg">
+                    <span className="text-[10px] text-slate-500 font-semibold mr-1 uppercase">⏱ Giờ chạy:</span>
+                    <span className="font-extrabold text-sky-700">{stats.g2.hours}h</span>
+                  </div>
+                  <div className="bg-white border border-blue-200/80 px-2 py-1 rounded-lg">
+                    <span className="text-[10px] text-slate-500 font-semibold mr-1 uppercase">⛽ Xăng:</span>
+                    <span className="font-extrabold text-red-600">{stats.g2.fuelXang}L</span>
+                  </div>
+                  <div className="bg-white border border-blue-200/80 px-2 py-1 rounded-lg">
+                    <span className="text-[10px] text-slate-500 font-semibold mr-1 uppercase">🛢 Dầu:</span>
+                    <span className="font-extrabold text-slate-700">{stats.g2.fuelDau}L</span>
+                  </div>
+                  <div className="bg-white border border-blue-200/80 px-2 py-1 rounded-lg">
+                    <span className="text-[10px] text-slate-500 font-semibold mr-1 uppercase">💰 Thành tiền:</span>
+                    <span className="font-extrabold text-blue-800">{formatCurrency(stats.g2.totalThanhTien)}</span>
+                  </div>
+                  <div className="bg-white border border-blue-200/80 px-2 py-1 rounded-lg">
+                    <span className="text-[10px] text-slate-500 font-semibold mr-1 uppercase">VAT:</span>
+                    <span className="font-extrabold text-orange-600">{formatCurrency(stats.g2.totalVat)}</span>
+                  </div>
+                  <div className="bg-blue-600 text-white px-2.5 py-1 rounded-lg font-bold">
+                    <span className="text-[10px] uppercase mr-1 opacity-90">🏆 Tổng:</span>
+                    <span>{formatCurrency(stats.g2.totalCong)}</span>
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            /* Single Row for specific group or < Aug 2026 */
+            <div className="flex flex-wrap gap-2">
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-2 px-3 min-w-[70px] shadow-sm">
+                <div className="text-slate-500 text-[10px] font-semibold uppercase">Records</div>
+                <div className="font-extrabold text-blue-700 text-sm">{stats.records}</div>
+              </div>
+              <div className="bg-sky-50 border border-sky-100 rounded-xl p-2 px-3 min-w-[90px] shadow-sm">
+                <div className="text-slate-500 text-[10px] font-semibold uppercase">⏱ Giờ chạy</div>
+                <div className="font-extrabold text-sky-700 text-sm">{stats.hours}h</div>
+              </div>
+              <div className="bg-red-50 border border-red-100 rounded-xl p-2 px-3 min-w-[80px] shadow-sm">
+                <div className="text-slate-500 text-[10px] font-semibold uppercase">⛽ Xăng</div>
+                <div className="font-extrabold text-red-600 text-sm">{stats.fuelXang}L</div>
+              </div>
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-2 px-3 min-w-[80px] shadow-sm">
+                <div className="text-slate-500 text-[10px] font-semibold uppercase">🛢 Dầu</div>
+                <div className="font-extrabold text-slate-700 text-sm">{stats.fuelDau}L</div>
+              </div>
+              <div className="bg-amber-50/50 border border-amber-100 rounded-xl p-2 px-3 min-w-[110px] shadow-sm">
+                <div className="text-slate-500 text-[10px] font-semibold uppercase">💰 Thành tiền</div>
+                <div className="font-extrabold text-amber-700 text-sm">{formatCurrency(stats.totalThanhTien)}</div>
+              </div>
+              <div className="bg-orange-50 border border-orange-100 rounded-xl p-2 px-3 min-w-[95px] shadow-sm">
+                <div className="text-slate-500 text-[10px] font-semibold uppercase">VAT</div>
+                <div className="font-extrabold text-orange-600 text-sm">{formatCurrency(stats.totalVat)}</div>
+              </div>
+              <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-2 px-4 min-w-[120px] shadow-sm">
+                <div className="text-slate-500 text-[10px] font-semibold uppercase">🏆 Tổng cộng</div>
+                <div className="font-extrabold text-emerald-700 text-sm">{formatCurrency(stats.totalCong)}</div>
+              </div>
+              {stats.pendingCount > 0 && (
+                <div className="bg-yellow-50 border border-yellow-300 rounded-xl p-2 px-3 min-w-[85px] shadow-sm">
+                  <div className="text-amber-800 text-[10px] font-semibold uppercase">⏳ Chờ duyệt</div>
+                  <div className="font-extrabold text-amber-800 text-sm">{stats.pendingCount}</div>
+                </div>
+              )}
             </div>
           )}
         </div>
