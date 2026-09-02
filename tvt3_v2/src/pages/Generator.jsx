@@ -1577,9 +1577,60 @@ export default function Generator() {
         )}
       </div>
 
+      {/* Navigation Cards as Tabs (Moved UP above Group Cards) */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 mb-4">
+        {[
+          { id: 'logs', label: 'Nhật ký chạy máy', color: 'blue', icon: '⏱' },
+          { id: 'anomalies', label: 'Báo cáo bất thường', color: 'red', icon: '⚠️' },
+          { id: 'invoices', label: 'Hóa đơn điện tử', color: 'emerald', icon: '💳' },
+          { id: 'transfer', label: 'Điều chuyển máy phát', color: 'orange', icon: '🔄' },
+        ].map(card => {
+          const isActive = activeTab === card.id;
+          
+          const borderColors = {
+            blue: 'border-l-blue-500',
+            red: 'border-l-red-500',
+            emerald: 'border-l-emerald-500',
+            orange: 'border-l-orange-500',
+          };
+          
+          const textColors = {
+            blue: 'text-blue-700',
+            red: 'text-red-700',
+            emerald: 'text-emerald-700',
+            orange: 'text-orange-700',
+          };
+
+          const ringColors = {
+            blue: 'ring-blue-400',
+            red: 'ring-red-400',
+            emerald: 'ring-emerald-400',
+            orange: 'ring-orange-400',
+          };
+
+          return (
+            <button
+              key={card.id}
+              onClick={() => { setActiveTab(card.id); setSearchQuery(''); }}
+              className={`
+                bg-white rounded-xl p-2 sm:p-3.5 text-left transition-all border-l-4 border-y border-r border-y-slate-200 border-r-slate-200
+                hover:shadow-md cursor-pointer flex items-center gap-1 sm:gap-2.5
+                ${borderColors[card.color]}
+                ${isActive ? `ring-2 ${ringColors[card.color]} ring-offset-1` : ''}
+              `}
+            >
+              <span className="text-sm sm:text-base shrink-0">{card.icon}</span>
+              <span className={`text-[9px] sm:text-xs font-bold uppercase tracking-wider truncate ${isActive ? 'text-slate-800 font-extrabold' : 'text-slate-500 font-semibold'}`} title={card.label}>
+                {card.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
       {/* OPTION 3: Interactive Side-by-Side Comparison Cards (Effective >= Aug 2026, Invoices tab only) */}
       {isFromAug2026 && activeTab === 'invoices' && groupComparisonStats && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 mb-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 mb-4">
           {/* CARD 1: GROUP 1 (67 TRẠM ĐẶC THÙ) */}
           <div 
             onClick={() => setSelectedGroupFilter(selectedGroupFilter === 'group1' ? 'all' : 'group1')}
@@ -1776,56 +1827,7 @@ export default function Generator() {
         </div>
       )}
 
-      {/* Navigation Cards as Tabs */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 mb-6">
-        {[
-          { id: 'logs', label: 'Nhật ký chạy máy', color: 'blue', icon: '⏱' },
-          { id: 'anomalies', label: 'Báo cáo bất thường', color: 'red', icon: '⚠️' },
-          { id: 'invoices', label: 'Hóa đơn điện tử', color: 'emerald', icon: '💳' },
-          { id: 'transfer', label: 'Điều chuyển máy phát', color: 'orange', icon: '🔄' },
-        ].map(card => {
-          const isActive = activeTab === card.id;
-          
-          const borderColors = {
-            blue: 'border-l-blue-500',
-            red: 'border-l-red-500',
-            emerald: 'border-l-emerald-500',
-            orange: 'border-l-orange-500',
-          };
-          
-          const textColors = {
-            blue: 'text-blue-700',
-            red: 'text-red-700',
-            emerald: 'text-emerald-700',
-            orange: 'text-orange-700',
-          };
 
-          const ringColors = {
-            blue: 'ring-blue-400',
-            red: 'ring-red-400',
-            emerald: 'ring-emerald-400',
-            orange: 'ring-orange-400',
-          };
-
-          return (
-            <button
-              key={card.id}
-              onClick={() => { setActiveTab(card.id); setSearchQuery(''); }}
-              className={`
-                bg-white rounded-xl p-2 sm:p-3.5 text-left transition-all border-l-4 border-y border-r border-y-slate-200 border-r-slate-200
-                hover:shadow-md cursor-pointer flex items-center gap-1 sm:gap-2.5
-                ${borderColors[card.color]}
-                ${isActive ? `ring-2 ${ringColors[card.color]} ring-offset-1` : ''}
-              `}
-            >
-              <span className="text-sm sm:text-base shrink-0">{card.icon}</span>
-              <span className={`text-[9px] sm:text-xs font-bold uppercase tracking-wider truncate ${isActive ? 'text-slate-800 font-extrabold' : 'text-slate-500 font-semibold'}`} title={card.label}>
-                {card.label}
-              </span>
-            </button>
-          );
-        })}
-      </div>
 
       {/* Global Search & Buyer Filter for invoices */}
       {activeTab === 'invoices' && (
