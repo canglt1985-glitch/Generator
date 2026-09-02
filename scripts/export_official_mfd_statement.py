@@ -21,17 +21,28 @@ except ImportError:
 SUPABASE_URL = os.getenv("SUPABASE_URL", "https://lnmoczxjweuifacqujcu.supabase.co")
 SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxubW9jenhqd2V1aWZhY3F1amN1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2MzcxOTYsImV4cCI6MjA5NDIxMzE5Nn0.C0Si7ChY4T_mxLylSkDNJOUcj9D0uuGW_L4t7p9yONI")
 
-# Special 67 Sites for MobiFone Dong Nai (Group 1)
-SPECIAL_67_SITES = {
-    'DNCM11', 'DNCM14', 'DNCM15', 'DNCM23', 'DNCM45', 'DNDQ03', 'DNDQ31', 'DNDQ51',
-    'DNDQ58', 'DNIDQN1', 'DNLK40', 'DNLK42', 'DNLK27', 'DNLK71', 'DNLK73', 'DNLT20',
-    'DNLT29', 'DNLT64', 'DNLT87', 'DNLT91', 'DNLT98', 'DNLTA1', 'DNLTA3', 'DNLTA8',
-    'DNLTC8', 'DNLTX5', 'DNNT82SR01', 'DNNTA5', 'DNTN24', 'DNTN43', 'DNTNL2', 'DNTP03',
-    'DNTP08', 'DNTP30', 'DNTP42', 'DNTP44', 'DNTP53', 'DNXL37', 'DNXL45', 'DNXL49',
-    'DNXL65', 'DNXL75', 'DNXL77', 'DNINTR49', 'DNINTR64', 'DNIAPH29', 'DNIAPH30',
-    'DNIAPH35', 'DNIAPH28', 'DNIAPH24', 'DNIAPH12', 'DNIAPH26', 'DNIAPH32', 'DNIBAN03',
-    'DNIBAN10', 'DNILTH10'
-}
+# Special 67 Sites for MobiFone Dong Nai (Group 1 - Raw & Canonical IDs)
+SPECIAL_67_SITES_RAW = [
+    'DNCM00', 'DNCM02', 'DNCM12', 'DNCM13', 'DNCM15', 'DNCM24', 'DNCM31', 'DNCM34', 'DNCM43', 'DNCM47',
+    'DNDQ00', 'DNDQ01', 'DNDQ02', 'DNDQ03', 'DNDQ06', 'DNDQ10', 'DNDQ12', 'DNDQ15', 'DNDQ16', 'DNDQ22',
+    'DNDQ30', 'DNDQ31', 'DNDQ33', 'DNDQ34', 'DNDQ35', 'DNDQ44', 'DNDQ47', 'DNIDQN1', 'DNITNT1', 'DNTNL1',
+    'DNLK00', 'DNLK09', 'DNLK15', 'DNLK17', 'DNLK25', 'DNLK46', 'DNLT22', 'DNTN00', 'DNTN05', 'DNTN06',
+    'DNTN10', 'DNTN27', 'DNTN31', 'DNTN35', 'DNTP00', 'DNTP05', 'DNTP10', 'DNTP26', 'DNTP28', 'DNTP32',
+    'DNTP37', 'DNTP45', 'DNTP47', 'DNTP48', 'DNTP52', 'DNVC35', 'DNXL00', 'DNXL01', 'DNXL03', 'DNXL07',
+    'DNXL09', 'DNXL20', 'DNXL44', 'DNXL46', 'DNXL47', 'DNXL48', 'DNXL65'
+]
+
+SPECIAL_67_CANONICAL_SITES = [
+    'DNISRA00', 'DNIXDO00', 'DNICMY04', 'DNICMY05', 'DNIXQU01', 'DNISRA03', 'DNIXDO05', 'DNIXDO07', 'DNISRA06', 'DNIXDO13',
+    'DNIDQU00', 'DNIDQU01', 'DNIDQU02', 'DNIDQU03', 'DNIDQU05', 'DNIDQU08', 'DNIDQU10', 'DNIDQU11', 'DNIDQU12', 'DNIDQU17',
+    'DNIDQU21', 'DNIDQU22', 'DNIDQU24', 'DNIDQU25', 'DNIDQU26', 'DNIDQU28', 'DNIDQU31', 'DNIDQN1', 'DNIDGI31',
+    'DNILKH00', 'DNIBLC00', 'DNILKH04', 'DNILKH05', 'DNILKH06', 'DNIBLC10', 'DNIXTC06', 'DNIBLC16', 'DNIBLC18', 'DNIBLC19',
+    'DNIBLC21', 'DNIBLC29', 'DNIBLC32', 'DNIBLC35', 'DNIBVI00', 'DNIBVI03', 'DNIBVI07', 'DNITPU03', 'DNITPU05', 'DNITPU08',
+    'DNITPU11', 'DNITPU17', 'DNITPU19', 'DNITPU20', 'DNITPU23', 'DNIPVI02', 'DNIXPH00', 'DNIXPH01', 'DNIXPH02', 'DNIXPH04',
+    'DNIXPH06', 'DNIXPH11', 'DNIXPH21', 'DNIXPH23', 'DNIXPH24', 'DNIXPH25', 'DNIXPH30'
+]
+
+SPECIAL_67_SITES = set(s.upper() for s in SPECIAL_67_SITES_RAW + SPECIAL_67_CANONICAL_SITES)
 
 def is_group_1(site_id, site_id_old=""):
     s1 = (site_id or "").upper().strip()
@@ -387,8 +398,8 @@ def create_styled_workbook(month=8, year=2026, output_path=None):
         g1_logs = [l for l in logs if is_group_1(l.get('site_id'), sites.get(l.get('site_id'), {}).get('site_id_old'))]
         g2_logs = [l for l in logs if not is_group_1(l.get('site_id'), sites.get(l.get('site_id'), {}).get('site_id_old'))]
 
-        g1_invs = [i for i in invoices if '0100686209-129' in (i.get('buyer_mst') or '') or 'ĐỒNG NAI' in (i.get('buyer_name') or '').upper()]
-        g2_invs = [i for i in invoices if not ('0100686209-129' in (i.get('buyer_mst') or '') or 'ĐỒNG NAI' in (i.get('buyer_name') or '').upper())]
+        g1_invs = [i for i in invoices if '0100686209-129' in (i.get('buyer_mst') or i.get('buyer_tax_code') or '') or 'ĐỒNG NAI' in (i.get('buyer_name') or i.get('buyer_legal_name') or '').upper() or 'DONG NAI' in (i.get('buyer_name') or i.get('buyer_legal_name') or '').upper() or 'KHU VỰC 8' in (i.get('buyer_name') or i.get('buyer_legal_name') or '').upper()]
+        g2_invs = [i for i in invoices if i not in g1_invs]
 
         add_02a_sheet('02A_TTNB_DongNai_67Tram', g1_logs, 'MobiFone Đồng Nai - 67 Trạm Đặc Thù')
         add_hd_sheet('HD_DongNai_67Tram', g1_invs, 'MobiFone Đồng Nai - 67 Trạm Đặc Thù')

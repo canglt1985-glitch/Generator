@@ -624,10 +624,10 @@ export default function Generator() {
     let g2_inv_dau_amount = 0, g2_inv_xang_amount = 0;
 
     invoices.forEach(inv => {
-      const mst = (inv.buyer_mst || '').trim();
-      const bname = (inv.buyer_name || '').toUpperCase();
-      const isG1 = mst.includes('0100686209-129') || bname.includes('ĐỒNG NAI') || bname.includes('DONG NAI');
-      const total = parseFloat(inv.total_amount) || 0;
+      const mst = (inv.buyer_mst || inv.buyer_tax_code || '').trim();
+      const bname = (inv.buyer_name || inv.buyer_legal_name || '').toUpperCase();
+      const isG1 = mst.includes('0100686209-129') || bname.includes('ĐỒNG NAI') || bname.includes('DONG NAI') || bname.includes('KHU VỰC 8');
+      const total = parseFloat(inv.total_amount_with_vat || inv.total_amount) || 0;
 
       let itemsList = [];
       if (inv.items) {
@@ -643,7 +643,7 @@ export default function Generator() {
       let invDauAmount = 0;
       let invXangAmount = 0;
 
-      if (Array.isArray(itemsList)) {
+      if (Array.isArray(itemsList) && itemsList.length > 0) {
         itemsList.forEach(item => {
           const qty = parseFloat(item.sl || item.quantity) || 0;
           const tt = parseFloat(item.tt || item.total_amount || item.total) || (qty * (parseFloat(item.dg || item.unit_price) || 0));
@@ -658,6 +658,20 @@ export default function Generator() {
             invXangAmount += tt;
           }
         });
+      }
+
+      // Fallback if itemsList is empty
+      if (invDau === 0 && invXang === 0) {
+        const pname = (inv.product_name || inv.fuel_type || '').toLowerCase();
+        const qty = parseFloat(inv.quantity || inv.fuel_quantity) || 0;
+        const tt = total;
+        if (pname.includes('xăng') || pname.includes('xang') || pname.includes('ron')) {
+          invXang = qty;
+          invXangAmount = tt;
+        } else {
+          invDau = qty;
+          invDauAmount = tt;
+        }
       }
 
       if (isG1) {
