@@ -1833,59 +1833,129 @@ def run_alarm_poll():
                     status['last_alarm_poll'] = datetime.now().isoformat()
                     return
 
+                # --- Load Sent Tech State Caches ---
+                active_tech_file = os.path.join(DATA_DIR, 'sent_active_techs.json')
+                cleared_tech_file = os.path.join(DATA_DIR, 'sent_cleared_techs.json')
+                
+                sent_active_techs = {}
+                if os.path.exists(active_tech_file):
+                    try:
+                        with open(active_tech_file, 'r', encoding='utf-8') as sf:
+                            sent_active_techs = json.load(sf)
+                    except Exception:
+                        sent_active_techs = {}
+                        
+                sent_cleared_techs = {}
+                if os.path.exists(cleared_tech_file):
+                    try:
+                        with open(cleared_tech_file, 'r', encoding='utf-8') as sf:
+                            sent_cleared_techs = json.load(sf)
+                    except Exception:
+                        sent_cleared_techs = {}
+
+                now_ts = datetime.now().timestamp()
+                # Purge entries older than 12 hours (43,200s)
+                sent_active_techs = {k: v for k, v in sent_active_techs.items() if isinstance(v, dict) and (now_ts - v.get('ts', 0)) < 43200}
+                sent_cleared_techs = {k: v for k, v in sent_cleared_techs.items() if isinstance(v, dict) and (now_ts - v.get('ts', 0)) < 43200}
+
                 # --- 1. ACTIVE SECTION ---
+                active_sent_count = 0
                 if new_md or new_mpd or new_mll:
                     lines_active = ["🚨 *ACTIVE*"]
                     
                     if new_md:
-                        lines_active.append("*MAC:*")
                         mac_groups = {}
                         for alarm in new_md:
                             raw_site = _site_key(alarm)
                             base_id, old_id, tech = _resolve_base_site_and_tech(raw_site, alarm.get('network') or '')
-                            t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '', full=False)
+                            sdate_raw = alarm.get('sdateStr') or alarm.get('sdate_str') or alarm.get('sdate') or ''
+                            t = _fmt_sdate(sdate_raw, full=False)
+                            inc_key = f"md_{base_id}_{sdate_raw}"
+                            already_sent = sent_active_techs.get(inc_key, {}).get('techs', [])
+                            if tech and tech in already_sent:
+                                continue  # Skip tech already reported ACTIVE for this incident
                             if base_id not in mac_groups:
-                                mac_groups[base_id] = {'label': _get_site_label(base_id), 'nets': [], 't': t}
+                                mac_groups[base_id] = {'label': _get_site_label(base_id), 'nets': [], 't': t, 'inc_keys': {}}
                             if tech and tech not in mac_groups[base_id]['nets']:
                                 mac_groups[base_id]['nets'].append(tech)
-                        for site, grp in mac_groups.items():
-                            net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
-                            lines_active.append(f"  • {grp['label']}{net_part} - {grp['t']}")
-                    
+                                mac_groups[base_id]['inc_keys'].setdefault(inc_key, []).append(tech)
+                        if mac_groups:
+                            lines_active.append("*MAC:*")
+                            for site, grp in mac_groups.items():
+                                net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
+                                lines_active.append(f"  • {grp['label']}{net_part} - {grp['t']}")
+                                active_sent_count += 1
+                                for ikey, techs in grp['inc_keys'].items():
+                                    existing = sent_active_techs.setdefault(ikey, {'techs': [], 'ts': now_ts})['techs']
+                                    for tech_item in techs:
+                                        if tech_item not in existing:
+                                            existing.append(tech_item)
+
                     if new_mpd:
-                        lines_active.append("*GEN:*")
                         mpd_groups = {}
                         for alarm in new_mpd:
                             raw_site = _site_key(alarm)
                             base_id, old_id, tech = _resolve_base_site_and_tech(raw_site, alarm.get('network') or '')
-                            t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '', full=False)
+                            sdate_raw = alarm.get('sdateStr') or alarm.get('sdate_str') or alarm.get('sdate') or ''
+                            t = _fmt_sdate(sdate_raw, full=False)
+                            inc_key = f"mpd_{base_id}_{sdate_raw}"
+                            already_sent = sent_active_techs.get(inc_key, {}).get('techs', [])
+                            if tech and tech in already_sent:
+                                continue
                             if base_id not in mpd_groups:
-                                mpd_groups[base_id] = {'label': _get_site_label(base_id), 'nets': [], 't': t}
+                                mpd_groups[base_id] = {'label': _get_site_label(base_id), 'nets': [], 't': t, 'inc_keys': {}}
                             if tech and tech not in mpd_groups[base_id]['nets']:
                                 mpd_groups[base_id]['nets'].append(tech)
-                        for site, grp in mpd_groups.items():
-                            net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
-                            lines_active.append(f"  • {grp['label']}{net_part} - {grp['t']}")
+                                mpd_groups[base_id]['inc_keys'].setdefault(inc_key, []).append(tech)
+                        if mpd_groups:
+                            lines_active.append("*GEN:*")
+                            for site, grp in mpd_groups.items():
+                                net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
+                                lines_active.append(f"  • {grp['label']}{net_part} - {grp['t']}")
+                                active_sent_count += 1
+                                for ikey, techs in grp['inc_keys'].items():
+                                    existing = sent_active_techs.setdefault(ikey, {'techs': [], 'ts': now_ts})['techs']
+                                    for tech_item in techs:
+                                        if tech_item not in existing:
+                                            existing.append(tech_item)
 
                     if new_mll:
-                        lines_active.append("*MLL:*")
                         mll_groups = {}
                         for alarm in new_mll:
                             raw_site = _site_key(alarm)
                             base_id, old_id, tech = _resolve_base_site_and_tech(raw_site, alarm.get('network') or '')
-                            t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '', full=False)
+                            sdate_raw = alarm.get('sdateStr') or alarm.get('sdate_str') or alarm.get('sdate') or ''
+                            t = _fmt_sdate(sdate_raw, full=False)
+                            inc_key = f"mll_{base_id}_{sdate_raw}"
+                            already_sent = sent_active_techs.get(inc_key, {}).get('techs', [])
+                            if tech and tech in already_sent:
+                                continue
                             if base_id not in mll_groups:
-                                mll_groups[base_id] = {'label': _get_site_label(base_id), 'nets': [], 't': t}
+                                mll_groups[base_id] = {'label': _get_site_label(base_id), 'nets': [], 't': t, 'inc_keys': {}}
                             if tech and tech not in mll_groups[base_id]['nets']:
                                 mll_groups[base_id]['nets'].append(tech)
-                        for site, grp in mll_groups.items():
-                            net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
-                            lines_active.append(f"  • {grp['label']}{net_part} - {grp['t']}")
+                                mll_groups[base_id]['inc_keys'].setdefault(inc_key, []).append(tech)
+                        if mll_groups:
+                            lines_active.append("*MLL:*")
+                            for site, grp in mll_groups.items():
+                                net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
+                                lines_active.append(f"  • {grp['label']}{net_part} - {grp['t']}")
+                                active_sent_count += 1
+                                for ikey, techs in grp['inc_keys'].items():
+                                    existing = sent_active_techs.setdefault(ikey, {'techs': [], 'ts': now_ts})['techs']
+                                    for tech_item in techs:
+                                        if tech_item not in existing:
+                                            existing.append(tech_item)
 
-                    _send_viber_report(lines_active)
+                    if active_sent_count > 0:
+                        _send_viber_report(lines_active)
+                        try:
+                            with open(active_tech_file, 'w', encoding='utf-8') as sf:
+                                json.dump(sent_active_techs, sf, ensure_ascii=False, indent=2)
+                        except Exception as fe:
+                            logger.warning(f"Failed to save sent_active_techs.json: {fe}")
 
-                # --- 2. CLEARED SECTION (with state-file deduplication) ---
-                # Load sent cleared cache to prevent double sending across polling processes
+                # --- 2. CLEARED SECTION (with state-file & tech deduplication) ---
                 cleared_state_file = os.path.join(DATA_DIR, 'sent_cleared_alarms.json')
                 sent_cleared = {}
                 if os.path.exists(cleared_state_file):
@@ -1895,8 +1965,6 @@ def run_alarm_poll():
                     except Exception:
                         sent_cleared = {}
 
-                # Purge entries older than 6 hours (21,600s)
-                now_ts = datetime.now().timestamp()
                 sent_cleared = {k: v for k, v in sent_cleared.items() if isinstance(v, (int, float)) and (now_ts - v) < 21600}
 
                 def _filter_unsent(alarm_list, table_type):
@@ -1915,55 +1983,96 @@ def run_alarm_poll():
                 unsent_cl_mpd = _filter_cl_mpd = _filter_unsent(cl_mpd, 'mpd')
                 unsent_cl_mll = _filter_unsent(cl_mll, 'mll')
 
+                cleared_sent_count = 0
                 if unsent_cl_md or unsent_cl_mpd or unsent_cl_mll:
                     lines_cleared = ["✅ *CLEARED*"]
 
                     if unsent_cl_md:
-                        lines_cleared.append("*MAC:*")
                         cl_mac_groups = {}
                         for alarm, _ in unsent_cl_md:
                             raw_site = _site_key(alarm)
                             base_id, old_id, tech = _resolve_base_site_and_tech(raw_site, alarm.get('network') or '')
+                            sdate_raw = alarm.get('sdateStr') or alarm.get('sdate_str') or alarm.get('sdate') or ''
                             clear_t = _fmt_sdate(alarm.get('clear_time') or alarm.get('edateStr') or '', full=False)
+                            inc_key = f"md_{base_id}_{sdate_raw}"
+                            already_cleared = sent_cleared_techs.get(inc_key, {}).get('techs', [])
+                            if tech and tech in already_cleared:
+                                continue  # Skip tech already reported CLEARED for this incident
                             if base_id not in cl_mac_groups:
-                                cl_mac_groups[base_id] = {'label': _get_site_label(base_id), 'nets': [], 't': clear_t}
+                                cl_mac_groups[base_id] = {'label': _get_site_label(base_id), 'nets': [], 't': clear_t, 'inc_keys': {}}
                             if tech and tech not in cl_mac_groups[base_id]['nets']:
                                 cl_mac_groups[base_id]['nets'].append(tech)
-                        for site, grp in cl_mac_groups.items():
-                            net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
-                            lines_cleared.append(f"  • {grp['label']}{net_part} - {grp['t']}")
+                                cl_mac_groups[base_id]['inc_keys'].setdefault(inc_key, []).append(tech)
+                        if cl_mac_groups:
+                            lines_cleared.append("*MAC:*")
+                            for site, grp in cl_mac_groups.items():
+                                net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
+                                lines_cleared.append(f"  • {grp['label']}{net_part} - {grp['t']}")
+                                cleared_sent_count += 1
+                                for ikey, techs in grp['inc_keys'].items():
+                                    existing = sent_cleared_techs.setdefault(ikey, {'techs': [], 'ts': now_ts})['techs']
+                                    for tech_item in techs:
+                                        if tech_item not in existing:
+                                            existing.append(tech_item)
 
                     if unsent_cl_mpd:
-                        lines_cleared.append("*GEN:*")
                         cl_mpd_groups = {}
                         for alarm, _ in unsent_cl_mpd:
                             raw_site = _site_key(alarm)
                             base_id, old_id, tech = _resolve_base_site_and_tech(raw_site, alarm.get('network') or '')
+                            sdate_raw = alarm.get('sdateStr') or alarm.get('sdate_str') or alarm.get('sdate') or ''
                             clear_t = _fmt_sdate(alarm.get('clear_time') or alarm.get('edateStr') or '', full=False)
+                            inc_key = f"mpd_{base_id}_{sdate_raw}"
+                            already_cleared = sent_cleared_techs.get(inc_key, {}).get('techs', [])
+                            if tech and tech in already_cleared:
+                                continue
                             if base_id not in cl_mpd_groups:
-                                cl_mpd_groups[base_id] = {'label': _get_site_label(base_id), 'nets': [], 't': clear_t}
+                                cl_mpd_groups[base_id] = {'label': _get_site_label(base_id), 'nets': [], 't': clear_t, 'inc_keys': {}}
                             if tech and tech not in cl_mpd_groups[base_id]['nets']:
                                 cl_mpd_groups[base_id]['nets'].append(tech)
-                        for site, grp in cl_mpd_groups.items():
-                            net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
-                            lines_cleared.append(f"  • {grp['label']}{net_part} - {grp['t']}")
+                                cl_mpd_groups[base_id]['inc_keys'].setdefault(inc_key, []).append(tech)
+                        if cl_mpd_groups:
+                            lines_cleared.append("*GEN:*")
+                            for site, grp in cl_mpd_groups.items():
+                                net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
+                                lines_cleared.append(f"  • {grp['label']}{net_part} - {grp['t']}")
+                                cleared_sent_count += 1
+                                for ikey, techs in grp['inc_keys'].items():
+                                    existing = sent_cleared_techs.setdefault(ikey, {'techs': [], 'ts': now_ts})['techs']
+                                    for tech_item in techs:
+                                        if tech_item not in existing:
+                                            existing.append(tech_item)
 
                     if unsent_cl_mll:
-                        lines_cleared.append("*MLL:*")
                         mll_cl_groups = {}
                         for alarm, _ in unsent_cl_mll:
                             raw_site = _site_key(alarm)
                             base_id, old_id, tech = _resolve_base_site_and_tech(raw_site, alarm.get('network') or '')
+                            sdate_raw = alarm.get('sdateStr') or alarm.get('sdate_str') or alarm.get('sdate') or ''
                             clear_t = _fmt_sdate(alarm.get('clear_time') or alarm.get('edateStr') or '', full=False)
+                            inc_key = f"mll_{base_id}_{sdate_raw}"
+                            already_cleared = sent_cleared_techs.get(inc_key, {}).get('techs', [])
+                            if tech and tech in already_cleared:
+                                continue
                             if base_id not in mll_cl_groups:
-                                mll_cl_groups[base_id] = {'label': _get_site_label(base_id), 'nets': [], 't': clear_t}
+                                mll_cl_groups[base_id] = {'label': _get_site_label(base_id), 'nets': [], 't': clear_t, 'inc_keys': {}}
                             if tech and tech not in mll_cl_groups[base_id]['nets']:
                                 mll_cl_groups[base_id]['nets'].append(tech)
-                        for site, grp in mll_cl_groups.items():
-                            net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
-                            lines_cleared.append(f"  • {grp['label']}{net_part} - {grp['t']}")
+                                mll_cl_groups[base_id]['inc_keys'].setdefault(inc_key, []).append(tech)
+                        if mll_cl_groups:
+                            lines_cleared.append("*MLL:*")
+                            for site, grp in mll_cl_groups.items():
+                                net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
+                                lines_cleared.append(f"  • {grp['label']}{net_part} - {grp['t']}")
+                                cleared_sent_count += 1
+                                for ikey, techs in grp['inc_keys'].items():
+                                    existing = sent_cleared_techs.setdefault(ikey, {'techs': [], 'ts': now_ts})['techs']
+                                    for tech_item in techs:
+                                        if tech_item not in existing:
+                                            existing.append(tech_item)
 
-                    _send_viber_report(lines_cleared)
+                    if cleared_sent_count > 0:
+                        _send_viber_report(lines_cleared)
 
                     # Mark keys as sent in state file
                     for _, ckey in unsent_cl_md + unsent_cl_mpd + unsent_cl_mll:
@@ -1973,6 +2082,8 @@ def run_alarm_poll():
                         os.makedirs(DATA_DIR, exist_ok=True)
                         with open(cleared_state_file, 'w', encoding='utf-8') as sf:
                             json.dump(sent_cleared, sf, ensure_ascii=False, indent=2)
+                        with open(cleared_tech_file, 'w', encoding='utf-8') as sf:
+                            json.dump(sent_cleared_techs, sf, ensure_ascii=False, indent=2)
                     except Exception as fe:
                         logger.warning(f"Failed to save sent_cleared_alarms.json: {fe}")
 
