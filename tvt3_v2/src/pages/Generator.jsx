@@ -2000,8 +2000,26 @@ export default function Generator() {
               <div className="flex items-start gap-3">
                 <AlertTriangle className="w-5 h-5 mt-0.5 text-white animate-pulse shrink-0" />
                 <div className="flex-1">
-                  <h4 className="font-extrabold text-sm uppercase tracking-wider">CẢNH BÁO THANH TOÁN (THEO CÂY XĂNG & PHÁP NHÂN TRONG NGÀY VƯỢT 5 TRIỆU ĐỒNG)</h4>
-                  <p className="text-xs text-red-100 mt-1">Các giao dịch sau đây từ cùng một cây xăng cho cùng một pháp nhân trong ngày vượt quá 5,000,000đ. Hệ thống tự động đề xuất giữ lại và loại bỏ hóa đơn để đảm bảo &lt; 5 triệu/ngày:</p>
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-red-500/50 pb-2 mb-2">
+                    <div>
+                      <h4 className="font-extrabold text-sm uppercase tracking-wider text-white">
+                        CẢNH BÁO THANH TOÁN (CÙNG CÂY XĂNG & CÙNG PHÁP NHÂN VƯỢT 5 TRIỆU ĐỒNG/NGÀY)
+                      </h4>
+                      <p className="text-xs text-red-100 mt-0.5">
+                        Theo quy định Thuế, điều kiện khấu trừ thuế áp dụng khi <strong>CÙNG 1 CÂY XĂNG</strong> xuất cho <strong>CÙNG 1 PHÁP NHÂN MUA</strong> &gt; 5,000,000đ/ngày. Dưới đây là phân loại chi tiết theo 2 nhóm:
+                      </p>
+                    </div>
+
+                    {/* Group Badges Summary */}
+                    <div className="flex items-center gap-2 text-xs shrink-0">
+                      <span className="bg-amber-950/80 text-amber-300 px-2.5 py-1 rounded-lg border border-amber-500/50 font-bold">
+                        📌 Nhóm 1 (Đồng Nai): {invoiceStats.warningDays.filter(w => w.buyerName.includes('Đồng Nai')).length} ngày vượt
+                      </span>
+                      <span className="bg-cyan-950/80 text-cyan-200 px-2.5 py-1 rounded-lg border border-cyan-500/50 font-bold">
+                        🏢 Nhóm 2 (Toàn Cầu): {invoiceStats.warningDays.filter(w => !w.buyerName.includes('Đồng Nai')).length} ngày vượt
+                      </span>
+                    </div>
+                  </div>
                   <div className="mt-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                     {invoiceStats.warningDays.map((wd, idx) => (
                       <div key={idx} className="bg-red-800/90 border border-red-400/50 rounded-lg p-3 text-xs shadow-inner flex flex-col justify-between">
