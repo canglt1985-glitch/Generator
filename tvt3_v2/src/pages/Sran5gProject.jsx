@@ -581,7 +581,7 @@ export default function Sran5gProject() {
     const install = filteredData.filter(d => d.install_date).length;
     
     // Swap 3G/4G integration count
-    const swapIntegration = filteredData.filter(d => d.integration_date && !is5gSite(d)).length;
+    const swapIntegration = filteredData.filter(d => d.integration_date).length;
     const integration = filteredData.filter(d => d.integration_date).length;
     const integration5g = filteredData.filter(d => d.integration_date && is5gSite(d)).length;
 
@@ -600,7 +600,7 @@ export default function Sran5gProject() {
       delivery, 
       install, 
       integration, 
-      swapIntegration: swapIntegration > 0 ? swapIntegration : integration,
+      swapIntegration,
       integration5g,
       onair: onair5g, // strictly 5G onair
       onair5g, 
@@ -1571,42 +1571,62 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+              <table className="w-full text-left border-collapse text-xs">
                 <thead>
-                  <tr className="bg-slate-100 text-[11px] font-bold text-slate-800 uppercase border-b border-slate-200">
-                    <th className="py-3 px-3 text-center w-12">STT</th>
-                    <th className="py-3 px-4">Cluster Mới (Cluster New)</th>
-                    <th className="py-3 px-3 text-center">Thứ Tự (Order)</th>
-                    <th className="py-3 px-3 text-center">Đơn vị (TVT)</th>
-                    <th className="py-3 px-4">Địa Bàn Huyện</th>
-                    <th className="py-3 px-3 text-right">Tổng 3G/4G</th>
-                    <th className="py-3 px-3 text-right">Tổng 5G</th>
-                    <th className="py-3 px-3 text-right">Tỷ lệ 5G</th>
-                    <th className="py-3 px-4 text-center">Tiến độ thi công</th>
-                    <th className="py-3 px-4 text-center">Thao tác</th>
+                  {/* Grouped Header Row 1 */}
+                  <tr className="bg-slate-800 text-[11px] font-black text-white uppercase tracking-wider border-b border-slate-700">
+                    <th colSpan={5} className="py-2.5 px-3 text-center border-r border-slate-700">📌 Thông tin Cluster & Địa bàn</th>
+                    <th colSpan={5} className="py-2.5 px-3 text-center bg-blue-900/90 text-blue-100 border-r border-blue-800">📊 4G / SR Progress (Tiến độ Swap)</th>
+                    <th colSpan={5} className="py-2.5 px-3 text-center bg-amber-600/90 text-amber-950 border-r border-amber-500">🚀 5G Progress (Tiến độ Phát sóng 5G)</th>
+                    <th className="py-2.5 px-3 text-center">Thao tác</th>
+                  </tr>
+
+                  {/* Sub-Header Row 2 */}
+                  <tr className="bg-slate-100 text-[10px] font-extrabold text-slate-800 uppercase border-b border-slate-300">
+                    <th className="py-2 px-2 text-center w-8 border-r border-slate-200">STT</th>
+                    <th className="py-2 px-3 border-r border-slate-200">Cluster Mới</th>
+                    <th className="py-2 px-2 text-center border-r border-slate-200">Order</th>
+                    <th className="py-2 px-2 text-center border-r border-slate-200">TVT</th>
+                    <th className="py-2 px-3 border-r border-slate-300">Huyện</th>
+
+                    {/* 4G/SR columns */}
+                    <th className="py-2 px-2 text-right bg-blue-50/70 border-r border-blue-100">Total 4G/SR</th>
+                    <th className="py-2 px-2 text-right bg-blue-50/70 border-r border-blue-100">Delivery</th>
+                    <th className="py-2 px-2 text-right bg-blue-50/70 border-r border-blue-100">Install</th>
+                    <th className="py-2 px-2 text-right bg-blue-100/80 font-bold border-r border-blue-200">3G4G CI</th>
+                    <th className="py-2 px-2 text-right bg-blue-100/90 font-black text-blue-900 border-r border-slate-300">3G4G Swap</th>
+
+                    {/* 5G columns */}
+                    <th className="py-2 px-2 text-right bg-amber-50/70 border-r border-amber-100">Total 5G</th>
+                    <th className="py-2 px-2 text-right bg-amber-50/70 border-r border-amber-100">Delivery</th>
+                    <th className="py-2 px-2 text-right bg-amber-50/70 border-r border-amber-100">Install</th>
+                    <th className="py-2 px-2 text-right bg-amber-100/80 font-bold border-r border-amber-200">5G CI</th>
+                    <th className="py-2 px-2 text-right bg-amber-200/90 font-black text-amber-950 border-r border-slate-300">5G OA</th>
+
+                    <th className="py-2 px-2 text-center">Chi tiết</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
+                <tbody className="divide-y divide-slate-100 text-slate-700">
                   {activeMonthClusterStats
                     .filter(c => selectedMonthTvt === 'ALL' || c.tvt === selectedMonthTvt)
                     .map((item, idx) => {
-                      const pct5g = item.total_3g4g > 0 ? ((item.total_5g / item.total_3g4g) * 100).toFixed(0) : 0;
                       const isVt3 = item.tvt === 'VT3';
+                      const swapPct = item.total_3g4g > 0 ? Math.min(100, Math.round((item.integration / item.total_3g4g) * 100)) : 0;
+                      const oa5gPct = item.total_5g > 0 ? Math.min(100, Math.round((item.onair5g / item.total_5g) * 100)) : 0;
+
                       return (
-                        <tr key={item.cluster} className="hover:bg-slate-50 transition-colors">
-                          <td className="py-3 px-3 text-center font-bold text-slate-400">{idx + 1}</td>
-                          <td className="py-3 px-4">
-                            <span className="font-extrabold text-slate-900 bg-slate-200/80 px-2.5 py-1 rounded-md border border-slate-300 font-mono text-xs shadow-xs">
+                        <tr key={item.cluster} className="hover:bg-slate-50 transition-colors font-medium">
+                          <td className="py-2.5 px-2 text-center text-slate-400 font-mono text-[11px] border-r border-slate-100">{idx + 1}</td>
+                          <td className="py-2.5 px-3 border-r border-slate-100">
+                            <span className="font-extrabold text-slate-900 bg-slate-200/70 px-2 py-0.5 rounded border border-slate-300 font-mono text-[11px]">
                               {item.cluster}
                             </span>
                           </td>
-                          <td className="py-3 px-3 text-center">
-                            <span className="font-mono font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 text-[11px]">
-                              {item.order}
-                            </span>
+                          <td className="py-2.5 px-2 text-center border-r border-slate-100 font-mono text-[10px] text-slate-600">
+                            {item.order}
                           </td>
-                          <td className="py-3 px-3 text-center">
-                            <span className={`px-2.5 py-1 rounded-full text-[10px] font-black tracking-wider ${
+                          <td className="py-2.5 px-2 text-center border-r border-slate-100">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
                               isVt3 
                                 ? 'bg-blue-100 text-blue-800 border border-blue-200' 
                                 : 'bg-purple-100 text-purple-800 border border-purple-200'
@@ -1614,39 +1634,56 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
                               {item.tvt}
                             </span>
                           </td>
-                          <td className="py-3 px-4 font-semibold text-slate-800">
+                          <td className="py-2.5 px-3 border-r border-slate-200 text-slate-800 font-semibold">
                             {item.district}
                           </td>
-                          <td className="py-3 px-3 text-right font-extrabold text-slate-900">
+
+                          {/* 4G/SR Progress data */}
+                          <td className="py-2.5 px-2 text-right font-extrabold text-slate-900 bg-blue-50/20 border-r border-blue-50">
                             {item.total_3g4g}
                           </td>
-                          <td className="py-3 px-3 text-right font-extrabold text-emerald-700">
+                          <td className="py-2.5 px-2 text-right font-semibold text-slate-700 bg-blue-50/20 border-r border-blue-50">
+                            {item.delivery}
+                          </td>
+                          <td className="py-2.5 px-2 text-right font-semibold text-slate-700 bg-blue-50/20 border-r border-blue-50">
+                            {item.install}
+                          </td>
+                          <td className="py-2.5 px-2 text-right font-bold text-blue-900 bg-blue-100/30 border-r border-blue-100">
+                            {item.integration}
+                          </td>
+                          <td className="py-2.5 px-2 text-right bg-blue-100/50 border-r border-slate-200 font-extrabold">
+                            <span className={`px-1.5 py-0.5 rounded ${swapPct === 100 ? 'bg-emerald-100 text-emerald-800 font-black' : swapPct > 0 ? 'bg-blue-200 text-blue-900' : 'text-slate-400'}`}>
+                              {swapPct}% ({item.integration})
+                            </span>
+                          </td>
+
+                          {/* 5G Progress data */}
+                          <td className="py-2.5 px-2 text-right font-extrabold text-amber-900 bg-amber-50/20 border-r border-amber-50">
                             {item.total_5g}
                           </td>
-                          <td className="py-3 px-3 text-right font-bold text-slate-500">
-                            {pct5g}%
+                          <td className="py-2.5 px-2 text-right font-semibold text-slate-700 bg-amber-50/20 border-r border-amber-50">
+                            {item.delivery > 0 ? Math.min(item.total_5g, item.delivery) : 0}
                           </td>
-                          <td className="py-3 px-4">
-                            <div className="flex items-center gap-1.5 justify-center text-[10px]">
-                              <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 font-medium" title="Đã giao hàng">
-                                📦 {item.delivery}
-                              </span>
-                              <span className="px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200 font-medium" title="Đã lắp đặt">
-                                🛠️ {item.install}
-                              </span>
-                              <span className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold" title="Đã Onair">
-                                🚀 {item.onair}
-                              </span>
-                            </div>
+                          <td className="py-2.5 px-2 text-right font-semibold text-slate-700 bg-amber-50/20 border-r border-amber-50">
+                            {item.install > 0 ? Math.min(item.total_5g, item.install) : 0}
                           </td>
-                          <td className="py-3 px-4 text-center">
+                          <td className="py-2.5 px-2 text-right font-bold text-amber-900 bg-amber-100/30 border-r border-amber-100">
+                            {item.integration > 0 ? Math.min(item.total_5g, item.integration) : 0}
+                          </td>
+                          <td className="py-2.5 px-2 text-right bg-amber-100/50 border-r border-slate-200 font-extrabold">
+                            <span className={`px-1.5 py-0.5 rounded ${oa5gPct >= 80 ? 'bg-emerald-100 text-emerald-800 font-black' : oa5gPct > 0 ? 'bg-amber-200 text-amber-900' : 'text-slate-400'}`}>
+                              {oa5gPct}% ({item.onair5g})
+                            </span>
+                          </td>
+
+                          <td className="py-2.5 px-2 text-center">
                             <button
                               onClick={() => filterByCluster(item)}
-                              className="px-2.5 py-1 text-[11px] font-bold bg-slate-800 hover:bg-blue-600 text-white rounded-lg transition-all shadow-sm flex items-center gap-1 mx-auto active:scale-95"
-                              title={`Lọc xem chi tiết ${item.total_3g4g} trạm của cluster ${item.cluster}`}
+                              className="px-2 py-1 text-[10px] font-bold bg-slate-800 hover:bg-blue-600 text-white rounded transition-all shadow-xs flex items-center gap-1 mx-auto active:scale-95"
+                              title={`Xem danh sách ${item.total_3g4g} trạm của ${item.cluster}`}
                             >
-                              <Search size={11} />
-                              <span>Xem trạm</span>
+                              <Search size={10} />
+                              <span>Xem</span>
                             </button>
                           </td>
                         </tr>
@@ -1654,38 +1691,58 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
                     })}
                 </tbody>
                 <tfoot>
-                  <tr className="bg-slate-100 font-black text-slate-900 text-xs border-t-2 border-slate-300">
-                    <td colSpan={5} className="py-3.5 px-4 text-right">
-                      TỔNG CỘNG {selectedMonthTvt !== 'ALL' ? `(${selectedMonthTvt})` : currentMonthPlan.name.toUpperCase()}:
-                    </td>
-                    <td className="py-3.5 px-3 text-right text-sm">
-                      {activeMonthClusterStats
-                        .filter(c => selectedMonthTvt === 'ALL' || c.tvt === selectedMonthTvt)
-                        .reduce((sum, c) => sum + c.total_3g4g, 0)}
-                    </td>
-                    <td className="py-3.5 px-3 text-right text-sm text-emerald-800">
-                      {activeMonthClusterStats
-                        .filter(c => selectedMonthTvt === 'ALL' || c.tvt === selectedMonthTvt)
-                        .reduce((sum, c) => sum + c.total_5g, 0)}
-                    </td>
-                    <td className="py-3.5 px-3 text-right">
-                      {activeMonthTotals.total3g4g > 0 ? ((activeMonthTotals.total5g / activeMonthTotals.total3g4g) * 100).toFixed(1) : 0}%
-                    </td>
-                    <td colSpan={2} className="py-3.5 px-4 text-center">
-                      <button
-                        onClick={() => {
-                          setSelectedStatus(selectedPlanMonth === 'aug' ? 'TARGET_AUG' : selectedPlanMonth === 'sep' ? (selectedMonthTvt === 'VT3' ? 'TARGET_SEP_VT3' : selectedMonthTvt === 'VT2' ? 'TARGET_SEP_VT2' : 'TARGET_SEP') : 'ALL');
-                          setTvt3Only(false);
-                          setSelectedDistrict('ALL');
-                          setSelectedScope('ALL');
-                          setActiveViewTab('table');
-                        }}
-                        className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-sm text-xs transition-all"
-                      >
-                        🔍 Lọc toàn bộ danh sách trạm &rarr;
-                      </button>
-                    </td>
-                  </tr>
+                  {(() => {
+                    const activeClusters = activeMonthClusterStats.filter(c => selectedMonthTvt === 'ALL' || c.tvt === selectedMonthTvt);
+                    const sum3g4g = activeClusters.reduce((s, c) => s + c.total_3g4g, 0);
+                    const sum5g = activeClusters.reduce((s, c) => s + c.total_5g, 0);
+                    const sumDel = activeClusters.reduce((s, c) => s + c.delivery, 0);
+                    const sumInst = activeClusters.reduce((s, c) => s + c.install, 0);
+                    const sumInteg = activeClusters.reduce((s, c) => s + c.integration, 0);
+                    const sum5gOa = activeClusters.reduce((s, c) => s + c.onair5g, 0);
+                    const avgSwapPct = sum3g4g > 0 ? Math.round((sumInteg / sum3g4g) * 100) : 0;
+                    const avg5gOaPct = sum5g > 0 ? Math.round((sum5gOa / sum5g) * 100) : 0;
+
+                    return (
+                      <tr className="bg-slate-900 font-black text-white text-xs border-t-2 border-slate-700">
+                        <td colSpan={5} className="py-3 px-3 text-right text-slate-200 border-r border-slate-700">
+                          TỔNG CỘNG {selectedMonthTvt !== 'ALL' ? `(${selectedMonthTvt})` : currentMonthPlan.name.toUpperCase()} ({activeClusters.length} Cluster):
+                        </td>
+                        
+                        {/* 4G/SR totals */}
+                        <td className="py-3 px-2 text-right text-sm text-cyan-300 border-r border-slate-700">{sum3g4g}</td>
+                        <td className="py-3 px-2 text-right text-slate-300 border-r border-slate-700">{sumDel}</td>
+                        <td className="py-3 px-2 text-right text-slate-300 border-r border-slate-700">{sumInst}</td>
+                        <td className="py-3 px-2 text-right text-blue-300 border-r border-slate-700">{sumInteg}</td>
+                        <td className="py-3 px-2 text-right text-emerald-400 bg-blue-950/70 border-r border-slate-700 font-black">
+                          {avgSwapPct}% ({sumInteg})
+                        </td>
+
+                        {/* 5G totals */}
+                        <td className="py-3 px-2 text-right text-sm text-amber-300 border-r border-slate-700">{sum5g}</td>
+                        <td className="py-3 px-2 text-right text-slate-300 border-r border-slate-700">{Math.min(sum5g, sumDel)}</td>
+                        <td className="py-3 px-2 text-right text-slate-300 border-r border-slate-700">{Math.min(sum5g, sumInst)}</td>
+                        <td className="py-3 px-2 text-right text-amber-200 border-r border-slate-700">{Math.min(sum5g, sumInteg)}</td>
+                        <td className="py-3 px-2 text-right text-amber-400 bg-amber-950/70 border-r border-slate-700 font-black">
+                          {avg5gOaPct}% ({sum5gOa})
+                        </td>
+
+                        <td className="py-3 px-2 text-center">
+                          <button
+                            onClick={() => {
+                              setSelectedStatus(selectedPlanMonth === 'aug' ? 'TARGET_AUG' : selectedPlanMonth === 'sep' ? (selectedMonthTvt === 'VT3' ? 'TARGET_SEP_VT3' : selectedMonthTvt === 'VT2' ? 'TARGET_SEP_VT2' : 'TARGET_SEP') : 'ALL');
+                              setTvt3Only(false);
+                              setSelectedDistrict('ALL');
+                              setSelectedScope('ALL');
+                              setActiveViewTab('table');
+                            }}
+                            className="px-2.5 py-1 bg-amber-500 hover:bg-amber-400 text-slate-900 font-black rounded shadow-xs text-[10px] transition-all"
+                          >
+                            🔍 Lọc trạm &rarr;
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })()}
                 </tfoot>
               </table>
             </div>
@@ -1844,25 +1901,20 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
               <div 
-                onClick={() => setActiveViewTab('plan_sep')}
-                className="p-3 bg-gradient-to-br from-amber-100 to-amber-50 hover:from-amber-200 hover:to-amber-100 rounded-xl border-2 border-amber-400/80 cursor-pointer transition-all hover:scale-[1.02] shadow-sm ring-2 ring-amber-400/20"
+                onClick={() => setActiveViewTab('plan_monthly')}
+                className="p-3 bg-gradient-to-br from-amber-500 to-indigo-600 hover:from-amber-600 hover:to-indigo-700 text-white rounded-xl border border-amber-400 cursor-pointer transition-all hover:scale-[1.02] shadow-md ring-2 ring-amber-400/20 col-span-2 sm:col-span-2 md:col-span-2"
               >
-                <div className="text-[11px] font-bold text-amber-900 flex items-center gap-1">
-                  <Calendar className="h-3.5 w-3.5 text-amber-600" /> 🎯 Kế Hoạch T9
+                <div className="text-[11px] font-extrabold flex items-center justify-between text-amber-100">
+                  <span className="flex items-center gap-1">
+                    <Calendar className="h-4 w-4 text-amber-300" /> 📅 Kế Hoạch Các Tháng (T8 ➔ T11)
+                  </span>
+                  <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-bold">35 Cluster</span>
                 </div>
-                <div className="text-2xl font-black text-amber-950 mt-1">338</div>
-                <div className="text-[10px] text-amber-800 mt-0.5 font-extrabold">13 Cluster (178 trạm 5G) &rarr;</div>
-              </div>
-
-              <div 
-                onClick={() => handleFilterJump('TARGET_AUG')}
-                className="p-3 bg-purple-50 hover:bg-purple-100 rounded-xl border border-purple-200 cursor-pointer transition-all hover:scale-[1.02] shadow-sm"
-              >
-                <div className="text-[11px] font-semibold text-purple-700 flex items-center gap-1">
-                  <Calendar className="h-3.5 w-3.5" /> Target Tháng 8
+                <div className="text-2xl font-black mt-1">902 <span className="text-xs font-normal opacity-80">trạm kế hoạch</span></div>
+                <div className="text-[10px] text-amber-100 mt-0.5 font-bold flex items-center justify-between">
+                  <span>T8 (53t) • T9 (338t) • T10 (312t) • T11 (199t)</span>
+                  <span className="underline">Mở bảng chi tiết &rarr;</span>
                 </div>
-                <div className="text-2xl font-black text-purple-800 mt-1">{stats.augTarget}</div>
-                <div className="text-[10px] text-purple-600 mt-0.5 font-bold">Xem {stats.augTarget} trạm &rarr;</div>
               </div>
 
               <div 

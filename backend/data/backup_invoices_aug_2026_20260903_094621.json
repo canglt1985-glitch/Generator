@@ -1,0 +1,3561 @@
+[
+  {
+    "id": "2a77b0c5-6a88-59c5-9db5-0915d4bf28d4",
+    "invoice_date": "2026-08-01",
+    "invoice_number": "169269",
+    "seller_name": "CÔNG TY CỔ PHẦN XĂNG DẦU TÍN NGHĨA",
+    "seller_mst": "3601038204",
+    "buyer_name": "CHI NHÁNH MOBIFONE",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 1371000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22850.0,
+        "sl": 60.0,
+        "tt": 1371000.0,
+        "ten": "1 Xăng E10 RON 95 Mức 3 Lít 60 22.850 1.371.000"
+      }
+    ],
+    "source": "Gmail PDF từ hoadondientu@viettel.com.vn",
+    "status": "Approved",
+    "invoice_url": "https://vinvoice.viettel.vn/utilities/invoice-search",
+    "kh_hd": "1K26TNC",
+    "ma_tra_cuu": "IRVIJODAJYUKK39",
+    "sub_total": 1371000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-01T20:00:13.375109+00:00",
+    "updated_at": "2026-08-01T20:00:13.375109+00:00"
+  },
+  {
+    "id": "5d661a40-ab70-5c54-9177-3388cca8350c",
+    "invoice_date": "2026-08-03",
+    "invoice_number": "171081",
+    "seller_name": "CÔNG TY CỔ PHẦN XĂNG DẦU TÍN NGHĨA",
+    "seller_mst": "3601038204",
+    "buyer_name": "CHI NHÁNH MOBIFONE",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 1000000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 29720.0,
+        "sl": 33.645,
+        "tt": 1000000.0,
+        "ten": "1 Dầu Điêzen 0,001S Mức 5 Lít 33,645 29.720 1.000.000"
+      }
+    ],
+    "source": "Gmail PDF từ hoadondientu@viettel.com.vn",
+    "status": "Approved",
+    "invoice_url": "https://vinvoice.viettel.vn/utilities/invoice-search",
+    "kh_hd": "1K26TNC",
+    "ma_tra_cuu": "0QUIWGNUNM0FJYI",
+    "sub_total": 1000000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-03T20:00:13.085043+00:00",
+    "updated_at": "2026-08-03T20:00:13.085043+00:00"
+  },
+  {
+    "id": "75781078-2780-59d6-8fa1-441f730489ee",
+    "invoice_date": "2026-08-03",
+    "invoice_number": "171080",
+    "seller_name": "CÔNG TY CỔ PHẦN XĂNG DẦU TÍN NGHĨA",
+    "seller_mst": "3601038204",
+    "buyer_name": "CHI NHÁNH MOBIFONE",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 1500000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22850.0,
+        "sl": 65.645,
+        "tt": 1500000.0,
+        "ten": "1 Xăng E10 RON 95 Mức 3 Lít 65,645 22.850 1.500.000"
+      }
+    ],
+    "source": "Gmail PDF từ hoadondientu@viettel.com.vn",
+    "status": "Approved",
+    "invoice_url": "https://vinvoice.viettel.vn/utilities/invoice-search",
+    "kh_hd": "1K26TNC",
+    "ma_tra_cuu": "V6J24TG5IQHBE37",
+    "sub_total": 1500000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-03T20:00:13.382362+00:00",
+    "updated_at": "2026-08-03T20:00:13.382362+00:00"
+  },
+  {
+    "id": "8a324b57-e938-5079-9330-a4371b8afb5e",
+    "invoice_date": "2026-08-05",
+    "invoice_number": "172321",
+    "seller_name": "CÔNG TY CỔ PHẦN XĂNG DẦU TÍN NGHĨA",
+    "seller_mst": "3601038204",
+    "buyer_name": "CHI NHÁNH MOBIFONE",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 1000000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 29720.0,
+        "sl": 33.645,
+        "tt": 1000000.0,
+        "ten": "1 Dầu Điêzen 0,001S Mức 5 Lít 33,645 29.720 1.000.000"
+      }
+    ],
+    "source": "Gmail PDF từ hoadondientu@viettel.com.vn",
+    "status": "Approved",
+    "invoice_url": "https://vinvoice.viettel.vn/utilities/invoice-search",
+    "kh_hd": "1K26TNC",
+    "ma_tra_cuu": "P304HXYTMQEV7F8",
+    "sub_total": 1000000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-05T20:00:19.992108+00:00",
+    "updated_at": "2026-08-05T20:00:19.992108+00:00"
+  },
+  {
+    "id": "5b87f325-dc1b-5fe6-8955-be075f983923",
+    "invoice_date": "2026-08-05",
+    "invoice_number": "172320",
+    "seller_name": "CÔNG TY CỔ PHẦN XĂNG DẦU TÍN NGHĨA",
+    "seller_mst": "3601038204",
+    "buyer_name": "CHI NHÁNH MOBIFONE",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 1371000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22850.0,
+        "sl": 60.0,
+        "tt": 1371000.0,
+        "ten": "1 Xăng E10 RON 95 Mức 3 Lít 60 22.850 1.371.000"
+      }
+    ],
+    "source": "Gmail PDF từ hoadondientu@viettel.com.vn",
+    "status": "Approved",
+    "invoice_url": "https://vinvoice.viettel.vn/utilities/invoice-search",
+    "kh_hd": "1K26TNC",
+    "ma_tra_cuu": "9TBHDCSOB2K13X1",
+    "sub_total": 1371000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-05T20:00:20.330203+00:00",
+    "updated_at": "2026-08-05T20:00:20.330203+00:00"
+  },
+  {
+    "id": "577b00f5-ba93-59b4-b692-656b470466c9",
+    "invoice_date": "2026-08-07",
+    "invoice_number": "173725",
+    "seller_name": "CÔNG TY CỔ PHẦN XĂNG DẦU TÍN NGHĨA",
+    "seller_mst": "3601038204",
+    "buyer_name": "CHI NHÁNH MOBIFONE",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 1100000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22320.0,
+        "sl": 49.282,
+        "tt": 1100000.0,
+        "ten": "1 Xăng E10 RON 95 Mức 3 Lít 49,282 22.320 1.100.000"
+      }
+    ],
+    "source": "Gmail PDF từ hoadondientu@viettel.com.vn",
+    "status": "Approved",
+    "invoice_url": "https://vinvoice.viettel.vn/utilities/invoice-search",
+    "kh_hd": "1K26TNC",
+    "ma_tra_cuu": "WY33YT0Y3YP6ORI",
+    "sub_total": 1100000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-07T20:00:22.020774+00:00",
+    "updated_at": "2026-08-07T20:00:22.020774+00:00"
+  },
+  {
+    "id": "d258a843-f61f-5234-9a64-e7ec5a202d5e",
+    "invoice_date": "2026-08-07",
+    "invoice_number": "173719",
+    "seller_name": "CÔNG TY CỔ PHẦN XĂNG DẦU TÍN NGHĨA",
+    "seller_mst": "3601038204",
+    "buyer_name": "CHI NHÁNH MOBIFONE",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 1000000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 27540.0,
+        "sl": 36.31,
+        "tt": 1000000.0,
+        "ten": "1 Dầu Điêzen 0,05S Mức 2 Lít 36,31 27.540 1.000.000"
+      }
+    ],
+    "source": "Gmail PDF từ hoadondientu@viettel.com.vn",
+    "status": "Approved",
+    "invoice_url": "https://vinvoice.viettel.vn/utilities/invoice-search",
+    "kh_hd": "1K26TNC",
+    "ma_tra_cuu": "IO30HBSPMOEU9HU",
+    "sub_total": 1000000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-07T20:00:22.319745+00:00",
+    "updated_at": "2026-08-07T20:00:22.319745+00:00"
+  },
+  {
+    "id": "6c41090d-a41b-5e83-9313-2486dba4b8d4",
+    "invoice_date": "2026-08-09",
+    "invoice_number": "175338",
+    "seller_name": "CÔNG TY CỔ PHẦN XĂNG DẦU TÍN NGHĨA",
+    "seller_mst": "3601038204",
+    "buyer_name": "CHI NHÁNH MOBIFONE",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 1000000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 27540.0,
+        "sl": 36.31,
+        "tt": 1000000.0,
+        "ten": "1 Dầu Điêzen 0,05S Mức 2 Lít 36,31 27.540 1.000.000"
+      }
+    ],
+    "source": "Gmail PDF từ hoadondientu@viettel.com.vn",
+    "status": "Approved",
+    "invoice_url": "https://vinvoice.viettel.vn/utilities/invoice-search",
+    "kh_hd": "1K26TNC",
+    "ma_tra_cuu": "8GNZKNSTHKTNI2A",
+    "sub_total": 1000000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-09T20:00:17.606782+00:00",
+    "updated_at": "2026-08-09T20:00:17.606782+00:00"
+  },
+  {
+    "id": "02c2486f-f406-5b09-9b0e-ad35bb49c323",
+    "invoice_date": "2026-08-09",
+    "invoice_number": "175241",
+    "seller_name": "CÔNG TY CỔ PHẦN XĂNG DẦU TÍN NGHĨA",
+    "seller_mst": "3601038204",
+    "buyer_name": "CHI NHÁNH MOBIFONE",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 1339200.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22320.0,
+        "sl": 60.0,
+        "tt": 1339200.0,
+        "ten": "1 Xăng E10 RON 95 Mức 3 Lít 60 22.320 1.339.200"
+      }
+    ],
+    "source": "Gmail PDF từ hoadondientu@viettel.com.vn",
+    "status": "Approved",
+    "invoice_url": "https://vinvoice.viettel.vn/utilities/invoice-search",
+    "kh_hd": "1K26TNC",
+    "ma_tra_cuu": "9L4QAKZS3X5ELCY",
+    "sub_total": 1339200.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-09T20:00:17.908411+00:00",
+    "updated_at": "2026-08-09T20:00:17.908411+00:00"
+  },
+  {
+    "id": "eff2ec53-56e4-58e6-8c93-bb42dd2020a0",
+    "invoice_date": "2026-08-10",
+    "invoice_number": "176300",
+    "seller_name": "CÔNG TY CỔ PHẦN XĂNG DẦU TÍN NGHĨA",
+    "seller_mst": "3601038204",
+    "buyer_name": "CHI NHÁNH MOBIFONE",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 892800.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22320.0,
+        "sl": 40.0,
+        "tt": 892800.0,
+        "ten": "1 Xăng E10 RON 95 Mức 3 Lít 40 22.320 892.800"
+      }
+    ],
+    "source": "Gmail PDF từ hoadondientu@viettel.com.vn",
+    "status": "Approved",
+    "invoice_url": "https://vinvoice.viettel.vn/utilities/invoice-search",
+    "kh_hd": "1K26TNC",
+    "ma_tra_cuu": "H8HGYHGL215CL3T",
+    "sub_total": 892800.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-10T20:00:21.350507+00:00",
+    "updated_at": "2026-08-10T20:00:21.350507+00:00"
+  },
+  {
+    "id": "8be6c0f0-5a1b-5430-8fb9-f5b280a3c167",
+    "invoice_date": "2026-08-10",
+    "invoice_number": "176299",
+    "seller_name": "CÔNG TY CỔ PHẦN XĂNG DẦU TÍN NGHĨA",
+    "seller_mst": "3601038204",
+    "buyer_name": "CHI NHÁNH MOBIFONE",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 1300370.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 27540.0,
+        "sl": 47.217,
+        "tt": 1300370.0,
+        "ten": "1 Dầu Điêzen 0,05S Mức 2 Lít 47,217 27.540 1.300.370"
+      }
+    ],
+    "source": "Gmail PDF từ hoadondientu@viettel.com.vn",
+    "status": "Approved",
+    "invoice_url": "https://vinvoice.viettel.vn/utilities/invoice-search",
+    "kh_hd": "1K26TNC",
+    "ma_tra_cuu": "000TPAJO62YCEAE",
+    "sub_total": 1300370.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-10T20:00:21.656696+00:00",
+    "updated_at": "2026-08-10T20:00:21.656696+00:00"
+  },
+  {
+    "id": "ec852e1c-ad90-5186-9502-67a9e5a0611b",
+    "invoice_date": "2026-08-11",
+    "invoice_number": "176432",
+    "seller_name": "CÔNG TY CỔ PHẦN XĂNG DẦU TÍN NGHĨA",
+    "seller_mst": "3601038204",
+    "buyer_name": "CHI NHÁNH MOBIFONE",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 800000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 27540.0,
+        "sl": 29.047,
+        "tt": 800000.0,
+        "ten": "1 Dầu Điêzen 0,05S Mức 2 Lít 29,047 27.540 800.000"
+      }
+    ],
+    "source": "Gmail PDF từ hoadondientu@viettel.com.vn",
+    "status": "Approved",
+    "invoice_url": "https://vinvoice.viettel.vn/utilities/invoice-search",
+    "kh_hd": "1K26TNC",
+    "ma_tra_cuu": "EGF8SU7EZIGQ2LF",
+    "sub_total": 800000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-11T01:49:11.93677+00:00",
+    "updated_at": "2026-08-11T01:49:11.93677+00:00"
+  },
+  {
+    "id": "d371ee44-4eed-5af7-a86c-464d2bd4025f",
+    "invoice_date": "2026-08-11",
+    "invoice_number": "00411662",
+    "seller_name": "CÔNG TY TNHH THƯƠNG MẠI & DỊCH VỤ THÀNH MINH PHÁT",
+    "seller_mst": "3602037394",
+    "buyer_name": "MOBIFONE TOÀN CẦU (TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 700000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 27540.0,
+        "sl": 25.41757,
+        "tt": 700000.0,
+        "ten": "1 Dầu Điêzen 0,05S Mức 2 Lít 25,41757 27.540,00000 700.000"
+      }
+    ],
+    "source": "Gmail PDF từ Nam Trần Hoai <namth.mobifone@gmail.com>",
+    "status": "Approved",
+    "invoice_url": "https://www.meinvoice.vn/tra-cuu",
+    "kh_hd": "1C26MMP",
+    "ma_tra_cuu": "DQFJIV2",
+    "sub_total": 700000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-11T03:44:03.432437+00:00",
+    "updated_at": "2026-08-11T03:44:03.432437+00:00"
+  },
+  {
+    "id": "9578df96-dcd5-508f-ab48-47c8f346ac18",
+    "invoice_date": "2026-08-11",
+    "invoice_number": "00411655",
+    "seller_name": "CÔNG TY TNHH THƯƠNG MẠI & DỊCH VỤ THÀNH MINH PHÁT",
+    "seller_mst": "3602037394",
+    "buyer_name": "MOBIFONE TOÀN CẦU (TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 700000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 27540.0,
+        "sl": 25.41757,
+        "tt": 700000.0,
+        "ten": "1 Dầu Điêzen 0,05S Mức 2 Lít 25,41757 27.540,00000 700.000"
+      }
+    ],
+    "source": "Gmail PDF từ Nam Trần Hoai <namth.mobifone@gmail.com>",
+    "status": "Approved",
+    "invoice_url": "https://www.meinvoice.vn/tra-cuu",
+    "kh_hd": "1C26MMP",
+    "ma_tra_cuu": "EPFQIPL63LMM",
+    "sub_total": 700000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-11T03:44:03.727875+00:00",
+    "updated_at": "2026-08-11T03:44:03.727875+00:00"
+  },
+  {
+    "id": "d9ccc0a4-7951-5b81-8b1c-475cbcdd6e10",
+    "invoice_date": "2026-08-13",
+    "invoice_number": "583408",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 2000000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 27540.0,
+        "sl": 72.62,
+        "tt": 2000000.0,
+        "dvt": "Lít",
+        "ten": "Dầu Điêzen 0,05S Mức 2"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNTgzNDA4fENRVlpFSVAzR3w2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "CQVZEIP3G",
+    "sub_total": 2000000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-13T20:00:36.494408+00:00",
+    "updated_at": "2026-08-13T20:00:36.494408+00:00"
+  },
+  {
+    "id": "72e089a6-256c-565f-bddc-810b9bb6ca9f",
+    "invoice_date": "2026-08-12",
+    "invoice_number": "582060",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 700000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22320.0,
+        "sl": 31.36,
+        "tt": 700000.0,
+        "dvt": "Lít",
+        "ten": "Xăng E10 RON 95 Mức 3"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNTgyMDYwfElXVTdHUkJUUXw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "IWU7GRBTQ",
+    "sub_total": 700000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-13T20:00:37.504682+00:00",
+    "updated_at": "2026-08-13T20:00:37.504682+00:00"
+  },
+  {
+    "id": "421cfd2c-e265-5ca1-a058-34eef4699f66",
+    "invoice_date": "2026-08-12",
+    "invoice_number": "580455",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 1377000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 27540.0,
+        "sl": 50.0,
+        "tt": 1377000.0,
+        "dvt": "Lít",
+        "ten": "Dầu Điêzen 0,05S Mức 2"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNTgwNDU1fEJDN1g1UDkzVnw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "BC7X5P93V",
+    "sub_total": 1377000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-13T20:00:40.728624+00:00",
+    "updated_at": "2026-08-13T20:00:40.728624+00:00"
+  },
+  {
+    "id": "b67252c7-cea2-555e-a13e-a88f19cc56e9",
+    "invoice_date": "2026-08-11",
+    "invoice_number": "579524",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 2000000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 27540.0,
+        "sl": 72.62,
+        "tt": 2000000.0,
+        "dvt": "Lít",
+        "ten": "Dầu Điêzen 0,05S Mức 2"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNTc5NTI0fDc4WUNCOTZCRXw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "78YCB96BE",
+    "sub_total": 2000000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-13T20:00:41.433374+00:00",
+    "updated_at": "2026-08-13T20:00:41.433374+00:00"
+  },
+  {
+    "id": "e8ed811c-e504-50e0-b411-e790f6676c39",
+    "invoice_date": "2026-08-11",
+    "invoice_number": "577949",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 900165.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22320.0,
+        "sl": 40.33,
+        "tt": 900165.0,
+        "dvt": "Lít",
+        "ten": "Xăng E10 RON 95 Mức 3"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNTc3OTQ5fEtNTVJFQkE3UHw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "KMMREBA7P",
+    "sub_total": 900165.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-13T20:00:42.066024+00:00",
+    "updated_at": "2026-08-13T20:00:42.066024+00:00"
+  },
+  {
+    "id": "197b66bd-a015-55ee-9d86-2a48d4be4b78",
+    "invoice_date": "2026-08-10",
+    "invoice_number": "576729",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 3500000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 27540.0,
+        "sl": 127.08,
+        "tt": 3500000.0,
+        "dvt": "Lít",
+        "ten": "Dầu Điêzen 0,05S Mức 2"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNTc2NzI5fFVYRVVIVkRDSnw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "UXEUHVDCJ",
+    "sub_total": 3500000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-13T20:00:42.825475+00:00",
+    "updated_at": "2026-08-13T20:00:42.825475+00:00"
+  },
+  {
+    "id": "cf41859f-6f23-5c0f-993a-4115a49a3344",
+    "invoice_date": "2026-08-10",
+    "invoice_number": "575231",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 688500.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 27540.0,
+        "sl": 25.0,
+        "tt": 688500.0,
+        "dvt": "Lít",
+        "ten": "Dầu Điêzen 0,05S Mức 2"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNTc1MjMxfDJLVVFNTE5STnw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "2KUQMLNRN",
+    "sub_total": 688500.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-13T20:00:43.508401+00:00",
+    "updated_at": "2026-08-13T20:00:43.508401+00:00"
+  },
+  {
+    "id": "b44458dd-f010-507f-9880-3b91ba999d2a",
+    "invoice_date": "2026-08-09",
+    "invoice_number": "573398",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 2000000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 27540.0,
+        "sl": 72.62,
+        "tt": 2000000.0,
+        "dvt": "Lít",
+        "ten": "Dầu Điêzen 0,05S Mức 2"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNTczMzk4fEc1VEsySzJLVnw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "G5TK2K2KV",
+    "sub_total": 2000000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-13T20:00:44.157388+00:00",
+    "updated_at": "2026-08-13T20:00:44.157388+00:00"
+  },
+  {
+    "id": "51d3e19f-3ec8-596e-8aa5-ff0b268cae04",
+    "invoice_date": "2026-08-08",
+    "invoice_number": "570828",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 3000000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 29640.0,
+        "sl": 101.21,
+        "tt": 3000000.0,
+        "dvt": "Lít",
+        "ten": "Dầu Điêzen 0,001S Mức 5"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNTcwODI4fFNNN0hCR0dEVXw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "SM7HBGGDU",
+    "sub_total": 3000000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-13T20:00:46.668481+00:00",
+    "updated_at": "2026-08-13T20:00:46.668481+00:00"
+  },
+  {
+    "id": "f6866091-5d94-582c-8059-22213b8611fc",
+    "invoice_date": "2026-08-07",
+    "invoice_number": "567766",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 1250040.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 27540.0,
+        "sl": 45.39,
+        "tt": 1250040.0,
+        "dvt": "Lít",
+        "ten": "Dầu Điêzen 0,05S Mức 2"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNTY3NzY2fDJONUJWU1Y4Rnw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "2N5BVSV8F",
+    "sub_total": 1250040.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-13T20:00:51.610667+00:00",
+    "updated_at": "2026-08-13T20:00:51.610667+00:00"
+  },
+  {
+    "id": "10616b58-d666-56fd-a0f7-dae09c2820aa",
+    "invoice_date": "2026-08-05",
+    "invoice_number": "563337",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 2800032.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 27620.0,
+        "sl": 101.38,
+        "tt": 2800032.0,
+        "dvt": "Lít",
+        "ten": "Dầu Điêzen 0,05S Mức 2"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNTYzMzM3fE85TUhLUTQyN3w2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "O9MHKQ427",
+    "sub_total": 2800032.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-13T20:00:53.032292+00:00",
+    "updated_at": "2026-08-13T20:00:53.032292+00:00"
+  },
+  {
+    "id": "942deb06-9fc3-5914-8526-faf2321657ef",
+    "invoice_date": "2026-08-04",
+    "invoice_number": "560956",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 750051.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22850.0,
+        "sl": 32.83,
+        "tt": 750051.0,
+        "dvt": "Lít",
+        "ten": "Xăng E10 RON 95 Mức 3"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNTYwOTU2fDZCWDRPREdIR3w2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "6BX4ODGHG",
+    "sub_total": 750051.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-13T20:00:56.087437+00:00",
+    "updated_at": "2026-08-13T20:00:56.087437+00:00"
+  },
+  {
+    "id": "ec8421bc-b886-5e46-b5d8-c96cc870058d",
+    "invoice_date": "2026-08-03",
+    "invoice_number": "558060",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 500000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22850.0,
+        "sl": 21.88,
+        "tt": 500000.0,
+        "dvt": "Lít",
+        "ten": "Xăng E10 RON 95 Mức 3"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNTU4MDYwfEJGQlFTMzZPOXw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "BFBQS36O9",
+    "sub_total": 500000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-13T20:00:57.555501+00:00",
+    "updated_at": "2026-08-13T20:00:57.555501+00:00"
+  },
+  {
+    "id": "23e356b8-2bc3-5361-8f2e-787a5fcf7f66",
+    "invoice_date": "2026-08-03",
+    "invoice_number": "556990",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 800024.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22850.0,
+        "sl": 35.01,
+        "tt": 800024.0,
+        "dvt": "Lít",
+        "ten": "Xăng E10 RON 95 Mức 3"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNTU2OTkwfDhHMlU1SU5NSnw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "8G2U5INMJ",
+    "sub_total": 800024.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-13T20:00:58.971039+00:00",
+    "updated_at": "2026-08-13T20:00:58.971039+00:00"
+  },
+  {
+    "id": "eeecb597-0496-512e-894e-5de929f01048",
+    "invoice_date": "2026-08-03",
+    "invoice_number": "556866",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 1000000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22850.0,
+        "sl": 43.76,
+        "tt": 1000000.0,
+        "dvt": "Lít",
+        "ten": "Xăng E10 RON 95 Mức 3"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNTU2ODY2fEJEMlFIRFVWOXw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "BD2QHDUV9",
+    "sub_total": 1000000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-13T20:01:01.197728+00:00",
+    "updated_at": "2026-08-13T20:01:01.197728+00:00"
+  },
+  {
+    "id": "8121d956-66ab-517f-8b73-4f777d460f68",
+    "invoice_date": "2026-08-01",
+    "invoice_number": "553057",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 1059965.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22850.0,
+        "sl": 46.39,
+        "tt": 1059965.0,
+        "dvt": "Lít",
+        "ten": "Xăng E10 RON 95 Mức 3"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNTUzMDU3fFhWWTRaOThYRHw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "XVY4Z98XD",
+    "sub_total": 1059965.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-13T20:01:02.714594+00:00",
+    "updated_at": "2026-08-13T20:01:02.714594+00:00"
+  },
+  {
+    "id": "e1430e4d-2fe8-5c6e-b68c-e1db90a7b126",
+    "invoice_date": "2026-08-13",
+    "invoice_number": "177950",
+    "seller_name": "CÔNG TY CỔ PHẦN XĂNG DẦU TÍN NGHĨA",
+    "seller_mst": "3601038204",
+    "buyer_name": "CHI NHÁNH MOBIFONE",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 2100000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22320.0,
+        "sl": 94.085,
+        "tt": 2100000.0,
+        "ten": "1 Xăng E10 RON 95 Mức 3 Lít 94,085 22.320 2.100.000"
+      }
+    ],
+    "source": "Gmail PDF từ hoadondientu@viettel.com.vn",
+    "status": "Approved",
+    "invoice_url": "https://vinvoice.viettel.vn/utilities/invoice-search",
+    "kh_hd": "1K26TNC",
+    "ma_tra_cuu": "QCBT68BX5L2DMSD",
+    "sub_total": 2100000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-13T20:01:03.076133+00:00",
+    "updated_at": "2026-08-13T20:01:03.076133+00:00"
+  },
+  {
+    "id": "05ccfc05-add7-52a5-b757-44cfa11782d9",
+    "invoice_date": "2026-08-08",
+    "invoice_number": "571663",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 929650.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22320.0,
+        "sl": 41.65,
+        "tt": 929650.0,
+        "dvt": "Lít",
+        "ten": "Xăng E10 RON 95 Mức 3"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNTcxNjYzfFNDWVhJN1JKVHw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "SCYXI7RJT",
+    "sub_total": 929650.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-13T20:00:44.940923+00:00",
+    "updated_at": "2026-08-13T20:00:44.940923+00:00"
+  },
+  {
+    "id": "6b05f8fd-87d0-5fa5-bc4b-ac7c52246fe6",
+    "invoice_date": "2026-08-08",
+    "invoice_number": "570470",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 730000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22320.0,
+        "sl": 32.71,
+        "tt": 730000.0,
+        "dvt": "Lít",
+        "ten": "Xăng E10 RON 95 Mức 3"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNTcwNDcwfE1PQjdPTUtOUHw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "MOB7OMKNP",
+    "sub_total": 730000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-13T20:00:50.867563+00:00",
+    "updated_at": "2026-08-13T20:00:50.867563+00:00"
+  },
+  {
+    "id": "343227dc-e19b-5a84-8aa3-a93c401f06a5",
+    "invoice_date": "2026-08-06",
+    "invoice_number": "565739",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 3300168.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 29720.0,
+        "sl": 111.04,
+        "tt": 3300168.0,
+        "dvt": "Lít",
+        "ten": "Dầu Điêzen 0,001S Mức 5"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNTY1NzM5fEY3NzM1OVpHV3w2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "F77359ZGW",
+    "sub_total": 3300168.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-13T20:00:52.346974+00:00",
+    "updated_at": "2026-08-13T20:00:52.346974+00:00"
+  },
+  {
+    "id": "cc161495-ca36-519d-afff-5809ee59929e",
+    "invoice_date": "2026-08-04",
+    "invoice_number": "561638",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 2694883.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 27620.0,
+        "sl": 97.57,
+        "tt": 2694883.0,
+        "dvt": "Lít",
+        "ten": "Dầu Điêzen 0,05S Mức 2"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNTYxNjM4fFlLUkNFWENVSnw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "YKRCEXCUJ",
+    "sub_total": 2694883.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-13T20:00:54.752035+00:00",
+    "updated_at": "2026-08-13T20:00:54.752035+00:00"
+  },
+  {
+    "id": "3429d172-27de-5fc1-90d8-801291e4ccf0",
+    "invoice_date": "2026-08-04",
+    "invoice_number": "560899",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 1300119.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22850.0,
+        "sl": 56.9,
+        "tt": 1300119.0,
+        "dvt": "Lít",
+        "ten": "Xăng E10 RON 95 Mức 3"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNTYwODk5fDdPNjZBMzgzTXw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "7O66A383M",
+    "sub_total": 1300119.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-13T20:00:56.810666+00:00",
+    "updated_at": "2026-08-13T20:00:56.810666+00:00"
+  },
+  {
+    "id": "0b735d50-c79c-5161-9a41-65a962dcb14b",
+    "invoice_date": "2026-08-03",
+    "invoice_number": "556991",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 700000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22850.0,
+        "sl": 30.63,
+        "tt": 700000.0,
+        "dvt": "Lít",
+        "ten": "Xăng E10 RON 95 Mức 3"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNTU2OTkxfFBYTTdWQzhBWnw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "PXM7VC8AZ",
+    "sub_total": 700000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-13T20:00:58.241218+00:00",
+    "updated_at": "2026-08-13T20:00:58.241218+00:00"
+  },
+  {
+    "id": "6e639e37-1c92-5b93-a269-0f0eb9aa857d",
+    "invoice_date": "2026-08-01",
+    "invoice_number": "553085",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 710132.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22850.0,
+        "sl": 31.08,
+        "tt": 710132.0,
+        "dvt": "Lít",
+        "ten": "Xăng E10 RON 95 Mức 3"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNTUzMDg1fEdHOUtESlRWN3w2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "GG9KDJTV7",
+    "sub_total": 710132.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-13T20:01:02.020719+00:00",
+    "updated_at": "2026-08-13T20:01:02.020719+00:00"
+  },
+  {
+    "id": "ce973158-b9ad-53dd-bfc4-69bc1ced21df",
+    "invoice_date": "2026-08-18",
+    "invoice_number": "00427072",
+    "seller_name": "CÔNG TY TNHH THƯƠNG MẠI & DỊCH VỤ THÀNH MINH PHÁT",
+    "seller_mst": "3602037394",
+    "buyer_name": "MOBIFONE TOÀN CẦU (TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 1350000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 27230.0,
+        "sl": 49.57767,
+        "tt": 1350000.0,
+        "ten": "1 Dầu Điêzen 0,05S Mức 2 Lít 49,57767 27.230,00000 1.350.000"
+      }
+    ],
+    "source": "Gmail PDF từ Nam Trần Hoai <namth.mobifone@gmail.com>",
+    "status": "Approved",
+    "invoice_url": "https://www.meinvoice.vn/tra-cuu",
+    "kh_hd": "1C26MMP",
+    "ma_tra_cuu": "7NF6IJ6MEK0V",
+    "sub_total": 1350000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-18T20:00:13.497216+00:00",
+    "updated_at": "2026-08-18T20:00:13.497216+00:00"
+  },
+  {
+    "id": "61998876-6076-560d-9288-d5daf593644e",
+    "invoice_date": "2026-08-19",
+    "invoice_number": "182736",
+    "seller_name": "CÔNG TY CỔ PHẦN XĂNG DẦU TÍN NGHĨA",
+    "seller_mst": "3601038204",
+    "buyer_name": "CHI NHÁNH MOBIFONE",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 1000000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22110.0,
+        "sl": 45.227,
+        "tt": 1000000.0,
+        "ten": "1 Xăng E10 RON 95 Mức 3 Lít 45,227 22.110 1.000.000"
+      }
+    ],
+    "source": "Gmail PDF từ hoadondientu@viettel.com.vn",
+    "status": "Approved",
+    "invoice_url": "https://vinvoice.viettel.vn/utilities/invoice-search",
+    "kh_hd": "1K26TNC",
+    "ma_tra_cuu": "WT1JFKLA7S8T98V",
+    "sub_total": 1000000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-19T20:00:20.627144+00:00",
+    "updated_at": "2026-08-19T20:00:20.627144+00:00"
+  },
+  {
+    "id": "6191ea5a-f2d9-5f7f-b54d-5abb4da8f35e",
+    "invoice_date": "2026-08-19",
+    "invoice_number": "182342",
+    "seller_name": "CÔNG TY CỔ PHẦN XĂNG DẦU TÍN NGHĨA",
+    "seller_mst": "3601038204",
+    "buyer_name": "CHI NHÁNH MOBIFONE",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 1000000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 27230.0,
+        "sl": 36.722,
+        "tt": 1000000.0,
+        "ten": "1 Dầu Điêzen 0,05S Mức 2 Lít 36,722 27.230 1.000.000"
+      }
+    ],
+    "source": "Gmail PDF từ hoadondientu@viettel.com.vn",
+    "status": "Approved",
+    "invoice_url": "https://vinvoice.viettel.vn/utilities/invoice-search",
+    "kh_hd": "1K26TNC",
+    "ma_tra_cuu": "VV0PGO9KEAC6545",
+    "sub_total": 1000000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-19T20:00:20.96959+00:00",
+    "updated_at": "2026-08-19T20:00:20.96959+00:00"
+  },
+  {
+    "id": "b9ed5b9d-8407-5abd-8ea4-c86a745f7c34",
+    "invoice_date": "2026-08-21",
+    "invoice_number": "183734",
+    "seller_name": "CÔNG TY CỔ PHẦN XĂNG DẦU TÍN NGHĨA",
+    "seller_mst": "3601038204",
+    "buyer_name": "CHI NHÁNH MOBIFONE",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 1100000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22660.0,
+        "sl": 48.542,
+        "tt": 1100000.0,
+        "ten": "1 Xăng E10 RON 95 Mức 3 Lít 48,542 22.660 1.100.000"
+      }
+    ],
+    "source": "Gmail PDF từ hoadondientu@viettel.com.vn",
+    "status": "Approved",
+    "invoice_url": "https://vinvoice.viettel.vn/utilities/invoice-search",
+    "kh_hd": "1K26TNC",
+    "ma_tra_cuu": "1HTIICPGDF8CH4W",
+    "sub_total": 1100000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-21T20:00:15.119892+00:00",
+    "updated_at": "2026-08-21T20:00:15.119892+00:00"
+  },
+  {
+    "id": "9bd3d742-c5c1-5c94-9a1e-01608b849bda",
+    "invoice_date": "2026-08-23",
+    "invoice_number": "185597",
+    "seller_name": "CÔNG TY CỔ PHẦN XĂNG DẦU TÍN NGHĨA",
+    "seller_mst": "3601038204",
+    "buyer_name": "CHI NHÁNH MOBIFONE",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 1359600.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22660.0,
+        "sl": 60.0,
+        "tt": 1359600.0,
+        "ten": "1 Xăng E10 RON 95 Mức 3 Lít 60 22.660 1.359.600"
+      }
+    ],
+    "source": "Gmail PDF từ hoadondientu@viettel.com.vn",
+    "status": "Approved",
+    "invoice_url": "https://vinvoice.viettel.vn/utilities/invoice-search",
+    "kh_hd": "1K26TNC",
+    "ma_tra_cuu": "IWXTKZ9M49K1LFM",
+    "sub_total": 1359600.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-23T20:00:24.323211+00:00",
+    "updated_at": "2026-08-23T20:00:24.323211+00:00"
+  },
+  {
+    "id": "1ae64666-e446-5f84-b69e-7038627cf222",
+    "invoice_date": "2026-08-24",
+    "invoice_number": "00439924",
+    "seller_name": "CÔNG TY TNHH THƯƠNG MẠI & DỊCH VỤ THÀNH MINH PHÁT",
+    "seller_mst": "3602037394",
+    "buyer_name": "MOBIFONE TOÀN CẦU (TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 650000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 28540.0,
+        "sl": 22.77505,
+        "tt": 650000.0,
+        "ten": "1 Dầu Điêzen 0,05S Mức 2 Lít 22,77505 28.540,00000 650.000"
+      }
+    ],
+    "source": "Gmail PDF từ Nam Trần Hoai <namth.mobifone@gmail.com>",
+    "status": "Approved",
+    "invoice_url": "https://www.meinvoice.vn/tra-cuu",
+    "kh_hd": "1C26MMP",
+    "ma_tra_cuu": "EPFQIPJ0E68Q",
+    "sub_total": 650000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-24T05:05:52.009841+00:00",
+    "updated_at": "2026-08-24T05:05:52.009841+00:00"
+  },
+  {
+    "id": "6e084079-981f-510c-ab44-ef5fcac07ca0",
+    "invoice_date": "2026-08-24",
+    "invoice_number": "00439851",
+    "seller_name": "CÔNG TY TNHH THƯƠNG MẠI & DỊCH VỤ THÀNH MINH PHÁT",
+    "seller_mst": "3602037394",
+    "buyer_name": "MOBIFONE TOÀN CẦU (TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 1400000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 28540.0,
+        "sl": 49.05395,
+        "tt": 1400000.0,
+        "ten": "1 Dầu Điêzen 0,05S Mức 2 Lít 49,05395 28.540,00000 1.400.000"
+      }
+    ],
+    "source": "Gmail PDF từ Nam Trần Hoai <namth.mobifone@gmail.com>",
+    "status": "Approved",
+    "invoice_url": "https://www.meinvoice.vn/tra-cuu",
+    "kh_hd": "1C26MMP",
+    "ma_tra_cuu": "PKF7I2P0Z7B3",
+    "sub_total": 1400000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-24T05:05:52.278504+00:00",
+    "updated_at": "2026-08-24T05:05:52.278504+00:00"
+  },
+  {
+    "id": "aad6c1dc-03fa-5eaa-b01d-df8446c067bb",
+    "invoice_date": "2026-08-24",
+    "invoice_number": "186044",
+    "seller_name": "CÔNG TY CỔ PHẦN XĂNG DẦU TÍN NGHĨA",
+    "seller_mst": "3601038204",
+    "buyer_name": "CHI NHÁNH MOBIFONE",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 1000000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 28540.0,
+        "sl": 35.037,
+        "tt": 1000000.0,
+        "ten": "1 Dầu Điêzen 0,05S Mức 2 Lít 35,037 28.540 1.000.000"
+      }
+    ],
+    "source": "Gmail PDF từ hoadondientu@viettel.com.vn",
+    "status": "Approved",
+    "invoice_url": "https://vinvoice.viettel.vn/utilities/invoice-search",
+    "kh_hd": "1K26TNC",
+    "ma_tra_cuu": "4A7UL48811GUQ1Y",
+    "sub_total": 1000000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-24T05:05:52.889877+00:00",
+    "updated_at": "2026-08-24T05:05:52.889877+00:00"
+  },
+  {
+    "id": "c7e69d89-8875-50d5-9e13-37274c9f924c",
+    "invoice_date": "2026-08-25",
+    "invoice_number": "187330",
+    "seller_name": "CÔNG TY CỔ PHẦN XĂNG DẦU TÍN NGHĨA",
+    "seller_mst": "3601038204",
+    "buyer_name": "CHI NHÁNH MOBIFONE",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 1700000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 28540.0,
+        "sl": 59.565,
+        "tt": 1700000.0,
+        "ten": "1 Dầu Điêzen 0,05S Mức 2 Lít 59,565 28.540 1.700.000"
+      }
+    ],
+    "source": "Gmail PDF từ hoadondientu@viettel.com.vn",
+    "status": "Approved",
+    "invoice_url": "https://vinvoice.viettel.vn/utilities/invoice-search",
+    "kh_hd": "1K26TNC",
+    "ma_tra_cuu": "JM6XUMA2VXYL81M",
+    "sub_total": 1700000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-25T20:00:29.179301+00:00",
+    "updated_at": "2026-08-25T20:00:29.179301+00:00"
+  },
+  {
+    "id": "2574fb55-0678-5fde-abbc-6b6eef524197",
+    "invoice_date": "2026-08-25",
+    "invoice_number": "187319",
+    "seller_name": "CÔNG TY CỔ PHẦN XĂNG DẦU TÍN NGHĨA",
+    "seller_mst": "3601038204",
+    "buyer_name": "CHI NHÁNH MOBIFONE",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 1133000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22660.0,
+        "sl": 50.0,
+        "tt": 1133000.0,
+        "ten": "1 Xăng E10 RON 95 Mức 3 Lít 50 22.660 1.133.000"
+      }
+    ],
+    "source": "Gmail PDF từ hoadondientu@viettel.com.vn",
+    "status": "Approved",
+    "invoice_url": "https://vinvoice.viettel.vn/utilities/invoice-search",
+    "kh_hd": "1K26TNC",
+    "ma_tra_cuu": "9YRGNWZYEMMOV",
+    "sub_total": 1133000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-25T20:00:29.907284+00:00",
+    "updated_at": "2026-08-25T20:00:29.907284+00:00"
+  },
+  {
+    "id": "769eedf7-a7e1-544e-9dc6-4e65a16777e5",
+    "invoice_date": "2026-08-25",
+    "invoice_number": "186881",
+    "seller_name": "CÔNG TY CỔ PHẦN XĂNG DẦU TÍN NGHĨA",
+    "seller_mst": "3601038204",
+    "buyer_name": "CHI NHÁNH MOBIFONE",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 800000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 28540.0,
+        "sl": 28.03,
+        "tt": 800000.0,
+        "ten": "1 Dầu Điêzen 0,05S Mức 2 Lít 28,03 28.540 800.000"
+      }
+    ],
+    "source": "Gmail PDF từ hoadondientu@viettel.com.vn",
+    "status": "Approved",
+    "invoice_url": "https://vinvoice.viettel.vn/utilities/invoice-search",
+    "kh_hd": "1K26TNC",
+    "ma_tra_cuu": "CWD5194531BH0M6",
+    "sub_total": 800000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-25T20:00:30.344104+00:00",
+    "updated_at": "2026-08-25T20:00:30.344104+00:00"
+  },
+  {
+    "id": "3a8edcc4-3df9-53fc-912c-74dee01e003c",
+    "invoice_date": "2026-08-26",
+    "invoice_number": "187645",
+    "seller_name": "CÔNG TY CỔ PHẦN XĂNG DẦU TÍN NGHĨA",
+    "seller_mst": "3601038204",
+    "buyer_name": "CHI NHÁNH MOBIFONE",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 1000000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 28540.0,
+        "sl": 35.037,
+        "tt": 1000000.0,
+        "ten": "1 Dầu Điêzen 0,05S Mức 2 Lít 35,037 28.540 1.000.000"
+      }
+    ],
+    "source": "Gmail PDF từ hoadondientu@viettel.com.vn",
+    "status": "Approved",
+    "invoice_url": "https://vinvoice.viettel.vn/utilities/invoice-search",
+    "kh_hd": "1K26TNC",
+    "ma_tra_cuu": "W3CZRHES1TSXW0F",
+    "sub_total": 1000000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-26T20:00:24.715562+00:00",
+    "updated_at": "2026-08-26T20:00:24.715562+00:00"
+  },
+  {
+    "id": "4a9067ea-d165-5ed0-884d-f9db41b4e6a5",
+    "invoice_date": "2026-08-27",
+    "invoice_number": "188759",
+    "seller_name": "CÔNG TY CỔ PHẦN XĂNG DẦU TÍN NGHĨA",
+    "seller_mst": "3601038204",
+    "buyer_name": "CHI NHÁNH MOBIFONE",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 1000000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 29880.0,
+        "sl": 33.465,
+        "tt": 1000000.0,
+        "ten": "1 Dầu Điêzen 0,001S Mức 5 Lít 33,465 29.880 1.000.000"
+      }
+    ],
+    "source": "Gmail PDF từ hoadondientu@viettel.com.vn",
+    "status": "Approved",
+    "invoice_url": "https://vinvoice.viettel.vn/utilities/invoice-search",
+    "kh_hd": "1K26TNC",
+    "ma_tra_cuu": "HS2MOQ65LDNBZ0P",
+    "sub_total": 1000000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-27T20:00:39.721904+00:00",
+    "updated_at": "2026-08-27T20:00:39.721904+00:00"
+  },
+  {
+    "id": "f480f738-748f-5b38-8b22-5383e134b30b",
+    "invoice_date": "2026-08-27",
+    "invoice_number": "188758",
+    "seller_name": "CÔNG TY CỔ PHẦN XĂNG DẦU TÍN NGHĨA",
+    "seller_mst": "3601038204",
+    "buyer_name": "CHI NHÁNH MOBIFONE",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 1356000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22600.0,
+        "sl": 60.0,
+        "tt": 1356000.0,
+        "ten": "1 Xăng E10 RON 95 Mức 3 Lít 60 22.600 1.356.000"
+      }
+    ],
+    "source": "Gmail PDF từ hoadondientu@viettel.com.vn",
+    "status": "Approved",
+    "invoice_url": "https://vinvoice.viettel.vn/utilities/invoice-search",
+    "kh_hd": "1K26TNC",
+    "ma_tra_cuu": "8EPYULEXPT8TDSH",
+    "sub_total": 1356000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-27T20:00:40.096813+00:00",
+    "updated_at": "2026-08-27T20:00:40.096813+00:00"
+  },
+  {
+    "id": "0023d4d5-093c-584c-a466-9639ae89722e",
+    "invoice_date": "2026-08-27",
+    "invoice_number": "188674",
+    "seller_name": "CÔNG TY CỔ PHẦN XĂNG DẦU TÍN NGHĨA",
+    "seller_mst": "3601038204",
+    "buyer_name": "CHI NHÁNH MOBIFONE",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 1000000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 30640.0,
+        "sl": 32.634,
+        "tt": 1000000.0,
+        "ten": "1 Dầu Điêzen 0,001S Mức 5 Lít 32,634 30.640 1.000.000"
+      }
+    ],
+    "source": "Gmail PDF từ hoadondientu@viettel.com.vn",
+    "status": "Approved",
+    "invoice_url": "https://vinvoice.viettel.vn/utilities/invoice-search",
+    "kh_hd": "1K26TNC",
+    "ma_tra_cuu": "Q1LL3YXPXOPM88C",
+    "sub_total": 1000000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-27T20:00:40.45485+00:00",
+    "updated_at": "2026-08-27T20:00:40.45485+00:00"
+  },
+  {
+    "id": "b02261f1-0845-541a-90ae-130a1c2ccc4d",
+    "invoice_date": "2026-08-13",
+    "invoice_number": "584919",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 1000000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22110.0,
+        "sl": 45.22,
+        "tt": 1000000.0,
+        "dvt": "Lít",
+        "ten": "Xăng E10 RON 95 Mức 3"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNTg0OTE5fEM0RTdPV1NVQnw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "C4E7OWSUB",
+    "sub_total": 1000000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-27T20:00:44.992954+00:00",
+    "updated_at": "2026-08-27T20:00:44.992954+00:00"
+  },
+  {
+    "id": "74a4f479-7f19-598f-84d1-9fb0bdd10428",
+    "invoice_date": "2026-08-14",
+    "invoice_number": "586304",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 2000000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 29330.0,
+        "sl": 68.18,
+        "tt": 2000000.0,
+        "dvt": "Lít",
+        "ten": "Dầu Điêzen 0,001S Mức 5"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNTg2MzA0fFhPNkpDNlRLV3w2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "XO6JC6TKW",
+    "sub_total": 2000000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-27T20:00:50.467275+00:00",
+    "updated_at": "2026-08-27T20:00:50.467275+00:00"
+  },
+  {
+    "id": "b2d096b0-4db3-5654-948e-e2ab6ac9cee9",
+    "invoice_date": "2026-08-14",
+    "invoice_number": "586919",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 700000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22110.0,
+        "sl": 31.65,
+        "tt": 700000.0,
+        "dvt": "Lít",
+        "ten": "Xăng E10 RON 95 Mức 3"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNTg2OTE5fDRURk5UREdST3w2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "4TFNTDGRO",
+    "sub_total": 700000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-27T20:00:51.459584+00:00",
+    "updated_at": "2026-08-27T20:00:51.459584+00:00"
+  },
+  {
+    "id": "80a92b43-9065-59e1-9f00-0fdb75432792",
+    "invoice_date": "2026-08-15",
+    "invoice_number": "589157",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 750037.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22110.0,
+        "sl": 33.92,
+        "tt": 750037.0,
+        "dvt": "Lít",
+        "ten": "Xăng E10 RON 95 Mức 3"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNTg5MTU3fEZHT0E3V1BLQ3w2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "FGOA7WPKC",
+    "sub_total": 750037.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-27T20:00:52.301814+00:00",
+    "updated_at": "2026-08-27T20:00:52.301814+00:00"
+  },
+  {
+    "id": "6d8f391e-6c80-5e92-a116-dafc0ab0513f",
+    "invoice_date": "2026-08-16",
+    "invoice_number": "590940",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 552750.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22110.0,
+        "sl": 25.0,
+        "tt": 552750.0,
+        "dvt": "Lít",
+        "ten": "Xăng E10 RON 95 Mức 3"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNTkwOTQwfERURjNUOUdDQXw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "DTF3T9GCA",
+    "sub_total": 552750.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-27T20:00:53.14918+00:00",
+    "updated_at": "2026-08-27T20:00:53.14918+00:00"
+  },
+  {
+    "id": "af8501ce-8cc7-548b-a82e-21b31f498d69",
+    "invoice_date": "2026-08-16",
+    "invoice_number": "590941",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 680750.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 27230.0,
+        "sl": 25.0,
+        "tt": 680750.0,
+        "dvt": "Lít",
+        "ten": "Dầu Điêzen 0,05S Mức 2"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNTkwOTQxfDdTWU1JQ0NMQ3w2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "7SYMICCLC",
+    "sub_total": 680750.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-27T20:00:55.111035+00:00",
+    "updated_at": "2026-08-27T20:00:55.111035+00:00"
+  },
+  {
+    "id": "3264af50-d377-55d6-8ba1-d34c958c88a6",
+    "invoice_date": "2026-08-16",
+    "invoice_number": "590942",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 680750.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 27230.0,
+        "sl": 25.0,
+        "tt": 680750.0,
+        "dvt": "Lít",
+        "ten": "Dầu Điêzen 0,05S Mức 2"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNTkwOTQyfDlYSURGSTlMRnw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "9XIDFI9LF",
+    "sub_total": 680750.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-27T20:00:57.911471+00:00",
+    "updated_at": "2026-08-27T20:00:57.911471+00:00"
+  },
+  {
+    "id": "c76f8ca2-878a-54a4-9217-621a5553f5a7",
+    "invoice_date": "2026-08-17",
+    "invoice_number": "592438",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 1000000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22110.0,
+        "sl": 45.23,
+        "tt": 1000000.0,
+        "dvt": "Lít",
+        "ten": "Xăng E10 RON 95 Mức 3"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNTkyNDM4fE5CWVJVTEJZRXw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "NBYRULBYE",
+    "sub_total": 1000000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-27T20:00:58.975776+00:00",
+    "updated_at": "2026-08-27T20:00:58.975776+00:00"
+  },
+  {
+    "id": "540d4404-a3e5-5cd0-aad2-14cea17b4af1",
+    "invoice_date": "2026-08-18",
+    "invoice_number": "595435",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 350000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22110.0,
+        "sl": 15.83,
+        "tt": 350000.0,
+        "dvt": "Lít",
+        "ten": "Xăng E10 RON 95 Mức 3"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNTk1NDM1fDVQSEI2VzRaVHw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "5PHB6W4ZT",
+    "sub_total": 350000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-27T20:01:00.082306+00:00",
+    "updated_at": "2026-08-27T20:01:00.082306+00:00"
+  },
+  {
+    "id": "d34d73a5-25a0-5a05-9a69-a3d92a1f8fe0",
+    "invoice_date": "2026-08-18",
+    "invoice_number": "596806",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 850063.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22110.0,
+        "sl": 38.45,
+        "tt": 850063.0,
+        "dvt": "Lít",
+        "ten": "Xăng E10 RON 95 Mức 3"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNTk2ODA2fElKRFhISVlJTXw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "IJDXHIYIM",
+    "sub_total": 850063.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-27T20:01:00.855255+00:00",
+    "updated_at": "2026-08-27T20:01:00.855255+00:00"
+  },
+  {
+    "id": "dc3d1f5b-6eca-5602-85a5-33781df9b570",
+    "invoice_date": "2026-08-19",
+    "invoice_number": "597763",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 2500000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 27230.0,
+        "sl": 91.81,
+        "tt": 2500000.0,
+        "dvt": "Lít",
+        "ten": "Dầu Điêzen 0,05S Mức 2"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNTk3NzYzfDQ2VFhUMldFRXw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "46TXT2WEE",
+    "sub_total": 2500000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-27T20:01:02.160884+00:00",
+    "updated_at": "2026-08-27T20:01:02.160884+00:00"
+  },
+  {
+    "id": "fd9cc9c5-89ce-5335-bb33-c770cd6ebbb4",
+    "invoice_date": "2026-08-19",
+    "invoice_number": "597876",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 680750.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 27230.0,
+        "sl": 25.0,
+        "tt": 680750.0,
+        "dvt": "Lít",
+        "ten": "Dầu Điêzen 0,05S Mức 2"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNTk3ODc2fFhHNlBHNEc3UXw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "XG6PG4G7Q",
+    "sub_total": 680750.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-27T20:01:02.971905+00:00",
+    "updated_at": "2026-08-27T20:01:02.971905+00:00"
+  },
+  {
+    "id": "9ab6e016-62b4-5b22-885b-ebc6f41dd93b",
+    "invoice_date": "2026-08-19",
+    "invoice_number": "598581",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 1000000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22110.0,
+        "sl": 45.22,
+        "tt": 1000000.0,
+        "dvt": "Lít",
+        "ten": "Xăng E10 RON 95 Mức 3"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNTk4NTgxfDVPNFcyNUwzVnw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "5O4W25L3V",
+    "sub_total": 1000000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-27T20:01:03.731899+00:00",
+    "updated_at": "2026-08-27T20:01:03.731899+00:00"
+  },
+  {
+    "id": "af6cfd8c-4c15-5443-8b23-a63267afc4a0",
+    "invoice_date": "2026-08-20",
+    "invoice_number": "599491",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 680750.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 27230.0,
+        "sl": 25.0,
+        "tt": 680750.0,
+        "dvt": "Lít",
+        "ten": "Dầu Điêzen 0,05S Mức 2"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNTk5NDkxfE1aNTZXUjJWTnw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "MZ56WR2VN",
+    "sub_total": 680750.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-27T20:01:04.599923+00:00",
+    "updated_at": "2026-08-27T20:01:04.599923+00:00"
+  },
+  {
+    "id": "7d48721e-50e5-5cb3-b814-ca9a245eb32d",
+    "invoice_date": "2026-08-20",
+    "invoice_number": "599492",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 110550.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22110.0,
+        "sl": 5.0,
+        "tt": 110550.0,
+        "dvt": "Lít",
+        "ten": "Xăng E10 RON 95 Mức 3"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNTk5NDkyfEM1WDlMVVBTUXw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "C5X9LUPSQ",
+    "sub_total": 110550.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-27T20:01:07.246082+00:00",
+    "updated_at": "2026-08-27T20:01:07.246082+00:00"
+  },
+  {
+    "id": "a66ddb75-c61f-5780-9586-63f1f2ae0763",
+    "invoice_date": "2026-08-20",
+    "invoice_number": "600815",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 800000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22110.0,
+        "sl": 36.18,
+        "tt": 800000.0,
+        "dvt": "Lít",
+        "ten": "Xăng E10 RON 95 Mức 3"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNjAwODE1fDlGVkFNTUhHV3w2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "9FVAMMHGW",
+    "sub_total": 800000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-27T20:01:08.049214+00:00",
+    "updated_at": "2026-08-27T20:01:08.049214+00:00"
+  },
+  {
+    "id": "2b4b21c7-e52b-5d27-9d52-bb64a6692e06",
+    "invoice_date": "2026-08-20",
+    "invoice_number": "601319",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 1050087.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22660.0,
+        "sl": 46.34,
+        "tt": 1050087.0,
+        "dvt": "Lít",
+        "ten": "Xăng E10 RON 95 Mức 3"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNjAxMzE5fEZBR1lESjJEV3w2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "FAGYDJ2DW",
+    "sub_total": 1050087.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-27T20:01:09.334627+00:00",
+    "updated_at": "2026-08-27T20:01:09.334627+00:00"
+  },
+  {
+    "id": "aa1bc20a-114a-5747-8cd7-bdd768ebbb60",
+    "invoice_date": "2026-08-21",
+    "invoice_number": "602040",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 800000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22660.0,
+        "sl": 35.3,
+        "tt": 800000.0,
+        "dvt": "Lít",
+        "ten": "Xăng E10 RON 95 Mức 3"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNjAyMDQwfEZSWVhKWEpVRXw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "FRYXJXJUE",
+    "sub_total": 800000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-27T20:01:10.119136+00:00",
+    "updated_at": "2026-08-27T20:01:10.119136+00:00"
+  },
+  {
+    "id": "70b92baa-0668-5403-bee3-31f35a63137b",
+    "invoice_date": "2026-08-21",
+    "invoice_number": "602938",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 339900.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22660.0,
+        "sl": 15.0,
+        "tt": 339900.0,
+        "dvt": "Lít",
+        "ten": "Xăng E10 RON 95 Mức 3"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNjAyOTM4fFFJN1lZMktSR3w2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "QI7YY2KRG",
+    "sub_total": 339900.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-27T20:01:11.41406+00:00",
+    "updated_at": "2026-08-27T20:01:11.41406+00:00"
+  },
+  {
+    "id": "5bddf10f-4fb7-5bd9-ac9b-c792d5b73b99",
+    "invoice_date": "2026-08-21",
+    "invoice_number": "602940",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 713500.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 28540.0,
+        "sl": 25.0,
+        "tt": 713500.0,
+        "dvt": "Lít",
+        "ten": "Dầu Điêzen 0,05S Mức 2"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNjAyOTQwfFBWSElZQUJKOXw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "PVHIYABJ9",
+    "sub_total": 713500.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-27T20:01:12.827922+00:00",
+    "updated_at": "2026-08-27T20:01:12.827922+00:00"
+  },
+  {
+    "id": "0b214688-e1a3-56cb-970e-02c2705a45ae",
+    "invoice_date": "2026-08-21",
+    "invoice_number": "604349",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 500000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22660.0,
+        "sl": 22.06,
+        "tt": 500000.0,
+        "dvt": "Lít",
+        "ten": "Xăng E10 RON 95 Mức 3"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNjA0MzQ5fDVLUThCSk41RHw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "5KQ8BJN5D",
+    "sub_total": 500000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-27T20:01:13.958263+00:00",
+    "updated_at": "2026-08-27T20:01:13.958263+00:00"
+  },
+  {
+    "id": "a48916e4-9bf1-5f72-ab54-45de7797153c",
+    "invoice_date": "2026-08-22",
+    "invoice_number": "606978",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 2000000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 28540.0,
+        "sl": 70.08,
+        "tt": 2000000.0,
+        "dvt": "Lít",
+        "ten": "Dầu Điêzen 0,05S Mức 2"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNjA2OTc4fEVMQ05PWkFBSnw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "ELCNOZAAJ",
+    "sub_total": 2000000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-27T20:01:16.074746+00:00",
+    "updated_at": "2026-08-27T20:01:16.074746+00:00"
+  },
+  {
+    "id": "9f26a4e8-7b7d-5d30-b9e3-4bf40f6e90b6",
+    "invoice_date": "2026-08-22",
+    "invoice_number": "607487",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 2100000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 28540.0,
+        "sl": 73.58,
+        "tt": 2100000.0,
+        "dvt": "Lít",
+        "ten": "Dầu Điêzen 0,05S Mức 2"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNjA3NDg3fFg2TkUzNjg4S3w2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "X6NE3688K",
+    "sub_total": 2100000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-27T20:01:16.846017+00:00",
+    "updated_at": "2026-08-27T20:01:16.846017+00:00"
+  },
+  {
+    "id": "c0204697-046f-5b1d-a6d7-3d62ac2bd4c7",
+    "invoice_date": "2026-08-23",
+    "invoice_number": "607841",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 2500000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 28540.0,
+        "sl": 87.59,
+        "tt": 2500000.0,
+        "dvt": "Lít",
+        "ten": "Dầu Điêzen 0,05S Mức 2"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNjA3ODQxfFc5OEhCTEFJQXw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "W98HBLAIA",
+    "sub_total": 2500000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-27T20:01:17.559167+00:00",
+    "updated_at": "2026-08-27T20:01:17.559167+00:00"
+  },
+  {
+    "id": "4128e7a2-3b87-5fbd-88aa-59d1326855c4",
+    "invoice_date": "2026-08-23",
+    "invoice_number": "608028",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 1569700.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 28540.0,
+        "sl": 55.0,
+        "tt": 1569700.0,
+        "dvt": "Lít",
+        "ten": "Dầu Điêzen 0,05S Mức 2"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNjA4MDI4fFQ1WVNVWldVN3w2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "T5YSUZWU7",
+    "sub_total": 1569700.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-27T20:01:18.463464+00:00",
+    "updated_at": "2026-08-27T20:01:18.463464+00:00"
+  },
+  {
+    "id": "326e289d-cfbf-531b-a9c1-c2a39572fdff",
+    "invoice_date": "2026-08-24",
+    "invoice_number": "611527",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 2200135.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 30640.0,
+        "sl": 71.81,
+        "tt": 2200135.0,
+        "dvt": "Lít",
+        "ten": "Dầu Điêzen 0,001S Mức 5"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNjExNTI3fFZKSDJQT0czRHw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "VJH2POG3D",
+    "sub_total": 2200135.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-27T20:01:19.342673+00:00",
+    "updated_at": "2026-08-27T20:01:19.342673+00:00"
+  },
+  {
+    "id": "908035db-8839-5b35-a2b4-ceef162bf296",
+    "invoice_date": "2026-08-27",
+    "invoice_number": "618627",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CÔNG TY DỊCH VỤ MOBIFONE KHU VỰC 8-CHI NHÁNH TỔNG CÔNG TY VIỄN THÔNG MOBIFONE",
+    "buyer_mst": "0100686209-129",
+    "total_amount": 1000000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22660.0,
+        "sl": 44.13,
+        "tt": 1000000.0,
+        "dvt": "Lít",
+        "ten": "Xăng E10 RON 95 Mức 3"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNjE4NjI3fE9VN1RWUlFZOHw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "OU7TVRQY8",
+    "sub_total": 1000000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-28T07:35:44.673649+00:00",
+    "updated_at": "2026-08-28T07:35:44.673649+00:00"
+  },
+  {
+    "id": "de3fa96e-9f9c-5d6c-88c5-215fce272f70",
+    "invoice_date": "2026-08-26",
+    "invoice_number": "617102",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CÔNG TY DỊCH VỤ MOBIFONE KHU VỰC 8-CHI NHÁNH TỔNG CÔNG TY VIỄN THÔNG MOBIFONE",
+    "buyer_mst": "0100686209-129",
+    "total_amount": 1660000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22660.0,
+        "sl": 73.26,
+        "tt": 1660000.0,
+        "dvt": "Lít",
+        "ten": "Xăng E10 RON 95 Mức 3"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNjE3MTAyfDZBUlM0NTZJS3w2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "6ARS456IK",
+    "sub_total": 1660000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-28T07:35:46.485115+00:00",
+    "updated_at": "2026-08-28T07:35:46.485115+00:00"
+  },
+  {
+    "id": "0faafd6f-4f30-5d98-87b4-27dff8cd6691",
+    "invoice_date": "2026-08-25",
+    "invoice_number": "614396",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CÔNG TY DỊCH VỤ MOBIFONE KHU VỰC 8-CHI NHÁNH TỔNG CÔNG TY VIỄN THÔNG MOBIFONE",
+    "buyer_mst": "0100686209-129",
+    "total_amount": 1450058.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22660.0,
+        "sl": 63.99,
+        "tt": 1450058.0,
+        "dvt": "Lít",
+        "ten": "Xăng E10 RON 95 Mức 3"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNjE0Mzk2fDZTRFZJVTY3Rnw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "6SDVIU67F",
+    "sub_total": 1450058.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-28T07:35:47.34922+00:00",
+    "updated_at": "2026-08-28T07:35:47.34922+00:00"
+  },
+  {
+    "id": "772deb10-2a3d-520f-931d-b823d86a050e",
+    "invoice_date": "2026-08-25",
+    "invoice_number": "613760",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CÔNG TY DỊCH VỤ MOBIFONE KHU VỰC 8-CHI NHÁNH TỔNG CÔNG TY VIỄN THÔNG MOBIFONE",
+    "buyer_mst": "0100686209-129",
+    "total_amount": 2000000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 30640.0,
+        "sl": 65.27,
+        "tt": 2000000.0,
+        "dvt": "Lít",
+        "ten": "Dầu Điêzen 0,001S Mức 5"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNjEzNzYwfE8zV05EN1NZN3w2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "O3WND7SY7",
+    "sub_total": 2000000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-28T07:35:48.176851+00:00",
+    "updated_at": "2026-08-28T07:35:48.176851+00:00"
+  },
+  {
+    "id": "ea999823-01ad-571c-83ca-9c1038d4de59",
+    "invoice_date": "2026-08-25",
+    "invoice_number": "613759",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CÔNG TY DỊCH VỤ MOBIFONE KHU VỰC 8-CHI NHÁNH TỔNG CÔNG TY VIỄN THÔNG MOBIFONE",
+    "buyer_mst": "0100686209-129",
+    "total_amount": 800000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22660.0,
+        "sl": 35.3,
+        "tt": 800000.0,
+        "dvt": "Lít",
+        "ten": "Xăng E10 RON 95 Mức 3"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNjEzNzU5fFNPQUtGRUdOQnw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "SOAKFEGNB",
+    "sub_total": 800000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-28T07:35:49.031105+00:00",
+    "updated_at": "2026-08-28T07:35:49.031105+00:00"
+  },
+  {
+    "id": "5fb75268-9df5-50d8-8471-4992c6622213",
+    "invoice_date": "2026-08-24",
+    "invoice_number": "611529",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CÔNG TY DỊCH VỤ MOBIFONE KHU VỰC 8-CHI NHÁNH TỔNG CÔNG TY VIỄN THÔNG MOBIFONE",
+    "buyer_mst": "0100686209-129",
+    "total_amount": 2200062.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 28540.0,
+        "sl": 77.09,
+        "tt": 2200062.0,
+        "dvt": "Lít",
+        "ten": "Dầu Điêzen 0,05S Mức 2"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNjExNTI5fFRFMjZBOE5UVXw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "TE26A8NTU",
+    "sub_total": 2200062.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-28T07:35:50.033417+00:00",
+    "updated_at": "2026-08-28T07:35:50.033417+00:00"
+  },
+  {
+    "id": "8b820bb1-8e96-5a0a-ab47-cb0eb01e39ef",
+    "invoice_date": "2026-08-23",
+    "invoice_number": "609292",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CÔNG TY DỊCH VỤ MOBIFONE KHU VỰC 8-CHI NHÁNH TỔNG CÔNG TY VIỄN THÔNG MOBIFONE",
+    "buyer_mst": "0100686209-129",
+    "total_amount": 2000000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 28540.0,
+        "sl": 70.07,
+        "tt": 2000000.0,
+        "dvt": "Lít",
+        "ten": "Dầu Điêzen 0,05S Mức 2"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNjA5MjkyfFlFS05RT1EyRXw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "YEKNQOQ2E",
+    "sub_total": 2000000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-28T07:35:50.883667+00:00",
+    "updated_at": "2026-08-28T07:35:50.883667+00:00"
+  },
+  {
+    "id": "9ec7e7ca-3e52-51c6-a071-50ea4fc27214",
+    "invoice_date": "2026-08-22",
+    "invoice_number": "606877",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CÔNG TY DỊCH VỤ MOBIFONE KHU VỰC 8-CHI NHÁNH TỔNG CÔNG TY VIỄN THÔNG MOBIFONE",
+    "buyer_mst": "0100686209-129",
+    "total_amount": 1000000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22660.0,
+        "sl": 44.13,
+        "tt": 1000000.0,
+        "dvt": "Lít",
+        "ten": "Xăng E10 RON 95 Mức 3"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNjA2ODc3fFEzOUgyR1JUQ3w2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "Q39H2GRTC",
+    "sub_total": 1000000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-28T07:35:51.628287+00:00",
+    "updated_at": "2026-08-28T07:35:51.628287+00:00"
+  },
+  {
+    "id": "20f1a4a9-3b6b-5fc7-a7c8-f8ae11500c61",
+    "invoice_date": "2026-08-22",
+    "invoice_number": "606852",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CÔNG TY DỊCH VỤ MOBIFONE KHU VỰC 8-CHI NHÁNH TỔNG CÔNG TY VIỄN THÔNG MOBIFONE",
+    "buyer_mst": "0100686209-129",
+    "total_amount": 3000000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 28540.0,
+        "sl": 105.11,
+        "tt": 3000000.0,
+        "dvt": "Lít",
+        "ten": "Dầu Điêzen 0,05S Mức 2"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNjA2ODUyfDlGVFRaTlVIWnw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "9FTTZNUHZ",
+    "sub_total": 3000000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-28T07:35:52.378906+00:00",
+    "updated_at": "2026-08-28T07:35:52.378906+00:00"
+  },
+  {
+    "id": "e537ae9f-4356-5559-ba0c-063dd1f51aad",
+    "invoice_date": "2026-08-21",
+    "invoice_number": "603565",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CÔNG TY DỊCH VỤ MOBIFONE KHU VỰC 8-CHI NHÁNH TỔNG CÔNG TY VIỄN THÔNG MOBIFONE",
+    "buyer_mst": "0100686209-129",
+    "total_amount": 700103.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22660.0,
+        "sl": 30.9,
+        "tt": 700103.0,
+        "dvt": "Lít",
+        "ten": "Xăng E10 RON 95 Mức 3"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNjAzNTY1fDdEMkhYQ0hLTHw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "7D2HXCHKL",
+    "sub_total": 700103.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-28T07:35:53.275746+00:00",
+    "updated_at": "2026-08-28T07:35:53.275746+00:00"
+  },
+  {
+    "id": "4ec8e754-0bc2-5ae0-9c9b-1115c85353ad",
+    "invoice_date": "2026-08-18",
+    "invoice_number": "596943",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CÔNG TY DỊCH VỤ MOBIFONE KHU VỰC 8-CHI NHÁNH TỔNG CÔNG TY VIỄN THÔNG MOBIFONE",
+    "buyer_mst": "0100686209-129",
+    "total_amount": 2500095.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 27230.0,
+        "sl": 91.81,
+        "tt": 2500095.0,
+        "dvt": "Lít",
+        "ten": "Dầu Điêzen 0,05S Mức 2"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNTk2OTQzfFpXWjRHRVUzNnw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "ZWZ4GEU36",
+    "sub_total": 2500095.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-28T07:35:54.045828+00:00",
+    "updated_at": "2026-08-28T07:35:54.045828+00:00"
+  },
+  {
+    "id": "60a20072-d628-55a6-a15d-2888598f89bd",
+    "invoice_date": "2026-08-18",
+    "invoice_number": "596812",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CÔNG TY DỊCH VỤ MOBIFONE KHU VỰC 8-CHI NHÁNH TỔNG CÔNG TY VIỄN THÔNG MOBIFONE",
+    "buyer_mst": "0100686209-129",
+    "total_amount": 700000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22110.0,
+        "sl": 31.66,
+        "tt": 700000.0,
+        "dvt": "Lít",
+        "ten": "Xăng E10 RON 95 Mức 3"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNTk2ODEyfFpSUEdHRDZCUHw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "ZRPGGD6BP",
+    "sub_total": 700000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-28T07:35:54.880236+00:00",
+    "updated_at": "2026-08-28T07:35:54.880236+00:00"
+  },
+  {
+    "id": "a5b1ee77-eb31-5635-9ebd-a77cd1454fb1",
+    "invoice_date": "2026-08-17",
+    "invoice_number": "593172",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CÔNG TY DỊCH VỤ MOBIFONE KHU VỰC 8-CHI NHÁNH TỔNG CÔNG TY VIỄN THÔNG MOBIFONE",
+    "buyer_mst": "0100686209-129",
+    "total_amount": 800000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22110.0,
+        "sl": 36.18,
+        "tt": 800000.0,
+        "dvt": "Lít",
+        "ten": "Xăng E10 RON 95 Mức 3"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNTkzMTcyfFMzSFQ1WTNSRXw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "S3HT5Y3RE",
+    "sub_total": 800000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-28T07:35:55.697763+00:00",
+    "updated_at": "2026-08-28T07:35:55.697763+00:00"
+  },
+  {
+    "id": "dc334149-ba5d-5d2d-8843-1a331385fcf4",
+    "invoice_date": "2026-08-16",
+    "invoice_number": "591467",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CÔNG TY DỊCH VỤ MOBIFONE KHU VỰC 8-CHI NHÁNH TỔNG CÔNG TY VIỄN THÔNG MOBIFONE",
+    "buyer_mst": "0100686209-129",
+    "total_amount": 1320077.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22110.0,
+        "sl": 59.71,
+        "tt": 1320077.0,
+        "dvt": "Lít",
+        "ten": "Xăng E10 RON 95 Mức 3"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNTkxNDY3fDZPRE8zMkNHWnw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "6ODO32CGZ",
+    "sub_total": 1320077.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-28T07:35:56.592452+00:00",
+    "updated_at": "2026-08-28T07:35:56.592452+00:00"
+  },
+  {
+    "id": "baf3e6b6-7535-5ec9-8e6c-33d6a811799e",
+    "invoice_date": "2026-08-14",
+    "invoice_number": "586863",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CÔNG TY DỊCH VỤ MOBIFONE KHU VỰC 8-CHI NHÁNH TỔNG CÔNG TY VIỄN THÔNG MOBIFONE",
+    "buyer_mst": "0100686209-129",
+    "total_amount": 900000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22110.0,
+        "sl": 40.71,
+        "tt": 900000.0,
+        "dvt": "Lít",
+        "ten": "Xăng E10 RON 95 Mức 3"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNTg2ODYzfEpKWDhCUE9VUXw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "JJX8BPOUQ",
+    "sub_total": 900000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-28T07:35:57.446059+00:00",
+    "updated_at": "2026-08-28T07:35:57.446059+00:00"
+  },
+  {
+    "id": "a11a2cc0-76ce-5de3-8b2e-abfc019d4ce8",
+    "invoice_date": "2026-08-14",
+    "invoice_number": "586305",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CÔNG TY DỊCH VỤ MOBIFONE KHU VỰC 8-CHI NHÁNH TỔNG CÔNG TY VIỄN THÔNG MOBIFONE",
+    "buyer_mst": "0100686209-129",
+    "total_amount": 500000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22110.0,
+        "sl": 22.61,
+        "tt": 500000.0,
+        "dvt": "Lít",
+        "ten": "Xăng E10 RON 95 Mức 3"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNTg2MzA1fE5FRkRJVVdIN3w2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "NEFDIUWH7",
+    "sub_total": 500000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-28T07:35:58.327215+00:00",
+    "updated_at": "2026-08-28T07:35:58.327215+00:00"
+  },
+  {
+    "id": "40927ac4-472b-5de2-83e0-7396e2d47471",
+    "invoice_date": "2026-08-14",
+    "invoice_number": "585859",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CÔNG TY DỊCH VỤ MOBIFONE KHU VỰC 8-CHI NHÁNH TỔNG CÔNG TY VIỄN THÔNG MOBIFONE",
+    "buyer_mst": "0100686209-129",
+    "total_amount": 2000000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 29330.0,
+        "sl": 68.19,
+        "tt": 2000000.0,
+        "dvt": "Lít",
+        "ten": "Dầu Điêzen 0,001S Mức 5"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNTg1ODU5fE1ST1lMNEpMWHw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "MROYL4JLX",
+    "sub_total": 2000000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-28T07:35:59.322455+00:00",
+    "updated_at": "2026-08-28T07:35:59.322455+00:00"
+  },
+  {
+    "id": "98768463-b737-57a0-8bc7-8544666ce4db",
+    "invoice_date": "2026-08-12",
+    "invoice_number": "582061",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CÔNG TY DỊCH VỤ MOBIFONE KHU VỰC 8-CHI NHÁNH TỔNG CÔNG TY VIỄN THÔNG MOBIFONE",
+    "buyer_mst": "0100686209-129",
+    "total_amount": 500000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22320.0,
+        "sl": 22.4,
+        "tt": 500000.0,
+        "dvt": "Lít",
+        "ten": "Xăng E10 RON 95 Mức 3"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNTgyMDYxfERDQlJUVEQ3Rnw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "DCBRTTD7F",
+    "sub_total": 500000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-28T07:36:00.260835+00:00",
+    "updated_at": "2026-08-28T07:36:00.260835+00:00"
+  },
+  {
+    "id": "d5f8e71d-4a60-5f01-919b-be3722b2cd2e",
+    "invoice_date": "2026-08-12",
+    "invoice_number": "581998",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CÔNG TY DỊCH VỤ MOBIFONE KHU VỰC 8-CHI NHÁNH TỔNG CÔNG TY VIỄN THÔNG MOBIFONE",
+    "buyer_mst": "0100686209-129",
+    "total_amount": 3400000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 27540.0,
+        "sl": 123.45,
+        "tt": 3400000.0,
+        "dvt": "Lít",
+        "ten": "Dầu Điêzen 0,05S Mức 2"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNTgxOTk4fEpHM1BETzRKUnw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "JG3PDO4JR",
+    "sub_total": 3400000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-28T07:36:01.445631+00:00",
+    "updated_at": "2026-08-28T07:36:01.445631+00:00"
+  },
+  {
+    "id": "a407a941-f0ba-5da5-8987-834bf0c5607b",
+    "invoice_date": "2026-08-29",
+    "invoice_number": "190307",
+    "seller_name": "CÔNG TY CỔ PHẦN XĂNG DẦU TÍN NGHĨA",
+    "seller_mst": "3601038204",
+    "buyer_name": "CHI NHÁNH MOBIFONE",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 1480000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22600.0,
+        "sl": 65.485,
+        "tt": 1480000.0,
+        "ten": "1 Xăng E10 RON 95 Mức 3 Lít 65,485 22.600 1.480.000"
+      }
+    ],
+    "source": "Gmail PDF từ hoadondientu@viettel.com.vn",
+    "status": "Approved",
+    "invoice_url": "https://vinvoice.viettel.vn/utilities/invoice-search",
+    "kh_hd": "1K26TNC",
+    "ma_tra_cuu": "N8KGL7JD44O46N9",
+    "sub_total": 1480000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-29T13:45:38.193798+00:00",
+    "updated_at": "2026-08-29T13:45:38.193798+00:00"
+  },
+  {
+    "id": "a7b35453-739d-59a3-a27a-839c8843bca7",
+    "invoice_date": "2026-08-28",
+    "invoice_number": "621968",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 2000000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 28080.0,
+        "sl": 71.23,
+        "tt": 2000000.0,
+        "dvt": "Lít",
+        "ten": "Dầu Điêzen 0,05S Mức 2"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNjIxOTY4fFhFUlBFNVRVQ3w2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "XERPE5TUC",
+    "sub_total": 2000000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-29T13:45:42.668687+00:00",
+    "updated_at": "2026-08-29T13:45:42.668687+00:00"
+  },
+  {
+    "id": "d88b7d6c-2991-5fb9-9e93-c73f64c0888a",
+    "invoice_date": "2026-08-28",
+    "invoice_number": "621240",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "MOBIFONE ĐỒNG NAI- CHI NHÁNH TỔNG CÔNG TY VIỄN THÔNG MOBIFONE",
+    "buyer_mst": "0100686209-129",
+    "total_amount": 2000000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 28080.0,
+        "sl": 71.23,
+        "tt": 2000000.0,
+        "dvt": "Lít",
+        "ten": "Dầu Điêzen 0,05S Mức 2"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNjIxMjQwfDk4NzZJQU1MVXw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "9876IAMLU",
+    "sub_total": 2000000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-29T13:45:43.038374+00:00",
+    "updated_at": "2026-08-29T13:45:43.038374+00:00"
+  },
+  {
+    "id": "b3a4db49-43d9-51d2-9683-5c3c405ade23",
+    "invoice_date": "2026-08-28",
+    "invoice_number": "621108",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 1770219.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 28080.0,
+        "sl": 63.04,
+        "tt": 1770219.0,
+        "dvt": "Lít",
+        "ten": "Dầu Điêzen 0,05S Mức 2"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNjIxMTA4fEU1VjRHSjlQNXw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "E5V4GJ9P5",
+    "sub_total": 1770219.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-29T13:45:43.767834+00:00",
+    "updated_at": "2026-08-29T13:45:43.767834+00:00"
+  },
+  {
+    "id": "a4b968cd-7836-540a-a959-c03d12033117",
+    "invoice_date": "2026-08-27",
+    "invoice_number": "618520",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 2600000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 28540.0,
+        "sl": 91.1,
+        "tt": 2600000.0,
+        "dvt": "Lít",
+        "ten": "Dầu Điêzen 0,05S Mức 2"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNjE4NTIwfEM1SkM5VTlLVnw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "C5JC9U9KV",
+    "sub_total": 2600000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-29T13:45:44.495781+00:00",
+    "updated_at": "2026-08-29T13:45:44.495781+00:00"
+  },
+  {
+    "id": "64182a93-9b3d-5cc5-92b4-c9cabcfc0162",
+    "invoice_date": "2026-08-27",
+    "invoice_number": "618517",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 750000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22660.0,
+        "sl": 33.1,
+        "tt": 750000.0,
+        "dvt": "Lít",
+        "ten": "Xăng E10 RON 95 Mức 3"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNjE4NTE3fEJJMlhJOVQ2Snw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "BI2XI9T6J",
+    "sub_total": 750000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-29T13:45:44.958613+00:00",
+    "updated_at": "2026-08-29T13:45:44.958613+00:00"
+  },
+  {
+    "id": "e966e90f-baef-562a-ac16-f39de0953c31",
+    "invoice_date": "2026-08-29",
+    "invoice_number": "190312",
+    "seller_name": "CÔNG TY CỔ PHẦN XĂNG DẦU TÍN NGHĨA",
+    "seller_mst": "3601038204",
+    "buyer_name": "CHI NHÁNH MOBIFONE",
+    "buyer_mst": "0100686209-129",
+    "total_amount": 1500000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 28080.0,
+        "sl": 53.417,
+        "tt": 1500000.0,
+        "ten": "1 Dầu Điêzen 0,05S Mức 2 Lít 53,417 28.080 1.500.000"
+      }
+    ],
+    "source": "Gmail PDF từ Tran Hai <tranhai089@icloud.com>",
+    "status": "Approved",
+    "invoice_url": "https://vinvoice.viettel.vn/utilities/invoice-search",
+    "kh_hd": "1K26TNC",
+    "ma_tra_cuu": "0EUIUSX58ICQ6RM",
+    "sub_total": 1500000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-30T09:59:44.993042+00:00",
+    "updated_at": "2026-08-30T09:59:44.993042+00:00"
+  },
+  {
+    "id": "9074c969-cbbf-5572-a790-ead9b8956821",
+    "invoice_date": "2026-08-30",
+    "invoice_number": "627559",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "MOBIFONE ĐỒNG NAI- CHI NHÁNH TỔNG CÔNG TY VIỄN THÔNG MOBIFONE",
+    "buyer_mst": "0100686209-129",
+    "total_amount": 2000000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 29880.0,
+        "sl": 66.93,
+        "tt": 2000000.0,
+        "dvt": "Lít",
+        "ten": "Dầu Điêzen 0,001S Mức 5"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNjI3NTU5fE1DVUszOFdKN3w2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "MCUK38WJ7",
+    "sub_total": 2000000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-30T20:00:59.73938+00:00",
+    "updated_at": "2026-08-30T20:00:59.73938+00:00"
+  },
+  {
+    "id": "b8ebb24e-72ef-5a6e-8b72-363b67d483ed",
+    "invoice_date": "2026-08-30",
+    "invoice_number": "627024",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "MOBIFONE ĐỒNG NAI- CHI NHÁNH TỔNG CÔNG TY VIỄN THÔNG MOBIFONE",
+    "buyer_mst": "0100686209-129",
+    "total_amount": 2000000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 29880.0,
+        "sl": 66.93,
+        "tt": 2000000.0,
+        "dvt": "Lít",
+        "ten": "Dầu Điêzen 0,001S Mức 5"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNjI3MDI0fElBNUFWNThDU3w2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "IA5AV58CS",
+    "sub_total": 2000000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-30T20:01:00.567092+00:00",
+    "updated_at": "2026-08-30T20:01:00.567092+00:00"
+  },
+  {
+    "id": "711eafce-f652-563c-a32e-4c65baf96942",
+    "invoice_date": "2026-08-29",
+    "invoice_number": "625217",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "MOBIFONE ĐỒNG NAI- CHI NHÁNH TỔNG CÔNG TY VIỄN THÔNG MOBIFONE",
+    "buyer_mst": "0100686209-129",
+    "total_amount": 4000136.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 28080.0,
+        "sl": 142.46,
+        "tt": 4000136.0,
+        "dvt": "Lít",
+        "ten": "Dầu Điêzen 0,05S Mức 2"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNjI1MjE3fEU2M1Y3N1NHSnw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "E63V77SGJ",
+    "sub_total": 4000136.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-30T20:01:03.8598+00:00",
+    "updated_at": "2026-08-30T20:01:03.8598+00:00"
+  },
+  {
+    "id": "0d1085cf-3ad5-59c4-b0e0-2ac2574ed443",
+    "invoice_date": "2026-08-30",
+    "invoice_number": "191123",
+    "seller_name": "CÔNG TY CỔ PHẦN XĂNG DẦU TÍN NGHĨA",
+    "seller_mst": "3601038204",
+    "buyer_name": "CHI NHÁNH MOBIFONE",
+    "buyer_mst": "0100686209-129",
+    "total_amount": 1000000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 28080.0,
+        "sl": 35.612,
+        "tt": 1000000.0,
+        "ten": "1 Dầu Điêzen 0,05S Mức 2 Lít 35,612 28.080 1.000.000"
+      }
+    ],
+    "source": "Gmail PDF từ hoadondientu@viettel.com.vn",
+    "status": "Approved",
+    "invoice_url": "https://vinvoice.viettel.vn/utilities/invoice-search",
+    "kh_hd": "1K26TNC",
+    "ma_tra_cuu": "MNUVXMY0G55S0CY",
+    "sub_total": 1000000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-30T20:01:04.220608+00:00",
+    "updated_at": "2026-08-30T20:01:04.220608+00:00"
+  },
+  {
+    "id": "7bd5c243-0025-563f-b74e-f83ffea47edb",
+    "invoice_date": "2026-08-30",
+    "invoice_number": "191122",
+    "seller_name": "CÔNG TY CỔ PHẦN XĂNG DẦU TÍN NGHĨA",
+    "seller_mst": "3601038204",
+    "buyer_name": "CHI NHÁNH MOBIFONE",
+    "buyer_mst": "0100686209-129",
+    "total_amount": 1000000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 28080.0,
+        "sl": 35.612,
+        "tt": 1000000.0,
+        "ten": "1 Dầu Điêzen 0,05S Mức 2 Lít 35,612 28.080 1.000.000"
+      }
+    ],
+    "source": "Gmail PDF từ hoadondientu@viettel.com.vn",
+    "status": "Approved",
+    "invoice_url": "https://vinvoice.viettel.vn/utilities/invoice-search",
+    "kh_hd": "1K26TNC",
+    "ma_tra_cuu": "F5NHX1PNHQ8DBAI",
+    "sub_total": 1000000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-30T20:01:04.58469+00:00",
+    "updated_at": "2026-08-30T20:01:04.58469+00:00"
+  },
+  {
+    "id": "3285b0ed-b244-57b3-8ee7-6328137f5589",
+    "invoice_date": "2026-08-31",
+    "invoice_number": "191836",
+    "seller_name": "CÔNG TY CỔ PHẦN XĂNG DẦU TÍN NGHĨA",
+    "seller_mst": "3601038204",
+    "buyer_name": "CHI NHÁNH MOBIFONE",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 1950000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 29880.0,
+        "sl": 65.26,
+        "tt": 1950000.0,
+        "ten": "1 Dầu Điêzen 0,001S Mức 5 Lít 65,26 29.880 1.950.000"
+      }
+    ],
+    "source": "Gmail PDF từ hoadondientu@viettel.com.vn",
+    "status": "Approved",
+    "invoice_url": "https://vinvoice.viettel.vn/utilities/invoice-search",
+    "kh_hd": "1K26TNC",
+    "ma_tra_cuu": "N2UW98ZBF8445GF",
+    "sub_total": 1950000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-31T20:00:33.112573+00:00",
+    "updated_at": "2026-08-31T20:00:33.112573+00:00"
+  },
+  {
+    "id": "d9ea655c-3448-5dd5-93bb-3ae2d79a98d4",
+    "invoice_date": "2026-08-31",
+    "invoice_number": "191835",
+    "seller_name": "CÔNG TY CỔ PHẦN XĂNG DẦU TÍN NGHĨA",
+    "seller_mst": "3601038204",
+    "buyer_name": "CHI NHÁNH MOBIFONE",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 1356000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22600.0,
+        "sl": 60.0,
+        "tt": 1356000.0,
+        "ten": "1 Xăng E10 RON 95 Mức 3 Lít 60 22.600 1.356.000"
+      }
+    ],
+    "source": "Gmail PDF từ hoadondientu@viettel.com.vn",
+    "status": "Approved",
+    "invoice_url": "https://vinvoice.viettel.vn/utilities/invoice-search",
+    "kh_hd": "1K26TNC",
+    "ma_tra_cuu": "7CAOC064XIZ124Z",
+    "sub_total": 1356000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-31T20:00:33.500629+00:00",
+    "updated_at": "2026-08-31T20:00:33.500629+00:00"
+  },
+  {
+    "id": "2df89980-4bd3-516b-b85f-f9c5ffbfb24f",
+    "invoice_date": "2026-08-31",
+    "invoice_number": "191394",
+    "seller_name": "CÔNG TY CỔ PHẦN XĂNG DẦU TÍN NGHĨA",
+    "seller_mst": "3601038204",
+    "buyer_name": "CHI NHÁNH MOBIFONE",
+    "buyer_mst": "0100686209-129",
+    "total_amount": 1450000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 28080.0,
+        "sl": 51.637,
+        "tt": 1450000.0,
+        "ten": "1 Dầu Điêzen 0,05S Mức 2 Lít 51,637 28.080 1.450.000"
+      }
+    ],
+    "source": "Gmail PDF từ hoadondientu@viettel.com.vn",
+    "status": "Approved",
+    "invoice_url": "https://vinvoice.viettel.vn/utilities/invoice-search",
+    "kh_hd": "1K26TNC",
+    "ma_tra_cuu": "5CN8R16AKCL6YDU",
+    "sub_total": 1450000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-08-31T20:00:34.285892+00:00",
+    "updated_at": "2026-08-31T20:00:34.285892+00:00"
+  },
+  {
+    "id": "6ee2d10c-fee3-59f0-a444-06e03a672f95",
+    "invoice_date": "2026-08-31",
+    "invoice_number": "630654",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 701526.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22600.0,
+        "sl": 31.04,
+        "tt": 701526.0,
+        "dvt": "Lít",
+        "ten": "Xăng E10 RON 95 Mức 3"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNjMwNjU0fDNTQVZTRFFNSnw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "3SAVSDQMJ",
+    "sub_total": 701526.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-09-02T11:39:28.167026+00:00",
+    "updated_at": "2026-09-02T11:39:28.167026+00:00"
+  },
+  {
+    "id": "e3a8830a-f9b5-5816-b72b-20136de7866c",
+    "invoice_date": "2026-08-31",
+    "invoice_number": "630121",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 1100000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22600.0,
+        "sl": 48.67,
+        "tt": 1100000.0,
+        "dvt": "Lít",
+        "ten": "Xăng E10 RON 95 Mức 3"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNjMwMTIxfEVYU0o1Vzc5N3w2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "EXSJ5W797",
+    "sub_total": 1100000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-09-02T11:39:29.170439+00:00",
+    "updated_at": "2026-09-02T11:39:29.170439+00:00"
+  },
+  {
+    "id": "68d80d59-d0a8-53b6-9efb-3ab63c8fb83e",
+    "invoice_date": "2026-08-31",
+    "invoice_number": "629836",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "MOBIFONE ĐỒNG NAI- CHI NHÁNH TỔNG CÔNG TY VIỄN THÔNG MOBIFONE",
+    "buyer_mst": "0100686209-129",
+    "total_amount": 2000000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 28080.0,
+        "sl": 71.22,
+        "tt": 2000000.0,
+        "dvt": "Lít",
+        "ten": "Dầu Điêzen 0,05S Mức 2"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNjI5ODM2fFA0NVdZUjQ2QXw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "P45WYR46A",
+    "sub_total": 2000000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-09-02T11:39:31.235769+00:00",
+    "updated_at": "2026-09-02T11:39:31.235769+00:00"
+  },
+  {
+    "id": "dc63e96a-9098-5448-9e9b-16809d527ec0",
+    "invoice_date": "2026-08-31",
+    "invoice_number": "629141",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 2000000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 29880.0,
+        "sl": 66.93,
+        "tt": 2000000.0,
+        "dvt": "Lít",
+        "ten": "Dầu Điêzen 0,001S Mức 5"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNjI5MTQxfFhQUThaRk45SXw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "XPQ8ZFN9I",
+    "sub_total": 2000000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-09-02T11:39:34.990828+00:00",
+    "updated_at": "2026-09-02T11:39:34.990828+00:00"
+  },
+  {
+    "id": "1024d11a-2ece-5350-bf55-fa68c3a2c829",
+    "invoice_date": "2026-08-31",
+    "invoice_number": "628523",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 700012.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22600.0,
+        "sl": 30.97,
+        "tt": 700012.0,
+        "dvt": "Lít",
+        "ten": "Xăng E10 RON 95 Mức 3"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNjI4NTIzfFpJT1JHRko0UHw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "ZIORGFJ4P",
+    "sub_total": 700012.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-09-02T11:39:35.838812+00:00",
+    "updated_at": "2026-09-02T11:39:35.838812+00:00"
+  },
+  {
+    "id": "3b48c5b5-6115-5798-91ce-40293579f4e5",
+    "invoice_date": "2026-08-31",
+    "invoice_number": "628521",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "MOBIFONE ĐỒNG NAI- CHI NHÁNH TỔNG CÔNG TY VIỄN THÔNG MOBIFONE",
+    "buyer_mst": "0100686209-129",
+    "total_amount": 2000000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 28080.0,
+        "sl": 71.22,
+        "tt": 2000000.0,
+        "dvt": "Lít",
+        "ten": "Dầu Điêzen 0,05S Mức 2"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNjI4NTIxfEdTUVhBQ0xKQnw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "GSQXACLJB",
+    "sub_total": 2000000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-09-02T11:39:36.669856+00:00",
+    "updated_at": "2026-09-02T11:39:36.669856+00:00"
+  },
+  {
+    "id": "df3564e4-e44f-58cb-bdee-28a875e092eb",
+    "invoice_date": "2026-08-30",
+    "invoice_number": "626732",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 1400000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 29880.0,
+        "sl": 46.85,
+        "tt": 1400000.0,
+        "dvt": "Lít",
+        "ten": "Dầu Điêzen 0,001S Mức 5"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNjI2NzMyfFZRSVMzQkJYNXw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "VQIS3BBX5",
+    "sub_total": 1400000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-09-02T11:39:38.012863+00:00",
+    "updated_at": "2026-09-02T11:39:38.012863+00:00"
+  },
+  {
+    "id": "667d7abc-7de2-5478-aff9-a04e323190a1",
+    "invoice_date": "2026-08-29",
+    "invoice_number": "625216",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 2000000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 28080.0,
+        "sl": 71.22,
+        "tt": 2000000.0,
+        "dvt": "Lít",
+        "ten": "Dầu Điêzen 0,05S Mức 2"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNjI1MjE2fEVHRDMzNFA1SXw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "EGD334P5I",
+    "sub_total": 2000000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-09-02T11:39:39.717609+00:00",
+    "updated_at": "2026-09-02T11:39:39.717609+00:00"
+  },
+  {
+    "id": "dfc9e29a-db81-5b4b-9365-f3989e3500d5",
+    "invoice_date": "2026-08-29",
+    "invoice_number": "624724",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 800000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 22600.0,
+        "sl": 35.39,
+        "tt": 800000.0,
+        "dvt": "Lít",
+        "ten": "Xăng E10 RON 95 Mức 3"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNjI0NzI0fFc1SEI2SFZXOHw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "W5HB6HVW8",
+    "sub_total": 800000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-09-02T11:39:41.139169+00:00",
+    "updated_at": "2026-09-02T11:39:41.139169+00:00"
+  },
+  {
+    "id": "08008d5d-bd7c-5ea6-b772-ee0aab2cf2ca",
+    "invoice_date": "2026-08-29",
+    "invoice_number": "624714",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "CHI NHÁNH TẠI TP HỒ  CHÍ MINH CÔNG TY CỔ PHẦN CÔNG NGHỆ MOBIFONE TOÀN CẦU ( TP HÀ NỘI)",
+    "buyer_mst": "0102577251-001",
+    "total_amount": 2000000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 29880.0,
+        "sl": 66.93,
+        "tt": 2000000.0,
+        "dvt": "Lít",
+        "ten": "Dầu Điêzen 0,001S Mức 5"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNjI0NzE0fFdYNlFUUUZIS3w2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "WX6QTQFHK",
+    "sub_total": 2000000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-09-02T11:39:42.207249+00:00",
+    "updated_at": "2026-09-02T11:39:42.207249+00:00"
+  },
+  {
+    "id": "81f93500-9a0e-5516-a348-9ee7f24d7140",
+    "invoice_date": "2026-08-28",
+    "invoice_number": "621846",
+    "seller_name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI XĂNG DẦU NAM TRUNG PHONG",
+    "seller_mst": "3600642702",
+    "buyer_name": "MOBIFONE ĐỒNG NAI- CHI NHÁNH TỔNG CÔNG TY VIỄN THÔNG MOBIFONE",
+    "buyer_mst": "0100686209-129",
+    "total_amount": 2000000.0,
+    "expense_type": "Mua dầu",
+    "items": [
+      {
+        "dg": 28080.0,
+        "sl": 71.23,
+        "tt": 2000000.0,
+        "dvt": "Lít",
+        "ten": "Dầu Điêzen 0,05S Mức 2"
+      }
+    ],
+    "source": "Gmail từ hoadon-noreply@easyinvoice.vn",
+    "status": "Approved",
+    "invoice_url": "http://3600642702hd.easyinvoice.com.vn/Invoice/ViewFromEmail?token=MUMyNk1UUF9fNjIxODQ2fDNDTTZFRVZMUHw2NzE4OA==",
+    "kh_hd": "1C26MTP",
+    "ma_tra_cuu": "3CM6EEVLP",
+    "sub_total": 2000000.0,
+    "vat_amount": 0.0,
+    "created_at": "2026-09-02T11:39:42.981027+00:00",
+    "updated_at": "2026-09-02T11:39:42.981027+00:00"
+  }
+]

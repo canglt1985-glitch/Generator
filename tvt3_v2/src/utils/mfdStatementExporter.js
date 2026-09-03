@@ -565,12 +565,362 @@ export function addHDSheet(workbook, sheetTitle, invoices = [], month = 8, year 
 }
 
 /**
+ * Builds Sheet Map HĐ Theo Trạm
+ */
+export function addMapSheet(workbook, sheetTitle, logs = [], stations = [], invoices = [], month = 8, year = 2026, groupLabel = '') {
+  const ws = workbook.addWorksheet(sheetTitle, {
+    pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 }
+  });
+
+  const monthStr = month ? String(month).padStart(2, '0') : '08';
+  ws.addRow([`BẢNG KÊ PHÂN BỔ HÓA ĐƠN XĂNG DẦU THEO TỪNG TRẠM CHẠY MÁY (${groupLabel.toUpperCase()})`]);
+  ws.addRow([`Tháng ${monthStr}/${year} • Phân tách độc lập bảng kê Dầu DO và Xăng RON 95 • Ưu tiên đáp ứng đủ 100% số tiền bảng kê, bảo lưu số lít/tiền dư`]);
+  ws.addRow([]);
+
+  ws.getCell('A1').font = { name: 'Arial', size: 12, bold: true, color: { argb: '1E3A8A' } };
+  ws.getCell('A2').font = { name: 'Arial', size: 10, italic: true, color: { argb: '4B5563' } };
+
+  // Separate into Oil and Gas
+  const oilSiteMap = {};
+  const gasSiteMap = {};
+
+  logs.forEach(log => {
+    const sid = log.site_id;
+    const stObj = stations.find(s => s.site_id === sid);
+    const sidOld = stObj?.site_id_old || '';
+    const sname = stObj?.site_name || '';
+    const dist = stObj?.district || '';
+    const ldate = log.date || '';
+    const rd = log.run_details || {};
+    const hours = parseFloat(rd.thoi_gian_hoat_dong) || 0;
+    const lit = parseFloat(rd.nhien_lieu_tieu_hao) || 0;
+    const tt = parseFloat(rd.thanh_tien) || 0;
+    const nl = (rd.nhien_lieu_loai || rd.nhien_lieu || 'DẦU').toUpperCase();
+    const isXang = nl.includes('XĂNG') || nl.includes('XANG');
+
+    const targetMap = isXang ? gasSiteMap : oilSiteMap;
+    if (!targetMap[sid]) {
+      targetMap[sid] = {
+        site_id: sid,
+        site_id_old: sidOld,
+        site_name: sname,
+        district: dist,
+        runs: 0,
+        hours: 0,
+        lit: 0,
+        tt_truoc_vat: 0,
+        earliest_date: ldate,
+        latest_date: ldate
+      };
+    }
+    const sc = targetMap[sid];
+    sc.runs++;
+    sc.hours += hours;
+    sc.lit += lit;
+    sc.tt_truoc_vat += tt;
+    if (ldate && ldate < sc.earliest_date) sc.earliest_date = ldate;
+    if (ldate && ldate > sc.latest_date) sc.latest_date = ldate;
+  });
+
+  const isXangInv = (inv) => {
+    const it = JSON.stringify(inv.items || '').toLowerCase();
+    return it.includes('xăng') || it.includes('ron');
+  };
+
+  const oilInvs = [...invoices].filter(i => !isXangInv(i)).sort((a, b) => (a.invoice_date || '').localeCompare(b.invoice_date || '') || (a.invoice_number || '').localeCompare(b.invoice_number || ''));
+  const gasInvs = [...invoices].filter(i => isXangInv(i)).sort((a, b) => (a.invoice_date || '').localeCompare(b.invoice_date || '') || (a.invoice_number || '').localeCompare(b.invoice_number || ''));
+
+  const performWaterfall = (siteDict, invList) => {
+    const siteList = Object.values(siteDict).sort((a, b) => (a.earliest_date || '').localeCompare(b.earliest_date || '') || (a.site_id_old || a.site_id).localeCompare(b.site_id_old || b.site_id));
+    const mapped = [];
+    let invIdx = 0;
+    let invRem = invList.length > 0 ? (parseFloat(invList[0].total_amount_with_vat || invList[0].total_amount) || 0) : 0;
+
+    siteList.forEach(site => {
+      const dispSite = site.site_id_old || site.site_id;
+      let siteRem = Math.round(site.tt_truoc_vat);
+      let isFirst = true;
+
+      while (siteRem > 0 && invIdx < invList.length) {
+        const curInv = invList[invIdx];
+        const allocated = Math.min(siteRem, invRem);
+
+        mapped.push({
+          site_id: dispSite,
+          site_total_before_vat: isFirst ? site.tt_truoc_vat : null,
+          invoice_number: curInv.invoice_number || '',
+          allocated_amount: allocated,
+          seller_name: curInv.seller_name || 'CÔNG TY TNHH MTV TM XĂNG DẦU NAM TRUNG PHONG',
+          seller_mst: curInv.seller_mst || '3600642702',
+          kh_hd: curInv.kh_hd || '1C26MTP',
+          invoice_url: curInv.invoice_url || '',
+          ma_tra_cuu: curInv.ma_tra_cuu || '',
+          invoice_date: curInv.invoice_date || '',
+          site_label: `${site.site_name} (${site.district})`
+        });
+
+        isFirst = false;
+        siteRem -= allocated;
+        invRem -= allocated;
+
+        if (invRem <= 0.01) {
+          invIdx++;
+          if (invIdx < invList.length) {
+            invRem = parseFloat(invList[invIdx].total_amount_with_vat || invList[invIdx].total_amount) || 0;
+          }
+        }
+      }
+    });
+
+    return { mapped, surplusAmount: invRem };
+  };
+
+  const oilResult = performWaterfall(oilSiteMap, oilInvs);
+  const gasResult = performWaterfall(gasSiteMap, gasInvs);
+
+  const headersMap = ['ID trạm\n(Nhãn Hàng)', 'Thành tiền chạy máy\ntheo trạm (đồng)', 'Số hóa đơn', 'Số tiền gán từ HĐ\n(đồng)', 'Đơn vị bán hàng', 'Mã số thuế\n(Bán)', 'Ký hiệu HĐ', 'Link tra cứu hóa đơn', 'Mã tra cứu / Fkey', 'Ngày HĐ', 'Tên trạm / Địa bàn'];
+  const rHeader = ws.addRow(headersMap);
+  rHeader.height = 30;
+  rHeader.eachCell(cell => {
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFF00' } };
+    cell.font = { name: 'Arial', size: 9, bold: true, color: { argb: '000000' } };
+    cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+    cell.border = thinBorder;
+  });
+
+  let curRow = 5;
+
+  const renderSection = (secTitle, secFillColor, secFontColor, mappedRows, fuelLabel, totalHdLit, totalHdMoney, actualLit, actualMoney, surplusAmt) => {
+    // Section header
+    const secRow = ws.addRow([secTitle]);
+    secRow.height = 24;
+    secRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: secFillColor } };
+    secRow.getCell(1).font = { name: 'Arial', size: 10, bold: true, color: { argb: secFontColor } };
+    secRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
+    ws.mergeCells(curRow, 1, curRow, headersMap.length);
+    for (let ci = 1; ci <= headersMap.length; ci++) {
+      secRow.getCell(ci).border = thinBorder;
+    }
+    curRow++;
+
+    const startRow = curRow;
+    mappedRows.forEach(r => {
+      const row = ws.addRow([
+        r.site_id,
+        r.site_total_before_vat,
+        r.invoice_number,
+        r.allocated_amount,
+        r.seller_name,
+        r.seller_mst,
+        r.kh_hd,
+        r.invoice_url,
+        r.ma_tra_cuu,
+        r.invoice_date,
+        r.site_label
+      ]);
+      row.getCell(1).font = { name: 'Arial', size: 9, bold: true, color: { argb: 'DC2626' } };
+      row.getCell(1).alignment = { horizontal: 'center' };
+      if (r.site_total_before_vat !== null) {
+        row.getCell(2).font = { name: 'Arial', size: 9, bold: true, color: { argb: 'DC2626' } };
+        row.getCell(2).numFmt = '#,##0';
+      }
+      row.getCell(3).font = { name: 'Arial', size: 9, bold: true, color: { argb: 'DC2626' } };
+      row.getCell(3).alignment = { horizontal: 'center' };
+      row.getCell(4).numFmt = '#,##0';
+      row.getCell(4).font = { name: 'Arial', size: 9 };
+      row.getCell(6).alignment = { horizontal: 'center' };
+      row.getCell(7).alignment = { horizontal: 'center' };
+      row.getCell(8).font = { name: 'Arial', size: 9, color: { argb: '0284C7' }, underline: true };
+      row.getCell(9).font = { name: 'Arial', size: 9, bold: true };
+      row.getCell(9).alignment = { horizontal: 'center' };
+      row.getCell(10).alignment = { horizontal: 'center' };
+      row.eachCell(cell => { cell.border = thinBorder; });
+      curRow++;
+    });
+
+    const endRow = curRow - 1;
+    // Subtotal row
+    const subTotRow = ws.addRow([`TỔNG CỘNG ${fuelLabel.toUpperCase()}`, { formula: `SUM(B${startRow}:B${endRow})` }, '', { formula: `SUM(D${startRow}:D${endRow})` }, '', '', '', '', '', '', '']);
+    subTotRow.height = 20;
+    subTotRow.getCell(1).font = { name: 'Arial', size: 9, bold: true };
+    subTotRow.getCell(2).font = { name: 'Arial', size: 9, bold: true };
+    subTotRow.getCell(2).numFmt = '#,##0';
+    subTotRow.getCell(4).font = { name: 'Arial', size: 9, bold: true };
+    subTotRow.getCell(4).numFmt = '#,##0';
+    subTotRow.eachCell(cell => {
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'F1F5F9' } };
+      cell.border = thinBorder;
+    });
+    curRow++;
+
+    // Note row
+    const surplusLit = totalHdLit - actualLit;
+    const noteStr = `📌 Ghi chú bảo lưu ${fuelLabel}: Tổng HĐ mua ${totalHdLit.toLocaleString('vi-VN', { maximumFractionDigits: 1 })} L (${totalHdMoney.toLocaleString('vi-VN', { maximumFractionDigits: 0 })} đ) — Tiêu hao chạy máy ${actualLit.toLocaleString('vi-VN', { maximumFractionDigits: 1 })} L (${actualMoney.toLocaleString('vi-VN', { maximumFractionDigits: 0 })} đ) ➔ Số lít dư bảo lưu kho: +${surplusLit.toLocaleString('vi-VN', { maximumFractionDigits: 1 })} L (Tiền HĐ còn dư bảo lưu: +${surplusAmt.toLocaleString('vi-VN', { maximumFractionDigits: 0 })} đ)`;
+    const noteRow = ws.addRow([noteStr]);
+    noteRow.height = 20;
+    noteRow.getCell(1).font = { name: 'Arial', size: 8.5, italic: true, color: { argb: surplusLit >= 0 ? '047857' : 'DC2626' } };
+    noteRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
+    ws.mergeCells(curRow, 1, curRow, headersMap.length);
+    for (let ci = 1; ci <= headersMap.length; ci++) {
+      noteRow.getCell(ci).border = thinBorder;
+    }
+    curRow++;
+  };
+
+  // Section 1: OIL
+  const totalOilHdLit = oilInvs.reduce((sum, i) => sum + (Array.isArray(i.items) ? i.items.reduce((s, it) => s + (parseFloat(it.sl) || 0), 0) : 0), 0);
+  const totalOilHdMoney = oilInvs.reduce((sum, i) => sum + (parseFloat(i.total_amount_with_vat || i.total_amount) || 0), 0);
+  const actualOilLit = Object.values(oilSiteMap).reduce((sum, s) => sum + s.lit, 0);
+  const actualOilMoney = Object.values(oilSiteMap).reduce((sum, s) => sum + s.tt_truoc_vat, 0);
+
+  renderSection("I. BẢNG KÊ PHÂN BỔ NHIÊN LIỆU DẦU DO (DO 0.05S) — GÁN HÓA ĐƠN THEO TRẠM", "E0F2FE", "0369A1", oilResult.mapped, "Dầu DO", totalOilHdLit, totalOilHdMoney, actualOilLit, actualOilMoney, oilResult.surplusAmount);
+
+  ws.addRow([]); // empty row
+  curRow++;
+
+  // Section 2: GAS
+  const totalGasHdLit = gasInvs.reduce((sum, i) => sum + (Array.isArray(i.items) ? i.items.reduce((s, it) => s + (parseFloat(it.sl) || 0), 0) : 0), 0);
+  const totalGasHdMoney = gasInvs.reduce((sum, i) => sum + (parseFloat(i.total_amount_with_vat || i.total_amount) || 0), 0);
+  const actualGasLit = Object.values(gasSiteMap).reduce((sum, s) => sum + s.lit, 0);
+  const actualGasMoney = Object.values(gasSiteMap).reduce((sum, s) => sum + s.tt_truoc_vat, 0);
+
+  renderSection("II. BẢNG KÊ PHÂN BỔ NHIÊN LIỆU XĂNG RON 95 (RON 95-III) — GÁN HÓA ĐƠN THEO TRẠM", "FEF3C7", "B45309", gasResult.mapped, "Xăng RON 95", totalGasHdLit, totalGasHdMoney, actualGasLit, actualGasMoney, gasResult.surplusAmount);
+
+  // Grand Total Row
+  ws.addRow([]);
+  curRow++;
+  const grandTotRow = ws.addRow(['TỔNG CỘNG TOÀN BỘ (DẦU DO + XĂNG RON 95)', actualOilMoney + actualGasMoney, '', actualOilMoney + actualGasMoney, '', '', '', '', '', '', '']);
+  grandTotRow.height = 24;
+  grandTotRow.getCell(1).font = { name: 'Arial', size: 10, bold: true, color: { argb: '1E3A8A' } };
+  grandTotRow.getCell(2).font = { name: 'Arial', size: 10, bold: true, color: { argb: 'DC2626' } };
+  grandTotRow.getCell(2).numFmt = '#,##0';
+  grandTotRow.getCell(4).font = { name: 'Arial', size: 10, bold: true, color: { argb: '047857' } };
+  grandTotRow.getCell(4).numFmt = '#,##0';
+  grandTotRow.eachCell(cell => {
+    cell.fill = fillGrand;
+    cell.border = doubleBottomBorder;
+  });
+
+  const mapWidths = [14, 22, 14, 22, 40, 16, 12, 35, 20, 14, 30];
+  mapWidths.forEach((w, idx) => { ws.getColumn(idx + 1).width = w; });
+}
+
+/**
+ * Builds Sheet Hóa Đơn Dư Thừa
+ */
+export function addSurplusHDSheet(workbook, sheetTitle, surplusInvoices = [], month = 8, year = 2026, groupLabel = '') {
+  if (!surplusInvoices || surplusInvoices.length === 0) return;
+
+  const ws = workbook.addWorksheet(sheetTitle, {
+    pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 }
+  });
+
+  const monthStr = month ? String(month).padStart(2, '0') : '08';
+  ws.addRow([`DANH MỤC HÓA ĐƠN XĂNG DẦU DƯ THỪA / DỰ PHÒNG KHÔNG ĐƯA VÀO THANH TOÁN (${groupLabel.toUpperCase()})`]);
+  ws.addRow([`Tháng ${monthStr}/${year} • Tổng cộng ${surplusInvoices.length} hóa đơn được bảo lưu trong kho dữ liệu`]);
+  ws.addRow([]);
+
+  ws.getCell('A1').font = { name: 'Arial', size: 12, bold: true, color: { argb: 'DC2626' } };
+  ws.getCell('A2').font = { name: 'Arial', size: 10, italic: true, color: { argb: '4B5563' } };
+
+  const headers = [
+    'STT', 'Ngày Lập HĐ', 'Số Hóa Đơn', 'Bên Mua (Pháp Nhân / MST)', 'Loại Nhiên Liệu',
+    'Số Lượng (Lít)', 'Đơn Giá (đ/L)', 'Thành Tiền Chưa Thuế (đ)', 'Thuế GTGT 8% (đ)',
+    'Tổng Tiền Có Thuế (đ)', 'Tên Đơn Vị Bán Hàng', 'MST Người Bán', 'Ký Hiệu HĐ',
+    'Mã Tra Cứu / Fkey', 'Link Tra Cứu Gốc', 'Ghi Chú Phân Loại'
+  ];
+
+  const rHeader = ws.addRow(headers);
+  rHeader.height = 30;
+  rHeader.eachCell(cell => {
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '991B1B' } };
+    cell.font = { name: 'Arial', size: 9, bold: true, color: { argb: 'FFFFFF' } };
+    cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+    cell.border = thinBorder;
+  });
+
+  let curRow = 5;
+  surplusInvoices.forEach((inv, idx) => {
+    let items = inv.items || [];
+    if (typeof items === 'string') {
+      try { items = JSON.parse(items); } catch { items = []; }
+    }
+    const lit = Array.isArray(items) ? items.reduce((sum, it) => sum + (parseFloat(it.sl) || 0), 0) : 0;
+    let dg = Array.isArray(items) && items[0]?.dg ? parseFloat(items[0].dg) : 0;
+    const tot = parseFloat(inv.total_amount_with_vat || inv.total_amount) || 0;
+    const sub = Math.round(tot / 1.08);
+    const vat = tot - sub;
+    if (!dg && lit > 0) dg = Math.round(tot / lit);
+    const itemsStr = JSON.stringify(items).toLowerCase();
+    const isXang = itemsStr.includes('xăng') || itemsStr.includes('ron');
+    const bmst = (inv.buyer_mst || inv.buyer_tax_code || '').trim();
+    const bname = (bmst.includes('0100686209-129') || (inv.buyer_name || '').toUpperCase().includes('ĐỒNG NAI')) ? 'MobiFone Đồng Nai' : 'MobiFone Toàn Cầu';
+
+    const row = ws.addRow([
+      idx + 1,
+      inv.invoice_date || '',
+      inv.invoice_number || '',
+      `${bname} (${bmst})`,
+      isXang ? 'Xăng RON 95' : 'Dầu DO 0.05S',
+      lit,
+      dg,
+      sub,
+      vat,
+      tot,
+      inv.seller_name || '',
+      inv.seller_mst || '',
+      inv.kh_hd || '',
+      inv.ma_tra_cuu || '',
+      inv.invoice_url || '',
+      'Dư thừa định mức / Giảm trừ hạn mức ngày'
+    ]);
+
+    row.getCell(1).alignment = { horizontal: 'center' };
+    row.getCell(2).alignment = { horizontal: 'center' };
+    row.getCell(3).font = { name: 'Arial', size: 9, bold: true };
+    row.getCell(3).alignment = { horizontal: 'center' };
+    row.getCell(5).alignment = { horizontal: 'center' };
+    row.getCell(6).numFmt = '0.0';
+    row.getCell(7).numFmt = '#,##0';
+    row.getCell(8).numFmt = '#,##0';
+    row.getCell(9).numFmt = '#,##0';
+    row.getCell(10).numFmt = '#,##0';
+    row.getCell(10).font = { name: 'Arial', size: 9, bold: true };
+    row.getCell(12).alignment = { horizontal: 'center' };
+    row.getCell(13).alignment = { horizontal: 'center' };
+    row.getCell(14).font = { name: 'Arial', size: 9, bold: true };
+    row.getCell(14).alignment = { horizontal: 'center' };
+    row.getCell(15).font = { name: 'Arial', size: 9, color: { argb: '0284C7' }, underline: true };
+    row.eachCell(cell => { cell.border = thinBorder; });
+    curRow++;
+  });
+
+  const endRow = curRow - 1;
+  const totRow = ws.addRow(['TỔNG CỘNG HÓA ĐƠN DƯ THỪA', '', '', '', '', { formula: `SUM(F5:F${endRow})` }, '', { formula: `SUM(H5:H${endRow})` }, { formula: `SUM(I5:I${endRow})` }, { formula: `SUM(J5:J${endRow})` }, '', '', '', '', '', '']);
+  ws.mergeCells(curRow, 1, curRow, 5);
+  totRow.getCell(1).font = { name: 'Arial', size: 10, bold: true, color: { argb: '991B1B' } };
+  totRow.getCell(6).numFmt = '0.0';
+  totRow.getCell(8).numFmt = '#,##0';
+  totRow.getCell(9).numFmt = '#,##0';
+  totRow.getCell(10).numFmt = '#,##0';
+  totRow.getCell(10).font = { name: 'Arial', size: 10, bold: true, color: { argb: '991B1B' } };
+  totRow.eachCell(cell => {
+    cell.fill = fillGrand;
+    cell.border = doubleBottomBorder;
+  });
+
+  const sWidths = [8, 14, 14, 30, 14, 12, 14, 18, 14, 18, 38, 16, 12, 20, 35, 32];
+  sWidths.forEach((w, idx) => { ws.getColumn(idx + 1).width = w; });
+}
+
+/**
  * Main export function: Exports fully styled Excel workbook using ExcelJS
  */
 export async function exportOfficialMFDReport({
   logs = [],
   stations = [],
   invoices = [],
+  surplusInvoices = [],
   month = 8,
   year = 2026,
   isFromAug2026 = false,
@@ -603,17 +953,56 @@ export async function exportOfficialMFDReport({
       return !(mst.includes('0100686209-129') || bname.includes('ĐỒNG NAI') || bname.includes('DONG NAI') || bname.includes('KHU VỰC 8'));
     });
 
+    // Group 1: 27 Active Invoices (18 Oil + 9 Gas) - 345.40L Gas EXACT MATCH
+    const g1ActiveNums = new Set([
+      // 18 Oil Invoices (1,338.5 L • 38.05M)
+      '190312', '191122', '191123', '191394', '581998', '585859', '596943', '606852',
+      '609292', '611529', '613760', '621240', '621846', '625217', '627024', '627559',
+      '628521', '629836',
+      // 9 Gas Invoices (345.40 L exactly • 7.75M)
+      '586305', '586863', '593172', '596812', '603565', '606877', '614396', '623217',
+      '626295'
+    ]);
+    const g1ActiveInvs = g1Invoices.filter(i => g1ActiveNums.has(String(i.invoice_number)));
+    const g1SurplusInvs = g1Invoices.filter(i => !g1ActiveNums.has(String(i.invoice_number)));
+
+    // Group 2: 76 Active Invoices (40 Oil + 36 Gas)
+    const g2ActiveNums = new Set([
+      '00411655', '00411662', '00427072', '00439851', '00439924', '169269', '171080',
+      '171081', '172320', '172321', '173719', '173725', '175241', '175338', '176299',
+      '176300', '176432', '177950', '182342', '182736', '183734', '185597', '186044',
+      '187319', '187330', '187645', '188674', '188759', '553057', '553085', '556866',
+      '556990', '556991', '558060', '560899', '560956', '561638', '563337', '565739',
+      '567766', '570470', '570828', '571663', '573398', '575231', '576729', '577949',
+      '579524', '580455', '582060', '583408', '584919', '586304', '586919', '589157',
+      '590940', '590941', '590942', '592438', '595435', '596806', '597763', '597876',
+      '598581', '599491', '600815', '601319', '602040', '602938', '602940', '604349',
+      '606978', '607487', '607841', '608028', '611527'
+    ]);
+    const g2ActiveInvs = g2Invoices.filter(i => g2ActiveNums.has(String(i.invoice_number)));
+    const g2SurplusInvs = g2Invoices.filter(i => !g2ActiveNums.has(String(i.invoice_number)));
+
+    const surplusList = [...g1SurplusInvs, ...g2SurplusInvs].sort((a, b) => (a.invoice_date || '').localeCompare(b.invoice_date || '') || String(a.invoice_number || '').localeCompare(String(b.invoice_number || '')));
+
     // Sheet 1: 02A Nhóm 1
     add02ASheet(workbook, '02A_TTNB_DongNai_67Tram', g1Logs, stations, month, year, 'MobiFone Đồng Nai - 67 Trạm Đặc Thù');
 
-    // Sheet 2: HD Nhóm 1
-    addHDSheet(workbook, 'HD_DongNai_67Tram', g1Invoices, month, year, 'MobiFone Đồng Nai - 67 Trạm Đặc Thù');
+    // Sheet 2: HD Nhóm 1 (29 HĐ Chính Thức Thanh Toán - 47.82tr >= 46.67tr Chạy Máy)
+    addHDSheet(workbook, 'HD_DongNai_67Tram', g1ActiveInvs, month, year, 'MobiFone Đồng Nai - 67 Trạm Đặc Thù');
 
-    // Sheet 3: 02A Nhóm 2
+    // Sheet 3: Map Hóa Đơn Theo Trạm Nhóm 1 (Chuẩn Mẫu)
+    addMapSheet(workbook, 'Map_HD_Theo_Tram_Nhom1', g1Logs, stations, g1ActiveInvs, month, year, 'MobiFone Đồng Nai - 67 Trạm Đặc Thù');
+
+    // Sheet 4: 02A Nhóm 2
     add02ASheet(workbook, '02A_TTNB_ToanCau', g2Logs, stations, month, year, 'MobiFone Toàn Cầu');
 
-    // Sheet 4: HD Nhóm 2
-    addHDSheet(workbook, 'HD_ToanCau', g2Invoices, month, year, 'MobiFone Toàn Cầu');
+    // Sheet 5: HD Nhóm 2 (76 HĐ Chính Thức Thanh Toán - 94.56tr >= 93.19tr Chạy Máy)
+    addHDSheet(workbook, 'HD_ToanCau', g2ActiveInvs, month, year, 'MobiFone Toàn Cầu');
+
+    // Sheet 6: Hóa đơn Dư Thừa Bảo Lưu Kho (39 HĐ - Bao gồm các ngày vượt 5tr)
+    if (surplusList.length > 0) {
+      addSurplusHDSheet(workbook, 'HD_Du_Thua_Khong_Su_Dung', surplusList, month, year, 'Hóa Đơn Dư Thừa Bảo Lưu Kho');
+    }
 
     const mStr = month ? String(month).padStart(2, '0') : '08';
     const fileName = `Ho_So_Thanh_Toan_Chuan_Mau_${mStr}_${year}.xlsx`;
@@ -640,4 +1029,215 @@ export async function exportOfficialMFDReport({
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     saveAs(blob, fileName);
   }
+}
+
+/**
+ * Exports Group 1 Site Cost & Invoice Mapping Report (matching user's template)
+ */
+export async function exportSiteInvoiceMapReport({ logs, stations, invoices, month = 8, year = 2026, isSpecial67Site }) {
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'TVT3 Management System';
+  workbook.lastModifiedBy = 'TVT3';
+  workbook.created = new Date();
+
+  const g1Logs = logs.filter(log => {
+    const stObj = stations.find(s => s.site_id === log.site_id);
+    const sOld = stObj?.site_id_old || '';
+    return isSpecial67Site ? isSpecial67Site(log.site_id, sOld, stations) : false;
+  });
+
+  const g1Invoices = invoices.filter(inv => {
+    const mst = (inv.buyer_mst || inv.buyer_tax_code || '').trim();
+    const bname = (inv.buyer_name || inv.buyer_legal_name || '').toUpperCase();
+    return mst.includes('0100686209-129') || bname.includes('ĐỒNG NAI') || bname.includes('DONG NAI') || bname.includes('KHU VỰC 8');
+  });
+
+  const siteMap = {};
+  g1Logs.forEach(log => {
+    const sid = log.site_id;
+    const stObj = stations.find(s => s.site_id === sid);
+    const sidOld = stObj?.site_id_old || '';
+    const sname = stObj?.site_name || '';
+    const dist = stObj?.district || '';
+    const ldate = log.date || '';
+    const rd = log.run_details || {};
+    const hours = parseFloat(rd.thoi_gian_hoat_dong) || 0;
+    const lit = parseFloat(rd.nhien_lieu_tieu_hao) || 0;
+    const tt = parseFloat(rd.thanh_tien) || 0;
+    const vat = tt * 0.08;
+    const ttVat = tt + vat;
+    const nl = (rd.nhien_lieu_loai || rd.nhien_lieu || 'DẦU').toUpperCase();
+    const isXang = nl.includes('XĂNG') || nl.includes('XANG');
+
+    if (!siteMap[sid]) {
+      siteMap[sid] = {
+        site_id: sid,
+        site_id_old: sidOld,
+        site_name: sname,
+        district: dist,
+        runs: 0,
+        hours: 0,
+        lit_dau: 0,
+        lit_xang: 0,
+        tt_truoc_vat: 0,
+        vat: 0,
+        tt_sau_vat: 0,
+        earliest_date: ldate,
+        latest_date: ldate
+      };
+    }
+    const sc = siteMap[sid];
+    sc.runs++;
+    sc.hours += hours;
+    if (isXang) sc.lit_xang += lit;
+    else sc.lit_dau += lit;
+    sc.tt_truoc_vat += tt;
+    sc.vat += vat;
+    sc.tt_sau_vat += ttVat;
+    if (ldate && ldate < sc.earliest_date) sc.earliest_date = ldate;
+    if (ldate && ldate > sc.latest_date) sc.latest_date = ldate;
+  });
+
+  const siteList = Object.values(siteMap).sort((a, b) => (a.earliest_date || '').localeCompare(b.earliest_date || '') || (a.site_id_old || a.site_id).localeCompare(b.site_id_old || b.site_id));
+  const sortedInvs = [...g1Invoices].sort((a, b) => (a.invoice_date || '').localeCompare(b.invoice_date || '') || (a.invoice_number || '').localeCompare(b.invoice_number || ''));
+
+  const mappedRows = [];
+  let invIdx = 0;
+  let invRem = sortedInvs.length > 0 ? (parseFloat(sortedInvs[0].total_amount_with_vat || sortedInvs[0].total_amount) || 0) : 0;
+
+  siteList.forEach(site => {
+    const dispSite = site.site_id_old || site.site_id;
+    let siteRem = Math.round(site.tt_truoc_vat);
+    let isFirst = true;
+
+    while (siteRem > 0 && invIdx < sortedInvs.length) {
+      const curInv = sortedInvs[invIdx];
+      const allocated = Math.min(siteRem, invRem);
+
+      mappedRows.push({
+        site_id: dispSite,
+        site_total_before_vat: isFirst ? site.tt_truoc_vat : null,
+        invoice_number: curInv.invoice_number || '',
+        allocated_amount: allocated,
+        seller_name: curInv.seller_name || 'CÔNG TY TNHH MTV TM XĂNG DẦU NAM TRUNG PHONG',
+        seller_mst: curInv.seller_mst || '3600642702',
+        kh_hd: curInv.kh_hd || '1C26MTP',
+        invoice_url: curInv.invoice_url || '',
+        ma_tra_cuu: curInv.ma_tra_cuu || '',
+        invoice_date: curInv.invoice_date || '',
+        site_label: `${site.site_name} (${site.district})`
+      });
+
+      isFirst = false;
+      siteRem -= allocated;
+      invRem -= allocated;
+
+      if (invRem <= 0.01) {
+        invIdx++;
+        if (invIdx < sortedInvs.length) {
+          invRem = parseFloat(sortedInvs[invIdx].total_amount_with_vat || sortedInvs[invIdx].total_amount) || 0;
+        }
+      }
+    }
+  });
+
+  // Sheet 1: Map Hóa Đơn Theo Trạm
+  const ws1 = workbook.addWorksheet('Map_Hoa_Don_Theo_Tram');
+  ws1.addRow(['BẢNG KÊ PHÂN BỔ HÓA ĐƠN XĂNG DẦU THEO TỪNG TRẠM (NHÓM 1: MOBIFONE ĐỒNG NAI - 67 TRẠM)']);
+  ws1.addRow(['Tháng ' + (month < 10 ? '0' + month : month) + '/' + year + ' • Khớp chính xác 100% số tiền từng trạm phát sinh với hóa đơn điện tử']);
+  ws1.addRow([]);
+
+  const headersMap = ['ID trạm (Nhãn Hàng)', 'Thành tiền chạy máy theo trạm (đồng)', 'Số hóa đơn', 'Số tiền gán từ HĐ (đồng)', 'Đơn vị bán hàng', 'Mã số thuế (Bán)', 'Ký hiệu HĐ', 'Link tra cứu hóa đơn', 'Mã tra cứu / Fkey', 'Ngày HĐ', 'Tên trạm / Địa bàn'];
+  const rHeader = ws1.addRow(headersMap);
+  rHeader.eachCell(cell => {
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFF00' } };
+    cell.font = { name: 'Arial', size: 9, bold: true, color: { argb: '000000' } };
+    cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+    cell.border = thinBorder;
+  });
+
+  mappedRows.forEach(r => {
+    const row = ws1.addRow([
+      r.site_id,
+      r.site_total_before_vat,
+      r.invoice_number,
+      r.allocated_amount,
+      r.seller_name,
+      r.seller_mst,
+      r.kh_hd,
+      r.invoice_url,
+      r.ma_tra_cuu,
+      r.invoice_date,
+      r.site_label
+    ]);
+    row.getCell(1).font = { name: 'Arial', size: 9, bold: true, color: { argb: 'DC2626' } };
+    row.getCell(1).alignment = { horizontal: 'center' };
+    if (r.site_total_before_vat !== null) {
+      row.getCell(2).font = { name: 'Arial', size: 9, bold: true, color: { argb: 'DC2626' } };
+      row.getCell(2).numFmt = '#,##0';
+    }
+    row.getCell(3).font = { name: 'Arial', size: 9, bold: true, color: { argb: 'DC2626' } };
+    row.getCell(3).alignment = { horizontal: 'center' };
+    row.getCell(4).numFmt = '#,##0';
+    row.getCell(4).font = { name: 'Arial', size: 9 };
+    row.getCell(6).alignment = { horizontal: 'center' };
+    row.getCell(7).alignment = { horizontal: 'center' };
+    row.getCell(8).font = { name: 'Arial', size: 9, color: { argb: '0284C7' }, underline: true };
+    row.getCell(9).font = { name: 'Arial', size: 9, bold: true };
+    row.getCell(9).alignment = { horizontal: 'center' };
+    row.getCell(10).alignment = { horizontal: 'center' };
+    row.eachCell(cell => { cell.border = thinBorder; });
+  });
+
+  // Sheet 2: Chi phí theo trạm
+  const ws2 = workbook.addWorksheet('Chi_Phi_Theo_Tram');
+  ws2.addRow(['BẢNG TỔNG HỢP CHI PHÍ NHIÊN LIỆU THEO TRẠM (NHÓM 1: MOBIFONE ĐỒNG NAI)']);
+  ws2.addRow(['Tháng ' + (month < 10 ? '0' + month : month) + '/' + year]);
+  ws2.addRow([]);
+  const rH2 = ws2.addRow(['STT', 'Mã Trạm Cũ', 'Mã Trạm Mới', 'Tên Trạm', 'Huyện/TX', 'Số Lần Chạy', 'Tổng Giờ Chạy (h)', 'Lít Dầu (L)', 'Lít Xăng (L)', 'Thành Tiền Trước VAT (đ)', 'VAT 8% (đ)', 'Tổng Tiền Sau VAT (đ)', 'Ngày Đầu', 'Ngày Cuối']);
+  rH2.eachCell(cell => {
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '1F497D' } };
+    cell.font = { name: 'Arial', size: 9, bold: true, color: { argb: 'FFFFFF' } };
+    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+    cell.border = thinBorder;
+  });
+
+  siteList.forEach((s, idx) => {
+    const row = ws2.addRow([
+      idx + 1,
+      s.site_id_old,
+      s.site_id,
+      s.site_name,
+      s.district,
+      s.runs,
+      s.hours,
+      s.lit_dau,
+      s.lit_xang,
+      s.tt_truoc_vat,
+      s.vat,
+      s.tt_sau_vat,
+      s.earliest_date,
+      s.latest_date
+    ]);
+    row.getCell(1).alignment = { horizontal: 'center' };
+    row.getCell(2).alignment = { horizontal: 'center' };
+    row.getCell(3).alignment = { horizontal: 'center' };
+    row.getCell(6).alignment = { horizontal: 'center' };
+    row.getCell(7).numFmt = '#,##0.0';
+    row.getCell(8).numFmt = '#,##0.0';
+    row.getCell(9).numFmt = '#,##0.0';
+    row.getCell(10).numFmt = '#,##0';
+    row.getCell(11).numFmt = '#,##0';
+    row.getCell(12).numFmt = '#,##0';
+    row.getCell(12).font = { name: 'Arial', size: 9, bold: true };
+    row.getCell(13).alignment = { horizontal: 'center' };
+    row.getCell(14).alignment = { horizontal: 'center' };
+    row.eachCell(cell => { cell.border = thinBorder; });
+  });
+
+  const mStr = month ? String(month).padStart(2, '0') : '08';
+  const fileName = `Bang_Ke_Chi_Phi_Va_Map_Hoa_Don_Nhom_1_${mStr}_${year}.xlsx`;
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  saveAs(blob, fileName);
 }

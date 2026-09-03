@@ -5,6 +5,7 @@ import {
   Edit, Eye, Clock, CheckCircle2, CheckCircle, CheckCheck, AlertCircle, X, ExternalLink, Filter, RefreshCw
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import JSZip from 'jszip';
 
 import { 
   GROUP_1_BUYER_INFO, 
@@ -12,7 +13,7 @@ import {
   isSpecial67Site 
 } from '../utils/siteGroups';
 import { getFuelPriceForDate } from '../utils/fuelPrice';
-import { exportOfficialMFDReport, buildHDWorksheet, build02AWorksheet } from '../utils/mfdStatementExporter';
+import { exportOfficialMFDReport, buildHDWorksheet, build02AWorksheet, exportSiteInvoiceMapReport } from '../utils/mfdStatementExporter';
 
 export default function Generator() {
   const [activeTab, setActiveTab] = useState('logs'); // logs, anomalies, invoices, transfer
@@ -815,6 +816,245 @@ export default function Generator() {
     XLSX.writeFile(wb, `Bang_Ke_Hoa_Don_Mau_HD_${monthStr}_${filterYear}.xlsx`);
   };
 
+  const exportInvoicesZip = async (targetGroup = 'current') => {
+    let targetInvs = [...filteredInvoices];
+    let groupName = 'Tat_Ca';
+    let groupTitle = 'Toàn Bộ Hóa Đơn';
+    
+    if (targetGroup === 'group1' || (!targetGroup && selectedGroupFilter === 'group1')) {
+      targetInvs = invoices.filter(inv => {
+        const mst = (inv.buyer_mst || inv.buyer_tax_code || '').trim();
+        const bname = (inv.buyer_name || inv.buyer_legal_name || '').toUpperCase();
+        return mst.includes('0100686209-129') || bname.includes('ĐỒNG NAI') || bname.includes('DONG NAI') || bname.includes('KHU VỰC 8');
+      });
+      groupName = 'Nhom_1_MobiFone_Dong_Nai';
+      groupTitle = 'Nhóm 1: MobiFone Đồng Nai (67 Trạm)';
+    } else if (targetGroup === 'group2' || (!targetGroup && selectedGroupFilter === 'group2')) {
+      targetInvs = invoices.filter(inv => {
+        const mst = (inv.buyer_mst || inv.buyer_tax_code || '').trim();
+        const bname = (inv.buyer_name || inv.buyer_legal_name || '').toUpperCase();
+        return !(mst.includes('0100686209-129') || bname.includes('ĐỒNG NAI') || bname.includes('DONG NAI') || bname.includes('KHU VỰC 8'));
+      });
+      groupName = 'Nhom_2_MobiFone_Toan_Cau';
+      groupTitle = 'Nhóm 2: MobiFone Toàn Cầu (Các trạm còn lại)';
+    }
+
+    if (targetInvs.length === 0) {
+      alert('Không có hóa đơn nào để xuất ZIP!');
+      return;
+    }
+
+    const zip = new JSZip();
+    const monthStr = filterMonth ? `T${String(filterMonth).padStart(2, '0')}` : 'Ca_Nam';
+
+    let rowsHtml = '';
+    let totalLit = 0;
+    let totalTien = 0;
+
+    targetInvs.forEach((inv, idx) => {
+      const invNum = inv.invoice_number || `HD_${idx+1}`;
+      const invDate = inv.invoice_date || '';
+      const fname = `HD_${String(idx+1).padStart(2, '0')}_${invDate}_${invNum}.html`;
+      const amt = parseFloat(inv.total_amount_with_vat || inv.total_amount) || 0;
+      totalTien += amt;
+
+      let itemsList = [];
+      if (inv.items) {
+        if (typeof inv.items === 'string') {
+          try { itemsList = JSON.parse(inv.items); } catch(e) { itemsList = []; }
+        } else if (Array.isArray(inv.items)) {
+          itemsList = inv.items;
+        }
+      }
+
+      let lit = 0;
+      let isXang = false;
+      itemsList.forEach(it => {
+        const q = parseFloat(it.sl || it.quantity) || 0;
+        lit += q;
+        const n = (it.ten || it.name || '').toLowerCase();
+        if (n.includes('xăng') || n.includes('xang') || n.includes('ron')) isXang = true;
+      });
+      if (lit === 0) lit = parseFloat(inv.quantity || inv.fuel_quantity) || 0;
+      totalLit += lit;
+
+      let itemRows = '';
+      itemsList.forEach((it, iIdx) => {
+        const iTen = it.ten || it.name || (isXang ? 'Xăng RON 95-III' : 'Dầu DO 0.05S-II');
+        const iSl = parseFloat(it.sl || it.quantity) || lit;
+        const iDg = parseFloat(it.dg || it.unit_price) || 0;
+        const iTt = parseFloat(it.tt || it.total_amount || it.total) || amt;
+        itemRows += `
+          <tr>
+            <td style="text-align: center; padding: 8px; border: 1px solid #cbd5e1;">${iIdx+1}</td>
+            <td style="padding: 8px; border: 1px solid #cbd5e1; font-weight: bold;">${iTen}</td>
+            <td style="text-align: center; padding: 8px; border: 1px solid #cbd5e1;">Lít</td>
+            <td style="text-align: right; padding: 8px; border: 1px solid #cbd5e1; font-weight: bold;">${iSl.toLocaleString('vi-VN', {minimumFractionDigits: 1})}</td>
+            <td style="text-align: right; padding: 8px; border: 1px solid #cbd5e1;">${iDg.toLocaleString('vi-VN')} đ</td>
+            <td style="text-align: right; padding: 8px; border: 1px solid #cbd5e1; font-weight: bold; color: #1e3a8a;">${iTt.toLocaleString('vi-VN')} đ</td>
+          </tr>
+        `;
+      });
+
+      const invHtml = `<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Hóa Đơn #${invNum} - ${groupTitle}</title>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #f8fafc; margin: 0; padding: 20px; }
+        .card { max-width: 800px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; }
+        .header { display: flex; justify-content: space-between; border-bottom: 2px solid #2563eb; padding-bottom: 12px; margin-bottom: 15px; }
+        .title { font-size: 18px; font-weight: bold; color: #1e3a8a; }
+        .party-box { display: flex; gap: 15px; margin-bottom: 15px; }
+        .party { flex: 1; background: #f1f5f9; padding: 12px; border-radius: 8px; font-size: 12px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 12px; }
+        th { background: #1e40af; color: #fff; padding: 8px; border: 1px solid #1e3a8a; }
+        .total-box { margin-top: 15px; padding: 12px; background: #eff6ff; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #bfdbfe; font-size: 13px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="header">
+            <div>
+                <div class="title">HÓA ĐƠN ĐIỆN TỬ</div>
+                <div style="font-size: 11px; color: #64748b;">(Bản thể hiện dữ liệu đối soát thanh toán chạy máy phát điện)</div>
+            </div>
+            <div style="text-align: right; font-size: 12px; color: #475569;">
+                <div><b>Số HĐ:</b> <span style="color: #dc2626; font-size: 15px; font-weight: bold;">${invNum}</span></div>
+                <div><b>Ký hiệu:</b> ${inv.kh_hd || '1C26MTP'} | <b>Mã tra cứu:</b> <span style="color: #2563eb; font-weight: bold;">${inv.ma_tra_cuu || 'N/A'}</span></div>
+                <div><b>Ngày lập:</b> ${invDate}</div>
+            </div>
+        </div>
+        <div class="party-box">
+            <div class="party">
+                <div style="font-weight: bold; color: #0f172a; text-transform: uppercase; margin-bottom: 4px;">🏢 Đơn Vị Bán Hàng</div>
+                <div><b>${inv.seller_name || 'Cây xăng'}</b></div>
+                <div>MST: ${inv.seller_mst || '3600642702'}</div>
+            </div>
+            <div class="party" style="border-left: 3px solid #d97706;">
+                <div style="font-weight: bold; color: #b45309; text-transform: uppercase; margin-bottom: 4px;">📌 Đơn Vị Mua Hàng</div>
+                <div><b>${inv.buyer_name || groupTitle}</b></div>
+                <div>MST: ${inv.buyer_mst || ''}</div>
+            </div>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 35px;">STT</th>
+                    <th>Tên Hàng Hóa / Nhiên Liệu</th>
+                    <th style="width: 50px;">ĐVT</th>
+                    <th style="width: 80px;">Số Lượng</th>
+                    <th style="width: 100px;">Đơn Giá</th>
+                    <th style="width: 120px;">Thành Tiền</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${itemRows || `<tr><td style="text-align:center;padding:8px;border:1px solid #cbd5e1;">1</td><td style="padding:8px;border:1px solid #cbd5e1;font-weight:bold;">${isXang ? 'Xăng chạy máy phát điện' : 'Dầu Diesel chạy máy phát điện'}</td><td style="text-align:center;padding:8px;border:1px solid #cbd5e1;">Lít</td><td style="text-align:right;padding:8px;border:1px solid #cbd5e1;font-weight:bold;">${lit.toLocaleString('vi-VN', {minimumFractionDigits: 1})}</td><td style="text-align:right;padding:8px;border:1px solid #cbd5e1;">-</td><td style="text-align:right;padding:8px;border:1px solid #cbd5e1;font-weight:bold;color:#1e3a8a;">${amt.toLocaleString('vi-VN')} đ</td></tr>`}
+            </tbody>
+        </table>
+        <div class="total-box">
+            <div>Tổng số lượng: <span style="color: #059669;">${lit.toLocaleString('vi-VN', {minimumFractionDigits: 1})} Lít</span></div>
+            <div style="color: #1e3a8a; font-size: 15px;">Tổng cộng: ${amt.toLocaleString('vi-VN')} VNĐ</div>
+        </div>
+        ${inv.invoice_url ? `<div style="text-align: center; margin-top: 15px;"><a href="${inv.invoice_url}" target="_blank" style="display: inline-block; background: #2563eb; color: #fff; text-decoration: none; padding: 7px 14px; border-radius: 6px; font-weight: bold; font-size: 12px;">🌐 Mở Bản Gốc Trên Cổng Tra Cứu</a></div>` : ''}
+    </div>
+</body>
+</html>`;
+
+      zip.file(fname, invHtml);
+
+      rowsHtml += `
+        <tr>
+          <td style="text-align: center; padding: 8px; border-bottom: 1px solid #e2e8f0;">${idx+1}</td>
+          <td style="text-align: center; padding: 8px; border-bottom: 1px solid #e2e8f0;">${invDate}</td>
+          <td style="text-align: center; padding: 8px; border-bottom: 1px solid #e2e8f0;"><a href="${fname}" style="color: #2563eb; font-weight: bold; text-decoration: none;">#${invNum}</a></td>
+          <td style="text-align: center; padding: 8px; border-bottom: 1px solid #e2e8f0;"><span style="background: ${isXang ? '#fef3c7; color: #b45309' : '#dbeafe; color: #1e40af'}; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 11px;">${isXang ? 'Xăng' : 'Dầu'}</span></td>
+          <td style="text-align: right; padding: 8px; border-bottom: 1px solid #e2e8f0; font-weight: bold;">${lit.toLocaleString('vi-VN', {minimumFractionDigits: 1})} L</td>
+          <td style="text-align: right; padding: 8px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #1e3a8a;">${amt.toLocaleString('vi-VN')} đ</td>
+          <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${(inv.seller_name || '').substring(0, 30)}</td>
+          <td style="text-align: center; padding: 8px; border-bottom: 1px solid #e2e8f0;"><a href="${fname}" style="display: inline-block; background: #2563eb; color: #fff; padding: 3px 8px; border-radius: 4px; text-decoration: none; font-size: 11px;">Xem / In</a></td>
+        </tr>
+      `;
+    });
+
+    const indexHtml = `<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Bảng Kê Hóa Đơn - ${groupTitle}</title>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #f8fafc; margin: 0; padding: 25px; }
+        .container { max-width: 1050px; margin: 0 auto; background: #fff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
+        h2 { color: #1e3a8a; margin-top: 0; }
+        .summary { display: flex; gap: 15px; margin-bottom: 20px; }
+        .card { flex: 1; padding: 12px 15px; border-radius: 8px; background: #f1f5f9; border-left: 4px solid #2563eb; }
+        .card h4 { margin: 0 0 4px 0; color: #475569; font-size: 11px; text-transform: uppercase; }
+        .card .val { font-size: 18px; font-weight: bold; color: #0f172a; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 12px; }
+        th { background: #1e40af; color: #fff; padding: 8px; text-align: left; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>📦 TRỌN BỘ ${targetInvs.length} HÓA ĐƠN - ${groupTitle.toUpperCase()}</h2>
+        <p style="color: #64748b; font-size: 13px;">Hồ sơ thanh toán nhiên liệu chạy máy phát điện ${monthStr}_${filterYear}</p>
+        <div class="summary">
+            <div class="card">
+                <h4>Số lượng hóa đơn</h4>
+                <div class="val">${targetInvs.length} HĐ</div>
+            </div>
+            <div class="card" style="border-left-color: #059669;">
+                <h4>Tổng số lượng nhiên liệu</h4>
+                <div class="val" style="color: #059669;">${totalLit.toLocaleString('vi-VN', {minimumFractionDigits: 1})} Lít</div>
+            </div>
+            <div class="card" style="border-left-color: #d97706;">
+                <h4>Tổng tiền thanh toán</h4>
+                <div class="val" style="color: #d97706;">${totalTien.toLocaleString('vi-VN')} đ</div>
+            </div>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 35px; text-align: center;">STT</th>
+                    <th style="width: 85px; text-align: center;">Ngày HĐ</th>
+                    <th style="width: 85px; text-align: center;">Số HĐ</th>
+                    <th style="width: 70px; text-align: center;">Loại</th>
+                    <th style="width: 85px; text-align: right;">Số Lít</th>
+                    <th style="width: 110px; text-align: right;">Tổng Tiền</th>
+                    <th>Nhà Cung Cấp</th>
+                    <th style="width: 80px; text-align: center;">Thao Tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${rowsHtml}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>`;
+
+    zip.file('00_INDEX_DANH_SACH_HOA_DON.html', indexHtml);
+
+    try {
+      const wb = XLSX.utils.book_new();
+      const ws = buildHDWorksheet(targetInvs, filterMonth, filterYear, groupTitle);
+      XLSX.utils.book_append_sheet(wb, ws, 'HD');
+      const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      zip.file(`Bang_Ke_Hoa_Don_${groupName}_${monthStr}_${filterYear}.xlsx`, excelBuffer);
+    } catch(e) {
+      console.warn('Could not attach Excel to ZIP:', e);
+    }
+
+    const content = await zip.generateAsync({ type: 'blob' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(content);
+    link.download = `Bo_Hoa_Don_${groupName}_${monthStr}_${filterYear}.zip`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // Export Anomalies to Excel
   const exportAnomaliesToExcel = () => {
     const dataForExcel = anomaliesList.map(anom => {
@@ -1615,13 +1855,43 @@ export default function Generator() {
             )}
 
             {activeTab === 'invoices' && (
-              <button
-                onClick={exportInvoicesToExcel}
-                className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg text-emerald-700 border border-emerald-200 bg-white hover:bg-emerald-50 shadow-sm transition-colors cursor-pointer"
-                title="Xuất bảng kê hóa đơn điện tử theo mẫu chuẩn HD"
-              >
-                <ExternalLink className="h-3.5 w-3.5 mr-1" /> Xuất Bảng Kê HD ({filterMonth ? `T${filterMonth}/${filterYear}` : `${filterYear}`})
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => exportSiteInvoiceMapReport({
+                    logs: genLogs,
+                    stations,
+                    invoices,
+                    month: filterMonth ? parseInt(filterMonth) : 8,
+                    year: filterYear ? parseInt(filterYear) : 2026,
+                    isSpecial67Site
+                  })}
+                  className="inline-flex items-center justify-center px-2.5 py-1.5 text-xs font-bold rounded-lg text-indigo-800 border border-indigo-300 bg-indigo-50 hover:bg-indigo-100 shadow-sm transition-colors cursor-pointer"
+                  title="Xuất bảng kê phân bổ & Map hóa đơn theo từng trạm Nhóm 1 (Chuẩn theo mẫu Excel)"
+                >
+                  <ExternalLink className="h-3.5 w-3.5 mr-1" /> 🔗 Map HĐ Theo Trạm (Nhóm 1)
+                </button>
+                <button
+                  onClick={() => exportInvoicesZip('group1')}
+                  className="inline-flex items-center justify-center px-2.5 py-1.5 text-xs font-bold rounded-lg text-amber-900 border border-amber-300 bg-amber-50 hover:bg-amber-100 shadow-sm transition-colors cursor-pointer"
+                  title="Tải trọn bộ file ZIP toàn bộ hóa đơn Nhóm 1 (MobiFone Đồng Nai - 67 trạm)"
+                >
+                  📦 Tải ZIP Nhóm 1 ({groupComparisonStats?.g1?.invCount || 28} HĐ)
+                </button>
+                <button
+                  onClick={() => exportInvoicesZip('current')}
+                  className="inline-flex items-center justify-center px-2.5 py-1.5 text-xs font-bold rounded-lg text-blue-700 border border-blue-200 bg-white hover:bg-blue-50 shadow-sm transition-colors cursor-pointer"
+                  title="Tải trọn bộ file ZIP theo bộ lọc hiện tại"
+                >
+                  📦 Tải ZIP Hóa Đơn
+                </button>
+                <button
+                  onClick={exportInvoicesToExcel}
+                  className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg text-emerald-700 border border-emerald-200 bg-white hover:bg-emerald-50 shadow-sm transition-colors cursor-pointer"
+                  title="Xuất bảng kê hóa đơn điện tử theo mẫu chuẩn HD"
+                >
+                  <ExternalLink className="h-3.5 w-3.5 mr-1" /> Xuất Bảng Kê HD ({filterMonth ? `T${filterMonth}/${filterYear}` : `${filterYear}`})
+                </button>
+              </div>
             )}
           </div>
         )}
@@ -1779,13 +2049,22 @@ export default function Generator() {
               <span className="text-slate-500">
                 📊 {groupComparisonStats.g1.runs} lượt chạy ({groupComparisonStats.g1.hours}h) | {groupComparisonStats.g1.invCount} HĐ
               </span>
-              <span className={`px-2 py-0.5 rounded text-[10px] font-bold transition-colors ${
-                selectedGroupFilter === 'group1' 
-                  ? 'bg-amber-600 text-white shadow-sm' 
-                  : 'bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200'
-              }`}>
-                {selectedGroupFilter === 'group1' ? '✓ Đang lọc Nhóm 1' : '👉 Click để lọc'}
-              </span>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={(e) => { e.stopPropagation(); exportInvoicesZip('group1'); }}
+                  className="px-2 py-0.5 rounded text-[10px] font-bold bg-white text-amber-900 border border-amber-300 hover:bg-amber-100 shadow-2xs transition-colors flex items-center gap-1 cursor-pointer"
+                  title="Tải trọn bộ file ZIP toàn bộ hóa đơn Nhóm 1"
+                >
+                  📦 ZIP ({groupComparisonStats.g1.invCount} HĐ)
+                </button>
+                <span className={`px-2 py-0.5 rounded text-[10px] font-bold transition-colors ${
+                  selectedGroupFilter === 'group1' 
+                    ? 'bg-amber-600 text-white shadow-sm' 
+                    : 'bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200'
+                }`}>
+                  {selectedGroupFilter === 'group1' ? '✓ Đang lọc' : '👉 Lọc'}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -1876,13 +2155,22 @@ export default function Generator() {
               <span className="text-slate-500">
                 📊 {groupComparisonStats.g2.runs} lượt chạy ({groupComparisonStats.g2.hours}h) | {groupComparisonStats.g2.invCount} HĐ
               </span>
-              <span className={`px-2 py-0.5 rounded text-[10px] font-bold transition-colors ${
-                selectedGroupFilter === 'group2' 
-                  ? 'bg-blue-600 text-white shadow-sm' 
-                  : 'bg-blue-100 text-blue-900 border border-blue-300 hover:bg-blue-200'
-              }`}>
-                {selectedGroupFilter === 'group2' ? '✓ Đang lọc Nhóm 2' : '👉 Click để lọc'}
-              </span>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={(e) => { e.stopPropagation(); exportInvoicesZip('group2'); }}
+                  className="px-2 py-0.5 rounded text-[10px] font-bold bg-white text-blue-900 border border-blue-300 hover:bg-blue-100 shadow-2xs transition-colors flex items-center gap-1 cursor-pointer"
+                  title="Tải trọn bộ file ZIP toàn bộ hóa đơn Nhóm 2"
+                >
+                  📦 ZIP ({groupComparisonStats.g2.invCount} HĐ)
+                </button>
+                <span className={`px-2 py-0.5 rounded text-[10px] font-bold transition-colors ${
+                  selectedGroupFilter === 'group2' 
+                    ? 'bg-blue-600 text-white shadow-sm' 
+                    : 'bg-blue-100 text-blue-900 border border-blue-300 hover:bg-blue-200'
+                }`}>
+                  {selectedGroupFilter === 'group2' ? '✓ Đang lọc' : '👉 Lọc'}
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -2653,7 +2941,21 @@ export default function Generator() {
                                   </div>
                                 )}
                               </td>
-                              <td className="px-4 py-3 whitespace-nowrap text-right text-xs space-x-1">
+                              <td className="px-4 py-3 whitespace-nowrap text-right text-xs space-x-1.5">
+                                {inv.invoice_url ? (
+                                  <a 
+                                    href={inv.invoice_url.includes('easyinvoice') && !inv.invoice_url.includes('DownloadInvPdf') ? inv.invoice_url.replace('ViewFromEmail', 'DownloadInvPdf') : inv.invoice_url}
+                                    target="_blank" 
+                                    rel="noreferrer"
+                                    className="text-emerald-700 hover:text-emerald-950 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 px-2 py-1 rounded-md transition-all inline-flex items-center gap-1 font-bold text-[11px] shadow-xs active:scale-95"
+                                    title="Tải / Xem file PDF hóa đơn gốc"
+                                  >
+                                    <FileText size={13} className="text-emerald-600" />
+                                    <span>Tải PDF</span>
+                                  </a>
+                                ) : (
+                                  <span className="text-[11px] text-slate-300 italic">Không có link</span>
+                                )}
                                 <button 
                                   onClick={() => setSelectedInvoice(inv)}
                                   className="text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 p-1.5 rounded transition-colors inline-flex items-center cursor-pointer"
@@ -2902,19 +3204,25 @@ export default function Generator() {
                 </div>
               </div>
 
-              {/* PDF Link */}
-              {selectedInvoice.invoice_url && (
-                <div className="flex justify-start">
+              {/* PDF & Tra cứu hóa đơn gốc */}
+              <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl">
+                <div className="text-xs text-emerald-900 font-semibold flex items-center gap-1.5">
+                  <FileText size={16} className="text-emerald-600" />
+                  <span>File Hóa Đơn Điện Tử Gốc (PDF / XML)</span>
+                </div>
+                {selectedInvoice.invoice_url ? (
                   <a 
-                    href={selectedInvoice.invoice_url} 
+                    href={selectedInvoice.invoice_url.includes('easyinvoice') && !selectedInvoice.invoice_url.includes('DownloadInvPdf') ? selectedInvoice.invoice_url.replace('ViewFromEmail', 'DownloadInvPdf') : selectedInvoice.invoice_url} 
                     target="_blank" 
                     rel="noreferrer"
-                    className="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800 font-semibold cursor-pointer"
+                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs inline-flex items-center gap-1.5 shadow-sm transition-all hover:scale-105 active:scale-95 cursor-pointer"
                   >
-                    <ExternalLink size={14} /> Mở file PDF/XML hóa đơn gốc
+                    <Download size={14} /> Tải / Mở File PDF Gốc
                   </a>
-                </div>
-              )}
+                ) : (
+                  <span className="text-xs text-slate-400 italic">Chưa có liên kết trực tiếp</span>
+                )}
+              </div>
             </div>
 
             <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
