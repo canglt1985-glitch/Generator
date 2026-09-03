@@ -410,10 +410,14 @@ export default function Sran5gProject() {
     setActiveViewTab('table');
   };
 
-  // Filtered dataset milestone breakdown (Live progress card for active filter e.g. Target Tháng 8)
+  // Filtered dataset milestone breakdown (Live progress card for active filter e.g. Target Tháng 9 / Target Tháng 8)
   const filteredStats = useMemo(() => {
     const total = filteredData.length;
     if (total === 0) return null;
+
+    const is5gSite = (d) => (d.scope_5g && d.scope_5g.toUpperCase().includes('5G') && !d.scope_5g.toUpperCase().includes('NONE')) || (d.unique_id && d.unique_id.toUpperCase().includes('5G'));
+    const total5g = filteredData.filter(is5gSite).length;
+    const totalSwap = filteredData.filter(d => !is5gSite(d)).length > 0 ? filteredData.filter(d => !is5gSite(d)).length : total;
 
     const survey = filteredData.filter(d => d.survey_date).length;
     const tssr = filteredData.filter(d => d.ie_app_date || d.rf_app_date || d.tssr_sub_date).length;
@@ -421,15 +425,33 @@ export default function Sran5gProject() {
     const wh = filteredData.filter(d => d.wh_pickup_date).length;
     const delivery = filteredData.filter(d => d.delivery_date).length;
     const install = filteredData.filter(d => d.install_date).length;
+    
+    // Swap 3G/4G integration count
+    const swapIntegration = filteredData.filter(d => d.integration_date && !is5gSite(d)).length;
     const integration = filteredData.filter(d => d.integration_date).length;
-    const onair = filteredData.filter(d => d.onair_date).length;
-
-    const is5gSite = (d) => (d.scope_5g && d.scope_5g.toUpperCase().includes('5G') && !d.scope_5g.toUpperCase().includes('NONE')) || (d.unique_id && d.unique_id.toUpperCase().includes('5G'));
-    const total5g = filteredData.filter(is5gSite).length;
-    const onair5g = filteredData.filter(d => d.onair_date && is5gSite(d)).length;
     const integration5g = filteredData.filter(d => d.integration_date && is5gSite(d)).length;
 
-    return { total, survey, tssr, rf, wh, delivery, install, integration, onair, total5g, onair5g, integration5g };
+    // 5G Onair count (Only 5G as requested by user!)
+    const onair5g = filteredData.filter(d => d.onair_date && is5gSite(d)).length;
+    const allOnair = filteredData.filter(d => d.onair_date).length;
+
+    return { 
+      total, 
+      total5g, 
+      totalSwap,
+      survey, 
+      tssr, 
+      rf, 
+      wh, 
+      delivery, 
+      install, 
+      integration, 
+      swapIntegration: swapIntegration > 0 ? swapIntegration : integration,
+      integration5g,
+      onair: onair5g, // strictly 5G onair
+      onair5g, 
+      allOnair 
+    };
   }, [filteredData]);
 
   // VKD Progress Breakdown (Vùng Kinh Doanh 5, VKD 4, VKD 3)
@@ -1443,12 +1465,14 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
                 className="p-3 bg-teal-50 hover:bg-teal-100 rounded-xl border border-teal-200 cursor-pointer transition-all hover:scale-[1.02] shadow-sm"
               >
                 <div className="text-[11px] font-semibold text-teal-700 flex items-center justify-between">
-                  <span className="flex items-center gap-1"><Server className="h-3.5 w-3.5" /> Đã Tích Hợp</span>
-                  <span className="text-[10px] bg-teal-200/60 text-teal-900 px-1.5 py-0.2 rounded font-bold">{stats.add5g > 0 ? `${((stats.integrationDone/stats.add5g)*100).toFixed(0)}% 5G` : ''}</span>
+                  <span className="flex items-center gap-1"><Server className="h-3.5 w-3.5" /> 6. Tích Hợp Swap 3G/4G</span>
+                  <span className="text-[10px] bg-teal-200/60 text-teal-900 px-1.5 py-0.2 rounded font-bold">
+                    {stats.activeTotal > 0 ? `${((stats.integrationDone / stats.activeTotal) * 100).toFixed(0)}%` : ''}
+                  </span>
                 </div>
                 <div className="text-2xl font-black text-teal-800 mt-1">{stats.integrationDone}</div>
                 <div className="text-[10px] text-teal-600 mt-0.5 font-bold">
-                  {stats.add5g > 0 ? `${stats.integrationDone}/${stats.add5g} trạm 5G` : `Xem ${stats.integrationDone} trạm`} &rarr;
+                  {stats.integrationDone} / {stats.activeTotal} trạm Swap &rarr;
                 </div>
               </div>
 
@@ -1457,12 +1481,14 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
                 className="p-3 bg-emerald-50 hover:bg-emerald-100 rounded-xl border border-emerald-300 col-span-2 sm:col-span-1 cursor-pointer transition-all hover:scale-[1.02] shadow-sm ring-2 ring-emerald-500/20"
               >
                 <div className="text-[11px] font-semibold text-emerald-800 flex items-center justify-between">
-                  <span className="flex items-center gap-1"><Radio className="h-3.5 w-3.5 text-emerald-600 animate-pulse" /> Đã Onair 5G</span>
-                  <span className="text-[10px] bg-emerald-200 text-emerald-900 px-1.5 py-0.2 rounded font-bold">{stats.add5g > 0 ? `${((stats.onair/stats.add5g)*100).toFixed(1)}%` : ''}</span>
+                  <span className="flex items-center gap-1"><Radio className="h-3.5 w-3.5 text-emerald-600 animate-pulse" /> 7. Onair 5G (Chỉ tính 5G)</span>
+                  <span className="text-[10px] bg-emerald-200 text-emerald-900 px-1.5 py-0.2 rounded font-bold">
+                    {stats.add5g > 0 ? `${((stats.onair5g / stats.add5g) * 100).toFixed(1)}%` : ''}
+                  </span>
                 </div>
-                <div className="text-2xl font-black text-emerald-800 mt-1">{stats.onair}</div>
+                <div className="text-2xl font-black text-emerald-800 mt-1">{stats.onair5g}</div>
                 <div className="text-[10px] text-emerald-700 mt-0.5 font-bold">
-                  {stats.add5g > 0 ? `${stats.onair}/${stats.add5g} trạm 5G` : `Xem ${stats.onair} trạm`} &rarr;
+                  {stats.add5g > 0 ? `${stats.onair5g}/${stats.add5g} trạm 5G phát sóng` : `Xem ${stats.onair5g} trạm`} &rarr;
                 </div>
               </div>
             </div>
@@ -1837,25 +1863,45 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
         </>
       )}
 
-      {/* Live Filter Progress Summary Banner (Target Tháng 8 Progress Tracker) */}
+      {/* Live Filter Progress Summary Banner (Kế hoạch Tháng 9 & Live Tracker) */}
       {filteredStats && (selectedStatus !== 'ALL' || selectedDistrict !== 'ALL' || selectedScope !== 'ALL' || searchTerm) && (
         <div className={`p-4 rounded-2xl text-white shadow-lg space-y-3 transition-all ${
-          selectedStatus === 'TARGET_AUG'
+          selectedStatus.includes('SEP') || selectedStatus.startsWith('CLUSTER_')
+            ? 'bg-gradient-to-r from-amber-950 via-slate-900 to-indigo-950 border-2 border-amber-500/60 ring-4 ring-amber-500/20'
+            : selectedStatus === 'TARGET_AUG'
             ? 'bg-gradient-to-r from-purple-950 via-indigo-900 to-slate-900 border-2 border-purple-500/50 ring-4 ring-purple-500/20'
             : 'bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 border border-slate-700'
         }`}>
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-2.5">
             <div className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-purple-400 animate-bounce" />
+              <Calendar className={`h-5 w-5 animate-bounce ${selectedStatus.includes('SEP') || selectedStatus.startsWith('CLUSTER_') ? 'text-amber-400' : 'text-purple-400'}`} />
               <span className="font-black text-sm tracking-wide text-white">
-                {selectedStatus === 'TARGET_AUG' 
+                {selectedStatus === 'TARGET_SEP'
+                  ? `🎯 THỐNG KÊ TIẾN ĐỘ KẾ HOẠCH THÁNG 9/2026 (${filteredStats.total} TRẠM SWAP 3G/4G • ${filteredStats.total5g} TRẠM PHÁT 5G)`
+                  : selectedStatus === 'TARGET_SEP_VT3'
+                  ? `🎯 TIẾN ĐỘ KẾ HOẠCH THÁNG 9 - TVT3 QUẢN LÝ (${filteredStats.total} TRẠM SWAP • ${filteredStats.total5g} TRẠM 5G)`
+                  : selectedStatus === 'TARGET_SEP_VT2'
+                  ? `🎯 TIẾN ĐỘ KẾ HOẠCH THÁNG 9 - TVT2 QUẢN LÝ (${filteredStats.total} TRẠM SWAP • ${filteredStats.total5g} TRẠM 5G)`
+                  : selectedStatus.startsWith('CLUSTER_')
+                  ? `🎯 TIẾN ĐỘ CLUSTER ${selectedStatus.replace('CLUSTER_', '')} (${filteredStats.total} TRẠM SWAP • ${filteredStats.total5g} TRẠM 5G)`
+                  : selectedStatus === 'TARGET_AUG' 
                   ? `🎯 THỐNG KÊ TIẾN ĐỘ THI CÔNG ${filteredStats.total} TRẠM TARGET THÁNG 8`
                   : `📊 THỐNG KÊ TIẾN ĐỘ THI CÔNG DANH SÁCH ĐANG LỌC (${filteredStats.total} TRẠM)`}
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-[11px] bg-purple-500/30 px-3 py-1 rounded-full text-purple-200 border border-purple-400/30 font-bold">
-                {selectedStatus === 'TARGET_AUG' ? 'Kế hoạch hoàn thành T8/2026' : 'Tự động tính theo bộ lọc'}
+              <span className={`text-[11px] px-3 py-1 rounded-full font-bold border ${
+                selectedStatus.includes('SEP') || selectedStatus.startsWith('CLUSTER_')
+                  ? 'bg-amber-500/30 text-amber-200 border-amber-400/40'
+                  : selectedStatus === 'TARGET_AUG'
+                  ? 'bg-purple-500/30 text-purple-200 border-purple-400/30'
+                  : 'bg-slate-700/50 text-slate-300 border-slate-600'
+              }`}>
+                {selectedStatus.includes('SEP') || selectedStatus.startsWith('CLUSTER_')
+                  ? 'Kế hoạch T9/2026 (13 Cluster) • Ưu tiên Day_06 ➔ Day_18'
+                  : selectedStatus === 'TARGET_AUG' 
+                  ? 'Kế hoạch hoàn thành T8/2026' 
+                  : 'Tự động tính theo bộ lọc'}
               </span>
               <button
                 onClick={exportFilteredToExcel}
@@ -1898,16 +1944,27 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
               <div className="text-[10px] text-blue-400 font-extrabold mt-0.5">{((filteredStats.install / filteredStats.total) * 100).toFixed(0)}% hoàn thành</div>
             </div>
 
-            <div className="bg-white/10 p-2.5 rounded-xl border border-white/10 hover:bg-white/15 transition-all">
-              <div className="text-slate-300 text-[10px] font-semibold">6. Tích Hợp</div>
-              <div className="font-black text-white text-base mt-0.5">{filteredStats.integration} / {filteredStats.total}</div>
-              <div className="text-[10px] text-teal-400 font-extrabold mt-0.5">{((filteredStats.integration / filteredStats.total) * 100).toFixed(0)}% hoàn thành</div>
+            {/* 6. Tích hợp Swap 3G/4G: Tính số lượng Swap */}
+            <div className="bg-white/10 p-2.5 rounded-xl border border-teal-400/40 bg-teal-950/25 hover:bg-white/15 transition-all">
+              <div className="text-teal-200 text-[10px] font-bold">6. Tích Hợp Swap 3G/4G</div>
+              <div className="font-black text-teal-300 text-base mt-0.5">{filteredStats.swapIntegration} / {filteredStats.total}</div>
+              <div className="text-[10px] text-teal-400 font-extrabold mt-0.5">
+                {filteredStats.total > 0 ? ((filteredStats.swapIntegration / filteredStats.total) * 100).toFixed(0) : 0}% swap xong
+              </div>
             </div>
 
-            <div className="bg-emerald-500/20 p-2.5 rounded-xl border border-emerald-400/40 col-span-2 sm:col-span-1 hover:bg-emerald-500/30 transition-all">
-              <div className="text-emerald-200 text-[10px] font-bold">7. Onair (Phát Sóng)</div>
-              <div className="font-black text-emerald-300 text-base mt-0.5">{filteredStats.onair} / {filteredStats.total}</div>
-              <div className="text-[10px] text-emerald-400 font-extrabold mt-0.5">{((filteredStats.onair / filteredStats.total) * 100).toFixed(0)}% phát sóng</div>
+            {/* 7. Onair: CHỈ TÍNH SỐ LƯỢNG 5G! */}
+            <div className="bg-emerald-500/20 p-2.5 rounded-xl border border-emerald-400/50 hover:bg-emerald-500/30 transition-all ring-2 ring-emerald-500/30">
+              <div className="text-emerald-200 text-[10px] font-bold flex items-center justify-center gap-1">
+                <Radio className="h-3 w-3 text-emerald-400 animate-pulse" />
+                <span>7. Onair 5G (Chỉ tính 5G)</span>
+              </div>
+              <div className="font-black text-emerald-300 text-base mt-0.5">
+                {filteredStats.onair5g} / {filteredStats.total5g}
+              </div>
+              <div className="text-[10px] text-emerald-400 font-extrabold mt-0.5">
+                {filteredStats.total5g > 0 ? ((filteredStats.onair5g / filteredStats.total5g) * 100).toFixed(0) : 0}% phát sóng 5G
+              </div>
             </div>
           </div>
         </div>
