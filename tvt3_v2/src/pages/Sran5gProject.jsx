@@ -7,6 +7,22 @@ import {
 import { supabase } from '../supabaseClient';
 import * as XLSX from 'xlsx';
 
+export const SEPTEMBER_2026_CLUSTERS = [
+  { order: 'Day_06', cluster: 'DNI_16_CM', db_cluster: 'DNI_06_CM', tvt: 'VT3', district: 'Cẩm Mỹ', total_3g4g: 26, total_5g: 6 },
+  { order: 'Day_07', cluster: 'DNI_07_TB', db_cluster: 'DNI_05_TB', tvt: 'VT2', district: 'Trảng Bom', total_3g4g: 27, total_5g: 23 },
+  { order: 'Day_08', cluster: 'DNI_15_XL', db_cluster: 'DNI_08_XL', tvt: 'VT3', district: 'Xuân Lộc', total_3g4g: 25, total_5g: 14 },
+  { order: 'Day_09', cluster: 'DNI_17_XL', db_cluster: 'DNI_16_XL', tvt: 'VT3', district: 'Xuân Lộc', total_3g4g: 26, total_5g: 10 },
+  { order: 'Day_10', cluster: 'DNI_06_TB', db_cluster: 'DNI_09_TB', tvt: 'VT2', district: 'Trảng Bom', total_3g4g: 27, total_5g: 16 },
+  { order: 'Day_11', cluster: 'DNI_18_XL', db_cluster: 'DNI_17_XL', tvt: 'VT3', district: 'Xuân Lộc', total_3g4g: 25, total_5g: 12 },
+  { order: 'Day_12', cluster: 'DNI_19_XL', db_cluster: 'DNI_18_XL', tvt: 'VT3', district: 'Xuân Lộc', total_3g4g: 25, total_5g: 6 },
+  { order: 'Day_13', cluster: 'DNI_13_LK', db_cluster: 'DNI_10_LK', tvt: 'VT3', district: 'Long Khánh', total_3g4g: 26, total_5g: 21 },
+  { order: 'Day_14', cluster: 'DNI_04_VC', db_cluster: 'DNI_11_VC', tvt: 'VT2', district: 'Vĩnh Cửu', total_3g4g: 26, total_5g: 19 },
+  { order: 'Day_15', cluster: 'DNI_14_LK', db_cluster: 'DNI_14_LK', tvt: 'VT3', district: 'Long Khánh', total_3g4g: 26, total_5g: 9 },
+  { order: 'Day_16', cluster: 'DNI_12_TN', db_cluster: 'DNI_12_TN', tvt: 'VT3', district: 'Thống Nhất', total_3g4g: 26, total_5g: 14 },
+  { order: 'Day_17', cluster: 'DNI_05_VC', db_cluster: 'DNI_13_VC', tvt: 'VT2', district: 'Vĩnh Cửu', total_3g4g: 27, total_5g: 21 },
+  { order: 'Day_18', cluster: 'DNI_20_DQ', db_cluster: 'DNI_19_DQ', tvt: 'VT3', district: 'Định Quán', total_3g4g: 26, total_5g: 7 },
+];
+
 export default function Sran5gProject() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -16,6 +32,7 @@ export default function Sran5gProject() {
   const [selectedStatus, setSelectedStatus] = useState('ALL');
   const [selectedPower, setSelectedPower] = useState('ALL');
   const [selectedVkd, setSelectedVkd] = useState('ALL'); // ALL, VKD 5, VKD 4, VKD 3
+  const [selectedSeptemberTvt, setSelectedSeptemberTvt] = useState('ALL'); // ALL, VT3, VT2
   const [tvt3Only, setTvt3Only] = useState(true);
   const [tvt3SiteIds, setTvt3SiteIds] = useState(new Set());
   const [tvt3SiteCount, setTvt3SiteCount] = useState(0);
@@ -24,7 +41,7 @@ export default function Sran5gProject() {
   const [importReport, setImportReport] = useState(null);
   const [selectedSite, setSelectedSite] = useState(null);
 
-  const [activeViewTab, setActiveViewTab] = useState('dashboard');
+  const [activeViewTab, setActiveViewTab] = useState('plan_sep'); // 'plan_sep' | 'dashboard' | 'table'
   const [copiedReport, setCopiedReport] = useState(false);
 
   // Helper classification for Vùng Kinh Doanh (VKD)
@@ -215,15 +232,38 @@ export default function Sran5gProject() {
       }
 
       let matchStatus = true;
-      if (selectedStatus === 'TARGET_AUG') matchStatus = item.monthly_target_im && String(item.monthly_target_im).includes('Aug');
-      else if (selectedStatus === 'SURVEY_DONE') matchStatus = !!item.survey_date;
-      else if (selectedStatus === 'TSSR_APPROVED') matchStatus = !!item.tssr_sub_date || !!item.ie_app_date || !!item.rf_app_date;
-      else if (selectedStatus === 'RF_DESIGN_APPROVED') matchStatus = !!item.rf_design_date;
-      else if (selectedStatus === 'WH_PICKUP') matchStatus = !!item.wh_pickup_date;
-      else if (selectedStatus === 'DELIVERY') matchStatus = !!item.delivery_date;
-      else if (selectedStatus === 'INSTALL') matchStatus = !!item.install_date;
-      else if (selectedStatus === 'INTEGRATION') matchStatus = !!item.integration_date;
-      else if (selectedStatus === 'ONAIR') matchStatus = !!item.onair_date;
+      if (selectedStatus === 'TARGET_SEP') {
+        matchStatus = item.monthly_target_im === 'Target_in_Sep' || item.raw_data?.Target_Month === 'Tháng 9' || (item.raw_data?.Cluster_Name && SEPTEMBER_2026_CLUSTERS.some(c => c.db_cluster === item.raw_data?.Cluster_Name || c.cluster === item.raw_data?.Cluster_Name));
+      } else if (selectedStatus === 'TARGET_SEP_VT3') {
+        const isSep = item.monthly_target_im === 'Target_in_Sep' || item.raw_data?.Target_Month === 'Tháng 9' || (item.raw_data?.Cluster_Name && SEPTEMBER_2026_CLUSTERS.some(c => c.db_cluster === item.raw_data?.Cluster_Name));
+        const isVt3 = item.raw_data?.TVT_Unit === 'VT3' || SEPTEMBER_2026_CLUSTERS.some(c => c.tvt === 'VT3' && (c.db_cluster === item.raw_data?.Cluster_Name || c.cluster === item.raw_data?.Cluster_Name));
+        matchStatus = isSep && isVt3;
+      } else if (selectedStatus === 'TARGET_SEP_VT2') {
+        const isSep = item.monthly_target_im === 'Target_in_Sep' || item.raw_data?.Target_Month === 'Tháng 9' || (item.raw_data?.Cluster_Name && SEPTEMBER_2026_CLUSTERS.some(c => c.db_cluster === item.raw_data?.Cluster_Name));
+        const isVt2 = item.raw_data?.TVT_Unit === 'VT2' || SEPTEMBER_2026_CLUSTERS.some(c => c.tvt === 'VT2' && (c.db_cluster === item.raw_data?.Cluster_Name || c.cluster === item.raw_data?.Cluster_Name));
+        matchStatus = isSep && isVt2;
+      } else if (selectedStatus.startsWith('CLUSTER_')) {
+        const targetCluster = selectedStatus.replace('CLUSTER_', '');
+        matchStatus = (item.raw_data?.Cluster_Name === targetCluster || item.raw_data?.Cluster_New === targetCluster);
+      } else if (selectedStatus === 'TARGET_AUG') {
+        matchStatus = item.monthly_target_im && String(item.monthly_target_im).includes('Aug');
+      } else if (selectedStatus === 'SURVEY_DONE') {
+        matchStatus = !!item.survey_date;
+      } else if (selectedStatus === 'TSSR_APPROVED') {
+        matchStatus = !!item.tssr_sub_date || !!item.ie_app_date || !!item.rf_app_date;
+      } else if (selectedStatus === 'RF_DESIGN_APPROVED') {
+        matchStatus = !!item.rf_design_date;
+      } else if (selectedStatus === 'WH_PICKUP') {
+        matchStatus = !!item.wh_pickup_date;
+      } else if (selectedStatus === 'DELIVERY') {
+        matchStatus = !!item.delivery_date;
+      } else if (selectedStatus === 'INSTALL') {
+        matchStatus = !!item.install_date;
+      } else if (selectedStatus === 'INTEGRATION') {
+        matchStatus = !!item.integration_date;
+      } else if (selectedStatus === 'ONAIR') {
+        matchStatus = !!item.onair_date;
+      }
 
       let matchPower = true;
       if (selectedPower !== 'ALL') {
@@ -287,6 +327,23 @@ export default function Sran5gProject() {
     const tssrApproved = activeDataset.filter(d => d.ie_app_date || d.rf_app_date || d.tssr_sub_date).length;
     const rfDesignApproved = activeDataset.filter(d => d.rf_design_date).length;
     const augTarget = activeDataset.filter(d => d.monthly_target_im && String(d.monthly_target_im).includes('Aug')).length;
+    
+    // September Plan target stats
+    const sepTarget = activeDataset.filter(d => 
+      d.monthly_target_im === 'Target_in_Sep' || d.raw_data?.Target_Month === 'Tháng 9' || 
+      SEPTEMBER_2026_CLUSTERS.some(c => c.db_cluster === d.raw_data?.Cluster_Name || c.cluster === d.raw_data?.Cluster_Name)
+    ).length;
+
+    const sepTargetVT3 = activeDataset.filter(d => 
+      (d.monthly_target_im === 'Target_in_Sep' || d.raw_data?.Target_Month === 'Tháng 9' || SEPTEMBER_2026_CLUSTERS.some(c => c.db_cluster === d.raw_data?.Cluster_Name)) &&
+      (d.raw_data?.TVT_Unit === 'VT3' || SEPTEMBER_2026_CLUSTERS.some(c => c.tvt === 'VT3' && (c.db_cluster === d.raw_data?.Cluster_Name || c.cluster === d.raw_data?.Cluster_Name)))
+    ).length;
+
+    const sepTargetVT2 = activeDataset.filter(d => 
+      (d.monthly_target_im === 'Target_in_Sep' || d.raw_data?.Target_Month === 'Tháng 9' || SEPTEMBER_2026_CLUSTERS.some(c => c.db_cluster === d.raw_data?.Cluster_Name)) &&
+      (d.raw_data?.TVT_Unit === 'VT2' || SEPTEMBER_2026_CLUSTERS.some(c => c.tvt === 'VT2' && (c.db_cluster === d.raw_data?.Cluster_Name || c.cluster === d.raw_data?.Cluster_Name)))
+    ).length;
+
     const whPickup = activeDataset.filter(d => d.wh_pickup_date).length;
     const deliveryDone = activeDataset.filter(d => d.delivery_date).length;
     const installDone = activeDataset.filter(d => d.install_date).length;
@@ -302,11 +359,56 @@ export default function Sran5gProject() {
     return { 
       activeTotal, overallTotal, swap4gOnly, swapBoth3g4g, add5g, 
       total4gSwap: (swap4gOnly + swapBoth3g4g) > 0 ? (swap4gOnly + swapBoth3g4g + add5g) : activeTotal,
-      surveyDone, tssrApproved, rfDesignApproved, augTarget, 
+      surveyDone, tssrApproved, rfDesignApproved, augTarget, sepTarget, sepTargetVT3, sepTargetVT2,
       whPickup, deliveryDone, installDone, integrationDone, onair,
       onair5g, integration5g
     };
   }, [data, tvt3Only, tvt3SiteIds]);
+
+  // September 13 Clusters Aggregated Progress Stats
+  const septemberClusterStats = useMemo(() => {
+    return SEPTEMBER_2026_CLUSTERS.map(c => {
+      const clusterSites = data.filter(d => 
+        (d.raw_data?.Cluster_Name === c.db_cluster || d.raw_data?.Cluster_Name === c.cluster || d.raw_data?.Cluster_New === c.cluster)
+      );
+      const is5gSite = (d) => (d.scope_5g && d.scope_5g.toUpperCase().includes('5G') && !d.scope_5g.toUpperCase().includes('NONE')) || (d.unique_id && d.unique_id.toUpperCase().includes('5G'));
+      const count5g = clusterSites.filter(is5gSite).length;
+      const survey = clusterSites.filter(d => d.survey_date).length;
+      const tssr = clusterSites.filter(d => d.ie_app_date || d.rf_app_date || d.tssr_sub_date).length;
+      const rf = clusterSites.filter(d => d.rf_design_date).length;
+      const wh = clusterSites.filter(d => d.wh_pickup_date).length;
+      const delivery = clusterSites.filter(d => d.delivery_date).length;
+      const install = clusterSites.filter(d => d.install_date).length;
+      const integration = clusterSites.filter(d => d.integration_date).length;
+      const onair = clusterSites.filter(d => d.onair_date).length;
+      const onair5g = clusterSites.filter(d => d.onair_date && is5gSite(d)).length;
+
+      return {
+        ...c,
+        db_count: clusterSites.length,
+        count5g,
+        survey,
+        tssr,
+        rf,
+        wh,
+        delivery,
+        install,
+        integration,
+        onair,
+        onair5g,
+        sites: clusterSites
+      };
+    });
+  }, [data]);
+
+  const filterByCluster = (clusterConfig) => {
+    setSelectedStatus(`CLUSTER_${clusterConfig.db_cluster}`);
+    setTvt3Only(false);
+    setSelectedDistrict('ALL');
+    setSelectedScope('ALL');
+    setSearchTerm('');
+    setActiveViewTab('table');
+  };
 
   // Filtered dataset milestone breakdown (Live progress card for active filter e.g. Target Tháng 8)
   const filteredStats = useMemo(() => {
@@ -401,6 +503,92 @@ export default function Sran5gProject() {
     });
     return Object.values(distMap).sort((a, b) => b.total - a.total);
   }, [data, tvt3Only, tvt3SiteIds]);
+
+  // Copy September Plan Report to Clipboard
+  const copySeptemberReport = () => {
+    const vt3Clusters = septemberClusterStats.filter(c => c.tvt === 'VT3');
+    const vt2Clusters = septemberClusterStats.filter(c => c.tvt === 'VT2');
+    const total3g4g = septemberClusterStats.reduce((sum, c) => sum + c.total_3g4g, 0);
+    const total5g = septemberClusterStats.reduce((sum, c) => sum + c.total_5g, 0);
+
+    const reportText = `🎯 BÁO CÁO KẾ HOẠCH TRIỂN KHAI SRAN 5G THÁNG 9/2026 (13 CLUSTER)
+🗓️ Cập nhật: ${new Date().toLocaleDateString('vi-VN')}
+
+📊 1. TỔNG QUAN QUY MÔ KẾ HOẠCH THÁNG 9:
+• Tổng số Cluster: 13 Cluster (Triển khai từ Day_06 ➔ Day_18)
+• Tổng số trạm Swap 3G/4G: ${total3g4g} trạm
+• Tổng số trạm Phát sóng 5G mới: ${total5g} trạm (Tỷ lệ: ${total3g4g > 0 ? ((total5g/total3g4g)*100).toFixed(1) : 0}%)
+• TVT3 phụ trách: 9 Cluster (${vt3Clusters.reduce((s,c)=>s+c.total_3g4g,0)} trạm 3G4G / ${vt3Clusters.reduce((s,c)=>s+c.total_5g,0)} trạm 5G)
+• TVT2 phụ trách: 4 Cluster (${vt2Clusters.reduce((s,c)=>s+c.total_3g4g,0)} trạm 3G4G / ${vt2Clusters.reduce((s,c)=>s+c.total_5g,0)} trạm 5G)
+
+📅 2. THỨ TỰ TRIỂN KHAI 13 CLUSTER THEO KẾ HOẠCH:
+${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tvt} - ${c.district}): ${c.total_3g4g} trạm 3G/4G | ${c.total_5g} trạm 5G | Onair: ${c.onair}/${c.total_3g4g}`).join('\n')}
+
+🚀 3. TỔNG HỢP TIẾN ĐỘ HIỆN TẠI (338 TRẠM THÁNG 9):
+• Đã Giao hàng (Delivery): ${septemberClusterStats.reduce((s,c)=>s+c.delivery,0)} / ${total3g4g} trạm
+• Đã Lắp đặt (Install): ${septemberClusterStats.reduce((s,c)=>s+c.install,0)} / ${total3g4g} trạm
+• Đã Onair (Phát sóng): ${septemberClusterStats.reduce((s,c)=>s+c.onair,0)} / ${total3g4g} trạm`;
+
+    navigator.clipboard.writeText(reportText);
+    setCopiedReport(true);
+    setTimeout(() => setCopiedReport(false), 3000);
+  };
+
+  // Export September Plan to Excel
+  const exportSeptemberPlanToExcel = () => {
+    const sepData = data.filter(d => 
+      d.monthly_target_im === 'Target_in_Sep' || d.raw_data?.Target_Month === 'Tháng 9' || 
+      SEPTEMBER_2026_CLUSTERS.some(c => c.db_cluster === d.raw_data?.Cluster_Name || c.cluster === d.raw_data?.Cluster_Name)
+    );
+
+    if (sepData.length === 0) {
+      alert("Chưa có dữ liệu trạm Kế hoạch Tháng 9!");
+      return;
+    }
+
+    const excelData = sepData.map((item, index) => {
+      const clusterConfig = SEPTEMBER_2026_CLUSTERS.find(c => c.db_cluster === item.raw_data?.Cluster_Name || c.cluster === item.raw_data?.Cluster_Name) || {};
+      return {
+        'STT': index + 1,
+        'Thứ tự Triển khai (Order)': clusterConfig.order || item.raw_data?.Order_Sep || item.raw_data?.Swap_Day_Plan || '',
+        'Cluster Mới (Cluster New)': clusterConfig.cluster || item.raw_data?.Cluster_New || '',
+        'Đơn vị Quản lý (TVT)': clusterConfig.tvt || item.raw_data?.TVT_Unit || 'VT3',
+        'Vùng Kinh Doanh': getVungKinhDoanh(item),
+        'Mã trạm mới (Site ID)': item.site_id || '',
+        'Mã trạm cũ (Old Site ID)': item.site_id_old || '',
+        'Địa bàn Huyện': item.district || clusterConfig.district || '',
+        'Scope 3G/4G': item.scope_3g4g || '',
+        'Scope 5G': item.scope_5g || '',
+        'Cấu hình 3G/4G': item.config_3g4g || '',
+        'Cấu hình 5G': item.config_5g || '',
+        'Giải pháp Thiết bị (Equip Solution)': item.equip_solution || '',
+        'Giải pháp Anten (Antenna Solution)': item.antenna_solution || '',
+        'Giải pháp Nguồn (Power Solution)': item.power_solution || '',
+        'Target Tháng': 'Tháng 9',
+        'Ngày Khảo sát TSSR': item.survey_date || '',
+        'Ngày Nộp TSSR': item.tssr_sub_date || '',
+        'Ngày Duyệt RF Design': item.rf_design_date || '',
+        'Ngày Nhận Kho (WH Pickup)': item.wh_pickup_date || '',
+        'Ngày Giao Hàng (Delivery)': item.delivery_date || '',
+        'Ngày Lắp Đặt (Installation)': item.install_date || '',
+        'Ngày Tích Hợp (Integration)': item.integration_date || '',
+        'Ngày Phát Sóng (Onair)': item.onair_date || '',
+        'Ghi chú': item.remarks || ''
+      };
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+    const colWidths = Object.keys(excelData[0] || {}).map(key => ({
+      wch: Math.max(key.length + 3, 16)
+    }));
+    worksheet['!cols'] = colWidths;
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Ke_Hoach_SRAN_5G_T9');
+
+    const timestamp = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(workbook, `Ke_Hoach_Trien_Khai_SRAN_5G_Thang_9_2026_${timestamp}.xlsx`);
+  };
 
   // Copy Executive Report Text to Clipboard
   const copyQuickReport = () => {
@@ -754,9 +942,23 @@ export default function Sran5gProject() {
         </div>
       </div>
 
-      {/* 3 Main View Tabs Navigation */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+      {/* 4 Main View Tabs Navigation */}
+      <div className="flex flex-col lg:flex-row items-center justify-between gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => {
+              setActiveViewTab('plan_sep');
+            }}
+            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+              activeViewTab === 'plan_sep'
+                ? 'bg-amber-600 text-white shadow-md ring-2 ring-amber-400/40'
+                : 'bg-amber-50 text-amber-900 hover:bg-amber-100 border border-amber-200'
+            }`}
+          >
+            <Calendar className="h-4 w-4 text-amber-200" />
+            📅 1. Kế Hoạch Tháng 9 (13 Cluster - 338 trạm)
+          </button>
+
           <button
             onClick={() => {
               setActiveViewTab('dashboard');
@@ -768,7 +970,7 @@ export default function Sran5gProject() {
             }`}
           >
             <Layers className="h-4 w-4 text-blue-400" />
-            📊 1. Báo Cáo Tổng Quan (Dashboard)
+            📊 2. Báo Cáo Tổng Quan (Dashboard)
           </button>
 
           <button
@@ -787,7 +989,7 @@ export default function Sran5gProject() {
             }`}
           >
             <Search className="h-4 w-4 text-emerald-400" />
-            🎯 2. Chi Tiết Trạm TVT3 ({stats.activeTotal || 390} trạm)
+            🎯 3. Chi Tiết Trạm TVT3 ({stats.activeTotal || 390} trạm)
           </button>
 
           <button
@@ -806,7 +1008,7 @@ export default function Sran5gProject() {
             }`}
           >
             <Database className="h-4 w-4 text-purple-400" />
-            🌐 3. Chi Tiết Cả Tỉnh ({stats.overallTotal || 1108} trạm)
+            🌐 4. Chi Tiết Cả Tỉnh ({stats.overallTotal || 1108} trạm)
           </button>
         </div>
 
@@ -830,7 +1032,256 @@ export default function Sran5gProject() {
         </div>
       </div>
 
-      {activeViewTab === 'dashboard' ? (
+      {activeViewTab === 'plan_sep' ? (
+        <div className="space-y-6 animate-in fade-in duration-300">
+          {/* Executive Overview Cards for September Plan */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="bg-gradient-to-br from-amber-500 to-amber-700 text-white p-4 rounded-xl shadow-md">
+              <div className="flex items-center justify-between text-amber-100 text-xs font-semibold mb-1">
+                <span>TỔNG QUY MÔ THÁNG 9</span>
+                <Calendar className="h-4 w-4 text-white" />
+              </div>
+              <div className="text-3xl font-black">338 <span className="text-xs font-normal opacity-80">trạm</span></div>
+              <div className="text-[11px] text-amber-100 mt-1 font-semibold flex items-center gap-1">
+                <span>13 Cluster (Day_06 &rarr; Day_18)</span>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-emerald-600 to-teal-700 text-white p-4 rounded-xl shadow-md">
+              <div className="flex items-center justify-between text-emerald-100 text-xs font-semibold mb-1">
+                <span>PHÁT SÓNG 5G MỚI</span>
+                <Zap className="h-4 w-4 text-emerald-200" />
+              </div>
+              <div className="text-3xl font-black">178 <span className="text-xs font-normal opacity-80">trạm 5G</span></div>
+              <div className="text-[11px] text-emerald-100 mt-1 font-semibold">
+                Tỷ lệ phủ sóng: 52.7% mạng lưới T9
+              </div>
+            </div>
+
+            <div 
+              onClick={() => setSelectedSeptemberTvt(selectedSeptemberTvt === 'VT3' ? 'ALL' : 'VT3')}
+              className={`p-4 rounded-xl shadow-md cursor-pointer transition-all border ${
+                selectedSeptemberTvt === 'VT3'
+                  ? 'bg-blue-600 text-white ring-2 ring-blue-300 shadow-blue-500/20'
+                  : 'bg-white text-slate-800 border-blue-200 hover:border-blue-400'
+              }`}
+            >
+              <div className={`flex items-center justify-between text-xs font-semibold mb-1 ${selectedSeptemberTvt === 'VT3' ? 'text-white' : 'text-blue-700'}`}>
+                <span>TVT3 QUẢN LÝ (VT3)</span>
+                <Server className="h-4 w-4" />
+              </div>
+              <div className="text-3xl font-black">231 <span className="text-xs font-normal opacity-80">trạm</span></div>
+              <div className={`text-[11px] mt-1 font-semibold ${selectedSeptemberTvt === 'VT3' ? 'text-blue-100' : 'text-slate-500'}`}>
+                9 Cluster (84 trạm 5G) {selectedSeptemberTvt === 'VT3' ? '✓ Đang lọc' : '• Click để lọc'}
+              </div>
+            </div>
+
+            <div 
+              onClick={() => setSelectedSeptemberTvt(selectedSeptemberTvt === 'VT2' ? 'ALL' : 'VT2')}
+              className={`p-4 rounded-xl shadow-md cursor-pointer transition-all border ${
+                selectedSeptemberTvt === 'VT2'
+                  ? 'bg-purple-600 text-white ring-2 ring-purple-300 shadow-purple-500/20'
+                  : 'bg-white text-slate-800 border-purple-200 hover:border-purple-400'
+              }`}
+            >
+              <div className={`flex items-center justify-between text-xs font-semibold mb-1 ${selectedSeptemberTvt === 'VT2' ? 'text-white' : 'text-purple-700'}`}>
+                <span>TVT2 QUẢN LÝ (VT2)</span>
+                <Radio className="h-4 w-4" />
+              </div>
+              <div className="text-3xl font-black">107 <span className="text-xs font-normal opacity-80">trạm</span></div>
+              <div className={`text-[11px] mt-1 font-semibold ${selectedSeptemberTvt === 'VT2' ? 'text-purple-100' : 'text-slate-500'}`}>
+                4 Cluster (94 trạm 5G) {selectedSeptemberTvt === 'VT2' ? '✓ Đang lọc' : '• Click để lọc'}
+              </div>
+            </div>
+          </div>
+
+          {/* Interactive Cluster Table for September */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="p-4 border-b border-slate-200 bg-slate-50/80 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-base font-black text-slate-800 flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-amber-500" />
+                  <span>KẾ HOẠCH TRIỂN KHAI SRAN 5G THÁNG 9/2026 (13 CLUSTER)</span>
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Thứ tự ưu tiên triển khai theo Day_06 đến Day_18 • Tổng cộng 338 trạm (178 trạm 5G)
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center bg-slate-200/70 p-1 rounded-xl gap-1">
+                  <button
+                    onClick={() => setSelectedSeptemberTvt('ALL')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                      selectedSeptemberTvt === 'ALL'
+                        ? 'bg-slate-900 text-white shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Tất cả (13 Cluster)
+                  </button>
+                  <button
+                    onClick={() => setSelectedSeptemberTvt('VT3')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                      selectedSeptemberTvt === 'VT3'
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'text-blue-700 hover:text-blue-900'
+                    }`}
+                  >
+                    Chỉ VT3 (9 Cluster)
+                  </button>
+                  <button
+                    onClick={() => setSelectedSeptemberTvt('VT2')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                      selectedSeptemberTvt === 'VT2'
+                        ? 'bg-purple-600 text-white shadow-sm'
+                        : 'text-purple-700 hover:text-purple-900'
+                    }`}
+                  >
+                    Chỉ VT2 (4 Cluster)
+                  </button>
+                </div>
+
+                <button
+                  onClick={exportSeptemberPlanToExcel}
+                  className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
+                >
+                  <FileSpreadsheet className="h-4 w-4" />
+                  <span>Xuất Excel T9 (338 trạm)</span>
+                </button>
+
+                <button
+                  onClick={copySeptemberReport}
+                  className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
+                >
+                  <CheckCircle2 className="h-4 w-4 text-amber-400" />
+                  <span>{copiedReport ? '✓ Đã Copy!' : '📋 Copy Báo Cáo T9'}</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-amber-50 text-[11px] font-bold text-amber-950 uppercase border-b border-amber-200">
+                    <th className="py-3 px-3 text-center w-12">STT</th>
+                    <th className="py-3 px-4">Cluster Mới (Cluster New)</th>
+                    <th className="py-3 px-3 text-center">Thứ Tự (Order)</th>
+                    <th className="py-3 px-3 text-center">Đơn vị (TVT)</th>
+                    <th className="py-3 px-4">Địa Bàn Huyện</th>
+                    <th className="py-3 px-3 text-right">Tổng 3G/4G</th>
+                    <th className="py-3 px-3 text-right">Tổng 5G</th>
+                    <th className="py-3 px-3 text-right">Tỷ lệ 5G</th>
+                    <th className="py-3 px-4 text-center">Tiến độ thi công</th>
+                    <th className="py-3 px-4 text-center">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
+                  {septemberClusterStats
+                    .filter(c => selectedSeptemberTvt === 'ALL' || c.tvt === selectedSeptemberTvt)
+                    .map((item, idx) => {
+                      const pct5g = item.total_3g4g > 0 ? ((item.total_5g / item.total_3g4g) * 100).toFixed(0) : 0;
+                      const isVt3 = item.tvt === 'VT3';
+                      return (
+                        <tr key={item.cluster} className="hover:bg-amber-50/50 transition-colors">
+                          <td className="py-3 px-3 text-center font-bold text-slate-400">{idx + 1}</td>
+                          <td className="py-3 px-4">
+                            <span className="font-extrabold text-amber-950 bg-amber-200/80 px-2.5 py-1 rounded-md border border-amber-300 font-mono text-xs shadow-xs">
+                              {item.cluster}
+                            </span>
+                          </td>
+                          <td className="py-3 px-3 text-center">
+                            <span className="font-mono font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 text-[11px]">
+                              {item.order}
+                            </span>
+                          </td>
+                          <td className="py-3 px-3 text-center">
+                            <span className={`px-2.5 py-1 rounded-full text-[10px] font-black tracking-wider ${
+                              isVt3 
+                                ? 'bg-blue-100 text-blue-800 border border-blue-200' 
+                                : 'bg-purple-100 text-purple-800 border border-purple-200'
+                            }`}>
+                              {item.tvt}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 font-semibold text-slate-800">
+                            {item.district}
+                          </td>
+                          <td className="py-3 px-3 text-right font-extrabold text-slate-900">
+                            {item.total_3g4g}
+                          </td>
+                          <td className="py-3 px-3 text-right font-extrabold text-emerald-700">
+                            {item.total_5g}
+                          </td>
+                          <td className="py-3 px-3 text-right font-bold text-slate-500">
+                            {pct5g}%
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-1.5 justify-center text-[10px]">
+                              <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 font-medium" title="Đã giao hàng">
+                                📦 {item.delivery}
+                              </span>
+                              <span className="px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200 font-medium" title="Đã lắp đặt">
+                                🛠️ {item.install}
+                              </span>
+                              <span className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold" title="Đã Onair">
+                                🚀 {item.onair}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            <button
+                              onClick={() => filterByCluster(item)}
+                              className="px-2.5 py-1 text-[11px] font-bold bg-slate-800 hover:bg-blue-600 text-white rounded-lg transition-all shadow-sm flex items-center gap-1 mx-auto active:scale-95"
+                              title={`Lọc xem chi tiết ${item.total_3g4g} trạm của cluster ${item.cluster}`}
+                            >
+                              <Search size={11} />
+                              <span>Xem trạm</span>
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+                <tfoot>
+                  <tr className="bg-amber-100/80 font-black text-amber-950 text-xs border-t-2 border-amber-300">
+                    <td colSpan={5} className="py-3.5 px-4 text-right">
+                      TỔNG CỘNG {selectedSeptemberTvt !== 'ALL' ? `(${selectedSeptemberTvt})` : 'KẾ HOẠCH THÁNG 9'}:
+                    </td>
+                    <td className="py-3.5 px-3 text-right text-sm">
+                      {septemberClusterStats
+                        .filter(c => selectedSeptemberTvt === 'ALL' || c.tvt === selectedSeptemberTvt)
+                        .reduce((sum, c) => sum + c.total_3g4g, 0)}
+                    </td>
+                    <td className="py-3.5 px-3 text-right text-sm text-emerald-800">
+                      {septemberClusterStats
+                        .filter(c => selectedSeptemberTvt === 'ALL' || c.tvt === selectedSeptemberTvt)
+                        .reduce((sum, c) => sum + c.total_5g, 0)}
+                    </td>
+                    <td className="py-3.5 px-3 text-right">
+                      52.7%
+                    </td>
+                    <td colSpan={2} className="py-3.5 px-4 text-center">
+                      <button
+                        onClick={() => {
+                          setSelectedStatus(selectedSeptemberTvt === 'VT3' ? 'TARGET_SEP_VT3' : selectedSeptemberTvt === 'VT2' ? 'TARGET_SEP_VT2' : 'TARGET_SEP');
+                          setTvt3Only(false);
+                          setSelectedDistrict('ALL');
+                          setSelectedScope('ALL');
+                          setActiveViewTab('table');
+                        }}
+                        className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg shadow-sm text-xs transition-all"
+                      >
+                        🔍 Lọc toàn bộ danh sách trạm &rarr;
+                      </button>
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        </div>
+      ) : activeViewTab === 'dashboard' ? (
         <div className="space-y-6">
           {/* Executive Overview Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-3">
@@ -898,7 +1349,18 @@ export default function Sran5gProject() {
               <span>Thống Kê Tiến Độ Theo 9 Nấc Thi Công Trạm (Click để xem danh sách trạm chi tiết)</span>
             </h3>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+              <div 
+                onClick={() => setActiveViewTab('plan_sep')}
+                className="p-3 bg-gradient-to-br from-amber-100 to-amber-50 hover:from-amber-200 hover:to-amber-100 rounded-xl border-2 border-amber-400/80 cursor-pointer transition-all hover:scale-[1.02] shadow-sm ring-2 ring-amber-400/20"
+              >
+                <div className="text-[11px] font-bold text-amber-900 flex items-center gap-1">
+                  <Calendar className="h-3.5 w-3.5 text-amber-600" /> 🎯 Kế Hoạch T9
+                </div>
+                <div className="text-2xl font-black text-amber-950 mt-1">338</div>
+                <div className="text-[10px] text-amber-800 mt-0.5 font-extrabold">13 Cluster (178 trạm 5G) &rarr;</div>
+              </div>
+
               <div 
                 onClick={() => handleFilterJump('TARGET_AUG')}
                 className="p-3 bg-purple-50 hover:bg-purple-100 rounded-xl border border-purple-200 cursor-pointer transition-all hover:scale-[1.02] shadow-sm"
@@ -1328,18 +1790,25 @@ export default function Sran5gProject() {
                 <select
                   value={selectedStatus}
                   onChange={(e) => setSelectedStatus(e.target.value)}
-                  className="px-3 py-2 text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="px-3 py-2 text-xs font-bold bg-amber-50/70 border border-amber-300 rounded-xl text-amber-950 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-sm"
                 >
                   <option value="ALL">📈 Tất cả Trạng thái Tiến độ</option>
-                  <option value="TARGET_AUG">🎯 Target Tháng 8 (Col AY)</option>
-                  <option value="SURVEY_DONE">📋 Đã Khảo Sát TSSR</option>
-                  <option value="TSSR_APPROVED">✅ Đã Duyệt TSSR</option>
-                  <option value="RF_DESIGN_APPROVED">🎨 Đã Duyệt RF Design</option>
-                  <option value="WH_PICKUP">📦 Đã Nhận Kho (WH Pickup)</option>
-                  <option value="DELIVERY">🚚 Đã Giao Hàng (Delivery)</option>
-                  <option value="INSTALL">🛠️ Đã Lắp Đặt (Installation)</option>
-                  <option value="INTEGRATION">⚙️ Đã Tích Hợp (Integration)</option>
-                  <option value="ONAIR">🚀 Đã Onair (Phát Sóng)</option>
+                  <optgroup label="🎯 Kế Hoạch Triển Khai">
+                    <option value="TARGET_SEP">🎯 Kế hoạch Tháng 9 (13 Cluster - 338 trạm)</option>
+                    <option value="TARGET_SEP_VT3">🎯 Kế hoạch T9 - TVT3 (9 Cluster - 231 trạm)</option>
+                    <option value="TARGET_SEP_VT2">🎯 Kế hoạch T9 - TVT2 (4 Cluster - 107 trạm)</option>
+                    <option value="TARGET_AUG">🎯 Target Tháng 8 (Col AY)</option>
+                  </optgroup>
+                  <optgroup label="⚡ Tiến Độ Thi Công">
+                    <option value="SURVEY_DONE">📋 Đã Khảo Sát TSSR</option>
+                    <option value="TSSR_APPROVED">✅ Đã Duyệt TSSR</option>
+                    <option value="RF_DESIGN_APPROVED">🎨 Đã Duyệt RF Design</option>
+                    <option value="WH_PICKUP">📦 Đã Nhận Kho (WH Pickup)</option>
+                    <option value="DELIVERY">🚚 Đã Giao Hàng (Delivery)</option>
+                    <option value="INSTALL">🛠️ Đã Lắp Đặt (Installation)</option>
+                    <option value="INTEGRATION">⚙️ Đã Tích Hợp (Integration)</option>
+                    <option value="ONAIR">🚀 Đã Onair (Phát Sóng)</option>
+                  </optgroup>
                 </select>
 
                 <select
