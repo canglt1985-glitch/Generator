@@ -120,7 +120,7 @@ export default function Sran5gProject() {
   const [selectedSite, setSelectedSite] = useState(null);
 
     const [selectedPlanMonth, setSelectedPlanMonth] = useState('sep'); // 'aug' | 'sep' | 'oct' | 'nov'
-  const [selectedMonthTvt, setSelectedMonthTvt] = useState('ALL'); // 'ALL' | 'VT3' | 'VT2'
+  const [selectedMonthTvt, setSelectedMonthTvt] = useState('VT3'); // Focus primarily on VT3 by default! ('VT3' | 'ALL' | 'VT2')
   const [activeViewTab, setActiveViewTab] = useState('plan_monthly'); // 'plan_monthly' | 'dashboard' | 'table'
 
   const [copiedReport, setCopiedReport] = useState(false);
@@ -680,28 +680,26 @@ export default function Sran5gProject() {
     return Object.values(distMap).sort((a, b) => b.total - a.total);
   }, [data, tvt3Only, tvt3SiteIds]);
 
-  // Generic Copy Monthly Report to Clipboard
+  // Generic Copy Monthly Report to Clipboard (Respecting TVT3 filter)
   const copyMonthlyReport = (monthKey = selectedPlanMonth) => {
     const plan = MONTHLY_PLANS_CONFIG[monthKey] || MONTHLY_PLANS_CONFIG.sep;
-    const clusters = activeMonthClusterStats;
-    const vt3Clusters = clusters.filter(c => c.tvt === 'VT3');
-    const vt2Clusters = clusters.filter(c => c.tvt === 'VT2');
+    const isVt3Only = selectedMonthTvt === 'VT3';
+    const allClusters = activeMonthClusterStats;
+    const clusters = isVt3Only ? allClusters.filter(c => c.tvt === 'VT3') : allClusters;
     const total3g4g = clusters.reduce((sum, c) => sum + c.total_3g4g, 0);
     const total5g = clusters.reduce((sum, c) => sum + c.total_5g, 0);
 
-    const reportText = `🎯 BÁO CÁO TIẾN ĐỘ & KẾ HOẠCH TRIỂN KHAI SRAN 5G ${plan.name.toUpperCase()} (${clusters.length} CLUSTER)
+    const reportText = `🎯 BÁO CÁO KẾ HOẠCH TRIỂN KHAI SRAN 5G ${plan.name.toUpperCase()} - ${isVt3Only ? 'TRUNG TÂM VIỄN THÔNG 3 (TVT3)' : 'TOÀN TỈNH ĐỒNG NAI'}
 🗓️ Cập nhật: ${new Date().toLocaleDateString('vi-VN')}
-🏷️ Trạng thái: ${plan.statusBadge}
+🏷️ Phạm vi: ${isVt3Only ? `Chỉ TVT3 (${clusters.length} Cluster)` : `Toàn tỉnh (${allClusters.length} Cluster)`}
 
-📊 1. TỔNG QUAN QUY MÔ KẾ HOẠCH:
+📊 1. QUY MÔ KẾ HOẠCH ${isVt3Only ? 'TVT3' : 'TOÀN TỈNH'}:
 • Tổng số Cluster: ${clusters.length} Cluster (${clusters[0]?.order} ➔ ${clusters[clusters.length-1]?.order})
 • Tổng số trạm Swap 3G/4G: ${total3g4g} trạm
 • Tổng số trạm Phát sóng 5G mới: ${total5g} trạm (Tỷ lệ 5G: ${total3g4g > 0 ? ((total5g/total3g4g)*100).toFixed(1) : 0}%)
-• TVT3 phụ trách: ${vt3Clusters.length} Cluster (${vt3Clusters.reduce((s,c)=>s+c.total_3g4g,0)} trạm 3G4G / ${vt3Clusters.reduce((s,c)=>s+c.total_5g,0)} trạm 5G)
-• TVT2 phụ trách: ${vt2Clusters.length} Cluster (${vt2Clusters.reduce((s,c)=>s+c.total_3g4g,0)} trạm 3G4G / ${vt2Clusters.reduce((s,c)=>s+c.total_5g,0)} trạm 5G)
-
-📅 2. CHI TIẾT TỪNG CLUSTER THEO KẾ HOẠCH:
-${clusters.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tvt} - ${c.district}): ${c.total_3g4g} trạm 3G/4G | ${c.total_5g} trạm 5G | Onair: ${c.onair}/${c.total_3g4g}`).join('\n')}
+${!isVt3Only ? `• TVT3 phụ trách: ${allClusters.filter(c=>c.tvt==='VT3').length} Cluster | TVT2 phụ trách: ${allClusters.filter(c=>c.tvt==='VT2').length} Cluster\n` : ''}
+📅 2. CHI TIẾT TỪNG CLUSTER THEO THỨ TỰ THI CÔNG:
+${clusters.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.district}): ${c.total_3g4g} trạm 3G/4G | ${c.total_5g} trạm 5G | Onair: ${c.onair}/${c.total_3g4g}`).join('\n')}
 
 🚀 3. TỔNG HỢP TIẾN ĐỘ THI CÔNG HIỆN TẠI:
 • Đã Giao hàng (Delivery): ${clusters.reduce((s,c)=>s+c.delivery,0)} / ${total3g4g} trạm
@@ -714,10 +712,12 @@ ${clusters.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tvt} - ${c.dist
     setTimeout(() => setCopiedReport(false), 3000);
   };
 
-  // Generic Export Monthly Plan to Excel
+  // Generic Export Monthly Plan to Excel (Respecting TVT3 filter)
   const exportMonthlyPlanToExcel = (monthKey = selectedPlanMonth) => {
     const plan = MONTHLY_PLANS_CONFIG[monthKey] || MONTHLY_PLANS_CONFIG.sep;
-    const clusters = plan.clusters;
+    const isVt3Only = selectedMonthTvt === 'VT3';
+    const allClusters = plan.clusters;
+    const clusters = isVt3Only ? allClusters.filter(c => c.tvt === 'VT3') : allClusters;
     
     let monthSites = data.filter(d => 
       clusters.some(c => c.db_cluster === d.raw_data?.Cluster_Name || c.cluster === d.raw_data?.Cluster_Name || c.cluster === d.raw_data?.Cluster_New)
@@ -725,6 +725,10 @@ ${clusters.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tvt} - ${c.dist
 
     if (monthSites.length === 0) {
       monthSites = data.filter(d => clusters.some(c => c.district === d.district));
+    }
+
+    if (isVt3Only) {
+      monthSites = monthSites.filter(d => isTvt3Item(d) || clusters.some(c => c.district === d.district));
     }
 
     const exportRows = (monthSites.length > 0 ? monthSites : data.slice(0, 50)).map((item, index) => {
@@ -763,11 +767,16 @@ ${clusters.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tvt} - ${c.dist
     worksheet['!cols'] = colWidths;
 
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, `Ke_Hoach_${plan.shortName}`);
+    const sheetName = isVt3Only ? `Ke_Hoach_${plan.shortName}_TVT3` : `Ke_Hoach_${plan.shortName}`;
+    XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
 
     const timestamp = new Date().toISOString().slice(0, 10);
-    XLSX.writeFile(workbook, `Ke_Hoach_Trien_Khai_SRAN_5G_${plan.shortName}_${timestamp}.xlsx`);
+    const fileName = isVt3Only 
+      ? `Ke_Hoach_SRAN_5G_${plan.shortName}_TVT3_${timestamp}.xlsx`
+      : `Ke_Hoach_Trien_Khai_SRAN_5G_${plan.shortName}_${timestamp}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
   };
+
 
   // Copy September Plan Report to Clipboard
   const copySeptemberReport = () => {
@@ -1325,7 +1334,6 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
                     key={mKey}
                     onClick={() => {
                       setSelectedPlanMonth(mKey);
-                      setSelectedMonthTvt('ALL');
                     }}
                     className={`px-3.5 py-2 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 ${
                       isSelected
@@ -1335,63 +1343,73 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
                   >
                     <span>{plan.themeColor === 'emerald' ? '⚡' : plan.themeColor === 'amber' ? '🎯' : plan.themeColor === 'blue' ? '🚀' : '🏁'}</span>
                     <span>{plan.name}</span>
-                    <span className="text-[10px] opacity-75 font-normal">({plan.clusters.length} C)</span>
+                    <span className="text-[10px] opacity-75 font-normal">({plan.clusters.filter(c => selectedMonthTvt === 'VT3' ? c.tvt === 'VT3' : true).length} C)</span>
                   </button>
                 );
               })}
             </div>
           </div>
 
-          {/* 4 Executive Overview Cards for the Active Month */}
+          {/* 4 Executive Overview Cards for the Active Month (Prioritizing TVT3) */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div className={`bg-gradient-to-br ${currentMonthPlan.gradient} text-white p-4 rounded-xl shadow-md`}>
-              <div className="flex items-center justify-between text-white/80 text-xs font-semibold mb-1">
-                <span>TỔNG QUY MÔ {currentMonthPlan.name.toUpperCase()}</span>
-                <Calendar className="h-4 w-4 text-white" />
-              </div>
-              <div className="text-3xl font-black">
-                {activeMonthTotals.total3g4g} <span className="text-xs font-normal opacity-80">trạm</span>
-              </div>
-              <div className="text-[11px] text-white/90 mt-1 font-semibold flex items-center gap-1">
-                <span>{activeMonthClusterStats.length} Cluster ({activeMonthClusterStats[0]?.order} &rarr; {activeMonthClusterStats[activeMonthClusterStats.length - 1]?.order})</span>
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-br from-emerald-600 to-teal-700 text-white p-4 rounded-xl shadow-md">
-              <div className="flex items-center justify-between text-emerald-100 text-xs font-semibold mb-1">
-                <span>PHÁT SÓNG 5G MỚI</span>
-                <Zap className="h-4 w-4 text-emerald-200" />
-              </div>
-              <div className="text-3xl font-black">
-                {activeMonthTotals.total5g} <span className="text-xs font-normal opacity-80">trạm 5G</span>
-              </div>
-              <div className="text-[11px] text-emerald-100 mt-1 font-semibold">
-                Tỷ lệ phủ sóng: {activeMonthTotals.total3g4g > 0 ? ((activeMonthTotals.total5g / activeMonthTotals.total3g4g) * 100).toFixed(1) : 0}% mạng lưới
-              </div>
-            </div>
-
             <div 
               onClick={() => setSelectedMonthTvt(selectedMonthTvt === 'VT3' ? 'ALL' : 'VT3')}
               className={`p-4 rounded-xl shadow-md cursor-pointer transition-all border ${
                 selectedMonthTvt === 'VT3'
-                  ? 'bg-blue-600 text-white ring-2 ring-blue-300 shadow-blue-500/20'
+                  ? 'bg-gradient-to-br from-blue-600 to-indigo-800 text-white ring-2 ring-blue-300 shadow-blue-500/20'
                   : 'bg-white text-slate-800 border-blue-200 hover:border-blue-400'
               }`}
             >
-              <div className={`flex items-center justify-between text-xs font-semibold mb-1 ${selectedMonthTvt === 'VT3' ? 'text-white' : 'text-blue-700'}`}>
-                <span>TVT3 QUẢN LÝ (VT3)</span>
+              <div className={`flex items-center justify-between text-xs font-semibold mb-1 ${selectedMonthTvt === 'VT3' ? 'text-blue-100' : 'text-blue-700'}`}>
+                <span>🎯 QUY MÔ TVT3 ({currentMonthPlan.shortName})</span>
                 <Server className="h-4 w-4" />
               </div>
               <div className="text-3xl font-black">
                 {activeMonthTotals.vt33g4g} <span className="text-xs font-normal opacity-80">trạm</span>
               </div>
-              <div className={`text-[11px] mt-1 font-semibold ${selectedMonthTvt === 'VT3' ? 'text-blue-100' : 'text-slate-500'}`}>
-                {activeMonthTotals.vt3Count} Cluster ({activeMonthTotals.vt35g} trạm 5G) {selectedMonthTvt === 'VT3' ? '✓ Đang lọc' : '• Click để lọc'}
+              <div className={`text-[11px] mt-1 font-semibold flex items-center justify-between ${selectedMonthTvt === 'VT3' ? 'text-blue-100' : 'text-slate-500'}`}>
+                <span>{activeMonthTotals.vt3Count} Cluster • {activeMonthTotals.vt35g} trạm 5G</span>
+                <span className="underline">{selectedMonthTvt === 'VT3' ? '✓ Đang xem TVT3' : 'Click lọc TVT3'}</span>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-emerald-600 to-teal-700 text-white p-4 rounded-xl shadow-md">
+              <div className="flex items-center justify-between text-emerald-100 text-xs font-semibold mb-1">
+                <span>5G PHÁT MỚI {selectedMonthTvt === 'VT3' ? '(TVT3)' : ''}</span>
+                <Zap className="h-4 w-4 text-emerald-200" />
+              </div>
+              <div className="text-3xl font-black">
+                {selectedMonthTvt === 'VT3' ? activeMonthTotals.vt35g : activeMonthTotals.total5g} <span className="text-xs font-normal opacity-80">trạm 5G</span>
+              </div>
+              <div className="text-[11px] text-emerald-100 mt-1 font-semibold">
+                Tỷ lệ phủ sóng: {selectedMonthTvt === 'VT3' 
+                  ? (activeMonthTotals.vt33g4g > 0 ? ((activeMonthTotals.vt35g / activeMonthTotals.vt33g4g) * 100).toFixed(1) : 0)
+                  : (activeMonthTotals.total3g4g > 0 ? ((activeMonthTotals.total5g / activeMonthTotals.total3g4g) * 100).toFixed(1) : 0)}% mạng lưới
               </div>
             </div>
 
             <div 
-              onClick={() => setSelectedMonthTvt(selectedMonthTvt === 'VT2' ? 'ALL' : 'VT2')}
+              onClick={() => setSelectedMonthTvt(selectedMonthTvt === 'ALL' ? 'VT3' : 'ALL')}
+              className={`p-4 rounded-xl shadow-md cursor-pointer transition-all border ${
+                selectedMonthTvt === 'ALL'
+                  ? 'bg-slate-900 text-white ring-2 ring-slate-400/40 shadow-slate-500/20'
+                  : 'bg-white text-slate-800 border-slate-200 hover:border-slate-400'
+              }`}
+            >
+              <div className={`flex items-center justify-between text-xs font-semibold mb-1 ${selectedMonthTvt === 'ALL' ? 'text-slate-200' : 'text-slate-600'}`}>
+                <span>TOÀN TỈNH ĐỒNG NAI</span>
+                <Layers className="h-4 w-4 text-amber-400" />
+              </div>
+              <div className="text-3xl font-black">
+                {activeMonthTotals.total3g4g} <span className="text-xs font-normal opacity-80">trạm</span>
+              </div>
+              <div className={`text-[11px] mt-1 font-semibold ${selectedMonthTvt === 'ALL' ? 'text-amber-200' : 'text-slate-500'}`}>
+                {activeMonthClusterStats.length} Cluster ({activeMonthTotals.total5g} trạm 5G) {selectedMonthTvt === 'ALL' ? '✓ Đang mở rộng' : '• Click xem cả tỉnh'}
+              </div>
+            </div>
+
+            <div 
+              onClick={() => setSelectedMonthTvt(selectedMonthTvt === 'VT2' ? 'VT3' : 'VT2')}
               className={`p-4 rounded-xl shadow-md cursor-pointer transition-all border ${
                 selectedMonthTvt === 'VT2'
                   ? 'bg-purple-600 text-white ring-2 ring-purple-300 shadow-purple-500/20'
@@ -1399,17 +1417,18 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
               }`}
             >
               <div className={`flex items-center justify-between text-xs font-semibold mb-1 ${selectedMonthTvt === 'VT2' ? 'text-white' : 'text-purple-700'}`}>
-                <span>TVT2 QUẢN LÝ (VT2)</span>
+                <span>ĐỐI CHIẾU TVT2 (VT2)</span>
                 <Radio className="h-4 w-4" />
               </div>
               <div className="text-3xl font-black">
                 {activeMonthTotals.vt23g4g} <span className="text-xs font-normal opacity-80">trạm</span>
               </div>
               <div className={`text-[11px] mt-1 font-semibold ${selectedMonthTvt === 'VT2' ? 'text-purple-100' : 'text-slate-500'}`}>
-                {activeMonthTotals.vt2Count} Cluster ({activeMonthTotals.vt25g} trạm 5G) {selectedMonthTvt === 'VT2' ? '✓ Đang lọc' : '• Click để lọc'}
+                {activeMonthTotals.vt2Count} Cluster ({activeMonthTotals.vt25g} trạm 5G) {selectedMonthTvt === 'VT2' ? '✓ Đang xem VT2' : '• Xem đối chiếu'}
               </div>
             </div>
           </div>
+
 
           {/* 📊 Live Milestone Progress Banner for Active Selection */}
           {(() => {
