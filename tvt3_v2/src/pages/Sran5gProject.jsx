@@ -539,26 +539,26 @@ export default function Sran5gProject() {
       const count5gInDb = clusterSites.filter(is5gSite).length;
       const count5g = Math.min(c.total_5g, count5gInDb > 0 ? count5gInDb : c.total_5g);
 
-      const rawSurvey = clusterSites.filter(d => d.survey_date).length;
-      const rawTssr = clusterSites.filter(d => d.ie_app_date || d.rf_app_date || d.tssr_sub_date).length;
-      const rawRf = clusterSites.filter(d => d.rf_design_date).length;
-      const rawWh = clusterSites.filter(d => d.wh_pickup_date).length;
-      const rawDelivery = clusterSites.filter(d => d.delivery_date).length;
-      const rawInstall = clusterSites.filter(d => d.install_date).length;
-      const rawIntegration = clusterSites.filter(d => d.integration_date).length;
+      const rawSurvey = clusterSites.filter(d => d.survey_date || d.ie_app_date || d.rf_app_date || d.tssr_sub_date || d.rf_design_date || d.wh_pickup_date || d.delivery_date || d.install_date || d.integration_date || d.onair_date).length;
+      const rawTssr = clusterSites.filter(d => d.ie_app_date || d.rf_app_date || d.tssr_sub_date || d.rf_design_date || d.wh_pickup_date || d.delivery_date || d.install_date || d.integration_date || d.onair_date).length;
+      const rawRf = clusterSites.filter(d => d.rf_design_date || d.wh_pickup_date || d.delivery_date || d.install_date || d.integration_date || d.onair_date).length;
+      const rawWh = clusterSites.filter(d => d.wh_pickup_date || d.delivery_date || d.install_date || d.integration_date || d.onair_date).length;
+      const rawDelivery = clusterSites.filter(d => d.delivery_date || d.install_date || d.integration_date || d.onair_date).length;
+      const rawInstall = clusterSites.filter(d => d.install_date || d.integration_date || d.onair_date).length;
+      const rawIntegration = clusterSites.filter(d => d.integration_date || d.onair_date).length;
       const rawOnair = clusterSites.filter(d => d.onair_date).length;
       const rawOnair5g = clusterSites.filter(d => d.onair_date && is5gSite(d)).length;
 
       // Strictly clamp numerators so they never exceed target denominators
-      const survey = Math.min(c.total_3g4g, rawSurvey > 0 ? rawSurvey : c.total_3g4g);
-      const tssr = Math.min(c.total_3g4g, rawTssr > 0 ? rawTssr : c.total_3g4g);
-      const rf = Math.min(c.total_3g4g, rawRf > 0 ? rawRf : c.total_3g4g);
-      const wh = Math.min(c.total_3g4g, rawWh > 0 ? rawWh : c.total_3g4g);
-      const delivery = Math.min(c.total_3g4g, rawDelivery > 0 ? rawDelivery : c.total_3g4g);
-      const install = Math.min(c.total_3g4g, rawInstall > 0 ? rawInstall : Math.round(c.total_3g4g * 0.95));
-      const integration = Math.min(c.total_3g4g, rawIntegration > 0 ? rawIntegration : Math.round(c.total_3g4g * 0.9));
-      const onair = Math.min(c.total_3g4g, rawOnair > 0 ? rawOnair : 24);
-      const onair5g = Math.min(c.total_5g, rawOnair5g > 0 ? rawOnair5g : (c.cluster === 'DNI_09_CM' ? 12 : c.cluster === 'DNI_10_TN' ? 9 : c.cluster === 'DNI_03_TB' ? 20 : Math.round(c.total_5g * 0.75)));
+      const survey = Math.min(c.total_3g4g, rawSurvey);
+      const tssr = Math.min(c.total_3g4g, rawTssr);
+      const rf = Math.min(c.total_3g4g, rawRf);
+      const wh = Math.min(c.total_3g4g, rawWh);
+      const delivery = Math.min(c.total_3g4g, rawDelivery);
+      const install = Math.min(c.total_3g4g, rawInstall);
+      const integration = Math.min(c.total_3g4g, rawIntegration);
+      const onair = Math.min(c.total_3g4g, rawOnair);
+      const onair5g = Math.min(c.total_5g, rawOnair5g);
 
       return {
         ...c,
