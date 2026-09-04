@@ -793,23 +793,41 @@ ${clusters.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.district}): ${c
     setTimeout(() => setCopiedReport(false), 3000);
   };
 
-  // Generic Export Monthly Plan to Excel (Respecting TVT3 filter)
+  // Generic Export Monthly Plan to Excel (Respecting TVT3 filter and strict month boundaries)
   const exportMonthlyPlanToExcel = (monthKey = selectedPlanMonth) => {
     const plan = MONTHLY_PLANS_CONFIG[monthKey] || MONTHLY_PLANS_CONFIG.sep;
     const isVt3Only = selectedMonthTvt === 'VT3';
     const allClusters = plan.clusters;
     const clusters = isVt3Only ? allClusters.filter(c => c.tvt === 'VT3') : allClusters;
     
-    let monthSites = data.filter(d => 
-      clusters.some(c => c.db_cluster === d.raw_data?.Cluster_Name || c.cluster === d.raw_data?.Cluster_Name || c.cluster === d.raw_data?.Cluster_New)
-    );
+    let monthSites = data.filter(d => {
+      // 1. Direct cluster name match
+      const matchCluster = clusters.some(c => c.db_cluster === d.raw_data?.Cluster_Name || c.cluster === d.raw_data?.Cluster_Name || c.cluster === d.raw_data?.Cluster_New);
+      if (matchCluster) return true;
 
-    if (monthSites.length === 0) {
-      monthSites = data.filter(d => clusters.some(c => c.district === d.district));
-    }
+      // 2. Strict target month checks (prevents Month 9 DNCM stations from leaking into Month 8!)
+      if (monthKey === 'aug') {
+        const isAugTarget = d.monthly_target_im && String(d.monthly_target_im).includes('Aug');
+        if (isAugTarget) {
+          if (clusters.some(c => c.cluster === 'DNI_09_CM') && (d.district === 'Cẩm Mỹ' || (d.site_id && d.site_id.startsWith('DNCM')))) return true;
+          if (clusters.some(c => c.cluster === 'DNI_10_TN') && (d.district === 'Thống Nhất' || (d.site_id && d.site_id.startsWith('DNTN')))) return true;
+          if (clusters.some(c => c.cluster === 'DNI_02_TB' || c.cluster === 'DNI_03_TB') && (d.district === 'Trảng Bom' || (d.site_id && d.site_id.startsWith('DNTB')))) return true;
+        }
+        return false;
+      }
+
+      if (monthKey === 'sep') {
+        return d.monthly_target_im === 'Target_in_Sep' || d.raw_data?.Target_Month === 'Tháng 9';
+      }
+
+      if (monthKey === 'oct') return d.raw_data?.Target_Month === 'Tháng 10';
+      if (monthKey === 'nov') return d.raw_data?.Target_Month === 'Tháng 11';
+
+      return false;
+    });
 
     if (isVt3Only) {
-      monthSites = monthSites.filter(d => isTvt3Item(d) || clusters.some(c => c.district === d.district));
+      monthSites = monthSites.filter(d => isTvt3Item(d) || (d.district === 'Cẩm Mỹ' || d.district === 'Thống Nhất' || d.district === 'Xuân Lộc' || d.district === 'Long Khánh'));
     }
 
     const exportRows = (monthSites.length > 0 ? monthSites : data.slice(0, 50)).map((item, index) => {
@@ -1297,7 +1315,7 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
         </div>
       </div>
 
-      {/* 4 Main View Tabs Navigation */}
+      {/* 3 Streamlined Main View Tabs Navigation */}
       <div className="flex flex-col lg:flex-row items-center justify-between gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
         <div className="flex flex-wrap items-center gap-2">
           <button
@@ -1325,12 +1343,11 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
             }`}
           >
             <Layers className="h-4 w-4 text-blue-400" />
-            📊 2. Báo Cáo Tổng Quan (Dashboard)
+            📊 2. Báo Cáo Tổng Quan (KPIs)
           </button>
 
           <button
             onClick={() => {
-              setTvt3Only(true);
               setSelectedDistrict('ALL');
               setSelectedScope('ALL');
               setSelectedStatus('ALL');
@@ -1338,32 +1355,13 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
               setActiveViewTab('table');
             }}
             className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-              activeViewTab === 'table' && tvt3Only
+              activeViewTab === 'table'
                 ? 'bg-blue-600 text-white shadow-md ring-2 ring-blue-400/40'
                 : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
             }`}
           >
             <Search className="h-4 w-4 text-emerald-400" />
-            🎯 3. Chi Tiết Trạm TVT3 ({stats.activeTotal || 390} trạm)
-          </button>
-
-          <button
-            onClick={() => {
-              setTvt3Only(false);
-              setSelectedDistrict('ALL');
-              setSelectedScope('ALL');
-              setSelectedStatus('ALL');
-              setSearchTerm('');
-              setActiveViewTab('table');
-            }}
-            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-              activeViewTab === 'table' && !tvt3Only
-                ? 'bg-indigo-600 text-white shadow-md ring-2 ring-indigo-400/40'
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-            }`}
-          >
-            <Database className="h-4 w-4 text-purple-400" />
-            🌐 4. Chi Tiết Cả Tỉnh ({stats.overallTotal || 1108} trạm)
+            📋 3. Tra Cứu & Bộ Lọc Trạm ({stats.activeTotal} trạm)
           </button>
         </div>
 
