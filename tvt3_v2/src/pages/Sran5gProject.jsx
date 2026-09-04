@@ -8,7 +8,7 @@ import { supabase } from '../supabaseClient';
 import * as XLSX from 'xlsx';
 
 export const AUGUST_2026_CLUSTERS = [
-  { order: 'Day_01-05', cluster: 'DNI_09_CM', db_cluster: 'DNI_09_CM', tvt: 'VT3', district: 'Cẩm Mỹ', total_3g4g: 26, total_5g: 13, note: '15 trạm Power, 11 trạm CRAN' },
+  { order: 'Day_01-05', cluster: 'DNI_09_CM', db_cluster: 'DNI_09_CM', tvt: 'VT3', district: 'Cẩm Mỹ', total_3g4g: 26, total_5g: 14, note: '15 trạm Power, 11 trạm CRAN' },
   { order: 'Day_01-05', cluster: 'DNI_02_TB', db_cluster: 'DNI_02_TB', tvt: 'VT2', district: 'Trảng Bom', total_3g4g: 27, total_5g: 16, note: '3 trạm Cancel, 8 trạm Power, 15 trạm CRAN' }
 ];
 
@@ -554,7 +554,7 @@ export default function Sran5gProject() {
       const install = Math.min(c.total_3g4g, rawInstall > 0 ? rawInstall : Math.round(c.total_3g4g * 0.95));
       const integration = Math.min(c.total_3g4g, rawIntegration > 0 ? rawIntegration : Math.round(c.total_3g4g * 0.9));
       const onair = Math.min(c.total_3g4g, rawOnair > 0 ? rawOnair : 24);
-      const onair5g = Math.min(c.total_5g, rawOnair5g > 0 ? rawOnair5g : (c.cluster === 'DNI_09_CM' ? 13 : Math.round(c.total_5g * 0.75)));
+      const onair5g = Math.min(c.total_5g, rawOnair5g > 0 ? rawOnair5g : (c.cluster === 'DNI_09_CM' ? 12 : Math.round(c.total_5g * 0.75)));
 
       return {
         ...c,
