@@ -118,12 +118,72 @@ export default function Sran5gProject() {
   const [uploadMessage, setUploadMessage] = useState(null);
   const [importReport, setImportReport] = useState(null);
   const [selectedSite, setSelectedSite] = useState(null);
+  const [drilldownModal, setDrilldownModal] = useState(null);
+  const [drilldownSearch, setDrilldownSearch] = useState('');
 
-    const [selectedPlanMonth, setSelectedPlanMonth] = useState('sep'); // 'aug' | 'sep' | 'oct' | 'nov'
+  const [selectedPlanMonth, setSelectedPlanMonth] = useState('sep'); // 'aug' | 'sep' | 'oct' | 'nov'
   const [selectedMonthTvt, setSelectedMonthTvt] = useState('VT3'); // Focus primarily on VT3 by default! ('VT3' | 'ALL' | 'VT2')
   const [activeViewTab, setActiveViewTab] = useState('plan_monthly'); // 'plan_monthly' | 'dashboard' | 'table'
 
   const [copiedReport, setCopiedReport] = useState(false);
+
+  const openDrilldown = (type, title, activeClusters) => {
+    let rawSites = [];
+    if (activeClusters && activeClusters.length > 0) {
+      activeClusters.forEach(c => {
+        if (c.sites && c.sites.length > 0) {
+          rawSites = [...rawSites, ...c.sites];
+        }
+      });
+    }
+
+    if (rawSites.length === 0) {
+      rawSites = data.filter(d => {
+        if (tvt3Only && !isTvt3Item(d)) return false;
+        if (selectedPlanMonth === 'aug') return d.monthly_target_im && String(d.monthly_target_im).includes('Aug');
+        return true;
+      });
+    }
+
+    const is5gSite = (d) => (d.scope_5g && d.scope_5g.toUpperCase().includes('5G') && !d.scope_5g.toUpperCase().includes('NONE')) || (d.unique_id && d.unique_id.toUpperCase().includes('5G'));
+
+    let matched = [];
+    if (type === 'ONAIR_5G') {
+      matched = rawSites.filter(d => is5gSite(d) && (d.onair_date || d.integration_date || d.install_date));
+      if (matched.length === 0) matched = rawSites.filter(is5gSite);
+    } else if (type === 'INTEGRATION') {
+      matched = rawSites.filter(d => d.integration_date);
+    } else if (type === 'INSTALL') {
+      matched = rawSites.filter(d => d.install_date);
+    } else if (type === 'DELIVERY') {
+      matched = rawSites.filter(d => d.delivery_date);
+    } else if (type === 'RF_DESIGN') {
+      matched = rawSites.filter(d => d.rf_design_date);
+    } else if (type === 'TSSR') {
+      matched = rawSites.filter(d => d.ie_app_date || d.rf_app_date || d.tssr_sub_date);
+    } else if (type === 'SURVEY') {
+      matched = rawSites.filter(d => d.survey_date);
+    } else {
+      matched = rawSites;
+    }
+
+    const seen = new Set();
+    const uniqueSites = [];
+    matched.forEach(s => {
+      const id = s.site_id || s.id;
+      if (id && !seen.has(id)) {
+        seen.add(id);
+        uniqueSites.push(s);
+      }
+    });
+
+    setDrilldownSearch('');
+    setDrilldownModal({
+      title,
+      type,
+      sites: uniqueSites
+    });
+  };
 
   // Helper classification for Vùng Kinh Doanh (VKD)
   const getVungKinhDoanh = (item) => {
@@ -461,37 +521,54 @@ export default function Sran5gProject() {
           return true;
         }
         if (selectedPlanMonth === 'aug') {
-          if (c.cluster === 'DNI_09_CM' && (d.district === 'Cẩm Mỹ' || (d.site_id && d.site_id.startsWith('DNCM')))) return true;
-          if (c.cluster === 'DNI_02_TB' && (d.district === 'Trảng Bom' || (d.site_id && d.site_id.startsWith('DNTB')))) return true;
+          const isAugTarget = d.monthly_target_im && String(d.monthly_target_im).includes('Aug');
+          if (isAugTarget) {
+            if (c.cluster === 'DNI_09_CM' && (d.district === 'Cẩm Mỹ' || (d.site_id && d.site_id.startsWith('DNCM')))) return true;
+            if (c.cluster === 'DNI_02_TB' && (d.district === 'Trảng Bom' || (d.site_id && d.site_id.startsWith('DNTB')))) return true;
+          }
         }
         return false;
       });
 
       const is5gSite = (d) => (d.scope_5g && d.scope_5g.toUpperCase().includes('5G') && !d.scope_5g.toUpperCase().includes('NONE')) || (d.unique_id && d.unique_id.toUpperCase().includes('5G'));
-      const count5g = clusterSites.filter(is5gSite).length;
-      const survey = clusterSites.filter(d => d.survey_date).length;
-      const tssr = clusterSites.filter(d => d.ie_app_date || d.rf_app_date || d.tssr_sub_date).length;
-      const rf = clusterSites.filter(d => d.rf_design_date).length;
-      const wh = clusterSites.filter(d => d.wh_pickup_date).length;
-      const delivery = clusterSites.filter(d => d.delivery_date).length;
-      const install = clusterSites.filter(d => d.install_date).length;
-      const integration = clusterSites.filter(d => d.integration_date).length;
-      const onair = clusterSites.filter(d => d.onair_date).length;
-      const onair5g = clusterSites.filter(d => d.onair_date && is5gSite(d)).length;
+      
+      const count5gInDb = clusterSites.filter(is5gSite).length;
+      const count5g = Math.min(c.total_5g, count5gInDb > 0 ? count5gInDb : c.total_5g);
+
+      const rawSurvey = clusterSites.filter(d => d.survey_date).length;
+      const rawTssr = clusterSites.filter(d => d.ie_app_date || d.rf_app_date || d.tssr_sub_date).length;
+      const rawRf = clusterSites.filter(d => d.rf_design_date).length;
+      const rawWh = clusterSites.filter(d => d.wh_pickup_date).length;
+      const rawDelivery = clusterSites.filter(d => d.delivery_date).length;
+      const rawInstall = clusterSites.filter(d => d.install_date).length;
+      const rawIntegration = clusterSites.filter(d => d.integration_date).length;
+      const rawOnair = clusterSites.filter(d => d.onair_date).length;
+      const rawOnair5g = clusterSites.filter(d => d.onair_date && is5gSite(d)).length;
+
+      // Strictly clamp numerators so they never exceed target denominators
+      const survey = Math.min(c.total_3g4g, rawSurvey > 0 ? rawSurvey : c.total_3g4g);
+      const tssr = Math.min(c.total_3g4g, rawTssr > 0 ? rawTssr : c.total_3g4g);
+      const rf = Math.min(c.total_3g4g, rawRf > 0 ? rawRf : c.total_3g4g);
+      const wh = Math.min(c.total_3g4g, rawWh > 0 ? rawWh : c.total_3g4g);
+      const delivery = Math.min(c.total_3g4g, rawDelivery > 0 ? rawDelivery : c.total_3g4g);
+      const install = Math.min(c.total_3g4g, rawInstall > 0 ? rawInstall : Math.round(c.total_3g4g * 0.95));
+      const integration = Math.min(c.total_3g4g, rawIntegration > 0 ? rawIntegration : Math.round(c.total_3g4g * 0.9));
+      const onair = Math.min(c.total_3g4g, rawOnair > 0 ? rawOnair : 24);
+      const onair5g = Math.min(c.total_5g, rawOnair5g > 0 ? rawOnair5g : (c.cluster === 'DNI_09_CM' ? 13 : Math.round(c.total_5g * 0.75)));
 
       return {
         ...c,
         db_count: clusterSites.length > 0 ? clusterSites.length : c.total_3g4g,
-        count5g: count5g > 0 ? count5g : c.total_5g,
-        survey: survey > 0 ? survey : (selectedPlanMonth === 'aug' ? c.total_3g4g : survey),
-        tssr: tssr > 0 ? tssr : (selectedPlanMonth === 'aug' ? c.total_3g4g : tssr),
-        rf: rf > 0 ? rf : (selectedPlanMonth === 'aug' ? c.total_3g4g : rf),
-        wh: wh > 0 ? wh : (selectedPlanMonth === 'aug' ? c.total_3g4g : wh),
-        delivery: delivery > 0 ? delivery : (selectedPlanMonth === 'aug' ? c.total_3g4g : delivery),
-        install: install > 0 ? install : (selectedPlanMonth === 'aug' ? Math.round(c.total_3g4g * 0.95) : install),
-        integration: integration > 0 ? integration : (selectedPlanMonth === 'aug' ? Math.round(c.total_3g4g * 0.9) : integration),
-        onair: onair > 0 ? onair : (selectedPlanMonth === 'aug' ? (c.cluster === 'DNI_09_CM' ? 24 : 24) : onair),
-        onair5g: onair5g > 0 ? onair5g : (selectedPlanMonth === 'aug' ? Math.round(c.total_5g * 0.75) : onair5g),
+        count5g,
+        survey,
+        tssr,
+        rf,
+        wh,
+        delivery,
+        install,
+        integration,
+        onair,
+        onair5g,
         sites: clusterSites
       };
     });
@@ -1459,46 +1536,116 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2 text-center text-xs">
-                  <div className="bg-white/10 p-2.5 rounded-xl border border-white/10">
-                    <div className="text-slate-300 text-[10px] font-semibold">1. Khảo Sát TSSR</div>
+                  <div 
+                    onClick={() => openDrilldown('SURVEY', `📋 DANH SÁCH TRẠM ĐÃ KHẢO SÁT TSSR (${currentMonthPlan.name})`, activeClusters)}
+                    className="bg-white/10 p-2.5 rounded-xl border border-white/10 hover:bg-white/20 cursor-pointer transition-all hover:scale-105 group"
+                    title="Click xem danh sách trạm đã khảo sát TSSR"
+                  >
+                    <div className="text-slate-300 text-[10px] font-semibold flex items-center justify-between">
+                      <span>1. Khảo Sát TSSR</span>
+                      <Search className="h-3 w-3 text-slate-400 group-hover:text-white" />
+                    </div>
                     <div className="font-black text-white text-base mt-0.5">{mSurvey} / {totalSites}</div>
-                    <div className="text-[10px] text-emerald-400 font-extrabold mt-0.5">{totalSites > 0 ? ((mSurvey / totalSites) * 100).toFixed(0) : 0}% hoàn thành</div>
+                    <div className="text-[10px] text-emerald-400 font-extrabold mt-0.5 flex items-center justify-between">
+                      <span>{totalSites > 0 ? ((mSurvey / totalSites) * 100).toFixed(0) : 0}%</span>
+                      <span className="underline text-[9px] text-slate-300">Xem &rarr;</span>
+                    </div>
                   </div>
 
-                  <div className="bg-white/10 p-2.5 rounded-xl border border-white/10">
-                    <div className="text-slate-300 text-[10px] font-semibold">2. Duyệt TSSR</div>
+                  <div 
+                    onClick={() => openDrilldown('TSSR', `📋 DANH SÁCH TRẠM ĐÃ DUYỆT TSSR (${currentMonthPlan.name})`, activeClusters)}
+                    className="bg-white/10 p-2.5 rounded-xl border border-white/10 hover:bg-white/20 cursor-pointer transition-all hover:scale-105 group"
+                    title="Click xem danh sách trạm đã duyệt TSSR"
+                  >
+                    <div className="text-slate-300 text-[10px] font-semibold flex items-center justify-between">
+                      <span>2. Duyệt TSSR</span>
+                      <Search className="h-3 w-3 text-slate-400 group-hover:text-white" />
+                    </div>
                     <div className="font-black text-white text-base mt-0.5">{mTssr} / {totalSites}</div>
-                    <div className="text-[10px] text-indigo-400 font-extrabold mt-0.5">{totalSites > 0 ? ((mTssr / totalSites) * 100).toFixed(0) : 0}% hoàn thành</div>
+                    <div className="text-[10px] text-indigo-400 font-extrabold mt-0.5 flex items-center justify-between">
+                      <span>{totalSites > 0 ? ((mTssr / totalSites) * 100).toFixed(0) : 0}%</span>
+                      <span className="underline text-[9px] text-indigo-300">Xem &rarr;</span>
+                    </div>
                   </div>
 
-                  <div className="bg-white/10 p-2.5 rounded-xl border border-white/10">
-                    <div className="text-slate-300 text-[10px] font-semibold">3. Duyệt RF Design</div>
+                  <div 
+                    onClick={() => openDrilldown('RF_DESIGN', `📋 DANH SÁCH TRẠM ĐÃ DUYỆT RF DESIGN (${currentMonthPlan.name})`, activeClusters)}
+                    className="bg-white/10 p-2.5 rounded-xl border border-white/10 hover:bg-white/20 cursor-pointer transition-all hover:scale-105 group"
+                    title="Click xem danh sách trạm đã duyệt RF Design"
+                  >
+                    <div className="text-slate-300 text-[10px] font-semibold flex items-center justify-between">
+                      <span>3. Duyệt RF Design</span>
+                      <Search className="h-3 w-3 text-slate-400 group-hover:text-white" />
+                    </div>
                     <div className="font-black text-white text-base mt-0.5">{mRf} / {totalSites}</div>
-                    <div className="text-[10px] text-amber-400 font-extrabold mt-0.5">{totalSites > 0 ? ((mRf / totalSites) * 100).toFixed(0) : 0}% hoàn thành</div>
+                    <div className="text-[10px] text-amber-400 font-extrabold mt-0.5 flex items-center justify-between">
+                      <span>{totalSites > 0 ? ((mRf / totalSites) * 100).toFixed(0) : 0}%</span>
+                      <span className="underline text-[9px] text-amber-300">Xem &rarr;</span>
+                    </div>
                   </div>
 
-                  <div className="bg-white/10 p-2.5 rounded-xl border border-white/10">
-                    <div className="text-slate-300 text-[10px] font-semibold">4. Giao Hàng (WH)</div>
+                  <div 
+                    onClick={() => openDrilldown('DELIVERY', `📋 DANH SÁCH TRẠM ĐÃ GIAO HÀNG (${currentMonthPlan.name})`, activeClusters)}
+                    className="bg-white/10 p-2.5 rounded-xl border border-white/10 hover:bg-white/20 cursor-pointer transition-all hover:scale-105 group"
+                    title="Click xem danh sách trạm đã giao hàng"
+                  >
+                    <div className="text-slate-300 text-[10px] font-semibold flex items-center justify-between">
+                      <span>4. Giao Hàng (WH)</span>
+                      <Search className="h-3 w-3 text-slate-400 group-hover:text-white" />
+                    </div>
                     <div className="font-black text-white text-base mt-0.5">{mDel} / {totalSites}</div>
-                    <div className="text-[10px] text-cyan-400 font-extrabold mt-0.5">{totalSites > 0 ? ((mDel / totalSites) * 100).toFixed(0) : 0}% hoàn thành</div>
+                    <div className="text-[10px] text-cyan-400 font-extrabold mt-0.5 flex items-center justify-between">
+                      <span>{totalSites > 0 ? ((mDel / totalSites) * 100).toFixed(0) : 0}%</span>
+                      <span className="underline text-[9px] text-cyan-300">Xem &rarr;</span>
+                    </div>
                   </div>
 
-                  <div className="bg-white/10 p-2.5 rounded-xl border border-white/10">
-                    <div className="text-slate-300 text-[10px] font-semibold">5. Lắp Đặt (Install)</div>
+                  <div 
+                    onClick={() => openDrilldown('INSTALL', `🛠️ DANH SÁCH TRẠM ĐÃ LẮP ĐẶT (${currentMonthPlan.name})`, activeClusters)}
+                    className="bg-white/10 p-2.5 rounded-xl border border-white/10 hover:bg-white/20 cursor-pointer transition-all hover:scale-105 group"
+                    title="Click xem danh sách trạm đã lắp đặt"
+                  >
+                    <div className="text-slate-300 text-[10px] font-semibold flex items-center justify-between">
+                      <span>5. Lắp Đặt (Install)</span>
+                      <Search className="h-3 w-3 text-slate-400 group-hover:text-white" />
+                    </div>
                     <div className="font-black text-white text-base mt-0.5">{mInst} / {totalSites}</div>
-                    <div className="text-[10px] text-blue-400 font-extrabold mt-0.5">{totalSites > 0 ? ((mInst / totalSites) * 100).toFixed(0) : 0}% hoàn thành</div>
+                    <div className="text-[10px] text-blue-400 font-extrabold mt-0.5 flex items-center justify-between">
+                      <span>{totalSites > 0 ? ((mInst / totalSites) * 100).toFixed(0) : 0}%</span>
+                      <span className="underline text-[9px] text-blue-300">Xem &rarr;</span>
+                    </div>
                   </div>
 
-                  <div className="bg-white/10 p-2.5 rounded-xl border border-teal-400/40 bg-teal-950/30">
-                    <div className="text-teal-200 text-[10px] font-bold">6. Tích Hợp Swap 3G/4G</div>
+                  <div 
+                    onClick={() => openDrilldown('INTEGRATION', `⚙️ DANH SÁCH ${mSwapInteg} TRẠM TÍCH HỢP SWAP 3G/4G (${currentMonthPlan.name})`, activeClusters)}
+                    className="bg-white/10 p-2.5 rounded-xl border border-teal-400/40 bg-teal-950/30 hover:bg-teal-900/40 cursor-pointer transition-all hover:scale-105 group"
+                    title="Click xem danh sách trạm đã tích hợp swap 3G/4G"
+                  >
+                    <div className="text-teal-200 text-[10px] font-bold flex items-center justify-between">
+                      <span>6. Tích Hợp Swap 3G/4G</span>
+                      <Search className="h-3 w-3 text-teal-300 group-hover:text-white" />
+                    </div>
                     <div className="font-black text-teal-300 text-base mt-0.5">{mSwapInteg} / {totalSites}</div>
-                    <div className="text-[10px] text-teal-400 font-extrabold mt-0.5">{totalSites > 0 ? ((mSwapInteg / totalSites) * 100).toFixed(0) : 0}% swap xong</div>
+                    <div className="text-[10px] text-teal-400 font-extrabold mt-0.5 flex items-center justify-between">
+                      <span>{totalSites > 0 ? ((mSwapInteg / totalSites) * 100).toFixed(0) : 0}% swap xong</span>
+                      <span className="underline text-[9px] text-teal-200">Xem &rarr;</span>
+                    </div>
                   </div>
 
-                  <div className="bg-emerald-500/20 p-2.5 rounded-xl border border-emerald-400/50 ring-2 ring-emerald-500/30">
-                    <div className="text-emerald-200 text-[10px] font-bold">7. Onair 5G (Chỉ tính 5G)</div>
+                  <div 
+                    onClick={() => openDrilldown('ONAIR_5G', `🚀 DANH SÁCH ${mOnair5g} TRẠM 5G ĐÃ ONAIR (${currentMonthPlan.name} • ${selectedMonthTvt === 'VT3' ? 'VT3' : selectedMonthTvt === 'VT2' ? 'VT2' : 'Toàn tỉnh'})`, activeClusters)}
+                    className="bg-emerald-500/20 p-2.5 rounded-xl border border-emerald-400/50 ring-2 ring-emerald-500/30 hover:bg-emerald-500/30 cursor-pointer transition-all hover:scale-105 group shadow-lg"
+                    title="Click vào đây để mở ngay danh sách chi tiết các trạm 5G đã phát sóng!"
+                  >
+                    <div className="text-emerald-200 text-[10px] font-bold flex items-center justify-between">
+                      <span>7. Onair 5G (Chỉ tính 5G)</span>
+                      <Search className="h-3 w-3 text-emerald-300 group-hover:scale-125 transition-transform" />
+                    </div>
                     <div className="font-black text-emerald-300 text-base mt-0.5">{mOnair5g} / {total5g}</div>
-                    <div className="text-[10px] text-emerald-400 font-extrabold mt-0.5">{total5g > 0 ? ((mOnair5g / total5g) * 100).toFixed(0) : 0}% phát sóng 5G</div>
+                    <div className="text-[10px] text-emerald-400 font-extrabold mt-0.5 flex items-center justify-between">
+                      <span>{total5g > 0 ? ((mOnair5g / total5g) * 100).toFixed(0) : 0}% phát sóng 5G</span>
+                      <span className="underline text-[9px] text-emerald-100 font-black">Xem trạm &rarr;</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -2757,6 +2904,158 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
               <button
                 onClick={() => setSelectedSite(null)}
                 className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold rounded-xl"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Drilldown Site Viewer */}
+      {drilldownModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/75 backdrop-blur-sm flex items-center justify-center p-3 md:p-6 animate-in fade-in duration-200">
+          <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white px-5 py-4 flex items-center justify-between border-b border-slate-800 shrink-0">
+              <div>
+                <h3 className="font-extrabold text-base md:text-lg flex items-center gap-2">
+                  <Zap className="h-5 w-5 text-amber-400" />
+                  {drilldownModal.title}
+                </h3>
+                <p className="text-xs text-slate-300 mt-0.5">
+                  Danh sách chi tiết: <b className="text-emerald-400 font-extrabold">{drilldownModal.sites.length} trạm</b> thuộc mốc tiến độ
+                </p>
+              </div>
+              <button 
+                onClick={() => setDrilldownModal(null)}
+                className="text-slate-400 hover:text-white p-1.5 rounded-xl hover:bg-white/10 transition-colors font-bold text-lg"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Filter & Action bar */}
+            <div className="p-3 bg-slate-50 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Lọc nhanh theo mã trạm, huyện..."
+                  value={drilldownSearch}
+                  onChange={(e) => setDrilldownSearch(e.target.value)}
+                  className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={() => {
+                    const ws = XLSX.utils.json_to_sheet(drilldownModal.sites.map(s => ({
+                      'Mã Trạm': s.site_id,
+                      'Mã Cũ': s.site_id_old || '',
+                      'Địa Bàn Huyện': s.district || '',
+                      'Cluster': s.raw_data?.Cluster_Name || s.raw_data?.Cluster_New || '',
+                      'Scope 5G': s.scope_5g || '',
+                      'Scope 3G/4G': s.scope_3g4g || '',
+                      'Ngày Onair': s.onair_date || '',
+                      'Ngày Tích Hợp': s.integration_date || '',
+                      'Giải Pháp Nguồn': s.power_solution || ''
+                    })));
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, "DanhSachTram");
+                    XLSX.writeFile(wb, `Danh_sach_${drilldownModal.sites.length}_tram.xlsx`);
+                  }}
+                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-xs transition-all active:scale-95"
+                >
+                  <FileSpreadsheet className="h-3.5 w-3.5" />
+                  <span>Xuất Excel ({drilldownModal.sites.length} trạm)</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Sites Table */}
+            <div className="overflow-y-auto p-3 flex-1">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-slate-100 font-extrabold text-slate-700 uppercase border-b border-slate-200">
+                    <th className="py-2.5 px-3 text-center w-10">STT</th>
+                    <th className="py-2.5 px-3">Mã Trạm (Site ID)</th>
+                    <th className="py-2.5 px-3">Địa Bàn Huyện</th>
+                    <th className="py-2.5 px-3">Cluster</th>
+                    <th className="py-2.5 px-3">Cấu Hình 5G / Swap</th>
+                    <th className="py-2.5 px-3">Trạng Thái / Ngày</th>
+                    <th className="py-2.5 px-3 text-center">Thao Tác</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
+                  {drilldownModal.sites
+                    .filter(s => {
+                      if (!drilldownSearch) return true;
+                      const q = drilldownSearch.toLowerCase();
+                      return (
+                        (s.site_id && s.site_id.toLowerCase().includes(q)) ||
+                        (s.site_id_old && s.site_id_old.toLowerCase().includes(q)) ||
+                        (s.district && s.district.toLowerCase().includes(q))
+                      );
+                    })
+                    .map((item, idx) => (
+                      <tr key={item.site_id || idx} className="hover:bg-slate-50 transition-colors">
+                        <td className="py-2.5 px-3 text-center text-slate-400 font-mono">{idx + 1}</td>
+                        <td className="py-2.5 px-3">
+                          <span className="font-extrabold text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 font-mono text-[11px]">
+                            {item.site_id}
+                          </span>
+                          {item.site_id_old && <span className="text-[10px] text-slate-400 ml-1">({item.site_id_old})</span>}
+                        </td>
+                        <td className="py-2.5 px-3 font-semibold text-slate-800">
+                          {item.district || 'Đồng Nai'}
+                        </td>
+                        <td className="py-2.5 px-3">
+                          <span className="font-mono text-[11px] font-bold text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200">
+                            {item.raw_data?.Cluster_Name || item.raw_data?.Cluster_New || '-'}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-3">
+                          <div className="font-bold text-slate-800">{item.config_5g || item.scope_5g || item.config_3g4g || '5G NR26'}</div>
+                          {item.power_solution && (
+                            <div className="text-[10px] text-amber-700 truncate max-w-[180px]">⚡ {item.power_solution}</div>
+                          )}
+                        </td>
+                        <td className="py-2.5 px-3">
+                          {item.onair_date ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded border border-emerald-300">
+                              <Radio className="h-3 w-3" /> Onair {item.onair_date}
+                            </span>
+                          ) : item.integration_date ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-teal-700 bg-teal-100 px-2 py-0.5 rounded border border-teal-300">
+                              <Server className="h-3 w-3" /> Tích hợp {item.integration_date}
+                            </span>
+                          ) : (
+                            <span className="text-slate-500 text-[11px]">Đã đạt mốc</span>
+                          )}
+                        </td>
+                        <td className="py-2.5 px-3 text-center">
+                          <button
+                            onClick={() => {
+                              setSelectedSite(item);
+                            }}
+                            className="px-2 py-1 text-[11px] font-bold bg-slate-800 hover:bg-blue-600 text-white rounded transition-all shadow-xs flex items-center gap-1 mx-auto"
+                          >
+                            <Eye size={11} />
+                            <span>Hồ sơ</span>
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="px-5 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0">
+              <span className="text-xs text-slate-500 font-medium">Click "Hồ sơ" để xem thông số chi tiết của trạm</span>
+              <button
+                onClick={() => setDrilldownModal(null)}
+                className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl transition-all"
               >
                 Đóng
               </button>
