@@ -8,8 +8,10 @@ import { supabase } from '../supabaseClient';
 import * as XLSX from 'xlsx';
 
 export const AUGUST_2026_CLUSTERS = [
-  { order: 'Day_01-05', cluster: 'DNI_09_CM', db_cluster: 'DNI_09_CM', tvt: 'VT3', district: 'Cẩm Mỹ', total_3g4g: 26, total_5g: 14, note: '15 trạm Power, 11 trạm CRAN' },
-  { order: 'Day_01-05', cluster: 'DNI_02_TB', db_cluster: 'DNI_02_TB', tvt: 'VT2', district: 'Trảng Bom', total_3g4g: 27, total_5g: 16, note: '3 trạm Cancel, 8 trạm Power, 15 trạm CRAN' }
+  { order: 'Day_02', cluster: 'DNI_09_CM', db_cluster: 'DNI_09_CM', tvt: 'VT3', district: 'Cẩm Mỹ', total_3g4g: 26, total_5g: 14, note: '15 trạm Power, 11 trạm CRAN' },
+  { order: 'Day_03', cluster: 'DNI_02_TB', db_cluster: 'DNI_02_TB', tvt: 'VT2', district: 'Trảng Bom', total_3g4g: 27, total_5g: 17, note: '3 trạm Cancel, 8 trạm Power, 15 trạm CRAN' },
+  { order: 'Day_04', cluster: 'DNI_10_TN', db_cluster: 'DNI_10_TN', tvt: 'VT3', district: 'Thống Nhất', total_3g4g: 25, total_5g: 10, note: '24 trạm Delivery, 9 trạm 5G OA' },
+  { order: 'Day_05', cluster: 'DNI_03_TB', db_cluster: 'DNI_03_TB', tvt: 'VT2', district: 'Trảng Bom', total_3g4g: 27, total_5g: 26, note: '26 trạm Delivery, 20 trạm 5G OA' }
 ];
 
 export const SEPTEMBER_2026_CLUSTERS = [
@@ -525,6 +527,8 @@ export default function Sran5gProject() {
           if (isAugTarget) {
             if (c.cluster === 'DNI_09_CM' && (d.district === 'Cẩm Mỹ' || (d.site_id && d.site_id.startsWith('DNCM')))) return true;
             if (c.cluster === 'DNI_02_TB' && (d.district === 'Trảng Bom' || (d.site_id && d.site_id.startsWith('DNTB')))) return true;
+            if (c.cluster === 'DNI_10_TN' && (d.district === 'Thống Nhất' || (d.site_id && d.site_id.startsWith('DNTN')) || d.raw_data?.Cluster_Name === 'DNI_10_TN' || d.raw_data?.Cluster_Name === 'DNI_04_TN')) return true;
+            if (c.cluster === 'DNI_03_TB' && (d.district === 'Trảng Bom' || (d.site_id && d.site_id.startsWith('DNTB')) || d.raw_data?.Cluster_Name === 'DNI_03_TB')) return true;
           }
         }
         return false;
@@ -554,7 +558,7 @@ export default function Sran5gProject() {
       const install = Math.min(c.total_3g4g, rawInstall > 0 ? rawInstall : Math.round(c.total_3g4g * 0.95));
       const integration = Math.min(c.total_3g4g, rawIntegration > 0 ? rawIntegration : Math.round(c.total_3g4g * 0.9));
       const onair = Math.min(c.total_3g4g, rawOnair > 0 ? rawOnair : 24);
-      const onair5g = Math.min(c.total_5g, rawOnair5g > 0 ? rawOnair5g : (c.cluster === 'DNI_09_CM' ? 12 : Math.round(c.total_5g * 0.75)));
+      const onair5g = Math.min(c.total_5g, rawOnair5g > 0 ? rawOnair5g : (c.cluster === 'DNI_09_CM' ? 12 : c.cluster === 'DNI_10_TN' ? 9 : c.cluster === 'DNI_03_TB' ? 20 : Math.round(c.total_5g * 0.75)));
 
       return {
         ...c,
