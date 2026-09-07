@@ -359,6 +359,7 @@ export default function InfrastructureDevelopment() {
   const tctApprovedCount = tvt3ScopeProjects.filter(p => p.approval_batch || p.priority).length;
 
   // 4. Phân loại đầu tư (MobiFone đầu tư vs Dùng chung CSHT)
+  const mbfApprovedInvestCount = tvt3ScopeProjects.filter(p => (p.implementation_type === 'MBF đầu tư' || !p.implementation_type) && (p.skhcn_status === 'Chấp thuận xây dựng mới' || p.skhcn_confirmed)).length;
   const mbfInvestCount = tvt3ScopeProjects.filter(p => p.implementation_type === 'MBF đầu tư' || !p.implementation_type).length;
   const sharedCshtCount = tvt3ScopeProjects.filter(p => p.implementation_type && p.implementation_type !== 'MBF đầu tư').length;
 
@@ -1440,16 +1441,16 @@ export default function InfrastructureDevelopment() {
                   className="bg-white p-4 rounded-2xl border border-slate-100 border-l-4 border-l-blue-500 shadow-sm hover:shadow-md transition-all cursor-pointer group"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-[12px] font-bold text-slate-500 uppercase tracking-wide">MobiFone Tự Đầu Tư</span>
+                    <span className="text-[12px] font-bold text-slate-500 uppercase tracking-wide">MBF Tự Đầu Tư (Sở Duyệt)</span>
                     <span className="p-2 bg-blue-50 text-blue-600 rounded-xl group-hover:scale-110 transition-transform">
                       <TrendingUp className="h-5 w-5" />
                     </span>
                   </div>
                   <div className="mt-2 flex items-baseline justify-between">
-                    <span className="text-2xl font-black text-blue-700">{mbfInvestCount}</span>
-                    <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">Đầu tư mới</span>
+                    <span className="text-2xl font-black text-blue-700">{mbfApprovedInvestCount} <span className="text-xs text-slate-400 font-normal">/ {mbfInvestCount}</span></span>
+                    <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">Sở đã duyệt</span>
                   </div>
-                  <p className="text-[11px] text-slate-400 mt-2">Xây mới 100% cột &amp; mặt bằng</p>
+                  <p className="text-[11px] text-slate-400 mt-2">37/50 trạm quy hoạch MBF xây mới (13 trạm chờ duyệt)</p>
                 </div>
 
                 {/* 6. Đủ Điều Kiện Ký HĐ */}
