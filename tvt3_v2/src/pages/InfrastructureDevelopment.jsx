@@ -25,7 +25,7 @@ export default function InfrastructureDevelopment() {
   const [projects, setProjects] = useState([]);
   const [activeSites, setActiveSites] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('list'); // list, kanban
+  const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, kanban, list
   const [selectedProject, setSelectedProject] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -331,11 +331,56 @@ export default function InfrastructureDevelopment() {
     }
   }
 
-  // Calculate stats
-  const totalProjects = projects.length;
-  const inProgressProjects = projects.filter(p => p.overall_status === 'IN_PROGRESS').length;
-  const completedProjects = projects.filter(p => p.overall_status === 'COMPLETED').length;
-  const planningProjects = projects.filter(p => p.overall_status === 'PLANNING').length;
+  // Calculate comprehensive CSHT stats (filtered to TVT3 scope)
+  const tvt3ScopeProjects = projects.filter(proj => {
+    return tvt3Districts.includes(proj.district) ||
+      proj.planning_id_new?.startsWith('TVT3_') ||
+      proj.planning_id_new?.startsWith('VKD3_') ||
+      proj.planning_id_new?.startsWith('VKD4_') ||
+      proj.planning_id_new?.startsWith('VKD5_') ||
+      proj.planning_id_new?.startsWith('VTV3_');
+  });
+
+  const totalProjects = tvt3ScopeProjects.length;
+  const inProgressProjects = tvt3ScopeProjects.filter(p => p.overall_status === 'IN_PROGRESS').length;
+  const completedProjects = tvt3ScopeProjects.filter(p => p.overall_status === 'COMPLETED' || p.current_stage === 'on_air').length;
+  const planningProjects = tvt3ScopeProjects.filter(p => p.overall_status === 'PLANNING' || p.current_stage === 'design').length;
+
+  // 1. Khảo sát thực địa
+  const surveyedCount = tvt3ScopeProjects.filter(p => p.latitude_survey && p.longitude_survey).length;
+  const surveyNokCount = tvt3ScopeProjects.filter(p => p.survey_status === 'NOK').length;
+  const surveyOkCount = tvt3ScopeProjects.filter(p => (p.latitude_survey && p.longitude_survey) && p.survey_status !== 'NOK').length;
+
+  // 2. Sở KHCN phê duyệt đầu tư
+  const skhcnApprovedCount = tvt3ScopeProjects.filter(p => p.skhcn_status === 'Chấp thuận xây dựng mới' || p.skhcn_confirmed).length;
+
+  // 3. TCT phê duyệt & Đợt quy hoạch
+  const tctApprovedCount = tvt3ScopeProjects.filter(p => p.approval_batch || p.priority).length;
+
+  // 4. Phân loại đầu tư (MobiFone đầu tư vs Dùng chung CSHT)
+  const mbfInvestCount = tvt3ScopeProjects.filter(p => p.implementation_type === 'MBF đầu tư' || !p.implementation_type).length;
+  const sharedCshtCount = tvt3ScopeProjects.filter(p => p.implementation_type && p.implementation_type !== 'MBF đầu tư').length;
+
+  // 5. Tiến độ Hợp đồng
+  const contractSignedCount = tvt3ScopeProjects.filter(p => p.contract_number || p.contract_date || p.is_contract_signed).length;
+  const contractEligibleCount = tvt3ScopeProjects.filter(p => {
+    const { isEligible } = checkContractEligibility(p);
+    return isEligible && p.survey_status !== 'NOK' && !p.contract_number;
+  }).length;
+  const contractIncompleteCount = tvt3ScopeProjects.filter(p => {
+    const { isEligible } = checkContractEligibility(p);
+    return !isEligible && p.survey_status !== 'NOK' && !p.contract_number;
+  }).length;
+
+  // 6. Stage distribution
+  const stageCounts = {
+    design: tvt3ScopeProjects.filter(p => p.current_stage === 'design').length,
+    survey: tvt3ScopeProjects.filter(p => p.current_stage === 'survey').length,
+    permits: tvt3ScopeProjects.filter(p => p.current_stage === 'permits').length,
+    contract: tvt3ScopeProjects.filter(p => p.current_stage === 'contract').length,
+    construction: tvt3ScopeProjects.filter(p => p.current_stage === 'construction').length,
+    on_air: tvt3ScopeProjects.filter(p => p.current_stage === 'on_air' || p.overall_status === 'COMPLETED').length,
+  };
 
   // Gap analysis / density
   const getDensityData = () => {
@@ -1282,8 +1327,9 @@ export default function InfrastructureDevelopment() {
       {/* Tabs Menu */}
       <div className="flex border-b border-slate-200">
         {[
-          { id: 'kanban', label: 'Bảng Tiến độ (Kanban)' },
-          { id: 'list', label: 'Danh sách Quy hoạch' }
+          { id: 'dashboard', label: '📊 Tổng quan Dashboard CSHT' },
+          { id: 'kanban', label: '📋 Bảng Tiến độ (Kanban)' },
+          { id: 'list', label: '📄 Danh sách Quy hoạch' }
         ].map(t => (
           <button
             key={t.id}
@@ -1307,6 +1353,335 @@ export default function InfrastructureDevelopment() {
         </div>
       ) : (
         <>
+          {/* TAB 1: DASHBOARD OVERVIEW */}
+          {activeTab === 'dashboard' && (
+            <div className="space-y-6">
+              {/* Executive KPI Cards Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* 1. Quỹ điểm quy hoạch TCT */}
+                <div 
+                  onClick={() => { setFilterStage(''); setFilterContractReady(''); setFilterImplementationType(''); setActiveTab('list'); }}
+                  className="bg-white p-4 rounded-2xl border border-slate-100 border-l-4 border-l-blue-600 shadow-sm hover:shadow-md transition-all cursor-pointer group"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[12px] font-bold text-slate-500 uppercase tracking-wide">Quỹ Điểm Quy Hoạch</span>
+                    <span className="p-2 bg-blue-50 text-blue-600 rounded-xl group-hover:scale-110 transition-transform">
+                      <Server className="h-5 w-5" />
+                    </span>
+                  </div>
+                  <div className="mt-2 flex items-baseline justify-between">
+                    <span className="text-2xl font-black text-slate-800">{totalProjects}</span>
+                    <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">TCT Cấp phép</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-2">Tổng quy hoạch trạm mới TVT3</p>
+                </div>
+
+                {/* 2. Khảo sát thực địa */}
+                <div 
+                  onClick={() => { setFilterStage('survey'); setActiveTab('list'); }}
+                  className="bg-white p-4 rounded-2xl border border-slate-100 border-l-4 border-l-cyan-500 shadow-sm hover:shadow-md transition-all cursor-pointer group"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[12px] font-bold text-slate-500 uppercase tracking-wide">Khảo Sát Thực Địa</span>
+                    <span className="p-2 bg-cyan-50 text-cyan-600 rounded-xl group-hover:scale-110 transition-transform">
+                      <MapPin className="h-5 w-5" />
+                    </span>
+                  </div>
+                  <div className="mt-2 flex items-baseline justify-between">
+                    <span className="text-2xl font-black text-slate-800">{surveyOkCount} <span className="text-xs text-slate-400 font-normal">/ {surveyedCount}</span></span>
+                    <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Đạt OK</span>
+                  </div>
+                  <p className="text-[11px] text-rose-500 mt-2 font-medium">⚠️ {surveyNokCount} trạm khảo sát Không Đạt (NOK)</p>
+                </div>
+
+                {/* 3. Sở KHCN Chấp Thuận */}
+                <div 
+                  onClick={() => { setFilterStage('permits'); setActiveTab('list'); }}
+                  className="bg-white p-4 rounded-2xl border border-slate-100 border-l-4 border-l-purple-600 shadow-sm hover:shadow-md transition-all cursor-pointer group"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[12px] font-bold text-slate-500 uppercase tracking-wide">Sở KHCN Phê Duyệt</span>
+                    <span className="p-2 bg-purple-50 text-purple-600 rounded-xl group-hover:scale-110 transition-transform">
+                      <CheckCircle2 className="h-5 w-5" />
+                    </span>
+                  </div>
+                  <div className="mt-2 flex items-baseline justify-between">
+                    <span className="text-2xl font-black text-purple-700">{skhcnApprovedCount}</span>
+                    <span className="text-[11px] font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">
+                      {totalProjects > 0 ? Math.round((skhcnApprovedCount / totalProjects) * 100) : 0}% Trạm
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-2">Đã có VB chấp thuận xây dựng mới</p>
+                </div>
+
+                {/* 4. Dùng Chung CSHT */}
+                <div 
+                  onClick={() => { setFilterImplementationType('SHARED_CSHT'); setActiveTab('list'); }}
+                  className="bg-white p-4 rounded-2xl border border-slate-100 border-l-4 border-l-indigo-600 shadow-sm hover:shadow-md transition-all cursor-pointer group"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[12px] font-bold text-slate-500 uppercase tracking-wide">Dùng Chung CSHT</span>
+                    <span className="p-2 bg-indigo-50 text-indigo-600 rounded-xl group-hover:scale-110 transition-transform">
+                      <Activity className="h-5 w-5" />
+                    </span>
+                  </div>
+                  <div className="mt-2 flex items-baseline justify-between">
+                    <span className="text-2xl font-black text-indigo-700">{sharedCshtCount}</span>
+                    <span className="text-[11px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">TCT Đối Tác</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-2">Thuê lại CSHT (Vietcom, OPG, HTC...)</p>
+                </div>
+
+                {/* 5. MobiFone Tự Đầu Tư */}
+                <div 
+                  onClick={() => { setFilterImplementationType('MBF_INVEST'); setActiveTab('list'); }}
+                  className="bg-white p-4 rounded-2xl border border-slate-100 border-l-4 border-l-blue-500 shadow-sm hover:shadow-md transition-all cursor-pointer group"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[12px] font-bold text-slate-500 uppercase tracking-wide">MobiFone Tự Đầu Tư</span>
+                    <span className="p-2 bg-blue-50 text-blue-600 rounded-xl group-hover:scale-110 transition-transform">
+                      <TrendingUp className="h-5 w-5" />
+                    </span>
+                  </div>
+                  <div className="mt-2 flex items-baseline justify-between">
+                    <span className="text-2xl font-black text-blue-700">{mbfInvestCount}</span>
+                    <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">Đầu tư mới</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-2">Xây mới 100% cột &amp; mặt bằng</p>
+                </div>
+
+                {/* 6. Đủ Điều Kiện Ký HĐ */}
+                <div 
+                  onClick={() => { setFilterContractReady('ELIGIBLE'); setActiveTab('list'); }}
+                  className="bg-white p-4 rounded-2xl border border-slate-100 border-l-4 border-l-emerald-500 shadow-sm hover:shadow-md transition-all cursor-pointer group"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[12px] font-bold text-slate-500 uppercase tracking-wide">Đủ Điều Kiện Ký HĐ</span>
+                    <span className="p-2 bg-emerald-50 text-emerald-600 rounded-xl group-hover:scale-110 transition-transform">
+                      <FileText className="h-5 w-5" />
+                    </span>
+                  </div>
+                  <div className="mt-2 flex items-baseline justify-between">
+                    <span className="text-2xl font-black text-emerald-600">{contractEligibleCount}</span>
+                    <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">11/11 OK</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-2">Đủ thông tin pháp lý sẵn sàng trình ký</p>
+                </div>
+
+                {/* 7. Đã Ký Hợp Đồng */}
+                <div 
+                  onClick={() => { setFilterStage('contract'); setActiveTab('list'); }}
+                  className="bg-white p-4 rounded-2xl border border-slate-100 border-l-4 border-l-teal-600 shadow-sm hover:shadow-md transition-all cursor-pointer group"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[12px] font-bold text-slate-500 uppercase tracking-wide">Đã Ký Hợp Đồng</span>
+                    <span className="p-2 bg-teal-50 text-teal-600 rounded-xl group-hover:scale-110 transition-transform">
+                      <CheckCircle2 className="h-5 w-5" />
+                    </span>
+                  </div>
+                  <div className="mt-2 flex items-baseline justify-between">
+                    <span className="text-2xl font-black text-teal-700">{contractSignedCount}</span>
+                    <span className="text-[11px] font-bold text-teal-600 bg-teal-50 px-2 py-0.5 rounded-full">Đã có Số HĐ</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-2">Hoàn tất hợp đồng thuê mặt bằng/CSHT</p>
+                </div>
+
+                {/* 8. Đã Phát Sóng (ON AIR) */}
+                <div 
+                  onClick={() => { setFilterStage('on_air'); setActiveTab('list'); }}
+                  className="bg-white p-4 rounded-2xl border border-slate-100 border-l-4 border-l-amber-500 shadow-sm hover:shadow-md transition-all cursor-pointer group"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[12px] font-bold text-slate-500 uppercase tracking-wide">Đã Phát Sóng (ON AIR)</span>
+                    <span className="p-2 bg-amber-50 text-amber-600 rounded-xl group-hover:scale-110 transition-transform">
+                      <Check className="h-5 w-5" />
+                    </span>
+                  </div>
+                  <div className="mt-2 flex items-baseline justify-between">
+                    <span className="text-2xl font-black text-amber-600">{completedProjects}</span>
+                    <span className="text-[11px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Hoàn thành</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-2">Đã đấu nối và phát sóng di động</p>
+                </div>
+              </div>
+
+              {/* Progress Pipeline Flow Bar */}
+              <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                    <Activity className="h-4 w-4 text-blue-600" />
+                    Tiến Độ Luồng Quy Hoạch &amp; Triển Khai (Pipeline 6 Giai Đoạn)
+                  </h3>
+                  <span className="text-xs font-semibold text-slate-400">Tổng số {totalProjects} trạm</span>
+                </div>
+                
+                <div className="grid grid-cols-2 md:grid-cols-6 gap-2 pt-2">
+                  {[
+                    { id: 'design', label: '1. Thiết kế', count: stageCounts.design, color: 'bg-indigo-50 border-indigo-200 text-indigo-700', badge: 'bg-indigo-600 text-white' },
+                    { id: 'survey', label: '2. Khảo sát', count: stageCounts.survey, color: 'bg-blue-50 border-blue-200 text-blue-700', badge: 'bg-blue-600 text-white' },
+                    { id: 'permits', label: '3. Xin phép KHCN', count: stageCounts.permits, color: 'bg-purple-50 border-purple-200 text-purple-700', badge: 'bg-purple-600 text-white' },
+                    { id: 'contract', label: '4. Ký Hợp Đồng', count: stageCounts.contract, color: 'bg-emerald-50 border-emerald-200 text-emerald-700', badge: 'bg-emerald-600 text-white' },
+                    { id: 'construction', label: '5. Xây dựng', count: stageCounts.construction, color: 'bg-orange-50 border-orange-200 text-orange-700', badge: 'bg-orange-600 text-white' },
+                    { id: 'on_air', label: '6. Phát sóng', count: stageCounts.on_air, color: 'bg-cyan-50 border-cyan-200 text-cyan-700', badge: 'bg-cyan-600 text-white' }
+                  ].map(s => (
+                    <div 
+                      key={s.id}
+                      onClick={() => { setFilterStage(s.id); setActiveTab('list'); }}
+                      className={`p-3 rounded-xl border ${s.color} hover:shadow-md transition-all cursor-pointer flex flex-col justify-between`}
+                    >
+                      <span className="text-[11px] font-bold block truncate">{s.label}</span>
+                      <div className="flex items-baseline justify-between mt-2">
+                        <span className="text-xl font-black">{s.count}</span>
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${s.badge}`}>
+                          {totalProjects > 0 ? Math.round((s.count / totalProjects) * 100) : 0}%
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Multi-Dimensional Analytics Widgets (2x2 Grid) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* WIDGET 1: HÌNH THỨC ĐẦU TƯ */}
+                <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                      <Server className="h-4 w-4 text-indigo-600" />
+                      Phân Loại Hình Thức Đầu Tư
+                    </h3>
+                    <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
+                      {sharedCshtCount} Dùng chung / {mbfInvestCount} MBF
+                    </span>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div>
+                      <div className="flex justify-between text-xs font-semibold text-slate-600 mb-1">
+                        <span>MobiFone Tự Đầu Tư (Xây Mới)</span>
+                        <span className="font-bold text-blue-600">{mbfInvestCount} trạm ({totalProjects > 0 ? Math.round(mbfInvestCount/totalProjects*100) : 0}%)</span>
+                      </div>
+                      <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                        <div className="bg-blue-600 h-full rounded-full transition-all" style={{ width: `${totalProjects > 0 ? (mbfInvestCount/totalProjects)*100 : 0}%` }} />
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex justify-between text-xs font-semibold text-slate-600 mb-1">
+                        <span>Dùng Chung CSHT (TCT Đối Tác)</span>
+                        <span className="font-bold text-indigo-600">{sharedCshtCount} trạm ({totalProjects > 0 ? Math.round(sharedCshtCount/totalProjects*100) : 0}%)</span>
+                      </div>
+                      <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                        <div className="bg-indigo-600 h-full rounded-full transition-all" style={{ width: `${totalProjects > 0 ? (sharedCshtCount/totalProjects)*100 : 0}%` }} />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-[12px] text-slate-600 space-y-1">
+                    <span className="font-bold text-slate-700 block">💡 Ghi chú Dùng chung CSHT:</span>
+                    <p>Các trạm đi thuê lại hạ tầng sẵn có của đối tác giúp tối ưu chi phí và rút ngắn thời gian phát sóng.</p>
+                  </div>
+                </div>
+
+                {/* WIDGET 2: TIẾN ĐỘ HỢP ĐỒNG & PHÁP LÝ */}
+                <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-emerald-600" />
+                      Tiến Độ Trình Ký &amp; Pháp Lý Mặt Bằng
+                    </h3>
+                    <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                      {contractSignedCount} Đã Ký
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-emerald-50/70 p-3 rounded-xl border border-emerald-100">
+                      <span className="text-[11px] font-bold text-emerald-700 block">Đã Ký Hợp Đồng</span>
+                      <span className="text-2xl font-black text-emerald-800 mt-1 block">{contractSignedCount}</span>
+                      <span className="text-[10px] text-emerald-600 mt-1 block">Hoàn tất thủ tục pháp lý</span>
+                    </div>
+
+                    <div className="bg-blue-50/70 p-3 rounded-xl border border-blue-100">
+                      <span className="text-[11px] font-bold text-blue-700 block">Đủ Điều Kiện Trình Ký</span>
+                      <span className="text-2xl font-black text-blue-800 mt-1 block">{contractEligibleCount}</span>
+                      <span className="text-[10px] text-blue-600 mt-1 block">Checklist 11/11 thông tin OK</span>
+                    </div>
+
+                    <div className="bg-amber-50/70 p-3 rounded-xl border border-amber-100">
+                      <span className="text-[11px] font-bold text-amber-700 block">Chưa Đủ Hồ Sơ</span>
+                      <span className="text-2xl font-black text-amber-800 mt-1 block">{contractIncompleteCount}</span>
+                      <span className="text-[10px] text-amber-600 mt-1 block">Đang hoàn thiện thông tin</span>
+                    </div>
+
+                    <div className="bg-rose-50/70 p-3 rounded-xl border border-rose-100">
+                      <span className="text-[11px] font-bold text-rose-700 block">Khảo Sát NOK</span>
+                      <span className="text-2xl font-black text-rose-800 mt-1 block">{surveyNokCount}</span>
+                      <span className="text-[10px] text-rose-600 mt-1 block">Vị trí không khả thi</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* WIDGET 3: SỞ KHCN PHÊ DUYỆT */}
+                <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-purple-600" />
+                      Tình Trạng Cấp Phép Sở KHCN
+                    </h3>
+                    <span className="text-xs font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">
+                      {skhcnApprovedCount} / {totalProjects} Trạm
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <div className="w-24 h-24 rounded-full border-8 border-purple-500 border-t-purple-200 flex items-center justify-center shrink-0">
+                      <span className="text-xl font-black text-purple-700">
+                        {totalProjects > 0 ? Math.round((skhcnApprovedCount / totalProjects) * 100) : 0}%
+                      </span>
+                    </div>
+                    <div className="space-y-2 text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="w-3 h-3 rounded-full bg-purple-500 inline-block" />
+                        <span className="font-semibold text-slate-700">Đã có Văn Bản Chấp Thuận: <strong className="text-purple-700">{skhcnApprovedCount} trạm</strong></span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="w-3 h-3 rounded-full bg-slate-200 inline-block" />
+                        <span className="font-semibold text-slate-500">Đang rà soát xin cấp phép: <strong className="text-slate-700">{skhcnPendingCount} trạm</strong></span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* WIDGET 4: PHÂN BỔ HẠ TẦNG THEO HUYỆN (TVT3) */}
+                <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-blue-600" />
+                      Phân Bổ Hạ Tầng Theo Huyện (TVT3)
+                    </h3>
+                    <span className="text-xs font-semibold text-slate-400">6 Huyện / Thị xã</span>
+                  </div>
+
+                  <div className="divide-y divide-slate-100 text-xs">
+                    {tvt3Districts.map(dist => {
+                      const dCount = tvt3ScopeProjects.filter(p => p.district === dist).length;
+                      const dSigned = tvt3ScopeProjects.filter(p => p.district === dist && (p.contract_number || p.is_contract_signed)).length;
+                      return (
+                        <div key={dist} className="py-2 flex items-center justify-between hover:bg-slate-50 px-2 rounded-lg transition-colors">
+                          <span className="font-semibold text-slate-700">{dist}</span>
+                          <div className="flex items-center gap-3">
+                            <span className="text-slate-500 font-mono">{dCount} trạm quy hoạch</span>
+                            <span className="font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">{dSigned} đã ký HĐ</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {activeTab === 'kanban' && (
             <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin select-none">
