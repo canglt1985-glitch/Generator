@@ -1365,10 +1365,80 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
           </button>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          {/* 🔍 Global Quick Station Lookup Input */}
+          <div className="relative min-w-[280px] max-w-sm">
+            <Search className="absolute left-3.5 top-2.5 h-4 w-4 text-blue-500" />
+            <input
+              type="text"
+              placeholder="🔍 Tìm trạm (VD: DNCM02, DNIXDO00, 26DNa...)"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-8 py-2 text-xs font-bold bg-white border-2 border-blue-500/50 rounded-xl text-slate-800 focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-500/30 shadow-md placeholder-slate-400"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 font-bold text-xs"
+              >
+                ✕
+              </button>
+            )}
+            
+            {/* Quick Autocomplete Search Results Dropdown when user types */}
+            {searchTerm.trim().length > 0 && (
+              <div className="absolute left-0 right-0 top-full mt-1.5 bg-white border border-slate-200 rounded-xl shadow-2xl z-50 max-h-80 overflow-y-auto p-2 divide-y divide-slate-100">
+                {(() => {
+                  const matches = data.filter(d => {
+                    const q = searchTerm.toLowerCase().trim();
+                    return (d.site_id || '').toLowerCase().includes(q) ||
+                           (d.site_id_old || '').toLowerCase().includes(q) ||
+                           (d.unique_id || '').toLowerCase().includes(q) ||
+                           (d.district || '').toLowerCase().includes(q) ||
+                           (d.ward || '').toLowerCase().includes(q);
+                  }).slice(0, 10);
+
+                  if (matches.length === 0) {
+                    return (
+                      <div className="p-3 text-center text-xs text-slate-400 font-medium">
+                        Không tìm thấy trạm phù hợp từ từ khóa "{searchTerm}"
+                      </div>
+                    );
+                  }
+
+                  return matches.map(m => (
+                    <div
+                      key={m.unique_id || m.site_id}
+                      onClick={() => {
+                        setSelectedSite(m);
+                        setSearchTerm('');
+                      }}
+                      className="p-2.5 hover:bg-blue-50 cursor-pointer rounded-lg transition-colors flex items-center justify-between group"
+                    >
+                      <div>
+                        <div className="text-xs font-black text-blue-700 group-hover:text-blue-800 flex items-center gap-1.5">
+                          <span>{m.site_id}</span>
+                          {m.site_id_old && <span className="text-[11px] text-slate-500 font-normal">({m.site_id_old})</span>}
+                        </div>
+                        <div className="text-[10px] text-slate-500 mt-0.5">
+                          📍 {m.district || 'Đồng Nai'} | 📶 3G/4G: {m.config_3g4g || '-'} | 5G: {m.config_5g || '-'}
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-700 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                          Xem chi tiết &rarr;
+                        </span>
+                      </div>
+                    </div>
+                  ));
+                })()}
+              </div>
+            )}
+          </div>
+
           <button
             onClick={exportFilteredToExcel}
-            className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-2 transition-all shadow-sm active:scale-95 hover:scale-105"
+            className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-sm active:scale-95 hover:scale-105"
             title="Xuất file Excel cho danh sách đang lọc"
           >
             <FileSpreadsheet className="h-4 w-4" />
@@ -1377,7 +1447,7 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
 
           <button
             onClick={copyQuickReport}
-            className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs flex items-center gap-2 transition-all shadow-sm active:scale-95"
+            className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
           >
             <CheckCircle2 className="h-4 w-4 text-emerald-400" />
             {copiedReport ? '✓ Đã Sao Chép Báo Cáo!' : '📋 Copy Báo Cáo Nhanh'}

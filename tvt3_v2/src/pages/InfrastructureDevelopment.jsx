@@ -12,11 +12,11 @@ import {
 } from 'lucide-react';
 
 const STAGES = [
-  { id: 'survey', label: 'Khảo sát', color: 'blue', desc: 'Khảo sát thực tế vị trí tọa độ' },
-  { id: 'permits', label: 'Xin phép', color: 'purple', desc: 'Gửi sở KHCN xin cấp phép xây dựng' },
   { id: 'design', label: 'Thiết kế', color: 'indigo', desc: 'Tư vấn thiết kế & quy hoạch nguồn lực' },
-  { id: 'contract', label: 'Ký hợp đồng', color: 'emerald', desc: 'Ký kết hợp đồng thuê chính thức' },
-  { id: 'construction', color: 'orange', label: 'Xây dựng', desc: 'Thi công xây móng cột & lắp thiết bị' },
+  { id: 'survey', label: 'Khảo sát', color: 'blue', desc: 'Khảo sát thực tế vị trí tọa độ' },
+  { id: 'permits', label: 'Xin phép KHCN', color: 'purple', desc: 'Gửi Sở KHCN & rà soát đối chiếu văn bản chấp thuận' },
+  { id: 'contract', label: 'Ký hợp đồng', color: 'emerald', desc: 'Phân loại (MBF đầu tư / Dùng chung CSHT) & Ký hợp đồng' },
+  { id: 'construction', label: 'Xây dựng', color: 'orange', desc: 'Thi công xây móng cột & lắp thiết bị' },
   { id: 'on_air', label: 'Phát sóng', color: 'cyan', desc: 'Đấu nối điện lưới và phát sóng di động' }
 ];
 
@@ -131,13 +131,14 @@ export default function InfrastructureDevelopment() {
     setIsEditing(false);
   };
   
-  // Filters
+  const [filterTv3Only, setFilterTv3Only] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterDistrict, setFilterDistrict] = useState('');
   const [filterStage, setFilterStage] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [filterPackage, setFilterPackage] = useState('');
   const [filterContractReady, setFilterContractReady] = useState('');
+  const [filterImplementationType, setFilterImplementationType] = useState('');
   
   // Form State for new proposal
   const [newProject, setNewProject] = useState({
@@ -160,8 +161,9 @@ export default function InfrastructureDevelopment() {
     deployment_package: ''
   });
 
-  const districts = ['Cẩm Mỹ', 'Xuân Lộc', 'Long Khánh', 'Thống Nhất', 'Định Quán', 'Tân Phú'];
-  const packages = Array.from(new Set(projects.map(p => p.deployment_package).filter(Boolean)));
+  const tvt3Districts = ['Cẩm Mỹ', 'Xuân Lộc', 'Long Khánh', 'Thống Nhất', 'Định Quán', 'Tân Phú'];
+  const districts = tvt3Districts;
+  const packages = Array.from(new Set(projects.map(p => p.deployment_package).filter(Boolean))).sort();
 
   // Haversine formula to compute distance in km
   const haversine = (lat1, lon1, lat2, lon2) => {
@@ -363,12 +365,22 @@ export default function InfrastructureDevelopment() {
     return data;
   };
 
-  // Filtered projects
+  // Filtered projects (strict TVT3 only)
   const filteredProjects = projects.filter(proj => {
+    const isTv3Site = tvt3Districts.includes(proj.district) ||
+      proj.planning_id_new?.startsWith('TVT3_') ||
+      proj.planning_id_new?.startsWith('VKD3_') ||
+      proj.planning_id_new?.startsWith('VKD4_') ||
+      proj.planning_id_new?.startsWith('VKD5_') ||
+      proj.planning_id_new?.startsWith('VTV3_');
+
+    if (!isTv3Site) return false;
+
     const matchesSearch = 
       proj.planning_id_new?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       proj.planning_id_old?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       proj.ward?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      proj.district?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       proj.address?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesDistrict = !filterDistrict || proj.district === filterDistrict;
     const matchesStage = !filterStage || proj.current_stage === filterStage;
@@ -387,7 +399,11 @@ export default function InfrastructureDevelopment() {
       }
     }
     
-    return matchesSearch && matchesDistrict && matchesStage && matchesStatus && matchesPackage && matchesContractReady;
+    const matchesImplType = !filterImplementationType || 
+      (filterImplementationType === 'MBF_INVEST' ? (proj.implementation_type === 'MBF đầu tư' || !proj.implementation_type) : 
+      (proj.implementation_type !== 'MBF đầu tư'));
+
+    return matchesSearch && matchesDistrict && matchesStage && matchesStatus && matchesPackage && matchesContractReady && matchesImplType;
   });
 
   // Handle stage transition
@@ -1348,7 +1364,7 @@ export default function InfrastructureDevelopment() {
                             
                             <div className="flex items-center gap-1 text-[10px] text-slate-500 mt-2">
                               <MapPin className="h-3 w-3 text-slate-400" />
-                              <span className="truncate">Xã mới: {proj.ward || 'Chưa xác định'}</span>
+                              <span className="truncate">Xã mới: {proj.ward ? (proj.district && !proj.ward.includes(proj.district) ? proj.ward + ', ' + proj.district : proj.ward) : (proj.district || 'Chưa xác định')}</span>
                             </div>
 
                             {(() => {
@@ -1413,17 +1429,31 @@ export default function InfrastructureDevelopment() {
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden space-y-4 p-4">
               {/* Table Filter Actions */}
               <div className="flex flex-col md:flex-row md:items-center gap-3 justify-between">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Tìm theo mã QH mới/cũ, xã hoặc địa bàn..."
-                    className="block w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg leading-5 bg-slate-50/50 text-slate-700 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-xs transition-all"
-                  />
+                <div className="flex items-center gap-2 flex-1">
+                  <div className="text-xs px-3 py-2 font-bold rounded-lg border bg-blue-600 text-white border-blue-600 shadow-sm flex items-center gap-1.5 whitespace-nowrap shadow-blue-500/20">
+                    🎯 Danh sách TVT3 ({filteredProjects.length} trạm)
+                  </div>
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Tìm theo mã QH mới/cũ, xã hoặc địa bàn TVT3..."
+                      className="block w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg leading-5 bg-slate-50/50 text-slate-700 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-xs transition-all"
+                    />
+                  </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
+                  <select
+                    value={filterImplementationType}
+                    onChange={(e) => setFilterImplementationType(e.target.value)}
+                    className="text-xs bg-blue-50/80 hover:bg-blue-100 border border-blue-200 rounded-lg px-2.5 py-1.5 font-bold text-blue-700 focus:outline-none"
+                  >
+                    <option value="">Tất cả Nhánh dự án</option>
+                    <option value="MBF_INVEST">🔷 MobiFone đầu tư mới</option>
+                    <option value="SHARED">🤝 Dùng chung CSHT (Thuê lại)</option>
+                  </select>
                   <select
                     value={filterDistrict}
                     onChange={(e) => setFilterDistrict(e.target.value)}
@@ -1535,7 +1565,7 @@ export default function InfrastructureDevelopment() {
                                )}
                              </td>
                             <td className="py-3 px-3 text-slate-600 font-semibold">
-                              {proj.ward || 'Chưa xác định'}
+                              {proj.ward ? (proj.district && !proj.ward.includes(proj.district) ? `${proj.ward}, ${proj.district}` : proj.ward) : (proj.district || 'Chưa xác định')}
                             </td>
                             <td className="py-3 px-3 text-slate-500 hidden md:table-cell">
                               {oldLoc}

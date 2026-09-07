@@ -1211,9 +1211,25 @@ export default function NetworkMap() {
                       <Popup>
                         <div className="font-sans text-xs flex flex-col gap-1">
                           <strong className="text-orange-500 block text-sm">Dự án: {code}</strong>
+                          {proj.district && <span className="text-slate-700 block font-bold text-[11px]">Địa bàn: {proj.ward ? `${proj.ward}, ${proj.district}` : proj.district}</span>}
+                          {proj.latitude_survey ? (
+                            <div className="bg-emerald-50 border border-emerald-100 p-1.5 rounded my-1 text-[11px]">
+                              <span className="text-emerald-700 font-bold block">📍 Tọa độ Sở KHCN chấp thuận:</span>
+                              <span className="font-mono text-emerald-800 block text-[10px]">{proj.latitude_survey}, {proj.longitude_survey}</span>
+                              {proj.latitude_plan && (
+                                <span className="text-slate-500 block text-[10px] mt-0.5 font-medium">
+                                  📐 Quy hoạch gốc: {proj.latitude_plan}, {proj.longitude_plan}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="bg-blue-50 border border-blue-100 p-1.5 rounded my-1 text-[11px]">
+                              <span className="text-blue-700 font-bold block">📐 Tọa độ Quy hoạch thiết kế:</span>
+                              <span className="font-mono text-blue-800 block text-[10px]">{proj.latitude_plan}, {proj.longitude_plan}</span>
+                            </div>
+                          )}
                           {proj.notes && <span className="text-slate-600 block font-medium">{proj.notes}</span>}
-                          <span className="text-slate-400 block text-[10px]">Trạng thái: {proj.overall_status || 'Chưa rõ'}</span>
-                          <span className="text-slate-400 block text-[10px]">Khảo sát: {proj.survey_status || 'Chưa rõ'}</span>
+                          <span className="text-slate-400 block text-[10px]">Trạng thái: {proj.overall_status || 'Chưa rõ'} | SKHCN: {proj.skhcn_status || 'Chưa rõ'}</span>
                           <a 
                             href={`https://www.google.com/maps/dir/?api=1&${customerLocation ? `origin=${customerLocation.lat},${customerLocation.lng}&` : ''}destination=${lat},${lng}&travelmode=driving`}
                             target="_blank" 
