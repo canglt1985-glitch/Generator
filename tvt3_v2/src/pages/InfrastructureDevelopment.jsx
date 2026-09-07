@@ -363,7 +363,7 @@ export default function InfrastructureDevelopment() {
   const sharedCshtCount = tvt3ScopeProjects.filter(p => p.implementation_type && p.implementation_type !== 'MBF đầu tư').length;
 
   // 5. Tiến độ Hợp đồng
-  const contractSignedCount = tvt3ScopeProjects.filter(p => p.contract_number || p.contract_date || p.is_contract_signed).length;
+  const contractSignedCount = tvt3ScopeProjects.filter(p => p.current_stage === 'contract' || p.contract_number || p.contract_date || p.is_contract_signed).length;
   const contractEligibleCount = tvt3ScopeProjects.filter(p => {
     const { isEligible } = checkContractEligibility(p);
     return isEligible && p.survey_status !== 'NOK' && !p.contract_number;
@@ -1470,22 +1470,22 @@ export default function InfrastructureDevelopment() {
                   <p className="text-[11px] text-slate-400 mt-2">Đủ thông tin pháp lý sẵn sàng trình ký</p>
                 </div>
 
-                {/* 7. Đã Ký Hợp Đồng */}
+                {/* 7. Trình Ký Hợp Đồng */}
                 <div 
                   onClick={() => { setFilterStage('contract'); setActiveTab('list'); }}
                   className="bg-white p-4 rounded-2xl border border-slate-100 border-l-4 border-l-teal-600 shadow-sm hover:shadow-md transition-all cursor-pointer group"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-[12px] font-bold text-slate-500 uppercase tracking-wide">Đã Ký Hợp Đồng</span>
+                    <span className="text-[12px] font-bold text-slate-500 uppercase tracking-wide">Trình Ký Hợp Đồng</span>
                     <span className="p-2 bg-teal-50 text-teal-600 rounded-xl group-hover:scale-110 transition-transform">
                       <CheckCircle2 className="h-5 w-5" />
                     </span>
                   </div>
                   <div className="mt-2 flex items-baseline justify-between">
                     <span className="text-2xl font-black text-teal-700">{contractSignedCount}</span>
-                    <span className="text-[11px] font-bold text-teal-600 bg-teal-50 px-2 py-0.5 rounded-full">Đã có Số HĐ</span>
+                    <span className="text-[11px] font-bold text-teal-600 bg-teal-50 px-2 py-0.5 rounded-full">Đã Trình Ký</span>
                   </div>
-                  <p className="text-[11px] text-slate-400 mt-2">Hoàn tất hợp đồng thuê mặt bằng/CSHT</p>
+                  <p className="text-[11px] text-slate-400 mt-2">Đang trình ký &amp; chuẩn bị xây dựng</p>
                 </div>
 
                 {/* 8. Đã Phát Sóng (ON AIR) */}
