@@ -1261,6 +1261,7 @@ export default function InfrastructureDevelopment() {
           <h1 className="text-xl md:text-2xl font-bold text-slate-800 flex items-center gap-2">
             <Server className="h-6 w-6 text-blue-600" />
             Phát triển Cơ sở Hạ tầng (3G/4G/5G)
+            <span className="text-xs bg-emerald-100 text-emerald-700 px-2.5 py-0.5 rounded-full font-bold ml-2">Dashboard v2.0</span>
           </h1>
           <p className="text-[13px] text-slate-500 mt-1">
             Quy hoạch mạng lưới trạm và theo dõi tiến trình khảo sát, thuê mặt bằng, xin phép, xây dựng trạm mới.
