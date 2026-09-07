@@ -353,6 +353,7 @@ export default function InfrastructureDevelopment() {
 
   // 2. Sở KHCN phê duyệt đầu tư
   const skhcnApprovedCount = tvt3ScopeProjects.filter(p => p.skhcn_status === 'Chấp thuận xây dựng mới' || p.skhcn_confirmed).length;
+  const skhcnPendingCount = totalProjects - skhcnApprovedCount;
 
   // 3. TCT phê duyệt & Đợt quy hoạch
   const tctApprovedCount = tvt3ScopeProjects.filter(p => p.approval_batch || p.priority).length;
