@@ -372,14 +372,12 @@ export default function InfrastructureDevelopment() {
     return !isEligible && p.survey_status !== 'NOK' && !p.contract_number;
   }).length;
 
-  // 6. Stage distribution
+  // 6. Stage progressive pipeline counts (Bám vào tiến độ thực tế dự án)
   const stageCounts = {
-    design: tvt3ScopeProjects.filter(p => p.current_stage === 'design').length,
-    survey: tvt3ScopeProjects.filter(p => p.current_stage === 'survey').length,
-    permits: tvt3ScopeProjects.filter(p => p.current_stage === 'permits').length,
-    contract: tvt3ScopeProjects.filter(p => p.current_stage === 'contract').length,
-    construction: tvt3ScopeProjects.filter(p => p.current_stage === 'construction').length,
-    on_air: tvt3ScopeProjects.filter(p => p.current_stage === 'on_air' || p.overall_status === 'COMPLETED').length,
+    design: totalProjects, // 1. Quỹ điểm Quy hoạch (74)
+    survey: surveyOkCount, // 2. Khảo sát & Tối ưu OK (64)
+    permits: skhcnApprovedCount, // 3. Trình TCT & Sở KHCN (61)
+    contract: contractSignedCount // 4. Trình ký Hợp đồng (9)
   };
 
   // Gap analysis / density
@@ -1302,28 +1300,7 @@ export default function InfrastructureDevelopment() {
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-        {[
-          { label: 'Tổng số Trạm Quy hoạch', val: totalProjects, icon: Server, color: 'border-l-blue-500 text-blue-600 bg-blue-50/40' },
-          { label: 'Đang Triển khai', val: inProgressProjects, icon: Clock, color: 'border-l-amber-500 text-amber-600 bg-amber-50/40' },
-          { label: 'Đã Phát sóng (ON AIR)', val: completedProjects, icon: CheckCircle2, color: 'border-l-emerald-500 text-emerald-600 bg-emerald-50/40' },
-          { label: 'Đang lập Kế hoạch', val: planningProjects, icon: AlertTriangle, color: 'border-l-slate-400 text-slate-600 bg-slate-50/40' }
-        ].map((kpi, idx) => {
-          const Icon = kpi.icon;
-          return (
-            <div key={idx} className={`bg-white p-4 rounded-xl border border-slate-100 border-l-4 ${kpi.color} shadow-sm flex items-center justify-between`}>
-              <div>
-                <span className="text-[12px] font-medium text-slate-400 block">{kpi.label}</span>
-                <span className="text-xl md:text-2xl font-bold text-slate-800 mt-1 block">{kpi.val}</span>
-              </div>
-              <div className="p-2 bg-white rounded-lg border border-slate-100">
-                <Icon className="h-5 w-5" />
-              </div>
-            </div>
-          );
-        })}
-      </div>
+
 
       {/* Tabs Menu */}
       <div className="flex border-b border-slate-200">
