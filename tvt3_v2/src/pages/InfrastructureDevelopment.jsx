@@ -47,6 +47,8 @@ export default function InfrastructureDevelopment() {
     notes: '',
     latitude_survey: '',
     longitude_survey: '',
+    latitude_skhcn: '',
+    longitude_skhcn: '',
     address: '',
     bank_account: '',
     bank_name: '',
@@ -96,6 +98,8 @@ export default function InfrastructureDevelopment() {
       notes: proj.notes || '',
       latitude_survey: proj.latitude_survey || '',
       longitude_survey: proj.longitude_survey || '',
+      latitude_skhcn: proj.latitude_skhcn || '',
+      longitude_skhcn: proj.longitude_skhcn || '',
       address: proj.address || '',
       bank_account: proj.bank_account || '',
       bank_name: proj.bank_name || '',
@@ -575,6 +579,8 @@ export default function InfrastructureDevelopment() {
         notes: editForm.notes || null,
         latitude_survey: editForm.latitude_survey ? parseFloat(editForm.latitude_survey) : null,
         longitude_survey: editForm.longitude_survey ? parseFloat(editForm.longitude_survey) : null,
+        latitude_skhcn: editForm.latitude_skhcn ? parseFloat(editForm.latitude_skhcn) : null,
+        longitude_skhcn: editForm.longitude_skhcn ? parseFloat(editForm.longitude_skhcn) : null,
         address: editForm.address || null,
         bank_account: editForm.bank_account || null,
         bank_name: editForm.bank_name || null,
@@ -1395,10 +1401,23 @@ export default function InfrastructureDevelopment() {
                                   ) : (
                                     <div className="text-slate-400 italic text-[9px]">🔍 KS: Chưa khảo sát</div>
                                   )}
+                                  {proj.latitude_skhcn && proj.longitude_skhcn && (
+                                    <div className="text-purple-600 font-mono text-[9px] truncate">
+                                      🏛️ Sở: {proj.latitude_skhcn.toFixed(5)}, {proj.longitude_skhcn.toFixed(5)}
+                                    </div>
+                                  )}
                                   {proj.latitude_plan && proj.longitude_plan && proj.latitude_survey && proj.longitude_survey && (
                                     <div className="text-amber-600 font-bold text-[9px]">
-                                      📏 Lệch: {(() => {
+                                      📏 Lệch (QH-KS): {(() => {
                                         const d = haversine(proj.latitude_plan, proj.longitude_plan, proj.latitude_survey, proj.longitude_survey) * 1000;
+                                        return d < 1000 ? `${Math.round(d)} m` : `${(d / 1000).toFixed(2)} km`;
+                                      })()}
+                                    </div>
+                                  )}
+                                  {proj.latitude_survey && proj.longitude_survey && proj.latitude_skhcn && proj.longitude_skhcn && (
+                                    <div className="text-purple-700 font-bold text-[9px]">
+                                      📏 Lệch (KS-Sở): {(() => {
+                                        const d = haversine(proj.latitude_survey, proj.longitude_survey, proj.latitude_skhcn, proj.longitude_skhcn) * 1000;
                                         return d < 1000 ? `${Math.round(d)} m` : `${(d / 1000).toFixed(2)} km`;
                                       })()}
                                     </div>
@@ -1816,6 +1835,30 @@ export default function InfrastructureDevelopment() {
                         onChange={(e) => setEditForm(prev => ({ ...prev, longitude_survey: e.target.value }))}
                         className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
                         placeholder="Ví dụ: 107.25296"
+                      />
+                    </div>
+                    {/* TỌA ĐỘ SỞ KHCN DUYỆT */}
+                    <div className="space-y-1 col-span-2 border-t border-slate-100 pt-3">
+                      <span className="text-[11px] font-bold text-purple-600 uppercase">Tọa độ Chấp thuận của Sở KHCN</span>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-500 uppercase">Vĩ độ Sở KHCN (Lat)</label>
+                      <input 
+                        type="number" step="any"
+                        value={editForm.latitude_skhcn || ''}
+                        onChange={(e) => setEditForm(prev => ({ ...prev, latitude_skhcn: e.target.value }))}
+                        className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-purple-500"
+                        placeholder="Ví dụ: 10.78904"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-500 uppercase">Kinh độ Sở KHCN (Long)</label>
+                      <input 
+                        type="number" step="any"
+                        value={editForm.longitude_skhcn || ''}
+                        onChange={(e) => setEditForm(prev => ({ ...prev, longitude_skhcn: e.target.value }))}
+                        className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-purple-500"
+                        placeholder="Ví dụ: 107.17012"
                       />
                     </div>
                     <div className="space-y-1 col-span-2">
@@ -2480,12 +2523,31 @@ export default function InfrastructureDevelopment() {
                           : 'Chưa có tọa độ khảo sát'}
                       </span>
                     </div>
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-bold text-purple-600 uppercase">Tọa độ Sở KHCN chấp thuận</span>
+                      <span className="text-sm font-medium text-purple-700 block">
+                        {selectedProject.latitude_skhcn && selectedProject.longitude_skhcn 
+                          ? `${selectedProject.latitude_skhcn} / ${selectedProject.longitude_skhcn}`
+                          : 'Chưa cập nhật tọa độ Sở KHCN'}
+                      </span>
+                    </div>
                     {selectedProject.latitude_plan && selectedProject.longitude_plan && selectedProject.latitude_survey && selectedProject.longitude_survey && (
-                      <div className="space-y-1 col-span-2">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase">Độ lệch địa lý (Giữa Thiết kế &amp; Khảo sát)</span>
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase">Độ lệch (Quy hoạch - Khảo sát)</span>
                         <span className="text-sm font-bold text-amber-700 block bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-100">
                           {(() => {
                             const d = haversine(selectedProject.latitude_plan, selectedProject.longitude_plan, selectedProject.latitude_survey, selectedProject.longitude_survey) * 1000;
+                            return d < 1000 ? `${Math.round(d)} mét` : `${(d / 1000).toFixed(2)} km`;
+                          })()}
+                        </span>
+                      </div>
+                    )}
+                    {selectedProject.latitude_survey && selectedProject.longitude_survey && selectedProject.latitude_skhcn && selectedProject.longitude_skhcn && (
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-bold text-purple-600 uppercase">Độ lệch (Khảo sát - Sở KHCN)</span>
+                        <span className="text-sm font-bold text-purple-800 block bg-purple-50 px-3 py-1.5 rounded-lg border border-purple-100">
+                          {(() => {
+                            const d = haversine(selectedProject.latitude_survey, selectedProject.longitude_survey, selectedProject.latitude_skhcn, selectedProject.longitude_skhcn) * 1000;
                             return d < 1000 ? `${Math.round(d)} mét` : `${(d / 1000).toFixed(2)} km`;
                           })()}
                         </span>
