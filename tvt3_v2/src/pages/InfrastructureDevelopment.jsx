@@ -12,12 +12,10 @@ import {
 } from 'lucide-react';
 
 const STAGES = [
-  { id: 'design', label: 'Thiết kế', color: 'indigo', desc: 'Tư vấn thiết kế & quy hoạch nguồn lực' },
-  { id: 'survey', label: 'Khảo sát', color: 'blue', desc: 'Khảo sát thực tế vị trí tọa độ' },
-  { id: 'permits', label: 'Xin phép KHCN', color: 'purple', desc: 'Gửi Sở KHCN & rà soát đối chiếu văn bản chấp thuận' },
-  { id: 'contract', label: 'Ký hợp đồng', color: 'emerald', desc: 'Phân loại (MBF đầu tư / Dùng chung CSHT) & Ký hợp đồng' },
-  { id: 'construction', label: 'Xây dựng', color: 'orange', desc: 'Thi công xây móng cột & lắp thiết bị' },
-  { id: 'on_air', label: 'Phát sóng', color: 'cyan', desc: 'Đấu nối điện lưới và phát sóng di động' }
+  { id: 'design', label: 'Quy hoạch', color: 'indigo', desc: 'Quỹ điểm quy hoạch mạng lưới trạm' },
+  { id: 'survey', label: 'Khảo sát & Tối ưu', color: 'blue', desc: 'Khảo sát thực tế & Tối ưu vị trí duyệt OK' },
+  { id: 'permits', label: 'Trình TCT & Sở KHCN', color: 'purple', desc: 'Trình TCT & rà soát văn bản chấp thuận Sở KHCN' },
+  { id: 'contract', label: 'Trình ký Hợp đồng', color: 'emerald', desc: 'Hoàn tất thủ tục pháp lý & trình ký hợp đồng' }
 ];
 
 export default function InfrastructureDevelopment() {
@@ -1486,25 +1484,7 @@ export default function InfrastructureDevelopment() {
                     <span className="text-2xl font-black text-teal-700">{contractSignedCount}</span>
                     <span className="text-[11px] font-bold text-teal-600 bg-teal-50 px-2 py-0.5 rounded-full">Đã Trình Ký</span>
                   </div>
-                  <p className="text-[11px] text-slate-400 mt-2">Đang trình ký &amp; chuẩn bị xây dựng</p>
-                </div>
-
-                {/* 8. Đã Phát Sóng (ON AIR) */}
-                <div 
-                  onClick={() => { setFilterStage('on_air'); setActiveTab('list'); }}
-                  className="bg-white p-4 rounded-2xl border border-slate-100 border-l-4 border-l-amber-500 shadow-sm hover:shadow-md transition-all cursor-pointer group"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-[12px] font-bold text-slate-500 uppercase tracking-wide">Đã Phát Sóng (ON AIR)</span>
-                    <span className="p-2 bg-amber-50 text-amber-600 rounded-xl group-hover:scale-110 transition-transform">
-                      <Check className="h-5 w-5" />
-                    </span>
-                  </div>
-                  <div className="mt-2 flex items-baseline justify-between">
-                    <span className="text-2xl font-black text-amber-600">{completedProjects}</span>
-                    <span className="text-[11px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Hoàn thành</span>
-                  </div>
-                  <p className="text-[11px] text-slate-400 mt-2">Đã đấu nối và phát sóng di động</p>
+                  <p className="text-[11px] text-slate-400 mt-2">Hoàn thành thủ tục giấy tờ của Tổ</p>
                 </div>
               </div>
 
@@ -1513,29 +1493,27 @@ export default function InfrastructureDevelopment() {
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
                     <Activity className="h-4 w-4 text-blue-600" />
-                    Tiến Độ Luồng Quy Hoạch &amp; Triển Khai (Pipeline 6 Giai Đoạn)
+                    Luồng Tiến Độ Công Việc Giấy Tờ Tổ Hạ Tầng (4 Bước Chuẩn)
                   </h3>
                   <span className="text-xs font-semibold text-slate-400">Tổng số {totalProjects} trạm</span>
                 </div>
                 
-                <div className="grid grid-cols-2 md:grid-cols-6 gap-2 pt-2">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2">
                   {[
-                    { id: 'design', label: '1. Thiết kế', count: stageCounts.design, color: 'bg-indigo-50 border-indigo-200 text-indigo-700', badge: 'bg-indigo-600 text-white' },
-                    { id: 'survey', label: '2. Khảo sát', count: stageCounts.survey, color: 'bg-blue-50 border-blue-200 text-blue-700', badge: 'bg-blue-600 text-white' },
-                    { id: 'permits', label: '3. Xin phép KHCN', count: stageCounts.permits, color: 'bg-purple-50 border-purple-200 text-purple-700', badge: 'bg-purple-600 text-white' },
-                    { id: 'contract', label: '4. Ký Hợp Đồng', count: stageCounts.contract, color: 'bg-emerald-50 border-emerald-200 text-emerald-700', badge: 'bg-emerald-600 text-white' },
-                    { id: 'construction', label: '5. Xây dựng', count: stageCounts.construction, color: 'bg-orange-50 border-orange-200 text-orange-700', badge: 'bg-orange-600 text-white' },
-                    { id: 'on_air', label: '6. Phát sóng', count: stageCounts.on_air, color: 'bg-cyan-50 border-cyan-200 text-cyan-700', badge: 'bg-cyan-600 text-white' }
+                    { id: 'design', label: '1. Quỹ điểm Quy hoạch', count: stageCounts.design, color: 'bg-indigo-50 border-indigo-200 text-indigo-700', badge: 'bg-indigo-600 text-white' },
+                    { id: 'survey', label: '2. Khảo sát & Tối ưu OK', count: stageCounts.survey, color: 'bg-blue-50 border-blue-200 text-blue-700', badge: 'bg-blue-600 text-white' },
+                    { id: 'permits', label: '3. Trình TCT & Sở KHCN', count: stageCounts.permits, color: 'bg-purple-50 border-purple-200 text-purple-700', badge: 'bg-purple-600 text-white' },
+                    { id: 'contract', label: '4. Trình ký Hợp đồng', count: stageCounts.contract, color: 'bg-emerald-50 border-emerald-200 text-emerald-700', badge: 'bg-emerald-600 text-white' }
                   ].map(s => (
                     <div 
                       key={s.id}
                       onClick={() => { setFilterStage(s.id); setActiveTab('list'); }}
-                      className={`p-3 rounded-xl border ${s.color} hover:shadow-md transition-all cursor-pointer flex flex-col justify-between`}
+                      className={`p-3.5 rounded-xl border ${s.color} hover:shadow-md transition-all cursor-pointer flex flex-col justify-between`}
                     >
-                      <span className="text-[11px] font-bold block truncate">{s.label}</span>
-                      <div className="flex items-baseline justify-between mt-2">
-                        <span className="text-xl font-black">{s.count}</span>
-                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${s.badge}`}>
+                      <span className="text-[12px] font-bold block truncate">{s.label}</span>
+                      <div className="flex items-baseline justify-between mt-3">
+                        <span className="text-2xl font-black">{s.count}</span>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${s.badge}`}>
                           {totalProjects > 0 ? Math.round((s.count / totalProjects) * 100) : 0}%
                         </span>
                       </div>
