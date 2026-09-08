@@ -12,10 +12,11 @@ import {
 } from 'lucide-react';
 
 const STAGES = [
-  { id: 'design', label: 'Quy hoạch', color: 'indigo', desc: 'Quỹ điểm quy hoạch mạng lưới trạm' },
-  { id: 'survey', label: 'Khảo sát & Tối ưu', color: 'blue', desc: 'Khảo sát thực tế & Tối ưu vị trí duyệt OK' },
-  { id: 'permits', label: 'Trình TCT & Sở KHCN', color: 'purple', desc: 'Trình TCT & rà soát văn bản chấp thuận Sở KHCN' },
-  { id: 'contract', label: 'Trình ký Hợp đồng', color: 'emerald', desc: 'Hoàn tất thủ tục pháp lý & trình ký hợp đồng' }
+  { id: 'design', label: 'Quỹ điểm Quy hoạch', color: 'indigo', desc: 'Quỹ điểm quy hoạch mạng lưới trạm' },
+  { id: 'survey', label: 'Khảo sát & Tối ưu', color: 'blue', desc: 'Khảo sát thực tế mặt bằng & Tối ưu vị trí duyệt OK' },
+  { id: 'skhcn', label: 'Sở KHCN Chấp thuận', color: 'amber', desc: 'Văn bản chấp thuận của Sở KHCN (Xây mới hoặc dùng chung CSHT)' },
+  { id: 'tct_approval', label: 'TCT Phê duyệt QĐĐT', color: 'purple', desc: 'Tổng công ty phê duyệt Lần 1 / Quyết định đầu tư / Lên gói thầu' },
+  { id: 'contract', label: 'Trình ký Hợp đồng', color: 'emerald', desc: 'Hoàn tất hồ sơ & Trình ký hợp đồng thuê mặt bằng' }
 ];
 
 export default function InfrastructureDevelopment() {
@@ -373,11 +374,13 @@ export default function InfrastructureDevelopment() {
   }).length;
 
   // 6. Stage progressive pipeline counts (Bám vào tiến độ thực tế dự án)
+  const pipelineTctApprovedCount = tvt3ScopeProjects.filter(p => p.current_stage === 'tct_approval' || p.current_stage === 'contract' || (p.approval_batch && p.approval_batch !== '0')).length;
   const stageCounts = {
     design: totalProjects, // 1. Quỹ điểm Quy hoạch (74)
-    survey: surveyOkCount, // 2. Khảo sát & Tối ưu OK (64)
-    permits: skhcnApprovedCount, // 3. Trình TCT & Sở KHCN (61)
-    contract: contractSignedCount // 4. Trình ký Hợp đồng (9)
+    survey: surveyOkCount, // 2. Khảo sát & Tối ưu OK (68)
+    skhcn: skhcnApprovedCount, // 3. Sở KHCN Chấp thuận (61)
+    tct_approval: pipelineTctApprovedCount, // 4. TCT Phê duyệt QĐĐT (27)
+    contract: contractSignedCount // 5. Trình ký Hợp đồng (12)
   };
 
   // Gap analysis / density
@@ -736,29 +739,50 @@ export default function InfrastructureDevelopment() {
 
   const handleExportExcel = () => {
     try {
-      const dataToExport = projects.map(proj => {
-        const oldLoc = proj.district || getOldLocation(proj);
-        const nearestSite = findNearestActiveSite(proj);
-        const showNearest = nearestSite && nearestSite.distance < 10;
+      const targetProjects = (filteredProjects && filteredProjects.length > 0) ? filteredProjects : projects;
+      if (!targetProjects || targetProjects.length === 0) {
+        alert("Không có dữ liệu trạm để xuất file Excel!");
+        return;
+      }
+
+      const dataToExport = targetProjects.map((proj, idx) => {
+        let oldLoc = '';
+        try {
+          oldLoc = proj.district || getOldLocation(proj);
+        } catch (e) {
+          oldLoc = proj.district || '';
+        }
+
+        let showNearest = false;
+        let nearestSite = null;
+        try {
+          nearestSite = findNearestActiveSite(proj);
+          showNearest = nearestSite && nearestSite.distance < 10;
+        } catch (e) {
+          // ignore distance calc errors
+        }
         
         return {
-          'Mã QH Mới': getDisplayPlanningId(proj.planning_id_new, proj.planning_id_old),
+          'STT': idx + 1,
+          'Mã QH Mới': getDisplayPlanningId(proj.planning_id_new, proj.planning_id_old) || '',
           'Mã QH Cũ': proj.planning_id_old || '',
           'Xã Quy Hoạch (Mới)': proj.ward || '',
           'Huyện Cũ': oldLoc || '',
+          'Địa chỉ / Vị trí': proj.address || '',
           'Trạm gần nhất (<10km)': showNearest ? `${nearestSite.site_id_old || nearestSite.site_id} (${nearestSite.distance.toFixed(1)} km)` : '-',
           'Vĩ độ Thiết kế (Lat)': proj.latitude_plan || '',
           'Kinh độ Thiết kế (Long)': proj.longitude_plan || '',
           'Vĩ độ Khảo sát (Lat)': proj.latitude_survey || '',
           'Kinh độ Khảo sát (Long)': proj.longitude_survey || '',
-          'Hình thức triển khai': proj.implementation_type || '',
+          'Hình thức triển khai': proj.implementation_type === 'MBF_INVEST' ? 'MobiFone tự đầu tư' : proj.implementation_type === 'SHARED' ? 'Dùng chung CSHT' : (proj.implementation_type || ''),
           'Loại cột': proj.antenna_type || '',
           'Độ cao (m)': proj.height || '',
-          'Giá thuê đề xuất (đ/tháng)': proj.proposed_rent || '',
+          'Giá thuê đề xuất (đ/tháng)': proj.proposed_rent ? Number(proj.proposed_rent).toLocaleString('vi-VN') : '',
           'Giai đoạn hiện tại': STAGES.find(s => s.id === proj.current_stage)?.label || proj.current_stage || '',
           'Trạng thái': proj.overall_status || '',
           'Họ tên chủ nhà': proj.landowner_name || '',
           'SĐT chủ nhà': proj.landlord_phone || '',
+          'CCCD chủ nhà': proj.landlord_cccd || '',
           'Số thửa đất': proj.plot_number || '',
           'Tờ bản đồ': proj.map_sheet || '',
           'Diện tích thuê (m2)': proj.leased_area || '',
@@ -772,20 +796,31 @@ export default function InfrastructureDevelopment() {
 
       const worksheet = XLSX.utils.json_to_sheet(dataToExport);
       const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Quy hoach CSHT');
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Quy_Hoach_CSHT');
       
       const maxLens = {};
       dataToExport.forEach(row => {
         Object.keys(row).forEach(key => {
-          const valStr = String(row[key]);
+          const valStr = String(row[key] ?? '');
           maxLens[key] = Math.max(maxLens[key] || key.length, valStr.length);
         });
       });
       worksheet['!cols'] = Object.keys(maxLens).map(key => ({
-        wch: Math.min(maxLens[key] + 3, 30)
+        wch: Math.min(Math.max(maxLens[key] + 3, 10), 35)
       }));
 
-      XLSX.writeFile(workbook, `Danh_Sach_Quy_Hoach_CSHT_${new Date().toISOString().slice(0,10)}.xlsx`);
+      const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Danh_Sach_Quy_Hoach_CSHT_${new Date().toISOString().slice(0,10)}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(() => {
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      }, 100);
     } catch (err) {
       console.error("Lỗi khi xuất Excel:", err);
       alert("Không thể xuất file Excel: " + err.message);
@@ -929,6 +964,12 @@ export default function InfrastructureDevelopment() {
       if (templateType === 'mou') {
         templatePath = '/templates/BBLV.docx';
         outputFileName = `Bien_Ban_Lam_Viec_${selectedProject.planning_id_new}.docx`;
+      } else if (templateType === 'phu_luc_chu_the') {
+        templatePath = '/templates/PHU_LUC_CHUYEN_CHU_THE.docx';
+        outputFileName = `Phu_Luc_Chuyen_Chu_The_${selectedProject.planning_id_new}.docx`;
+      } else if (templateType === 'phu_luc_giam_gia') {
+        templatePath = selectedProject.implementation_type === 'MBF đầu tư' ? '/templates/PHU_LUC_GIAM_GIA_MAT_BANG.docx' : '/templates/PHU_LUC_GIAM_GIA_CSHT.docx';
+        outputFileName = `Phu_Luc_Giam_Gia_${selectedProject.planning_id_new}.docx`;
       } else {
         if (selectedProject.implementation_type === 'MBF đầu tư') {
           templatePath = '/templates/HOP_DONG_MOI_MAT_BANG.docx';
@@ -1470,24 +1511,25 @@ export default function InfrastructureDevelopment() {
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
                     <Activity className="h-4 w-4 text-blue-600" />
-                    Luồng Tiến Độ Công Việc Giấy Tờ Tổ Hạ Tầng (4 Bước Chuẩn)
+                    Luồng Tiến Độ Công Việc Giấy Tờ Tổ Hạ Tầng (5 Bước Chuẩn PTM)
                   </h3>
                   <span className="text-xs font-semibold text-slate-400">Tổng số {totalProjects} trạm</span>
                 </div>
                 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 pt-2">
                   {[
                     { id: 'design', label: '1. Quỹ điểm Quy hoạch', count: stageCounts.design, color: 'bg-indigo-50 border-indigo-200 text-indigo-700', badge: 'bg-indigo-600 text-white' },
                     { id: 'survey', label: '2. Khảo sát & Tối ưu OK', count: stageCounts.survey, color: 'bg-blue-50 border-blue-200 text-blue-700', badge: 'bg-blue-600 text-white' },
-                    { id: 'permits', label: '3. Trình TCT & Sở KHCN', count: stageCounts.permits, color: 'bg-purple-50 border-purple-200 text-purple-700', badge: 'bg-purple-600 text-white' },
-                    { id: 'contract', label: '4. Trình ký Hợp đồng', count: stageCounts.contract, color: 'bg-emerald-50 border-emerald-200 text-emerald-700', badge: 'bg-emerald-600 text-white' }
+                    { id: 'skhcn', label: '3. Sở KHCN Chấp thuận', count: stageCounts.skhcn, color: 'bg-amber-50 border-amber-200 text-amber-700', badge: 'bg-amber-600 text-white' },
+                    { id: 'tct_approval', label: '4. TCT Phê duyệt QĐĐT', count: stageCounts.tct_approval, color: 'bg-purple-50 border-purple-200 text-purple-700', badge: 'bg-purple-600 text-white' },
+                    { id: 'contract', label: '5. Trình ký Hợp đồng', count: stageCounts.contract, color: 'bg-emerald-50 border-emerald-200 text-emerald-700', badge: 'bg-emerald-600 text-white' }
                   ].map(s => (
                     <div 
                       key={s.id}
                       onClick={() => { setFilterStage(s.id); setActiveTab('list'); }}
-                      className={`p-3.5 rounded-xl border ${s.color} hover:shadow-md transition-all cursor-pointer flex flex-col justify-between`}
+                      className={`p-3 rounded-xl border ${s.color} hover:shadow-md transition-all cursor-pointer flex flex-col justify-between`}
                     >
-                      <span className="text-[12px] font-bold block truncate">{s.label}</span>
+                      <span className="text-[11px] font-bold block truncate" title={s.label}>{s.label}</span>
                       <div className="flex items-baseline justify-between mt-3">
                         <span className="text-2xl font-black">{s.count}</span>
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${s.badge}`}>
@@ -1850,6 +1892,14 @@ export default function InfrastructureDevelopment() {
                     <option value="INCOMPLETE">Chưa đủ thông tin</option>
                     <option value="NOK">Trạm không khả thi (NOK)</option>
                   </select>
+
+                  <button 
+                    onClick={handleExportExcel}
+                    className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer ml-auto"
+                    title="Xuất danh sách đang lọc ra Excel"
+                  >
+                    <Download className="h-3.5 w-3.5" /> Xuất Excel ({filteredProjects.length})
+                  </button>
                 </div>
               </div>
 
@@ -3108,18 +3158,36 @@ export default function InfrastructureDevelopment() {
               ) : (
                 <>
                   <button 
+                    onClick={() => handleExportDoc('contract')}
+                    disabled={isExportingDoc}
+                    className="px-3.5 py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-sm"
+                    title="Xuất file Hợp đồng Ký mới (.docx)"
+                  >
+                    <FileText className="h-3.5 w-3.5" /> HĐ Ký Mới (.docx)
+                  </button>
+                  <button 
                     onClick={() => handleExportDoc('mou')}
                     disabled={isExportingDoc}
                     className="px-3 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-50 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    title="Xuất Biên bản làm việc / Ghi nhớ (.docx)"
                   >
-                    <FileText className="h-3.5 w-3.5 text-blue-600" /> BB Ghi Nhớ
+                    <FileText className="h-3.5 w-3.5 text-blue-600" /> BB Làm Việc
                   </button>
                   <button 
-                    onClick={() => handleExportDoc('contract')}
+                    onClick={() => handleExportDoc('phu_luc_chu_the')}
                     disabled={isExportingDoc}
                     className="px-3 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-50 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    title="Xuất Phụ lục chuyển đổi chủ thể (.docx)"
                   >
-                    <FileText className="h-3.5 w-3.5 text-emerald-600" /> HĐ Ký Mới
+                    <FileText className="h-3.5 w-3.5 text-purple-600" /> PL Chủ Thể
+                  </button>
+                  <button 
+                    onClick={() => handleExportDoc('phu_luc_giam_gia')}
+                    disabled={isExportingDoc}
+                    className="px-3 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-50 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    title="Xuất Phụ lục giảm giá hợp đồng (.docx)"
+                  >
+                    <FileText className="h-3.5 w-3.5 text-amber-600" /> PL Giảm Giá
                   </button>
                   <button 
                     onClick={() => setIsEditing(true)}
