@@ -9,35 +9,35 @@ import * as XLSX from 'xlsx';
 
 export const SRAN_25_CLUSTERS = [
   // Giai đoạn 1: Pilot & Khởi động (Màu xanh lá - 8 Cluster)
-  { order: '5G_Only', cluster: 'DNI_5G_Only', db_cluster: 'DNI_5G_Only', tvt: 'VT1/VT2', district: 'Long Thành', date: '-', total_3g4g: 0, total_5g: 19, phase: 'pilot', note: '19 trạm 5G độc lập (Long Thành/VT1/VT2)' },
-  { order: 'Day_00', cluster: 'DNI_00_Pilot', db_cluster: 'DNI_00_Pilot', tvt: 'VT1', district: 'Long Thành', date: '18-Aug', total_3g4g: 3, total_5g: 3, phase: 'pilot', note: 'Thử nghiệm Pilot Long Thành' },
-  { order: 'Day_01', cluster: 'DNI_01_LT', db_cluster: 'DNI_01_LT', tvt: 'VT1', district: 'Long Thành', date: '21-Aug', total_3g4g: 19, total_5g: 8, phase: 'pilot', note: 'Trọng điểm KCN Long Thành' },
-  { order: 'Day_02', cluster: 'DNI_09_CM', db_cluster: 'DNI_09_CM', alt_db: 'DNI_02_CM', tvt: 'VT3', district: 'Cẩm Mỹ', date: '25-Aug', total_3g4g: 26, total_5g: 17, phase: 'pilot', note: 'Trạm Power & CRAN Cẩm Mỹ' },
-  { order: 'Day_03', cluster: 'DNI_02_TB', db_cluster: 'DNI_02_TB', alt_db: 'DNI_03_TB', tvt: 'VT2', district: 'Trảng Bom', date: '25-Aug', total_3g4g: 27, total_5g: 17, phase: 'pilot', note: 'Khu vực Trảng Bom' },
-  { order: 'Day_04', cluster: 'DNI_10_TN', db_cluster: 'DNI_10_TN', alt_db: 'DNI_04_TN', tvt: 'VT3', district: 'Thống Nhất', date: '27-Aug', total_3g4g: 25, total_5g: 10, phase: 'pilot', note: 'Khu vực Thống Nhất' },
-  { order: 'Day_05', cluster: 'DNI_03_TB', db_cluster: 'DNI_03_TB', alt_db: 'DNI_07_TB', tvt: 'VT2', district: 'Trảng Bom', date: '27-Aug', total_3g4g: 27, total_5g: 26, phase: 'pilot', note: 'Khu vực Trảng Bom' },
-  { order: 'Day_06', cluster: 'DNI_16_CM', db_cluster: 'DNI_16_CM', alt_db: 'DNI_06_CM', tvt: 'VT3', district: 'Cẩm Mỹ', date: '04-Sep', total_3g4g: 26, total_5g: 6, phase: 'pilot', note: 'Mở rộng Cẩm Mỹ' },
+  { order: '5G_Only', cluster: 'DNI_5G_Only', db_cluster: 'DNI_5G_Only', tvt: 'VT1/VT2', district: 'Long Thành', date: '-', total_3g4g: 0, del_3g4g: 0, ins_3g4g: 0, ci_3g4g: 0, swap_3g4g: 0, total_5g: 19, del_5g: 17, ins_5g: 17, ci_5g: 16, oa_5g: 14, phase: 'pilot', note: '19 trạm 5G độc lập (Long Thành/VT1/VT2)' },
+  { order: 'Day_00', cluster: 'DNI_00_Pilot', db_cluster: 'DNI_00_Pilot', tvt: 'VT1', district: 'Long Thành', date: '18-Aug', total_3g4g: 3, del_3g4g: 3, ins_3g4g: 3, ci_3g4g: 3, swap_3g4g: 3, total_5g: 3, del_5g: 3, ins_5g: 3, ci_5g: 3, oa_5g: 3, phase: 'pilot', note: 'Thử nghiệm Pilot Long Thành' },
+  { order: 'Day_01', cluster: 'DNI_01_LT', db_cluster: 'DNI_01_LT', tvt: 'VT1', district: 'Long Thành', date: '21-Aug', total_3g4g: 19, del_3g4g: 19, ins_3g4g: 19, ci_3g4g: 19, swap_3g4g: 19, total_5g: 8, del_5g: 8, ins_5g: 8, ci_5g: 7, oa_5g: 7, phase: 'pilot', note: 'Trọng điểm KCN Long Thành' },
+  { order: 'Day_02', cluster: 'DNI_09_CM', db_cluster: 'DNI_09_CM', alt_db: 'DNI_02_CM', tvt: 'VT3', district: 'Cẩm Mỹ', date: '25-Aug', total_3g4g: 26, del_3g4g: 26, ins_3g4g: 26, ci_3g4g: 26, swap_3g4g: 26, total_5g: 17, del_5g: 17, ins_5g: 17, ci_5g: 16, oa_5g: 14, phase: 'pilot', note: 'Trạm Power & CRAN Cẩm Mỹ' },
+  { order: 'Day_03', cluster: 'DNI_02_TB', db_cluster: 'DNI_02_TB', alt_db: 'DNI_03_TB', tvt: 'VT2', district: 'Trảng Bom', date: '25-Aug', total_3g4g: 27, del_3g4g: 24, ins_3g4g: 24, ci_3g4g: 23, swap_3g4g: 23, total_5g: 17, del_5g: 15, ins_5g: 15, ci_5g: 15, oa_5g: 11, phase: 'pilot', note: 'Khu vực Trảng Bom' },
+  { order: 'Day_04', cluster: 'DNI_10_TN', db_cluster: 'DNI_10_TN', alt_db: 'DNI_04_TN', tvt: 'VT3', district: 'Thống Nhất', date: '27-Aug', total_3g4g: 25, del_3g4g: 24, ins_3g4g: 24, ci_3g4g: 24, swap_3g4g: 24, total_5g: 10, del_5g: 10, ins_5g: 10, ci_5g: 9, oa_5g: 10, phase: 'pilot', note: 'Khu vực Thống Nhất' },
+  { order: 'Day_05', cluster: 'DNI_03_TB', db_cluster: 'DNI_03_TB', alt_db: 'DNI_07_TB', tvt: 'VT2', district: 'Trảng Bom', date: '27-Aug', total_3g4g: 27, del_3g4g: 26, ins_3g4g: 26, ci_3g4g: 23, swap_3g4g: 26, total_5g: 26, del_5g: 25, ins_5g: 25, ci_5g: 21, oa_5g: 20, phase: 'pilot', note: 'Khu vực Trảng Bom' },
+  { order: 'Day_06', cluster: 'DNI_16_CM', db_cluster: 'DNI_16_CM', alt_db: 'DNI_06_CM', tvt: 'VT3', district: 'Cẩm Mỹ', date: '04-Sep', total_3g4g: 26, del_3g4g: 26, ins_3g4g: 26, ci_3g4g: 25, swap_3g4g: 26, total_5g: 6, del_5g: 6, ins_5g: 6, ci_5g: 4, oa_5g: 0, phase: 'pilot', note: 'Mở rộng Cẩm Mỹ' },
 
   // Giai đoạn 2: Thi công trọng điểm (Màu vàng - 12 Cluster)
-  { order: 'Day_07', cluster: 'DNI_07_TB', db_cluster: 'DNI_07_TB', alt_db: 'DNI_05_TB', tvt: 'VT2', district: 'Trảng Bom', date: '08-Sep', total_3g4g: 27, total_5g: 23, phase: 'phase2' },
-  { order: 'Day_08', cluster: 'DNI_15_XL', db_cluster: 'DNI_15_XL', alt_db: 'DNI_08_XL', tvt: 'VT3', district: 'Xuân Lộc', date: '08-Sep', total_3g4g: 25, total_5g: 14, phase: 'phase2' },
-  { order: 'Day_09', cluster: 'DNI_17_XL', db_cluster: 'DNI_17_XL', alt_db: 'DNI_16_XL', tvt: 'VT3', district: 'Xuân Lộc', date: '08-Sep', total_3g4g: 26, total_5g: 10, phase: 'phase2' },
-  { order: 'Day_10', cluster: 'DNI_06_TB', db_cluster: 'DNI_06_TB', alt_db: 'DNI_09_TB', tvt: 'VT2', district: 'Trảng Bom', date: '11-Sep', total_3g4g: 27, total_5g: 16, phase: 'phase2' },
-  { order: 'Day_11', cluster: 'DNI_18_XL', db_cluster: 'DNI_18_XL', alt_db: 'DNI_17_XL', tvt: 'VT3', district: 'Xuân Lộc', date: '11-Sep', total_3g4g: 27, total_5g: 21, phase: 'phase2' },
-  { order: 'Day_12', cluster: 'DNI_19_XL', db_cluster: 'DNI_19_XL', alt_db: 'DNI_18_XL', tvt: 'VT3', district: 'Xuân Lộc', date: '11-Sep', total_3g4g: 26, total_5g: 7, phase: 'phase2' },
-  { order: 'Day_13', cluster: 'DNI_13_LK', db_cluster: 'DNI_13_LK', alt_db: 'DNI_10_LK', tvt: 'VT3', district: 'Long Khánh', date: '15-Sep', total_3g4g: 25, total_5g: 12, phase: 'phase2' },
-  { order: 'Day_14', cluster: 'DNI_04_VC', db_cluster: 'DNI_04_VC', alt_db: 'DNI_11_VC', tvt: 'VT2', district: 'Vĩnh Cửu', date: '15-Sep', total_3g4g: 25, total_5g: 6, phase: 'phase2' },
-  { order: 'Day_15', cluster: 'DNI_14_LK', db_cluster: 'DNI_14_LK', tvt: 'VT3', district: 'Long Khánh', date: '15-Sep', total_3g4g: 26, total_5g: 9, phase: 'phase2' },
-  { order: 'Day_16', cluster: 'DNI_12_TN', db_cluster: 'DNI_12_TN', tvt: 'VT3', district: 'Thống Nhất', date: '18-Sep', total_3g4g: 26, total_5g: 21, phase: 'phase2' },
-  { order: 'Day_17', cluster: 'DNI_05_VC', db_cluster: 'DNI_05_VC', alt_db: 'DNI_13_VC', tvt: 'VT2', district: 'Vĩnh Cửu', date: '18-Sep', total_3g4g: 26, total_5g: 20, phase: 'phase2' },
-  { order: 'Day_18', cluster: 'DNI_20_DQ', db_cluster: 'DNI_20_DQ', alt_db: 'DNI_19_DQ', tvt: 'VT3', district: 'Định Quán', date: '18-Sep', total_3g4g: 26, total_5g: 4, phase: 'phase2' },
+  { order: 'Day_07', cluster: 'DNI_07_TB', db_cluster: 'DNI_07_TB', alt_db: 'DNI_05_TB', tvt: 'VT2', district: 'Trảng Bom', date: '08-Sep', total_3g4g: 27, del_3g4g: 22, ins_3g4g: 17, ci_3g4g: 13, swap_3g4g: 1, total_5g: 23, del_5g: 19, ins_5g: 15, ci_5g: 13, oa_5g: 0, phase: 'phase2' },
+  { order: 'Day_08', cluster: 'DNI_15_XL', db_cluster: 'DNI_15_XL', alt_db: 'DNI_08_XL', tvt: 'VT3', district: 'Xuân Lộc', date: '08-Sep', total_3g4g: 25, del_3g4g: 24, ins_3g4g: 17, ci_3g4g: 6, swap_3g4g: 0, total_5g: 14, del_5g: 13, ins_5g: 8, ci_5g: 5, oa_5g: 0, phase: 'phase2' },
+  { order: 'Day_09', cluster: 'DNI_17_XL', db_cluster: 'DNI_17_XL', alt_db: 'DNI_16_XL', tvt: 'VT3', district: 'Xuân Lộc', date: '08-Sep', total_3g4g: 26, del_3g4g: 24, ins_3g4g: 17, ci_3g4g: 2, swap_3g4g: 0, total_5g: 10, del_5g: 9, ins_5g: 7, ci_5g: 1, oa_5g: 0, phase: 'phase2' },
+  { order: 'Day_10', cluster: 'DNI_06_TB', db_cluster: 'DNI_06_TB', alt_db: 'DNI_09_TB', tvt: 'VT2', district: 'Trảng Bom', date: '11-Sep', total_3g4g: 27, del_3g4g: 10, ins_3g4g: 3, ci_3g4g: 3, swap_3g4g: 1, total_5g: 16, del_5g: 6, ins_5g: 2, ci_5g: 2, oa_5g: 0, phase: 'phase2' },
+  { order: 'Day_11', cluster: 'DNI_18_XL', db_cluster: 'DNI_18_XL', alt_db: 'DNI_17_XL', tvt: 'VT3', district: 'Xuân Lộc', date: '11-Sep', total_3g4g: 27, del_3g4g: 5, ins_3g4g: 1, ci_3g4g: 0, swap_3g4g: 0, total_5g: 21, del_5g: 3, ins_5g: 1, ci_5g: 0, oa_5g: 0, phase: 'phase2' },
+  { order: 'Day_12', cluster: 'DNI_19_XL', db_cluster: 'DNI_19_XL', alt_db: 'DNI_18_XL', tvt: 'VT3', district: 'Xuân Lộc', date: '11-Sep', total_3g4g: 26, del_3g4g: 6, ins_3g4g: 0, ci_3g4g: 0, swap_3g4g: 0, total_5g: 7, del_5g: 3, ins_5g: 0, ci_5g: 0, oa_5g: 0, phase: 'phase2' },
+  { order: 'Day_13', cluster: 'DNI_13_LK', db_cluster: 'DNI_13_LK', alt_db: 'DNI_10_LK', tvt: 'VT3', district: 'Long Khánh', date: '15-Sep', total_3g4g: 25, del_3g4g: 11, ins_3g4g: 2, ci_3g4g: 0, swap_3g4g: 0, total_5g: 12, del_5g: 5, ins_5g: 1, ci_5g: 0, oa_5g: 0, phase: 'phase2' },
+  { order: 'Day_14', cluster: 'DNI_04_VC', db_cluster: 'DNI_04_VC', alt_db: 'DNI_11_VC', tvt: 'VT2', district: 'Vĩnh Cửu', date: '15-Sep', total_3g4g: 25, del_3g4g: 12, ins_3g4g: 4, ci_3g4g: 0, swap_3g4g: 0, total_5g: 6, del_5g: 3, ins_5g: 2, ci_5g: 0, oa_5g: 0, phase: 'phase2' },
+  { order: 'Day_15', cluster: 'DNI_14_LK', db_cluster: 'DNI_14_LK', tvt: 'VT3', district: 'Long Khánh', date: '15-Sep', total_3g4g: 26, del_3g4g: 17, ins_3g4g: 7, ci_3g4g: 4, swap_3g4g: 0, total_5g: 9, del_5g: 4, ins_5g: 3, ci_5g: 2, oa_5g: 0, phase: 'phase2' },
+  { order: 'Day_16', cluster: 'DNI_12_TN', db_cluster: 'DNI_12_TN', tvt: 'VT3', district: 'Thống Nhất', date: '18-Sep', total_3g4g: 26, del_3g4g: 16, ins_3g4g: 11, ci_3g4g: 5, swap_3g4g: 0, total_5g: 21, del_5g: 13, ins_5g: 9, ci_5g: 4, oa_5g: 0, phase: 'phase2' },
+  { order: 'Day_17', cluster: 'DNI_05_VC', db_cluster: 'DNI_05_VC', alt_db: 'DNI_13_VC', tvt: 'VT2', district: 'Vĩnh Cửu', date: '18-Sep', total_3g4g: 26, del_3g4g: 6, ins_3g4g: 3, ci_3g4g: 3, swap_3g4g: 0, total_5g: 20, del_5g: 5, ins_5g: 4, ci_5g: 4, oa_5g: 0, phase: 'phase2' },
+  { order: 'Day_18', cluster: 'DNI_20_DQ', db_cluster: 'DNI_20_DQ', alt_db: 'DNI_19_DQ', tvt: 'VT3', district: 'Định Quán', date: '18-Sep', total_3g4g: 26, del_3g4g: 0, ins_3g4g: 0, ci_3g4g: 0, swap_3g4g: 0, total_5g: 4, del_5g: 0, ins_5g: 0, ci_5g: 0, oa_5g: 0, phase: 'phase2' },
 
   // Giai đoạn 3: Nước rút về đích (Màu xám - 5 Cluster)
-  { order: 'Day_19', cluster: 'DNI_11_VC', db_cluster: 'DNI_11_VC', alt_db: 'DNI_15_VC', tvt: 'VT2', district: 'Vĩnh Cửu', date: '22-Sep', total_3g4g: 26, total_5g: 14, phase: 'phase3' },
-  { order: 'Day_20', cluster: 'DNI_21_DQ', db_cluster: 'DNI_21_DQ', alt_db: 'DNI_20_DQ', tvt: 'VT3', district: 'Định Quán', date: '22-Sep', total_3g4g: 25, total_5g: 4, phase: 'phase3' },
-  { order: 'Day_21', cluster: 'DNI_22_DQ', db_cluster: 'DNI_22_DQ', alt_db: 'DNI_21_DQ', tvt: 'VT3', district: 'Định Quán', date: '22-Sep', total_3g4g: 25, total_5g: 6, phase: 'phase3' },
-  { order: 'Day_22', cluster: 'DNI_23_TP', db_cluster: 'DNI_23_TP', alt_db: 'DNI_22_TP', tvt: 'VT3', district: 'Tân Phú', date: '29-Sep', total_3g4g: 26, total_5g: 13, phase: 'phase3' },
-  { order: 'Day_23', cluster: 'DNI_24_TP', db_cluster: 'DNI_24_TP', alt_db: 'DNI_23_TP', tvt: 'VT3', district: 'Tân Phú', date: '29-Sep', total_3g4g: 25, total_5g: 1, phase: 'phase3' }
+  { order: 'Day_19', cluster: 'DNI_11_VC', db_cluster: 'DNI_11_VC', alt_db: 'DNI_15_VC', tvt: 'VT2', district: 'Vĩnh Cửu', date: '22-Sep', total_3g4g: 26, del_3g4g: 11, ins_3g4g: 1, ci_3g4g: 1, swap_3g4g: 0, total_5g: 14, del_5g: 5, ins_5g: 0, ci_5g: 0, oa_5g: 0, phase: 'phase3' },
+  { order: 'Day_20', cluster: 'DNI_21_DQ', db_cluster: 'DNI_21_DQ', alt_db: 'DNI_20_DQ', tvt: 'VT3', district: 'Định Quán', date: '22-Sep', total_3g4g: 25, del_3g4g: 2, ins_3g4g: 0, ci_3g4g: 0, swap_3g4g: 0, total_5g: 4, del_5g: 2, ins_5g: 0, ci_5g: 0, oa_5g: 0, phase: 'phase3' },
+  { order: 'Day_21', cluster: 'DNI_22_DQ', db_cluster: 'DNI_22_DQ', alt_db: 'DNI_21_DQ', tvt: 'VT3', district: 'Định Quán', date: '22-Sep', total_3g4g: 25, del_3g4g: 1, ins_3g4g: 0, ci_3g4g: 0, swap_3g4g: 0, total_5g: 6, del_5g: 1, ins_5g: 0, ci_5g: 0, oa_5g: 0, phase: 'phase3' },
+  { order: 'Day_22', cluster: 'DNI_23_TP', db_cluster: 'DNI_23_TP', alt_db: 'DNI_22_TP', tvt: 'VT3', district: 'Tân Phú', date: '29-Sep', total_3g4g: 26, del_3g4g: 1, ins_3g4g: 0, ci_3g4g: 0, swap_3g4g: 0, total_5g: 13, del_5g: 1, ins_5g: 0, ci_5g: 0, oa_5g: 0, phase: 'phase3' },
+  { order: 'Day_23', cluster: 'DNI_24_TP', db_cluster: 'DNI_24_TP', alt_db: 'DNI_23_TP', tvt: 'VT3', district: 'Tân Phú', date: '29-Sep', total_3g4g: 25, del_3g4g: 0, ins_3g4g: 0, ci_3g4g: 0, swap_3g4g: 0, total_5g: 1, del_5g: 0, ins_5g: 0, ci_5g: 0, oa_5g: 0, phase: 'phase3' }
 ];
 
 export const AUGUST_2026_CLUSTERS = SRAN_25_CLUSTERS.filter(c => c.phase === 'pilot');
@@ -554,16 +554,16 @@ export default function Sran5gProject() {
       const rawOnair = clusterSites.filter(d => d.onair_date).length;
       const rawOnair5g = clusterSites.filter(d => d.onair_date && is5gSite(d)).length;
 
-      // Strictly clamp numerators so they never exceed target denominators
-      const survey = Math.min(c.total_3g4g, rawSurvey);
-      const tssr = Math.min(c.total_3g4g, rawTssr);
-      const rf = Math.min(c.total_3g4g, rawRf);
-      const wh = Math.min(c.total_3g4g, rawWh);
-      const delivery = Math.min(c.total_3g4g, rawDelivery);
-      const install = Math.min(c.total_3g4g, rawInstall);
-      const integration = Math.min(c.total_3g4g, rawIntegration);
-      const onair = Math.min(c.total_3g4g, rawOnair);
-      const onair5g = Math.min(c.total_5g, rawOnair5g);
+      // Use exact report progress metrics from Excel report when defined
+      const delivery = c.del_3g4g !== undefined ? c.del_3g4g : Math.min(c.total_3g4g, rawDelivery);
+      const install = c.ins_3g4g !== undefined ? c.ins_3g4g : Math.min(c.total_3g4g, rawInstall);
+      const integration = c.ci_3g4g !== undefined ? c.ci_3g4g : Math.min(c.total_3g4g, rawIntegration);
+      const swap = c.swap_3g4g !== undefined ? c.swap_3g4g : Math.min(c.total_3g4g, rawOnair);
+
+      const del5g = c.del_5g !== undefined ? c.del_5g : Math.min(c.total_5g, rawDelivery);
+      const ins5g = c.ins_5g !== undefined ? c.ins_5g : Math.min(c.total_5g, rawInstall);
+      const ci5g = c.ci_5g !== undefined ? c.ci_5g : Math.min(c.total_5g, rawIntegration);
+      const oa5g = c.oa_5g !== undefined ? c.oa_5g : Math.min(c.total_5g, rawOnair5g);
 
       return {
         ...c,
@@ -576,8 +576,12 @@ export default function Sran5gProject() {
         delivery,
         install,
         integration,
+        swap,
         onair,
-        onair5g,
+        del5g,
+        ins5g,
+        ci5g,
+        onair5g: oa5g,
         sites: clusterSites
       };
     });
@@ -1835,7 +1839,8 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
                     .filter(c => selectedMonthTvt === 'ALL' || c.tvt === selectedMonthTvt)
                     .map((item, idx) => {
                       const isVt3 = item.tvt === 'VT3';
-                      const swapPct = item.total_3g4g > 0 ? Math.min(100, Math.round((item.integration / item.total_3g4g) * 100)) : 0;
+                      const swapVal = item.swap !== undefined ? item.swap : item.integration;
+                      const swapPct = item.total_3g4g > 0 ? Math.min(100, Math.round((swapVal / item.total_3g4g) * 100)) : 0;
                       const oa5gPct = item.total_5g > 0 ? Math.min(100, Math.round((item.onair5g / item.total_5g) * 100)) : 0;
 
                       return (
@@ -1883,7 +1888,7 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
                           </td>
                           <td className="py-2.5 px-2 text-right bg-blue-100/50 border-r border-slate-200 font-extrabold">
                             <span className={`px-1.5 py-0.5 rounded ${swapPct === 100 ? 'bg-emerald-100 text-emerald-800 font-black' : swapPct > 0 ? 'bg-blue-200 text-blue-900' : 'text-slate-400'}`}>
-                              {swapPct}% ({item.integration})
+                              {swapPct}% ({swapVal})
                             </span>
                           </td>
 
@@ -1892,13 +1897,13 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
                             {item.total_5g}
                           </td>
                           <td className="py-2.5 px-2 text-right font-semibold text-slate-700 bg-amber-50/20 border-r border-amber-50">
-                            {item.delivery > 0 ? Math.min(item.total_5g, item.delivery) : 0}
+                            {item.del5g !== undefined ? item.del5g : item.delivery}
                           </td>
                           <td className="py-2.5 px-2 text-right font-semibold text-slate-700 bg-amber-50/20 border-r border-amber-50">
-                            {item.install > 0 ? Math.min(item.total_5g, item.install) : 0}
+                            {item.ins5g !== undefined ? item.ins5g : item.install}
                           </td>
                           <td className="py-2.5 px-2 text-right font-bold text-amber-900 bg-amber-100/30 border-r border-amber-100">
-                            {item.integration > 0 ? Math.min(item.total_5g, item.integration) : 0}
+                            {item.ci5g !== undefined ? item.ci5g : item.integration}
                           </td>
                           <td className="py-2.5 px-2 text-right bg-amber-100/50 border-r border-slate-200 font-extrabold">
                             <span className={`px-1.5 py-0.5 rounded ${oa5gPct >= 80 ? 'bg-emerald-100 text-emerald-800 font-black' : oa5gPct > 0 ? 'bg-amber-200 text-amber-900' : 'text-slate-400'}`}>
@@ -1928,8 +1933,14 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
                     const sumDel = activeClusters.reduce((s, c) => s + c.delivery, 0);
                     const sumInst = activeClusters.reduce((s, c) => s + c.install, 0);
                     const sumInteg = activeClusters.reduce((s, c) => s + c.integration, 0);
+                    const sumSwap = activeClusters.reduce((s, c) => s + (c.swap !== undefined ? c.swap : c.integration), 0);
+
+                    const sumDel5g = activeClusters.reduce((s, c) => s + (c.del5g !== undefined ? c.del5g : c.delivery), 0);
+                    const sumInst5g = activeClusters.reduce((s, c) => s + (c.ins5g !== undefined ? c.ins5g : c.install), 0);
+                    const sumCi5g = activeClusters.reduce((s, c) => s + (c.ci5g !== undefined ? c.ci5g : c.integration), 0);
                     const sum5gOa = activeClusters.reduce((s, c) => s + c.onair5g, 0);
-                    const avgSwapPct = sum3g4g > 0 ? Math.round((sumInteg / sum3g4g) * 100) : 0;
+
+                    const avgSwapPct = sum3g4g > 0 ? Math.round((sumSwap / sum3g4g) * 100) : 0;
                     const avg5gOaPct = sum5g > 0 ? Math.round((sum5gOa / sum5g) * 100) : 0;
 
                     return (
@@ -1944,14 +1955,14 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
                         <td className="py-3 px-2 text-right text-slate-300 border-r border-slate-700">{sumInst}</td>
                         <td className="py-3 px-2 text-right text-blue-300 border-r border-slate-700">{sumInteg}</td>
                         <td className="py-3 px-2 text-right text-emerald-400 bg-blue-950/70 border-r border-slate-700 font-black">
-                          {avgSwapPct}% ({sumInteg})
+                          {avgSwapPct}% ({sumSwap})
                         </td>
 
                         {/* 5G totals */}
                         <td className="py-3 px-2 text-right text-sm text-amber-300 border-r border-slate-700">{sum5g}</td>
-                        <td className="py-3 px-2 text-right text-slate-300 border-r border-slate-700">{Math.min(sum5g, sumDel)}</td>
-                        <td className="py-3 px-2 text-right text-slate-300 border-r border-slate-700">{Math.min(sum5g, sumInst)}</td>
-                        <td className="py-3 px-2 text-right text-amber-200 border-r border-slate-700">{Math.min(sum5g, sumInteg)}</td>
+                        <td className="py-3 px-2 text-right text-slate-300 border-r border-slate-700">{sumDel5g}</td>
+                        <td className="py-3 px-2 text-right text-slate-300 border-r border-slate-700">{sumInst5g}</td>
+                        <td className="py-3 px-2 text-right text-amber-200 border-r border-slate-700">{sumCi5g}</td>
                         <td className="py-3 px-2 text-right text-amber-400 bg-amber-950/70 border-r border-slate-700 font-black">
                           {avg5gOaPct}% ({sum5gOa})
                         </td>
