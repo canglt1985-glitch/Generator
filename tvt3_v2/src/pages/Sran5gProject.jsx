@@ -7,99 +7,110 @@ import {
 import { supabase } from '../supabaseClient';
 import * as XLSX from 'xlsx';
 
-export const AUGUST_2026_CLUSTERS = [
-  { order: 'Day_02', cluster: 'DNI_09_CM', db_cluster: 'DNI_09_CM', tvt: 'VT3', district: 'Cẩm Mỹ', total_3g4g: 26, total_5g: 14, note: '15 trạm Power, 11 trạm CRAN' },
-  { order: 'Day_03', cluster: 'DNI_02_TB', db_cluster: 'DNI_02_TB', tvt: 'VT2', district: 'Trảng Bom', total_3g4g: 27, total_5g: 17, note: '3 trạm Cancel, 8 trạm Power, 15 trạm CRAN' },
-  { order: 'Day_04', cluster: 'DNI_10_TN', db_cluster: 'DNI_10_TN', tvt: 'VT3', district: 'Thống Nhất', total_3g4g: 25, total_5g: 10, note: '24 trạm Delivery, 9 trạm 5G OA' },
-  { order: 'Day_05', cluster: 'DNI_03_TB', db_cluster: 'DNI_03_TB', tvt: 'VT2', district: 'Trảng Bom', total_3g4g: 27, total_5g: 26, note: '26 trạm Delivery, 20 trạm 5G OA' }
+export const SRAN_25_CLUSTERS = [
+  // Giai đoạn 1: Pilot & Khởi động (Màu xanh lá - 8 Cluster)
+  { order: '5G_Only', cluster: 'DNI_5G_Only', db_cluster: 'DNI_5G_Only', tvt: 'VT1/VT2', district: 'Long Thành', date: '-', total_3g4g: 0, total_5g: 19, phase: 'pilot', note: '19 trạm 5G độc lập (Long Thành/VT1/VT2)' },
+  { order: 'Day_00', cluster: 'DNI_00_Pilot', db_cluster: 'DNI_00_Pilot', tvt: 'VT1', district: 'Long Thành', date: '18-Aug', total_3g4g: 3, total_5g: 3, phase: 'pilot', note: 'Thử nghiệm Pilot Long Thành' },
+  { order: 'Day_01', cluster: 'DNI_01_LT', db_cluster: 'DNI_01_LT', tvt: 'VT1', district: 'Long Thành', date: '21-Aug', total_3g4g: 19, total_5g: 8, phase: 'pilot', note: 'Trọng điểm KCN Long Thành' },
+  { order: 'Day_02', cluster: 'DNI_09_CM', db_cluster: 'DNI_09_CM', alt_db: 'DNI_02_CM', tvt: 'VT3', district: 'Cẩm Mỹ', date: '25-Aug', total_3g4g: 26, total_5g: 17, phase: 'pilot', note: 'Trạm Power & CRAN Cẩm Mỹ' },
+  { order: 'Day_03', cluster: 'DNI_02_TB', db_cluster: 'DNI_02_TB', alt_db: 'DNI_03_TB', tvt: 'VT2', district: 'Trảng Bom', date: '25-Aug', total_3g4g: 27, total_5g: 17, phase: 'pilot', note: 'Khu vực Trảng Bom' },
+  { order: 'Day_04', cluster: 'DNI_10_TN', db_cluster: 'DNI_10_TN', alt_db: 'DNI_04_TN', tvt: 'VT3', district: 'Thống Nhất', date: '27-Aug', total_3g4g: 25, total_5g: 10, phase: 'pilot', note: 'Khu vực Thống Nhất' },
+  { order: 'Day_05', cluster: 'DNI_03_TB', db_cluster: 'DNI_03_TB', alt_db: 'DNI_07_TB', tvt: 'VT2', district: 'Trảng Bom', date: '27-Aug', total_3g4g: 27, total_5g: 26, phase: 'pilot', note: 'Khu vực Trảng Bom' },
+  { order: 'Day_06', cluster: 'DNI_16_CM', db_cluster: 'DNI_16_CM', alt_db: 'DNI_06_CM', tvt: 'VT3', district: 'Cẩm Mỹ', date: '04-Sep', total_3g4g: 26, total_5g: 6, phase: 'pilot', note: 'Mở rộng Cẩm Mỹ' },
+
+  // Giai đoạn 2: Thi công trọng điểm (Màu vàng - 12 Cluster)
+  { order: 'Day_07', cluster: 'DNI_07_TB', db_cluster: 'DNI_07_TB', alt_db: 'DNI_05_TB', tvt: 'VT2', district: 'Trảng Bom', date: '08-Sep', total_3g4g: 27, total_5g: 23, phase: 'phase2' },
+  { order: 'Day_08', cluster: 'DNI_15_XL', db_cluster: 'DNI_15_XL', alt_db: 'DNI_08_XL', tvt: 'VT3', district: 'Xuân Lộc', date: '08-Sep', total_3g4g: 25, total_5g: 14, phase: 'phase2' },
+  { order: 'Day_09', cluster: 'DNI_17_XL', db_cluster: 'DNI_17_XL', alt_db: 'DNI_16_XL', tvt: 'VT3', district: 'Xuân Lộc', date: '08-Sep', total_3g4g: 26, total_5g: 10, phase: 'phase2' },
+  { order: 'Day_10', cluster: 'DNI_06_TB', db_cluster: 'DNI_06_TB', alt_db: 'DNI_09_TB', tvt: 'VT2', district: 'Trảng Bom', date: '11-Sep', total_3g4g: 27, total_5g: 16, phase: 'phase2' },
+  { order: 'Day_11', cluster: 'DNI_18_XL', db_cluster: 'DNI_18_XL', alt_db: 'DNI_17_XL', tvt: 'VT3', district: 'Xuân Lộc', date: '11-Sep', total_3g4g: 27, total_5g: 21, phase: 'phase2' },
+  { order: 'Day_12', cluster: 'DNI_19_XL', db_cluster: 'DNI_19_XL', alt_db: 'DNI_18_XL', tvt: 'VT3', district: 'Xuân Lộc', date: '11-Sep', total_3g4g: 26, total_5g: 7, phase: 'phase2' },
+  { order: 'Day_13', cluster: 'DNI_13_LK', db_cluster: 'DNI_13_LK', alt_db: 'DNI_10_LK', tvt: 'VT3', district: 'Long Khánh', date: '15-Sep', total_3g4g: 25, total_5g: 12, phase: 'phase2' },
+  { order: 'Day_14', cluster: 'DNI_04_VC', db_cluster: 'DNI_04_VC', alt_db: 'DNI_11_VC', tvt: 'VT2', district: 'Vĩnh Cửu', date: '15-Sep', total_3g4g: 25, total_5g: 6, phase: 'phase2' },
+  { order: 'Day_15', cluster: 'DNI_14_LK', db_cluster: 'DNI_14_LK', tvt: 'VT3', district: 'Long Khánh', date: '15-Sep', total_3g4g: 26, total_5g: 9, phase: 'phase2' },
+  { order: 'Day_16', cluster: 'DNI_12_TN', db_cluster: 'DNI_12_TN', tvt: 'VT3', district: 'Thống Nhất', date: '18-Sep', total_3g4g: 26, total_5g: 21, phase: 'phase2' },
+  { order: 'Day_17', cluster: 'DNI_05_VC', db_cluster: 'DNI_05_VC', alt_db: 'DNI_13_VC', tvt: 'VT2', district: 'Vĩnh Cửu', date: '18-Sep', total_3g4g: 26, total_5g: 20, phase: 'phase2' },
+  { order: 'Day_18', cluster: 'DNI_20_DQ', db_cluster: 'DNI_20_DQ', alt_db: 'DNI_19_DQ', tvt: 'VT3', district: 'Định Quán', date: '18-Sep', total_3g4g: 26, total_5g: 4, phase: 'phase2' },
+
+  // Giai đoạn 3: Nước rút về đích (Màu xám - 5 Cluster)
+  { order: 'Day_19', cluster: 'DNI_11_VC', db_cluster: 'DNI_11_VC', alt_db: 'DNI_15_VC', tvt: 'VT2', district: 'Vĩnh Cửu', date: '22-Sep', total_3g4g: 26, total_5g: 14, phase: 'phase3' },
+  { order: 'Day_20', cluster: 'DNI_21_DQ', db_cluster: 'DNI_21_DQ', alt_db: 'DNI_20_DQ', tvt: 'VT3', district: 'Định Quán', date: '22-Sep', total_3g4g: 25, total_5g: 4, phase: 'phase3' },
+  { order: 'Day_21', cluster: 'DNI_22_DQ', db_cluster: 'DNI_22_DQ', alt_db: 'DNI_21_DQ', tvt: 'VT3', district: 'Định Quán', date: '22-Sep', total_3g4g: 25, total_5g: 6, phase: 'phase3' },
+  { order: 'Day_22', cluster: 'DNI_23_TP', db_cluster: 'DNI_23_TP', alt_db: 'DNI_22_TP', tvt: 'VT3', district: 'Tân Phú', date: '29-Sep', total_3g4g: 26, total_5g: 13, phase: 'phase3' },
+  { order: 'Day_23', cluster: 'DNI_24_TP', db_cluster: 'DNI_24_TP', alt_db: 'DNI_23_TP', tvt: 'VT3', district: 'Tân Phú', date: '29-Sep', total_3g4g: 25, total_5g: 1, phase: 'phase3' }
 ];
 
-export const SEPTEMBER_2026_CLUSTERS = [
-  { order: 'Day_06', cluster: 'DNI_16_CM', db_cluster: 'DNI_06_CM', tvt: 'VT3', district: 'Cẩm Mỹ', total_3g4g: 26, total_5g: 6 },
-  { order: 'Day_07', cluster: 'DNI_07_TB', db_cluster: 'DNI_05_TB', tvt: 'VT2', district: 'Trảng Bom', total_3g4g: 27, total_5g: 23 },
-  { order: 'Day_08', cluster: 'DNI_15_XL', db_cluster: 'DNI_08_XL', tvt: 'VT3', district: 'Xuân Lộc', total_3g4g: 25, total_5g: 14 },
-  { order: 'Day_09', cluster: 'DNI_17_XL', db_cluster: 'DNI_16_XL', tvt: 'VT3', district: 'Xuân Lộc', total_3g4g: 26, total_5g: 10 },
-  { order: 'Day_10', cluster: 'DNI_06_TB', db_cluster: 'DNI_09_TB', tvt: 'VT2', district: 'Trảng Bom', total_3g4g: 27, total_5g: 16 },
-  { order: 'Day_11', cluster: 'DNI_18_XL', db_cluster: 'DNI_17_XL', tvt: 'VT3', district: 'Xuân Lộc', total_3g4g: 25, total_5g: 12 },
-  { order: 'Day_12', cluster: 'DNI_19_XL', db_cluster: 'DNI_18_XL', tvt: 'VT3', district: 'Xuân Lộc', total_3g4g: 25, total_5g: 6 },
-  { order: 'Day_13', cluster: 'DNI_13_LK', db_cluster: 'DNI_10_LK', tvt: 'VT3', district: 'Long Khánh', total_3g4g: 26, total_5g: 21 },
-  { order: 'Day_14', cluster: 'DNI_04_VC', db_cluster: 'DNI_11_VC', tvt: 'VT2', district: 'Vĩnh Cửu', total_3g4g: 26, total_5g: 19 },
-  { order: 'Day_15', cluster: 'DNI_14_LK', db_cluster: 'DNI_14_LK', tvt: 'VT3', district: 'Long Khánh', total_3g4g: 26, total_5g: 9 },
-  { order: 'Day_16', cluster: 'DNI_12_TN', db_cluster: 'DNI_12_TN', tvt: 'VT3', district: 'Thống Nhất', total_3g4g: 26, total_5g: 14 },
-  { order: 'Day_17', cluster: 'DNI_05_VC', db_cluster: 'DNI_13_VC', tvt: 'VT2', district: 'Vĩnh Cửu', total_3g4g: 27, total_5g: 21 },
-  { order: 'Day_18', cluster: 'DNI_20_DQ', db_cluster: 'DNI_19_DQ', tvt: 'VT3', district: 'Định Quán', total_3g4g: 26, total_5g: 7 },
-];
-
-export const OCTOBER_2026_CLUSTERS = [
-  { order: 'Day_19', cluster: 'DNI_21_DQ', db_cluster: 'DNI_21_DQ', tvt: 'VT3', district: 'Định Quán', total_3g4g: 26, total_5g: 12 },
-  { order: 'Day_20', cluster: 'DNI_22_TP', db_cluster: 'DNI_22_TP', tvt: 'VT3', district: 'Tân Phú', total_3g4g: 25, total_5g: 14 },
-  { order: 'Day_21', cluster: 'DNI_08_TB', db_cluster: 'DNI_08_TB', tvt: 'VT2', district: 'Trảng Bom', total_3g4g: 27, total_5g: 18 },
-  { order: 'Day_22', cluster: 'DNI_23_TP', db_cluster: 'DNI_23_TP', tvt: 'VT3', district: 'Tân Phú', total_3g4g: 26, total_5g: 11 },
-  { order: 'Day_23', cluster: 'DNI_03_BH', db_cluster: 'DNI_03_BH', tvt: 'VT2', district: 'Biên Hòa', total_3g4g: 28, total_5g: 22 },
-  { order: 'Day_24', cluster: 'DNI_24_TN', db_cluster: 'DNI_24_TN', tvt: 'VT3', district: 'Thống Nhất', total_3g4g: 26, total_5g: 15 },
-  { order: 'Day_25', cluster: 'DNI_01_LT', db_cluster: 'DNI_01_LT', tvt: 'VT2', district: 'Long Thành', total_3g4g: 26, total_5g: 17 },
-  { order: 'Day_26', cluster: 'DNI_25_LK', db_cluster: 'DNI_25_LK', tvt: 'VT3', district: 'Long Khánh', total_3g4g: 25, total_5g: 13 },
-  { order: 'Day_27', cluster: 'DNI_10_NT', db_cluster: 'DNI_10_NT', tvt: 'VT2', district: 'Nhơn Trạch', total_3g4g: 27, total_5g: 19 },
-  { order: 'Day_28', cluster: 'DNI_26_CM', db_cluster: 'DNI_26_CM', tvt: 'VT3', district: 'Cẩm Mỹ', total_3g4g: 25, total_5g: 10 },
-  { order: 'Day_29', cluster: 'DNI_11_VC', db_cluster: 'DNI_11_VC', tvt: 'VT2', district: 'Vĩnh Cửu', total_3g4g: 26, total_5g: 16 },
-  { order: 'Day_30', cluster: 'DNI_27_XL', db_cluster: 'DNI_27_XL', tvt: 'VT3', district: 'Xuân Lộc', total_3g4g: 25, total_5g: 12 },
-];
-
-export const NOVEMBER_2026_CLUSTERS = [
-  { order: 'Day_31', cluster: 'DNI_28_TP', db_cluster: 'DNI_28_TP', tvt: 'VT3', district: 'Tân Phú', total_3g4g: 24, total_5g: 10 },
-  { order: 'Day_32', cluster: 'DNI_29_DQ', db_cluster: 'DNI_29_DQ', tvt: 'VT3', district: 'Định Quán', total_3g4g: 25, total_5g: 9 },
-  { order: 'Day_33', cluster: 'DNI_12_BH', db_cluster: 'DNI_12_BH', tvt: 'VT2', district: 'Biên Hòa', total_3g4g: 28, total_5g: 24 },
-  { order: 'Day_34', cluster: 'DNI_30_LT', db_cluster: 'DNI_30_LT', tvt: 'VT2', district: 'Long Thành', total_3g4g: 26, total_5g: 15 },
-  { order: 'Day_35', cluster: 'DNI_31_NT', db_cluster: 'DNI_31_NT', tvt: 'VT2', district: 'Nhơn Trạch', total_3g4g: 25, total_5g: 16 },
-  { order: 'Day_36', cluster: 'DNI_32_TN', db_cluster: 'DNI_32_TN', tvt: 'VT3', district: 'Thống Nhất', total_3g4g: 24, total_5g: 11 },
-  { order: 'Day_37', cluster: 'DNI_33_LK', db_cluster: 'DNI_33_LK', tvt: 'VT3', district: 'Long Khánh', total_3g4g: 24, total_5g: 12 },
-  { order: 'Day_38', cluster: 'DNI_34_CM', db_cluster: 'DNI_34_CM', tvt: 'VT3', district: 'Cẩm Mỹ', total_3g4g: 23, total_5g: 8 },
-];
+export const AUGUST_2026_CLUSTERS = SRAN_25_CLUSTERS.filter(c => c.phase === 'pilot');
+export const SEPTEMBER_2026_CLUSTERS = SRAN_25_CLUSTERS.filter(c => c.phase === 'phase2');
+export const OCTOBER_2026_CLUSTERS = SRAN_25_CLUSTERS.filter(c => c.phase === 'phase3');
+export const NOVEMBER_2026_CLUSTERS = SRAN_25_CLUSTERS;
 
 export const MONTHLY_PLANS_CONFIG = {
-  aug: {
-    id: 'aug',
-    name: 'Tháng 8/2026',
-    shortName: 'T8',
-    statusBadge: 'Đã triển khai (25/08)',
+  all: {
+    id: 'all',
+    name: 'Báo Cáo 25 Cluster SRAN (592 4G • 307 5G)',
+    shortName: 'Tất cả 25 Cluster',
+    statusBadge: 'Báo cáo tổng hợp chính thức Excel',
+    statusClass: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+    themeColor: 'emerald',
+    gradient: 'from-emerald-700 via-teal-800 to-indigo-900',
+    clusters: SRAN_25_CLUSTERS,
+    desc: 'Toàn bộ 25 Cluster SRAN theo chuẩn Excel • 592 trạm 4G/SR • 307 trạm 5G'
+  },
+  pilot: {
+    id: 'pilot',
+    name: 'Giai đoạn Khởi động & Pilot (Day_00 ➔ Day_06)',
+    shortName: 'Pilot & GĐ1 (8 Cluster)',
+    statusBadge: 'Khởi động & Pilot',
     statusClass: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
     themeColor: 'emerald',
     gradient: 'from-emerald-600 to-teal-800',
-    clusters: AUGUST_2026_CLUSTERS,
-    desc: 'Đợt khởi động dự án • 2 Cluster (53 trạm) • Theo dõi On-air & Xử lý tồn tại tủ nguồn, CRAN, Cancel'
+    clusters: SRAN_25_CLUSTERS.filter(c => c.phase === 'pilot'),
+    desc: '8 Cluster (Day_00 ➔ Day_06 + 5G_Only) • 176 trạm 4G • 106 trạm 5G'
   },
-  sep: {
-    id: 'sep',
-    name: 'Tháng 9/2026',
-    shortName: 'T9',
-    statusBadge: 'Đang triển khai trọng điểm',
+  phase2: {
+    id: 'phase2',
+    name: 'Giai đoạn 2 Thi công trọng điểm (Day_07 ➔ Day_18)',
+    shortName: 'GĐ2 Trọng điểm (12 Cluster)',
+    statusBadge: 'Trọng điểm cuốn chiếu',
     statusClass: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
     themeColor: 'amber',
     gradient: 'from-amber-500 to-amber-700',
-    clusters: SEPTEMBER_2026_CLUSTERS,
-    desc: '13 Cluster thi công cuốn chiếu Day_06 ➔ Day_18 • 338 trạm (178 trạm 5G)'
+    clusters: SRAN_25_CLUSTERS.filter(c => c.phase === 'phase2'),
+    desc: '12 Cluster thi công cuốn chiếu Day_07 ➔ Day_18 • 313 trạm 4G • 163 trạm 5G'
   },
-  oct: {
-    id: 'oct',
-    name: 'Tháng 10/2026',
-    shortName: 'T10',
-    statusBadge: 'Kế hoạch Giai đoạn 3 (Quý 4)',
+  phase3: {
+    id: 'phase3',
+    name: 'Giai đoạn 3 Nước rút về đích (Day_19 ➔ Day_23)',
+    shortName: 'GĐ3 Về đích (5 Cluster)',
+    statusBadge: 'Nước rút về đích',
     statusClass: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
     themeColor: 'blue',
     gradient: 'from-blue-600 to-indigo-800',
-    clusters: OCTOBER_2026_CLUSTERS,
-    desc: '12 Cluster mở rộng mạng lưới • 312 trạm (179 trạm 5G)'
+    clusters: SRAN_25_CLUSTERS.filter(c => c.phase === 'phase3'),
+    desc: '5 Cluster hoàn thành 100% chỉ tiêu phát sóng Day_19 ➔ Day_23 • 127 trạm 4G • 38 trạm 5G'
   },
-  nov: {
-    id: 'nov',
-    name: 'Tháng 11/2026',
-    shortName: 'T11',
-    statusBadge: 'Kế hoạch Về đích cuối năm',
-    statusClass: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
-    themeColor: 'purple',
-    gradient: 'from-purple-600 to-violet-800',
-    clusters: NOVEMBER_2026_CLUSTERS,
-    desc: '8 Cluster nước rút hoàn thành 100% chỉ tiêu phát sóng toàn tỉnh • 199 trạm'
+  aug: {
+    id: 'aug',
+    name: 'Pilot & Đợt 1 / Tháng 8 (8 Cluster)',
+    shortName: 'GĐ1 (8 Cluster)',
+    statusBadge: 'Pilot & Đợt 1',
+    statusClass: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+    themeColor: 'emerald',
+    gradient: 'from-emerald-600 to-teal-800',
+    clusters: SRAN_25_CLUSTERS.filter(c => c.phase === 'pilot'),
+    desc: '8 Cluster khởi động (176 trạm 4G • 106 trạm 5G)'
+  },
+  sep: {
+    id: 'sep',
+    name: 'Thi công Tháng 9/2026 (17 Cluster)',
+    shortName: 'Tháng 9 (17 Cluster)',
+    statusBadge: 'Trọng điểm Tháng 9',
+    statusClass: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+    themeColor: 'amber',
+    gradient: 'from-amber-500 to-amber-700',
+    clusters: SRAN_25_CLUSTERS.filter(c => c.phase === 'phase2' || c.phase === 'phase3'),
+    desc: '17 Cluster thi công Giai đoạn 2 & 3 • 440 trạm 4G • 201 trạm 5G'
   }
 };
 
@@ -123,8 +134,8 @@ export default function Sran5gProject() {
   const [drilldownModal, setDrilldownModal] = useState(null);
   const [drilldownSearch, setDrilldownSearch] = useState('');
 
-  const [selectedPlanMonth, setSelectedPlanMonth] = useState('sep'); // 'aug' | 'sep' | 'oct' | 'nov'
-  const [selectedMonthTvt, setSelectedMonthTvt] = useState('VT3'); // Focus primarily on VT3 by default! ('VT3' | 'ALL' | 'VT2')
+  const [selectedPlanMonth, setSelectedPlanMonth] = useState('all'); // 'all' | 'pilot' | 'phase2' | 'phase3' | 'aug' | 'sep'
+  const [selectedMonthTvt, setSelectedMonthTvt] = useState('ALL'); // 'ALL' | 'VT3' | 'VT2'
   const [activeViewTab, setActiveViewTab] = useState('plan_monthly'); // 'plan_monthly' | 'dashboard' | 'table'
 
   const [copiedReport, setCopiedReport] = useState(false);
@@ -519,18 +530,12 @@ export default function Sran5gProject() {
     const targetClusters = currentMonthPlan.clusters;
     return targetClusters.map(c => {
       const clusterSites = data.filter(d => {
-        if (d.raw_data?.Cluster_Name === c.db_cluster || d.raw_data?.Cluster_Name === c.cluster || d.raw_data?.Cluster_New === c.cluster) {
-          return true;
-        }
-        if (selectedPlanMonth === 'aug') {
-          const isAugTarget = d.monthly_target_im && String(d.monthly_target_im).includes('Aug');
-          if (isAugTarget) {
-            if (c.cluster === 'DNI_09_CM' && (d.district === 'Cẩm Mỹ' || (d.site_id && d.site_id.startsWith('DNCM')))) return true;
-            if (c.cluster === 'DNI_02_TB' && (d.district === 'Trảng Bom' || (d.site_id && d.site_id.startsWith('DNTB')))) return true;
-            if (c.cluster === 'DNI_10_TN' && (d.district === 'Thống Nhất' || (d.site_id && d.site_id.startsWith('DNTN')) || d.raw_data?.Cluster_Name === 'DNI_10_TN' || d.raw_data?.Cluster_Name === 'DNI_04_TN')) return true;
-            if (c.cluster === 'DNI_03_TB' && (d.district === 'Trảng Bom' || (d.site_id && d.site_id.startsWith('DNTB')) || d.raw_data?.Cluster_Name === 'DNI_03_TB')) return true;
-          }
-        }
+        const cname = d.raw_data?.Cluster_Name;
+        const cnew = d.raw_data?.Cluster_New;
+        if (c.cluster === 'DNI_5G_Only') return cname === 'DNI_5G_Only' || cnew === 'DNI_5G_Only';
+        if (c.cluster === cnew || c.cluster === cname) return true;
+        if (c.db_cluster && (cname === c.db_cluster || cnew === c.db_cluster)) return true;
+        if (c.alt_db && (cname === c.alt_db || cnew === c.alt_db)) return true;
         return false;
       });
 
@@ -1837,7 +1842,13 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
                         <tr key={item.cluster} className="hover:bg-slate-50 transition-colors font-medium">
                           <td className="py-2.5 px-2 text-center text-slate-400 font-mono text-[11px] border-r border-slate-100">{idx + 1}</td>
                           <td className="py-2.5 px-3 border-r border-slate-100">
-                            <span className="font-extrabold text-slate-900 bg-slate-200/70 px-2 py-0.5 rounded border border-slate-300 font-mono text-[11px]">
+                            <span className={`font-extrabold px-2 py-0.5 rounded border font-mono text-[11px] ${
+                              item.phase === 'pilot' 
+                                ? 'bg-emerald-100 text-emerald-950 border-emerald-300' 
+                                : item.phase === 'phase2'
+                                ? 'bg-amber-100 text-amber-950 border-amber-300'
+                                : 'bg-slate-200 text-slate-900 border-slate-300'
+                            }`}>
                               {item.cluster}
                             </span>
                           </td>
