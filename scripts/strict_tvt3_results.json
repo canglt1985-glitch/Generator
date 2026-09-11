@@ -1,0 +1,1347 @@
+{
+  "tvt3_count": 0,
+  "other_count": 134,
+  "tvt3_items": [],
+  "other_items": [
+    {
+      "ma_qh": "26DNa205",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 11.44371,
+      "lng": 106.64617,
+      "province": "Việt Nam",
+      "district": "Chơn Thành",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa214",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 11.45113,
+      "lng": 106.6511,
+      "province": "Việt Nam",
+      "district": "Chơn Thành",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa139",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 11.4393,
+      "lng": 106.6558,
+      "province": "Việt Nam",
+      "district": "Chơn Thành",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa022",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 11.46992,
+      "lng": 106.607,
+      "province": "Việt Nam",
+      "district": "Minh Hưng",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa006",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 11.46488,
+      "lng": 106.6076,
+      "province": "Việt Nam",
+      "district": "Minh Hưng",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa023",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 11.39651,
+      "lng": 106.6667,
+      "province": "Việt Nam",
+      "district": "Chơn Thành",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa150",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 11.481381,
+      "lng": 106.861379,
+      "province": "Việt Nam",
+      "district": "Bình Phước",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa151",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 11.48158222,
+      "lng": 106.8807743,
+      "province": "Việt Nam",
+      "district": "Bình Phước",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa024",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 11.5286,
+      "lng": 106.5603,
+      "province": "Việt Nam",
+      "district": "Tân Khai",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa025",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 11.49787,
+      "lng": 106.57276,
+      "province": "Việt Nam",
+      "district": "Minh Hưng",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa087",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.92715548,
+      "lng": 106.8965585,
+      "province": "Việt Nam",
+      "district": "Long Bình",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa196",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.92882,
+      "lng": 106.8898,
+      "province": "Việt Nam",
+      "district": "Long Bình",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa213",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.92303808,
+      "lng": 106.8580514,
+      "province": "Việt Nam",
+      "district": "Trấn Biên",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa093",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.9474,
+      "lng": 106.8915,
+      "province": "Việt Nam",
+      "district": "Long Bình",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa094",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.9443,
+      "lng": 106.896,
+      "province": "Việt Nam",
+      "district": "Long Bình",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa098",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.9159013,
+      "lng": 106.8689509,
+      "province": "Việt Nam",
+      "district": "Trấn Biên",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa102",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.954752,
+      "lng": 106.899105,
+      "province": "Việt Nam",
+      "district": "Long Bình",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa155",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.9601,
+      "lng": 107.2363,
+      "province": "Việt Nam",
+      "district": "Bảo Vinh",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa156",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.96743,
+      "lng": 107.21709,
+      "province": "Việt Nam",
+      "district": "Bình Lộc",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa176",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.6565662,
+      "lng": 107.0306347,
+      "province": "Việt Nam",
+      "district": "Phước Thái",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa243",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.65315,
+      "lng": 107.02438,
+      "province": "Việt Nam",
+      "district": "Phước Thái",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa235",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.68973,
+      "lng": 107.02904,
+      "province": "Việt Nam",
+      "district": "Phước Thái",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa221",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.83906554,
+      "lng": 106.9536252,
+      "province": "Việt Nam",
+      "district": "An Phước",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa240",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.66243,
+      "lng": 107.02176,
+      "province": "Việt Nam",
+      "district": "Phước Thái",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa231",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.84542606,
+      "lng": 106.9836925,
+      "province": "Việt Nam",
+      "district": "Bình An",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa211",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.8209,
+      "lng": 106.92553,
+      "province": "Việt Nam",
+      "district": "An Phước",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa106",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.80962366,
+      "lng": 106.9185452,
+      "province": "Việt Nam",
+      "district": "An Phước",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa198",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.79288508,
+      "lng": 106.9867623,
+      "province": "Việt Nam",
+      "district": "Long Thành",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa241",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.66282276,
+      "lng": 107.02931,
+      "province": "Việt Nam",
+      "district": "Phước Thái",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa108",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.79073649,
+      "lng": 106.9984485,
+      "province": "Việt Nam",
+      "district": "Long Thành",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa200",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.8157836,
+      "lng": 106.9121061,
+      "province": "Việt Nam",
+      "district": "An Phước",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa206",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.70002,
+      "lng": 106.8475,
+      "province": "Việt Nam",
+      "district": "Nhơn Trạch (phường)",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa116",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.7053,
+      "lng": 106.92,
+      "province": "Việt Nam",
+      "district": "Nhơn Trạch (phường)",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa117",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.71812115,
+      "lng": 106.9096281,
+      "province": "Việt Nam",
+      "district": "Nhơn Trạch (phường)",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa119",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.71077,
+      "lng": 106.943562,
+      "province": "Việt Nam",
+      "district": "Phước An",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa120",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.74571774,
+      "lng": 106.9314415,
+      "province": "Việt Nam",
+      "district": "Nhơn Trạch (phường)",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa208",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.72865867,
+      "lng": 106.9324485,
+      "province": "Việt Nam",
+      "district": "Nhơn Trạch (phường)",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa220",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.73230787,
+      "lng": 106.9382023,
+      "province": "Việt Nam",
+      "district": "Nhơn Trạch (phường)",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa121",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.72977177,
+      "lng": 106.9215023,
+      "province": "Việt Nam",
+      "district": "Nhơn Trạch (phường)",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa122",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.71052,
+      "lng": 106.91207,
+      "province": "Việt Nam",
+      "district": "Nhơn Trạch (phường)",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa126",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.96034047,
+      "lng": 106.9273493,
+      "province": "Việt Nam",
+      "district": "Long Bình",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa233",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.95863594,
+      "lng": 107.0230844,
+      "province": "Việt Nam",
+      "district": "Trảng Bom",
+      "ward": "Trảng Bom (Phường)"
+    },
+    {
+      "ma_qh": "26DNa128",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.98899,
+      "lng": 106.9437,
+      "province": "Việt Nam",
+      "district": "Hố Nai, Đồng Nai",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa129",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.96257766,
+      "lng": 106.9175809,
+      "province": "Việt Nam",
+      "district": "Hố Nai, Đồng Nai",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa130",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.9057027,
+      "lng": 106.9871363,
+      "province": "Việt Nam",
+      "district": "Trảng Bom",
+      "ward": "Trảng Bom (Phường)"
+    },
+    {
+      "ma_qh": "26DNa236",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 11.008889,
+      "lng": 106.849167,
+      "province": "Việt Nam",
+      "district": "Tân Phong",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa234",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 11.00931337,
+      "lng": 106.8530006,
+      "province": "Việt Nam",
+      "district": "Tân Phong",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa261",
+      "vb": "802/MBF.ĐNa-VT-TTKDVT",
+      "status": "Đã PD",
+      "lat": 11.5098,
+      "lng": 106.5585,
+      "province": "Việt Nam",
+      "district": "Tân Khai",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa268",
+      "vb": "802/MBF.ĐNa-VT-TTKDVT",
+      "status": "Đã PD",
+      "lat": 10.65682,
+      "lng": 106.97391,
+      "province": "Việt Nam",
+      "district": "Phước An",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa252",
+      "vb": "802/MBF.ĐNa-VT-TTKDVT",
+      "status": "Đã PD",
+      "lat": 10.9624,
+      "lng": 107.0365,
+      "province": "Việt Nam",
+      "district": "Trảng Bom",
+      "ward": "Trảng Bom (Phường)"
+    },
+    {
+      "ma_qh": "26DNa159",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.9279,
+      "lng": 107.1649,
+      "province": "Việt Nam",
+      "district": "Dầu Giây",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa107",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.71149,
+      "lng": 107.01356,
+      "province": "Việt Nam",
+      "district": "Long Phước",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa104",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.79983,
+      "lng": 106.98879,
+      "province": "Việt Nam",
+      "district": "Long Thành",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa118",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.7538,
+      "lng": 106.92929,
+      "province": "Việt Nam",
+      "district": "Nhơn Trạch (phường)",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa115",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.72835,
+      "lng": 106.82561,
+      "province": "Việt Nam",
+      "district": "Đại Phước",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa109",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.75704,
+      "lng": 107.014307,
+      "province": "Việt Nam",
+      "district": "Long Thành",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa111",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.775027,
+      "lng": 107.046082,
+      "province": "Việt Nam",
+      "district": "Long Thành",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa112",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.797732,
+      "lng": 107.06827,
+      "province": "Việt Nam",
+      "district": "Long Thành",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa113",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.776368,
+      "lng": 107.016314,
+      "province": "Việt Nam",
+      "district": "Long Thành",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa114",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.768268,
+      "lng": 107.029486,
+      "province": "Việt Nam",
+      "district": "Long Thành",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa191",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.77073,
+      "lng": 107.043101,
+      "province": "Việt Nam",
+      "district": "Long Thành",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa193",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.760726,
+      "lng": 107.01859,
+      "province": "Việt Nam",
+      "district": "Long Thành",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa194",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.751824,
+      "lng": 107.01694,
+      "province": "Việt Nam",
+      "district": "Long Thành",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa202",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.75998,
+      "lng": 107.025796,
+      "province": "Việt Nam",
+      "district": "Long Thành",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa222",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.78307,
+      "lng": 107.060087,
+      "province": "Việt Nam",
+      "district": "Long Thành",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa225",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.7920503,
+      "lng": 107.0433802,
+      "province": "Việt Nam",
+      "district": "Long Thành",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa188",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.914168,
+      "lng": 106.850405,
+      "province": "Việt Nam",
+      "district": "Trấn Biên",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa029",
+      "vb": "802/MBF.ĐNa-VT-TTKDVT",
+      "status": "Đã PD",
+      "lat": 11.71455,
+      "lng": 107.14242,
+      "province": "Việt Nam",
+      "district": "Nghĩa Trung",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa028",
+      "vb": "802/MBF.ĐNa-VT-TTKDVT",
+      "status": "Đã PD",
+      "lat": 11.41801,
+      "lng": 106.61345,
+      "province": "Việt Nam",
+      "district": "Chơn Thành",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa181",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 11.19904,
+      "lng": 107.36331,
+      "province": "Việt Nam",
+      "district": "Định Quán",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa002",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 11.904723,
+      "lng": 106.739512,
+      "province": "Việt Nam",
+      "district": "Tân Tiến",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa004",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 11.931067,
+      "lng": 107.005713,
+      "province": "Việt Nam",
+      "district": "Phú Nghĩa",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa012",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 11.64886304,
+      "lng": 106.8973023,
+      "province": "Việt Nam",
+      "district": "Thuận Lợi",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa013",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.97332562,
+      "lng": 106.9010265,
+      "province": "Việt Nam",
+      "district": "Hố Nai, Đồng Nai",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa014",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.99381,
+      "lng": 106.87439,
+      "province": "Việt Nam",
+      "district": "Trảng Dài",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa017",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.73335663,
+      "lng": 106.8993791,
+      "province": "Việt Nam",
+      "district": "Nhơn Trạch (phường)",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa019",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 11.80493056,
+      "lng": 107.2424899,
+      "province": "Việt Nam",
+      "district": "Bù Đăng",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa021",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 12.05738,
+      "lng": 107.10918,
+      "province": "Việt Nam",
+      "district": "Đak Ơ",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa026",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 11.892007,
+      "lng": 106.697271,
+      "province": "Việt Nam",
+      "district": "Lộc Quảng",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa027",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 11.77148151,
+      "lng": 106.9278227,
+      "province": "Việt Nam",
+      "district": "Bình Tân",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa085",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.85965906,
+      "lng": 106.9194985,
+      "province": "Việt Nam",
+      "district": "Tam Phước",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa088",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.907,
+      "lng": 106.88015,
+      "province": "Việt Nam",
+      "district": "Long Hưng, Biên Hòa",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa089",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.8688,
+      "lng": 106.9665,
+      "province": "Việt Nam",
+      "district": "Tam Phước",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa090",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.86646,
+      "lng": 106.85209,
+      "province": "Việt Nam",
+      "district": "Long Hưng, Biên Hòa",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa091",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.96355,
+      "lng": 106.8065,
+      "province": "Việt Nam",
+      "district": "Trấn Biên",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa092",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.8976,
+      "lng": 106.8515,
+      "province": "Việt Nam",
+      "district": "Long Hưng, Biên Hòa",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa095",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.9407503,
+      "lng": 106.8808238,
+      "province": "Việt Nam",
+      "district": "Long Bình",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa096",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.94057217,
+      "lng": 106.8296645,
+      "province": "Việt Nam",
+      "district": "Trấn Biên",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa097",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.897709,
+      "lng": 106.89066,
+      "province": "Việt Nam",
+      "district": "Long Hưng, Biên Hòa",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa099",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.946716,
+      "lng": 106.844981,
+      "province": "Việt Nam",
+      "district": "Tân Hiệp",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa100",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.93152336,
+      "lng": 106.8331951,
+      "province": "Việt Nam",
+      "district": "Trấn Biên",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa101",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.88234343,
+      "lng": 106.9531428,
+      "province": "Việt Nam",
+      "district": "Tam Phước",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa103",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.81628,
+      "lng": 106.93636,
+      "province": "Việt Nam",
+      "district": "An Phước",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa105",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.82746881,
+      "lng": 106.9435158,
+      "province": "Việt Nam",
+      "district": "An Phước",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa124",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 11.0668252,
+      "lng": 107.0948349,
+      "province": "Việt Nam",
+      "district": "Bàu Hàm",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa125",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.96918727,
+      "lng": 106.9567879,
+      "province": "Việt Nam",
+      "district": "Bình Minh",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa127",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.98979,
+      "lng": 106.9677,
+      "province": "Việt Nam",
+      "district": "Bình Minh",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa131",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 11.33162,
+      "lng": 107.15649,
+      "province": "Việt Nam",
+      "district": "Phú Lý",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa132",
+      "vb": "802/MBF.ĐNa-VT-TTKDVT",
+      "status": "Đã PD",
+      "lat": 10.969045,
+      "lng": 106.88803,
+      "province": "Việt Nam",
+      "district": "Long Bình",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa134",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 11.636,
+      "lng": 106.5959,
+      "province": "Việt Nam",
+      "district": "Bình Long",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa152",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 11.4848,
+      "lng": 106.8854,
+      "province": "Việt Nam",
+      "district": "Bình Phước",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa153",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 11.51806,
+      "lng": 106.8632,
+      "province": "Việt Nam",
+      "district": "Đồng Xoài (phường)",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa157",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.94522,
+      "lng": 107.13508,
+      "province": "Việt Nam",
+      "district": "Dầu Giây",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa158",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.83497838,
+      "lng": 107.3132943,
+      "province": "Việt Nam",
+      "district": "Cẩm Mỹ",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa179",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 11.03546,
+      "lng": 107.16756,
+      "province": "Việt Nam",
+      "district": "Gia Kiệm",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa217",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.77269,
+      "lng": 107.00227,
+      "province": "Việt Nam",
+      "district": "Long Thành",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa255",
+      "vb": "802/MBF.ĐNa-VT-TTKDVT",
+      "status": "Đã PD",
+      "lat": 10.92939,
+      "lng": 107.4003,
+      "province": "Việt Nam",
+      "district": "Xuân Lộc, Đồng Nai",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa266",
+      "vb": "802/MBF.ĐNa-VT-TTKDVT",
+      "status": "Đã PD",
+      "lat": 11.560738,
+      "lng": 106.98285,
+      "province": "Việt Nam",
+      "district": "Đồng Tâm",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa008",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 11.4491,
+      "lng": 106.8653,
+      "province": "Việt Nam",
+      "district": "Đồng Phú (phường)",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa032",
+      "vb": "802/MBF.ĐNa-VT-TTKDVT",
+      "status": "Đã PD",
+      "lat": 11.430521,
+      "lng": 106.635968,
+      "province": "Việt Nam",
+      "district": "Chơn Thành",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa052",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.95267,
+      "lng": 107.1414,
+      "province": "Việt Nam",
+      "district": "Dầu Giây",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa001",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 11.8023,
+      "lng": 107.2336,
+      "province": "Việt Nam",
+      "district": "Bù Đăng",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa003",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 11.9151,
+      "lng": 107.0089,
+      "province": "Việt Nam",
+      "district": "Phú Nghĩa",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa038",
+      "vb": "802/MBF.ĐNa-VT-TTKDVT",
+      "status": "Đã PD",
+      "lat": 11.8543,
+      "lng": 106.9997,
+      "province": "Việt Nam",
+      "district": "Phước Long, Đồng Nai",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa066",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.95203,
+      "lng": 106.99888,
+      "province": "Việt Nam",
+      "district": "Trảng Bom",
+      "ward": "Trảng Bom (Phường)"
+    },
+    {
+      "ma_qh": "26DNa067",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 11.092375,
+      "lng": 107.03686,
+      "province": "Việt Nam",
+      "district": "Trị An",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa182",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.87227238,
+      "lng": 106.9121043,
+      "province": "Việt Nam",
+      "district": "Phước Tân (phường)",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa190",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.998556,
+      "lng": 106.873856,
+      "province": "Việt Nam",
+      "district": "Trảng Dài",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa199",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.74801593,
+      "lng": 106.9393132,
+      "province": "Việt Nam",
+      "district": "Nhơn Trạch (phường)",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa207",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.97527425,
+      "lng": 106.9657144,
+      "province": "Việt Nam",
+      "district": "Bình Minh",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa209",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.99819,
+      "lng": 106.86421,
+      "province": "Việt Nam",
+      "district": "Trảng Dài",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa212",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.9449689,
+      "lng": 107.0083645,
+      "province": "Việt Nam",
+      "district": "An Viễn",
+      "ward": "Trảng Bom (Phường)"
+    },
+    {
+      "ma_qh": "26DNa216",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.97353,
+      "lng": 106.92996,
+      "province": "Việt Nam",
+      "district": "Hố Nai, Đồng Nai",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa232",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.93655,
+      "lng": 106.8067,
+      "province": "Việt Nam",
+      "district": "Tân Vạn",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa237",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.68257,
+      "lng": 107.02467,
+      "province": "Việt Nam",
+      "district": "Phước Thái",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa248",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.98693625,
+      "lng": 106.8467431,
+      "province": "Việt Nam",
+      "district": "Trảng Dài",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa053",
+      "vb": "802/MBF.ĐNa-VT-TTKDVT",
+      "status": "Đã PD",
+      "lat": 11.092087,
+      "lng": 107.217165,
+      "province": "Việt Nam",
+      "district": "Thống Nhất",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa165",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.97435587,
+      "lng": 107.2302666,
+      "province": "Việt Nam",
+      "district": "Bình Lộc",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa185",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.84657,
+      "lng": 107.12686,
+      "province": "Việt Nam",
+      "district": "Xuân Quế",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa197",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.76022106,
+      "lng": 106.9262552,
+      "province": "Việt Nam",
+      "district": "Nhơn Trạch (phường)",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa204",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.78256,
+      "lng": 106.94491,
+      "province": "Việt Nam",
+      "district": "Long Thành",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa218",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.77654,
+      "lng": 106.9545,
+      "province": "Việt Nam",
+      "district": "Long Thành",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa219",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.73960762,
+      "lng": 106.9452349,
+      "province": "Việt Nam",
+      "district": "Nhơn Trạch (phường)",
+      "ward": ""
+    },
+    {
+      "ma_qh": "26DNa230",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.73364166,
+      "lng": 106.9484899,
+      "province": "Việt Nam",
+      "district": "Nhơn Trạch (phường)",
+      "ward": ""
+    }
+  ]
+}

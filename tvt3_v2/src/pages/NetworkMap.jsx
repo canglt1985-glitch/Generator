@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '../supabaseClient';
-import { MapPin, Search, Server, Shield, Map as MapIcon, Compass, AlertCircle, Info, Radio, Layers, Filter } from 'lucide-react';
+import { MapPin, Search, Server, Shield, Map as MapIcon, Compass, AlertCircle, Info, Radio, Layers, Filter, Copy, Check, ExternalLink } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, Circle, useMap, LayersControl, Tooltip } from 'react-leaflet';
 import L from 'leaflet';
 
@@ -75,16 +75,36 @@ const customerIcon = new L.Icon({
   shadowSize: [41, 41]
 });
 
+// 12 vị trí Quy hoạch CSHT thuộc TVT3 trình ký
+const TVT3_CSHT_TRINH_KY_SITES = [
+  { code: '26DNa185', vb: '16/MBF.ĐNa-VT', lat: 10.846570, lng: 107.126860, ward: 'Xã Xuân Quế', province: 'TP Đồng Nai', note: 'Quy hoạch CSHT TVT3 trình ký (Xã Xuân Quế)' },
+  { code: '26DNa155', vb: '16/MBF.ĐNa-VT', lat: 10.960100, lng: 107.236300, ward: 'Phường Bảo Vinh', province: 'TP Đồng Nai', note: 'Quy hoạch CSHT TVT3 trình ký (P. Bảo Vinh)' },
+  { code: '26DNa156', vb: '16/MBF.ĐNa-VT', lat: 10.967430, lng: 107.217090, ward: 'Phường Bình Lộc', province: 'TP Đồng Nai', note: 'Quy hoạch CSHT TVT3 trình ký (P. Bình Lộc)' },
+  { code: '26DNa165', vb: '16/MBF.ĐNa-VT', lat: 10.974356, lng: 107.230267, ward: 'Phường Bình Lộc', province: 'TP Đồng Nai', note: 'Quy hoạch CSHT TVT3 trình ký (P. Bình Lộc)' },
+  { code: '26DNa052', vb: '16/MBF.ĐNa-VT', lat: 10.952670, lng: 107.141400, ward: 'Xã Dầu Giây', province: 'TP Đồng Nai', note: 'Quy hoạch CSHT TVT3 trình ký (Xã Dầu Giây)' },
+  { code: '26DNa157', vb: '16/MBF.ĐNa-VT', lat: 10.945220, lng: 107.135080, ward: 'Xã Dầu Giây', province: 'TP Đồng Nai', note: 'Quy hoạch CSHT TVT3 trình ký (Xã Dầu Giây)' },
+  { code: '26DNa159', vb: '16/MBF.ĐNa-VT', lat: 10.927900, lng: 107.164900, ward: 'Xã Dầu Giây', province: 'TP Đồng Nai', note: 'Quy hoạch CSHT TVT3 trình ký (Xã Dầu Giây)' },
+  { code: '26DNa179', vb: '16/MBF.ĐNa-VT', lat: 11.035460, lng: 107.167560, ward: 'Xã Gia Kiệm', province: 'TP Đồng Nai', note: 'Quy hoạch CSHT TVT3 trình ký (Xã Gia Kiệm)' },
+  { code: '26DNa053', vb: '802/MBF.ĐNa-VT-TTKDVT', lat: 11.092087, lng: 107.217165, ward: 'Xã La Ngà', province: 'TP Đồng Nai', note: 'Quy hoạch CSHT TVT3 trình ký (Xã La Ngà)' },
+  { code: '26DNa158', vb: '16/MBF.ĐNa-VT', lat: 10.834978, lng: 107.313294, ward: 'Xã Xuân Định', province: 'TP Đồng Nai', note: 'Quy hoạch CSHT TVT3 trình ký (Xã Xuân Định)' },
+  { code: '26DNa255', vb: '802/MBF.ĐNa-VT-TTKDVT', lat: 10.929390, lng: 107.400300, ward: 'Xã Gia Ray', province: 'TP Đồng Nai', note: 'Quy hoạch CSHT TVT3 trình ký (Xã Gia Ray)' },
+  { code: '26DNa181', vb: '16/MBF.ĐNa-VT', lat: 11.199040, lng: 107.363310, ward: 'Xã Định Quán', province: 'TP Đồng Nai', note: 'Quy hoạch CSHT TVT3 trình ký (Xã Định Quán)' }
+];
+
 // Custom HTML DivIcon to display Site ID / PTM ID directly on map as a small labeled chip
-const createSiteDivIcon = (id, type) => {
-  const isProject = type === 'Quy hoạch';
-  const bgColor = isProject 
-    ? 'bg-gradient-to-r from-amber-500 to-orange-500 border-amber-400 shadow-amber-500/20' 
-    : 'bg-gradient-to-r from-blue-600 to-cyan-600 border-cyan-500/30 shadow-blue-500/20';
+const createSiteDivIcon = (id, type, isSkhcn = false, isTvt3TrinhKy = false) => {
+  let bgColor = 'bg-gradient-to-r from-blue-600 to-cyan-600 border-cyan-500/30 shadow-blue-500/20';
+  if (isSkhcn) {
+    bgColor = 'bg-gradient-to-r from-emerald-600 to-teal-500 border-emerald-300 shadow-emerald-500/30 ring-2 ring-emerald-400/40';
+  } else if (isTvt3TrinhKy) {
+    bgColor = 'bg-gradient-to-r from-purple-600 via-fuchsia-600 to-pink-600 border-purple-300 shadow-purple-500/40 ring-2 ring-purple-400/50';
+  } else if (type === 'Quy hoạch') {
+    bgColor = 'bg-gradient-to-r from-amber-500 to-orange-500 border-amber-400 shadow-amber-500/20';
+  }
   
   return L.divIcon({
     html: `<div class="flex items-center justify-center px-1.5 py-0.5 rounded border text-[8px] font-extrabold text-white tracking-tighter shadow-md whitespace-nowrap ${bgColor} transition-transform duration-100 hover:scale-110 active:scale-95" style="transform: translate(-50%, -50%); min-width: 32px; line-height: 1;">
-             ${id}
+             ${isSkhcn ? '🏛️ ' : isTvt3TrinhKy ? '📑 ' : ''}${id}
            </div>`,
     className: 'bg-transparent border-none', // Removes default leaflet white square wrapper styles
     iconSize: [0, 0],
@@ -137,6 +157,7 @@ export default function NetworkMap() {
   // Layer Toggles
   const [showActiveSites, setShowActiveSites] = useState(true);
   const [showProjects, setShowProjects] = useState(true);
+  const [showTvt3TrinhKy, setShowTvt3TrinhKy] = useState(true);
   const [showCoverageCircle, setShowCoverageCircle] = useState(false);
   const [showTransmission, setShowTransmission] = useState(false);
   const [useGPS, setUseGPS] = useState(false);
@@ -380,7 +401,7 @@ export default function NetworkMap() {
           .select('site_id, site_id_old, name, location_info, management_info, technical_info'),
         supabase
           .from('infrastructure_projects')
-          .select('planning_id_new, planning_id_old, latitude_survey, longitude_survey, latitude_plan, longitude_plan, survey_status, overall_status, notes')
+          .select('planning_id_new, planning_id_old, latitude_survey, longitude_survey, latitude_plan, longitude_plan, survey_status, overall_status, skhcn_status, notes, conflict_notes')
       ]);
 
       if (sitesRes.error) throw sitesRes.error;
@@ -500,38 +521,24 @@ export default function NetworkMap() {
     else setZoomLevel(14);
   };
 
-  // Auto-fetch fiber optic cable route to nearest site
+  // Toast notification state
+  const [toastMessage, setToastMessage] = useState('');
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(''), 3500);
+  };
+
+  const handleCopyCoords = (lat, lng, label = 'Tọa độ') => {
+    if (!lat || !lng) return;
+    const coordStr = `${parseFloat(lat).toFixed(6)}, ${parseFloat(lng).toFixed(6)}`;
+    navigator.clipboard.writeText(coordStr);
+    showToast(`Đã sao chép ${label}: ${coordStr}`);
+  };
+
+  // Reset tuyến cáp khi thay đổi điểm chọn trên bản đồ (Chỉ tính khi người dùng ấn nút "Kéo cáp")
   useEffect(() => {
-    if (nearestSites && nearestSites.length > 0 && customerLocation) {
-      const nearest = nearestSites[0];
-      const getRoute = async () => {
-        try {
-          // Sử dụng route đường bộ đi bộ (foot) vì cáp quang treo cột điện đi được cả vào ngõ hẻm/lối đi bộ
-          const url = `https://router.project-osrm.org/route/v1/foot/${customerLocation.lng},${customerLocation.lat};${nearest.lng},${nearest.lat}?overview=full&geometries=geojson`;
-          const response = await fetch(url);
-          const data = await response.json();
-          if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
-            const route = data.routes[0];
-            const path = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
-            setCableRoute({
-              path,
-              distance: route.distance,
-              cableLength: route.distance * 1.05, // Cộng 5% độ võng cáp dự phòng tiêu chuẩn
-              targetCode: nearest.code,
-              targetName: nearest.name
-            });
-          } else {
-            setCableRoute(null);
-          }
-        } catch {
-          setCableRoute(null);
-        }
-      };
-      getRoute();
-    } else {
-      setCableRoute(null);
-    }
-  }, [nearestSites, customerLocation]);
+    setCableRoute(null);
+  }, [customerLocation]);
 
   const handleManualCableRoute = async (target) => {
     if (!customerLocation || !target) return;
@@ -559,69 +566,35 @@ export default function NetworkMap() {
     if (e) e.preventDefault();
     setValidationError('');
 
-    const inputVal = coordinateInput.trim();
-    if (!inputVal) {
-      setValidationError('Vui lòng nhập tọa độ GPS hoặc tên địa điểm, hàng quán!');
-      return;
-    }
-
-    const parsedCoords = parseGPSCoordinates(inputVal);
+  // Handle unified search input change (Mã trạm, Tọa độ GPS, Tên địa danh)
+  const handleUnifiedQueryChange = (val) => {
+    setCoordinateInput(val);
+    setValidationError('');
     
-    if (parsedCoords) {
-      const { lat, lng } = parsedCoords;
-      
-      if (lat < 8 || lat > 24 || lng < 100 || lng > 111) {
-        setValidationError('Tọa độ nằm ngoài lãnh thổ Việt Nam!');
-        return;
-      }
-      
-      executeScan(lat, lng);
-    } else {
-      // Nếu là tên địa điểm, cơ quan, hàng quán -> Tìm kiếm địa chỉ (Geocoding)
-      let searchQuery = inputVal;
-      if (!searchQuery.toLowerCase().includes('đồng nai')) {
-        searchQuery += ', Đồng Nai';
-      }
-
-      setLoading(true);
-      try {
-        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=1`, {
-          headers: {
-            'Accept-Language': 'vi,en'
-          }
-        });
-        if (!response.ok) throw new Error('Geocoding API error');
-        
-        const results = await response.json();
-        if (results && results.length > 0) {
-          const lat = parseFloat(results[0].lat);
-          const lng = parseFloat(results[0].lon);
-          executeScan(lat, lng);
-          // Ghi đè tọa độ GPS đã tìm thấy lên ô input để người dùng thấy trực quan
-          setCoordinateInput(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
-        } else {
-          setValidationError(`Không tìm thấy địa điểm "${inputVal}" tại Đồng Nai. Hãy thử nhập chi tiết hơn.`);
-        }
-      } catch (err) {
-        console.error('Lỗi tìm kiếm địa điểm:', err);
-        setValidationError('Không thể kết nối máy chủ định vị địa điểm. Vui lòng nhập tọa độ GPS.');
-      } finally {
-        setLoading(false);
-      }
-    }
-  };
-
-  // Handle autocomplete query input change
-  const handleSiteSearchChange = (val) => {
-    setSiteSearchQuery(val);
     if (!val || val.trim().length < 2) {
       setSearchSuggestions([]);
       return;
     }
-    
+
     const query = val.trim().toLowerCase();
-    
-    // Lọc trạm hoạt động
+
+    // 1. Filter TVT3 Trình Ký Sites
+    const filteredTvt3 = TVT3_CSHT_TRINH_KY_SITES
+      .filter(s => 
+        s.code.toLowerCase().includes(query) || 
+        s.ward.toLowerCase().includes(query) || 
+        s.note.toLowerCase().includes(query)
+      )
+      .map(s => ({
+        id: s.code,
+        code: s.code,
+        name: `${s.ward}, ${s.province}`,
+        lat: s.lat,
+        lng: s.lng,
+        type: 'TVT3 Trình Ký'
+      }));
+
+    // 2. Filter Active Sites
     const filteredActive = activeSites
       .filter(s => 
         s.site_id.toLowerCase().includes(query) || 
@@ -631,13 +604,13 @@ export default function NetworkMap() {
       .map(s => ({
         id: s.site_id,
         code: s.site_id_old || s.site_id,
-        name: s.name || 'Chưa đặt tên',
+        name: s.name || 'Trạm hoạt động',
         lat: parseFloat(s.location_info.vi_do),
         lng: parseFloat(s.location_info.kinh_do),
         type: 'Hoạt động'
       }));
 
-    // Lọc dự án CSHT quy hoạch
+    // 3. Filter Projects
     const filteredProjects = infraProjects
       .filter(p => 
         p.planning_id_new.toLowerCase().includes(query) || 
@@ -653,47 +626,109 @@ export default function NetworkMap() {
         type: 'Quy hoạch'
       }));
 
-    // Gộp và giới hạn tối đa 7 gợi ý
-    const allFiltered = [...filteredActive, ...filteredProjects].slice(0, 7);
+    const allFiltered = [...filteredTvt3, ...filteredActive, ...filteredProjects].slice(0, 8);
     setSearchSuggestions(allFiltered);
   };
 
-  // Find site by ID/code and pan to its location (FlyTo)
-  const handleSiteSearch = (e) => {
+  const handleSelectSuggestion = (item) => {
+    setCoordinateInput(item.code);
+    setSearchSuggestions([]);
+    setMapCenter([item.lat, item.lng]);
+    setZoomLevel(16);
+    showToast(`Đã di chuyển tới trạm ${item.code}`);
+  };
+
+  // Submit Unified Search (GPS Coordinates, Station Code, or Place Name)
+  const handleUnifiedSearch = async (e) => {
     if (e) e.preventDefault();
     setValidationError('');
-    
-    if (!siteSearchQuery.trim()) return;
+    setSearchSuggestions([]);
 
-    const query = siteSearchQuery.trim().toLowerCase();
-    
-    // Find in Active Sites first
+    const inputVal = coordinateInput.trim();
+    if (!inputVal) {
+      setValidationError('Vui lòng nhập Mã trạm (VD: DNI012, 26DNa185) hoặc Tọa độ GPS!');
+      return;
+    }
+
+    // A. Parse if input is GPS coordinates
+    const parsedCoords = parseGPSCoordinates(inputVal);
+    if (parsedCoords) {
+      const { lat, lng } = parsedCoords;
+      if (lat < 8 || lat > 24 || lng < 100 || lng > 111) {
+        setValidationError('Tọa độ nằm ngoài lãnh thổ Việt Nam!');
+        return;
+      }
+      executeScan(lat, lng);
+      showToast(`Định vị GPS: ${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+      return;
+    }
+
+    const query = inputVal.toLowerCase();
+
+    // B. Check TVT3 Trình Ký Sites
+    const matchedTvt3 = TVT3_CSHT_TRINH_KY_SITES.find(s => s.code.toLowerCase() === query || s.code.toLowerCase().includes(query));
+    if (matchedTvt3) {
+      setMapCenter([matchedTvt3.lat, matchedTvt3.lng]);
+      setZoomLevel(16);
+      showToast(`Đã tìm thấy trạm trình ký: ${matchedTvt3.code}`);
+      return;
+    }
+
+    // C. Check Active Sites
     const matchedActive = activeSites.find(
-      s => s.site_id.toLowerCase().includes(query) || (s.site_id_old && s.site_id_old.toLowerCase().includes(query))
+      s => s.site_id.toLowerCase() === query || (s.site_id_old && s.site_id_old.toLowerCase() === query) || s.site_id.toLowerCase().includes(query) || (s.site_id_old && s.site_id_old.toLowerCase().includes(query))
     );
-
     if (matchedActive) {
       const lat = parseFloat(matchedActive.location_info.vi_do);
       const lng = parseFloat(matchedActive.location_info.kinh_do);
       setMapCenter([lat, lng]);
-      setZoomLevel(15);
+      setZoomLevel(16);
+      showToast(`Đã tìm thấy trạm: ${matchedActive.site_id_old || matchedActive.site_id}`);
       return;
     }
 
-    // Then find in Projects
+    // D. Check CSHT Projects
     const matchedProject = infraProjects.find(
-      p => p.planning_id_new.toLowerCase().includes(query) || (p.planning_id_old && p.planning_id_old.toLowerCase().includes(query))
+      p => p.planning_id_new.toLowerCase() === query || (p.planning_id_old && p.planning_id_old.toLowerCase() === query) || p.planning_id_new.toLowerCase().includes(query) || (p.planning_id_old && p.planning_id_old.toLowerCase().includes(query))
     );
-
     if (matchedProject) {
       const lat = parseFloat(matchedProject.latitude_survey || matchedProject.latitude_plan);
       const lng = parseFloat(matchedProject.longitude_survey || matchedProject.longitude_plan);
       setMapCenter([lat, lng]);
-      setZoomLevel(15);
+      setZoomLevel(16);
+      showToast(`Đã tìm thấy dự án: ${matchedProject.planning_id_old || matchedProject.planning_id_new}`);
       return;
     }
 
-    setValidationError('Không tìm thấy mã trạm hoặc dự án này trong hệ thống!');
+    // E. Nominatim Geocoding for Place Names
+    let searchQuery = inputVal;
+    if (!searchQuery.toLowerCase().includes('đồng nai')) {
+      searchQuery += ', Đồng Nai';
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=1`, {
+        headers: { 'Accept-Language': 'vi,en' }
+      });
+      if (!response.ok) throw new Error('Geocoding API error');
+      
+      const results = await response.json();
+      if (results && results.length > 0) {
+        const lat = parseFloat(results[0].lat);
+        const lng = parseFloat(results[0].lon);
+        executeScan(lat, lng);
+        setCoordinateInput(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+        showToast(`Đã định vị địa danh: ${inputVal}`);
+      } else {
+        setValidationError(`Không tìm thấy mã trạm hoặc địa điểm "${inputVal}". Vui lòng kiểm tra lại.`);
+      }
+    } catch (err) {
+      console.error('Lỗi tìm kiếm:', err);
+      setValidationError('Không thể kết nối máy chủ định vị địa điểm. Vui lòng thử lại.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const formatDistance = (meters) => {
@@ -833,202 +868,187 @@ export default function NetworkMap() {
       {/* Main Grid Workspace */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Left Side Control Panel */}
-        <div className="lg:col-span-1 space-y-4">
-          <div className="bg-slate-800 border border-slate-700/60 rounded-2xl p-5 shadow-lg space-y-4 text-slate-200">
-            <h3 className="text-sm font-bold text-white flex items-center gap-2 border-b border-slate-700 pb-2.5 font-sans">
-              <MapIcon className="h-4.5 w-4.5 text-cyan-400" /> Bảng điều khiển
-            </h3>
+        <div className="lg:col-span-1 space-y-3">
+          <div className="bg-slate-800/95 border border-slate-700/70 rounded-2xl p-3.5 sm:p-4 shadow-xl space-y-3 text-slate-200 backdrop-blur-sm">
+            <div className="flex items-center justify-between border-b border-slate-700/60 pb-2">
+              <h3 className="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5 font-sans">
+                <MapIcon className="h-4 w-4 text-cyan-400" /> Bảng điều khiển
+              </h3>
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                TVT3 Đồng Nai
+              </span>
+            </div>
 
-            {/* 1. GPS Input form */}
-            <form onSubmit={handleManualSearch} className="space-y-3">
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-400 uppercase font-sans">Tìm theo Tọa độ hoặc Địa danh</label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={coordinateInput}
-                    onChange={(e) => setCoordinateInput(e.target.value)}
-                    placeholder="Tọa độ GPS hoặc tên cơ quan, địa điểm, hàng quán..."
-                    className="block w-full pr-10 pl-3 py-2 border border-slate-700 rounded-xl bg-slate-900/60 text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 text-sm transition-all font-sans"
-                  />
-                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                    <MapPin className="h-4 w-4 text-slate-500" />
-                  </div>
+            {/* 1. Unified Search Form (Mã trạm, Tọa độ GPS, Tên địa danh) */}
+            <form onSubmit={handleUnifiedSearch} className="space-y-2 relative font-sans">
+              <div className="relative">
+                <input
+                  type="text"
+                  value={coordinateInput}
+                  onChange={(e) => handleUnifiedQueryChange(e.target.value)}
+                  placeholder="Mã trạm (VD: DNI012, 26DNa185) hoặc Tọa độ..."
+                  className="block w-full pl-3 pr-20 py-2 border border-slate-700/80 rounded-xl bg-slate-900/90 text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 text-xs transition-all font-sans"
+                />
+                <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                  {coordinateInput && (
+                    <button 
+                      type="button" 
+                      onClick={() => { setCoordinateInput(''); setSearchSuggestions([]); }}
+                      className="p-1 text-slate-400 hover:text-slate-200 text-xs transition-colors"
+                      title="Xóa tìm kiếm"
+                    >
+                      ✕
+                    </button>
+                  )}
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="px-2.5 py-1 bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-700 text-white rounded-lg font-bold text-xs shadow-sm active:scale-95 transition-all cursor-pointer flex items-center gap-1"
+                  >
+                    <Search className="h-3.5 w-3.5" />
+                    <span>Tìm</span>
+                  </button>
                 </div>
+
+                {/* Autocomplete Suggestions Menu */}
+                {searchSuggestions.length > 0 && (
+                  <div className="absolute left-0 right-0 z-[100] bg-slate-900/95 backdrop-blur-md border border-slate-700 rounded-xl mt-1 shadow-2xl divide-y divide-slate-800/80 max-h-56 overflow-y-auto font-sans">
+                    {searchSuggestions.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => handleSelectSuggestion(item)}
+                        className="w-full text-left px-3 py-1.5 hover:bg-slate-800/90 transition-colors flex flex-col gap-0.5 cursor-pointer font-sans"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-cyan-400 text-xs">{item.code}</span>
+                          <span className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded ${
+                            item.type === 'Hoạt động' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
+                            item.type === 'TVT3 Trình Ký' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' :
+                            'bg-orange-500/10 text-orange-400 border border-orange-500/20'
+                          }`}>
+                            {item.type}
+                          </span>
+                        </div>
+                        <span className="text-[9px] text-slate-400 truncate max-w-[240px]">
+                          {item.name}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-              
+
               {validationError && (
-                <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-red-400 text-xs flex items-start gap-2 font-sans">
-                  <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-2 text-red-400 text-[11px] flex items-center gap-1.5 font-sans">
+                  <AlertCircle className="h-3.5 w-3.5 shrink-0" />
                   <span>{validationError}</span>
                 </div>
               )}
 
-              <div className="space-y-2">
-                {/* Công tắc Bật/Tắt định vị GPS thực địa thời gian thực - Gọn nhẹ */}
-                <div className="flex items-center justify-between px-1.5 py-1 bg-slate-900/20 border border-slate-800/40 rounded-lg font-sans text-xs">
-                  <div className="flex items-center gap-2">
-                    <Compass className={`h-4 w-4 ${useGPS ? 'text-cyan-400 animate-spin' : 'text-slate-500'}`} style={{ animationDuration: useGPS ? '8s' : '0s' }} />
-                    <span className="text-[11px] text-slate-400 font-medium">Bám theo GPS thực địa</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setUseGPS(!useGPS)}
-                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${useGPS ? 'bg-cyan-600' : 'bg-slate-700'}`}
-                  >
-                    <span
-                      className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${useGPS ? 'translate-x-4' : 'translate-x-0'}`}
-                    />
-                  </button>
+              {/* GPS thực địa mini pill */}
+              <div className="flex items-center justify-between px-2.5 py-1.5 bg-slate-900/50 border border-slate-800 rounded-lg font-sans text-xs">
+                <div className="flex items-center gap-2">
+                  <Compass className={`h-3.5 w-3.5 ${useGPS ? 'text-cyan-400 animate-spin' : 'text-slate-500'}`} style={{ animationDuration: useGPS ? '8s' : '0s' }} />
+                  <span className="text-[11px] text-slate-300 font-medium">Bám theo GPS thực địa</span>
                 </div>
-
                 <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-2 bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-700 text-white rounded-lg font-bold text-xs shadow-md shadow-cyan-500/10 active:scale-95 transition-all cursor-pointer font-sans"
+                  type="button"
+                  onClick={() => setUseGPS(!useGPS)}
+                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${useGPS ? 'bg-cyan-600' : 'bg-slate-700'}`}
                 >
-                  Định vị & Tìm trạm
+                  <span
+                    className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${useGPS ? 'translate-x-4' : 'translate-x-0'}`}
+                  />
                 </button>
               </div>
             </form>
 
-            {/* 2. Site Search box */}
-            <form onSubmit={handleSiteSearch} className="space-y-2 pt-2 border-t border-slate-700/40 relative">
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-400 uppercase font-sans">Tìm nhanh mã trạm</label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={siteSearchQuery}
-                    onChange={(e) => handleSiteSearchChange(e.target.value)}
-                    placeholder="Mã trạm cũ/mới (ví dụ: DNI012)"
-                    className="block w-full pr-10 pl-3 py-2 border border-slate-700 rounded-xl bg-slate-900/60 text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 text-sm transition-all font-sans"
-                  />
-                  <button type="submit" className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-500 hover:text-cyan-400 transition-colors">
-                    <Search className="h-4 w-4" />
-                  </button>
-                </div>
-
-                {/* Autocomplete Suggestions Dropdown Menu */}
-                {searchSuggestions.length > 0 && (
-                  <div className="absolute left-0 right-0 z-[100] bg-slate-900 border border-slate-700/80 rounded-xl mt-1 shadow-2xl divide-y divide-slate-800/60 max-h-60 overflow-y-auto font-sans">
-                    {searchSuggestions.map((item) => {
-                      const isProject = item.type === 'Quy hoạch';
-                      const mainCode = item.code;
-                      const subCode = item.id;
-                      const hasDiffCode = subCode && subCode !== mainCode;
-                      
-                      return (
-                        <button
-                          key={item.id}
-                          type="button"
-                          onClick={() => {
-                            setSiteSearchQuery(mainCode);
-                            setSearchSuggestions([]);
-                            // Zoom và pan tới trạm
-                            setMapCenter([item.lat, item.lng]);
-                            setZoomLevel(15);
-                          }}
-                          className="w-full text-left px-3.5 py-2 hover:bg-slate-800/80 transition-colors flex flex-col gap-0.5 cursor-pointer font-sans"
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="font-bold text-cyan-400 text-xs">
-                              {hasDiffCode ? `${mainCode} ➔ ${subCode}` : mainCode}
-                            </span>
-                            <span className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded ${
-                              isProject ? 'bg-orange-500/10 text-orange-400 border border-orange-500/20' : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
-                            }`}>
-                              {item.type}
-                            </span>
-                          </div>
-                          <span className="text-[9px] text-slate-400 truncate max-w-[200px]">
-                            {item.name}
-                          </span>
-                        </button>
-                      );
-                    })}
+            {/* Quản lý lớp bản đồ - Giao diện 2x2 Grid Pills tinh gọn */}
+            <div className="pt-2 border-t border-slate-700/50 space-y-1.5 font-sans">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Lớp bản đồ</span>
+                <span className="text-[9px] text-slate-500">Bật/tắt hiển thị</span>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-1.5 text-[11px]">
+                {/* 1. Trạm Hoạt động */}
+                <button
+                  type="button"
+                  onClick={() => setShowActiveSites(!showActiveSites)}
+                  className={`flex items-center justify-between p-1.5 rounded-lg border transition-all text-left cursor-pointer ${
+                    showActiveSites
+                      ? 'bg-blue-950/40 border-blue-500/40 text-blue-200 shadow-sm'
+                      : 'bg-slate-900/40 border-slate-800 text-slate-500 opacity-60'
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5 truncate">
+                    <span className={`h-2 w-2 rounded-full shrink-0 ${showActiveSites ? 'bg-blue-400 ring-2 ring-blue-400/30' : 'bg-slate-600'}`} />
+                    <span className="font-semibold truncate text-[10.5px]">Trạm HĐ</span>
                   </div>
-                )}
-              </div>
-            </form>
+                  <span className="font-bold text-[10px] shrink-0 ml-1">{activeSites.length}</span>
+                </button>
 
-            {/* 3. Scan Radius Slider */}
-            <div className="space-y-2 pt-2 border-t border-slate-700/40 font-sans">
-              <div className="flex items-center justify-between text-xs font-bold text-slate-400 uppercase">
-                <span>Bán kính quét</span>
-                <span className="text-cyan-400 font-semibold lowercase font-sans">{formatDistance(scanRadius)}</span>
+                {/* 2. Dự án CSHT Quy hoạch */}
+                <button
+                  type="button"
+                  onClick={() => setShowProjects(!showProjects)}
+                  className={`flex items-center justify-between p-1.5 rounded-lg border transition-all text-left cursor-pointer ${
+                    showProjects
+                      ? 'bg-orange-950/40 border-orange-500/40 text-orange-200 shadow-sm'
+                      : 'bg-slate-900/40 border-slate-800 text-slate-500 opacity-60'
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5 truncate">
+                    <span className={`h-2 w-2 rounded-full shrink-0 ${showProjects ? 'bg-orange-400 ring-2 ring-orange-400/30' : 'bg-slate-600'}`} />
+                    <span className="font-semibold truncate text-[10.5px]">CSHT QH</span>
+                  </div>
+                  <span className="font-bold text-[10px] shrink-0 ml-1">{infraProjects.length}</span>
+                </button>
+
+                {/* 3. CSHT TVT3 Trình ký */}
+                <button
+                  type="button"
+                  onClick={() => setShowTvt3TrinhKy(!showTvt3TrinhKy)}
+                  className={`flex items-center justify-between p-1.5 rounded-lg border transition-all text-left cursor-pointer ${
+                    showTvt3TrinhKy
+                      ? 'bg-purple-950/50 border-purple-500/50 text-purple-200 ring-1 ring-purple-500/30 shadow-sm'
+                      : 'bg-slate-900/40 border-slate-800 text-slate-500 opacity-60'
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5 truncate">
+                    <span className={`h-2 w-2 rounded-full shrink-0 ${showTvt3TrinhKy ? 'bg-fuchsia-400 ring-2 ring-fuchsia-400/30' : 'bg-slate-600'}`} />
+                    <span className="font-bold truncate text-[10.5px] text-purple-300">📑 Trình ký</span>
+                  </div>
+                  <span className="font-extrabold text-[10px] text-fuchsia-300 shrink-0 ml-1">{TVT3_CSHT_TRINH_KY_SITES.length}</span>
+                </button>
+
+                {/* 4. Tuyến truyền dẫn Last Mile */}
+                <button
+                  type="button"
+                  onClick={() => setShowTransmission(!showTransmission)}
+                  className={`flex items-center justify-between p-1.5 rounded-lg border transition-all text-left cursor-pointer ${
+                    showTransmission
+                      ? 'bg-cyan-950/40 border-cyan-500/40 text-cyan-200 shadow-sm'
+                      : 'bg-slate-900/40 border-slate-800 text-slate-500 opacity-60'
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5 truncate">
+                    <span className={`h-2 w-2 rounded-full shrink-0 ${showTransmission ? 'bg-cyan-400 ring-2 ring-cyan-400/30' : 'bg-slate-600'}`} />
+                    <span className="font-semibold truncate text-[10.5px]">Last Mile</span>
+                  </div>
+                  <span className="font-bold text-[10px] shrink-0 ml-1">{transmissionLines.length}</span>
+                </button>
               </div>
-              <input
-                type="range"
-                min="300"
-                max="5000"
-                step="100"
-                value={scanRadius}
-                onChange={(e) => {
-                  const val = parseInt(e.target.value);
-                  setScanRadius(val);
-                  if (customerLocation) {
-                    executeScan(customerLocation.lat, customerLocation.lng);
-                  }
-                }}
-                className="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-cyan-500"
-              />
-              <div className="flex justify-between text-[10px] text-slate-500">
-                <span>300m</span>
-                <span>2km</span>
-                <span>5km</span>
+
+              {/* SKHCN Approved Mini Banner */}
+              <div className="text-[10px] text-emerald-400 flex items-center justify-between bg-emerald-950/20 py-1 px-2 rounded-lg border border-emerald-500/20">
+                <span className="flex items-center gap-1">🏛️ Sở KHCN phê duyệt:</span>
+                <span className="font-extrabold text-emerald-300">
+                  {infraProjects.filter(p => p.skhcn_status === 'Đã chấp thuận' || String(p.notes || '').includes('Sở KHCN')).length} vị trí
+                </span>
               </div>
             </div>
-
-            {/* 4. Layer Toggles */}
-            <div className="space-y-3 pt-2.5 border-t border-slate-700/40 font-sans">
-              <span className="text-[11px] font-bold text-slate-400 uppercase block font-sans">Quản lý lớp bản đồ</span>
-              <div className="space-y-2 text-xs">
-                <label className="flex items-center gap-2 cursor-pointer hover:text-white transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={showActiveSites}
-                    onChange={(e) => setShowActiveSites(e.target.checked)}
-                    className="rounded border-slate-700 text-cyan-600 bg-slate-900 focus:ring-cyan-500/30"
-                  />
-                  <span>Trạm hoạt động ({activeSites.length})</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer hover:text-white transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={showProjects}
-                    onChange={(e) => setShowProjects(e.target.checked)}
-                    className="rounded border-slate-700 text-cyan-600 bg-slate-900 focus:ring-cyan-500/30"
-                  />
-                  <span>Dự án CSHT quy hoạch ({infraProjects.length})</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer hover:text-white transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={showCoverageCircle}
-                    onChange={(e) => setShowCoverageCircle(e.target.checked)}
-                    className="rounded border-slate-700 text-cyan-600 bg-slate-900 focus:ring-cyan-500/30"
-                  />
-                  <span>Hiển thị Vùng phủ sóng của Trạm (500m)</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer hover:text-white transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={showTransmission}
-                    onChange={(e) => setShowTransmission(e.target.checked)}
-                    className="rounded border-slate-700 text-cyan-600 bg-slate-900 focus:ring-cyan-500/30"
-                  />
-                  <span>Tuyến truyền dẫn Last Mile ({transmissionLines.length})</span>
-                </label>
-              </div>
-
-
-            </div>
-          </div>
-
-          {/* Danh sách các trạm lân cận trên Mobile (Đưa lên trên bản đồ) */}
-          <div className="block lg:hidden mt-4">
-            {renderNearestSitesTable(false)}
           </div>
 
           {/* Danh sách trạm lân cận tinh gọn ở sidebar (Desktop only) */}
@@ -1041,6 +1061,14 @@ export default function NetworkMap() {
         <div className="lg:col-span-2 space-y-4">
           {/* Map Leaflet Container */}
           <div className="bg-slate-800 border border-slate-700/60 rounded-2xl overflow-hidden h-[450px] lg:h-[600px] relative shadow-lg">
+            {/* Floating Toast Notification */}
+            {toastMessage && (
+              <div className="absolute top-3 left-1/2 transform -translate-x-1/2 z-[2000] bg-slate-900/95 text-white text-xs font-bold px-4 py-2 rounded-full border border-cyan-500/60 shadow-2xl backdrop-blur-md flex items-center gap-2 animate-in fade-in zoom-in duration-200">
+                <Check className="h-4 w-4 text-emerald-400 shrink-0" />
+                <span>{toastMessage}</span>
+              </div>
+            )}
+
             <MapContainer 
               center={mapCenter} 
               zoom={zoomLevel} 
@@ -1080,11 +1108,48 @@ export default function NetworkMap() {
                     icon={customerIcon}
                   >
                     <Popup>
-                      <div className="text-center font-sans">
-                        <strong className="text-red-500 block text-xs">VỊ TRÍ ĐỊNH VỊ</strong>
-                        <span className="text-[10px] text-slate-500 block mt-0.5">
-                          Tọa độ: {customerLocation.lat.toFixed(5)}, {customerLocation.lng.toFixed(5)}
-                        </span>
+                      <div className="font-sans text-xs flex flex-col gap-1.5 p-0.5 max-w-[270px]">
+                        <div className="flex items-center justify-between border-b border-slate-200 pb-1">
+                          <strong className="text-red-500 font-bold text-xs flex items-center gap-1">📍 VỊ TRÍ ĐỊNH VỊ</strong>
+                          <button 
+                            onClick={() => handleCopyCoords(customerLocation.lat, customerLocation.lng, 'Vị trí chọn')}
+                            className="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold border border-slate-300 flex items-center gap-1 transition-all"
+                            title="Sao chép Tọa độ GPS (Google Maps format)"
+                          >
+                            <Copy className="h-3 w-3 text-cyan-600" /> Copy Lat,Lng
+                          </button>
+                        </div>
+                        
+                        <div className="bg-slate-50 border border-slate-200 rounded p-1.5 font-mono text-[10px] text-slate-800 flex items-center justify-between">
+                          <span>{customerLocation.lat.toFixed(6)}, {customerLocation.lng.toFixed(6)}</span>
+                          <span className="text-[9px] text-slate-400 font-sans">Google Maps</span>
+                        </div>
+
+                        {nearestSites && nearestSites.length > 0 && (
+                          <div className="space-y-1.5 mt-1 border-t border-slate-100 pt-1">
+                            <span className="text-[10px] font-bold text-slate-500 uppercase block">Chọn trạm kéo cáp quang:</span>
+                            <div className="max-h-[140px] overflow-y-auto space-y-1 pr-0.5">
+                              {nearestSites.slice(0, 4).map(stn => (
+                                <div key={`pop-stn-${stn.code}`} className="flex items-center justify-between bg-white border border-slate-200 rounded p-1.5 text-[11px]">
+                                  <div>
+                                    <span className="font-bold text-cyan-600 block">{stn.code}</span>
+                                    <span className="text-[9px] text-slate-400 block">{formatDistance(stn.distance)}</span>
+                                  </div>
+                                  <button
+                                    onClick={() => handleManualCableRoute(stn)}
+                                    className={`px-2 py-1 rounded text-[9px] font-bold text-white transition-all ${
+                                      cableRoute?.targetCode === stn.code
+                                        ? 'bg-purple-600 shadow-purple-600/30 ring-1 ring-purple-400 font-extrabold'
+                                        : 'bg-indigo-600 hover:bg-indigo-500'
+                                    }`}
+                                  >
+                                    {cableRoute?.targetCode === stn.code ? '✓ Đang kéo cáp' : '🔌 Kéo cáp'}
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </Popup>
                   </Marker>
@@ -1110,17 +1175,34 @@ export default function NetworkMap() {
                       icon={createSiteDivIcon(name, 'Hoạt động')}
                     >
                       <Popup>
-                        <div className="font-sans text-xs flex flex-col gap-1">
-                          <strong className="text-blue-600 block text-sm">Trạm: {name}</strong>
+                        <div className="font-sans text-xs flex flex-col gap-1.5 max-w-[260px]">
+                          <div className="flex items-center justify-between border-b border-slate-200 pb-1">
+                            <strong className="text-blue-600 block text-sm font-bold">{name}</strong>
+                            <button 
+                              onClick={() => handleCopyCoords(lat, lng, `trạm ${name}`)}
+                              className="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold border border-slate-300 flex items-center gap-1 transition-all"
+                              title="Sao chép Tọa độ trạm"
+                            >
+                              <Copy className="h-3 w-3 text-cyan-600" /> Copy
+                            </button>
+                          </div>
                           {site.name && <span className="text-slate-600 block font-medium">{site.name}</span>}
-                          <span className="text-slate-400 block text-[10px]">Mã trạm mới: {site.site_id}</span>
-                          <span className="text-slate-400 block text-[10px]">Tọa độ: {lat.toFixed(5)}, {lng.toFixed(5)}</span>
-                          <div className="flex gap-1.5 mt-1.5">
+                          <span className="text-slate-400 font-mono block text-[10px]">{lat.toFixed(6)}, {lng.toFixed(6)}</span>
+                          
+                          <div className="flex gap-1 mt-1 font-sans">
+                            {customerLocation && (
+                              <button
+                                onClick={() => handleManualCableRoute({ code: name, name: site.name, lat, lng })}
+                                className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1 bg-purple-600 hover:bg-purple-500 !text-white rounded text-[10px] font-bold transition-all text-center shadow-sm"
+                              >
+                                🔌 Kéo cáp
+                              </button>
+                            )}
                             <a 
                               href={`https://www.google.com/maps/dir/?api=1&${customerLocation ? `origin=${customerLocation.lat},${customerLocation.lng}&` : ''}destination=${lat},${lng}&travelmode=driving`}
                               target="_blank" 
                               rel="noopener noreferrer"
-                              className="flex-1 inline-flex items-center justify-center gap-1 px-2.5 py-1 bg-cyan-600 hover:bg-cyan-500 !text-white rounded text-[11px] font-bold transition-all text-center shadow-sm"
+                              className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1 bg-cyan-600 hover:bg-cyan-500 !text-white rounded text-[10px] font-bold transition-all text-center shadow-sm"
                             >
                               Dẫn đường
                             </a>
@@ -1128,7 +1210,7 @@ export default function NetworkMap() {
                               href={`/datasites?search=${name}`}
                               target="_blank" 
                               rel="noopener noreferrer"
-                              className="flex-1 inline-flex items-center justify-center gap-1 px-2.5 py-1 bg-blue-600 hover:bg-blue-500 !text-white rounded text-[11px] font-bold transition-all text-center shadow-sm"
+                              className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1 bg-blue-600 hover:bg-blue-500 !text-white rounded text-[10px] font-bold transition-all text-center shadow-sm"
                             >
                               Datasite
                             </a>
@@ -1201,43 +1283,70 @@ export default function NetworkMap() {
                 const lat = parseFloat(proj.latitude_survey || proj.latitude_plan);
                 const lng = parseFloat(proj.longitude_survey || proj.longitude_plan);
                 const code = proj.planning_id_old || proj.planning_id_new;
+                const isSkhcn = proj.skhcn_status === 'Đã chấp thuận' || String(proj.notes || '').includes('Sở KHCN');
 
                 return (
                   <div key={proj.planning_id_new}>
                     <Marker 
                       position={[lat, lng]} 
-                      icon={createSiteDivIcon(code, 'Quy hoạch')}
+                      icon={createSiteDivIcon(code, 'Quy hoạch', isSkhcn)}
                     >
                       <Popup>
-                        <div className="font-sans text-xs flex flex-col gap-1">
-                          <strong className="text-orange-500 block text-sm">Dự án: {code}</strong>
-                          {proj.district && <span className="text-slate-700 block font-bold text-[11px]">Địa bàn: {proj.ward ? `${proj.ward}, ${proj.district}` : proj.district}</span>}
-                          {proj.latitude_survey ? (
-                            <div className="bg-emerald-50 border border-emerald-100 p-1.5 rounded my-1 text-[11px]">
-                              <span className="text-emerald-700 font-bold block">📍 Tọa độ Sở KHCN chấp thuận:</span>
-                              <span className="font-mono text-emerald-800 block text-[10px]">{proj.latitude_survey}, {proj.longitude_survey}</span>
-                              {proj.latitude_plan && (
-                                <span className="text-slate-500 block text-[10px] mt-0.5 font-medium">
-                                  📐 Quy hoạch gốc: {proj.latitude_plan}, {proj.longitude_plan}
+                        <div className="font-sans text-xs flex flex-col gap-1.5 max-w-[270px]">
+                          <div className="flex items-center justify-between border-b border-slate-200 pb-1">
+                            <strong className="text-orange-500 block text-sm font-bold">{code}</strong>
+                            <div className="flex items-center gap-1">
+                              {isSkhcn && (
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-emerald-500/20 text-emerald-600 border border-emerald-500/30">
+                                  🏛️ SKHCN
                                 </span>
+                              )}
+                              <button 
+                                onClick={() => handleCopyCoords(lat, lng, `quy hoạch ${code}`)}
+                                className="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold border border-slate-300 flex items-center gap-1 transition-all"
+                                title="Sao chép Tọa độ GPS"
+                              >
+                                <Copy className="h-3 w-3 text-cyan-600" /> Copy
+                              </button>
+                            </div>
+                          </div>
+                          {proj.district && <span className="text-slate-700 block font-bold text-[11px]">Địa bàn: {proj.ward ? `${proj.ward}, ${proj.district}` : proj.district}</span>}
+                          
+                          {isSkhcn ? (
+                            <div className="bg-emerald-50 border border-emerald-200 p-2 rounded-lg my-1 text-[11px] space-y-1">
+                              <span className="text-emerald-800 font-extrabold block">🏛️ Sở KHCN Phê Duyệt Đầu Tư</span>
+                              <span className="font-mono text-emerald-900 block text-[10px]">Tọa độ: {lat.toFixed(6)}, {lng.toFixed(6)}</span>
+                              {proj.notes && (
+                                <div className="text-[10px] text-emerald-950 font-medium border-t border-emerald-200/80 pt-1 mt-1 leading-snug">
+                                  🔗 <b>Mapping:</b> {proj.notes.replace('Sở KHCN chấp thuận đầu tư | ', '')}
+                                </div>
                               )}
                             </div>
                           ) : (
-                            <div className="bg-blue-50 border border-blue-100 p-1.5 rounded my-1 text-[11px]">
-                              <span className="text-blue-700 font-bold block">📐 Tọa độ Quy hoạch thiết kế:</span>
-                              <span className="font-mono text-blue-800 block text-[10px]">{proj.latitude_plan}, {proj.longitude_plan}</span>
+                            <div className="bg-amber-50 border border-amber-200 p-1.5 rounded my-1 text-[11px]">
+                              <span className="text-amber-800 font-bold block">📐 Tọa độ Quy hoạch:</span>
+                              <span className="font-mono text-amber-900 block text-[10px]">{lat.toFixed(6)}, {lng.toFixed(6)}</span>
                             </div>
                           )}
-                          {proj.notes && <span className="text-slate-600 block font-medium">{proj.notes}</span>}
-                          <span className="text-slate-400 block text-[10px]">Trạng thái: {proj.overall_status || 'Chưa rõ'} | SKHCN: {proj.skhcn_status || 'Chưa rõ'}</span>
-                          <a 
-                            href={`https://www.google.com/maps/dir/?api=1&${customerLocation ? `origin=${customerLocation.lat},${customerLocation.lng}&` : ''}destination=${lat},${lng}&travelmode=driving`}
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="mt-1.5 inline-flex items-center justify-center gap-1 px-2.5 py-1 bg-cyan-600 hover:bg-cyan-500 !text-white rounded text-[11px] font-bold transition-all text-center shadow-sm"
-                          >
-                            Dẫn đường (Google Maps)
-                          </a>
+
+                          <div className="flex gap-1 mt-1 font-sans">
+                            {customerLocation && (
+                              <button
+                                onClick={() => handleManualCableRoute({ code: code, name: proj.notes || 'Dự án CSHT', lat, lng })}
+                                className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1 bg-purple-600 hover:bg-purple-500 !text-white rounded text-[10px] font-bold transition-all text-center shadow-sm"
+                              >
+                                🔌 Kéo cáp
+                              </button>
+                            )}
+                            <a 
+                              href={`https://www.google.com/maps/dir/?api=1&${customerLocation ? `origin=${customerLocation.lat},${customerLocation.lng}&` : ''}destination=${lat},${lng}&travelmode=driving`}
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1 bg-cyan-600 hover:bg-cyan-500 !text-white rounded text-[10px] font-bold transition-all text-center shadow-sm"
+                            >
+                              Dẫn đường
+                            </a>
+                          </div>
                         </div>
                       </Popup>
                     </Marker>
@@ -1253,6 +1362,74 @@ export default function NetworkMap() {
                   </div>
                 );
               })}
+
+              {/* Render danh sách 12 trạm CSHT TVT3 Trình Ký (Màu tím/fuchsia rực rỡ) */}
+              {showTvt3TrinhKy && TVT3_CSHT_TRINH_KY_SITES.map(site => (
+                <div key={`tvt3-trinhky-${site.code}`}>
+                  <Marker 
+                    position={[site.lat, site.lng]} 
+                    icon={createSiteDivIcon(site.code, 'Quy hoạch', false, true)}
+                  >
+                    <Popup>
+                      <div className="font-sans text-xs flex flex-col gap-1.5 max-w-[270px]">
+                        <div className="flex items-center justify-between border-b border-slate-200 pb-1">
+                          <strong className="text-purple-600 block text-sm font-bold">{site.code}</strong>
+                          <div className="flex items-center gap-1">
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-purple-500/20 text-purple-600 border border-purple-500/30">
+                              📑 TVT3
+                            </span>
+                            <button 
+                              onClick={() => handleCopyCoords(site.lat, site.lng, `trạm ${site.code}`)}
+                              className="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold border border-slate-300 flex items-center gap-1 transition-all"
+                              title="Sao chép Tọa độ trạm trình ký"
+                            >
+                              <Copy className="h-3 w-3 text-purple-600" /> Copy
+                            </button>
+                          </div>
+                        </div>
+                        <span className="text-slate-700 block font-bold text-[11px]">Văn bản: {site.vb}</span>
+                        <span className="text-slate-600 block font-medium text-[11px]">Đơn vị hành chính: <b>{site.ward}, {site.province}</b></span>
+                        
+                        <div className="bg-purple-50 border border-purple-200 p-2 rounded-lg my-1 text-[11px] space-y-1">
+                          <span className="text-purple-900 font-extrabold block">📝 Quy hoạch Hạ tầng TVT3 Trình Ký</span>
+                          <span className="font-mono text-purple-950 block text-[10px]">Tọa độ: {site.lat.toFixed(6)}, {site.lng.toFixed(6)}</span>
+                          <div className="text-[10px] text-purple-800 font-medium border-t border-purple-200 pt-1 mt-1 leading-snug">
+                            📍 <b>Địa bàn:</b> {site.ward}, {site.province}
+                          </div>
+                        </div>
+
+                        <div className="flex gap-1 mt-1 font-sans">
+                          {customerLocation && (
+                            <button
+                              onClick={() => handleManualCableRoute({ code: site.code, name: site.note, lat: site.lat, lng: site.lng })}
+                              className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1 bg-purple-600 hover:bg-purple-500 !text-white rounded text-[10px] font-bold transition-all text-center shadow-sm"
+                            >
+                              🔌 Kéo cáp
+                            </button>
+                          )}
+                          <a 
+                            href={`https://www.google.com/maps/dir/?api=1&${customerLocation ? `origin=${customerLocation.lat},${customerLocation.lng}&` : ''}destination=${site.lat},${site.lng}&travelmode=driving`}
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1 bg-purple-700 hover:bg-purple-600 !text-white rounded text-[10px] font-bold transition-all text-center shadow-sm"
+                          >
+                            Dẫn đường
+                          </a>
+                        </div>
+                      </div>
+                    </Popup>
+                  </Marker>
+
+                  {/* Vòng tròn phủ sóng 500m màu tím */}
+                  {showCoverageCircle && (
+                    <Circle
+                      center={[site.lat, site.lng]}
+                      radius={500}
+                      pathOptions={{ fillColor: '#a855f7', fillOpacity: 0.05, color: '#a855f7', weight: 1, opacity: 0.4 }}
+                    />
+                  )}
+                </div>
+              ))}
 
               {/* Draw polylines to nearest sites */}
               {customerLocation && nearestSites.map((item, idx) => {
@@ -1300,9 +1477,9 @@ export default function NetworkMap() {
             </MapContainer>
           </div>
 
-          {/* Radar Scan summary panel (Mobile only: block on mobile, hidden on lg) */}
-          <div className="block lg:hidden mt-4">
-            
+          {/* Nearest sites table on mobile (rendered under map) */}
+          <div className="block lg:hidden mt-2">
+            {renderNearestSitesTable(false)}
           </div>
 
 
@@ -1310,4 +1487,5 @@ export default function NetworkMap() {
       </div>
     </div>
   );
+}
 }

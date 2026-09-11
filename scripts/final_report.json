@@ -1,0 +1,226 @@
+{
+  "tvt3_count": 20,
+  "other_count": 114,
+  "tvt3_items": [
+    {
+      "ma_qh": "26DNa155",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.9601,
+      "lng": 107.2363,
+      "district": "Long Khánh",
+      "area_note": "Gần trạm DNLK47 (Phường Bình Lộc, Long Khánh) cách 661m",
+      "nearest_stn": "DNLK47",
+      "nearest_dist": 661
+    },
+    {
+      "ma_qh": "26DNa156",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.96743,
+      "lng": 107.21709,
+      "district": "Long Khánh",
+      "area_note": "Gần trạm DNLK74 (Phường Bình Lộc, Long Khánh) cách 514m",
+      "nearest_stn": "DNLK74",
+      "nearest_dist": 514
+    },
+    {
+      "ma_qh": "26DNa233",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.95863594,
+      "lng": 107.0230844,
+      "district": "Thống Nhất / Long Khánh",
+      "area_note": "Vùng Thống Nhất / Long Khánh (TVT3)",
+      "nearest_stn": "DNTN31",
+      "nearest_dist": 8547
+    },
+    {
+      "ma_qh": "26DNa252",
+      "vb": "802/MBF.ĐNa-VT-TTKDVT",
+      "status": "Đã PD",
+      "lat": 10.9624,
+      "lng": 107.0365,
+      "district": "Thống Nhất / Long Khánh",
+      "area_note": "Vùng Thống Nhất / Long Khánh (TVT3)",
+      "nearest_stn": "DNTN31",
+      "nearest_dist": 7284
+    },
+    {
+      "ma_qh": "26DNa159",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.9279,
+      "lng": 107.1649,
+      "district": "Thống Nhất",
+      "area_note": "Gần trạm DNTN04 (Phường Dầu Giây, Thống Nhất) cách 1595m",
+      "nearest_stn": "DNTN04",
+      "nearest_dist": 1595
+    },
+    {
+      "ma_qh": "26DNa112",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.797732,
+      "lng": 107.06827,
+      "district": "Cẩm Mỹ / Xuân Lộc",
+      "area_note": "Vùng kinh độ 107.06827°E thuộc TVT3",
+      "nearest_stn": "DNLT06",
+      "nearest_dist": 2212
+    },
+    {
+      "ma_qh": "26DNa222",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.78307,
+      "lng": 107.060087,
+      "district": "Cẩm Mỹ / Xuân Lộc",
+      "area_note": "Vùng kinh độ 107.060087°E thuộc TVT3",
+      "nearest_stn": "DNLT06",
+      "nearest_dist": 3841
+    },
+    {
+      "ma_qh": "26DNa181",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 11.19904,
+      "lng": 107.36331,
+      "district": "Định Quán",
+      "area_note": "Gần trạm DNDQ00 (Xã Định Quán, Định Quán) cách 610m",
+      "nearest_stn": "DNDQ00",
+      "nearest_dist": 610
+    },
+    {
+      "ma_qh": "26DNa124",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 11.0668252,
+      "lng": 107.0948349,
+      "district": "Thống Nhất",
+      "area_note": "Gần trạm DNTN24 (Xã Thống Nhất, Thống Nhất) cách 2938m",
+      "nearest_stn": "DNTN24",
+      "nearest_dist": 2938
+    },
+    {
+      "ma_qh": "26DNa131",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 11.33162,
+      "lng": 107.15649,
+      "district": "Định Quán / Tân Phú",
+      "area_note": "Vùng kinh độ 107.15649°E thuộc TVT3",
+      "nearest_stn": "DNVC03",
+      "nearest_dist": 2217
+    },
+    {
+      "ma_qh": "26DNa157",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.94522,
+      "lng": 107.13508,
+      "district": "Thống Nhất",
+      "area_note": "Gần trạm DNTN03 (Phường Dầu Giây, Thống Nhất) cách 409m",
+      "nearest_stn": "DNTN03",
+      "nearest_dist": 409
+    },
+    {
+      "ma_qh": "26DNa158",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.83497838,
+      "lng": 107.3132943,
+      "district": "Xuân Lộc",
+      "area_note": "Gần trạm DNXL72 (Xã Xuân Định, Xuân Lộc) cách 1915m",
+      "nearest_stn": "DNXL72",
+      "nearest_dist": 1915
+    },
+    {
+      "ma_qh": "26DNa179",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 11.03546,
+      "lng": 107.16756,
+      "district": "Thống Nhất",
+      "area_note": "Gần trạm DNTN05 (Xã Gia Kiệm, Thống Nhất) cách 864m",
+      "nearest_stn": "DNTN05",
+      "nearest_dist": 864
+    },
+    {
+      "ma_qh": "26DNa255",
+      "vb": "802/MBF.ĐNa-VT-TTKDVT",
+      "status": "Đã PD",
+      "lat": 10.92939,
+      "lng": 107.4003,
+      "district": "Xuân Lộc",
+      "area_note": "Gần trạm DNXL38 (Phường Xuân Lộc, Xuân Lộc) cách 718m",
+      "nearest_stn": "DNXL38",
+      "nearest_dist": 718
+    },
+    {
+      "ma_qh": "26DNa052",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.95267,
+      "lng": 107.1414,
+      "district": "Thống Nhất",
+      "area_note": "Gần trạm DNTNL1 (Phường Dầu Giây, Thống Nhất) cách 514m",
+      "nearest_stn": "DNTNL1",
+      "nearest_dist": 514
+    },
+    {
+      "ma_qh": "26DNa067",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 11.092375,
+      "lng": 107.03686,
+      "district": "Thống Nhất / Long Khánh",
+      "area_note": "Vùng Thống Nhất / Long Khánh (TVT3)",
+      "nearest_stn": "DNTN24",
+      "nearest_dist": 9299
+    },
+    {
+      "ma_qh": "26DNa212",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.9449689,
+      "lng": 107.0083645,
+      "district": "Thống Nhất / Long Khánh",
+      "area_note": "Vùng Thống Nhất / Long Khánh (TVT3)",
+      "nearest_stn": "DNTN31",
+      "nearest_dist": 9887
+    },
+    {
+      "ma_qh": "26DNa053",
+      "vb": "802/MBF.ĐNa-VT-TTKDVT",
+      "status": "Đã PD",
+      "lat": 11.092087,
+      "lng": 107.217165,
+      "district": "Định Quán",
+      "area_note": "Gần trạm DNIDQN1 (Xã La Ngà, Định Quán) cách 248m",
+      "nearest_stn": "DNIDQN1",
+      "nearest_dist": 248
+    },
+    {
+      "ma_qh": "26DNa165",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.97435587,
+      "lng": 107.2302666,
+      "district": "Long Khánh",
+      "area_note": "Gần trạm DNLK01 (Phường Bình Lộc, Long Khánh) cách 1010m",
+      "nearest_stn": "DNLK01",
+      "nearest_dist": 1010
+    },
+    {
+      "ma_qh": "26DNa185",
+      "vb": "16/MBF.ĐNa-VT",
+      "status": "Đã PD",
+      "lat": 10.84657,
+      "lng": 107.12686,
+      "district": "Cẩm Mỹ",
+      "area_note": "Gần trạm DNCM26 (Xã Xuân Quế, Cẩm Mỹ) cách 1413m",
+      "nearest_stn": "DNCM26",
+      "nearest_dist": 1413
+    }
+  ]
+}
