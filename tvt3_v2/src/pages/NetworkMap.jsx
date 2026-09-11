@@ -75,36 +75,89 @@ const customerIcon = new L.Icon({
   shadowSize: [41, 41]
 });
 
-// 12 vị trí Quy hoạch CSHT thuộc TVT3 trình ký
-const TVT3_CSHT_TRINH_KY_SITES = [
-  { code: '26DNa185', vb: '16/MBF.ĐNa-VT', lat: 10.846570, lng: 107.126860, ward: 'Xã Xuân Quế', province: 'TP Đồng Nai', note: 'Quy hoạch CSHT TVT3 trình ký (Xã Xuân Quế)' },
-  { code: '26DNa155', vb: '16/MBF.ĐNa-VT', lat: 10.960100, lng: 107.236300, ward: 'Phường Bảo Vinh', province: 'TP Đồng Nai', note: 'Quy hoạch CSHT TVT3 trình ký (P. Bảo Vinh)' },
-  { code: '26DNa156', vb: '16/MBF.ĐNa-VT', lat: 10.967430, lng: 107.217090, ward: 'Phường Bình Lộc', province: 'TP Đồng Nai', note: 'Quy hoạch CSHT TVT3 trình ký (P. Bình Lộc)' },
-  { code: '26DNa165', vb: '16/MBF.ĐNa-VT', lat: 10.974356, lng: 107.230267, ward: 'Phường Bình Lộc', province: 'TP Đồng Nai', note: 'Quy hoạch CSHT TVT3 trình ký (P. Bình Lộc)' },
-  { code: '26DNa052', vb: '16/MBF.ĐNa-VT', lat: 10.952670, lng: 107.141400, ward: 'Xã Dầu Giây', province: 'TP Đồng Nai', note: 'Quy hoạch CSHT TVT3 trình ký (Xã Dầu Giây)' },
-  { code: '26DNa157', vb: '16/MBF.ĐNa-VT', lat: 10.945220, lng: 107.135080, ward: 'Xã Dầu Giây', province: 'TP Đồng Nai', note: 'Quy hoạch CSHT TVT3 trình ký (Xã Dầu Giây)' },
-  { code: '26DNa159', vb: '16/MBF.ĐNa-VT', lat: 10.927900, lng: 107.164900, ward: 'Xã Dầu Giây', province: 'TP Đồng Nai', note: 'Quy hoạch CSHT TVT3 trình ký (Xã Dầu Giây)' },
-  { code: '26DNa179', vb: '16/MBF.ĐNa-VT', lat: 11.035460, lng: 107.167560, ward: 'Xã Gia Kiệm', province: 'TP Đồng Nai', note: 'Quy hoạch CSHT TVT3 trình ký (Xã Gia Kiệm)' },
-  { code: '26DNa053', vb: '802/MBF.ĐNa-VT-TTKDVT', lat: 11.092087, lng: 107.217165, ward: 'Xã La Ngà', province: 'TP Đồng Nai', note: 'Quy hoạch CSHT TVT3 trình ký (Xã La Ngà)' },
-  { code: '26DNa158', vb: '16/MBF.ĐNa-VT', lat: 10.834978, lng: 107.313294, ward: 'Xã Xuân Định', province: 'TP Đồng Nai', note: 'Quy hoạch CSHT TVT3 trình ký (Xã Xuân Định)' },
-  { code: '26DNa255', vb: '802/MBF.ĐNa-VT-TTKDVT', lat: 10.929390, lng: 107.400300, ward: 'Xã Gia Ray', province: 'TP Đồng Nai', note: 'Quy hoạch CSHT TVT3 trình ký (Xã Gia Ray)' },
-  { code: '26DNa181', vb: '16/MBF.ĐNa-VT', lat: 11.199040, lng: 107.363310, ward: 'Xã Định Quán', province: 'TP Đồng Nai', note: 'Quy hoạch CSHT TVT3 trình ký (Xã Định Quán)' }
-];
+// Helper phân loại trạng thái trạm CSHT Quy hoạch theo ý kiến Sở & Tiến độ
+const getInfraProjectCategory = (proj) => {
+  const skhcn = String(proj?.skhcn_status || '').toLowerCase();
+  const notes = String(proj?.notes || '').toLowerCase();
+  const survey = String(proj?.survey_status || '').trim();
+
+  // 1. Sở yêu cầu dùng chung CSHT (Màu tím / Fuchsia)
+  if (skhcn.includes('dùng chung') || notes.includes('dùng chung') || notes.includes('thương lượng csht')) {
+    return {
+      key: 'dung_chung',
+      label: 'Sở yêu cầu dùng chung CSHT',
+      shortLabel: 'Dùng chung',
+      color: '#a855f7',
+      bgGradient: 'bg-gradient-to-r from-purple-600 via-fuchsia-600 to-pink-600 border-purple-300 shadow-purple-500/40 ring-2 ring-purple-400/50',
+      badgeClass: 'bg-purple-500/20 text-purple-600 border border-purple-500/30',
+      popupBg: 'bg-purple-50 border border-purple-200 text-purple-950',
+      textColor: 'text-purple-600',
+      icon: '🤝'
+    };
+  }
+
+  // 2. Sở OK đầu tư mới / Chấp thuận xây dựng mới (Màu xanh lá Emerald)
+  if (skhcn.includes('chấp thuận') || notes.includes('sở khcn chấp thuận') || notes.includes('đã chấp thuận')) {
+    return {
+      key: 'so_ok_dau_tu',
+      label: 'Sở duyệt đầu tư mới',
+      shortLabel: 'Đầu tư mới',
+      color: '#10b981',
+      bgGradient: 'bg-gradient-to-r from-emerald-600 to-teal-500 border-emerald-300 shadow-emerald-500/30 ring-2 ring-emerald-400/40',
+      badgeClass: 'bg-emerald-500/20 text-emerald-600 border border-emerald-500/30',
+      popupBg: 'bg-emerald-50 border border-emerald-200 text-emerald-950',
+      textColor: 'text-emerald-600',
+      icon: '🏛️'
+    };
+  }
+
+  // 3. Đã khảo sát thực địa (Màu xanh dương / Cyan)
+  if (survey && survey !== 'None' && survey !== 'NOK' && survey !== '0') {
+    return {
+      key: 'da_khao_sat',
+      label: 'Đã khảo sát thực địa',
+      shortLabel: 'Đã khảo sát',
+      color: '#06b6d4',
+      bgGradient: 'bg-gradient-to-r from-cyan-600 to-blue-600 border-cyan-300 shadow-cyan-500/30 ring-2 ring-cyan-400/40',
+      badgeClass: 'bg-cyan-500/20 text-cyan-600 border border-cyan-500/30',
+      popupBg: 'bg-cyan-50 border border-cyan-200 text-cyan-950',
+      textColor: 'text-cyan-600',
+      icon: '📐'
+    };
+  }
+
+  // 4. Trạm Quy hoạch ban đầu / Chờ thẩm định (Màu cam Hổ phách)
+  return {
+    key: 'quy_hoach',
+    label: 'Vị trí quy hoạch',
+    shortLabel: 'Quy hoạch',
+    color: '#f59e0b',
+    bgGradient: 'bg-gradient-to-r from-amber-500 to-orange-500 border-amber-300 shadow-amber-500/20',
+    badgeClass: 'bg-orange-500/20 text-orange-600 border border-orange-500/30',
+    popupBg: 'bg-amber-50 border border-amber-200 text-amber-950',
+    textColor: 'text-orange-500',
+    icon: '📍'
+  };
+};
 
 // Custom HTML DivIcon to display Site ID / PTM ID directly on map as a small labeled chip
-const createSiteDivIcon = (id, type, isSkhcn = false, isTvt3TrinhKy = false) => {
+const createSiteDivIcon = (id, type, infraCategory = null) => {
   let bgColor = 'bg-gradient-to-r from-blue-600 to-cyan-600 border-cyan-500/30 shadow-blue-500/20';
-  if (isSkhcn) {
-    bgColor = 'bg-gradient-to-r from-emerald-600 to-teal-500 border-emerald-300 shadow-emerald-500/30 ring-2 ring-emerald-400/40';
-  } else if (isTvt3TrinhKy) {
-    bgColor = 'bg-gradient-to-r from-purple-600 via-fuchsia-600 to-pink-600 border-purple-300 shadow-purple-500/40 ring-2 ring-purple-400/50';
+  let iconPrefix = '';
+
+  if (type === 'Hoạt động') {
+    bgColor = 'bg-gradient-to-r from-blue-600 to-cyan-600 border-cyan-500/30 shadow-blue-500/20';
+  } else if (infraCategory) {
+    bgColor = infraCategory.bgGradient;
+    iconPrefix = `${infraCategory.icon} `;
   } else if (type === 'Quy hoạch') {
     bgColor = 'bg-gradient-to-r from-amber-500 to-orange-500 border-amber-400 shadow-amber-500/20';
+    iconPrefix = '📍 ';
   }
   
   return L.divIcon({
     html: `<div class="flex items-center justify-center px-1.5 py-0.5 rounded border text-[8px] font-extrabold text-white tracking-tighter shadow-md whitespace-nowrap ${bgColor} transition-transform duration-100 hover:scale-110 active:scale-95" style="transform: translate(-50%, -50%); min-width: 32px; line-height: 1;">
-             ${isSkhcn ? '🏛️ ' : isTvt3TrinhKy ? '📑 ' : ''}${id}
+             ${iconPrefix}${id}
            </div>`,
     className: 'bg-transparent border-none', // Removes default leaflet white square wrapper styles
     iconSize: [0, 0],
@@ -157,7 +210,7 @@ export default function NetworkMap() {
   // Layer Toggles
   const [showActiveSites, setShowActiveSites] = useState(true);
   const [showProjects, setShowProjects] = useState(true);
-  const [showTvt3TrinhKy, setShowTvt3TrinhKy] = useState(true);
+  const [infraFilter, setInfraFilter] = useState('all'); // 'all' | 'so_ok_dau_tu' | 'dung_chung' | 'da_khao_sat' | 'quy_hoach'
   const [showCoverageCircle, setShowCoverageCircle] = useState(false);
   const [showTransmission, setShowTransmission] = useState(false);
   const [useGPS, setUseGPS] = useState(false);
@@ -165,6 +218,30 @@ export default function NetworkMap() {
 
   // Autocomplete Suggestions
   const [searchSuggestions, setSearchSuggestions] = useState([]);
+
+  // Phân loại 95 dự án CSHT Quy hoạch theo ý kiến Sở & Tiến độ
+  const { categorizedProjects, categoryCounts } = useMemo(() => {
+    const counts = {
+      so_ok_dau_tu: 0,
+      dung_chung: 0,
+      da_khao_sat: 0,
+      quy_hoach: 0,
+      total: infraProjects.length
+    };
+
+    const list = infraProjects.map(proj => {
+      const category = getInfraProjectCategory(proj);
+      if (counts[category.key] !== undefined) {
+        counts[category.key]++;
+      }
+      return {
+        ...proj,
+        category
+      };
+    });
+
+    return { categorizedProjects: list, categoryCounts: counts };
+  }, [infraProjects]);
 
   // Parse transmission lines from activeSites
   const transmissionLines = useMemo(() => {
@@ -401,7 +478,7 @@ export default function NetworkMap() {
           .select('site_id, site_id_old, name, location_info, management_info, technical_info'),
         supabase
           .from('infrastructure_projects')
-          .select('planning_id_new, planning_id_old, latitude_survey, longitude_survey, latitude_plan, longitude_plan, survey_status, overall_status, skhcn_status, notes, conflict_notes')
+          .select('project_id, planning_id_new, planning_id_old, latitude_survey, longitude_survey, latitude_plan, longitude_plan, survey_status, overall_status, skhcn_status, notes, conflict_notes, district, ward, address, priority, sharing_partner, shared_site_id')
       ]);
 
       if (sitesRes.error) throw sitesRes.error;
@@ -578,23 +655,7 @@ export default function NetworkMap() {
 
     const query = val.trim().toLowerCase();
 
-    // 1. Filter TVT3 Trình Ký Sites
-    const filteredTvt3 = TVT3_CSHT_TRINH_KY_SITES
-      .filter(s => 
-        s.code.toLowerCase().includes(query) || 
-        s.ward.toLowerCase().includes(query) || 
-        s.note.toLowerCase().includes(query)
-      )
-      .map(s => ({
-        id: s.code,
-        code: s.code,
-        name: `${s.ward}, ${s.province}`,
-        lat: s.lat,
-        lng: s.lng,
-        type: 'TVT3 Trình Ký'
-      }));
-
-    // 2. Filter Active Sites
+    // 1. Filter Active Sites
     const filteredActive = activeSites
       .filter(s => 
         s.site_id.toLowerCase().includes(query) || 
@@ -607,26 +668,30 @@ export default function NetworkMap() {
         name: s.name || 'Trạm hoạt động',
         lat: parseFloat(s.location_info.vi_do),
         lng: parseFloat(s.location_info.kinh_do),
-        type: 'Hoạt động'
+        type: 'Hoạt động',
+        badgeClass: 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
       }));
 
-    // 3. Filter Projects
-    const filteredProjects = infraProjects
+    // 2. Filter CSHT Projects (95 vị trí - phân loại 4 màu)
+    const filteredProjects = categorizedProjects
       .filter(p => 
         p.planning_id_new.toLowerCase().includes(query) || 
         (p.planning_id_old && p.planning_id_old.toLowerCase().includes(query)) ||
+        (p.ward && p.ward.toLowerCase().includes(query)) ||
+        (p.district && p.district.toLowerCase().includes(query)) ||
         (p.notes && p.notes.toLowerCase().includes(query))
       )
       .map(p => ({
         id: p.planning_id_new,
         code: p.planning_id_old || p.planning_id_new,
-        name: p.notes || 'Dự án CSHT',
+        name: `${p.category.icon} ${p.category.shortLabel}${p.ward ? ` • ${p.ward}` : ''}`,
         lat: parseFloat(p.latitude_survey || p.latitude_plan),
         lng: parseFloat(p.longitude_survey || p.longitude_plan),
-        type: 'Quy hoạch'
+        type: p.category.shortLabel,
+        badgeClass: p.category.badgeClass
       }));
 
-    const allFiltered = [...filteredTvt3, ...filteredActive, ...filteredProjects].slice(0, 8);
+    const allFiltered = [...filteredActive, ...filteredProjects].slice(0, 8);
     setSearchSuggestions(allFiltered);
   };
 
@@ -665,16 +730,7 @@ export default function NetworkMap() {
 
     const query = inputVal.toLowerCase();
 
-    // B. Check TVT3 Trình Ký Sites
-    const matchedTvt3 = TVT3_CSHT_TRINH_KY_SITES.find(s => s.code.toLowerCase() === query || s.code.toLowerCase().includes(query));
-    if (matchedTvt3) {
-      setMapCenter([matchedTvt3.lat, matchedTvt3.lng]);
-      setZoomLevel(16);
-      showToast(`Đã tìm thấy trạm trình ký: ${matchedTvt3.code}`);
-      return;
-    }
-
-    // C. Check Active Sites
+    // B. Check Active Sites
     const matchedActive = activeSites.find(
       s => s.site_id.toLowerCase() === query || (s.site_id_old && s.site_id_old.toLowerCase() === query) || s.site_id.toLowerCase().includes(query) || (s.site_id_old && s.site_id_old.toLowerCase().includes(query))
     );
@@ -687,8 +743,8 @@ export default function NetworkMap() {
       return;
     }
 
-    // D. Check CSHT Projects
-    const matchedProject = infraProjects.find(
+    // C. Check CSHT Projects (95 vị trí - phân loại 4 màu)
+    const matchedProject = categorizedProjects.find(
       p => p.planning_id_new.toLowerCase() === query || (p.planning_id_old && p.planning_id_old.toLowerCase() === query) || p.planning_id_new.toLowerCase().includes(query) || (p.planning_id_old && p.planning_id_old.toLowerCase().includes(query))
     );
     if (matchedProject) {
@@ -696,7 +752,7 @@ export default function NetworkMap() {
       const lng = parseFloat(matchedProject.longitude_survey || matchedProject.longitude_plan);
       setMapCenter([lat, lng]);
       setZoomLevel(16);
-      showToast(`Đã tìm thấy dự án: ${matchedProject.planning_id_old || matchedProject.planning_id_new}`);
+      showToast(`Đã tìm thấy dự án ${matchedProject.planning_id_old || matchedProject.planning_id_new} (${matchedProject.category.label})`);
       return;
     }
 
@@ -964,90 +1020,157 @@ export default function NetworkMap() {
               </div>
             </form>
 
-            {/* Quản lý lớp bản đồ - Giao diện 2x2 Grid Pills tinh gọn */}
-            <div className="pt-2 border-t border-slate-700/50 space-y-1.5 font-sans">
+            {/* Quản lý lớp bản đồ - 3 Lớp chính & Phân loại màu sắc CSHT */}
+            <div className="pt-2 border-t border-slate-700/50 space-y-2 font-sans">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Lớp bản đồ</span>
                 <span className="text-[9px] text-slate-500">Bật/tắt hiển thị</span>
               </div>
               
-              <div className="grid grid-cols-2 gap-1.5 text-[11px]">
+              <div className="grid grid-cols-3 gap-1.5 text-[11px]">
                 {/* 1. Trạm Hoạt động */}
                 <button
                   type="button"
                   onClick={() => setShowActiveSites(!showActiveSites)}
-                  className={`flex items-center justify-between p-1.5 rounded-lg border transition-all text-left cursor-pointer ${
+                  className={`flex flex-col justify-between p-1.5 rounded-lg border transition-all text-left cursor-pointer ${
                     showActiveSites
                       ? 'bg-blue-950/40 border-blue-500/40 text-blue-200 shadow-sm'
                       : 'bg-slate-900/40 border-slate-800 text-slate-500 opacity-60'
                   }`}
                 >
-                  <div className="flex items-center gap-1.5 truncate">
+                  <div className="flex items-center gap-1 truncate">
                     <span className={`h-2 w-2 rounded-full shrink-0 ${showActiveSites ? 'bg-blue-400 ring-2 ring-blue-400/30' : 'bg-slate-600'}`} />
                     <span className="font-semibold truncate text-[10.5px]">Trạm HĐ</span>
                   </div>
-                  <span className="font-bold text-[10px] shrink-0 ml-1">{activeSites.length}</span>
+                  <span className="font-bold text-[10px] text-blue-300 mt-1">{activeSites.length}</span>
                 </button>
 
                 {/* 2. Dự án CSHT Quy hoạch */}
                 <button
                   type="button"
                   onClick={() => setShowProjects(!showProjects)}
-                  className={`flex items-center justify-between p-1.5 rounded-lg border transition-all text-left cursor-pointer ${
+                  className={`flex flex-col justify-between p-1.5 rounded-lg border transition-all text-left cursor-pointer ${
                     showProjects
-                      ? 'bg-orange-950/40 border-orange-500/40 text-orange-200 shadow-sm'
+                      ? 'bg-amber-950/40 border-amber-500/40 text-amber-200 shadow-sm'
                       : 'bg-slate-900/40 border-slate-800 text-slate-500 opacity-60'
                   }`}
                 >
-                  <div className="flex items-center gap-1.5 truncate">
-                    <span className={`h-2 w-2 rounded-full shrink-0 ${showProjects ? 'bg-orange-400 ring-2 ring-orange-400/30' : 'bg-slate-600'}`} />
+                  <div className="flex items-center gap-1 truncate">
+                    <span className={`h-2 w-2 rounded-full shrink-0 ${showProjects ? 'bg-amber-400 ring-2 ring-amber-400/30' : 'bg-slate-600'}`} />
                     <span className="font-semibold truncate text-[10.5px]">CSHT QH</span>
                   </div>
-                  <span className="font-bold text-[10px] shrink-0 ml-1">{infraProjects.length}</span>
+                  <span className="font-bold text-[10px] text-amber-300 mt-1">{infraProjects.length}</span>
                 </button>
 
-                {/* 3. CSHT TVT3 Trình ký */}
-                <button
-                  type="button"
-                  onClick={() => setShowTvt3TrinhKy(!showTvt3TrinhKy)}
-                  className={`flex items-center justify-between p-1.5 rounded-lg border transition-all text-left cursor-pointer ${
-                    showTvt3TrinhKy
-                      ? 'bg-purple-950/50 border-purple-500/50 text-purple-200 ring-1 ring-purple-500/30 shadow-sm'
-                      : 'bg-slate-900/40 border-slate-800 text-slate-500 opacity-60'
-                  }`}
-                >
-                  <div className="flex items-center gap-1.5 truncate">
-                    <span className={`h-2 w-2 rounded-full shrink-0 ${showTvt3TrinhKy ? 'bg-fuchsia-400 ring-2 ring-fuchsia-400/30' : 'bg-slate-600'}`} />
-                    <span className="font-bold truncate text-[10.5px] text-purple-300">📑 Trình ký</span>
-                  </div>
-                  <span className="font-extrabold text-[10px] text-fuchsia-300 shrink-0 ml-1">{TVT3_CSHT_TRINH_KY_SITES.length}</span>
-                </button>
-
-                {/* 4. Tuyến truyền dẫn Last Mile */}
+                {/* 3. Tuyến truyền dẫn Last Mile */}
                 <button
                   type="button"
                   onClick={() => setShowTransmission(!showTransmission)}
-                  className={`flex items-center justify-between p-1.5 rounded-lg border transition-all text-left cursor-pointer ${
+                  className={`flex flex-col justify-between p-1.5 rounded-lg border transition-all text-left cursor-pointer ${
                     showTransmission
                       ? 'bg-cyan-950/40 border-cyan-500/40 text-cyan-200 shadow-sm'
                       : 'bg-slate-900/40 border-slate-800 text-slate-500 opacity-60'
                   }`}
                 >
-                  <div className="flex items-center gap-1.5 truncate">
+                  <div className="flex items-center gap-1 truncate">
                     <span className={`h-2 w-2 rounded-full shrink-0 ${showTransmission ? 'bg-cyan-400 ring-2 ring-cyan-400/30' : 'bg-slate-600'}`} />
                     <span className="font-semibold truncate text-[10.5px]">Last Mile</span>
                   </div>
-                  <span className="font-bold text-[10px] shrink-0 ml-1">{transmissionLines.length}</span>
+                  <span className="font-bold text-[10px] text-cyan-300 mt-1">{transmissionLines.length}</span>
                 </button>
               </div>
 
-              {/* SKHCN Approved Mini Banner */}
-              <div className="text-[10px] text-emerald-400 flex items-center justify-between bg-emerald-950/20 py-1 px-2 rounded-lg border border-emerald-500/20">
-                <span className="flex items-center gap-1">🏛️ Sở KHCN phê duyệt:</span>
-                <span className="font-extrabold text-emerald-300">
-                  {infraProjects.filter(p => p.skhcn_status === 'Đã chấp thuận' || String(p.notes || '').includes('Sở KHCN')).length} vị trí
-                </span>
-              </div>
+              {/* Chú giải phân loại màu sắc Trạm CSHT Quy hoạch (Khi bật lớp CSHT QH) */}
+              {showProjects && (
+                <div className="bg-slate-900/70 border border-slate-800/80 rounded-xl p-2 space-y-1.5 text-[10.5px] animate-in fade-in duration-200">
+                  <div className="flex items-center justify-between text-[10px] text-slate-400 font-bold uppercase tracking-wider border-b border-slate-800 pb-1">
+                    <span>Phân loại trạng thái CSHT:</span>
+                    <button
+                      type="button"
+                      onClick={() => setInfraFilter('all')}
+                      className={`px-1.5 py-0.2 rounded text-[9px] font-bold cursor-pointer transition-all ${
+                        infraFilter === 'all' ? 'bg-slate-700 text-white' : 'text-slate-500 hover:text-slate-300'
+                      }`}
+                    >
+                      Tất cả ({categoryCounts.total})
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-1.5 pt-0.5">
+                    {/* 1. Sở duyệt ĐT mới */}
+                    <button
+                      type="button"
+                      onClick={() => setInfraFilter(infraFilter === 'so_ok_dau_tu' ? 'all' : 'so_ok_dau_tu')}
+                      className={`flex items-center justify-between p-1.5 rounded-lg border transition-all cursor-pointer text-left ${
+                        infraFilter === 'so_ok_dau_tu'
+                          ? 'bg-emerald-950/60 border-emerald-400 text-emerald-100 ring-1 ring-emerald-400/30'
+                          : 'bg-emerald-950/20 border-emerald-500/20 text-emerald-300 hover:border-emerald-500/40'
+                      }`}
+                      title="Bấm để lọc: Sở KHCN chấp thuận đầu tư mới"
+                    >
+                      <div className="flex items-center gap-1 truncate">
+                        <span className="h-2 w-2 rounded-full bg-emerald-400 ring-2 ring-emerald-400/30 shrink-0" />
+                        <span className="font-medium text-[10px] truncate">🏛️ ĐT mới</span>
+                      </div>
+                      <span className="font-extrabold text-[10px] text-emerald-300 shrink-0 ml-1">{categoryCounts.so_ok_dau_tu}</span>
+                    </button>
+
+                    {/* 2. Yêu cầu dùng chung */}
+                    <button
+                      type="button"
+                      onClick={() => setInfraFilter(infraFilter === 'dung_chung' ? 'all' : 'dung_chung')}
+                      className={`flex items-center justify-between p-1.5 rounded-lg border transition-all cursor-pointer text-left ${
+                        infraFilter === 'dung_chung'
+                          ? 'bg-purple-950/60 border-purple-400 text-purple-100 ring-1 ring-purple-400/30'
+                          : 'bg-purple-950/20 border-purple-500/20 text-purple-300 hover:border-purple-500/40'
+                      }`}
+                      title="Bấm để lọc: Sở yêu cầu dùng chung hạ tầng"
+                    >
+                      <div className="flex items-center gap-1 truncate">
+                        <span className="h-2 w-2 rounded-full bg-fuchsia-400 ring-2 ring-purple-400/30 shrink-0" />
+                        <span className="font-medium text-[10px] truncate">🤝 Dùng chung</span>
+                      </div>
+                      <span className="font-extrabold text-[10px] text-fuchsia-300 shrink-0 ml-1">{categoryCounts.dung_chung}</span>
+                    </button>
+
+                    {/* 3. Đã khảo sát */}
+                    <button
+                      type="button"
+                      onClick={() => setInfraFilter(infraFilter === 'da_khao_sat' ? 'all' : 'da_khao_sat')}
+                      className={`flex items-center justify-between p-1.5 rounded-lg border transition-all cursor-pointer text-left ${
+                        infraFilter === 'da_khao_sat'
+                          ? 'bg-cyan-950/60 border-cyan-400 text-cyan-100 ring-1 ring-cyan-400/30'
+                          : 'bg-cyan-950/20 border-cyan-500/20 text-cyan-300 hover:border-cyan-500/40'
+                      }`}
+                      title="Bấm để lọc: Trạm đã khảo sát thực địa"
+                    >
+                      <div className="flex items-center gap-1 truncate">
+                        <span className="h-2 w-2 rounded-full bg-cyan-400 ring-2 ring-cyan-400/30 shrink-0" />
+                        <span className="font-medium text-[10px] truncate">📐 Đã KS</span>
+                      </div>
+                      <span className="font-extrabold text-[10px] text-cyan-300 shrink-0 ml-1">{categoryCounts.da_khao_sat}</span>
+                    </button>
+
+                    {/* 4. Quy hoạch */}
+                    <button
+                      type="button"
+                      onClick={() => setInfraFilter(infraFilter === 'quy_hoach' ? 'all' : 'quy_hoach')}
+                      className={`flex items-center justify-between p-1.5 rounded-lg border transition-all cursor-pointer text-left ${
+                        infraFilter === 'quy_hoach'
+                          ? 'bg-amber-950/60 border-amber-400 text-amber-100 ring-1 ring-amber-400/30'
+                          : 'bg-amber-950/20 border-amber-500/20 text-amber-300 hover:border-amber-500/40'
+                      }`}
+                      title="Bấm để lọc: Vị trí quy hoạch ban đầu"
+                    >
+                      <div className="flex items-center gap-1 truncate">
+                        <span className="h-2 w-2 rounded-full bg-amber-400 ring-2 ring-amber-400/30 shrink-0" />
+                        <span className="font-medium text-[10px] truncate">📍 Quy hoạch</span>
+                      </div>
+                      <span className="font-extrabold text-[10px] text-amber-300 shrink-0 ml-1">{categoryCounts.quy_hoach}</span>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -1278,158 +1401,101 @@ export default function NetworkMap() {
                 );
               })}
 
-              {/* Render danh sách trạm Quy hoạch (Dự án CSHT) */}
-              {showProjects && infraProjects.map(proj => {
-                const lat = parseFloat(proj.latitude_survey || proj.latitude_plan);
-                const lng = parseFloat(proj.longitude_survey || proj.longitude_plan);
-                const code = proj.planning_id_old || proj.planning_id_new;
-                const isSkhcn = proj.skhcn_status === 'Đã chấp thuận' || String(proj.notes || '').includes('Sở KHCN');
+              {/* Render danh sách trạm Quy hoạch (Dự án CSHT - 95 vị trí phân loại màu) */}
+              {showProjects && categorizedProjects
+                .filter(proj => infraFilter === 'all' || proj.category.key === infraFilter)
+                .map(proj => {
+                  const lat = parseFloat(proj.latitude_survey || proj.latitude_plan);
+                  const lng = parseFloat(proj.longitude_survey || proj.longitude_plan);
+                  const code = proj.planning_id_old || proj.planning_id_new;
+                  const cat = proj.category;
 
-                return (
-                  <div key={proj.planning_id_new}>
-                    <Marker 
-                      position={[lat, lng]} 
-                      icon={createSiteDivIcon(code, 'Quy hoạch', isSkhcn)}
-                    >
-                      <Popup>
-                        <div className="font-sans text-xs flex flex-col gap-1.5 max-w-[270px]">
-                          <div className="flex items-center justify-between border-b border-slate-200 pb-1">
-                            <strong className="text-orange-500 block text-sm font-bold">{code}</strong>
-                            <div className="flex items-center gap-1">
-                              {isSkhcn && (
-                                <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-emerald-500/20 text-emerald-600 border border-emerald-500/30">
-                                  🏛️ SKHCN
+                  return (
+                    <div key={proj.planning_id_new || proj.project_id}>
+                      <Marker 
+                        position={[lat, lng]} 
+                        icon={createSiteDivIcon(code, 'Quy hoạch', cat)}
+                      >
+                        <Popup>
+                          <div className="font-sans text-xs flex flex-col gap-1.5 max-w-[280px]">
+                            <div className="flex items-center justify-between border-b border-slate-200 pb-1">
+                              <strong className={`block text-sm font-bold ${cat.textColor}`}>{code}</strong>
+                              <div className="flex items-center gap-1">
+                                <span className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold ${cat.badgeClass}`}>
+                                  {cat.icon} {cat.shortLabel}
                                 </span>
-                              )}
-                              <button 
-                                onClick={() => handleCopyCoords(lat, lng, `quy hoạch ${code}`)}
-                                className="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold border border-slate-300 flex items-center gap-1 transition-all"
-                                title="Sao chép Tọa độ GPS"
-                              >
-                                <Copy className="h-3 w-3 text-cyan-600" /> Copy
-                              </button>
+                                <button 
+                                  onClick={() => handleCopyCoords(lat, lng, `quy hoạch ${code}`)}
+                                  className="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold border border-slate-300 flex items-center gap-1 transition-all cursor-pointer"
+                                  title="Sao chép Tọa độ GPS"
+                                >
+                                  <Copy className="h-3 w-3 text-cyan-600" /> Copy
+                                </button>
+                              </div>
                             </div>
-                          </div>
-                          {proj.district && <span className="text-slate-700 block font-bold text-[11px]">Địa bàn: {proj.ward ? `${proj.ward}, ${proj.district}` : proj.district}</span>}
-                          
-                          {isSkhcn ? (
-                            <div className="bg-emerald-50 border border-emerald-200 p-2 rounded-lg my-1 text-[11px] space-y-1">
-                              <span className="text-emerald-800 font-extrabold block">🏛️ Sở KHCN Phê Duyệt Đầu Tư</span>
-                              <span className="font-mono text-emerald-900 block text-[10px]">Tọa độ: {lat.toFixed(6)}, {lng.toFixed(6)}</span>
+
+                            {(proj.ward || proj.district) && (
+                              <span className="text-slate-700 block font-bold text-[11px]">
+                                Địa bàn: {proj.ward ? `${proj.ward}, ` : ''}{proj.district || 'TP Đồng Nai'}
+                              </span>
+                            )}
+                            
+                            {/* Khối thông tin phân loại Sở KHCN & Trạng thái khảo sát */}
+                            <div className={`p-2 rounded-lg my-1 text-[11px] space-y-1 ${cat.popupBg}`}>
+                              <div className="flex items-center justify-between">
+                                <span className="font-extrabold block">{cat.icon} {cat.label}</span>
+                                {proj.skhcn_status && (
+                                  <span className="text-[9px] font-bold opacity-80">{proj.skhcn_status}</span>
+                                )}
+                              </div>
+                              <span className="font-mono block text-[10px] opacity-90">Tọa độ: {lat.toFixed(6)}, {lng.toFixed(6)}</span>
+                              
                               {proj.notes && (
-                                <div className="text-[10px] text-emerald-950 font-medium border-t border-emerald-200/80 pt-1 mt-1 leading-snug">
-                                  🔗 <b>Mapping:</b> {proj.notes.replace('Sở KHCN chấp thuận đầu tư | ', '')}
+                                <div className="text-[10px] font-medium border-t border-black/10 pt-1 mt-1 leading-snug">
+                                  📝 <b>Ghi chú:</b> {proj.notes}
+                                </div>
+                              )}
+
+                              {proj.sharing_partner && (
+                                <div className="text-[10px] font-bold text-purple-800 pt-0.5">
+                                  🤝 <b>Đối tác dùng chung:</b> {proj.sharing_partner}
                                 </div>
                               )}
                             </div>
-                          ) : (
-                            <div className="bg-amber-50 border border-amber-200 p-1.5 rounded my-1 text-[11px]">
-                              <span className="text-amber-800 font-bold block">📐 Tọa độ Quy hoạch:</span>
-                              <span className="font-mono text-amber-900 block text-[10px]">{lat.toFixed(6)}, {lng.toFixed(6)}</span>
-                            </div>
-                          )}
 
-                          <div className="flex gap-1 mt-1 font-sans">
-                            {customerLocation && (
-                              <button
-                                onClick={() => handleManualCableRoute({ code: code, name: proj.notes || 'Dự án CSHT', lat, lng })}
-                                className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1 bg-purple-600 hover:bg-purple-500 !text-white rounded text-[10px] font-bold transition-all text-center shadow-sm"
+                            <div className="flex gap-1 mt-1 font-sans">
+                              {customerLocation && (
+                                <button
+                                  onClick={() => handleManualCableRoute({ code: code, name: proj.notes || 'Dự án CSHT', lat, lng })}
+                                  className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1 bg-purple-600 hover:bg-purple-500 !text-white rounded text-[10px] font-bold transition-all text-center shadow-sm cursor-pointer"
+                                >
+                                  🔌 Kéo cáp
+                                </button>
+                              )}
+                              <a 
+                                href={`https://www.google.com/maps/dir/?api=1&${customerLocation ? `origin=${customerLocation.lat},${customerLocation.lng}&` : ''}destination=${lat},${lng}&travelmode=driving`}
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1 bg-cyan-600 hover:bg-cyan-500 !text-white rounded text-[10px] font-bold transition-all text-center shadow-sm"
                               >
-                                🔌 Kéo cáp
-                              </button>
-                            )}
-                            <a 
-                              href={`https://www.google.com/maps/dir/?api=1&${customerLocation ? `origin=${customerLocation.lat},${customerLocation.lng}&` : ''}destination=${lat},${lng}&travelmode=driving`}
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1 bg-cyan-600 hover:bg-cyan-500 !text-white rounded text-[10px] font-bold transition-all text-center shadow-sm"
-                            >
-                              Dẫn đường
-                            </a>
+                                Dẫn đường
+                              </a>
+                            </div>
                           </div>
-                        </div>
-                      </Popup>
-                    </Marker>
+                        </Popup>
+                      </Marker>
 
-                    {/* Vòng tròn phủ sóng 500m của trạm quy hoạch */}
-                    {showCoverageCircle && (
-                      <Circle
-                        center={[lat, lng]}
-                        radius={500}
-                        pathOptions={{ fillColor: '#ef4444', fillOpacity: 0.03, color: '#ef4444', weight: 0.8, opacity: 0.3 }}
-                      />
-                    )}
-                  </div>
-                );
-              })}
-
-              {/* Render danh sách 12 trạm CSHT TVT3 Trình Ký (Màu tím/fuchsia rực rỡ) */}
-              {showTvt3TrinhKy && TVT3_CSHT_TRINH_KY_SITES.map(site => (
-                <div key={`tvt3-trinhky-${site.code}`}>
-                  <Marker 
-                    position={[site.lat, site.lng]} 
-                    icon={createSiteDivIcon(site.code, 'Quy hoạch', false, true)}
-                  >
-                    <Popup>
-                      <div className="font-sans text-xs flex flex-col gap-1.5 max-w-[270px]">
-                        <div className="flex items-center justify-between border-b border-slate-200 pb-1">
-                          <strong className="text-purple-600 block text-sm font-bold">{site.code}</strong>
-                          <div className="flex items-center gap-1">
-                            <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-purple-500/20 text-purple-600 border border-purple-500/30">
-                              📑 TVT3
-                            </span>
-                            <button 
-                              onClick={() => handleCopyCoords(site.lat, site.lng, `trạm ${site.code}`)}
-                              className="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold border border-slate-300 flex items-center gap-1 transition-all"
-                              title="Sao chép Tọa độ trạm trình ký"
-                            >
-                              <Copy className="h-3 w-3 text-purple-600" /> Copy
-                            </button>
-                          </div>
-                        </div>
-                        <span className="text-slate-700 block font-bold text-[11px]">Văn bản: {site.vb}</span>
-                        <span className="text-slate-600 block font-medium text-[11px]">Đơn vị hành chính: <b>{site.ward}, {site.province}</b></span>
-                        
-                        <div className="bg-purple-50 border border-purple-200 p-2 rounded-lg my-1 text-[11px] space-y-1">
-                          <span className="text-purple-900 font-extrabold block">📝 Quy hoạch Hạ tầng TVT3 Trình Ký</span>
-                          <span className="font-mono text-purple-950 block text-[10px]">Tọa độ: {site.lat.toFixed(6)}, {site.lng.toFixed(6)}</span>
-                          <div className="text-[10px] text-purple-800 font-medium border-t border-purple-200 pt-1 mt-1 leading-snug">
-                            📍 <b>Địa bàn:</b> {site.ward}, {site.province}
-                          </div>
-                        </div>
-
-                        <div className="flex gap-1 mt-1 font-sans">
-                          {customerLocation && (
-                            <button
-                              onClick={() => handleManualCableRoute({ code: site.code, name: site.note, lat: site.lat, lng: site.lng })}
-                              className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1 bg-purple-600 hover:bg-purple-500 !text-white rounded text-[10px] font-bold transition-all text-center shadow-sm"
-                            >
-                              🔌 Kéo cáp
-                            </button>
-                          )}
-                          <a 
-                            href={`https://www.google.com/maps/dir/?api=1&${customerLocation ? `origin=${customerLocation.lat},${customerLocation.lng}&` : ''}destination=${site.lat},${site.lng}&travelmode=driving`}
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1 bg-purple-700 hover:bg-purple-600 !text-white rounded text-[10px] font-bold transition-all text-center shadow-sm"
-                          >
-                            Dẫn đường
-                          </a>
-                        </div>
-                      </div>
-                    </Popup>
-                  </Marker>
-
-                  {/* Vòng tròn phủ sóng 500m màu tím */}
-                  {showCoverageCircle && (
-                    <Circle
-                      center={[site.lat, site.lng]}
-                      radius={500}
-                      pathOptions={{ fillColor: '#a855f7', fillOpacity: 0.05, color: '#a855f7', weight: 1, opacity: 0.4 }}
-                    />
-                  )}
-                </div>
-              ))}
+                      {/* Vòng tròn phủ sóng 500m của trạm quy hoạch */}
+                      {showCoverageCircle && (
+                        <Circle
+                          center={[lat, lng]}
+                          radius={500}
+                          pathOptions={{ fillColor: cat.color, fillOpacity: 0.04, color: cat.color, weight: 0.8, opacity: 0.3 }}
+                        />
+                      )}
+                    </div>
+                  );
+                })}
 
               {/* Draw polylines to nearest sites */}
               {customerLocation && nearestSites.map((item, idx) => {
