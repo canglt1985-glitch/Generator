@@ -1721,13 +1721,13 @@ export default function NetworkMap() {
                 .map(site => {
                   const lat = parseFloat(site.location_info.vi_do);
                   const lng = parseFloat(site.location_info.kinh_do);
+                  const cat = site.sranCategory;
                   const oldId = site.site_id_old || site.site_id;
                   const newId = (site.site_id && site.site_id !== oldId) 
                     ? site.site_id 
                     : (cat?.sranInfo?.site_id && cat.sranInfo.site_id !== oldId ? cat.sranInfo.site_id : null);
                   const displayName = newId ? `${oldId} - ${newId}` : oldId;
                   const name = oldId;
-                  const cat = site.sranCategory;
                   
                   return (
                     <div key={site.site_id}>
