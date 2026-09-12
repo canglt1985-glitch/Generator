@@ -377,6 +377,7 @@ export default function NetworkMap() {
   const [showCoverageCircle, setShowCoverageCircle] = useState(false);
   const [useGPS, setUseGPS] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [customTargetSearch, setCustomTargetSearch] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [bottomSheetState, setBottomSheetState] = useState('collapsed'); // 'collapsed' | 'half' | 'full'
