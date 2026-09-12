@@ -1,11 +1,11 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
 import { 
-  MapPin, Search, Server, Shield, Map as MapIcon, Compass, AlertCircle, Info, Radio, 
-  Layers, Filter, Copy, Check, ExternalLink, Maximize2, Minimize2,
-  ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Crosshair, X, Navigation
+  MapPin, Search, Server, Compass, AlertCircle, Radio, 
+  Layers, Copy, Check, Maximize2, Minimize2,
+  ChevronLeft, ChevronRight, ChevronDown, X
 } from 'lucide-react';
-import { MapContainer, TileLayer, Marker, Popup, Polyline, Circle, useMap, Tooltip } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, Circle, useMap } from 'react-leaflet';
 import L from 'leaflet';
 
 // Google Maps & OSM Tile Layer Definitions
@@ -81,7 +81,7 @@ const parseGPSCoordinates = (str) => {
   }
   
   // 5. Trích xuất khối số có chứa dấu chấm hoặc phẩy thập phân
-  const numberRegex = /(-?\d+[\.,]\d+)/g;
+  const numberRegex = /(-?\d+[.,]\d+)/g;
   const numbers = clean.match(numberRegex);
   if (numbers && numbers.length === 2) {
     const lat = parseFloat(numbers[0].replace(',', '.'));
@@ -353,7 +353,6 @@ function MapClickListener({ onClick }) {
 
 export default function NetworkMap() {
   const [coordinateInput, setCoordinateInput] = useState('');
-  const [siteSearchQuery, setSiteSearchQuery] = useState('');
   const [activeSites, setActiveSites] = useState([]);
   const [infraProjects, setInfraProjects] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -372,7 +371,7 @@ export default function NetworkMap() {
   const [activeSiteFilter, setActiveSiteFilter] = useState('all'); // 'all' | 'onair_5g' | 'swapped_4g_era' | 'normal_4g'
   const [sranTrackerData, setSranTrackerData] = useState([]);
   const [showProjects, setShowProjects] = useState(false); // Mặc định tắt CSHT QH
-  const [infraFilter, setInfraFilter] = useState('all'); // 'all' | 'so_ok_dau_tu' | 'dung_chung' | 'da_khao_sat' | 'quy_hoach'
+  const [infraFilter] = useState('all'); // 'all' | 'so_ok_dau_tu' | 'dung_chung' | 'da_khao_sat' | 'quy_hoach'
   const [showTransmission, setShowTransmission] = useState(false); // Mặc định tắt Last Mile
   const [showCoverageCircle, setShowCoverageCircle] = useState(false);
   const [useGPS, setUseGPS] = useState(false);
@@ -433,27 +432,14 @@ export default function NetworkMap() {
   }, [activeSites, sranTrackerData]);
 
   // Phân loại 95 dự án CSHT Quy hoạch theo ý kiến Sở & Tiến độ
-  const { categorizedProjects, categoryCounts } = useMemo(() => {
-    const counts = {
-      so_ok_dau_tu: 0,
-      dung_chung: 0,
-      da_khao_sat: 0,
-      quy_hoach: 0,
-      total: infraProjects.length
-    };
-
-    const list = infraProjects.map(proj => {
+  const categorizedProjects = useMemo(() => {
+    return infraProjects.map(proj => {
       const category = getInfraProjectCategory(proj);
-      if (counts[category.key] !== undefined) {
-        counts[category.key]++;
-      }
       return {
         ...proj,
         category
       };
     });
-
-    return { categorizedProjects: list, categoryCounts: counts };
   }, [infraProjects]);
 
   // Parse transmission lines from activeSites
@@ -616,127 +602,10 @@ export default function NetworkMap() {
     return toQL;
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  useEffect(() => {
-    const handleTransUpdate = (e) => {
-      const { site_id, technical_info } = e.detail;
-      setActiveSites(prev => prev.map(s => s.site_id === site_id ? { ...s, technical_info } : s));
-    };
-    window.addEventListener('datasite-updated', handleTransUpdate);
-    return () => window.removeEventListener('datasite-updated', handleTransUpdate);
-  }, []);
-
-  // Quản lý công tắc định vị GPS thực địa thời gian thực
-  useEffect(() => {
-    if (useGPS) {
-      if (!navigator.geolocation) {
-        setValidationError('Thiết bị hoặc trình duyệt của bạn không hỗ trợ định vị GPS!');
-        setUseGPS(false);
-        return;
-      }
-
-      setLoading(true);
-      // Sử dụng watchPosition để cập nhật bám theo vị trí liên tục thời gian thực khi di chuyển
-      watchIdRef.current = navigator.geolocation.watchPosition(
-        (position) => {
-          const lat = position.coords.latitude;
-          const lng = position.coords.longitude;
-          executeScan(lat, lng);
-          setCoordinateInput(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
-          setLoading(false);
-          setValidationError('');
-        },
-        (error) => {
-          console.error('Lỗi định vị GPS thực địa:', error);
-          setValidationError('Không thể lấy vị trí GPS. Vui lòng bật định vị trên điện thoại và cho phép trình duyệt truy cập.');
-          
-          // Dọn dẹp watchPosition ngay lập tức khi lỗi để tránh lặp bất đồng bộ làm lệch công tắc
-          if (watchIdRef.current !== null) {
-            navigator.geolocation.clearWatch(watchIdRef.current);
-            watchIdRef.current = null;
-          }
-          
-          setLoading(false);
-          setUseGPS(false);
-        },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-      );
-    } else {
-      // Hủy theo dõi GPS khi tắt công tắc
-      if (watchIdRef.current !== null) {
-        navigator.geolocation.clearWatch(watchIdRef.current);
-        watchIdRef.current = null;
-      }
-      setLoading(false);
-    }
-
-    return () => {
-      if (watchIdRef.current !== null) {
-        navigator.geolocation.clearWatch(watchIdRef.current);
-        watchIdRef.current = null;
-      }
-    };
-  }, [useGPS]);
-
-  async function fetchData() {
-    setLoading(true);
-    try {
-      // Fetch song song datasites, infrastructure_projects và sran_5g_tracker từ Supabase
-      const [sitesRes, projectsRes, sranRes1, sranRes2] = await Promise.all([
-        supabase
-          .from('datasites')
-          .select('site_id, site_id_old, name, location_info, management_info, technical_info'),
-        supabase
-          .from('infrastructure_projects')
-          .select('project_id, planning_id_new, planning_id_old, latitude_survey, longitude_survey, latitude_plan, longitude_plan, survey_status, overall_status, skhcn_status, notes, conflict_notes, district, ward, address, priority, sharing_partner, shared_site_id'),
-        supabase
-          .from('sran_5g_tracker')
-          .select('site_id, site_id_old, scope_3g4g, config_3g4g, scope_5g, config_5g, onair_date, integration_date, install_date, survey_date, pack_po, district, unique_id, raw_data')
-          .range(0, 999),
-        supabase
-          .from('sran_5g_tracker')
-          .select('site_id, site_id_old, scope_3g4g, config_3g4g, scope_5g, config_5g, onair_date, integration_date, install_date, survey_date, pack_po, district, unique_id, raw_data')
-          .range(1000, 1999)
-      ]);
-
-      if (sitesRes.error) throw sitesRes.error;
-      if (projectsRes.error) throw projectsRes.error;
-
-      // Filter and clean active sites (must have valid coordinates)
-      const cleanActive = (sitesRes.data || []).filter(site => {
-        const lat = parseFloat(site.location_info?.vi_do);
-        const lng = parseFloat(site.location_info?.kinh_do);
-        return !isNaN(lat) && !isNaN(lng);
-      });
-
-      // Filter and clean projects (must have valid coordinates)
-      const cleanProjects = (projectsRes.data || []).filter(proj => {
-        const lat = parseFloat(proj.latitude_survey || proj.latitude_plan);
-        const lng = parseFloat(proj.longitude_survey || proj.longitude_plan);
-        return !isNaN(lat) && !isNaN(lng);
-      });
-
-      const allSran = [
-        ...(sranRes1.data || []),
-        ...(sranRes2.data || [])
-      ];
-
-      setActiveSites(cleanActive);
-      setInfraProjects(cleanProjects);
-      setSranTrackerData(allSran);
-    } catch (err) {
-      console.error('Lỗi khi tải dữ liệu hạ tầng:', err);
-    } finally {
-      setLoading(false);
-    }
-  }
-
   // Handle map click or manual coordinates input to run nearest sites calculation
-  const executeScan = (lat, lng, overrideRadius = null) => {
+  const executeScan = useCallback((lat, lng, overrideRadius = null) => {
     setValidationError('');
+    setCableRoute(null);
     const customerCoord = { lat, lng };
     setCustomerLocation(customerCoord);
     setMapCenter([lat, lng]);
@@ -817,7 +686,147 @@ export default function NetworkMap() {
     else if (maxDist > 2000) setZoomLevel(13);
     else if (maxDist > 1000) setZoomLevel(14);
     else setZoomLevel(15);
+  }, [categorizedActiveSites, infraProjects, scanRadius]);
+
+  const executeScanRef = useRef(executeScan);
+  useEffect(() => {
+    executeScanRef.current = executeScan;
+  }, [executeScan]);
+
+  const handleToggleGPS = () => {
+    if (!useGPS) {
+      if (!navigator.geolocation) {
+        setValidationError('Thiết bị hoặc trình duyệt của bạn không hỗ trợ định vị GPS!');
+        return;
+      }
+      setValidationError('');
+      setLoading(true);
+      setUseGPS(true);
+    } else {
+      setUseGPS(false);
+      setLoading(false);
+    }
   };
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadData() {
+      try {
+        // Fetch song song datasites, infrastructure_projects và sran_5g_tracker từ Supabase
+        const [sitesRes, projectsRes, sranRes1, sranRes2] = await Promise.all([
+          supabase
+            .from('datasites')
+            .select('site_id, site_id_old, name, location_info, management_info, technical_info'),
+          supabase
+            .from('infrastructure_projects')
+            .select('project_id, planning_id_new, planning_id_old, latitude_survey, longitude_survey, latitude_plan, longitude_plan, survey_status, overall_status, skhcn_status, notes, conflict_notes, district, ward, address, priority, sharing_partner, shared_site_id'),
+          supabase
+            .from('sran_5g_tracker')
+            .select('site_id, site_id_old, scope_3g4g, config_3g4g, scope_5g, config_5g, onair_date, integration_date, install_date, survey_date, pack_po, district, unique_id, raw_data')
+            .range(0, 999),
+          supabase
+            .from('sran_5g_tracker')
+            .select('site_id, site_id_old, scope_3g4g, config_3g4g, scope_5g, config_5g, onair_date, integration_date, install_date, survey_date, pack_po, district, unique_id, raw_data')
+            .range(1000, 1999)
+        ]);
+
+        if (ignore) return;
+        if (sitesRes.error) throw sitesRes.error;
+        if (projectsRes.error) throw projectsRes.error;
+
+        // Filter and clean active sites (must have valid coordinates)
+        const cleanActive = (sitesRes.data || []).filter(site => {
+          const lat = parseFloat(site.location_info?.vi_do);
+          const lng = parseFloat(site.location_info?.kinh_do);
+          return !isNaN(lat) && !isNaN(lng);
+        });
+
+        // Filter and clean projects (must have valid coordinates)
+        const cleanProjects = (projectsRes.data || []).filter(proj => {
+          const lat = parseFloat(proj.latitude_survey || proj.latitude_plan);
+          const lng = parseFloat(proj.longitude_survey || proj.longitude_plan);
+          return !isNaN(lat) && !isNaN(lng);
+        });
+
+        const allSran = [
+          ...(sranRes1.data || []),
+          ...(sranRes2.data || [])
+        ];
+
+        setActiveSites(cleanActive);
+        setInfraProjects(cleanProjects);
+        setSranTrackerData(allSran);
+      } catch (err) {
+        console.error('Lỗi khi tải dữ liệu hạ tầng:', err);
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadData();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleTransUpdate = (e) => {
+      const { site_id, technical_info } = e.detail;
+      setActiveSites(prev => prev.map(s => s.site_id === site_id ? { ...s, technical_info } : s));
+    };
+    window.addEventListener('datasite-updated', handleTransUpdate);
+    return () => window.removeEventListener('datasite-updated', handleTransUpdate);
+  }, []);
+
+  // Quản lý công tắc định vị GPS thực địa thời gian thực
+  useEffect(() => {
+    if (useGPS && navigator.geolocation) {
+      // Sử dụng watchPosition để cập nhật bám theo vị trí liên tục thời gian thực khi di chuyển
+      watchIdRef.current = navigator.geolocation.watchPosition(
+        (position) => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          if (executeScanRef.current) {
+            executeScanRef.current(lat, lng);
+          }
+          setCoordinateInput(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+          setLoading(false);
+          setValidationError('');
+        },
+        (error) => {
+          console.error('Lỗi định vị GPS thực địa:', error);
+          setValidationError('Không thể lấy vị trí GPS. Vui lòng bật định vị trên điện thoại và cho phép trình duyệt truy cập.');
+          
+          // Dọn dẹp watchPosition ngay lập tức khi lỗi để tránh lặp bất đồng bộ làm lệch công tắc
+          if (watchIdRef.current !== null) {
+            navigator.geolocation.clearWatch(watchIdRef.current);
+            watchIdRef.current = null;
+          }
+          
+          setLoading(false);
+          setUseGPS(false);
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    } else {
+      // Hủy theo dõi GPS khi tắt công tắc
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+      }
+    }
+
+    return () => {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+      }
+    };
+  }, [useGPS]);
 
   const handleRadiusChange = (newRadius) => {
     setScanRadius(newRadius);
@@ -893,11 +902,6 @@ export default function NetworkMap() {
     navigator.clipboard.writeText(lines.join('\n'));
     showToast(`Đã sao chép thông tin & link chỉ đường vị trí ${code}`);
   };
-
-  // Reset tuyến cáp khi thay đổi điểm chọn trên bản đồ (Chỉ tính khi người dùng ấn nút "Kéo cáp")
-  useEffect(() => {
-    setCableRoute(null);
-  }, [customerLocation]);
 
   const handleManualCableRoute = async (target) => {
     if (!customerLocation || !target) return;
@@ -1717,7 +1721,7 @@ export default function NetworkMap() {
           {/* GPS Locate FAB */}
           <button
             type="button"
-            onClick={() => setUseGPS(!useGPS)}
+            onClick={handleToggleGPS}
             className={`h-10 w-10 bg-slate-900/90 hover:bg-slate-800 text-white rounded-xl border shadow-xl flex items-center justify-center transition-all cursor-pointer ${
               useGPS 
                 ? 'border-cyan-500 text-cyan-400 ring-2 ring-cyan-500/40 animate-pulse' 
