@@ -181,10 +181,16 @@ const getSiteSranCategory = (site, sranMap) => {
 
   const hasOnair = !!sran.onair_date;
 
+  const rawCfg = (sran.config_3g4g || sran.raw_data?.['3G4G Config'] || '').toUpperCase();
+  const rawSol = (sran.raw_data?.['Swap Solution'] || sran.raw_data?.['Swap_Solution'] || '').toUpperCase();
+  const is4gOnly = rawCfg.includes('4G ONLY') || (rawSol.includes('SWAP:4G') && !rawSol.includes('3G'));
+  const config4g = (rawCfg === '0' || rawCfg === '-') ? null : (is4gOnly ? '4G Only' : 'SRAN');
+
   const sranInfo = {
     site_id: sran.site_id,
     pack_po: sran.pack_po || sran.raw_data?.PO,
     config_5g: sran.config_5g || (is5g ? 'NR26 32T' : null),
+    config_4g: config4g,
     config_3g4g: sran.config_3g4g || sran.raw_data?.['3G4G Config'],
     onair_date: sran.onair_date,
     integration_date: sran.integration_date,
@@ -1663,56 +1669,26 @@ export default function NetworkMap() {
 
                             {/* Khối chi tiết SRAN 5G / 4G ERA nếu có */}
                             {cat?.sranInfo && (
-                              <div className="bg-slate-50 border border-slate-200 rounded-lg p-2 text-[11px] space-y-1">
+                              <div className="bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-[11px] space-y-1.5 shadow-sm">
                                 <div className="font-bold text-slate-700 flex items-center justify-between">
                                   <span className="flex items-center gap-1">📡 Dự án SRAN</span>
-                                  <span className="font-mono text-[10px] text-cyan-700 bg-cyan-50 px-1.5 py-0.2 rounded border border-cyan-200">
+                                  <span className="font-mono text-[10px] text-cyan-700 bg-cyan-50 px-1.5 py-0.5 rounded border border-cyan-200">
                                     {cat.sranInfo.site_id}
                                   </span>
                                 </div>
 
-                                {cat.sranInfo.cluster_name && (
-                                  <div className="flex items-center justify-between text-[10.5px]">
-                                    <span className="text-slate-600">🏛️ Cụm SRAN:</span>
-                                    <span className="font-bold text-slate-800 flex items-center gap-1">
-                                      {cat.sranInfo.cluster_name}
-                                      {cat.sranInfo.in_swapped_cluster && (
-                                        <span className="text-[9px] px-1 py-0.2 rounded bg-emerald-100 text-emerald-800 font-bold border border-emerald-300">
-                                          Đã Swap ERA
-                                        </span>
-                                      )}
-                                    </span>
-                                  </div>
-                                )}
-
                                 {cat.sranInfo.config_5g && (
                                   <div className="text-pink-700 font-semibold flex items-center justify-between">
                                     <span>⚡ Cấu hình 5G:</span>
-                                    <span className="font-mono font-bold bg-pink-50 px-1 rounded border border-pink-200">{cat.sranInfo.config_5g}</span>
+                                    <span className="font-mono font-bold bg-pink-50 px-1.5 py-0.5 rounded border border-pink-200">{cat.sranInfo.config_5g}</span>
                                   </div>
                                 )}
-                                {cat.sranInfo.config_3g4g && (
-                                  <div className="text-slate-600 flex items-center justify-between">
-                                    <span>🔄 Cấu hình 3G/4G:</span> 
-                                    <span className="font-medium text-slate-800">{cat.sranInfo.config_3g4g}</span>
+                                {cat.sranInfo.config_4g && (
+                                  <div className="text-slate-700 font-medium flex items-center justify-between">
+                                    <span>🔄 Cấu hình 4G:</span> 
+                                    <span className="font-bold text-slate-800 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">{cat.sranInfo.config_4g}</span>
                                   </div>
                                 )}
-                                {cat.sranInfo.status_note && (
-                                  <div className="text-[10px] text-slate-600 italic bg-white/80 p-1 rounded border border-slate-200/60">
-                                    ℹ️ {cat.sranInfo.status_note}
-                                  </div>
-                                )}
-                                <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-[10px] text-slate-500 pt-1 border-t border-slate-200/60">
-                                  {cat.sranInfo.onair_date && (
-                                    <span className="text-emerald-700 font-extrabold">🚀 Onair: {cat.sranInfo.onair_date}</span>
-                                  )}
-                                  {cat.sranInfo.integration_date && (
-                                    <span>Tích hợp: {cat.sranInfo.integration_date}</span>
-                                  )}
-                                  {cat.sranInfo.install_date && (
-                                    <span>Lắp đặt: {cat.sranInfo.install_date}</span>
-                                  )}
-                                </div>
                               </div>
                             )}
 
