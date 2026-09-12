@@ -168,18 +168,18 @@ const getSiteSranCategory = (site, sranMap) => {
   const cname = (sran.raw_data?.Cluster_Name || '').toUpperCase();
   const cnew = (sran.raw_data?.Cluster_New || '').toUpperCase();
   
-  // Danh sách các Cụm đã hoàn tất Swap ERA (Bao gồm Cẩm Mỹ, Thống Nhất, và 2 Cụm Xuân Lộc DNI_15_XL, DNI_17_XL)
-  const swappedClusterPatterns = [
-    'DNI_09_CM', 'DNI_02_CM', 
-    'DNI_10_TN', 'DNI_04_TN', 
-    'DNI_16_CM', 'DNI_06_CM',
-    'DNI_15_XL', 'DNI_08_XL',
-    'DNI_17_XL', 'DNI_16_XL', 'DNI_18_XL',
-    'DNI_01_LT', 'DNI_00_PILOT', 'DNI_02_TB', 'DNI_03_TB', 'DNI_07_TB'
-  ];
-  const inSwappedCluster = swappedClusterPatterns.some(pat => cname.includes(pat) || cnew.includes(pat));
+  // 5 Cụm đã hoàn tất Swap ERA chính xác (Cẩm Mỹ Day_02, Thống Nhất Day_04, Cẩm Mỹ Day_06, Xuân Lộc 15, Xuân Lộc 17)
+  // Các cụm Long Khánh (DNLK47, DNLK18...), Định Quán, Tân Phú chưa swap
+  const isSwappedCluster = (
+    cname === 'DNI_02_CM' || cnew === 'DNI_02_CM' || cname === 'DNI_09_CM' || cnew === 'DNI_09_CM' ||
+    cname === 'DNI_04_TN' || cnew === 'DNI_04_TN' || cname === 'DNI_10_TN' || cnew === 'DNI_10_TN' ||
+    cname === 'DNI_06_CM' || cnew === 'DNI_16_CM' || cname === 'DNI_16_CM' ||
+    cnew === 'DNI_15_XL' || cname === 'DNI_08_XL' ||
+    cnew === 'DNI_17_XL' || cname === 'DNI_16_XL' ||
+    cname === 'DNI_01_LT' || cname === 'DNI_00_PILOT'
+  );
+
   const hasOnair = !!sran.onair_date;
-  const hasIntegration = !!sran.integration_date;
 
   const sranInfo = {
     site_id: sran.site_id,
@@ -190,88 +190,86 @@ const getSiteSranCategory = (site, sranMap) => {
     integration_date: sran.integration_date,
     install_date: sran.install_date,
     cluster_name: sran.raw_data?.Cluster_New || sran.raw_data?.Cluster_Name || sran.district || 'Cụm SRAN',
-    in_swapped_cluster: inSwappedCluster
+    in_swapped_cluster: isSwappedCluster
   };
 
-  // 1. Trạm phát sóng 5G (Đã có ngày Onair/Integration hoặc nằm trong các Cluster đã Swap có cấu hình 5G)
-  if (is5g && (hasOnair || hasIntegration || inSwappedCluster)) {
+  // 1. Trạm phát sóng 5G: Đã có ngày Onair hoặc nằm trong 5 Cụm đã Swap có cấu hình 5G
+  if (hasOnair || (isSwappedCluster && is5g)) {
     return {
       key: 'onair_5g',
       label: '5G Đang phát sóng',
       shortLabel: '5G Onair',
       icon: '📶',
       color: '#ec4899',
-      bgGradient: 'bg-gradient-to-r from-fuchsia-600 via-pink-600 to-rose-600 border-pink-300 shadow-pink-500/50 ring-2 ring-pink-400/60',
+      borderClass: 'border-2 border-pink-400 shadow-[0_0_10px_rgba(236,72,153,0.95)] ring-2 ring-pink-500/40 bg-slate-900/95 text-pink-100',
       badgeClass: 'bg-pink-500/20 text-pink-700 border border-pink-500/40 font-bold',
       textColor: 'text-pink-600',
       sranInfo: {
         ...sranInfo,
-        status_note: inSwappedCluster ? 'Đang phát sóng 5G (Cụm đã hoàn tất Swap ERA)' : 'Đang phát sóng 5G'
+        status_note: isSwappedCluster ? 'Đang phát sóng 5G (Cụm đã hoàn tất Swap ERA)' : 'Đang phát sóng 5G'
       }
     };
   }
 
-  // 2. Trạm đã swap sang 4G ERA
-  if (hasOnair || inSwappedCluster || hasIntegration || !!sran.install_date) {
+  // 2. Trạm đã swap sang 4G ERA: Nằm trong 5 Cụm đã swap
+  if (isSwappedCluster) {
     return {
       key: 'swapped_4g_era',
       label: '4G ERA Đã Swap',
       shortLabel: '4G ERA',
       icon: '🔄',
-      color: '#10b981',
-      bgGradient: 'bg-gradient-to-r from-emerald-600 to-teal-600 border-emerald-300 shadow-emerald-500/40 ring-1 ring-emerald-400/40',
-      badgeClass: 'bg-emerald-500/20 text-emerald-700 border border-emerald-500/40 font-bold',
-      textColor: 'text-emerald-600',
+      color: '#06b6d4',
+      borderClass: 'border-2 border-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.95)] ring-1 ring-cyan-400/50 bg-slate-900/95 text-cyan-100',
+      badgeClass: 'bg-cyan-500/20 text-cyan-700 border border-cyan-500/40 font-bold',
+      textColor: 'text-cyan-600',
       sranInfo: {
         ...sranInfo,
-        status_note: inSwappedCluster ? 'Đã hoàn tất Swap thiết bị 4G ERA' : 'Đã swap 4G ERA'
+        status_note: 'Đã hoàn tất Swap thiết bị 4G ERA'
       }
     };
   }
 
-  // 3. Trạm 4G Hiện hữu
+  // 3. Trạm 4G Hiện hữu (Chưa swap - bao gồm Long Khánh DNLK47, DNLK18...)
   return {
     key: 'normal_4g',
     label: '4G Hiện hữu',
     shortLabel: '4G Thường',
     icon: '🔵',
     color: '#3b82f6',
-    bgGradient: 'bg-gradient-to-r from-blue-600 to-cyan-600 border-cyan-500/30 shadow-blue-500/20',
+    borderClass: 'border border-blue-400/60 bg-blue-600/90 text-white shadow-sm',
     badgeClass: 'bg-blue-500/20 text-blue-700 border border-blue-500/30',
     textColor: 'text-blue-600',
     sranInfo: {
       ...sranInfo,
-      status_note: '4G Thiết bị hiện hữu'
+      status_note: '4G Thiết bị hiện hữu (Chưa Swap)'
     }
   };
 };
 
 // Custom HTML DivIcon to display Site ID / PTM ID directly on map as a small labeled chip
+// Tiêu đề chỉ hiển thị tên trạm (không kèm tiền tố dài dòng), viền màu sắc phân biệt công nghệ
 const createSiteDivIcon = (id, type, infraCategory = null, sranCategory = null) => {
-  let bgColor = 'bg-gradient-to-r from-blue-600 to-cyan-600 border-cyan-500/30 shadow-blue-500/20';
+  let chipClass = 'border border-blue-400/60 bg-blue-600/90 text-white shadow-sm';
   let iconPrefix = '';
 
   if (type === 'Hoạt động') {
-    if (sranCategory?.key === 'onair_5g') {
-      bgColor = sranCategory.bgGradient;
-      iconPrefix = '📶 5G ';
-    } else if (sranCategory?.key === 'swapped_4g_era') {
-      bgColor = sranCategory.bgGradient;
-      iconPrefix = '🔄 ERA ';
-    } else {
-      bgColor = 'bg-gradient-to-r from-blue-600 to-cyan-600 border-cyan-500/30 shadow-blue-500/20';
-      iconPrefix = '';
-    }
+    // Trạm hoạt động: Chỉ hiển thị tên trạm, viền màu phân biệt công nghệ
+    // - 5G Onair: Viền Hồng Neon phát sáng rực rỡ
+    // - 4G ERA: Viền Xanh Cyan Điện tử phát sáng (không trùng màu xanh lá của CSHT)
+    // - 4G Thường: Viền Xanh Dương thanh gọn
+    chipClass = sranCategory?.borderClass || 'border border-blue-400/60 bg-blue-600/90 text-white shadow-sm';
+    iconPrefix = '';
   } else if (infraCategory) {
-    bgColor = infraCategory.bgGradient;
+    // Dự án CSHT: Nền màu theo ý kiến Sở (Xanh lá Sở duyệt, Tím Dùng chung, Vàng Đã KS, Cam QH)
+    chipClass = `${infraCategory.bgGradient} text-white`;
     iconPrefix = `${infraCategory.icon} `;
   } else if (type === 'Quy hoạch') {
-    bgColor = 'bg-gradient-to-r from-amber-500 to-orange-500 border-amber-400 shadow-amber-500/20';
+    chipClass = 'bg-gradient-to-r from-amber-500 to-orange-500 border-amber-400 shadow-amber-500/20 text-white';
     iconPrefix = '📍 ';
   }
   
   return L.divIcon({
-    html: `<div class="flex items-center justify-center px-1.5 py-0.5 rounded border text-[8px] font-extrabold text-white tracking-tighter shadow-md whitespace-nowrap ${bgColor} transition-transform duration-100 hover:scale-110 active:scale-95" style="transform: translate(-50%, -50%); min-width: 32px; line-height: 1;">
+    html: `<div class="flex items-center justify-center px-1.5 py-0.5 rounded text-[8.5px] font-black tracking-tight whitespace-nowrap ${chipClass} transition-transform duration-100 hover:scale-110 active:scale-95" style="transform: translate(-50%, -50%); min-width: 28px; line-height: 1;">
              ${iconPrefix}${id}
            </div>`,
     className: 'bg-transparent border-none', // Removes default leaflet white square wrapper styles
@@ -1318,38 +1316,6 @@ export default function NetworkMap() {
                       <span className="font-extrabold text-[11px] text-blue-300 mt-1">{activeSiteCounts.normal_4g}</span>
                     </button>
                   </div>
-
-                  {/* Ghi chú các Cụm SRAN đã hoàn thành Swap */}
-                  <div className="mt-2 pt-2 border-t border-slate-800/80 space-y-1.5 font-sans">
-                    <div className="flex items-center justify-between text-[10px] text-slate-300 font-bold">
-                      <span className="flex items-center gap-1">
-                        <span className="text-emerald-400">✅</span> Cụm SRAN đã Swap ERA ({5} cụm):
-                      </span>
-                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                        {activeSiteCounts.onair_5g + activeSiteCounts.swapped_4g_era} trạm
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap gap-1 text-[9px]">
-                      <span className="px-1.5 py-0.5 rounded bg-emerald-950/50 text-emerald-300 border border-emerald-500/30 font-medium">
-                        DNI_15_XL (Xuân Lộc)
-                      </span>
-                      <span className="px-1.5 py-0.5 rounded bg-emerald-950/50 text-emerald-300 border border-emerald-500/30 font-medium">
-                        DNI_17_XL (Xuân Lộc)
-                      </span>
-                      <span className="px-1.5 py-0.5 rounded bg-slate-800/80 text-slate-300 border border-slate-700">
-                        DNI_09_CM (Cẩm Mỹ)
-                      </span>
-                      <span className="px-1.5 py-0.5 rounded bg-slate-800/80 text-slate-300 border border-slate-700">
-                        DNI_10_TN (Thống Nhất)
-                      </span>
-                      <span className="px-1.5 py-0.5 rounded bg-slate-800/80 text-slate-300 border border-slate-700">
-                        DNI_16_CM (Cẩm Mỹ)
-                      </span>
-                    </div>
-                    <p className="text-[9.5px] text-slate-400 leading-tight">
-                      💡 <em>Trạm có cấu hình 5G trong các cụm đã swap được tô màu hồng neon phát sóng <strong>📶 5G Onair</strong>.</em>
-                    </p>
-                  </div>
                 </div>
               )}
 
@@ -1474,24 +1440,24 @@ export default function NetworkMap() {
               {!showTransmission && <MapClickListener onClick={(lat, lng) => executeScan(lat, lng)} />}
 
               <LayersControl position="topright">
-                <LayersControl.BaseLayer checked name="Bản đồ Đường phố">
+                <LayersControl.BaseLayer checked name="Vệ tinh + Đường phố (Google)">
                   <TileLayer
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    attribution='&copy; Google'
+                    url="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
                   />
                 </LayersControl.BaseLayer>
-                
-                <LayersControl.BaseLayer name="Ảnh Vệ tinh (Google)">
+
+                <LayersControl.BaseLayer name="Ảnh Vệ tinh (Không nhãn)">
                   <TileLayer
                     attribution='&copy; Google'
                     url="https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}"
                   />
                 </LayersControl.BaseLayer>
-
-                <LayersControl.BaseLayer name="Vệ tinh + Đường phố">
+                
+                <LayersControl.BaseLayer name="Bản đồ Đường phố">
                   <TileLayer
-                    attribution='&copy; Google'
-                    url="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                   />
                 </LayersControl.BaseLayer>
               </LayersControl>
