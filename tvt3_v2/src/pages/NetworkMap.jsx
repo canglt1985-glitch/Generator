@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '../supabaseClient';
-import { MapPin, Search, Server, Shield, Map as MapIcon, Compass, AlertCircle, Info, Radio, Layers, Filter, Copy, Check, ExternalLink } from 'lucide-react';
+import { MapPin, Search, Server, Shield, Map as MapIcon, Compass, AlertCircle, Info, Radio, Layers, Filter, Copy, Check, ExternalLink, Maximize2, Minimize2 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, Circle, useMap, LayersControl, Tooltip } from 'react-leaflet';
 import L from 'leaflet';
 
@@ -269,7 +269,7 @@ const createSiteDivIcon = (id, type, infraCategory = null, sranCategory = null) 
   }
   
   return L.divIcon({
-    html: `<div class="flex items-center justify-center px-1.5 py-0.5 rounded text-[8.5px] font-black tracking-tight whitespace-nowrap ${chipClass} transition-transform duration-100 hover:scale-110 active:scale-95" style="transform: translate(-50%, -50%); min-width: 28px; line-height: 1;">
+    html: `<div class="flex items-center justify-center px-1 py-[1px] rounded-[3px] text-[7.5px] font-black tracking-tighter whitespace-nowrap ${chipClass} transition-transform duration-100 hover:scale-125 active:scale-95" style="transform: translate(-50%, -50%); min-width: 20px; line-height: 1;">
              ${iconPrefix}${id}
            </div>`,
     className: 'bg-transparent border-none', // Removes default leaflet white square wrapper styles
@@ -277,6 +277,18 @@ const createSiteDivIcon = (id, type, infraCategory = null, sranCategory = null) 
     iconAnchor: [0, 0]
   });
 };
+
+// Helper component to dynamically handle map resize on fullscreen toggle
+function MapResizeHandler({ isFullscreen }) {
+  const map = useMap();
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      map.invalidateSize();
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [isFullscreen, map]);
+  return null;
+}
 
 // Helper component to dynamically change map viewport center & zoom
 function ChangeView({ center, zoom }) {
@@ -326,9 +338,22 @@ export default function NetworkMap() {
   const [sranTrackerData, setSranTrackerData] = useState([]);
   const [showProjects, setShowProjects] = useState(true);
   const [infraFilter, setInfraFilter] = useState('all'); // 'all' | 'so_ok_dau_tu' | 'dung_chung' | 'da_khao_sat' | 'quy_hoach'
+  const [showTransmission, setShowTransmission] = useState(true);
   const [showCoverageCircle, setShowCoverageCircle] = useState(false);
-  const [showTransmission, setShowTransmission] = useState(false);
   const [useGPS, setUseGPS] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Lắng nghe phím Escape để thoát chế độ toàn màn hình
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isFullscreen) {
+        setIsFullscreen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isFullscreen]);
   const watchIdRef = useRef(null);
 
   // Autocomplete Suggestions
@@ -762,8 +787,6 @@ export default function NetworkMap() {
     else setZoomLevel(14);
   };
 
-  // Toast notification state
-  const [toastMessage, setToastMessage] = useState('');
   const showToast = (msg) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(''), 3500);
@@ -1083,6 +1106,17 @@ export default function NetworkMap() {
           <p className="text-xs text-slate-400 mt-1 font-sans">
             Click trực tiếp lên bản đồ hoặc nhập tọa độ để quét trạm, khảo sát PTM, PAKH, đo khoảng cách vùng phủ sóng.
           </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsFullscreen(!isFullscreen)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-slate-700 font-bold text-xs shadow-sm transition-all cursor-pointer active:scale-95 hover:border-cyan-500"
+            title={isFullscreen ? "Thu nhỏ bản đồ (Esc)" : "Mở bản đồ toàn màn hình"}
+          >
+            {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            <span>{isFullscreen ? 'Thu nhỏ' : 'Toàn màn hình'}</span>
+          </button>
         </div>
       </div>
 
@@ -1421,8 +1455,12 @@ export default function NetworkMap() {
 
         {/* Right Side Map Canvas & Table */}
         <div className="lg:col-span-2 space-y-4">
-          {/* Map Leaflet Container */}
-          <div className="bg-slate-800 border border-slate-700/60 rounded-2xl overflow-hidden h-[450px] lg:h-[600px] relative shadow-lg">
+          {/* Map Leaflet Container (Hỗ trợ Toàn màn hình - Fullscreen) */}
+          <div className={`transition-all duration-300 ${
+            isFullscreen 
+              ? 'fixed inset-0 z-[9999] w-screen h-screen bg-slate-950 overflow-hidden' 
+              : 'bg-slate-800 border border-slate-700/60 rounded-2xl overflow-hidden h-[450px] lg:h-[620px] relative shadow-lg'
+          }`}>
             {/* Floating Toast Notification */}
             {toastMessage && (
               <div className="absolute top-3 left-1/2 transform -translate-x-1/2 z-[2000] bg-slate-900/95 text-white text-xs font-bold px-4 py-2 rounded-full border border-cyan-500/60 shadow-2xl backdrop-blur-md flex items-center gap-2 animate-in fade-in zoom-in duration-200">
@@ -1431,11 +1469,75 @@ export default function NetworkMap() {
               </div>
             )}
 
+            {/* Nút bật/tắt Toàn màn hình góc trên bản đồ */}
+            <button
+              type="button"
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              className="absolute top-3 right-14 z-[1000] bg-slate-900/90 hover:bg-slate-800 text-white px-2.5 py-1.5 rounded-xl border border-slate-700 shadow-xl backdrop-blur-md flex items-center gap-1.5 text-xs font-bold transition-all active:scale-95 cursor-pointer hover:border-cyan-500"
+              title={isFullscreen ? "Thu nhỏ bản đồ (Phím Esc)" : "Mở toàn màn hình bản đồ"}
+            >
+              {isFullscreen ? (
+                <>
+                  <Minimize2 className="h-4 w-4 text-cyan-400" />
+                  <span className="hidden sm:inline">Thu nhỏ (Esc)</span>
+                </>
+              ) : (
+                <>
+                  <Maximize2 className="h-4 w-4 text-cyan-400" />
+                  <span className="hidden sm:inline">Toàn màn hình</span>
+                </>
+              )}
+            </button>
+
+            {/* Floating Quick Filter Bar khi ở chế độ Fullscreen */}
+            {isFullscreen && (
+              <div className="absolute bottom-5 left-1/2 transform -translate-x-1/2 z-[1000] bg-slate-900/95 border border-slate-700/80 rounded-2xl px-3 py-1.5 shadow-2xl backdrop-blur-md flex items-center gap-2 font-sans text-xs">
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider hidden sm:inline">Lọc trạm:</span>
+                <button
+                  type="button"
+                  onClick={() => setActiveSiteFilter('all')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    activeSiteFilter === 'all' ? 'bg-cyan-600 text-white shadow-sm' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                  }`}
+                >
+                  Tất cả ({activeSiteCounts.total})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveSiteFilter(activeSiteFilter === 'onair_5g' ? 'all' : 'onair_5g')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                    activeSiteFilter === 'onair_5g' ? 'bg-pink-600 text-white shadow-sm ring-2 ring-pink-400/50' : 'bg-slate-800 text-pink-300 hover:bg-slate-700'
+                  }`}
+                >
+                  <span>📶 5G</span> ({activeSiteCounts.onair_5g})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveSiteFilter(activeSiteFilter === 'swapped_4g_era' ? 'all' : 'swapped_4g_era')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                    activeSiteFilter === 'swapped_4g_era' ? 'bg-cyan-600 text-white shadow-sm ring-2 ring-cyan-400/50' : 'bg-slate-800 text-cyan-300 hover:bg-slate-700'
+                  }`}
+                >
+                  <span>🔄 ERA</span> ({activeSiteCounts.swapped_4g_era})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveSiteFilter(activeSiteFilter === 'normal_4g' ? 'all' : 'normal_4g')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                    activeSiteFilter === 'normal_4g' ? 'bg-blue-600 text-white shadow-sm ring-2 ring-blue-400/50' : 'bg-slate-800 text-blue-300 hover:bg-slate-700'
+                  }`}
+                >
+                  <span>🔵 4G</span> ({activeSiteCounts.normal_4g})
+                </button>
+              </div>
+            )}
+
             <MapContainer 
               center={mapCenter} 
               zoom={zoomLevel} 
               style={{ height: '100%', width: '100%', zIndex: 10 }}
             >
+              <MapResizeHandler isFullscreen={isFullscreen} />
               <ChangeView center={mapCenter} zoom={zoomLevel} />
               {!showTransmission && <MapClickListener onClick={(lat, lng) => executeScan(lat, lng)} />}
 
