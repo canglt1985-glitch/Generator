@@ -554,6 +554,12 @@ export default function Sran5gProject() {
       const rawOnair = clusterSites.filter(d => d.onair_date).length;
       const rawOnair5g = clusterSites.filter(d => d.onair_date && is5gSite(d)).length;
 
+      const survey = Math.min(c.total_3g4g, rawSurvey);
+      const tssr = Math.min(c.total_3g4g, rawTssr);
+      const rf = Math.min(c.total_3g4g, rawRf);
+      const wh = Math.min(c.total_3g4g, rawWh);
+      const onair = Math.min(c.total_3g4g, rawOnair);
+
       // Use exact report progress metrics from Excel report when defined
       const delivery = c.del_3g4g !== undefined ? c.del_3g4g : Math.min(c.total_3g4g, rawDelivery);
       const install = c.ins_3g4g !== undefined ? c.ins_3g4g : Math.min(c.total_3g4g, rawInstall);

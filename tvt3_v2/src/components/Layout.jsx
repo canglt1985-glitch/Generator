@@ -1,6 +1,7 @@
 import { Outlet, Link } from 'react-router-dom';
 import Header from './Header';
 import CookieConsent from './CookieConsent';
+import ErrorBoundary from './ErrorBoundary';
 
 export default function Layout() {
   const currentYear = new Date().getFullYear();
@@ -10,7 +11,9 @@ export default function Layout() {
       <Header />
       <main className="flex-1 w-full overflow-x-hidden p-4 md:p-6 lg:p-8">
         <div className="max-w-[1600px] mx-auto">
-          <Outlet />
+          <ErrorBoundary>
+            <Outlet />
+          </ErrorBoundary>
         </div>
       </main>
       <footer className="w-full bg-white border-t border-gray-100 py-6 mt-10">
