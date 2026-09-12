@@ -818,6 +818,17 @@ export default function NetworkMap() {
       lines.push(`Trạm: ${name}`);
     }
 
+    const vp = site?.management_info?.vung_phu;
+    const tm = site?.management_info?.tram_main && site.management_info.tram_main !== 'KHÔNG' ? site.management_info.tram_main : '';
+    const isCran = vp && vp.toUpperCase().includes('CRAN');
+    if (vp) {
+      if (isCran && tm) {
+        lines.push(`Vùng phủ: ${vp} (Trạm Main: ${tm})`);
+      } else {
+        lines.push(`Vùng phủ: ${vp}`);
+      }
+    }
+
     if (site?.management_info?.qlt) {
       const phone = site.management_info.sdt_qlt ? ` - ${site.management_info.sdt_qlt}` : '';
       lines.push(`Người QLT: ${site.management_info.qlt}${phone}`);
@@ -1736,6 +1747,29 @@ export default function NetworkMap() {
                             )}
 
                             {site.name && <span className="text-slate-600 block font-medium">{site.name}</span>}
+
+                            {/* Thông tin Vùng phủ & Trạm Main (nếu là CRAN Outdoor) */}
+                            {site.management_info?.vung_phu && (() => {
+                              const vp = site.management_info.vung_phu;
+                              const tm = site.management_info.tram_main && site.management_info.tram_main !== 'KHÔNG' ? site.management_info.tram_main : null;
+                              const isCran = vp.toUpperCase().includes('CRAN');
+                              return (
+                                <div className="space-y-0.5 text-[10.5px]">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-slate-600 font-medium">🌐 Vùng phủ:</span>
+                                    <span className="font-bold text-slate-800">{vp}</span>
+                                  </div>
+                                  {isCran && tm && (
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-slate-600 font-medium">🏢 Trạm Main:</span>
+                                      <span className="font-mono font-bold text-cyan-800 bg-cyan-50 px-1.5 py-0.5 rounded border border-cyan-200 text-[10px]">
+                                        {tm}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()}
                             {site.management_info?.qlt && (
                               <div className="flex items-center justify-between text-[10.5px] bg-slate-100/90 rounded px-2 py-1 border border-slate-200">
                                 <span className="text-slate-600 font-medium">👤 Người QLT:</span>
