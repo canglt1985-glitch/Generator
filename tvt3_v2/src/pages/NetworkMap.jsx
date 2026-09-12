@@ -639,10 +639,6 @@ export default function NetworkMap() {
     }
   };
 
-  const handleManualSearch = async (e) => {
-    if (e) e.preventDefault();
-    setValidationError('');
-
   // Handle unified search input change (Mã trạm, Tọa độ GPS, Tên địa danh)
   const handleUnifiedQueryChange = (val) => {
     setCoordinateInput(val);
@@ -1553,5 +1549,4 @@ export default function NetworkMap() {
       </div>
     </div>
   );
-}
 }
