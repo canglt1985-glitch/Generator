@@ -805,18 +805,20 @@ export default function NetworkMap() {
     showToast(`Đã sao chép ${label}: ${coordStr}`);
   };
 
-  // Sao chép tổng hợp: Tên trạm, Người QLT, SĐT, Tọa độ & Link chỉ đường Google Maps
-  const handleCopyStationInfo = (site, lat, lng, name) => {
+  // Sao chép tổng hợp: Tên trạm, Vùng phủ, Người QLT, SĐT, Tọa độ & Link chỉ đường Google Maps
+  const handleCopyStationInfo = (site, lat, lng, defaultTitle) => {
     if (!lat || !lng) return;
     const coordStr = `${parseFloat(lat).toFixed(6)}, ${parseFloat(lng).toFixed(6)}`;
     const mapUrl = `https://www.google.com/maps/dir/?api=1&destination=${parseFloat(lat).toFixed(6)},${parseFloat(lng).toFixed(6)}`;
     
     const lines = [];
-    if (site?.name && site.name !== name) {
-      lines.push(`Trạm: ${name} (${site.name})`);
-    } else {
-      lines.push(`Trạm: ${name}`);
-    }
+    const oldId = site?.site_id_old || site?.site_id || defaultTitle;
+    const newId = (site?.site_id && site.site_id !== oldId)
+      ? site.site_id
+      : (site?.sranCategory?.sranInfo?.site_id && site.sranCategory.sranInfo.site_id !== oldId ? site.sranCategory.sranInfo.site_id : null);
+    const stationLabel = newId ? `${oldId} - ${newId}` : oldId;
+
+    lines.push(`Trạm: ${stationLabel}`);
 
     const vp = site?.management_info?.vung_phu;
     const tm = site?.management_info?.tram_main && site.management_info.tram_main !== 'KHÔNG' ? site.management_info.tram_main : '';
@@ -839,7 +841,7 @@ export default function NetworkMap() {
 
     const textToCopy = lines.join('\n');
     navigator.clipboard.writeText(textToCopy);
-    showToast(`Đã sao chép thông tin & link chỉ đường trạm ${name}`);
+    showToast(`Đã sao chép thông tin & link chỉ đường trạm ${stationLabel}`);
   };
 
   // Sao chép thông tin vị trí quy hoạch & link chỉ đường
@@ -898,24 +900,39 @@ export default function NetworkMap() {
 
     const query = val.trim().toLowerCase();
 
-    // 1. Filter Active Sites (Kèm nhãn công nghệ 5G / 4G ERA)
+    // 1. Filter Active Sites (Kèm nhãn công nghệ 5G / 4G ERA, hỗ trợ tìm theo cả Site ID cũ và Site ID mới)
     const filteredActive = categorizedActiveSites
-      .filter(s => 
-        s.site_id.toLowerCase().includes(query) || 
-        (s.site_id_old && s.site_id_old.toLowerCase().includes(query)) ||
-        (s.name && s.name.toLowerCase().includes(query)) ||
-        (query.includes('5g') && s.sranCategory?.key === 'onair_5g') ||
-        ((query.includes('era') || query.includes('swap')) && s.sranCategory?.key === 'swapped_4g_era')
-      )
-      .map(s => ({
-        id: s.site_id,
-        code: s.site_id_old || s.site_id,
-        name: `${s.sranCategory?.icon || '🔵'} ${s.sranCategory?.shortLabel || '4G'} • ${s.name || 'Trạm hoạt động'}`,
-        lat: parseFloat(s.location_info.vi_do),
-        lng: parseFloat(s.location_info.kinh_do),
-        type: s.sranCategory?.shortLabel || 'Hoạt động',
-        badgeClass: s.sranCategory?.badgeClass || 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
-      }));
+      .filter(s => {
+        const oldId = (s.site_id_old || '').toLowerCase();
+        const newId = (s.site_id || '').toLowerCase();
+        const sranId = (s.sranCategory?.sranInfo?.site_id || '').toLowerCase();
+        return (
+          oldId.includes(query) || 
+          newId.includes(query) ||
+          sranId.includes(query) ||
+          (query.includes('5g') && s.sranCategory?.key === 'onair_5g') ||
+          ((query.includes('era') || query.includes('swap')) && s.sranCategory?.key === 'swapped_4g_era')
+        );
+      })
+      .map(s => {
+        const oldId = s.site_id_old || s.site_id;
+        const newId = (s.site_id && s.site_id !== oldId) 
+          ? s.site_id 
+          : (s.sranCategory?.sranInfo?.site_id && s.sranCategory.sranInfo.site_id !== oldId ? s.sranCategory.sranInfo.site_id : null);
+        const displayCode = newId ? `${oldId} - ${newId}` : oldId;
+
+        return {
+          id: s.site_id,
+          code: displayCode,
+          oldCode: oldId,
+          newCode: newId,
+          name: `${s.sranCategory?.icon || '🔵'} ${s.sranCategory?.shortLabel || '4G'}${newId ? ` • ${newId}` : ''}`,
+          lat: parseFloat(s.location_info.vi_do),
+          lng: parseFloat(s.location_info.kinh_do),
+          type: s.sranCategory?.shortLabel || 'Hoạt động',
+          badgeClass: s.sranCategory?.badgeClass || 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+        };
+      });
 
     // 2. Filter CSHT Projects (95 vị trí - phân loại 4 màu)
     const filteredProjects = categorizedProjects
@@ -975,19 +992,31 @@ export default function NetworkMap() {
 
     const query = inputVal.toLowerCase();
 
-    // B. Check Active Sites (kèm nhận diện nhãn công nghệ 5G / 4G ERA)
-    const matchedActive = categorizedActiveSites.find(
-      s => s.site_id.toLowerCase() === query || 
-           (s.site_id_old && s.site_id_old.toLowerCase() === query) || 
-           s.site_id.toLowerCase().includes(query) || 
-           (s.site_id_old && s.site_id_old.toLowerCase().includes(query))
-    );
+    // B. Check Active Sites (kèm nhận diện nhãn công nghệ 5G / 4G ERA & hỗ trợ Site ID cũ / mới)
+    const matchedActive = categorizedActiveSites.find(s => {
+      const oldId = (s.site_id_old || '').toLowerCase();
+      const newId = (s.site_id || '').toLowerCase();
+      const sranId = (s.sranCategory?.sranInfo?.site_id || '').toLowerCase();
+      const combined = `${oldId} - ${newId}`.toLowerCase();
+      
+      return (
+        oldId === query || newId === query || sranId === query || combined === query ||
+        oldId.includes(query) || newId.includes(query) || sranId.includes(query) ||
+        (query.length >= 4 && (query.includes(oldId) || (newId && query.includes(newId))))
+      );
+    });
     if (matchedActive) {
       const lat = parseFloat(matchedActive.location_info.vi_do);
       const lng = parseFloat(matchedActive.location_info.kinh_do);
+      const oldId = matchedActive.site_id_old || matchedActive.site_id;
+      const newId = (matchedActive.site_id && matchedActive.site_id !== oldId) 
+        ? matchedActive.site_id 
+        : (matchedActive.sranCategory?.sranInfo?.site_id && matchedActive.sranCategory.sranInfo.site_id !== oldId ? matchedActive.sranCategory.sranInfo.site_id : null);
+      const displayTitle = newId ? `${oldId} - ${newId}` : oldId;
+
       setMapCenter([lat, lng]);
       setZoomLevel(16);
-      showToast(`Đã tìm thấy trạm: ${matchedActive.site_id_old || matchedActive.site_id} (${matchedActive.sranCategory?.label || 'Hoạt động'})`);
+      showToast(`Đã tìm thấy trạm: ${displayTitle} (${matchedActive.sranCategory?.label || 'Hoạt động'})`);
       return;
     }
 
@@ -1692,7 +1721,12 @@ export default function NetworkMap() {
                 .map(site => {
                   const lat = parseFloat(site.location_info.vi_do);
                   const lng = parseFloat(site.location_info.kinh_do);
-                  const name = site.site_id_old || site.site_id;
+                  const oldId = site.site_id_old || site.site_id;
+                  const newId = (site.site_id && site.site_id !== oldId) 
+                    ? site.site_id 
+                    : (cat?.sranInfo?.site_id && cat.sranInfo.site_id !== oldId ? cat.sranInfo.site_id : null);
+                  const displayName = newId ? `${oldId} - ${newId}` : oldId;
+                  const name = oldId;
                   const cat = site.sranCategory;
                   
                   return (
@@ -1705,7 +1739,7 @@ export default function NetworkMap() {
                           <div className="font-sans text-xs flex flex-col gap-1.5 max-w-[280px]">
                             <div className="flex items-center justify-between border-b border-slate-200 pb-1">
                               <div>
-                                <strong className={`block text-sm font-bold ${cat?.textColor || 'text-blue-600'}`}>{name}</strong>
+                                <strong className={`block text-sm font-bold ${cat?.textColor || 'text-blue-600'}`}>{displayName}</strong>
                                 {cat && (
                                   <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-extrabold mt-0.5 ${cat.badgeClass}`}>
                                     {cat.icon} {cat.label}
@@ -1713,7 +1747,7 @@ export default function NetworkMap() {
                                 )}
                               </div>
                               <button 
-                                onClick={() => handleCopyStationInfo(site, lat, lng, name)}
+                                onClick={() => handleCopyStationInfo(site, lat, lng, displayName)}
                                 className="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold border border-slate-300 flex items-center gap-1 transition-all cursor-pointer"
                                 title="Sao chép Tên trạm, Người QLT, SĐT, Tọa độ & Link chỉ đường"
                               >
@@ -1721,16 +1755,9 @@ export default function NetworkMap() {
                               </button>
                             </div>
 
-                            {/* Khối chi tiết SRAN 5G / 4G ERA nếu có */}
-                            {cat?.sranInfo && (
+                            {/* Khối cấu hình 5G / 4G nếu có */}
+                            {(cat?.sranInfo?.config_5g || cat?.sranInfo?.config_4g) && (
                               <div className="bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-[11px] space-y-1.5 shadow-sm">
-                                <div className="font-bold text-slate-700 flex items-center justify-between">
-                                  <span className="flex items-center gap-1">📡 Dự án SRAN</span>
-                                  <span className="font-mono text-[10px] text-cyan-700 bg-cyan-50 px-1.5 py-0.5 rounded border border-cyan-200">
-                                    {cat.sranInfo.site_id}
-                                  </span>
-                                </div>
-
                                 {cat.sranInfo.config_5g && (
                                   <div className="text-pink-700 font-semibold flex items-center justify-between">
                                     <span>⚡ Cấu hình 5G:</span>
@@ -1745,8 +1772,6 @@ export default function NetworkMap() {
                                 )}
                               </div>
                             )}
-
-                            {site.name && <span className="text-slate-600 block font-medium">{site.name}</span>}
 
                             {/* Thông tin Vùng phủ & Trạm Main (nếu là CRAN Outdoor) */}
                             {site.management_info?.vung_phu && (() => {
