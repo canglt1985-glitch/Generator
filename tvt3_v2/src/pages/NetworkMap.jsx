@@ -1717,6 +1717,23 @@ export default function NetworkMap() {
                             )}
 
                             {site.name && <span className="text-slate-600 block font-medium">{site.name}</span>}
+                            {site.management_info?.qlt && (
+                              <div className="flex items-center justify-between text-[10.5px] bg-slate-100/90 rounded px-2 py-1 border border-slate-200">
+                                <span className="text-slate-600 font-medium">👤 Người QLT:</span>
+                                <span className="font-bold text-slate-800 flex items-center gap-1">
+                                  {site.management_info.qlt}
+                                  {site.management_info.sdt_qlt && (
+                                    <a 
+                                      href={`tel:${site.management_info.sdt_qlt}`}
+                                      className="text-cyan-700 hover:underline font-mono text-[10px]"
+                                      title="Gọi điện thoại cho Người QLT"
+                                    >
+                                      ({site.management_info.sdt_qlt})
+                                    </a>
+                                  )}
+                                </span>
+                              </div>
+                            )}
                             <span className="text-slate-400 font-mono block text-[10px]">{lat.toFixed(6)}, {lng.toFixed(6)}</span>
                             
                             <div className="flex gap-1 mt-1 font-sans">
