@@ -338,17 +338,18 @@ export default function NetworkMap() {
   const [zoomLevel, setZoomLevel] = useState(11);
   const [scanRadius, setScanRadius] = useState(1000); // scan radius in meters (default 1000m)
   
-  // Layer Toggles
+  // Layer Toggles - Mặc định chỉ hiển thị trạm hoạt động
   const [showActiveSites, setShowActiveSites] = useState(true);
   const [activeSiteFilter, setActiveSiteFilter] = useState('all'); // 'all' | 'onair_5g' | 'swapped_4g_era' | 'normal_4g'
   const [sranTrackerData, setSranTrackerData] = useState([]);
-  const [showProjects, setShowProjects] = useState(true);
+  const [showProjects, setShowProjects] = useState(false); // Mặc định tắt CSHT QH
   const [infraFilter, setInfraFilter] = useState('all'); // 'all' | 'so_ok_dau_tu' | 'dung_chung' | 'da_khao_sat' | 'quy_hoach'
-  const [showTransmission, setShowTransmission] = useState(true);
+  const [showTransmission, setShowTransmission] = useState(false); // Mặc định tắt Last Mile
   const [showCoverageCircle, setShowCoverageCircle] = useState(false);
   const [useGPS, setUseGPS] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [customTargetSearch, setCustomTargetSearch] = useState('');
 
   // Lắng nghe phím Escape để thoát chế độ toàn màn hình
   useEffect(() => {
@@ -754,24 +755,13 @@ export default function NetworkMap() {
       return;
     }
 
-    // Filter by Scan Radius
-    const withinRadius = allCalculated.filter(item => item.distance <= scanRadius);
+    // Filter by Scan Radius - Luôn đảm bảo hiển thị tối thiểu 5 trạm gần nhất
+    const currentRadius = overrideRadius || scanRadius;
+    const withinRadius = allCalculated.filter(item => item.distance <= currentRadius);
 
-    // Apply dynamic rule to pick count:
-    // nearest distance d1
-    const d1 = allCalculated[0].distance;
-    let limitCount = 5;
-
-    if (d1 > 2000) limitCount = 1;
-    else if (d1 > 1000) limitCount = 2;
-    else if (d1 > 500) limitCount = 3;
-    else limitCount = 5;
-
-    // Take the minimum of withinRadius or limitCount (ensure we always show at least the nearest one)
-    let finalSelection = withinRadius.slice(0, limitCount);
-    if (finalSelection.length === 0) {
-      finalSelection = [allCalculated[0]];
-    }
+    let finalSelection = withinRadius.length >= 5
+      ? withinRadius.slice(0, 15)
+      : allCalculated.slice(0, Math.min(5, allCalculated.length));
 
     // Đảm bảo luôn lấy đến ít nhất 1 điểm trạm đang hoạt động để làm đối chứng
     const hasActiveSite = finalSelection.some(item => item.type === 'Hoạt động');
@@ -788,9 +778,17 @@ export default function NetworkMap() {
 
     // Adjust zoom dynamically
     const maxDist = finalSelection[finalSelection.length - 1].distance;
-    if (maxDist > 2000) setZoomLevel(12);
-    else if (maxDist > 1000) setZoomLevel(13);
-    else setZoomLevel(14);
+    if (maxDist > 4000) setZoomLevel(12);
+    else if (maxDist > 2000) setZoomLevel(13);
+    else if (maxDist > 1000) setZoomLevel(14);
+    else setZoomLevel(15);
+  };
+
+  const handleRadiusChange = (newRadius) => {
+    setScanRadius(newRadius);
+    if (customerLocation) {
+      executeScan(customerLocation.lat, customerLocation.lng, newRadius);
+    }
   };
 
   const showToast = (msg) => {
@@ -869,6 +867,7 @@ export default function NetworkMap() {
   const handleManualCableRoute = async (target) => {
     if (!customerLocation || !target) return;
     try {
+      showToast(`Đang tính toán tuyến kéo cáp đến ${target.code}...`);
       const url = `https://router.project-osrm.org/route/v1/foot/${customerLocation.lng},${customerLocation.lat};${target.lng},${target.lat}?overview=full&geometries=geojson`;
       const response = await fetch(url);
       const data = await response.json();
@@ -882,9 +881,29 @@ export default function NetworkMap() {
           targetCode: target.code,
           targetName: target.name
         });
+        showToast(`Đã nối tuyến cáp quang đến trạm ${target.code}: ${formatDistance(route.distance)}`);
+      } else {
+        const straightDist = haversineMeters(customerLocation.lat, customerLocation.lng, target.lat, target.lng);
+        setCableRoute({
+          path: [[customerLocation.lat, customerLocation.lng], [target.lat, target.lng]],
+          distance: straightDist * 1.3,
+          cableLength: straightDist * 1.3 * 1.05,
+          targetCode: target.code,
+          targetName: target.name
+        });
+        showToast(`Đã nối tuyến cáp (ước tính) đến ${target.code}: ${formatDistance(straightDist * 1.3)}`);
       }
     } catch (err) {
       console.error(err);
+      const straightDist = haversineMeters(customerLocation.lat, customerLocation.lng, target.lat, target.lng);
+      setCableRoute({
+        path: [[customerLocation.lat, customerLocation.lng], [target.lat, target.lng]],
+        distance: straightDist * 1.3,
+        cableLength: straightDist * 1.3 * 1.05,
+        targetCode: target.code,
+        targetName: target.name
+      });
+      showToast(`Đã kết nối tuyến cáp đến ${target.code}`);
     }
   };
 
@@ -1081,6 +1100,120 @@ export default function NetworkMap() {
           <Server size={12} className="text-cyan-400" />
           Các trạm lân cận
         </h4>
+
+        {/* Bộ chọn bán kính quét nhanh */}
+        <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] bg-slate-900/60 p-2 rounded-xl border border-slate-700/50">
+          <div className="flex items-center gap-1.5 text-slate-400 font-medium">
+            <span>Bán kính:</span>
+            <div className="flex items-center gap-1">
+              {[1000, 2000, 3000, 5000, 10000].map(r => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => handleRadiusChange(r)}
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
+                    scanRadius === r 
+                      ? 'bg-cyan-500 text-slate-950 font-extrabold shadow-sm' 
+                      : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
+                  }`}
+                >
+                  {r >= 1000 ? `${r / 1000}km` : `${r}m`}
+                </button>
+              ))}
+            </div>
+          </div>
+          <span className="text-[10px] text-slate-400 italic">
+            Hiển thị {nearestSites.length} trạm gần nhất
+          </span>
+        </div>
+
+        {/* Ô tìm kiếm trạm đích bất kỳ để kéo cáp (VD: DNLK24) */}
+        <div className="relative font-sans text-xs">
+          <div className="flex items-center gap-2 bg-slate-900/80 border border-slate-700/80 focus-within:border-purple-500 rounded-xl px-3 py-1.5 transition-all">
+            <Search className="h-3.5 w-3.5 text-purple-400 shrink-0" />
+            <input 
+              type="text"
+              placeholder="🔍 Kéo cáp đến trạm khác (nhập mã trạm, VD: DNLK24, DNXL09)..."
+              value={customTargetSearch}
+              onChange={(e) => setCustomTargetSearch(e.target.value)}
+              className="bg-transparent border-none outline-none text-white text-xs w-full placeholder-slate-400"
+            />
+            {customTargetSearch && (
+              <button 
+                type="button"
+                onClick={() => setCustomTargetSearch('')}
+                className="text-slate-400 hover:text-white text-xs px-1 cursor-pointer"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          {customTargetSearch.trim().length >= 2 && (
+            <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-slate-900/95 backdrop-blur-md border border-purple-500/40 rounded-xl shadow-2xl overflow-hidden divide-y divide-slate-800 max-h-52 overflow-y-auto font-sans">
+              {categorizedActiveSites
+                .filter(s => {
+                  const q = customTargetSearch.toLowerCase();
+                  const oldId = (s.site_id_old || '').toLowerCase();
+                  const newId = (s.site_id || '').toLowerCase();
+                  const sName = (s.name || '').toLowerCase();
+                  return oldId.includes(q) || newId.includes(q) || sName.includes(q);
+                })
+                .slice(0, 6)
+                .map(s => {
+                  const sLat = parseFloat(s.location_info.vi_do);
+                  const sLng = parseFloat(s.location_info.kinh_do);
+                  const dist = haversineMeters(customerLocation.lat, customerLocation.lng, sLat, sLng);
+                  const oldId = s.site_id_old || s.site_id;
+                  const newId = (s.site_id && s.site_id !== oldId) ? s.site_id : null;
+                  const title = newId ? `${oldId} - ${newId}` : oldId;
+
+                  return (
+                    <button
+                      key={s.site_id}
+                      type="button"
+                      onClick={() => {
+                        handleManualCableRoute({
+                          code: oldId,
+                          name: s.name,
+                          lat: sLat,
+                          lng: sLng
+                        });
+                        setCustomTargetSearch('');
+                        setNearestSites(prev => {
+                          if (prev.some(p => p.code === oldId || p.id === s.site_id)) return prev;
+                          return [{
+                            id: s.site_id,
+                            code: oldId,
+                            displayCode: title,
+                            name: s.name,
+                            lat: sLat,
+                            lng: sLng,
+                            type: 'Hoạt động',
+                            techType: s.sranCategory?.shortLabel || '4G',
+                            sranCategory: s.sranCategory,
+                            district: formatLocationName(s.location_info?.xa_moi, s.location_info?.huyen_cu),
+                            toVT: formatManagementUnit(s.management_info?.to_ql),
+                            distance: dist
+                          }, ...prev].sort((a, b) => a.distance - b.distance);
+                        });
+                        setMapCenter([sLat, sLng]);
+                      }}
+                      className="w-full text-left px-3 py-2 hover:bg-purple-950/50 transition-colors flex items-center justify-between cursor-pointer"
+                    >
+                      <div>
+                        <div className="font-bold text-cyan-400 text-xs">{title}</div>
+                        <div className="text-[10px] text-slate-400">{s.name} • Cách điểm chọn: <span className="text-emerald-400 font-bold">{formatDistance(dist)}</span></div>
+                      </div>
+                      <span className="px-2.5 py-1 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-[10px] font-bold shrink-0 shadow-sm flex items-center gap-1">
+                        🔌 Kéo cáp
+                      </span>
+                    </button>
+                  );
+                })}
+            </div>
+          )}
+        </div>
 
         {cableRoute && (
           <div className="bg-purple-950/40 border border-purple-500/35 rounded-xl p-3 text-xs space-y-1.5 animate-in slide-in-from-top-1 duration-200">
@@ -1823,10 +1956,31 @@ export default function NetworkMap() {
                             <div className="flex gap-1 mt-1 font-sans">
                               {customerLocation && (
                                 <button
-                                  onClick={() => handleManualCableRoute({ code: name, name: site.name, lat, lng })}
-                                  className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1 bg-purple-600 hover:bg-purple-500 !text-white rounded text-[10px] font-bold transition-all text-center shadow-sm"
+                                  onClick={() => {
+                                    handleManualCableRoute({ code: name, name: site.name, lat, lng });
+                                    setNearestSites(prev => {
+                                      if (prev.some(p => p.code === name || p.id === site.site_id)) return prev;
+                                      const dist = haversineMeters(customerLocation.lat, customerLocation.lng, lat, lng);
+                                      return [{
+                                        id: site.site_id,
+                                        code: name,
+                                        displayCode: displayName,
+                                        name: site.name,
+                                        lat,
+                                        lng,
+                                        type: 'Hoạt động',
+                                        techType: cat?.shortLabel || '4G',
+                                        sranCategory: cat,
+                                        district: formatLocationName(site.location_info?.xa_moi, site.location_info?.huyen_cu),
+                                        toVT: formatManagementUnit(site.management_info?.to_ql),
+                                        distance: dist
+                                      }, ...prev].sort((a, b) => a.distance - b.distance);
+                                    });
+                                  }}
+                                  className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 !text-white rounded text-[10px] font-bold transition-all text-center shadow-sm"
+                                  title="Kéo cáp quang từ điểm khảo sát đến trạm này"
                                 >
-                                  🔌 Kéo cáp
+                                  🔌 Kéo cáp ({formatDistance(haversineMeters(customerLocation.lat, customerLocation.lng, lat, lng))})
                                 </button>
                               )}
                               <a 
