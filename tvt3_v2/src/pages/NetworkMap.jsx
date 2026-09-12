@@ -805,6 +805,49 @@ export default function NetworkMap() {
     showToast(`Đã sao chép ${label}: ${coordStr}`);
   };
 
+  // Sao chép tổng hợp: Tên trạm, Người QLT, SĐT, Tọa độ & Link chỉ đường Google Maps
+  const handleCopyStationInfo = (site, lat, lng, name) => {
+    if (!lat || !lng) return;
+    const coordStr = `${parseFloat(lat).toFixed(6)}, ${parseFloat(lng).toFixed(6)}`;
+    const mapUrl = `https://www.google.com/maps/dir/?api=1&destination=${parseFloat(lat).toFixed(6)},${parseFloat(lng).toFixed(6)}`;
+    
+    const lines = [];
+    if (site?.name && site.name !== name) {
+      lines.push(`Trạm: ${name} (${site.name})`);
+    } else {
+      lines.push(`Trạm: ${name}`);
+    }
+
+    if (site?.management_info?.qlt) {
+      const phone = site.management_info.sdt_qlt ? ` - ${site.management_info.sdt_qlt}` : '';
+      lines.push(`Người QLT: ${site.management_info.qlt}${phone}`);
+    }
+
+    lines.push(`Tọa độ: ${coordStr}`);
+    lines.push(`Chỉ đường: ${mapUrl}`);
+
+    const textToCopy = lines.join('\n');
+    navigator.clipboard.writeText(textToCopy);
+    showToast(`Đã sao chép thông tin & link chỉ đường trạm ${name}`);
+  };
+
+  // Sao chép thông tin vị trí quy hoạch & link chỉ đường
+  const handleCopyProjectInfo = (proj, lat, lng, code) => {
+    if (!lat || !lng) return;
+    const coordStr = `${parseFloat(lat).toFixed(6)}, ${parseFloat(lng).toFixed(6)}`;
+    const mapUrl = `https://www.google.com/maps/dir/?api=1&destination=${parseFloat(lat).toFixed(6)},${parseFloat(lng).toFixed(6)}`;
+    
+    const lines = [
+      `Vị trí Quy hoạch CSHT: ${code}`,
+      proj.address ? `Địa chỉ: ${proj.address}` : '',
+      `Tọa độ: ${coordStr}`,
+      `Chỉ đường: ${mapUrl}`
+    ].filter(Boolean);
+
+    navigator.clipboard.writeText(lines.join('\n'));
+    showToast(`Đã sao chép thông tin & link chỉ đường vị trí ${code}`);
+  };
+
   // Reset tuyến cáp khi thay đổi điểm chọn trên bản đồ (Chỉ tính khi người dùng ấn nút "Kéo cáp")
   useEffect(() => {
     setCableRoute(null);
@@ -1659,9 +1702,9 @@ export default function NetworkMap() {
                                 )}
                               </div>
                               <button 
-                                onClick={() => handleCopyCoords(lat, lng, `trạm ${name}`)}
-                                className="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold border border-slate-300 flex items-center gap-1 transition-all"
-                                title="Sao chép Tọa độ trạm"
+                                onClick={() => handleCopyStationInfo(site, lat, lng, name)}
+                                className="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold border border-slate-300 flex items-center gap-1 transition-all cursor-pointer"
+                                title="Sao chép Tên trạm, Người QLT, SĐT, Tọa độ & Link chỉ đường"
                               >
                                 <Copy className="h-3 w-3 text-cyan-600" /> Copy
                               </button>
@@ -1710,7 +1753,13 @@ export default function NetworkMap() {
                                 </span>
                               </div>
                             )}
-                            <span className="text-slate-400 font-mono block text-[10px]">{lat.toFixed(6)}, {lng.toFixed(6)}</span>
+                            <span 
+                              onClick={() => handleCopyCoords(lat, lng, `tọa độ trạm ${name}`)}
+                              className="text-slate-400 hover:text-slate-600 cursor-pointer font-mono block text-[10px] transition-colors"
+                              title="Nhấp để chỉ sao chép tọa độ"
+                            >
+                              {lat.toFixed(6)}, {lng.toFixed(6)}
+                            </span>
                             
                             <div className="flex gap-1 mt-1 font-sans">
                               {customerLocation && (
@@ -1831,9 +1880,9 @@ export default function NetworkMap() {
                                   {cat.icon} {cat.shortLabel}
                                 </span>
                                 <button 
-                                  onClick={() => handleCopyCoords(lat, lng, `quy hoạch ${code}`)}
+                                  onClick={() => handleCopyProjectInfo(proj, lat, lng, code)}
                                   className="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold border border-slate-300 flex items-center gap-1 transition-all cursor-pointer"
-                                  title="Sao chép Tọa độ GPS"
+                                  title="Sao chép Vị trí, Địa bàn, Tọa độ & Link chỉ đường"
                                 >
                                   <Copy className="h-3 w-3 text-cyan-600" /> Copy
                                 </button>
@@ -1854,7 +1903,13 @@ export default function NetworkMap() {
                                   <span className="text-[9px] font-bold opacity-80">{proj.skhcn_status}</span>
                                 )}
                               </div>
-                              <span className="font-mono block text-[10px] opacity-90">Tọa độ: {lat.toFixed(6)}, {lng.toFixed(6)}</span>
+                              <span 
+                                onClick={() => handleCopyCoords(lat, lng, `tọa độ quy hoạch ${code}`)}
+                                className="font-mono block text-[10px] opacity-90 hover:opacity-100 cursor-pointer underline-offset-2 hover:underline"
+                                title="Nhấp để chỉ sao chép tọa độ"
+                              >
+                                Tọa độ: {lat.toFixed(6)}, {lng.toFixed(6)}
+                              </span>
                               
                               {proj.notes && (
                                 <div className="text-[10px] font-medium border-t border-black/10 pt-1 mt-1 leading-snug">
