@@ -1,8 +1,37 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '../supabaseClient';
-import { MapPin, Search, Server, Shield, Map as MapIcon, Compass, AlertCircle, Info, Radio, Layers, Filter, Copy, Check, ExternalLink, Maximize2, Minimize2 } from 'lucide-react';
-import { MapContainer, TileLayer, Marker, Popup, Polyline, Circle, useMap, LayersControl, Tooltip } from 'react-leaflet';
+import { 
+  MapPin, Search, Server, Shield, Map as MapIcon, Compass, AlertCircle, Info, Radio, 
+  Layers, Filter, Copy, Check, ExternalLink, Maximize2, Minimize2,
+  ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Crosshair, X, Navigation
+} from 'lucide-react';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, Circle, useMap, Tooltip } from 'react-leaflet';
 import L from 'leaflet';
+
+// Google Maps & OSM Tile Layer Definitions
+const TILE_LAYERS = {
+  google_hybrid: {
+    id: 'google_hybrid',
+    name: 'Google Vệ tinh',
+    subname: 'Ảnh vệ tinh + Nhãn đường phố',
+    url: 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+    attribution: '&copy; Google Maps'
+  },
+  google_satellite: {
+    id: 'google_satellite',
+    name: 'Vệ tinh thuần',
+    subname: 'Không nhãn địa danh',
+    url: 'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+    attribution: '&copy; Google Maps'
+  },
+  osm: {
+    id: 'osm',
+    name: 'Bản đồ Đường phố',
+    subname: 'Giao thông OSM',
+    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attribution: '&copy; OpenStreetMap'
+  }
+};
 
 // Fix Leaflet default marker icons bug in Vite build environment
 delete L.Icon.Default.prototype._getIconUrl;
@@ -348,8 +377,11 @@ export default function NetworkMap() {
   const [showCoverageCircle, setShowCoverageCircle] = useState(false);
   const [useGPS, setUseGPS] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
-  const [isFullscreen, setIsFullscreen] = useState(false);
   const [customTargetSearch, setCustomTargetSearch] = useState('');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [bottomSheetState, setBottomSheetState] = useState('collapsed'); // 'collapsed' | 'half' | 'full'
+  const [selectedTileLayer, setSelectedTileLayer] = useState('google_hybrid');
+  const [showLayersPopup, setShowLayersPopup] = useState(false);
 
   // Lắng nghe phím Escape để thoát chế độ toàn màn hình
   useEffect(() => {
@@ -702,11 +734,13 @@ export default function NetworkMap() {
   }
 
   // Handle map click or manual coordinates input to run nearest sites calculation
-  const executeScan = (lat, lng) => {
+  const executeScan = (lat, lng, overrideRadius = null) => {
     setValidationError('');
     const customerCoord = { lat, lng };
     setCustomerLocation(customerCoord);
     setMapCenter([lat, lng]);
+    setIsSidebarOpen(true);
+    setBottomSheetState('half');
 
     // Calculate distances to all Active Sites (sử dụng categorizedActiveSites)
     const activeDistances = categorizedActiveSites.map(site => {
@@ -1095,11 +1129,23 @@ export default function NetworkMap() {
     if (!customerLocation || nearestSites.length === 0) return null;
     
     return (
-      <div className="bg-slate-800/80 border border-slate-700/60 rounded-2xl overflow-hidden p-4 space-y-3 animate-in fade-in duration-300 text-slate-200">
-        <h4 className="text-xs font-bold text-white uppercase tracking-wider font-sans flex items-center gap-1.5 border-b border-slate-700/40 pb-2">
-          <Server size={12} className="text-cyan-400" />
-          Các trạm lân cận
-        </h4>
+      <div className="bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-2xl overflow-hidden p-3.5 space-y-2.5 shadow-2xl animate-in fade-in duration-300 text-slate-200">
+        <div className="flex items-center justify-between border-b border-slate-700/60 pb-2">
+          <h4 className="text-xs font-bold text-white uppercase tracking-wider font-sans flex items-center gap-1.5">
+            <Server size={12} className="text-cyan-400" />
+            Các trạm lân cận ({nearestSites.length})
+          </h4>
+          {isCompact && (
+            <button
+              type="button"
+              onClick={() => setIsSidebarOpen(false)}
+              className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
+              title="Thu gọn bảng (‹)"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+          )}
+        </div>
 
         {/* Bộ chọn bán kính quét nhanh */}
         <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] bg-slate-900/60 p-2 rounded-xl border border-slate-700/50">
@@ -1318,473 +1364,481 @@ export default function NetworkMap() {
   };
 
   return (
-    <div className="w-full space-y-5 py-4 animate-in fade-in slide-in-from-bottom-3 duration-300">
-      {/* Header Dashboard Title */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-700/50 pb-4">
-        <div>
-          <h1 className="text-xl md:text-2xl font-bold text-white flex items-center gap-2 font-sans">
-            <Compass className="h-6 w-6 text-cyan-400 animate-pulse" /> Bản đồ số Hạ tầng mạng TVT3
-          </h1>
-          <p className="text-xs text-slate-400 mt-1 font-sans">
-            Click trực tiếp lên bản đồ hoặc nhập tọa độ để quét trạm, khảo sát PTM, PAKH, đo khoảng cách vùng phủ sóng.
-          </p>
+    <div className="w-full relative animate-in fade-in duration-300 font-sans">
+      {/* Floating Toast Notification */}
+      {toastMessage && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[3000] bg-slate-900/95 text-white text-xs font-bold px-4 py-2 rounded-full border border-cyan-500/60 shadow-2xl backdrop-blur-md flex items-center gap-2 animate-in fade-in zoom-in duration-200">
+          <Check className="h-4 w-4 text-emerald-400 shrink-0" />
+          <span>{toastMessage}</span>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setIsFullscreen(!isFullscreen)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-slate-700 font-bold text-xs shadow-sm transition-all cursor-pointer active:scale-95 hover:border-cyan-500"
-            title={isFullscreen ? "Thu nhỏ bản đồ (Esc)" : "Mở bản đồ toàn màn hình"}
-          >
-            {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-            <span>{isFullscreen ? 'Thu nhỏ' : 'Toàn màn hình'}</span>
-          </button>
-        </div>
-      </div>
+      )}
 
-      {/* Main Grid Workspace */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* Left Side Control Panel */}
-        <div className="lg:col-span-1 space-y-3">
-          <div className="bg-slate-800/95 border border-slate-700/70 rounded-2xl p-3.5 sm:p-4 shadow-xl space-y-3 text-slate-200 backdrop-blur-sm">
-            <div className="flex items-center justify-between border-b border-slate-700/60 pb-2">
-              <h3 className="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5 font-sans">
-                <MapIcon className="h-4 w-4 text-cyan-400" /> Bảng điều khiển
-              </h3>
-              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-                TVT3 Đồng Nai
-              </span>
-            </div>
+      {/* Main Map Canvas Container (Google Maps 100% Full-bleed Style) */}
+      <div className={`relative w-full overflow-hidden transition-all duration-300 ${
+        isFullscreen 
+          ? 'fixed inset-0 z-[2000] w-screen h-screen bg-slate-950' 
+          : 'h-[calc(100vh-100px)] min-h-[580px] rounded-2xl border border-slate-700/60 bg-slate-900 shadow-2xl'
+      }`}>
 
-            {/* 1. Unified Search Form (Mã trạm, Tọa độ GPS, Tên địa danh) */}
-            <form onSubmit={handleUnifiedSearch} className="space-y-2 relative font-sans">
-              <div className="relative">
+        {/* 1. Desktop Top-Left Floating Search Box & Results Drawer */}
+        <div className="absolute top-3.5 left-3.5 z-[1000] w-[380px] hidden lg:flex flex-col gap-2 pointer-events-auto font-sans">
+          <div className="bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-2xl shadow-2xl p-2.5 space-y-2">
+            <form onSubmit={handleUnifiedSearch} className="relative">
+              <div className="relative flex items-center">
+                <Search className="h-4 w-4 text-slate-400 absolute left-3 pointer-events-none" />
                 <input
                   type="text"
                   value={coordinateInput}
                   onChange={(e) => handleUnifiedQueryChange(e.target.value)}
-                  placeholder="Mã trạm (VD: DNI012, 26DNa185) hoặc Tọa độ..."
-                  className="block w-full pl-3 pr-20 py-2 border border-slate-700/80 rounded-xl bg-slate-900/90 text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 text-xs transition-all font-sans"
+                  placeholder="Mã trạm (VD: DNLK51) hoặc Tọa độ..."
+                  className="block w-full pl-9 pr-16 py-2 border border-slate-700/80 rounded-xl bg-slate-950/80 text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 text-xs transition-all font-sans"
                 />
-                <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                <div className="absolute right-1.5 flex items-center gap-1">
                   {coordinateInput && (
                     <button 
                       type="button" 
                       onClick={() => { setCoordinateInput(''); setSearchSuggestions([]); }}
-                      className="p-1 text-slate-400 hover:text-slate-200 text-xs transition-colors"
+                      className="p-1 text-slate-400 hover:text-slate-200 text-xs transition-colors cursor-pointer"
                       title="Xóa tìm kiếm"
                     >
-                      ✕
+                      <X className="h-3.5 w-3.5" />
                     </button>
                   )}
                   <button
                     type="submit"
                     disabled={loading}
-                    className="px-2.5 py-1 bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-700 text-white rounded-lg font-bold text-xs shadow-sm active:scale-95 transition-all cursor-pointer flex items-center gap-1"
+                    className="px-2.5 py-1 bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-700 text-white rounded-lg font-bold text-xs shadow-sm active:scale-95 transition-all cursor-pointer"
                   >
-                    <Search className="h-3.5 w-3.5" />
-                    <span>Tìm</span>
+                    Tìm
                   </button>
                 </div>
-
-                {/* Autocomplete Suggestions Menu */}
-                {searchSuggestions.length > 0 && (
-                  <div className="absolute left-0 right-0 z-[100] bg-slate-900/95 backdrop-blur-md border border-slate-700 rounded-xl mt-1 shadow-2xl divide-y divide-slate-800/80 max-h-56 overflow-y-auto font-sans">
-                    {searchSuggestions.map((item) => (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => handleSelectSuggestion(item)}
-                        className="w-full text-left px-3 py-1.5 hover:bg-slate-800/90 transition-colors flex flex-col gap-0.5 cursor-pointer font-sans"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="font-bold text-cyan-400 text-xs">{item.code}</span>
-                          <span className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded ${
-                            item.type === 'Hoạt động' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
-                            item.type === 'TVT3 Trình Ký' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' :
-                            'bg-orange-500/10 text-orange-400 border border-orange-500/20'
-                          }`}>
-                            {item.type}
-                          </span>
-                        </div>
-                        <span className="text-[9px] text-slate-400 truncate max-w-[240px]">
-                          {item.name}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                )}
               </div>
 
-              {validationError && (
-                <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-2 text-red-400 text-[11px] flex items-center gap-1.5 font-sans">
-                  <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                  <span>{validationError}</span>
+              {/* Suggestions Dropdown */}
+              {searchSuggestions.length > 0 && (
+                <div className="absolute left-0 right-0 top-full mt-1.5 z-[1100] bg-slate-900/95 backdrop-blur-md border border-slate-700 rounded-xl shadow-2xl divide-y divide-slate-800/80 max-h-56 overflow-y-auto font-sans">
+                  {searchSuggestions.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => handleSelectSuggestion(item)}
+                      className="w-full text-left px-3 py-1.5 hover:bg-slate-800/90 transition-colors flex flex-col gap-0.5 cursor-pointer font-sans"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-cyan-400 text-xs">{item.code}</span>
+                        <span className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded ${
+                          item.type === 'Hoạt động' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
+                          item.type === 'TVT3 Trình Ký' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' :
+                          'bg-orange-500/10 text-orange-400 border border-orange-500/20'
+                        }`}>
+                          {item.type}
+                        </span>
+                      </div>
+                      <span className="text-[9px] text-slate-400 truncate max-w-[280px]">
+                        {item.name}
+                      </span>
+                    </button>
+                  ))}
                 </div>
               )}
-
-              {/* GPS thực địa mini pill */}
-              <div className="flex items-center justify-between px-2.5 py-1.5 bg-slate-900/50 border border-slate-800 rounded-lg font-sans text-xs">
-                <div className="flex items-center gap-2">
-                  <Compass className={`h-3.5 w-3.5 ${useGPS ? 'text-cyan-400 animate-spin' : 'text-slate-500'}`} style={{ animationDuration: useGPS ? '8s' : '0s' }} />
-                  <span className="text-[11px] text-slate-300 font-medium">Bám theo GPS thực địa</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setUseGPS(!useGPS)}
-                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${useGPS ? 'bg-cyan-600' : 'bg-slate-700'}`}
-                >
-                  <span
-                    className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${useGPS ? 'translate-x-4' : 'translate-x-0'}`}
-                  />
-                </button>
-              </div>
             </form>
 
-            {/* Quản lý lớp bản đồ - 3 Lớp chính & Phân loại màu sắc CSHT */}
-            <div className="pt-2 border-t border-slate-700/50 space-y-2 font-sans">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Lớp bản đồ</span>
-                <span className="text-[9px] text-slate-500">Bật/tắt hiển thị</span>
+            {validationError && (
+              <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-2 text-red-400 text-[11px] flex items-center gap-1.5 font-sans">
+                <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                <span>{validationError}</span>
               </div>
-              
-              <div className="grid grid-cols-3 gap-1.5 text-[11px]">
-                {/* 1. Trạm Hoạt động */}
-                <button
-                  type="button"
-                  onClick={() => setShowActiveSites(!showActiveSites)}
-                  className={`flex flex-col justify-between p-1.5 rounded-lg border transition-all text-left cursor-pointer ${
-                    showActiveSites
-                      ? 'bg-blue-950/40 border-blue-500/40 text-blue-200 shadow-sm'
-                      : 'bg-slate-900/40 border-slate-800 text-slate-500 opacity-60'
-                  }`}
-                >
-                  <div className="flex items-center gap-1 truncate">
-                    <span className={`h-2 w-2 rounded-full shrink-0 ${showActiveSites ? 'bg-blue-400 ring-2 ring-blue-400/30' : 'bg-slate-600'}`} />
-                    <span className="font-semibold truncate text-[10.5px]">Trạm HĐ</span>
-                  </div>
-                  <span className="font-bold text-[10px] text-blue-300 mt-1">{activeSites.length}</span>
-                </button>
+            )}
 
-                {/* 2. Dự án CSHT Quy hoạch */}
-                <button
-                  type="button"
-                  onClick={() => setShowProjects(!showProjects)}
-                  className={`flex flex-col justify-between p-1.5 rounded-lg border transition-all text-left cursor-pointer ${
-                    showProjects
-                      ? 'bg-amber-950/40 border-amber-500/40 text-amber-200 shadow-sm'
-                      : 'bg-slate-900/40 border-slate-800 text-slate-500 opacity-60'
-                  }`}
-                >
-                  <div className="flex items-center gap-1 truncate">
-                    <span className={`h-2 w-2 rounded-full shrink-0 ${showProjects ? 'bg-amber-400 ring-2 ring-amber-400/30' : 'bg-slate-600'}`} />
-                    <span className="font-semibold truncate text-[10.5px]">CSHT QH</span>
-                  </div>
-                  <span className="font-bold text-[10px] text-amber-300 mt-1">{infraProjects.length}</span>
-                </button>
-
-                {/* 3. Tuyến truyền dẫn Last Mile */}
-                <button
-                  type="button"
-                  onClick={() => setShowTransmission(!showTransmission)}
-                  className={`flex flex-col justify-between p-1.5 rounded-lg border transition-all text-left cursor-pointer ${
-                    showTransmission
-                      ? 'bg-cyan-950/40 border-cyan-500/40 text-cyan-200 shadow-sm'
-                      : 'bg-slate-900/40 border-slate-800 text-slate-500 opacity-60'
-                  }`}
-                >
-                  <div className="flex items-center gap-1 truncate">
-                    <span className={`h-2 w-2 rounded-full shrink-0 ${showTransmission ? 'bg-cyan-400 ring-2 ring-cyan-400/30' : 'bg-slate-600'}`} />
-                    <span className="font-semibold truncate text-[10.5px]">Last Mile</span>
-                  </div>
-                  <span className="font-bold text-[10px] text-cyan-300 mt-1">{transmissionLines.length}</span>
-                </button>
+            {/* Quick status bar when customer location is active */}
+            {customerLocation && (
+              <div className="flex items-center justify-between pt-1 border-t border-slate-800 text-[11px] text-slate-300">
+                <div className="flex items-center gap-1.5 truncate">
+                  <MapPin className="h-3.5 w-3.5 text-red-400 shrink-0 animate-bounce" />
+                  <span className="truncate font-medium">
+                    {customerLocation.lat.toFixed(5)}, {customerLocation.lng.toFixed(5)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => handleCopyCoords(customerLocation.lat, customerLocation.lng, 'Vị trí chọn')}
+                    className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white cursor-pointer"
+                    title="Sao chép tọa độ"
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                    className="flex items-center gap-1 px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-cyan-400 font-bold text-[10.5px] cursor-pointer"
+                  >
+                    {isSidebarOpen ? <ChevronLeft className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                    <span>{isSidebarOpen ? 'Thu gọn' : 'Mở rộng'}</span>
+                  </button>
+                </div>
               </div>
+            )}
+          </div>
 
-              {/* Chú giải & Lọc phân loại công nghệ Trạm hoạt động: 5G Phát sóng & 4G Swap ERA (Khi bật lớp Trạm HĐ) */}
-              {showActiveSites && (
-                <div className="bg-slate-900/70 border border-slate-800/80 rounded-xl p-2 space-y-1.5 text-[10.5px] animate-in fade-in duration-200">
-                  <div className="flex items-center justify-between text-[10px] text-slate-400 font-bold uppercase tracking-wider border-b border-slate-800 pb-1">
-                    <span>Công nghệ RAN & 5G (SRAN):</span>
-                    <button
-                      type="button"
-                      onClick={() => setActiveSiteFilter('all')}
-                      className={`px-1.5 py-0.5 rounded text-[9px] font-bold cursor-pointer transition-all ${
-                        activeSiteFilter === 'all' ? 'bg-slate-700 text-white' : 'text-slate-500 hover:text-slate-300'
-                      }`}
-                    >
-                      Tất cả ({activeSiteCounts.total})
-                    </button>
-                  </div>
+          {/* Desktop Collapsible Nearest Stations Drawer */}
+          {customerLocation && isSidebarOpen && (
+            <div className="max-h-[calc(100vh-220px)] overflow-y-auto pr-0.5 animate-in slide-in-from-left-2 duration-200">
+              {renderNearestSitesTable(true)}
+            </div>
+          )}
 
-                  <div className="grid grid-cols-3 gap-1.5 pt-0.5">
-                    {/* 1. 5G Phát sóng */}
-                    <button
-                      type="button"
-                      onClick={() => setActiveSiteFilter(activeSiteFilter === 'onair_5g' ? 'all' : 'onair_5g')}
-                      className={`flex flex-col justify-between p-1.5 rounded-lg border transition-all cursor-pointer text-left ${
-                        activeSiteFilter === 'onair_5g'
-                          ? 'bg-pink-950/60 border-pink-500 text-pink-200 shadow-md ring-1 ring-pink-400/50'
-                          : 'bg-slate-900/50 border-pink-500/20 text-slate-300 hover:border-pink-500/40'
-                      }`}
-                      title="Trạm đã phát sóng 5G (ON AIR)"
-                    >
-                      <div className="flex items-center gap-1">
-                        <span>📶</span>
-                        <span className="font-bold text-[10px] text-pink-400">5G Onair</span>
-                      </div>
-                      <span className="font-extrabold text-[11px] text-pink-300 mt-1">{activeSiteCounts.onair_5g}</span>
-                    </button>
+          {/* Desktop Mini Tab when Drawer is collapsed */}
+          {customerLocation && !isSidebarOpen && (
+            <button
+              type="button"
+              onClick={() => setIsSidebarOpen(true)}
+              className="bg-slate-900/95 hover:bg-slate-800 border border-cyan-500/50 text-cyan-400 rounded-xl px-3 py-2 shadow-2xl flex items-center gap-2 font-bold text-xs transition-all w-fit cursor-pointer animate-in fade-in"
+            >
+              <ChevronRight className="h-4 w-4" />
+              <span>Trạm lân cận ({nearestSites.length})</span>
+            </button>
+          )}
+        </div>
 
-                    {/* 2. 4G ERA đã Swap */}
-                    <button
-                      type="button"
-                      onClick={() => setActiveSiteFilter(activeSiteFilter === 'swapped_4g_era' ? 'all' : 'swapped_4g_era')}
-                      className={`flex flex-col justify-between p-1.5 rounded-lg border transition-all cursor-pointer text-left ${
-                        activeSiteFilter === 'swapped_4g_era'
-                          ? 'bg-emerald-950/60 border-emerald-500 text-emerald-200 shadow-md ring-1 ring-emerald-400/50'
-                          : 'bg-slate-900/50 border-emerald-500/20 text-slate-300 hover:border-emerald-500/40'
-                      }`}
-                      title="Trạm đã hoàn tất Swap sang Ericsson RAN (4G ERA)"
-                    >
-                      <div className="flex items-center gap-1">
-                        <span>🔄</span>
-                        <span className="font-bold text-[10px] text-emerald-400">4G ERA</span>
-                      </div>
-                      <span className="font-extrabold text-[11px] text-emerald-300 mt-1">{activeSiteCounts.swapped_4g_era}</span>
-                    </button>
-
-                    {/* 3. 4G Hiện hữu (Chưa swap) */}
-                    <button
-                      type="button"
-                      onClick={() => setActiveSiteFilter(activeSiteFilter === 'normal_4g' ? 'all' : 'normal_4g')}
-                      className={`flex flex-col justify-between p-1.5 rounded-lg border transition-all cursor-pointer text-left ${
-                        activeSiteFilter === 'normal_4g'
-                          ? 'bg-blue-950/60 border-blue-500 text-blue-200 shadow-md ring-1 ring-blue-400/50'
-                          : 'bg-slate-900/50 border-blue-500/20 text-slate-300 hover:border-blue-500/40'
-                      }`}
-                      title="Trạm 4G truyền thống / Chưa swap ERA"
-                    >
-                      <div className="flex items-center gap-1">
-                        <span>🔵</span>
-                        <span className="font-bold text-[10px] text-blue-400">4G Thường</span>
-                      </div>
-                      <span className="font-extrabold text-[11px] text-blue-300 mt-1">{activeSiteCounts.normal_4g}</span>
-                    </button>
-                  </div>
-                </div>
+        {/* 2. Mobile Top Floating Search Pill */}
+        <div className="absolute top-3 left-3 right-3 z-[1000] flex lg:hidden flex-col gap-1 pointer-events-auto font-sans">
+          <form onSubmit={handleUnifiedSearch} className="relative">
+            <div className="bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-full px-3.5 py-1.5 shadow-xl flex items-center gap-2">
+              <Search className="h-4 w-4 text-slate-400 shrink-0" />
+              <input
+                type="text"
+                value={coordinateInput}
+                onChange={(e) => handleUnifiedQueryChange(e.target.value)}
+                placeholder="Mã trạm (VD: DNLK51) hoặc tọa độ..."
+                className="bg-transparent border-none outline-none text-white text-xs w-full placeholder-slate-500 font-sans"
+              />
+              {coordinateInput && (
+                <button
+                  type="button"
+                  onClick={() => { setCoordinateInput(''); setSearchSuggestions([]); }}
+                  className="p-1 text-slate-400 hover:text-white text-xs cursor-pointer"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
               )}
+              <button
+                type="submit"
+                className="px-2.5 py-1 bg-cyan-600 active:bg-cyan-500 text-white rounded-full font-bold text-[11px] shrink-0 cursor-pointer"
+              >
+                Tìm
+              </button>
+            </div>
 
-              {/* Chú giải phân loại màu sắc Trạm CSHT Quy hoạch (Khi bật lớp CSHT QH) */}
-              {showProjects && (
-                <div className="bg-slate-900/70 border border-slate-800/80 rounded-xl p-2 space-y-1.5 text-[10.5px] animate-in fade-in duration-200">
-                  <div className="flex items-center justify-between text-[10px] text-slate-400 font-bold uppercase tracking-wider border-b border-slate-800 pb-1">
-                    <span>Phân loại trạng thái CSHT:</span>
-                    <button
-                      type="button"
-                      onClick={() => setInfraFilter('all')}
-                      className={`px-1.5 py-0.2 rounded text-[9px] font-bold cursor-pointer transition-all ${
-                        infraFilter === 'all' ? 'bg-slate-700 text-white' : 'text-slate-500 hover:text-slate-300'
-                      }`}
-                    >
-                      Tất cả ({categoryCounts.total})
-                    </button>
-                  </div>
+            {/* Mobile Suggestions Dropdown */}
+            {searchSuggestions.length > 0 && (
+              <div className="absolute left-0 right-0 top-full mt-1.5 z-[1100] bg-slate-900/95 backdrop-blur-md border border-slate-700 rounded-2xl shadow-2xl divide-y divide-slate-800/80 max-h-52 overflow-y-auto font-sans">
+                {searchSuggestions.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => handleSelectSuggestion(item)}
+                    className="w-full text-left px-3.5 py-2 hover:bg-slate-800 transition-colors flex flex-col gap-0.5 cursor-pointer"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-cyan-400 text-xs">{item.code}</span>
+                      <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400">
+                        {item.type}
+                      </span>
+                    </div>
+                    <span className="text-[9px] text-slate-400 truncate">{item.name}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </form>
 
-                  <div className="grid grid-cols-2 gap-1.5 pt-0.5">
-                    {/* 1. Sở duyệt ĐT mới */}
-                    <button
-                      type="button"
-                      onClick={() => setInfraFilter(infraFilter === 'so_ok_dau_tu' ? 'all' : 'so_ok_dau_tu')}
-                      className={`flex items-center justify-between p-1.5 rounded-lg border transition-all cursor-pointer text-left ${
-                        infraFilter === 'so_ok_dau_tu'
-                          ? 'bg-emerald-950/60 border-emerald-400 text-emerald-100 ring-1 ring-emerald-400/30'
-                          : 'bg-emerald-950/20 border-emerald-500/20 text-emerald-300 hover:border-emerald-500/40'
-                      }`}
-                      title="Bấm để lọc: Sở KHCN chấp thuận đầu tư mới"
-                    >
-                      <div className="flex items-center gap-1 truncate">
-                        <span className="h-2 w-2 rounded-full bg-emerald-400 ring-2 ring-emerald-400/30 shrink-0" />
-                        <span className="font-medium text-[10px] truncate">🏛️ ĐT mới</span>
-                      </div>
-                      <span className="font-extrabold text-[10px] text-emerald-300 shrink-0 ml-1">{categoryCounts.so_ok_dau_tu}</span>
-                    </button>
+          {validationError && (
+            <div className="bg-red-500/10 border border-red-500/30 rounded-xl px-3 py-1.5 text-red-400 text-[10.5px] flex items-center gap-1.5">
+              <AlertCircle className="h-3 w-3 shrink-0" />
+              <span>{validationError}</span>
+            </div>
+          )}
+        </div>
 
-                    {/* 2. Yêu cầu dùng chung */}
-                    <button
-                      type="button"
-                      onClick={() => setInfraFilter(infraFilter === 'dung_chung' ? 'all' : 'dung_chung')}
-                      className={`flex items-center justify-between p-1.5 rounded-lg border transition-all cursor-pointer text-left ${
-                        infraFilter === 'dung_chung'
-                          ? 'bg-purple-950/60 border-purple-400 text-purple-100 ring-1 ring-purple-400/30'
-                          : 'bg-purple-950/20 border-purple-500/20 text-purple-300 hover:border-purple-500/40'
-                      }`}
-                      title="Bấm để lọc: Sở yêu cầu dùng chung hạ tầng"
-                    >
-                      <div className="flex items-center gap-1 truncate">
-                        <span className="h-2 w-2 rounded-full bg-fuchsia-400 ring-2 ring-purple-400/30 shrink-0" />
-                        <span className="font-medium text-[10px] truncate">🤝 Dùng chung</span>
-                      </div>
-                      <span className="font-extrabold text-[10px] text-fuchsia-300 shrink-0 ml-1">{categoryCounts.dung_chung}</span>
-                    </button>
+        {/* 3. Top Horizontal Filter Chips Bar (Google Maps Style) */}
+        <div className="absolute top-15 lg:top-3.5 left-3 right-14 lg:left-[405px] lg:right-20 z-[1000] flex items-center gap-1.5 overflow-x-auto no-scrollbar pointer-events-auto py-0.5 font-sans">
+          {/* Chip 1: Trạm Hoạt động */}
+          <button
+            type="button"
+            onClick={() => setShowActiveSites(!showActiveSites)}
+            className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all shadow-md cursor-pointer ${
+              showActiveSites
+                ? 'bg-blue-600 text-white ring-2 ring-blue-400/40'
+                : 'bg-slate-900/90 text-slate-400 border border-slate-700/80 hover:border-slate-500'
+            }`}
+          >
+            <span className={`h-2 w-2 rounded-full ${showActiveSites ? 'bg-white' : 'bg-slate-500'}`} />
+            <span>Trạm HĐ</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${showActiveSites ? 'bg-blue-700 text-blue-100' : 'bg-slate-800 text-slate-400'}`}>
+              {activeSites.length}
+            </span>
+          </button>
 
-                    {/* 3. Đã khảo sát */}
-                    <button
-                      type="button"
-                      onClick={() => setInfraFilter(infraFilter === 'da_khao_sat' ? 'all' : 'da_khao_sat')}
-                      className={`flex items-center justify-between p-1.5 rounded-lg border transition-all cursor-pointer text-left ${
-                        infraFilter === 'da_khao_sat'
-                          ? 'bg-cyan-950/60 border-cyan-400 text-cyan-100 ring-1 ring-cyan-400/30'
-                          : 'bg-cyan-950/20 border-cyan-500/20 text-cyan-300 hover:border-cyan-500/40'
-                      }`}
-                      title="Bấm để lọc: Trạm đã khảo sát thực địa"
-                    >
-                      <div className="flex items-center gap-1 truncate">
-                        <span className="h-2 w-2 rounded-full bg-cyan-400 ring-2 ring-cyan-400/30 shrink-0" />
-                        <span className="font-medium text-[10px] truncate">📐 Đã KS</span>
-                      </div>
-                      <span className="font-extrabold text-[10px] text-cyan-300 shrink-0 ml-1">{categoryCounts.da_khao_sat}</span>
-                    </button>
+          {/* Chip 2: 5G Onair */}
+          <button
+            type="button"
+            onClick={() => {
+              if (!showActiveSites) setShowActiveSites(true);
+              setActiveSiteFilter(activeSiteFilter === 'onair_5g' ? 'all' : 'onair_5g');
+            }}
+            className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all shadow-md cursor-pointer ${
+              showActiveSites && activeSiteFilter === 'onair_5g'
+                ? 'bg-pink-600 text-white ring-2 ring-pink-400/50'
+                : 'bg-slate-900/90 text-slate-300 border border-slate-700/80 hover:border-pink-500/40'
+            }`}
+          >
+            <span>📶 5G Onair</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-pink-950/60 text-pink-300 border border-pink-500/30">
+              {activeSiteCounts.onair_5g}
+            </span>
+          </button>
 
-                    {/* 4. Quy hoạch */}
-                    <button
-                      type="button"
-                      onClick={() => setInfraFilter(infraFilter === 'quy_hoach' ? 'all' : 'quy_hoach')}
-                      className={`flex items-center justify-between p-1.5 rounded-lg border transition-all cursor-pointer text-left ${
-                        infraFilter === 'quy_hoach'
-                          ? 'bg-amber-950/60 border-amber-400 text-amber-100 ring-1 ring-amber-400/30'
-                          : 'bg-amber-950/20 border-amber-500/20 text-amber-300 hover:border-amber-500/40'
-                      }`}
-                      title="Bấm để lọc: Vị trí quy hoạch ban đầu"
-                    >
-                      <div className="flex items-center gap-1 truncate">
-                        <span className="h-2 w-2 rounded-full bg-amber-400 ring-2 ring-amber-400/30 shrink-0" />
-                        <span className="font-medium text-[10px] truncate">📍 Quy hoạch</span>
-                      </div>
-                      <span className="font-extrabold text-[10px] text-amber-300 shrink-0 ml-1">{categoryCounts.quy_hoach}</span>
-                    </button>
-                  </div>
+          {/* Chip 3: 4G ERA Swap */}
+          <button
+            type="button"
+            onClick={() => {
+              if (!showActiveSites) setShowActiveSites(true);
+              setActiveSiteFilter(activeSiteFilter === 'swapped_4g_era' ? 'all' : 'swapped_4g_era');
+            }}
+            className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all shadow-md cursor-pointer ${
+              showActiveSites && activeSiteFilter === 'swapped_4g_era'
+                ? 'bg-cyan-600 text-white ring-2 ring-cyan-400/50'
+                : 'bg-slate-900/90 text-slate-300 border border-slate-700/80 hover:border-cyan-500/40'
+            }`}
+          >
+            <span>🔄 4G ERA</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-cyan-950/60 text-cyan-300 border border-cyan-500/30">
+              {activeSiteCounts.swapped_4g_era}
+            </span>
+          </button>
+
+          {/* Chip 4: CSHT Quy hoạch */}
+          <button
+            type="button"
+            onClick={() => setShowProjects(!showProjects)}
+            className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all shadow-md cursor-pointer ${
+              showProjects
+                ? 'bg-amber-600 text-white ring-2 ring-amber-400/40'
+                : 'bg-slate-900/90 text-slate-400 border border-slate-700/80 hover:border-slate-500'
+            }`}
+          >
+            <span className={`h-2 w-2 rounded-full ${showProjects ? 'bg-white' : 'bg-slate-500'}`} />
+            <span>CSHT QH</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${showProjects ? 'bg-amber-700 text-amber-100' : 'bg-slate-800 text-slate-400'}`}>
+              {infraProjects.length}
+            </span>
+          </button>
+
+          {/* Chip 5: Tuyến truyền dẫn Last Mile */}
+          <button
+            type="button"
+            onClick={() => setShowTransmission(!showTransmission)}
+            className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all shadow-md cursor-pointer ${
+              showTransmission
+                ? 'bg-emerald-600 text-white ring-2 ring-emerald-400/40'
+                : 'bg-slate-900/90 text-slate-400 border border-slate-700/80 hover:border-slate-500'
+            }`}
+          >
+            <span className={`h-2 w-2 rounded-full ${showTransmission ? 'bg-white' : 'bg-slate-500'}`} />
+            <span>Last Mile</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${showTransmission ? 'bg-emerald-700 text-emerald-100' : 'bg-slate-800 text-slate-400'}`}>
+              {transmissionLines.length}
+            </span>
+          </button>
+
+          {/* Chip 6: Vùng phủ 500m */}
+          <button
+            type="button"
+            onClick={() => setShowCoverageCircle(!showCoverageCircle)}
+            className={`shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-bold transition-all shadow-md cursor-pointer ${
+              showCoverageCircle
+                ? 'bg-indigo-600 text-white ring-2 ring-indigo-400/40'
+                : 'bg-slate-900/90 text-slate-400 border border-slate-700/80 hover:border-slate-500'
+            }`}
+            title="Bật/tắt vòng tròn bán kính phủ sóng 500m"
+          >
+            <span>📐 Phủ 500m</span>
+          </button>
+        </div>
+
+        {/* 4. Right Floating Action Buttons (FABs) */}
+        <div className="absolute right-3.5 bottom-24 lg:bottom-6 z-[1000] flex flex-col gap-2 pointer-events-auto font-sans">
+          {/* Layers FAB & Popup */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowLayersPopup(!showLayersPopup)}
+              className={`h-10 w-10 bg-slate-900/90 hover:bg-slate-800 text-white rounded-xl border shadow-xl flex items-center justify-center transition-all cursor-pointer ${
+                showLayersPopup ? 'border-cyan-500 text-cyan-400 ring-2 ring-cyan-500/30' : 'border-slate-700/80'
+              }`}
+              title="Lớp bản đồ (Vệ tinh / Đường phố)"
+            >
+              <Layers className="h-5 w-5" />
+            </button>
+
+            {showLayersPopup && (
+              <div className="absolute right-12 bottom-0 w-60 bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-2xl p-2.5 shadow-2xl space-y-1.5 text-xs text-white z-[1100]">
+                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1 pb-1 border-b border-slate-800">
+                  Lớp bản đồ nền:
                 </div>
-              )}
+                {Object.values(TILE_LAYERS).map((layer) => (
+                  <button
+                    key={layer.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedTileLayer(layer.id);
+                      setShowLayersPopup(false);
+                      showToast(`Đã đổi sang: ${layer.name}`);
+                    }}
+                    className={`w-full text-left p-2 rounded-xl flex items-center justify-between transition-colors cursor-pointer ${
+                      selectedTileLayer === layer.id
+                        ? 'bg-cyan-600/20 text-cyan-400 border border-cyan-500/40 font-bold'
+                        : 'hover:bg-slate-800/80 text-slate-300'
+                    }`}
+                  >
+                    <div>
+                      <div className="font-semibold text-xs">{layer.name}</div>
+                      <div className="text-[10px] text-slate-400">{layer.subname}</div>
+                    </div>
+                    {selectedTileLayer === layer.id && <Check className="h-4 w-4 text-cyan-400" />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* GPS Locate FAB */}
+          <button
+            type="button"
+            onClick={() => setUseGPS(!useGPS)}
+            className={`h-10 w-10 bg-slate-900/90 hover:bg-slate-800 text-white rounded-xl border shadow-xl flex items-center justify-center transition-all cursor-pointer ${
+              useGPS 
+                ? 'border-cyan-500 text-cyan-400 ring-2 ring-cyan-500/40 animate-pulse' 
+                : 'border-slate-700/80 text-slate-300'
+            }`}
+            title={useGPS ? "Đang bám theo GPS thực địa (Bấm để tắt)" : "Bật định vị GPS thực địa"}
+          >
+            <Compass className={`h-5 w-5 ${useGPS ? 'animate-spin text-cyan-400' : ''}`} style={{ animationDuration: useGPS ? '8s' : '0s' }} />
+          </button>
+
+          {/* Fullscreen Toggle FAB */}
+          <button
+            type="button"
+            onClick={() => setIsFullscreen(!isFullscreen)}
+            className="h-10 w-10 bg-slate-900/90 hover:bg-slate-800 text-white rounded-xl border border-slate-700/80 shadow-xl flex items-center justify-center transition-all cursor-pointer hover:border-cyan-500"
+            title={isFullscreen ? "Thu nhỏ bản đồ (Esc)" : "Toàn màn hình"}
+          >
+            {isFullscreen ? <Minimize2 className="h-5 w-5 text-cyan-400" /> : <Maximize2 className="h-5 w-5 text-cyan-400" />}
+          </button>
+        </div>
+
+        {/* 5. Floating Cable Route Banner (Bottom-Center) */}
+        {cableRoute && (
+          <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-[1000] bg-slate-950/95 border border-purple-500/60 rounded-full px-4 py-2 shadow-2xl backdrop-blur-md text-xs font-sans text-slate-200 flex items-center gap-3 animate-in slide-in-from-bottom-2 pointer-events-auto">
+            <div className="flex items-center gap-1.5 font-bold text-purple-400">
+              <span>🔌</span>
+              <span>Đến {cableRoute.targetCode}:</span>
+            </div>
+            <div className="text-slate-300">
+              Đường bộ: <b className="text-white">{formatDistance(cableRoute.distance)}</b>
+            </div>
+            <div className="text-emerald-400 font-bold border-l border-slate-700 pl-2">
+              Cáp (+5%): {formatDistance(cableRoute.cableLength)}
+            </div>
+            <button
+              type="button"
+              onClick={() => setCableRoute(null)}
+              className="ml-1 p-0.5 rounded-full hover:bg-slate-800 text-slate-400 hover:text-white cursor-pointer"
+              title="Ẩn tuyến cáp"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
+
+        {/* 6. Mobile Interactive Bottom Sheet (Google Maps Style) */}
+        <div className={`lg:hidden fixed bottom-0 left-0 right-0 z-[1001] bg-slate-900/95 backdrop-blur-xl border-t border-slate-700/80 rounded-t-3xl shadow-2xl transition-all duration-300 flex flex-col pointer-events-auto font-sans ${
+          bottomSheetState === 'collapsed' 
+            ? 'h-[72px]' 
+            : bottomSheetState === 'half' 
+              ? 'h-[50vh]' 
+              : 'h-[88vh]'
+        }`}>
+          {/* Pull Handle Header */}
+          <div
+            className="w-full pt-2 pb-1.5 flex flex-col items-center cursor-pointer select-none"
+            onClick={() => {
+              if (bottomSheetState === 'collapsed') setBottomSheetState('half');
+              else if (bottomSheetState === 'half') setBottomSheetState('full');
+              else setBottomSheetState('collapsed');
+            }}
+          >
+            <div className="w-12 h-1.5 bg-slate-600 hover:bg-slate-400 rounded-full transition-colors mb-1" />
+            
+            {/* Peek Summary Line */}
+            <div className="w-full px-4 flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2 truncate text-slate-300">
+                <MapPin className="h-4 w-4 text-cyan-400 shrink-0" />
+                {customerLocation ? (
+                  <span className="truncate font-semibold">
+                    Khảo sát: {customerLocation.lat.toFixed(4)}, {customerLocation.lng.toFixed(4)}
+                    {nearestSites.length > 0 && ` • Gần: ${nearestSites[0].code} (${formatDistance(nearestSites[0].distance)})`}
+                  </span>
+                ) : (
+                  <span className="text-slate-400">Chạm lên bản đồ để quét trạm & kéo cáp</span>
+                )}
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                {bottomSheetState === 'collapsed' ? (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setBottomSheetState('half'); }}
+                    className="text-cyan-400 font-bold text-[11px] px-2 py-0.5 rounded bg-cyan-500/10 cursor-pointer"
+                  >
+                    Xem trạm
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setBottomSheetState(bottomSheetState === 'full' ? 'half' : 'collapsed'); }}
+                    className="p-1 text-slate-400 hover:text-white cursor-pointer"
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Danh sách trạm lân cận tinh gọn ở sidebar (Desktop only) */}
-          <div className="hidden lg:block">
-            {renderNearestSitesTable(true)}
-          </div>
+          {/* Sheet Body Content (Visible in Half and Full states) */}
+          {bottomSheetState !== 'collapsed' && (
+            <div className="flex-1 overflow-y-auto px-3.5 pb-4 space-y-3">
+              {renderNearestSitesTable(bottomSheetState === 'half')}
+            </div>
+          )}
         </div>
 
-        {/* Right Side Map Canvas & Table */}
-        <div className="lg:col-span-2 space-y-4">
-          {/* Map Leaflet Container (Hỗ trợ Toàn màn hình - Fullscreen) */}
-          <div className={`transition-all duration-300 ${
-            isFullscreen 
-              ? 'fixed inset-0 z-[9999] w-screen h-screen bg-slate-950 overflow-hidden' 
-              : 'bg-slate-800 border border-slate-700/60 rounded-2xl overflow-hidden h-[450px] lg:h-[620px] relative shadow-lg'
-          }`}>
-            {/* Floating Toast Notification */}
-            {toastMessage && (
-              <div className="absolute top-3 left-1/2 transform -translate-x-1/2 z-[2000] bg-slate-900/95 text-white text-xs font-bold px-4 py-2 rounded-full border border-cyan-500/60 shadow-2xl backdrop-blur-md flex items-center gap-2 animate-in fade-in zoom-in duration-200">
-                <Check className="h-4 w-4 text-emerald-400 shrink-0" />
-                <span>{toastMessage}</span>
-              </div>
-            )}
+        {/* 7. Map Leaflet Core Canvas */}
+        <MapContainer 
+          center={mapCenter} 
+          zoom={zoomLevel} 
+          style={{ height: '100%', width: '100%', zIndex: 10 }}
+        >
+          <MapResizeHandler isFullscreen={isFullscreen} />
+          <ChangeView center={mapCenter} zoom={zoomLevel} />
+          {!showTransmission && <MapClickListener onClick={(lat, lng) => executeScan(lat, lng)} />}
 
-            {/* Nút bật/tắt Toàn màn hình góc trên bản đồ */}
-            <button
-              type="button"
-              onClick={() => setIsFullscreen(!isFullscreen)}
-              className="absolute top-3 right-14 z-[1000] bg-slate-900/90 hover:bg-slate-800 text-white px-2.5 py-1.5 rounded-xl border border-slate-700 shadow-xl backdrop-blur-md flex items-center gap-1.5 text-xs font-bold transition-all active:scale-95 cursor-pointer hover:border-cyan-500"
-              title={isFullscreen ? "Thu nhỏ bản đồ (Phím Esc)" : "Mở toàn màn hình bản đồ"}
-            >
-              {isFullscreen ? (
-                <>
-                  <Minimize2 className="h-4 w-4 text-cyan-400" />
-                  <span className="hidden sm:inline">Thu nhỏ (Esc)</span>
-                </>
-              ) : (
-                <>
-                  <Maximize2 className="h-4 w-4 text-cyan-400" />
-                  <span className="hidden sm:inline">Toàn màn hình</span>
-                </>
-              )}
-            </button>
-
-            {/* Floating Quick Filter Bar khi ở chế độ Fullscreen */}
-            {isFullscreen && (
-              <div className="absolute bottom-5 left-1/2 transform -translate-x-1/2 z-[1000] bg-slate-900/95 border border-slate-700/80 rounded-2xl px-3 py-1.5 shadow-2xl backdrop-blur-md flex items-center gap-2 font-sans text-xs">
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider hidden sm:inline">Lọc trạm:</span>
-                <button
-                  type="button"
-                  onClick={() => setActiveSiteFilter('all')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    activeSiteFilter === 'all' ? 'bg-cyan-600 text-white shadow-sm' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                  }`}
-                >
-                  Tất cả ({activeSiteCounts.total})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveSiteFilter(activeSiteFilter === 'onair_5g' ? 'all' : 'onair_5g')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                    activeSiteFilter === 'onair_5g' ? 'bg-pink-600 text-white shadow-sm ring-2 ring-pink-400/50' : 'bg-slate-800 text-pink-300 hover:bg-slate-700'
-                  }`}
-                >
-                  <span>📶 5G</span> ({activeSiteCounts.onair_5g})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveSiteFilter(activeSiteFilter === 'swapped_4g_era' ? 'all' : 'swapped_4g_era')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                    activeSiteFilter === 'swapped_4g_era' ? 'bg-cyan-600 text-white shadow-sm ring-2 ring-cyan-400/50' : 'bg-slate-800 text-cyan-300 hover:bg-slate-700'
-                  }`}
-                >
-                  <span>🔄 ERA</span> ({activeSiteCounts.swapped_4g_era})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveSiteFilter(activeSiteFilter === 'normal_4g' ? 'all' : 'normal_4g')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                    activeSiteFilter === 'normal_4g' ? 'bg-blue-600 text-white shadow-sm ring-2 ring-blue-400/50' : 'bg-slate-800 text-blue-300 hover:bg-slate-700'
-                  }`}
-                >
-                  <span>🔵 4G</span> ({activeSiteCounts.normal_4g})
-                </button>
-              </div>
-            )}
-
-            <MapContainer 
-              center={mapCenter} 
-              zoom={zoomLevel} 
-              style={{ height: '100%', width: '100%', zIndex: 10 }}
-            >
-              <MapResizeHandler isFullscreen={isFullscreen} />
-              <ChangeView center={mapCenter} zoom={zoomLevel} />
-              {!showTransmission && <MapClickListener onClick={(lat, lng) => executeScan(lat, lng)} />}
-
-              <LayersControl position="topright">
-                <LayersControl.BaseLayer checked name="Vệ tinh + Đường phố (Google)">
-                  <TileLayer
-                    attribution='&copy; Google'
-                    url="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
-                  />
-                </LayersControl.BaseLayer>
-
-                <LayersControl.BaseLayer name="Ảnh Vệ tinh (Không nhãn)">
-                  <TileLayer
-                    attribution='&copy; Google'
-                    url="https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}"
-                  />
-                </LayersControl.BaseLayer>
-                
-                <LayersControl.BaseLayer name="Bản đồ Đường phố">
-                  <TileLayer
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  />
-                </LayersControl.BaseLayer>
-              </LayersControl>
+          <TileLayer
+            key={selectedTileLayer}
+            attribution={TILE_LAYERS[selectedTileLayer]?.attribution || '&copy; Google Maps'}
+            url={TILE_LAYERS[selectedTileLayer]?.url || TILE_LAYERS.google_hybrid.url}
+          />
 
               {/* Vòng tròn Radar quét từ vị trí khách hàng */}
               {customerLocation && (
@@ -2214,16 +2268,7 @@ export default function NetworkMap() {
                   </Popup>
                 </Polyline>
               )}
-            </MapContainer>
-          </div>
-
-          {/* Nearest sites table on mobile (rendered under map) */}
-          <div className="block lg:hidden mt-2">
-            {renderNearestSitesTable(false)}
-          </div>
-
-
-        </div>
+        </MapContainer>
       </div>
     </div>
   );
