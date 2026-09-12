@@ -1728,6 +1728,26 @@ export default function NetworkMap() {
             <Compass className={`h-5 w-5 ${useGPS ? 'animate-spin text-cyan-400' : ''}`} style={{ animationDuration: useGPS ? '8s' : '0s' }} />
           </button>
 
+          {/* Zoom In/Out Controls */}
+          <div className="flex flex-col bg-slate-900/90 border border-slate-700/80 rounded-xl overflow-hidden shadow-xl">
+            <button
+              type="button"
+              onClick={() => setZoomLevel(prev => Math.min(prev + 1, 18))}
+              className="h-8 w-10 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 transition-colors border-b border-slate-700/60 font-bold text-sm cursor-pointer"
+              title="Phóng to (+)"
+            >
+              +
+            </button>
+            <button
+              type="button"
+              onClick={() => setZoomLevel(prev => Math.max(prev - 1, 6))}
+              className="h-8 w-10 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 transition-colors font-bold text-sm cursor-pointer"
+              title="Thu nhỏ (-)"
+            >
+              −
+            </button>
+          </div>
+
           {/* Fullscreen Toggle FAB */}
           <button
             type="button"
@@ -1829,6 +1849,7 @@ export default function NetworkMap() {
         <MapContainer 
           center={mapCenter} 
           zoom={zoomLevel} 
+          zoomControl={false}
           style={{ height: '100%', width: '100%', zIndex: 10 }}
         >
           <MapResizeHandler isFullscreen={isFullscreen} />
