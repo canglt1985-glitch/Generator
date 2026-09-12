@@ -165,14 +165,19 @@ const getSiteSranCategory = (site, sranMap) => {
                (sran.config_5g && sran.config_5g !== '-') ||
                (sran.raw_data && sran.raw_data['5G Scope'] && sran.raw_data['5G Scope'].includes('5G'));
 
-  const cname = sran.raw_data?.Cluster_Name;
-  const cnew = sran.raw_data?.Cluster_New;
-  const swappedClusters = new Set([
-    'DNI_00_Pilot', 'DNI_01_LT', 'DNI_09_CM', 'DNI_02_CM', 
-    'DNI_10_TN', 'DNI_04_TN', 'DNI_16_CM', 'DNI_06_CM', 
-    'DNI_02_TB', 'DNI_03_TB', 'DNI_07_TB'
-  ]);
-  const inSwappedCluster = (cname && swappedClusters.has(cname)) || (cnew && swappedClusters.has(cnew));
+  const cname = (sran.raw_data?.Cluster_Name || '').toUpperCase();
+  const cnew = (sran.raw_data?.Cluster_New || '').toUpperCase();
+  
+  // Danh sách các Cụm đã hoàn tất Swap ERA (Bao gồm Cẩm Mỹ, Thống Nhất, và 2 Cụm Xuân Lộc DNI_15_XL, DNI_17_XL)
+  const swappedClusterPatterns = [
+    'DNI_09_CM', 'DNI_02_CM', 
+    'DNI_10_TN', 'DNI_04_TN', 
+    'DNI_16_CM', 'DNI_06_CM',
+    'DNI_15_XL', 'DNI_08_XL',
+    'DNI_17_XL', 'DNI_16_XL', 'DNI_18_XL',
+    'DNI_01_LT', 'DNI_00_PILOT', 'DNI_02_TB', 'DNI_03_TB', 'DNI_07_TB'
+  ];
+  const inSwappedCluster = swappedClusterPatterns.some(pat => cname.includes(pat) || cnew.includes(pat));
   const hasOnair = !!sran.onair_date;
   const hasIntegration = !!sran.integration_date;
 
@@ -184,11 +189,12 @@ const getSiteSranCategory = (site, sranMap) => {
     onair_date: sran.onair_date,
     integration_date: sran.integration_date,
     install_date: sran.install_date,
-    cluster_name: cnew || cname || sran.district
+    cluster_name: sran.raw_data?.Cluster_New || sran.raw_data?.Cluster_Name || sran.district || 'Cụm SRAN',
+    in_swapped_cluster: inSwappedCluster
   };
 
-  // 1. Trạm phát sóng 5G (Đã ON AIR 5G hoặc tích hợp 5G trong cluster đã phát sóng)
-  if (is5g && (hasOnair || (inSwappedCluster && hasIntegration))) {
+  // 1. Trạm phát sóng 5G (Đã có ngày Onair/Integration hoặc nằm trong các Cluster đã Swap có cấu hình 5G)
+  if (is5g && (hasOnair || hasIntegration || inSwappedCluster)) {
     return {
       key: 'onair_5g',
       label: '5G Đang phát sóng',
@@ -198,12 +204,15 @@ const getSiteSranCategory = (site, sranMap) => {
       bgGradient: 'bg-gradient-to-r from-fuchsia-600 via-pink-600 to-rose-600 border-pink-300 shadow-pink-500/50 ring-2 ring-pink-400/60',
       badgeClass: 'bg-pink-500/20 text-pink-700 border border-pink-500/40 font-bold',
       textColor: 'text-pink-600',
-      sranInfo
+      sranInfo: {
+        ...sranInfo,
+        status_note: inSwappedCluster ? 'Đang phát sóng 5G (Cụm đã hoàn tất Swap ERA)' : 'Đang phát sóng 5G'
+      }
     };
   }
 
   // 2. Trạm đã swap sang 4G ERA
-  if (hasOnair || inSwappedCluster || hasIntegration) {
+  if (hasOnair || inSwappedCluster || hasIntegration || !!sran.install_date) {
     return {
       key: 'swapped_4g_era',
       label: '4G ERA Đã Swap',
@@ -213,7 +222,10 @@ const getSiteSranCategory = (site, sranMap) => {
       bgGradient: 'bg-gradient-to-r from-emerald-600 to-teal-600 border-emerald-300 shadow-emerald-500/40 ring-1 ring-emerald-400/40',
       badgeClass: 'bg-emerald-500/20 text-emerald-700 border border-emerald-500/40 font-bold',
       textColor: 'text-emerald-600',
-      sranInfo
+      sranInfo: {
+        ...sranInfo,
+        status_note: inSwappedCluster ? 'Đã hoàn tất Swap thiết bị 4G ERA' : 'Đã swap 4G ERA'
+      }
     };
   }
 
@@ -227,7 +239,10 @@ const getSiteSranCategory = (site, sranMap) => {
     bgGradient: 'bg-gradient-to-r from-blue-600 to-cyan-600 border-cyan-500/30 shadow-blue-500/20',
     badgeClass: 'bg-blue-500/20 text-blue-700 border border-blue-500/30',
     textColor: 'text-blue-600',
-    sranInfo
+    sranInfo: {
+      ...sranInfo,
+      status_note: '4G Thiết bị hiện hữu'
+    }
   };
 };
 
@@ -1303,6 +1318,38 @@ export default function NetworkMap() {
                       <span className="font-extrabold text-[11px] text-blue-300 mt-1">{activeSiteCounts.normal_4g}</span>
                     </button>
                   </div>
+
+                  {/* Ghi chú các Cụm SRAN đã hoàn thành Swap */}
+                  <div className="mt-2 pt-2 border-t border-slate-800/80 space-y-1.5 font-sans">
+                    <div className="flex items-center justify-between text-[10px] text-slate-300 font-bold">
+                      <span className="flex items-center gap-1">
+                        <span className="text-emerald-400">✅</span> Cụm SRAN đã Swap ERA ({5} cụm):
+                      </span>
+                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        {activeSiteCounts.onair_5g + activeSiteCounts.swapped_4g_era} trạm
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1 text-[9px]">
+                      <span className="px-1.5 py-0.5 rounded bg-emerald-950/50 text-emerald-300 border border-emerald-500/30 font-medium">
+                        DNI_15_XL (Xuân Lộc)
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded bg-emerald-950/50 text-emerald-300 border border-emerald-500/30 font-medium">
+                        DNI_17_XL (Xuân Lộc)
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded bg-slate-800/80 text-slate-300 border border-slate-700">
+                        DNI_09_CM (Cẩm Mỹ)
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded bg-slate-800/80 text-slate-300 border border-slate-700">
+                        DNI_10_TN (Thống Nhất)
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded bg-slate-800/80 text-slate-300 border border-slate-700">
+                        DNI_16_CM (Cẩm Mỹ)
+                      </span>
+                    </div>
+                    <p className="text-[9.5px] text-slate-400 leading-tight">
+                      💡 <em>Trạm có cấu hình 5G trong các cụm đã swap được tô màu hồng neon phát sóng <strong>📶 5G Onair</strong>.</em>
+                    </p>
+                  </div>
                 </div>
               )}
 
@@ -1555,15 +1602,36 @@ export default function NetworkMap() {
                                     {cat.sranInfo.site_id}
                                   </span>
                                 </div>
+
+                                {cat.sranInfo.cluster_name && (
+                                  <div className="flex items-center justify-between text-[10.5px]">
+                                    <span className="text-slate-600">🏛️ Cụm SRAN:</span>
+                                    <span className="font-bold text-slate-800 flex items-center gap-1">
+                                      {cat.sranInfo.cluster_name}
+                                      {cat.sranInfo.in_swapped_cluster && (
+                                        <span className="text-[9px] px-1 py-0.2 rounded bg-emerald-100 text-emerald-800 font-bold border border-emerald-300">
+                                          Đã Swap ERA
+                                        </span>
+                                      )}
+                                    </span>
+                                  </div>
+                                )}
+
                                 {cat.sranInfo.config_5g && (
-                                  <div className="text-pink-700 font-semibold flex items-center gap-1">
-                                    <span>⚡ 5G:</span>
-                                    <span>{cat.sranInfo.config_5g}</span>
+                                  <div className="text-pink-700 font-semibold flex items-center justify-between">
+                                    <span>⚡ Cấu hình 5G:</span>
+                                    <span className="font-mono font-bold bg-pink-50 px-1 rounded border border-pink-200">{cat.sranInfo.config_5g}</span>
                                   </div>
                                 )}
                                 {cat.sranInfo.config_3g4g && (
-                                  <div className="text-slate-600">
-                                    <span>🔄 3G/4G:</span> {cat.sranInfo.config_3g4g}
+                                  <div className="text-slate-600 flex items-center justify-between">
+                                    <span>🔄 Cấu hình 3G/4G:</span> 
+                                    <span className="font-medium text-slate-800">{cat.sranInfo.config_3g4g}</span>
+                                  </div>
+                                )}
+                                {cat.sranInfo.status_note && (
+                                  <div className="text-[10px] text-slate-600 italic bg-white/80 p-1 rounded border border-slate-200/60">
+                                    ℹ️ {cat.sranInfo.status_note}
                                   </div>
                                 )}
                                 <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-[10px] text-slate-500 pt-1 border-t border-slate-200/60">
@@ -1575,9 +1643,6 @@ export default function NetworkMap() {
                                   )}
                                   {cat.sranInfo.install_date && (
                                     <span>Lắp đặt: {cat.sranInfo.install_date}</span>
-                                  )}
-                                  {cat.sranInfo.cluster_name && (
-                                    <span>Cụm: {cat.sranInfo.cluster_name}</span>
                                   )}
                                 </div>
                               </div>
