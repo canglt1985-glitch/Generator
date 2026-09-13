@@ -364,7 +364,6 @@ export default function NetworkMap() {
   const [validationError, setValidationError] = useState('');
   const [mapCenter, setMapCenter] = useState([11.201, 107.221]); // Default coordinates for Dong Nai
   const [zoomLevel, setZoomLevel] = useState(11);
-  const [scanRadius, setScanRadius] = useState(1000); // scan radius in meters (default 1000m)
   
   // Layer Toggles - Mặc định chỉ hiển thị trạm hoạt động
   const [showActiveSites, setShowActiveSites] = useState(true);
@@ -603,7 +602,7 @@ export default function NetworkMap() {
   };
 
   // Handle map click or manual coordinates input to run nearest sites calculation
-  const executeScan = useCallback((lat, lng, overrideRadius = null) => {
+  const executeScan = useCallback((lat, lng) => {
     setValidationError('');
     setCableRoute(null);
     const customerCoord = { lat, lng };
@@ -659,19 +658,18 @@ export default function NetworkMap() {
       return;
     }
 
-    // Filter by Scan Radius - Luôn đảm bảo hiển thị tối thiểu 5 trạm gần nhất
-    const currentRadius = overrideRadius || scanRadius;
-    const withinRadius = allCalculated.filter(item => item.distance <= currentRadius);
-
-    let finalSelection = withinRadius.length >= 5
-      ? withinRadius.slice(0, 15)
-      : allCalculated.slice(0, Math.min(5, allCalculated.length));
+    // Tối ưu số lượng trạm lân cận hiển thị (tiết kiệm không gian màn hình):
+    // - Nếu trạm gần nhất < 1km: hiển thị 3 trạm gần nhất
+    // - Nếu trạm gần nhất > 1km: hiển thị 1-2 trạm gần nhất (mặc định lấy 2 trạm gần nhất)
+    const nearestDistance = allCalculated[0].distance;
+    const limit = nearestDistance < 1000 ? 3 : 2;
+    let finalSelection = allCalculated.slice(0, Math.min(limit, allCalculated.length));
 
     // Đảm bảo luôn lấy đến ít nhất 1 điểm trạm đang hoạt động để làm đối chứng
     const hasActiveSite = finalSelection.some(item => item.type === 'Hoạt động');
     if (!hasActiveSite) {
       const nearestActive = allCalculated.find(item => item.type === 'Hoạt động');
-      if (nearestActive) {
+      if (nearestActive && !finalSelection.some(item => item.id === nearestActive.id)) {
         finalSelection.push(nearestActive);
       }
     }
@@ -686,7 +684,7 @@ export default function NetworkMap() {
     else if (maxDist > 2000) setZoomLevel(13);
     else if (maxDist > 1000) setZoomLevel(14);
     else setZoomLevel(15);
-  }, [categorizedActiveSites, infraProjects, scanRadius]);
+  }, [categorizedActiveSites, infraProjects]);
 
   const executeScanRef = useRef(executeScan);
   useEffect(() => {
@@ -827,13 +825,6 @@ export default function NetworkMap() {
       }
     };
   }, [useGPS]);
-
-  const handleRadiusChange = (newRadius) => {
-    setScanRadius(newRadius);
-    if (customerLocation) {
-      executeScan(customerLocation.lat, customerLocation.lng, newRadius);
-    }
-  };
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -1150,32 +1141,6 @@ export default function NetworkMap() {
               <ChevronLeft className="h-4 w-4" />
             </button>
           )}
-        </div>
-
-        {/* Bộ chọn bán kính quét nhanh */}
-        <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] bg-slate-900/60 p-2 rounded-xl border border-slate-700/50">
-          <div className="flex items-center gap-1.5 text-slate-400 font-medium">
-            <span>Bán kính:</span>
-            <div className="flex items-center gap-1">
-              {[1000, 2000, 3000, 5000, 10000].map(r => (
-                <button
-                  key={r}
-                  type="button"
-                  onClick={() => handleRadiusChange(r)}
-                  className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
-                    scanRadius === r 
-                      ? 'bg-cyan-500 text-slate-950 font-extrabold shadow-sm' 
-                      : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
-                  }`}
-                >
-                  {r >= 1000 ? `${r / 1000}km` : `${r}m`}
-                </button>
-              ))}
-            </div>
-          </div>
-          <span className="text-[10px] text-slate-400 italic">
-            Hiển thị {nearestSites.length} trạm gần nhất
-          </span>
         </div>
 
         {/* Ô tìm kiếm trạm đích bất kỳ để kéo cáp (VD: DNLK24) */}
@@ -1919,12 +1884,6 @@ export default function NetworkMap() {
                       </div>
                     </Popup>
                   </Marker>
-
-                  <Circle
-                    center={[customerLocation.lat, customerLocation.lng]}
-                    radius={scanRadius}
-                    pathOptions={{ fillColor: '#06b6d4', fillOpacity: 0.08, color: '#06b6d4', weight: 1.5, dashArray: '4, 6' }}
-                  />
                 </>
               )}
 
