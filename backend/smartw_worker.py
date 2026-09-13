@@ -100,7 +100,7 @@ def _get_datasites_list():
     if not supabase:
         return []
     try:
-        res = supabase.table("datasites").select("site_id, site_id_old").execute()
+        res = supabase.table("datasites").select("site_id, site_id_old, management_info").execute()
         _datasites_cache = res.data or []
     except Exception as e:
         logger.error(f'SmartW failed to fetch datasites cache: {e}')
@@ -2710,21 +2710,51 @@ def send_periodic_full_report():
         logger.info("SmartW Worker: 🏠 No active alarms, skipping periodic report.")
 
 
-def _get_district_code(site_id: str) -> str:
-    s = (site_id or '').upper().strip()
-    if 'DNLT' in s or 'DNIH' in s: return 'DNLT'
-    if 'DNTN' in s or 'DNTB' in s or 'DNIT' in s: return 'DNTN'
-    if 'DNCM' in s or 'DNIC' in s: return 'DNCM'
-    if 'DNLK' in s or 'DNIL' in s: return 'DNLK'
-    if 'DNXL' in s or 'DNIX' in s: return 'DNXL'
-    if 'DNTP' in s or 'DNIP' in s: return 'DNTP'
-    if 'DNDQ' in s or 'DNID' in s: return 'DNDQ'
-    if 'DNVC' in s or 'DNBI' in s or 'DNBH' in s: return 'DNVC'
-    return s[:4] if len(s) >= 4 else 'Khác'
+def _get_site_qlt_short(site_raw: str) -> str:
+    """
+    Look up QLT short name (e.g. 'Thái', 'Vinh', 'Khuân') for a given site ID.
+    Extracts the last word of full name (e.g. 'Lê Thành Thái' -> 'Thái').
+    Returns short name, or 'Khác' if not found.
+    """
+    if not site_raw:
+        return 'Khác'
+    
+    s = str(site_raw).strip().upper()
+    base_part, _ = _split_site_id(s)
+    s_clean = base_part.strip().upper()
+    
+    data = _get_datasites_list()
+    
+    # 1. Exact match with site_id or site_id_old (check both raw s and cleaned s_clean)
+    for item in data:
+        s_id = (item.get("site_id") or "").strip().upper()
+        s_old = (item.get("site_id_old") or "").strip().upper()
+        if s == s_id or s == s_old or s_clean == s_id or s_clean == s_old:
+            mgt = item.get("management_info") or {}
+            full_name = (mgt.get("qlt") or "").strip()
+            if full_name:
+                parts = full_name.split()
+                return parts[-1] if parts else full_name
+            return 'Khác'
+            
+    # 2. Prefix match (e.g. DNTN55_4G or DNIDGI28_L or DNTN55L)
+    for item in data:
+        s_id = (item.get("site_id") or "").strip().upper()
+        s_old = (item.get("site_id_old") or "").strip().upper()
+        if (s_id and (s.startswith(s_id) or s_clean.startswith(s_id))) or \
+           (s_old and (s.startswith(s_old) or s_clean.startswith(s_old))):
+            mgt = item.get("management_info") or {}
+            full_name = (mgt.get("qlt") or "").strip()
+            if full_name:
+                parts = full_name.split()
+                return parts[-1] if parts else full_name
+            return 'Khác'
+            
+    return 'Khác'
 
 
 def _send_mll_cause_viber_report(audit_result: dict):
-    """Format and send district-aggregated MLL Cause Audit report for TVT3 to Viber group TVT3-Giám sát Ran."""
+    """Format and send QLT-aggregated MLL Cause Audit report for TVT3 to Viber group TVT3-Giám sát Ran."""
     missing_records = audit_result.get('missing_records', [])
     missing_count = audit_result.get('missing_count', 0)
     date_range = audit_result.get('date_range', '')
@@ -2739,10 +2769,10 @@ def _send_mll_cause_viber_report(audit_result: dict):
     if missing_count == 0:
         lines.append("🎉 *Tất cả các sự cố MLL của TVT3 đều đã cập nhật ĐẦY ĐỦ 3 cấp nguyên nhân!*")
     else:
-        # Group missing records by District Code & Date
+        # Group missing records by QLT (Người quản lý trạm) & Date
         from collections import defaultdict
-        dist_counts = defaultdict(lambda: defaultdict(int))
-        dist_totals = defaultdict(int)
+        qlt_counts = defaultdict(lambda: defaultdict(int))
+        qlt_totals = defaultdict(int)
 
         def _parse_time(t_str):
             if not t_str: return None
@@ -2753,19 +2783,26 @@ def _send_mll_cause_viber_report(audit_result: dict):
             return None
 
         for r in missing_records:
-            dist = _get_district_code(r.get('site_id'))
+            qlt = _get_site_qlt_short(r.get('site_id'))
             edate_dt = _parse_time(r.get('ket_thuc'))
             date_str = edate_dt.strftime('%d/%m') if edate_dt else 'Gần đây'
-            dist_counts[dist][date_str] += 1
-            dist_totals[dist] += 1
+            qlt_counts[qlt][date_str] += 1
+            qlt_totals[qlt] += 1
 
-        target_districts = ['DNLT', 'DNTN', 'DNCM', 'DNLK', 'DNXL', 'DNTP', 'DNDQ', 'DNVC']
-        for dist in target_districts:
-            tot = dist_totals[dist]
+        # Sắp xếp danh sách người QLT theo số sự cố giảm dần (nhiều nhất lên đầu), 'Khác' ở cuối
+        sorted_qlts = sorted(
+            [q for q in qlt_totals.keys() if q != 'Khác'],
+            key=lambda q: (-qlt_totals[q], q)
+        )
+        if 'Khác' in qlt_totals and qlt_totals['Khác'] > 0:
+            sorted_qlts.append('Khác')
+
+        for qlt in sorted_qlts:
+            tot = qlt_totals[qlt]
             if tot > 0:
-                dates = sorted(dist_counts[dist].keys(), reverse=True)
-                date_breakdown = ' | '.join(f'{d}: {dist_counts[dist][d]}' for d in dates)
-                lines.append(f"🔹 *{dist}:* *{tot}* sự cố ({date_breakdown})")
+                dates = sorted(qlt_counts[qlt].keys(), reverse=True)
+                date_breakdown = ' | '.join(f'{d}: {qlt_counts[qlt][d]}' for d in dates)
+                lines.append(f"🔹 *{qlt}:* *{tot}* sự cố ({date_breakdown})")
 
     # Send to Viber group TVT3-Giám sát Ran (uses viber_bot_token_alarms)
     _send_viber_report(lines)
