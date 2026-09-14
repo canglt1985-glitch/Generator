@@ -2253,10 +2253,15 @@ def run_vhkt_poll(target_date: str = None):
 def _parse_alarm_date_str(sdate_raw):
     if not sdate_raw:
         return None
+    from datetime import timezone
+    tz_vn = timezone(timedelta(hours=7))
     s_str = str(sdate_raw).strip()
     if "T" in s_str or "-" in s_str[:10]:
         try:
-            return datetime.fromisoformat(s_str.replace("Z", "+00:00")).strftime("%Y-%m-%d")
+            dt = datetime.fromisoformat(s_str.replace("Z", "+00:00"))
+            if dt.tzinfo:
+                dt = dt.astimezone(tz_vn)
+            return dt.strftime("%Y-%m-%d")
         except:
             pass
     if "/" in s_str:
@@ -2270,7 +2275,7 @@ def _parse_alarm_date_str(sdate_raw):
         ts = float(s_str)
         if ts > 1e11:
             ts /= 1000.0
-        return datetime.fromtimestamp(ts).strftime("%Y-%m-%d")
+        return datetime.fromtimestamp(ts, tz=tz_vn).strftime("%Y-%m-%d")
     except:
         pass
     return None
@@ -2283,6 +2288,9 @@ def auto_sync_mpd_alarms_fallback() -> int:
         return 0
 
     try:
+        from datetime import timezone
+        tz_vn = timezone(timedelta(hours=7))
+
         res_alarms = supabase.table("smartw_alarms").select("*").eq("alarm_type", "mpd").eq("status", "CLEARED").execute()
         all_alarms = res_alarms.data or []
         
@@ -2317,10 +2325,12 @@ def auto_sync_mpd_alarms_fallback() -> int:
                 continue
 
             try:
-                clean_s = sdate_iso.replace('+00:00', '').replace('Z', '').strip()
-                clean_e = edate_iso.replace('+00:00', '').replace('Z', '').strip()
-                dt_start = datetime.fromisoformat(clean_s)
-                dt_end = datetime.fromisoformat(clean_e)
+                dt_start = datetime.fromisoformat(sdate_iso.replace('Z', '+00:00'))
+                if dt_start.tzinfo:
+                    dt_start = dt_start.astimezone(tz_vn)
+                dt_end = datetime.fromisoformat(edate_iso.replace('Z', '+00:00'))
+                if dt_end.tzinfo:
+                    dt_end = dt_end.astimezone(tz_vn)
             except Exception:
                 continue
 
@@ -2353,9 +2363,14 @@ def auto_sync_mpd_alarms_fallback() -> int:
                 cong_suat_may = str(mp.get("cong_suat") or "")
 
             nhien_lieu = round(hours * dinh_muc, 2)
-            don_gia = 27540
+            try:
+                from smartw.mfd_import import get_pretax_price
+                don_gia = get_pretax_price(loai_nhien_lieu, date_str=date_label) or 27540
+            except Exception:
+                don_gia = 27540
             thanh_tien = round(nhien_lieu * don_gia)
 
+            smartw_alarm_id = f"{raw_site}__{alarm.get('sdate_str') or dt_start.strftime('%d/%m/%Y %H:%M:%S')}"
             run_details = {
                 "gio_bat_dau": start_time,
                 "gio_ket_thuc": end_time,
@@ -2370,7 +2385,7 @@ def auto_sync_mpd_alarms_fallback() -> int:
                 "nhien_lieu_loai": loai_nhien_lieu,
                 "status": "approved",
                 "source": "smartw",
-                "smartw_alarm_id": f"{raw_site}__{alarm.get('sdate_str') or ''}"
+                "smartw_alarm_id": smartw_alarm_id
             }
 
             supabase.table("generator_logs").insert({
