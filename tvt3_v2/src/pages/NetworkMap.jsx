@@ -3,13 +3,20 @@ import { supabase } from '../supabaseClient';
 import { 
   MapPin, Search, Server, Compass, AlertCircle, Radio, 
   Layers, Copy, Check, Maximize2, Minimize2,
-  ChevronLeft, ChevronRight, ChevronDown, X
+  ChevronLeft, ChevronRight, ChevronDown, X, Zap, RefreshCw
 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, Circle, useMap } from 'react-leaflet';
 import L from 'leaflet';
 
 // Google Maps & OSM Tile Layer Definitions
 const TILE_LAYERS = {
+  google_satellite: {
+    id: 'google_satellite',
+    name: 'Vệ tinh thuần',
+    subname: 'Ảnh vệ tinh độ nét cao (không nhãn)',
+    url: 'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+    attribution: '&copy; Google Maps'
+  },
   google_hybrid: {
     id: 'google_hybrid',
     name: 'Google Vệ tinh',
@@ -17,17 +24,10 @@ const TILE_LAYERS = {
     url: 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
     attribution: '&copy; Google Maps'
   },
-  google_satellite: {
-    id: 'google_satellite',
-    name: 'Vệ tinh thuần',
-    subname: 'Không nhãn địa danh',
-    url: 'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-    attribution: '&copy; Google Maps'
-  },
   osm: {
     id: 'osm',
-    name: 'Bản đồ Đường phố',
-    subname: 'Giao thông OSM',
+    name: 'Đường phố OSM',
+    subname: 'Giao thông đường bộ',
     url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
     attribution: '&copy; OpenStreetMap'
   }
@@ -365,13 +365,14 @@ export default function NetworkMap() {
   const [mapCenter, setMapCenter] = useState([11.201, 107.221]); // Default coordinates for Dong Nai
   const [zoomLevel, setZoomLevel] = useState(11);
   
-  // Layer Toggles - Mặc định chỉ hiển thị trạm hoạt động
-  const [showActiveSites, setShowActiveSites] = useState(true);
-  const [activeSiteFilter, setActiveSiteFilter] = useState('all'); // 'all' | 'onair_5g' | 'swapped_4g_era' | 'normal_4g'
+  // Layer Toggles - Hệ thống phân lớp bản đồ đa lựa chọn (Multi-select layers)
+  const [layerActiveSites, setLayerActiveSites] = useState(true); // Trạm hoạt động 3G/4G hiện hữu
+  const [layer5gOnair, setLayer5gOnair] = useState(true); // Trạm 5G Onair
+  const [layer4gEra, setLayer4gEra] = useState(true); // Trạm 4G ERA Swap
+  const [layerPlanningInfra, setLayerPlanningInfra] = useState(false); // Trạm CSHT Quy hoạch
+  const [layerLastmile, setLayerLastmile] = useState(false); // Tuyến truyền dẫn Last Mile
   const [sranTrackerData, setSranTrackerData] = useState([]);
-  const [showProjects, setShowProjects] = useState(false); // Mặc định tắt CSHT QH
   const [infraFilter] = useState('all'); // 'all' | 'so_ok_dau_tu' | 'dung_chung' | 'da_khao_sat' | 'quy_hoach'
-  const [showTransmission, setShowTransmission] = useState(false); // Mặc định tắt Last Mile
   const [showCoverageCircle, setShowCoverageCircle] = useState(false);
   const [useGPS, setUseGPS] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
@@ -379,7 +380,7 @@ export default function NetworkMap() {
   const [customTargetSearch, setCustomTargetSearch] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [bottomSheetState, setBottomSheetState] = useState('collapsed'); // 'collapsed' | 'half' | 'full'
-  const [selectedTileLayer, setSelectedTileLayer] = useState('google_hybrid');
+  const [selectedTileLayer, setSelectedTileLayer] = useState('google_satellite'); // Mặc định Vệ tinh thuần theo yêu cầu
   const [showLayersPopup, setShowLayersPopup] = useState(false);
 
   // Lắng nghe phím Escape để thoát chế độ toàn màn hình
@@ -1011,6 +1012,16 @@ export default function NetworkMap() {
     setSearchSuggestions([]);
     setMapCenter([item.lat, item.lng]);
     setZoomLevel(16);
+
+    // Tự động bật phân lớp tương ứng nếu đang bị tắt để người dùng thấy ngay trạm vừa tìm
+    if (item.type === 'Quy hoạch') {
+      if (!layerPlanningInfra) setLayerPlanningInfra(true);
+    } else {
+      if (item.techType === '5G' && !layer5gOnair) setLayer5gOnair(true);
+      else if (item.techType === '4G ERA' && !layer4gEra) setLayer4gEra(true);
+      else if (!layerActiveSites) setLayerActiveSites(true);
+    }
+
     showToast(`Đã di chuyển tới trạm ${item.code}`);
   };
 
@@ -1065,6 +1076,12 @@ export default function NetworkMap() {
 
       setMapCenter([lat, lng]);
       setZoomLevel(16);
+
+      // Tự động bật phân lớp tương ứng nếu đang tắt
+      if (matchedActive.sranCategory?.key === 'onair_5g' && !layer5gOnair) setLayer5gOnair(true);
+      else if (matchedActive.sranCategory?.key === 'swapped_4g_era' && !layer4gEra) setLayer4gEra(true);
+      else if (!layerActiveSites) setLayerActiveSites(true);
+
       showToast(`Đã tìm thấy trạm: ${displayTitle} (${matchedActive.sranCategory?.label || 'Hoạt động'})`);
       return;
     }
@@ -1078,6 +1095,9 @@ export default function NetworkMap() {
       const lng = parseFloat(matchedProject.longitude_survey || matchedProject.longitude_plan);
       setMapCenter([lat, lng]);
       setZoomLevel(16);
+
+      if (!layerPlanningInfra) setLayerPlanningInfra(true);
+
       showToast(`Đã tìm thấy dự án ${matchedProject.planning_id_old || matchedProject.planning_id_new} (${matchedProject.category.label})`);
       return;
     }
@@ -1536,35 +1556,35 @@ export default function NetworkMap() {
           {/* Chip 1: Trạm Hoạt động */}
           <button
             type="button"
-            onClick={() => setShowActiveSites(!showActiveSites)}
+            onClick={() => setLayerActiveSites(!layerActiveSites)}
             className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all shadow-md cursor-pointer ${
-              showActiveSites
+              layerActiveSites
                 ? 'bg-blue-600 text-white ring-2 ring-blue-400/40'
                 : 'bg-slate-900/90 text-slate-400 border border-slate-700/80 hover:border-slate-500'
             }`}
+            title={layerActiveSites ? 'Nhấp để ẩn trạm hoạt động thường' : 'Nhấp để hiện trạm hoạt động thường'}
           >
-            <span className={`h-2 w-2 rounded-full ${showActiveSites ? 'bg-white' : 'bg-slate-500'}`} />
+            <span className={`h-2 w-2 rounded-full ${layerActiveSites ? 'bg-white' : 'bg-slate-500'}`} />
             <span>Trạm HĐ</span>
-            <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${showActiveSites ? 'bg-blue-700 text-blue-100' : 'bg-slate-800 text-slate-400'}`}>
-              {activeSites.length}
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${layerActiveSites ? 'bg-blue-700 text-blue-100' : 'bg-slate-800 text-slate-400'}`}>
+              {activeSiteCounts.normal_4g}
             </span>
           </button>
 
           {/* Chip 2: 5G Onair */}
           <button
             type="button"
-            onClick={() => {
-              if (!showActiveSites) setShowActiveSites(true);
-              setActiveSiteFilter(activeSiteFilter === 'onair_5g' ? 'all' : 'onair_5g');
-            }}
+            onClick={() => setLayer5gOnair(!layer5gOnair)}
             className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all shadow-md cursor-pointer ${
-              showActiveSites && activeSiteFilter === 'onair_5g'
+              layer5gOnair
                 ? 'bg-pink-600 text-white ring-2 ring-pink-400/50'
-                : 'bg-slate-900/90 text-slate-300 border border-slate-700/80 hover:border-pink-500/40'
+                : 'bg-slate-900/90 text-slate-400 border border-slate-700/80 hover:border-pink-500/40'
             }`}
+            title={layer5gOnair ? 'Nhấp để ẩn trạm 5G Onair' : 'Nhấp để hiện trạm 5G Onair'}
           >
+            <span className={`h-2 w-2 rounded-full ${layer5gOnair ? 'bg-white' : 'bg-pink-500'}`} />
             <span>📶 5G Onair</span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-pink-950/60 text-pink-300 border border-pink-500/30">
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${layer5gOnair ? 'bg-pink-700 text-pink-100' : 'bg-pink-950/60 text-pink-300 border border-pink-500/30'}`}>
               {activeSiteCounts.onair_5g}
             </span>
           </button>
@@ -1572,18 +1592,17 @@ export default function NetworkMap() {
           {/* Chip 3: 4G ERA Swap */}
           <button
             type="button"
-            onClick={() => {
-              if (!showActiveSites) setShowActiveSites(true);
-              setActiveSiteFilter(activeSiteFilter === 'swapped_4g_era' ? 'all' : 'swapped_4g_era');
-            }}
+            onClick={() => setLayer4gEra(!layer4gEra)}
             className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all shadow-md cursor-pointer ${
-              showActiveSites && activeSiteFilter === 'swapped_4g_era'
+              layer4gEra
                 ? 'bg-cyan-600 text-white ring-2 ring-cyan-400/50'
-                : 'bg-slate-900/90 text-slate-300 border border-slate-700/80 hover:border-cyan-500/40'
+                : 'bg-slate-900/90 text-slate-400 border border-slate-700/80 hover:border-cyan-500/40'
             }`}
+            title={layer4gEra ? 'Nhấp để ẩn trạm 4G ERA' : 'Nhấp để hiện trạm 4G ERA'}
           >
+            <span className={`h-2 w-2 rounded-full ${layer4gEra ? 'bg-white' : 'bg-cyan-400'}`} />
             <span>🔄 4G ERA</span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-cyan-950/60 text-cyan-300 border border-cyan-500/30">
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${layer4gEra ? 'bg-cyan-700 text-cyan-100' : 'bg-cyan-950/60 text-cyan-300 border border-cyan-500/30'}`}>
               {activeSiteCounts.swapped_4g_era}
             </span>
           </button>
@@ -1591,16 +1610,17 @@ export default function NetworkMap() {
           {/* Chip 4: CSHT Quy hoạch */}
           <button
             type="button"
-            onClick={() => setShowProjects(!showProjects)}
+            onClick={() => setLayerPlanningInfra(!layerPlanningInfra)}
             className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all shadow-md cursor-pointer ${
-              showProjects
+              layerPlanningInfra
                 ? 'bg-amber-600 text-white ring-2 ring-amber-400/40'
                 : 'bg-slate-900/90 text-slate-400 border border-slate-700/80 hover:border-slate-500'
             }`}
+            title={layerPlanningInfra ? 'Nhấp để ẩn trạm quy hoạch CSHT' : 'Nhấp để hiện trạm quy hoạch CSHT'}
           >
-            <span className={`h-2 w-2 rounded-full ${showProjects ? 'bg-white' : 'bg-slate-500'}`} />
-            <span>CSHT QH</span>
-            <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${showProjects ? 'bg-amber-700 text-amber-100' : 'bg-slate-800 text-slate-400'}`}>
+            <span className={`h-2 w-2 rounded-full ${layerPlanningInfra ? 'bg-white' : 'bg-slate-500'}`} />
+            <span>Trạm QH</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${layerPlanningInfra ? 'bg-amber-700 text-amber-100' : 'bg-slate-800 text-slate-400'}`}>
               {infraProjects.length}
             </span>
           </button>
@@ -1608,16 +1628,17 @@ export default function NetworkMap() {
           {/* Chip 5: Tuyến truyền dẫn Last Mile */}
           <button
             type="button"
-            onClick={() => setShowTransmission(!showTransmission)}
+            onClick={() => setLayerLastmile(!layerLastmile)}
             className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all shadow-md cursor-pointer ${
-              showTransmission
+              layerLastmile
                 ? 'bg-emerald-600 text-white ring-2 ring-emerald-400/40'
                 : 'bg-slate-900/90 text-slate-400 border border-slate-700/80 hover:border-slate-500'
             }`}
+            title={layerLastmile ? 'Nhấp để ẩn tuyến Lastmile' : 'Nhấp để hiện tuyến Lastmile'}
           >
-            <span className={`h-2 w-2 rounded-full ${showTransmission ? 'bg-white' : 'bg-slate-500'}`} />
+            <span className={`h-2 w-2 rounded-full ${layerLastmile ? 'bg-white' : 'bg-slate-500'}`} />
             <span>Last Mile</span>
-            <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${showTransmission ? 'bg-emerald-700 text-emerald-100' : 'bg-slate-800 text-slate-400'}`}>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${layerLastmile ? 'bg-emerald-700 text-emerald-100' : 'bg-slate-800 text-slate-400'}`}>
               {transmissionLines.length}
             </span>
           </button>
@@ -1647,38 +1668,231 @@ export default function NetworkMap() {
               className={`h-10 w-10 bg-slate-900/90 hover:bg-slate-800 text-white rounded-xl border shadow-xl flex items-center justify-center transition-all cursor-pointer ${
                 showLayersPopup ? 'border-cyan-500 text-cyan-400 ring-2 ring-cyan-500/30' : 'border-slate-700/80'
               }`}
-              title="Lớp bản đồ (Vệ tinh / Đường phố)"
+              title="Phân lớp bản đồ (Nền vệ tinh & Phân lớp dữ liệu trạm)"
             >
               <Layers className="h-5 w-5" />
             </button>
 
             {showLayersPopup && (
-              <div className="absolute right-12 bottom-0 w-60 bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-2xl p-2.5 shadow-2xl space-y-1.5 text-xs text-white z-[1100]">
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1 pb-1 border-b border-slate-800">
-                  Lớp bản đồ nền:
-                </div>
-                {Object.values(TILE_LAYERS).map((layer) => (
-                  <button
-                    key={layer.id}
+              <div className="absolute right-12 bottom-0 w-72 sm:w-80 bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-2xl p-3 shadow-2xl space-y-3 text-xs text-white z-[1100] max-h-[85vh] overflow-y-auto font-sans">
+                <div className="flex items-center justify-between pb-1.5 border-b border-slate-800">
+                  <div className="flex items-center gap-1.5 text-cyan-400 font-bold text-xs">
+                    <Layers className="h-4 w-4" />
+                    <span>PHÂN LỚP BẢN ĐỒ</span>
+                  </div>
+                  <button 
                     type="button"
-                    onClick={() => {
-                      setSelectedTileLayer(layer.id);
-                      setShowLayersPopup(false);
-                      showToast(`Đã đổi sang: ${layer.name}`);
-                    }}
-                    className={`w-full text-left p-2 rounded-xl flex items-center justify-between transition-colors cursor-pointer ${
-                      selectedTileLayer === layer.id
-                        ? 'bg-cyan-600/20 text-cyan-400 border border-cyan-500/40 font-bold'
-                        : 'hover:bg-slate-800/80 text-slate-300'
-                    }`}
+                    onClick={() => setShowLayersPopup(false)}
+                    className="h-5 w-5 rounded-md hover:bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
                   >
-                    <div>
-                      <div className="font-semibold text-xs">{layer.name}</div>
-                      <div className="text-[10px] text-slate-400">{layer.subname}</div>
-                    </div>
-                    {selectedTileLayer === layer.id && <Check className="h-4 w-4 text-cyan-400" />}
+                    <X className="h-3.5 w-3.5" />
                   </button>
-                ))}
+                </div>
+
+                {/* 1. Lớp Bản Đồ Nền (Base Maps - Chọn 1 trong 3) */}
+                <div className="space-y-1.5">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    Bản đồ nền (Mặc định: Vệ tinh thuần):
+                  </div>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {Object.values(TILE_LAYERS).map((layer) => {
+                      const isSelected = selectedTileLayer === layer.id;
+                      return (
+                        <button
+                          key={layer.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedTileLayer(layer.id);
+                            showToast(`Bản đồ: ${layer.name}`);
+                          }}
+                          className={`p-2 rounded-xl text-center transition-all cursor-pointer flex flex-col items-center gap-1 border ${
+                            isSelected
+                              ? 'bg-cyan-600/25 border-cyan-500 text-cyan-300 font-bold ring-1 ring-cyan-500/40 shadow-sm shadow-cyan-500/20'
+                              : 'bg-slate-800/60 border-slate-700/60 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                          }`}
+                        >
+                          <span className="text-base">{layer.id === 'google_satellite' ? '🛰️' : layer.id === 'google_hybrid' ? '🗺️' : '🚗'}</span>
+                          <span className="text-[10.5px] leading-tight font-semibold">{layer.name}</span>
+                          {isSelected && <span className="h-1.5 w-1.5 rounded-full bg-cyan-400"></span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 2. Phân Lớp Dữ Liệu (Overlays - Bật / Tắt 1 hoặc nhiều lớp) */}
+                <div className="space-y-1.5 pt-2 border-t border-slate-800">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      Phân lớp dữ liệu (chọn nhiều):
+                    </span>
+                    <div className="flex items-center gap-1.5 text-[10px]">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLayerActiveSites(true);
+                          setLayer5gOnair(true);
+                          setLayer4gEra(true);
+                          setLayerPlanningInfra(true);
+                          setLayerLastmile(true);
+                          showToast('Đã bật tất cả phân lớp');
+                        }}
+                        className="text-cyan-400 hover:underline cursor-pointer font-semibold"
+                      >
+                        Bật hết
+                      </button>
+                      <span className="text-slate-600">•</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLayerActiveSites(false);
+                          setLayer5gOnair(false);
+                          setLayer4gEra(false);
+                          setLayerPlanningInfra(false);
+                          setLayerLastmile(false);
+                          showToast('Đã tắt tất cả phân lớp');
+                        }}
+                        className="text-slate-400 hover:text-slate-200 hover:underline cursor-pointer"
+                      >
+                        Tắt hết
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    {/* Layer 1: Trạm hoạt động */}
+                    <label className="flex items-center justify-between p-2 rounded-xl bg-slate-800/50 hover:bg-slate-800/90 border border-slate-700/60 cursor-pointer transition-colors">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <input
+                          type="checkbox"
+                          checked={layerActiveSites}
+                          onChange={(e) => setLayerActiveSites(e.target.checked)}
+                          className="rounded border-slate-600 text-blue-600 focus:ring-blue-500 h-4 w-4 bg-slate-900 cursor-pointer"
+                        />
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                            <span className="h-2 w-2 rounded-full bg-blue-500 shrink-0"></span>
+                            <span>Trạm hoạt động</span>
+                          </div>
+                          <div className="text-[10px] text-slate-400 truncate">3G/4G hiện hữu đang phát sóng</div>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-950 text-blue-300 border border-blue-700/50 shrink-0">
+                        {activeSiteCounts.normal_4g}
+                      </span>
+                    </label>
+
+                    {/* Layer 2: 5G Onair */}
+                    <label className="flex items-center justify-between p-2 rounded-xl bg-slate-800/50 hover:bg-slate-800/90 border border-slate-700/60 cursor-pointer transition-colors">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <input
+                          type="checkbox"
+                          checked={layer5gOnair}
+                          onChange={(e) => setLayer5gOnair(e.target.checked)}
+                          className="rounded border-slate-600 text-pink-600 focus:ring-pink-500 h-4 w-4 bg-slate-900 cursor-pointer"
+                        />
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                            <span className="h-2 w-2 rounded-full bg-pink-500 shrink-0"></span>
+                            <span>5G Onair</span>
+                          </div>
+                          <div className="text-[10px] text-slate-400 truncate">Trạm 5G đã phát sóng thành công</div>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-pink-950 text-pink-300 border border-pink-700/50 shrink-0">
+                        {activeSiteCounts.onair_5g}
+                      </span>
+                    </label>
+
+                    {/* Layer 3: 4G ERA Swap */}
+                    <label className="flex items-center justify-between p-2 rounded-xl bg-slate-800/50 hover:bg-slate-800/90 border border-slate-700/60 cursor-pointer transition-colors">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <input
+                          type="checkbox"
+                          checked={layer4gEra}
+                          onChange={(e) => setLayer4gEra(e.target.checked)}
+                          className="rounded border-slate-600 text-cyan-500 focus:ring-cyan-500 h-4 w-4 bg-slate-900 cursor-pointer"
+                        />
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                            <span className="h-2 w-2 rounded-full bg-cyan-400 shrink-0"></span>
+                            <span>4G ERA Swap</span>
+                          </div>
+                          <div className="text-[10px] text-slate-400 truncate">Trạm 4G đã swap thiết bị Ericsson</div>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-700/50 shrink-0">
+                        {activeSiteCounts.swapped_4g_era}
+                      </span>
+                    </label>
+
+                    {/* Layer 4: Trạm quy hoạch CSHT */}
+                    <label className="flex items-center justify-between p-2 rounded-xl bg-slate-800/50 hover:bg-slate-800/90 border border-slate-700/60 cursor-pointer transition-colors">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <input
+                          type="checkbox"
+                          checked={layerPlanningInfra}
+                          onChange={(e) => setLayerPlanningInfra(e.target.checked)}
+                          className="rounded border-slate-600 text-amber-500 focus:ring-amber-500 h-4 w-4 bg-slate-900 cursor-pointer"
+                        />
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                            <span className="h-2 w-2 rounded-full bg-amber-400 shrink-0"></span>
+                            <span>Trạm quy hoạch</span>
+                          </div>
+                          <div className="text-[10px] text-slate-400 truncate">Vị trí CSHT quy hoạch phát triển</div>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-950 text-amber-300 border border-amber-700/50 shrink-0">
+                        {infraProjects.length}
+                      </span>
+                    </label>
+
+                    {/* Layer 5: Lastmile */}
+                    <label className="flex items-center justify-between p-2 rounded-xl bg-slate-800/50 hover:bg-slate-800/90 border border-slate-700/60 cursor-pointer transition-colors">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <input
+                          type="checkbox"
+                          checked={layerLastmile}
+                          onChange={(e) => setLayerLastmile(e.target.checked)}
+                          className="rounded border-slate-600 text-emerald-500 focus:ring-emerald-500 h-4 w-4 bg-slate-900 cursor-pointer"
+                        />
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                            <span className="h-2 w-2 rounded-full bg-emerald-400 shrink-0"></span>
+                            <span>Lastmile</span>
+                          </div>
+                          <div className="text-[10px] text-slate-400 truncate">Tuyến truyền dẫn & trạm phụ thuộc</div>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-700/50 shrink-0">
+                        {transmissionLines.length}
+                      </span>
+                    </label>
+
+                    {/* Layer 6: Bán kính phủ sóng 500m */}
+                    <label className="flex items-center justify-between p-2 rounded-xl bg-slate-800/50 hover:bg-slate-800/90 border border-slate-700/60 cursor-pointer transition-colors">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <input
+                          type="checkbox"
+                          checked={showCoverageCircle}
+                          onChange={(e) => setShowCoverageCircle(e.target.checked)}
+                          className="rounded border-slate-600 text-indigo-500 focus:ring-indigo-500 h-4 w-4 bg-slate-900 cursor-pointer"
+                        />
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                            <span className="h-2 w-2 rounded-full bg-indigo-400 shrink-0"></span>
+                            <span>Bán kính 500m</span>
+                          </div>
+                          <div className="text-[10px] text-slate-400 truncate">Vòng tròn bán kính phủ quanh trạm</div>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-700/50 shrink-0">
+                        500m
+                      </span>
+                    </label>
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -1823,7 +2037,7 @@ export default function NetworkMap() {
         >
           <MapResizeHandler isFullscreen={isFullscreen} />
           <ChangeView center={mapCenter} zoom={zoomLevel} />
-          {!showTransmission && <MapClickListener onClick={(lat, lng) => executeScan(lat, lng)} />}
+          {!layerLastmile && <MapClickListener onClick={(lat, lng) => executeScan(lat, lng)} />}
 
           <TileLayer
             key={selectedTileLayer}
@@ -1887,9 +2101,14 @@ export default function NetworkMap() {
                 </>
               )}
 
-              {/* Render danh sách Trạm hoạt động - Phân loại 5G Phát sóng & 4G Swap ERA */}
-              {showActiveSites && categorizedActiveSites
-                .filter(site => activeSiteFilter === 'all' || site.sranCategory?.key === activeSiteFilter)
+              {/* Render danh sách Trạm hoạt động - Phân loại 5G Phát sóng & 4G Swap ERA (Đa lựa chọn phân lớp) */}
+              {categorizedActiveSites
+                .filter(site => {
+                  const catKey = site.sranCategory?.key;
+                  if (catKey === 'onair_5g') return layer5gOnair;
+                  if (catKey === 'swapped_4g_era') return layer4gEra;
+                  return layerActiveSites;
+                })
                 .map(site => {
                   const lat = parseFloat(site.location_info.vi_do);
                   const lng = parseFloat(site.location_info.kinh_do);
@@ -2062,7 +2281,7 @@ export default function NetworkMap() {
                 })}
 
               {/* Render danh sách Tuyến truyền dẫn Last Mile */}
-              {showTransmission && transmissionLines.map(line => {
+              {layerLastmile && transmissionLines.map(line => {
                 const { color, dashArray } = getTransLineOptions(line);
                 return (
                   <Polyline 
@@ -2109,7 +2328,7 @@ export default function NetworkMap() {
               })}
 
               {/* Render danh sách trạm Quy hoạch (Dự án CSHT - 95 vị trí phân loại màu) */}
-              {showProjects && categorizedProjects
+              {layerPlanningInfra && categorizedProjects
                 .filter(proj => infraFilter === 'all' || proj.category.key === infraFilter)
                 .map(proj => {
                   const lat = parseFloat(proj.latitude_survey || proj.latitude_plan);
