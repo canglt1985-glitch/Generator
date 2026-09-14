@@ -13,6 +13,26 @@ export default class ErrorBoundary extends React.Component {
 
   componentDidCatch(error, errorInfo) {
     console.error('ErrorBoundary caught an error:', error, errorInfo);
+
+    // Tự động tải lại trang ngay nếu lỗi do bản build mới làm hash chunk thay đổi
+    const errorMessage = error?.message || error?.toString() || '';
+    const isDynamicImportError = 
+      errorMessage.includes('Failed to fetch dynamically imported module') ||
+      errorMessage.includes('Importing a module script failed') ||
+      errorMessage.includes('error loading dynamically imported module') ||
+      error?.name === 'ChunkLoadError';
+
+    if (isDynamicImportError) {
+      const storageKey = 'last_chunk_reload_ts';
+      const lastReload = parseInt(sessionStorage.getItem(storageKey) || '0', 10);
+      const now = Date.now();
+      if (now - lastReload > 10000) {
+        sessionStorage.setItem(storageKey, now.toString());
+        window.location.reload();
+        return;
+      }
+    }
+
     this.setState({ errorInfo });
   }
 
