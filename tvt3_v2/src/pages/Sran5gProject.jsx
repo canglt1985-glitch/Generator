@@ -1331,34 +1331,34 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
       </div>
 
       {/* 3 Streamlined Main View Tabs Navigation */}
-      <div className="flex flex-col lg:flex-row items-center justify-between gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
-        <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-col lg:flex-row items-center justify-between gap-2.5 bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
+        <div className="flex flex-wrap items-center gap-1.5">
           <button
             onClick={() => {
               setActiveViewTab('plan_monthly');
             }}
-            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
               activeViewTab === 'plan_monthly' || activeViewTab === 'plan_sep'
-                ? 'bg-amber-600 text-white shadow-md ring-2 ring-amber-400/40'
+                ? 'bg-amber-600 text-white shadow-sm ring-1 ring-amber-400/40'
                 : 'bg-amber-50 text-amber-900 hover:bg-amber-100 border border-amber-200'
             }`}
           >
-            <Calendar className="h-4 w-4 text-amber-200" />
-            📅 1. Kế Hoạch Theo Tháng (T8, T9, T10, T11)
+            <Calendar className="h-3.5 w-3.5 text-amber-200" />
+            <span>📅 1. Kế Hoạch Triển Khai</span>
           </button>
 
           <button
             onClick={() => {
               setActiveViewTab('dashboard');
             }}
-            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
               activeViewTab === 'dashboard'
-                ? 'bg-slate-900 text-white shadow-md ring-2 ring-slate-400/40'
+                ? 'bg-slate-900 text-white shadow-sm ring-1 ring-slate-400/40'
                 : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
             }`}
           >
-            <Layers className="h-4 w-4 text-blue-400" />
-            📊 2. Báo Cáo Tổng Quan (KPIs)
+            <Layers className="h-3.5 w-3.5 text-blue-400" />
+            <span>📊 2. Báo Cáo Tổng Quan</span>
           </button>
 
           <button
@@ -1369,32 +1369,32 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
               setSearchTerm('');
               setActiveViewTab('table');
             }}
-            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
               activeViewTab === 'table'
-                ? 'bg-blue-600 text-white shadow-md ring-2 ring-blue-400/40'
+                ? 'bg-blue-600 text-white shadow-sm ring-1 ring-blue-400/40'
                 : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
             }`}
           >
-            <Search className="h-4 w-4 text-emerald-400" />
-            📋 3. Tra Cứu & Bộ Lọc Trạm ({stats.activeTotal} trạm)
+            <Search className="h-3.5 w-3.5 text-emerald-400" />
+            <span>📋 3. Tra Cứu & Bộ Lọc ({stats.activeTotal} trạm)</span>
           </button>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 shrink-0">
           {/* 🔍 Global Quick Station Lookup Input */}
-          <div className="relative min-w-[280px] max-w-sm">
-            <Search className="absolute left-3.5 top-2.5 h-4 w-4 text-blue-500" />
+          <div className="relative w-52 sm:w-60 md:w-64">
+            <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-blue-500" />
             <input
               type="text"
-              placeholder="🔍 Tìm trạm (VD: DNCM02, DNIXDO00, 26DNa...)"
+              placeholder="🔍 Tìm trạm (VD: DNCM02...)"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-8 py-2 text-xs font-bold bg-white border-2 border-blue-500/50 rounded-xl text-slate-800 focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-500/30 shadow-md placeholder-slate-400"
+              className="w-full pl-8 pr-7 py-1.5 text-xs font-bold bg-white border border-blue-400/70 rounded-lg text-slate-800 focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20 shadow-sm placeholder-slate-400"
             />
             {searchTerm && (
               <button
                 onClick={() => setSearchTerm('')}
-                className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 font-bold text-xs"
+                className="absolute right-2 top-1.5 text-slate-400 hover:text-slate-600 font-bold text-xs"
               >
                 ✕
               </button>
@@ -1453,61 +1453,70 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
 
           <button
             onClick={exportFilteredToExcel}
-            className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-sm active:scale-95 hover:scale-105"
+            className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
             title="Xuất file Excel cho danh sách đang lọc"
           >
-            <FileSpreadsheet className="h-4 w-4" />
+            <FileSpreadsheet className="h-3.5 w-3.5" />
             <span>Xuất Excel ({filteredData.length})</span>
           </button>
 
           <button
             onClick={copyQuickReport}
-            className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
+            className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
           >
-            <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-            {copiedReport ? '✓ Đã Sao Chép Báo Cáo!' : '📋 Copy Báo Cáo Nhanh'}
+            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+            {copiedReport ? '✓ Đã Copy!' : '📋 Copy Báo Cáo'}
           </button>
         </div>
       </div>
 
             {activeViewTab === 'plan_monthly' || activeViewTab === 'plan_sep' ? (
-        <div className="space-y-6 animate-in fade-in duration-300">
-          {/* 🗓️ UNIFIED MONTH SELECTOR BAR (T8, T9, T10, T11) */}
-          <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 p-4 rounded-2xl shadow-xl border border-slate-700/50 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${currentMonthPlan.statusClass}`}>
+        <div className="space-y-4 animate-in fade-in duration-300">
+          {/* 🗓️ UNIFIED MONTH SELECTOR BAR */}
+          <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 px-4 py-2.5 rounded-xl shadow-md border border-slate-700/60 flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border whitespace-nowrap shrink-0 ${currentMonthPlan.statusClass}`}>
                   {currentMonthPlan.statusBadge}
                 </span>
-                <span className="text-xs text-slate-400 font-medium">Dự án SRAN 5G MobiFone Đồng Nai</span>
+                <span className="text-xs text-slate-400 font-medium whitespace-nowrap">Dự án SRAN 5G MobiFone Đồng Nai</span>
               </div>
-              <h2 className="text-lg md:text-xl font-black text-white flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-amber-400" />
-                <span>KẾ HOẠCH TRIỂN KHAI {currentMonthPlan.name.toUpperCase()}</span>
-              </h2>
-              <p className="text-xs text-slate-300 mt-1">{currentMonthPlan.desc}</p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-sm md:text-base font-extrabold text-white flex items-center gap-1.5 whitespace-nowrap">
+                  <Calendar className="h-4 w-4 text-amber-400 shrink-0" />
+                  <span>Kế hoạch: <span className="text-amber-300 font-black">{currentMonthPlan.shortName || currentMonthPlan.name}</span></span>
+                </h2>
+                <span className="text-xs text-slate-300 hidden xl:inline truncate max-w-xl">
+                  • {currentMonthPlan.desc}
+                </span>
+              </div>
             </div>
 
-            {/* Month Switcher Tabs */}
-            <div className="flex flex-wrap items-center bg-slate-950/70 p-1.5 rounded-xl border border-slate-700/70 gap-1.5 shrink-0">
-              {Object.keys(MONTHLY_PLANS_CONFIG).map((mKey) => {
+            {/* Phase / Month Switcher Tabs */}
+            <div className="flex flex-wrap items-center bg-slate-950/80 p-1 rounded-xl border border-slate-700/70 gap-1 shrink-0">
+              {[
+                { key: 'all', icon: '⚡', label: 'Tất cả 25 C' },
+                { key: 'pilot', icon: '🎯', label: 'Pilot & GĐ1 (8 C)' },
+                { key: 'phase2', icon: '🚀', label: 'GĐ2 Trọng điểm (12 C)' },
+                { key: 'phase3', icon: '🏁', label: 'GĐ3 Về đích (5 C)' },
+                { key: 'sep', icon: '📅', label: 'Tháng 9 (17 C)' }
+              ].map(({ key: mKey, icon, label }) => {
                 const plan = MONTHLY_PLANS_CONFIG[mKey];
+                if (!plan) return null;
                 const isSelected = selectedPlanMonth === mKey;
                 return (
                   <button
                     key={mKey}
-                    onClick={() => {
-                      setSelectedPlanMonth(mKey);
-                    }}
-                    className={`px-3.5 py-2 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 ${
+                    onClick={() => setSelectedPlanMonth(mKey)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${
                       isSelected
-                        ? `${plan.themeColor === 'emerald' ? 'bg-emerald-600 text-white shadow-md ring-2 ring-emerald-400/40' : plan.themeColor === 'amber' ? 'bg-amber-600 text-white shadow-md ring-2 ring-amber-400/40' : plan.themeColor === 'blue' ? 'bg-blue-600 text-white shadow-md ring-2 ring-blue-400/40' : 'bg-purple-600 text-white shadow-md ring-2 ring-purple-400/40'}`
+                        ? `${plan.themeColor === 'emerald' ? 'bg-emerald-600 text-white shadow-sm ring-1 ring-emerald-400/40' : plan.themeColor === 'amber' ? 'bg-amber-600 text-white shadow-sm ring-1 ring-amber-400/40' : plan.themeColor === 'blue' ? 'bg-blue-600 text-white shadow-sm ring-1 ring-blue-400/40' : 'bg-purple-600 text-white shadow-sm ring-1 ring-purple-400/40'}`
                         : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
                     }`}
+                    title={plan.name}
                   >
-                    <span>{plan.themeColor === 'emerald' ? '⚡' : plan.themeColor === 'amber' ? '🎯' : plan.themeColor === 'blue' ? '🚀' : '🏁'}</span>
-                    <span>{plan.name}</span>
-                    <span className="text-[10px] opacity-75 font-normal">({plan.clusters.filter(c => selectedMonthTvt === 'VT3' ? c.tvt === 'VT3' : true).length} C)</span>
+                    <span>{icon}</span>
+                    <span>{label}</span>
                   </button>
                 );
               })}
@@ -2001,13 +2010,13 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
               <div className="flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5 text-amber-500" />
                 <h4 className="text-sm font-black text-slate-900">
-                  TỒN ĐỌNG & ĐIỂM NGHẼN KỸ THUẬT CẦN XỬ LÝ ({currentMonthPlan.name.toUpperCase()})
+                  TỒN ĐỌNG & ĐIỂM NGHẼN KỸ THUẬT CẦN XỬ LÝ ({currentMonthPlan.shortName || currentMonthPlan.name})
                 </h4>
               </div>
               <span className="text-xs text-slate-500 font-medium">Theo dõi các trạm vướng nguồn, CRAN quang, chủ nhà hoặc bị hoãn swap</span>
             </div>
 
-            {selectedPlanMonth === 'aug' ? (
+            {selectedPlanMonth === 'aug' || selectedPlanMonth === 'pilot' ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
                 <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl space-y-2">
                   <div className="font-extrabold text-rose-800 flex items-center justify-between">
@@ -2053,7 +2062,7 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
                   </div>
                 </div>
               </div>
-            ) : selectedPlanMonth === 'sep' ? (
+            ) : selectedPlanMonth === 'sep' || selectedPlanMonth === 'phase2' || selectedPlanMonth === 'phase3' ? (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
                 <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl space-y-2">
                   <div className="font-extrabold text-amber-900">📦 Tiến Độ Giao Vật Tư Đến Trạm</div>
