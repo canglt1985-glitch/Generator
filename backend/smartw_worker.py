@@ -802,6 +802,7 @@ def sync_alarms_to_supabase(result: dict):
                 "cellid": alarm.get('cellid') if t == 'mll_cell' else None,
                 "vendor": alarm.get('vendor'),
                 "alarm_name": alarm_name,
+                "alarm_info": (alarm.get('alarmInfo') or alarm.get('alarm_info') or '').strip() or None,
                 "alarm_type": t,
                 "sdate": sdate_iso,
                 "sdate_str": sdate_str,
@@ -2291,7 +2292,13 @@ def auto_sync_mpd_alarms_fallback() -> int:
         from datetime import timezone
         tz_vn = timezone(timedelta(hours=7))
 
-        res_alarms = supabase.table("smartw_alarms").select("*").eq("alarm_type", "mpd").eq("status", "CLEARED").execute()
+        # Fetch cleared alarms from smartw_alarms within the last 3 days
+        start_filter = (datetime.now() - timedelta(days=3)).strftime("%Y-%m-%d")
+        res_alarms = supabase.table("smartw_alarms")\
+            .select("*")\
+            .eq("status", "CLEARED")\
+            .gte("sdate", start_filter)\
+            .execute()
         all_alarms = res_alarms.data or []
         
         target_dates = {
@@ -2300,7 +2307,20 @@ def auto_sync_mpd_alarms_fallback() -> int:
             datetime.now().strftime("%Y-%m-%d")
         }
         
-        alarms = [a for a in all_alarms if _parse_alarm_date_str(a.get("sdate") or a.get("sdateStr")) in target_dates]
+        def is_gen_alarm(a):
+            atype = (a.get("alarm_type") or "").lower()
+            aname = (a.get("alarm_name") or "").lower()
+            ainfo = (a.get("alarm_info") or "").lower()
+            if atype == "mpd":
+                return True
+            if "generat" in aname or "generat" in ainfo:
+                return True
+            return False
+
+        alarms = [
+            a for a in all_alarms
+            if is_gen_alarm(a) and _parse_alarm_date_str(a.get("sdate") or a.get("sdateStr")) in target_dates
+        ]
         if not alarms:
             return 0
 
@@ -2317,7 +2337,23 @@ def auto_sync_mpd_alarms_fallback() -> int:
         for alarm in alarms:
             raw_site = (alarm.get("site") or "").strip().upper()
             station = site_map.get(raw_site)
-            canonical_id = station.get("site_id") if station else raw_site
+            base_cand = raw_site
+            if not station:
+                base_id, old_id, _ = _resolve_base_site_and_tech(raw_site)
+                if base_id and base_id.upper() in site_map:
+                    station = site_map[base_id.upper()]
+                    base_cand = base_id.upper()
+                elif old_id and old_id.upper() in site_map:
+                    station = site_map[old_id.upper()]
+                    base_cand = old_id.upper()
+                else:
+                    for k, v in site_map.items():
+                        if k and raw_site.startswith(k):
+                            station = v
+                            base_cand = k
+                            break
+
+            canonical_id = station.get("site_id") if station else base_cand
 
             sdate_iso = str(alarm.get("sdate") or "")
             edate_iso = str(alarm.get("edate") or "")

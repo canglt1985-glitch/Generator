@@ -33,7 +33,20 @@ exit /b 1
 :START
 echo [INFO] Using Python executable: %PYTHON_EXE%
 %PYTHON_EXE% backend\run_workers.py
+set "EXIT_CODE=%errorlevel%"
+
+if "%EXIT_CODE%"=="42" (
+    echo.
+    echo ======================================================================
+    echo [INFO] Da co mot tien trinh run_workers.py khac dang chay tren he thong!
+    echo Cua so nay se tu dong dung de tranh gui trung lap thong bao ^& bao cao.
+    echo ======================================================================
+    echo Nhan phim bat ky de dong cua so...
+    pause >nul
+    exit /b 0
+)
+
 echo.
-echo [WARNING] Daemon manager stopped or crashed. Restarting in 10 seconds...
+echo [WARNING] Daemon manager stopped or crashed (Exit Code: %EXIT_CODE%). Restarting in 10 seconds...
 timeout /t 10
 goto :START

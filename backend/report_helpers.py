@@ -94,11 +94,26 @@ def get_missing_logs_recommendations(start_date=None, end_date=None, grace_days=
             if s_id not in ton_by_site:
                 ton_by_site[s_id] = nl_ton_val
 
+    def resolve_site_code(code: str) -> str:
+        c = (code or "").strip().upper()
+        if not c:
+            return ""
+        if c in map_id_to_site_id:
+            return map_id_to_site_id[c]
+        for s in datasites:
+            s_id = (s.get("site_id") or "").strip().upper()
+            s_old = (s.get("site_id_old") or "").strip().upper()
+            if s_id and c.startswith(s_id):
+                return s_id
+            if s_old and c.startswith(s_old):
+                return s_id
+        return c
+
     # Group logs by resolved site_id
     logs_by_station = defaultdict(list)
     for l in logs:
         l_site = (l.get("site_id") or "").strip().upper()
-        resolved = map_id_to_site_id.get(l_site, l_site)
+        resolved = resolve_site_code(l_site)
         if resolved:
             logs_by_station[resolved].append(l)
             
@@ -106,7 +121,7 @@ def get_missing_logs_recommendations(start_date=None, end_date=None, grace_days=
     refuels_by_station = defaultdict(list)
     for r in refuels:
         r_site = (r.get("site_id") or "").strip().upper()
-        resolved = map_id_to_site_id.get(r_site, r_site)
+        resolved = resolve_site_code(r_site)
         ft = r.get("fuel_tracking") or {}
         if resolved and ft and ft.get("is_approved") is True and (ft.get("quantity") or 0) > 0:
             refuels_by_station[resolved].append(r)
@@ -126,7 +141,7 @@ def get_missing_logs_recommendations(start_date=None, end_date=None, grace_days=
         if not station_raw:
             continue
             
-        site_id = map_id_to_site_id.get(station_raw, station_raw)
+        site_id = resolve_site_code(station_raw)
             
         try:
             outage_date_val = o.get("ngay_mat_dien")

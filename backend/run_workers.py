@@ -30,7 +30,32 @@ logger.info("==================================================")
 logger.info("🚀 Starting TVT3 V2 Backend Workers Daemon Manager")
 logger.info("==================================================")
 
-# 2. Tracks last execution times/keys of scheduled jobs
+# 2. Single-Instance Daemon Lock (Loopback Socket)
+import socket
+_instance_lock_socket = None
+
+def ensure_single_instance(port=59123):
+    """
+    Ensure only one instance of run_workers.py runs concurrently on this system.
+    Uses a loopback TCP socket lock which the OS kernel automatically frees on exit.
+    """
+    global _instance_lock_socket
+    try:
+        _instance_lock_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        _instance_lock_socket.bind(('127.0.0.1', port))
+        _instance_lock_socket.listen(1)
+        logger.info(f"🔒 Single-instance lock successfully acquired on 127.0.0.1:{port}")
+        return True
+    except (socket.error, OSError):
+        logger.error("==================================================================")
+        logger.error("⛔ CẢNH BÁO: ĐÃ CÓ MỘT TIẾN TRÌNH run_workers.py ĐANG CHẠY TRÊN MÁY!")
+        logger.error(f"Port {port} đã được chiếm dụng bởi instance chạy trước đó.")
+        logger.error("🛑 Tiến trình này sẽ tự động dừng ngay lập tức (Exit Code: 42)")
+        logger.error("   để ngăn chặn việc gửi tin nhắn trùng lặp (Lịch cúp điện & Báo cáo).")
+        logger.error("==================================================================")
+        sys.exit(42)
+
+# 3. Tracks last execution times/keys of scheduled jobs
 last_run = {}
 
 # Staggered startup sequence configuration
@@ -122,6 +147,9 @@ def run_job(job_name, cmd):
         logger.error(f"❌ Failed to start job {job_name}: {e}")
 
 def main():
+    # 0. Acquire single-instance lock to prevent duplicate runs
+    ensure_single_instance()
+
     logger.info(f"Backend Virtualenv Python: {sys.executable}")
     logger.info(f"Logs directory path: {logs_dir}")
     logger.info("Starting scheduler loop. Press Ctrl+C to stop.")

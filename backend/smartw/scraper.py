@@ -660,9 +660,12 @@ class SmartWScraper:
             await self._handle_session_expired()
             return await self._parse_table(self._page, column_map)
 
-        # Handle different response formats
+        # Handle different response formats (including jqxGrid list-wrapped dict)
         if isinstance(raw, list):
-            rows = raw
+            if raw and isinstance(raw[0], dict) and ('Rows' in raw[0] or 'rows' in raw[0]):
+                rows = raw[0].get('Rows') or raw[0].get('rows') or []
+            else:
+                rows = raw
         elif isinstance(raw, dict):
             rows = raw.get('Rows') or raw.get('rows') or raw.get('data') or []
         else:
@@ -712,9 +715,10 @@ class SmartWScraper:
 
         all_data = await self._fetch_alarm_data(url, MPD_COLUMNS)
 
-        # Filter: chỉ giữ alarm có cảnh báo chứa "gener" (generator)
+        # Filter: chỉ giữ alarm có cảnh báo hoặc alarmInfo chứa "gener" (generator)
         data = [r for r in all_data
-                if MPD_FILTER_KEYWORD in (r.get('alarmName') or '').lower()]
+                if MPD_FILTER_KEYWORD in (r.get('alarmName') or '').lower()
+                or MPD_FILTER_KEYWORD in (r.get('alarmInfo') or '').lower()]
 
         logger.info(f'SmartW Scrape MPĐ: {len(all_data)} raw → {len(data)} after filter "{MPD_FILTER_KEYWORD}"')
         self._save_json(data, 'mpd.json')
@@ -807,9 +811,10 @@ class SmartWScraper:
                     if 'Rows' in item:
                         rows = item['Rows']
 
-        # Filter: only generator alarms (case-insensitive)
+        # Filter: only generator alarms (case-insensitive in alarmName or alarmInfo)
         data = [r for r in rows
-                if 'generat' in (r.get('alarmName') or '').lower()]
+                if 'generat' in (r.get('alarmName') or '').lower()
+                or 'generat' in (r.get('alarmInfo') or '').lower()]
 
         logger.info(f'SmartW MFĐ Reports: {total} total → {len(data)} generator events for {date_str}')
         self._save_json(data, 'mfd_reports.json')
@@ -1006,6 +1011,44 @@ class SmartWScraper:
             'recordstartindex': '0',
             'recordendindex': '1000'
         }
+
+        # ── 1. Check official Summary report first (Báo Cáo Nguyên Nhân MLL) ──
+        summary_params = {
+            'sdate': sdate_str,
+            'edate': edate_str,
+            'mien': REGION,
+            'tinh': PROVINCE,
+            'type': 'TO_VT',
+            'thongKeTheo': 'TO_VT',
+            'team': 'MBF_MN_DONG_NAI_PVT_TVT3',
+            'dept': 'MBF_MN_DONG_NAI_PVT',
+        }
+        summary_url = f'{BASE_URL}/smartw/import-rp-site-mll/data.htm?' + urlencode(summary_params)
+        logger.info(f'SmartW Scrape MLL Cause Summary: {summary_url[:100]}...')
+        try:
+            summary_raw = await self._fetch_alarm_data(summary_url, {})
+            if summary_raw and isinstance(summary_raw, list):
+                for s_item in summary_raw:
+                    t_name = str(s_item.get('to_vt') or s_item.get('team') or s_item.get('tenTo') or s_item.get('dept') or s_item.get('trungTam') or '').upper()
+                    chua_du = int(s_item.get('chuaDuNguyenNhan') or s_item.get('chua_du_nguyen_nhan') or s_item.get('chuaDuNn') or 0)
+                    chua_xd = int(s_item.get('chuaXacDinhNguyenNhan') or s_item.get('chua_xac_dinh_nguyen_nhan') or 0)
+
+                    is_match_tvt3 = ('TVT3' in t_name or 'TVT 3' in t_name or 'DONG_NAI_PVT_TVT3' in t_name or 'ĐỒNG NAI 3' in t_name or len(summary_raw) == 1)
+                    if is_match_tvt3 and chua_du == 0 and chua_xd == 0:
+                        logger.info(f'SmartW MLL Cause Summary: Official SmartW report shows 0 missing causes for TVT3! ({s_item})')
+                        res = {
+                            'total_scanned': int(s_item.get('tong') or s_item.get('total') or 0),
+                            'ended_scanned': int(s_item.get('tong') or s_item.get('total') or 0),
+                            'missing_count': 0,
+                            'missing_records': [],
+                            'date_range': f'{sdate_start.strftime("%d/%m/%Y")} -> {edate_end.strftime("%d/%m/%Y")}',
+                            'scraped_at': datetime.now().isoformat()
+                        }
+                        self._save_json(res, 'mll_cause_missing.json')
+                        return res
+        except Exception as se:
+            logger.warning(f'SmartW MLL Cause Summary check error: {se}')
+
         data_url = f'{BASE_URL}/smartw/import-rp-site-mll/dataDetail.htm?' + urlencode(params)
         page_url = f'{BASE_URL}/smartw/import-rp-site-mll/listDetail.htm?' + urlencode(params)
 
@@ -1072,6 +1115,21 @@ class SmartWScraper:
         missing_records = []
         ended_scanned_count = 0
 
+        # First pass: map completed causes by site to prevent false alerts when only 1 tech (e.g. 4G) has cause
+        site_completed_incidents = set()
+        for r in records:
+            c1_test = (r.get('nnCap1') or r.get('tenNnCap1') or r.get('nguyen_nhan_1') or r.get('nguyenNhan1') or r.get('tenNguyenNhan1') or r.get('causeby1') or r.get('causeby') or r.get('c1') or '').strip()
+            c2_test = (r.get('nnCap2') or r.get('tenNnCap2') or r.get('nguyen_nhan_2') or r.get('nguyenNhan2') or r.get('tenNguyenNhan2') or r.get('causeby2') or r.get('c2') or r.get('actionProcess') or '').strip()
+            c3_test = (r.get('nnCap3') or r.get('tenNnCap3') or r.get('nguyen_nhan_3') or r.get('nguyenNhan3') or r.get('tenNguyenNhan3') or r.get('causeby3') or r.get('c3') or '').strip()
+            chua_du_flag = r.get('chuaDuNguyenNhan')
+            is_full = (c1_test and c2_test and c3_test) or (chua_du_flag is not None and str(chua_du_flag).strip() in ('0', 'False', 'false', 'N', 'n'))
+            if is_full:
+                s_id = (r.get('siteId') or r.get('site_id') or r.get('site') or '').strip().upper()
+                ed_raw = r.get('edate') or r.get('ket_thuc') or r.get('edateStr')
+                ed_dt = _parse_time(ed_raw)
+                if s_id and ed_dt:
+                    site_completed_incidents.add((s_id, ed_dt.strftime('%Y-%m-%d %H')))
+
         for r in records:
             # 1. Filter ONLY Mobifone Đồng Nai TVT3 (MBF_MN_DONG_NAI_PVT_TVT3)
             ma_to = (r.get('maToXl') or r.get('to_vt') or r.get('team') or r.get('maPhongXl') or '').upper()
@@ -1095,13 +1153,17 @@ class SmartWScraper:
                 if not (sdate_start <= edate_dt <= edate_end):
                     continue  # Skip incidents outside window (today - 3 to yesterday 23:59)
 
+            # Skip if site already has a completed tech record in same incident window
+            if edate_dt and (site_raw, edate_dt.strftime('%Y-%m-%d %H')) in site_completed_incidents:
+                continue
+
             ended_scanned_count += 1
 
             to_vt = (r.get('maToXl') or r.get('to_vt') or r.get('team') or r.get('maPhongXl') or 'TVT Đồng Nai 3').strip()
 
-            c1 = (r.get('nnCap1') or r.get('nguyen_nhan_1') or r.get('nguyenNhan1') or r.get('causeby1') or r.get('causeby') or r.get('c1') or '').strip()
-            c2 = (r.get('nnCap2') or r.get('nguyen_nhan_2') or r.get('nguyenNhan2') or r.get('causeby2') or r.get('c2') or '').strip()
-            c3 = (r.get('nnCap3') or r.get('nguyen_nhan_3') or r.get('nguyenNhan3') or r.get('causeby3') or r.get('c3') or '').strip()
+            c1 = (r.get('nnCap1') or r.get('tenNnCap1') or r.get('nguyen_nhan_1') or r.get('nguyenNhan1') or r.get('tenNguyenNhan1') or r.get('causeby1') or r.get('causeby') or r.get('c1') or '').strip()
+            c2 = (r.get('nnCap2') or r.get('tenNnCap2') or r.get('nguyen_nhan_2') or r.get('nguyenNhan2') or r.get('tenNguyenNhan2') or r.get('causeby2') or r.get('c2') or r.get('actionProcess') or '').strip()
+            c3 = (r.get('nnCap3') or r.get('tenNnCap3') or r.get('nguyen_nhan_3') or r.get('nguyenNhan3') or r.get('tenNguyenNhan3') or r.get('causeby3') or r.get('c3') or '').strip()
 
             missing = []
             if not c1: missing.append('Cấp 1')

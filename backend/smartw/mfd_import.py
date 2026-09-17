@@ -68,18 +68,55 @@ def get_pretax_price(fuel_type: str, date_str: str = None) -> float:
 def get_station_info(site_id: str, date_str: str = None) -> dict | None:
     """
     Lookup station info from V2 datasites table, parsing the infrastructure_info JSONB.
+    Supports suffix stripping for ERA / SRAN technologies (e.g. DNIXLO10L -> DNIXLO10).
     """
-    if not supabase:
+    if not supabase or not site_id:
         return None
         
-    site_upper = site_id.strip().upper()
+    s = str(site_id).strip().upper()
+    for delimiter in ['_', '-']:
+        if delimiter in s:
+            parts = s.split(delimiter)
+            if parts[0]:
+                s = parts[0]
+                break
+    site_upper = s
     try:
         res = supabase.table("datasites").select("*").execute()
         station = None
-        for s in (res.data or []):
-            if (s.get("site_id") or "").upper() == site_upper or (s.get("site_id_old") or "").upper() == site_upper:
-                station = s
+        datasites = res.data or []
+        # 1. Exact match
+        for st in datasites:
+            if (st.get("site_id") or "").upper() == site_upper or (st.get("site_id_old") or "").upper() == site_upper:
+                station = st
                 break
+                
+        # 2. Prefix match for ERA suffixes (e.g. DNIXLO10L, DNIXLO00UL, DNIXLO16N, DNXL01L...)
+        if not station:
+            for st in datasites:
+                s_id = (st.get("site_id") or "").upper()
+                s_old = (st.get("site_id_old") or "").upper()
+                if s_id and site_upper.startswith(s_id):
+                    station = st
+                    break
+                if s_old and site_upper.startswith(s_old):
+                    station = st
+                    break
+
+        # 3. Fallback: 8 chars new id / 6 chars old id
+        if not station:
+            if len(site_upper) >= 8 and (site_upper.startswith("DN") or site_upper.startswith("26")):
+                cand = site_upper[:8]
+                for st in datasites:
+                    if (st.get("site_id") or "").upper() == cand:
+                        station = st
+                        break
+            elif len(site_upper) >= 6 and site_upper.startswith("DN"):
+                cand = site_upper[:6]
+                for st in datasites:
+                    if (st.get("site_id_old") or "").upper() == cand:
+                        station = st
+                        break
                 
         if not station:
             return None
@@ -340,8 +377,8 @@ def import_mfd_data(raw_data: list[dict]) -> dict:
         if not station_info and status == 'approved':
             status = 'pending'
 
-        dinh_muc_quy_chuan = station_info.get('dinh_muc_quy_chuan') or dinh_muc
-        dinh_muc_thuc_te = station_info.get('dinh_muc_thuc_te') or dinh_muc
+        dinh_muc_quy_chuan = (station_info or {}).get('dinh_muc_quy_chuan') or dinh_muc
+        dinh_muc_thuc_te = (station_info or {}).get('dinh_muc_thuc_te') or dinh_muc
 
         hours = round(duration_min / 60, 2)
         nhien_lieu = round(hours * dinh_muc_quy_chuan, 2)

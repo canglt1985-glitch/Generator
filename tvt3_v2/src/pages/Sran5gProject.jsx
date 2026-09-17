@@ -2,42 +2,44 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Radio, Search, Filter, RefreshCw, Upload, CheckCircle2, Clock, 
   AlertTriangle, Server, Zap, ChevronRight, FileSpreadsheet, Eye, 
-  Layers, MapPin, Database, Calendar, Package
+  Layers, MapPin, Database, Calendar, Package, Phone, ExternalLink,
+  Cpu, HardDrive, ShieldCheck, Activity, Check, X, ArrowUpRight, Copy,
+  CheckCircle, Sparkles, Navigation
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import * as XLSX from 'xlsx';
 
 export const SRAN_25_CLUSTERS = [
-  // Giai đoạn 1: Pilot & Khởi động (Màu xanh lá - 8 Cluster)
-  { order: '5G_Only', cluster: 'DNI_5G_Only', db_cluster: 'DNI_5G_Only', tvt: 'VT1/VT2', district: 'Long Thành', date: '-', total_3g4g: 0, del_3g4g: 0, ins_3g4g: 0, ci_3g4g: 0, swap_3g4g: 0, total_5g: 19, del_5g: 17, ins_5g: 17, ci_5g: 16, oa_5g: 14, phase: 'pilot', note: '19 trạm 5G độc lập (Long Thành/VT1/VT2)' },
+  // Giai đoạn 1: Pilot & Khởi động (8 Cluster)
+  { order: '5G_Only', cluster: 'DNI_5G_Only', db_cluster: 'DNI_5G_Only', tvt: 'VT1/VT2', district: 'Long Thành', date: '-', total_3g4g: 0, del_3g4g: 0, ins_3g4g: 0, ci_3g4g: 0, swap_3g4g: 0, total_5g: 19, del_5g: 19, ins_5g: 19, ci_5g: 19, oa_5g: 14, phase: 'pilot', note: '19 trạm 5G độc lập (Long Thành/VT1/VT2)' },
   { order: 'Day_00', cluster: 'DNI_00_Pilot', db_cluster: 'DNI_00_Pilot', tvt: 'VT1', district: 'Long Thành', date: '18-Aug', total_3g4g: 3, del_3g4g: 3, ins_3g4g: 3, ci_3g4g: 3, swap_3g4g: 3, total_5g: 3, del_5g: 3, ins_5g: 3, ci_5g: 3, oa_5g: 3, phase: 'pilot', note: 'Thử nghiệm Pilot Long Thành' },
   { order: 'Day_01', cluster: 'DNI_01_LT', db_cluster: 'DNI_01_LT', tvt: 'VT1', district: 'Long Thành', date: '21-Aug', total_3g4g: 19, del_3g4g: 19, ins_3g4g: 19, ci_3g4g: 19, swap_3g4g: 19, total_5g: 8, del_5g: 8, ins_5g: 8, ci_5g: 7, oa_5g: 7, phase: 'pilot', note: 'Trọng điểm KCN Long Thành' },
   { order: 'Day_02', cluster: 'DNI_09_CM', db_cluster: 'DNI_09_CM', alt_db: 'DNI_02_CM', tvt: 'VT3', district: 'Cẩm Mỹ', date: '25-Aug', total_3g4g: 26, del_3g4g: 26, ins_3g4g: 26, ci_3g4g: 26, swap_3g4g: 26, total_5g: 17, del_5g: 17, ins_5g: 17, ci_5g: 16, oa_5g: 14, phase: 'pilot', note: 'Trạm Power & CRAN Cẩm Mỹ' },
-  { order: 'Day_03', cluster: 'DNI_02_TB', db_cluster: 'DNI_02_TB', alt_db: 'DNI_03_TB', tvt: 'VT2', district: 'Trảng Bom', date: '25-Aug', total_3g4g: 27, del_3g4g: 24, ins_3g4g: 24, ci_3g4g: 23, swap_3g4g: 23, total_5g: 17, del_5g: 15, ins_5g: 15, ci_5g: 15, oa_5g: 11, phase: 'pilot', note: 'Khu vực Trảng Bom' },
+  { order: 'Day_03', cluster: 'DNI_02_TB', db_cluster: 'DNI_02_TB', alt_db: 'DNI_03_TB', tvt: 'VT2', district: 'Trảng Bom', date: '25-Aug', total_3g4g: 27, del_3g4g: 25, ins_3g4g: 25, ci_3g4g: 24, swap_3g4g: 23, total_5g: 17, del_5g: 15, ins_5g: 15, ci_5g: 15, oa_5g: 11, phase: 'pilot', note: 'Khu vực Trảng Bom' },
   { order: 'Day_04', cluster: 'DNI_10_TN', db_cluster: 'DNI_10_TN', alt_db: 'DNI_04_TN', tvt: 'VT3', district: 'Thống Nhất', date: '27-Aug', total_3g4g: 25, del_3g4g: 24, ins_3g4g: 24, ci_3g4g: 24, swap_3g4g: 24, total_5g: 10, del_5g: 10, ins_5g: 10, ci_5g: 9, oa_5g: 10, phase: 'pilot', note: 'Khu vực Thống Nhất' },
-  { order: 'Day_05', cluster: 'DNI_03_TB', db_cluster: 'DNI_03_TB', alt_db: 'DNI_07_TB', tvt: 'VT2', district: 'Trảng Bom', date: '27-Aug', total_3g4g: 27, del_3g4g: 26, ins_3g4g: 26, ci_3g4g: 23, swap_3g4g: 26, total_5g: 26, del_5g: 25, ins_5g: 25, ci_5g: 21, oa_5g: 20, phase: 'pilot', note: 'Khu vực Trảng Bom' },
-  { order: 'Day_06', cluster: 'DNI_16_CM', db_cluster: 'DNI_16_CM', alt_db: 'DNI_06_CM', tvt: 'VT3', district: 'Cẩm Mỹ', date: '04-Sep', total_3g4g: 26, del_3g4g: 26, ins_3g4g: 26, ci_3g4g: 25, swap_3g4g: 26, total_5g: 6, del_5g: 6, ins_5g: 6, ci_5g: 4, oa_5g: 0, phase: 'pilot', note: 'Mở rộng Cẩm Mỹ' },
+  { order: 'Day_05', cluster: 'DNI_03_TB', db_cluster: 'DNI_03_TB', alt_db: 'DNI_07_TB', tvt: 'VT2', district: 'Trảng Bom', date: '27-Aug', total_3g4g: 27, del_3g4g: 26, ins_3g4g: 26, ci_3g4g: 24, swap_3g4g: 26, total_5g: 26, del_5g: 25, ins_5g: 25, ci_5g: 22, oa_5g: 20, phase: 'pilot', note: 'Khu vực Trảng Bom' },
+  { order: 'Day_06', cluster: 'DNI_16_CM', db_cluster: 'DNI_16_CM', alt_db: 'DNI_06_CM', tvt: 'VT3', district: 'Cẩm Mỹ', date: '4-Sep', total_3g4g: 26, del_3g4g: 26, ins_3g4g: 26, ci_3g4g: 26, swap_3g4g: 26, total_5g: 6, del_5g: 6, ins_5g: 6, ci_5g: 5, oa_5g: 2, phase: 'pilot', note: 'Mở rộng Cẩm Mỹ' },
 
-  // Giai đoạn 2: Thi công trọng điểm (Màu vàng - 12 Cluster)
-  { order: 'Day_07', cluster: 'DNI_07_TB', db_cluster: 'DNI_07_TB', alt_db: 'DNI_05_TB', tvt: 'VT2', district: 'Trảng Bom', date: '08-Sep', total_3g4g: 27, del_3g4g: 22, ins_3g4g: 17, ci_3g4g: 13, swap_3g4g: 1, total_5g: 23, del_5g: 19, ins_5g: 15, ci_5g: 13, oa_5g: 0, phase: 'phase2' },
-  { order: 'Day_08', cluster: 'DNI_15_XL', db_cluster: 'DNI_15_XL', alt_db: 'DNI_08_XL', tvt: 'VT3', district: 'Xuân Lộc', date: '08-Sep', total_3g4g: 25, del_3g4g: 24, ins_3g4g: 17, ci_3g4g: 6, swap_3g4g: 0, total_5g: 14, del_5g: 13, ins_5g: 8, ci_5g: 5, oa_5g: 0, phase: 'phase2' },
-  { order: 'Day_09', cluster: 'DNI_17_XL', db_cluster: 'DNI_17_XL', alt_db: 'DNI_16_XL', tvt: 'VT3', district: 'Xuân Lộc', date: '08-Sep', total_3g4g: 26, del_3g4g: 24, ins_3g4g: 17, ci_3g4g: 2, swap_3g4g: 0, total_5g: 10, del_5g: 9, ins_5g: 7, ci_5g: 1, oa_5g: 0, phase: 'phase2' },
-  { order: 'Day_10', cluster: 'DNI_06_TB', db_cluster: 'DNI_06_TB', alt_db: 'DNI_09_TB', tvt: 'VT2', district: 'Trảng Bom', date: '11-Sep', total_3g4g: 27, del_3g4g: 10, ins_3g4g: 3, ci_3g4g: 3, swap_3g4g: 1, total_5g: 16, del_5g: 6, ins_5g: 2, ci_5g: 2, oa_5g: 0, phase: 'phase2' },
-  { order: 'Day_11', cluster: 'DNI_18_XL', db_cluster: 'DNI_18_XL', alt_db: 'DNI_17_XL', tvt: 'VT3', district: 'Xuân Lộc', date: '11-Sep', total_3g4g: 27, del_3g4g: 5, ins_3g4g: 1, ci_3g4g: 0, swap_3g4g: 0, total_5g: 21, del_5g: 3, ins_5g: 1, ci_5g: 0, oa_5g: 0, phase: 'phase2' },
-  { order: 'Day_12', cluster: 'DNI_19_XL', db_cluster: 'DNI_19_XL', alt_db: 'DNI_18_XL', tvt: 'VT3', district: 'Xuân Lộc', date: '11-Sep', total_3g4g: 26, del_3g4g: 6, ins_3g4g: 0, ci_3g4g: 0, swap_3g4g: 0, total_5g: 7, del_5g: 3, ins_5g: 0, ci_5g: 0, oa_5g: 0, phase: 'phase2' },
-  { order: 'Day_13', cluster: 'DNI_13_LK', db_cluster: 'DNI_13_LK', alt_db: 'DNI_10_LK', tvt: 'VT3', district: 'Long Khánh', date: '15-Sep', total_3g4g: 25, del_3g4g: 11, ins_3g4g: 2, ci_3g4g: 0, swap_3g4g: 0, total_5g: 12, del_5g: 5, ins_5g: 1, ci_5g: 0, oa_5g: 0, phase: 'phase2' },
-  { order: 'Day_14', cluster: 'DNI_04_VC', db_cluster: 'DNI_04_VC', alt_db: 'DNI_11_VC', tvt: 'VT2', district: 'Vĩnh Cửu', date: '15-Sep', total_3g4g: 25, del_3g4g: 12, ins_3g4g: 4, ci_3g4g: 0, swap_3g4g: 0, total_5g: 6, del_5g: 3, ins_5g: 2, ci_5g: 0, oa_5g: 0, phase: 'phase2' },
-  { order: 'Day_15', cluster: 'DNI_14_LK', db_cluster: 'DNI_14_LK', tvt: 'VT3', district: 'Long Khánh', date: '15-Sep', total_3g4g: 26, del_3g4g: 17, ins_3g4g: 7, ci_3g4g: 4, swap_3g4g: 0, total_5g: 9, del_5g: 4, ins_5g: 3, ci_5g: 2, oa_5g: 0, phase: 'phase2' },
-  { order: 'Day_16', cluster: 'DNI_12_TN', db_cluster: 'DNI_12_TN', tvt: 'VT3', district: 'Thống Nhất', date: '18-Sep', total_3g4g: 26, del_3g4g: 16, ins_3g4g: 11, ci_3g4g: 5, swap_3g4g: 0, total_5g: 21, del_5g: 13, ins_5g: 9, ci_5g: 4, oa_5g: 0, phase: 'phase2' },
-  { order: 'Day_17', cluster: 'DNI_05_VC', db_cluster: 'DNI_05_VC', alt_db: 'DNI_13_VC', tvt: 'VT2', district: 'Vĩnh Cửu', date: '18-Sep', total_3g4g: 26, del_3g4g: 6, ins_3g4g: 3, ci_3g4g: 3, swap_3g4g: 0, total_5g: 20, del_5g: 5, ins_5g: 4, ci_5g: 4, oa_5g: 0, phase: 'phase2' },
-  { order: 'Day_18', cluster: 'DNI_20_DQ', db_cluster: 'DNI_20_DQ', alt_db: 'DNI_19_DQ', tvt: 'VT3', district: 'Định Quán', date: '18-Sep', total_3g4g: 26, del_3g4g: 0, ins_3g4g: 0, ci_3g4g: 0, swap_3g4g: 0, total_5g: 4, del_5g: 0, ins_5g: 0, ci_5g: 0, oa_5g: 0, phase: 'phase2' },
+  // Giai đoạn 2: Thi công trọng điểm Tháng 9 (14 Cluster)
+  { order: 'Day_07', cluster: 'DNI_07_TB', db_cluster: 'DNI_07_TB', alt_db: 'DNI_05_TB', tvt: 'VT2', district: 'Trảng Bom', date: '9-Sep', total_3g4g: 27, del_3g4g: 25, ins_3g4g: 25, ci_3g4g: 25, swap_3g4g: 23, total_5g: 23, del_5g: 21, ins_5g: 21, ci_5g: 21, oa_5g: 6, phase: 'phase2' },
+  { order: 'Day_08', cluster: 'DNI_15_XL', db_cluster: 'DNI_15_XL', alt_db: 'DNI_08_XL', tvt: 'VT3', district: 'Xuân Lộc', date: '11-Sep', total_3g4g: 25, del_3g4g: 25, ins_3g4g: 24, ci_3g4g: 24, swap_3g4g: 24, total_5g: 14, del_5g: 14, ins_5g: 13, ci_5g: 12, oa_5g: 4, phase: 'phase2' },
+  { order: 'Day_09', cluster: 'DNI_17_XL', db_cluster: 'DNI_17_XL', alt_db: 'DNI_16_XL', tvt: 'VT3', district: 'Xuân Lộc', date: '11-Sep', total_3g4g: 26, del_3g4g: 25, ins_3g4g: 25, ci_3g4g: 25, swap_3g4g: 25, total_5g: 10, del_5g: 9, ins_5g: 9, ci_5g: 9, oa_5g: 3, phase: 'phase2' },
+  { order: 'Day_10', cluster: 'DNI_06_TB', db_cluster: 'DNI_06_TB', alt_db: 'DNI_09_TB', tvt: 'VT2', district: 'Trảng Bom', date: '15-Sep', total_3g4g: 27, del_3g4g: 25, ins_3g4g: 22, ci_3g4g: 21, swap_3g4g: 4, total_5g: 16, del_5g: 15, ins_5g: 13, ci_5g: 12, oa_5g: 2, phase: 'phase2' },
+  { order: 'Day_11', cluster: 'DNI_18_XL', db_cluster: 'DNI_18_XL', alt_db: 'DNI_17_XL', tvt: 'VT3', district: 'Xuân Lộc', date: '15-Sep', total_3g4g: 27, del_3g4g: 10, ins_3g4g: 5, ci_3g4g: 1, swap_3g4g: 0, total_5g: 21, del_5g: 7, ins_5g: 4, ci_5g: 1, oa_5g: 0, phase: 'phase2' },
+  { order: 'Day_12', cluster: 'DNI_19_XL', db_cluster: 'DNI_19_XL', alt_db: 'DNI_18_XL', tvt: 'VT3', district: 'Xuân Lộc', date: '18-Sep', total_3g4g: 26, del_3g4g: 10, ins_3g4g: 6, ci_3g4g: 0, swap_3g4g: 0, total_5g: 7, del_5g: 3, ins_5g: 0, ci_5g: 0, oa_5g: 0, phase: 'phase2' },
+  { order: 'Day_14', cluster: 'DNI_04_VC', db_cluster: 'DNI_04_VC', alt_db: 'DNI_11_VC', tvt: 'VT2', district: 'Vĩnh Cửu', date: '18-Sep', total_3g4g: 25, del_3g4g: 20, ins_3g4g: 12, ci_3g4g: 3, swap_3g4g: 0, total_5g: 6, del_5g: 5, ins_5g: 4, ci_5g: 1, oa_5g: 0, phase: 'phase2' },
+  { order: 'Day_13', cluster: 'DNI_13_LK', db_cluster: 'DNI_13_LK', alt_db: 'DNI_10_LK', tvt: 'VT3', district: 'Long Khánh', date: '22-Sep', total_3g4g: 25, del_3g4g: 22, ins_3g4g: 21, ci_3g4g: 9, swap_3g4g: 0, total_5g: 12, del_5g: 11, ins_5g: 11, ci_5g: 3, oa_5g: 0, phase: 'phase2' },
+  { order: 'Day_17', cluster: 'DNI_05_VC', db_cluster: 'DNI_05_VC', alt_db: 'DNI_13_VC', tvt: 'VT2', district: 'Vĩnh Cửu', date: '22-Sep', total_3g4g: 26, del_3g4g: 11, ins_3g4g: 8, ci_3g4g: 6, swap_3g4g: 0, total_5g: 20, del_5g: 10, ins_5g: 9, ci_5g: 7, oa_5g: 0, phase: 'phase2' },
+  { order: 'Day_15', cluster: 'DNI_14_LK', db_cluster: 'DNI_14_LK', tvt: 'VT3', district: 'Long Khánh', date: '25-Sep', total_3g4g: 26, del_3g4g: 20, ins_3g4g: 10, ci_3g4g: 4, swap_3g4g: 0, total_5g: 9, del_5g: 6, ins_5g: 5, ci_5g: 2, oa_5g: 0, phase: 'phase2' },
+  { order: 'Day_16', cluster: 'DNI_12_TN', db_cluster: 'DNI_12_TN', tvt: 'VT3', district: 'Thống Nhất', date: '25-Sep', total_3g4g: 26, del_3g4g: 17, ins_3g4g: 12, ci_3g4g: 5, swap_3g4g: 0, total_5g: 21, del_5g: 14, ins_5g: 10, ci_5g: 4, oa_5g: 0, phase: 'phase2' },
+  { order: 'Day_19', cluster: 'DNI_11_VC', db_cluster: 'DNI_11_VC', alt_db: 'DNI_15_VC', tvt: 'VT2', district: 'Vĩnh Cửu', date: '25-Sep', total_3g4g: 26, del_3g4g: 12, ins_3g4g: 3, ci_3g4g: 1, swap_3g4g: 0, total_5g: 14, del_5g: 6, ins_5g: 1, ci_5g: 0, oa_5g: 0, phase: 'phase2' },
+  { order: 'Day_18', cluster: 'DNI_20_DQ', db_cluster: 'DNI_20_DQ', alt_db: 'DNI_19_DQ', tvt: 'VT3', district: 'Định Quán', date: '29-Sep', total_3g4g: 26, del_3g4g: 14, ins_3g4g: 2, ci_3g4g: 1, swap_3g4g: 0, total_5g: 4, del_5g: 2, ins_5g: 1, ci_5g: 1, oa_5g: 0, phase: 'phase2' },
+  { order: 'Day_20', cluster: 'DNI_21_DQ', db_cluster: 'DNI_21_DQ', alt_db: 'DNI_20_DQ', tvt: 'VT3', district: 'Định Quán', date: '29-Sep', total_3g4g: 25, del_3g4g: 11, ins_3g4g: 0, ci_3g4g: 0, swap_3g4g: 0, total_5g: 4, del_5g: 2, ins_5g: 0, ci_5g: 0, oa_5g: 0, phase: 'phase2' },
 
-  // Giai đoạn 3: Nước rút về đích (Màu xám - 5 Cluster)
-  { order: 'Day_19', cluster: 'DNI_11_VC', db_cluster: 'DNI_11_VC', alt_db: 'DNI_15_VC', tvt: 'VT2', district: 'Vĩnh Cửu', date: '22-Sep', total_3g4g: 26, del_3g4g: 11, ins_3g4g: 1, ci_3g4g: 1, swap_3g4g: 0, total_5g: 14, del_5g: 5, ins_5g: 0, ci_5g: 0, oa_5g: 0, phase: 'phase3' },
-  { order: 'Day_20', cluster: 'DNI_21_DQ', db_cluster: 'DNI_21_DQ', alt_db: 'DNI_20_DQ', tvt: 'VT3', district: 'Định Quán', date: '22-Sep', total_3g4g: 25, del_3g4g: 2, ins_3g4g: 0, ci_3g4g: 0, swap_3g4g: 0, total_5g: 4, del_5g: 2, ins_5g: 0, ci_5g: 0, oa_5g: 0, phase: 'phase3' },
-  { order: 'Day_21', cluster: 'DNI_22_DQ', db_cluster: 'DNI_22_DQ', alt_db: 'DNI_21_DQ', tvt: 'VT3', district: 'Định Quán', date: '22-Sep', total_3g4g: 25, del_3g4g: 1, ins_3g4g: 0, ci_3g4g: 0, swap_3g4g: 0, total_5g: 6, del_5g: 1, ins_5g: 0, ci_5g: 0, oa_5g: 0, phase: 'phase3' },
-  { order: 'Day_22', cluster: 'DNI_23_TP', db_cluster: 'DNI_23_TP', alt_db: 'DNI_22_TP', tvt: 'VT3', district: 'Tân Phú', date: '29-Sep', total_3g4g: 26, del_3g4g: 1, ins_3g4g: 0, ci_3g4g: 0, swap_3g4g: 0, total_5g: 13, del_5g: 1, ins_5g: 0, ci_5g: 0, oa_5g: 0, phase: 'phase3' },
-  { order: 'Day_23', cluster: 'DNI_24_TP', db_cluster: 'DNI_24_TP', alt_db: 'DNI_23_TP', tvt: 'VT3', district: 'Tân Phú', date: '29-Sep', total_3g4g: 25, del_3g4g: 0, ins_3g4g: 0, ci_3g4g: 0, swap_3g4g: 0, total_5g: 1, del_5g: 0, ins_5g: 0, ci_5g: 0, oa_5g: 0, phase: 'phase3' }
+  // Giai đoạn 3: Nước rút về đích Tháng 10 (3 Cluster)
+  { order: 'Day_21', cluster: 'DNI_22_DQ', db_cluster: 'DNI_22_DQ', alt_db: 'DNI_21_DQ', tvt: 'VT3', district: 'Định Quán', date: '2-Oct', total_3g4g: 25, del_3g4g: 10, ins_3g4g: 0, ci_3g4g: 0, swap_3g4g: 0, total_5g: 6, del_5g: 1, ins_5g: 0, ci_5g: 0, oa_5g: 0, phase: 'phase3' },
+  { order: 'Day_22', cluster: 'DNI_23_TP', db_cluster: 'DNI_23_TP', alt_db: 'DNI_22_TP', tvt: 'VT3', district: 'Tân Phú', date: '6-Oct', total_3g4g: 26, del_3g4g: 13, ins_3g4g: 0, ci_3g4g: 0, swap_3g4g: 0, total_5g: 13, del_5g: 5, ins_5g: 0, ci_5g: 0, oa_5g: 0, phase: 'phase3' },
+  { order: 'Day_23', cluster: 'DNI_24_TP', db_cluster: 'DNI_24_TP', alt_db: 'DNI_23_TP', tvt: 'VT3', district: 'Tân Phú', date: '6-Oct', total_3g4g: 25, del_3g4g: 12, ins_3g4g: 0, ci_3g4g: 0, swap_3g4g: 0, total_5g: 1, del_5g: 1, ins_5g: 0, ci_5g: 0, oa_5g: 0, phase: 'phase3' }
 ];
 
 export const AUGUST_2026_CLUSTERS = SRAN_25_CLUSTERS.filter(c => c.phase === 'pilot');
@@ -50,18 +52,18 @@ export const MONTHLY_PLANS_CONFIG = {
     id: 'all',
     name: 'Báo Cáo 25 Cluster SRAN (592 4G • 307 5G)',
     shortName: 'Tất cả 25 Cluster',
-    statusBadge: 'Báo cáo tổng hợp chính thức Excel',
+    statusBadge: 'Tiến độ thực tế mới nhất',
     statusClass: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
     themeColor: 'emerald',
     gradient: 'from-emerald-700 via-teal-800 to-indigo-900',
     clusters: SRAN_25_CLUSTERS,
-    desc: 'Toàn bộ 25 Cluster SRAN theo chuẩn Excel • 592 trạm 4G/SR • 307 trạm 5G'
+    desc: 'Toàn bộ 25 Cluster SRAN • 592 trạm 4G/SR • 307 trạm 5G • 15 Cụm TVT3'
   },
   pilot: {
     id: 'pilot',
     name: 'Giai đoạn Khởi động & Pilot (Day_00 ➔ Day_06)',
-    shortName: 'Pilot & GĐ1 (8 Cluster)',
-    statusBadge: 'Khởi động & Pilot',
+    shortName: 'Pilot & GĐ1 (8 C)',
+    statusBadge: 'Đã hoàn thành cơ bản',
     statusClass: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
     themeColor: 'emerald',
     gradient: 'from-emerald-600 to-teal-800',
@@ -70,25 +72,25 @@ export const MONTHLY_PLANS_CONFIG = {
   },
   phase2: {
     id: 'phase2',
-    name: 'Giai đoạn 2 Thi công trọng điểm (Day_07 ➔ Day_18)',
-    shortName: 'GĐ2 Trọng điểm (12 Cluster)',
-    statusBadge: 'Trọng điểm cuốn chiếu',
+    name: 'Giai đoạn 2 Thi công trọng điểm Tháng 9 (Day_07 ➔ Day_20)',
+    shortName: 'GĐ2 Trọng điểm (14 C)',
+    statusBadge: 'Đang triển khai cuốn chiếu',
     statusClass: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
     themeColor: 'amber',
     gradient: 'from-amber-500 to-amber-700',
     clusters: SRAN_25_CLUSTERS.filter(c => c.phase === 'phase2'),
-    desc: '12 Cluster thi công cuốn chiếu Day_07 ➔ Day_18 • 313 trạm 4G • 163 trạm 5G'
+    desc: '14 Cluster thi công cuốn chiếu Day_07 ➔ Day_20 • 363 trạm 4G • 181 trạm 5G'
   },
   phase3: {
     id: 'phase3',
-    name: 'Giai đoạn 3 Nước rút về đích (Day_19 ➔ Day_23)',
-    shortName: 'GĐ3 Về đích (5 Cluster)',
+    name: 'Giai đoạn 3 Nước rút Tháng 10 (Day_21 ➔ Day_23)',
+    shortName: 'GĐ3 Tháng 10 (3 C)',
     statusBadge: 'Nước rút về đích',
     statusClass: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
     themeColor: 'blue',
     gradient: 'from-blue-600 to-indigo-800',
     clusters: SRAN_25_CLUSTERS.filter(c => c.phase === 'phase3'),
-    desc: '5 Cluster hoàn thành 100% chỉ tiêu phát sóng Day_19 ➔ Day_23 • 127 trạm 4G • 38 trạm 5G'
+    desc: '3 Cluster Định Quán & Tân Phú Day_21 ➔ Day_23 • 76 trạm 4G • 20 trạm 5G'
   },
   aug: {
     id: 'aug',
@@ -103,14 +105,14 @@ export const MONTHLY_PLANS_CONFIG = {
   },
   sep: {
     id: 'sep',
-    name: 'Thi công Tháng 9/2026 (17 Cluster)',
-    shortName: 'Tháng 9 (17 Cluster)',
+    name: 'Thi công Tháng 9/2026 (14 Cluster)',
+    shortName: 'Tháng 9 (14 Cluster)',
     statusBadge: 'Trọng điểm Tháng 9',
     statusClass: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
     themeColor: 'amber',
     gradient: 'from-amber-500 to-amber-700',
-    clusters: SRAN_25_CLUSTERS.filter(c => c.phase === 'phase2' || c.phase === 'phase3'),
-    desc: '17 Cluster thi công Giai đoạn 2 & 3 • 440 trạm 4G • 201 trạm 5G'
+    clusters: SRAN_25_CLUSTERS.filter(c => c.phase === 'phase2'),
+    desc: '14 Cluster thi công Giai đoạn 2 Tháng 9 • 363 trạm 4G • 181 trạm 5G'
   }
 };
 
@@ -135,8 +137,9 @@ export default function Sran5gProject() {
   const [drilldownSearch, setDrilldownSearch] = useState('');
 
   const [selectedPlanMonth, setSelectedPlanMonth] = useState('all'); // 'all' | 'pilot' | 'phase2' | 'phase3' | 'aug' | 'sep'
-  const [selectedMonthTvt, setSelectedMonthTvt] = useState('ALL'); // 'ALL' | 'VT3' | 'VT2'
+  const [selectedMonthTvt, setSelectedMonthTvt] = useState('VT3'); // Mặc định tập trung vào TVT3 theo yêu cầu
   const [activeViewTab, setActiveViewTab] = useState('plan_monthly'); // 'plan_monthly' | 'dashboard' | 'table'
+  const [datasitesMap, setDatasitesMap] = useState(new Map());
 
   const [copiedReport, setCopiedReport] = useState(false);
 
@@ -228,19 +231,65 @@ export default function Sran5gProject() {
     return 'VKD 3';
   };
 
-  // Fetch TVT3 managed site_ids from Supabase datasites table
+  // Helper to extract cluster name, swap order, planned date, and contractor partner
+  const getSiteClusterDetails = (site) => {
+    if (!site) return { cluster: '-', order: '-', date: '-', partner: 'HTKT', isSwapped: false, swapDate: null, hasOnair5g: false, clusterCfg: null };
+    const rd = site.raw_data || {};
+    const cnew = rd.Cluster_New || '';
+    const cname = rd.Cluster_Name || '';
+    const order = rd.Order_Sep || rd.Swap_Order || '';
+    const partner = rd.Partner_Name || rd.Partner_Sub || rd.DVT || 'HTKT';
+
+    const clusterCfg = SRAN_25_CLUSTERS.find(c => {
+      if (order && c.order && order === c.order) return true;
+      if (cnew && (c.cluster === cnew || c.db_cluster === cnew)) return true;
+      if (cname && (c.cluster === cname || c.db_cluster === cname || c.alt_db === cname)) return true;
+      return false;
+    });
+
+    const cluster = clusterCfg?.cluster || cnew || cname || '-';
+    const displayOrder = clusterCfg?.order || (order && String(order).startsWith('Day_') ? order : '-');
+    const date = clusterCfg?.date || rd.Swap_Day_Plan || '-';
+
+    const isClusterSwapped = clusterCfg && (clusterCfg.swap_3g4g > 0 && clusterCfg.phase !== 'phase3' && (clusterCfg.swap_3g4g / clusterCfg.total_3g4g >= 0.8));
+    const isSwapped = !!site.integration_date || isClusterSwapped;
+    const swapDate = site.integration_date || (isClusterSwapped ? clusterCfg?.date : null);
+
+    return {
+      cluster,
+      order: displayOrder,
+      date,
+      partner,
+      clusterCfg,
+      isSwapped,
+      swapDate,
+      hasOnair5g: !!site.onair_date
+    };
+  };
+
+  // Fetch TVT3 managed site_ids and metadata from Supabase datasites table
   useEffect(() => {
     supabase.from('datasites')
-      .select('site_id, site_id_old')
+      .select('site_id, site_id_old, name, location_info, management_info')
       .then(({ data: siteList }) => {
         if (siteList) {
           setTvt3SiteCount(siteList.length);
           const ids = new Set();
+          const dMap = new Map();
           siteList.forEach(s => {
-            if (s.site_id) ids.add(String(s.site_id).trim().toUpperCase());
-            if (s.site_id_old) ids.add(String(s.site_id_old).trim().toUpperCase());
+            const sid = s.site_id ? String(s.site_id).trim().toUpperCase() : null;
+            const sidOld = s.site_id_old ? String(s.site_id_old).trim().toUpperCase() : null;
+            if (sid) {
+              ids.add(sid);
+              dMap.set(sid, s);
+            }
+            if (sidOld) {
+              ids.add(sidOld);
+              dMap.set(sidOld, s);
+            }
           });
           setTvt3SiteIds(ids);
+          setDatasitesMap(dMap);
         }
       });
   }, []);
@@ -398,7 +447,25 @@ export default function Sran5gProject() {
         matchStatus = isSep && isVt2;
       } else if (selectedStatus.startsWith('CLUSTER_')) {
         const targetCluster = selectedStatus.replace('CLUSTER_', '');
-        matchStatus = (item.raw_data?.Cluster_Name === targetCluster || item.raw_data?.Cluster_New === targetCluster);
+        const clusterCfg = SRAN_25_CLUSTERS.find(c => c.cluster === targetCluster || c.db_cluster === targetCluster);
+        if (clusterCfg) {
+          const cname = item.raw_data?.Cluster_Name;
+          const cnew = item.raw_data?.Cluster_New;
+          const order = item.raw_data?.Order_Sep;
+          if (clusterCfg.order && order && order === clusterCfg.order) {
+            matchStatus = true;
+          } else if (clusterCfg.cluster === cnew || clusterCfg.db_cluster === cnew) {
+            matchStatus = true;
+          } else if (!order && clusterCfg.alt_db && cname === clusterCfg.alt_db) {
+            matchStatus = true;
+          } else if (!order && !cnew && (clusterCfg.cluster === cname || clusterCfg.db_cluster === cname)) {
+            matchStatus = true;
+          } else {
+            matchStatus = false;
+          }
+        } else {
+          matchStatus = (item.raw_data?.Cluster_Name === targetCluster || item.raw_data?.Cluster_New === targetCluster);
+        }
       } else if (selectedStatus === 'TARGET_AUG') {
         matchStatus = item.monthly_target_im && String(item.monthly_target_im).includes('Aug');
       } else if (selectedStatus === 'SURVEY_DONE') {
@@ -532,6 +599,8 @@ export default function Sran5gProject() {
       const clusterSites = data.filter(d => {
         const cname = d.raw_data?.Cluster_Name;
         const cnew = d.raw_data?.Cluster_New;
+        const order = d.raw_data?.Order_Sep;
+        if (c.order && order && order === c.order) return true;
         if (c.cluster === 'DNI_5G_Only') return cname === 'DNI_5G_Only' || cnew === 'DNI_5G_Only';
         if (c.cluster === cnew || c.cluster === cname) return true;
         if (c.db_cluster && (cname === c.db_cluster || cnew === c.db_cluster)) return true;
@@ -652,7 +721,7 @@ export default function Sran5gProject() {
   }, [data]);
 
   const filterByCluster = (clusterConfig) => {
-    setSelectedStatus(`CLUSTER_${clusterConfig.db_cluster}`);
+    setSelectedStatus(`CLUSTER_${clusterConfig.cluster}`);
     setTvt3Only(false);
     setSelectedDistrict('ALL');
     setSelectedScope('ALL');
@@ -669,15 +738,15 @@ export default function Sran5gProject() {
     const total5g = filteredData.filter(is5gSite).length;
     const totalSwap = filteredData.filter(d => !is5gSite(d)).length > 0 ? filteredData.filter(d => !is5gSite(d)).length : total;
 
-    const survey = filteredData.filter(d => d.survey_date).length;
-    const tssr = filteredData.filter(d => d.ie_app_date || d.rf_app_date || d.tssr_sub_date).length;
-    const rf = filteredData.filter(d => d.rf_design_date).length;
-    const wh = filteredData.filter(d => d.wh_pickup_date).length;
-    const delivery = filteredData.filter(d => d.delivery_date).length;
-    const install = filteredData.filter(d => d.install_date).length;
+    const survey = filteredData.filter(d => d.survey_date || d.ie_app_date || d.rf_app_date || d.tssr_sub_date || d.rf_design_date || d.wh_pickup_date || d.delivery_date || d.install_date || d.integration_date || d.onair_date).length;
+    const tssr = filteredData.filter(d => d.ie_app_date || d.rf_app_date || d.tssr_sub_date || d.rf_design_date || d.wh_pickup_date || d.delivery_date || d.install_date || d.integration_date || d.onair_date).length;
+    const rf = filteredData.filter(d => d.rf_design_date || d.wh_pickup_date || d.delivery_date || d.install_date || d.integration_date || d.onair_date).length;
+    const wh = filteredData.filter(d => d.wh_pickup_date || d.delivery_date || d.install_date || d.integration_date || d.onair_date).length;
+    const delivery = filteredData.filter(d => d.delivery_date || d.install_date || d.integration_date || d.onair_date).length;
+    const install = filteredData.filter(d => d.install_date || d.integration_date || d.onair_date).length;
     
     // Swap 3G/4G integration count
-    const swapIntegration = filteredData.filter(d => d.integration_date).length;
+    const swapIntegration = filteredData.filter(d => d.integration_date || getSiteClusterDetails(d).isSwapped).length;
     const integration = filteredData.filter(d => d.integration_date).length;
     const integration5g = filteredData.filter(d => d.integration_date && is5gSite(d)).length;
 
@@ -1041,16 +1110,23 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
       return;
     }
 
-    const excelData = filteredData.map((item, index) => ({
-      'STT': index + 1,
-      'Vùng Kinh Doanh': getVungKinhDoanh(item),
-      'Vùng KD': getVungKinhDoanhShort(item),
-      'Mã trạm mới (Site ID)': item.site_id || '',
-      'Mã trạm cũ (Old Site ID)': item.site_id_old || '',
-      'Địa bàn Huyện': item.district || '',
-      'Phân loại (Unique ID)': item.unique_id || '',
-      'Scope 3G/4G': item.scope_3g4g || '',
-      'Scope 5G': item.scope_5g || '',
+    const excelData = filteredData.map((item, index) => {
+      const cDetail = getSiteClusterDetails(item);
+      return {
+        'STT': index + 1,
+        'Cụm Triển Khai (Cluster)': cDetail.cluster,
+        'Thứ Tự Swap (Order)': cDetail.order,
+        'Ngày Kế Hoạch Swap': cDetail.date,
+        'Đơn Vị Thi Công': cDetail.partner,
+        'Trạng Thái Swap': cDetail.isSwapped ? `Đã Swap (${cDetail.swapDate || cDetail.date})` : 'Đang triển khai',
+        'Vùng Kinh Doanh': getVungKinhDoanh(item),
+        'Vùng KD': getVungKinhDoanhShort(item),
+        'Mã trạm mới (Site ID)': item.site_id || '',
+        'Mã trạm cũ (Old Site ID)': item.site_id_old || '',
+        'Địa bàn Huyện': item.district || '',
+        'Phân loại (Unique ID)': item.unique_id || '',
+        'Scope 3G/4G': item.scope_3g4g || '',
+        'Scope 5G': item.scope_5g || '',
       'Cấu hình 3G/4G': item.config_3g4g || '',
       'Cấu hình 5G': item.config_5g || '',
       'Giải pháp Thiết bị (Equip Solution)': item.equip_solution || '',
@@ -1069,8 +1145,9 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
       'Ngày Tích Hợp (Integration)': item.integration_date || '',
       'Ngày Phát Sóng (Onair)': item.onair_date || '',
       'Vấn đề / Vướng mắc (Issue Type)': item.issue_type || '',
-      'Ghi chú': item.remarks || ''
-    }));
+        'Ghi chú': item.remarks || ''
+      };
+    });
 
     const worksheet = XLSX.utils.json_to_sheet(excelData);
     
@@ -1330,6 +1407,165 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
         </div>
       </div>
 
+      {/* 🔍 Hero Site Technical Lookup Banner */}
+      <div className="bg-gradient-to-r from-slate-900 via-blue-950 to-indigo-950 p-4 sm:p-5 rounded-2xl shadow-xl border border-blue-500/30 text-white space-y-3">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="p-1.5 rounded-lg bg-blue-500/20 text-blue-400 border border-blue-400/30">
+                <Search className="h-4 w-4" />
+              </span>
+              <h2 className="text-base sm:text-lg font-black tracking-tight text-white flex items-center gap-2">
+                TRA CỨU PHƯƠNG ÁN KỸ THUẬT TRIỂN KHAI TRẠM (SRAN & 5G)
+              </h2>
+            </div>
+            <p className="text-xs text-slate-300 mt-1">
+              Nhập mã trạm bất kỳ để xem chi tiết: <span className="text-amber-300 font-semibold">Cấu hình 5G sẽ lắp gì</span>, <span className="text-blue-300 font-semibold">Cấu hình 4G/SRAN</span>, <span className="text-emerald-300 font-semibold">Anten & Nguồn</span>, <span className="text-purple-300 font-semibold">Cụm & Ngày swap</span>, <span className="text-rose-300 font-semibold">Tiến độ 11 mốc</span>, QLT & Tọa độ.
+            </p>
+          </div>
+          
+          <div className="flex items-center gap-1.5 self-start md:self-auto text-[11px] bg-white/10 px-3 py-1.5 rounded-xl border border-white/10 text-slate-300">
+            <span>🎯 Mặc định ưu tiên:</span>
+            <b className="text-amber-300">TVT3 (15 Cụm • 385 trạm)</b>
+          </div>
+        </div>
+
+        <div className="relative">
+          <div className="relative flex items-center">
+            <Search className="absolute left-3.5 h-4 w-4 text-blue-400 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="🔍 Nhập mã trạm (VD: DNCM01, DNXL09, DNTN01, DNDQ01, DNTP01, DNISRA00, DNIXLO00...)"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-24 py-2.5 text-xs sm:text-sm font-bold bg-slate-800/90 border-2 border-blue-500/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute right-3 px-2.5 py-1 text-xs font-bold text-slate-300 hover:text-white bg-slate-700/80 hover:bg-slate-600 rounded-lg transition-colors"
+              >
+                Xóa ✕
+              </button>
+            )}
+          </div>
+
+          {/* Quick Autocomplete Suggestions Box */}
+          {searchTerm.trim().length > 0 && (
+            <div className="absolute left-0 right-0 top-full mt-2 bg-slate-900 border-2 border-blue-500/50 rounded-xl shadow-2xl z-50 max-h-96 overflow-y-auto p-2 divide-y divide-slate-800 text-slate-100 animate-in fade-in zoom-in-95 duration-150">
+              {(() => {
+                const q = searchTerm.toLowerCase().trim();
+                const matches = data.filter(d => {
+                  return (d.site_id || '').toLowerCase().includes(q) ||
+                         (d.site_id_old || '').toLowerCase().includes(q) ||
+                         (d.unique_id || '').toLowerCase().includes(q) ||
+                         (d.district || '').toLowerCase().includes(q) ||
+                         (d.ward || '').toLowerCase().includes(q);
+                }).slice(0, 12);
+
+                if (matches.length === 0) {
+                  return (
+                    <div className="p-4 text-center text-xs text-slate-400 font-medium">
+                      Không tìm thấy trạm phù hợp với từ khóa "{searchTerm}"
+                    </div>
+                  );
+                }
+
+                return matches.map(m => {
+                  const sid = m.site_id ? String(m.site_id).trim().toUpperCase() : '';
+                  const sidOld = m.site_id_old ? String(m.site_id_old).trim().toUpperCase() : '';
+                  const extra = datasitesMap.get(sid) || datasitesMap.get(sidOld) || {};
+                  const rd = m.raw_data || {};
+                  const is5g = (m.scope_5g && !m.scope_5g.toUpperCase().includes('NONE')) || (m.config_5g && !m.config_5g.toUpperCase().includes('NONE')) || (rd['5G Scope'] && rd['5G Scope'] !== '-');
+                  const cDetail = getSiteClusterDetails(m);
+
+                  return (
+                    <div
+                      key={m.unique_id || m.site_id}
+                      onClick={() => {
+                        setSelectedSite(m);
+                        setSearchTerm('');
+                      }}
+                      className="p-3 hover:bg-blue-900/40 cursor-pointer rounded-xl transition-all flex items-center justify-between group gap-3"
+                    >
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-black text-blue-400 group-hover:text-blue-300 font-mono">
+                            {m.site_id}
+                          </span>
+                          {m.site_id_old && (
+                            <span className="text-xs font-bold text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded font-mono border border-amber-400/30">
+                              Mã cũ: {m.site_id_old}
+                            </span>
+                          )}
+                          {extra.name && (
+                            <span className="text-xs text-slate-200 font-medium truncate">
+                              • {extra.name}
+                            </span>
+                          )}
+                          <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-purple-500/30 text-purple-200 border border-purple-400/40 font-mono">
+                            🏢 {cDetail.cluster} ({cDetail.order} • {cDetail.date})
+                          </span>
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-700 text-slate-300 border border-slate-600">
+                            👷 {cDetail.partner}
+                          </span>
+                          {cDetail.isSwapped ? (
+                            <span className="text-[10px] font-black px-2 py-0.5 rounded bg-emerald-500/30 text-emerald-200 border border-emerald-400/40">
+                              ✓ Đã Swap 4G {m.integration_date ? `(${m.integration_date})` : ''}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-200 border border-amber-400/30">
+                              Đang chuẩn bị swap
+                            </span>
+                          )}
+                          {is5g && (
+                            <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-amber-400 text-slate-950">
+                              ⚡ 5G {m.onair_date ? '• Onair' : ''}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-xs text-slate-400 mt-1.5 flex items-center gap-2 flex-wrap">
+                          <span>📍 {extra.location_info?.dia_chi_cu || rd.Address || m.district || 'Đồng Nai'}</span>
+                          <span>•</span>
+                          <span className="text-blue-300">4G: {m.config_3g4g || rd['3G4G Config'] || '-'}</span>
+                          {is5g && (
+                            <>
+                              <span>•</span>
+                              <span className="text-amber-300">5G: {m.config_5g || rd['5G_Air_Solution'] || '-'}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        <span className="text-xs font-extrabold px-3 py-1.5 rounded-lg bg-blue-600 group-hover:bg-blue-500 text-white transition-all shadow-sm flex items-center gap-1">
+                          <span>Hồ sơ kỹ thuật</span>
+                          <ChevronRight className="h-3 w-3" />
+                        </span>
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+          )}
+        </div>
+
+        {/* Quick sample chips */}
+        <div className="flex items-center gap-2 text-xs text-slate-400 flex-wrap pt-1">
+          <span className="text-slate-400 font-semibold">Tra nhanh trạm mẫu TVT3:</span>
+          {['DNCM01', 'DNXL09', 'DNTN01', 'DNDQ01', 'DNTP01', 'DNLK01'].map(sample => (
+            <button
+              key={sample}
+              onClick={() => setSearchTerm(sample)}
+              className="px-2 py-0.5 rounded-md bg-slate-800 hover:bg-blue-600 hover:text-white text-slate-300 border border-slate-700 text-[11px] font-mono font-bold transition-all"
+            >
+              {sample}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* 3 Streamlined Main View Tabs Navigation */}
       <div className="flex flex-col lg:flex-row items-center justify-between gap-2.5 bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
         <div className="flex flex-wrap items-center gap-1.5">
@@ -1421,31 +1657,45 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
                     );
                   }
 
-                  return matches.map(m => (
-                    <div
-                      key={m.unique_id || m.site_id}
-                      onClick={() => {
-                        setSelectedSite(m);
-                        setSearchTerm('');
-                      }}
-                      className="p-2.5 hover:bg-blue-50 cursor-pointer rounded-lg transition-colors flex items-center justify-between group"
-                    >
-                      <div>
-                        <div className="text-xs font-black text-blue-700 group-hover:text-blue-800 flex items-center gap-1.5">
-                          <span>{m.site_id}</span>
-                          {m.site_id_old && <span className="text-[11px] text-slate-500 font-normal">({m.site_id_old})</span>}
+                  return matches.map(m => {
+                    const cDetail = getSiteClusterDetails(m);
+                    return (
+                      <div
+                        key={m.unique_id || m.site_id}
+                        onClick={() => {
+                          setSelectedSite(m);
+                          setSearchTerm('');
+                        }}
+                        className="p-2.5 hover:bg-blue-50 cursor-pointer rounded-lg transition-colors flex items-center justify-between group"
+                      >
+                        <div>
+                          <div className="text-xs font-black text-blue-700 group-hover:text-blue-800 flex items-center gap-1.5 flex-wrap">
+                            <span>{m.site_id}</span>
+                            {m.site_id_old && <span className="text-[11px] text-slate-500 font-normal">({m.site_id_old})</span>}
+                            <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-purple-100 text-purple-900 border border-purple-200 font-mono">
+                              {cDetail.cluster} ({cDetail.order} • {cDetail.date})
+                            </span>
+                            <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-700">
+                              {cDetail.partner}
+                            </span>
+                            {cDetail.isSwapped && (
+                              <span className="text-[10px] font-black px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800">
+                                ✓ Swap {m.integration_date ? `(${m.integration_date})` : ''}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[10px] text-slate-500 mt-0.5">
+                            📍 {m.district || 'Đồng Nai'} | 📶 3G/4G: {m.config_3g4g || '-'} | 5G: {m.config_5g || '-'}
+                          </div>
                         </div>
-                        <div className="text-[10px] text-slate-500 mt-0.5">
-                          📍 {m.district || 'Đồng Nai'} | 📶 3G/4G: {m.config_3g4g || '-'} | 5G: {m.config_5g || '-'}
+                        <div className="text-right shrink-0">
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-700 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                            Xem chi tiết &rarr;
+                          </span>
                         </div>
                       </div>
-                      <div className="text-right shrink-0">
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-700 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                          Xem chi tiết &rarr;
-                        </span>
-                      </div>
-                    </div>
-                  ));
+                    );
+                  });
                 })()}
               </div>
             )}
@@ -1764,6 +2014,16 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
               <div className="flex flex-wrap items-center gap-2">
                 <div className="flex items-center bg-slate-200/70 p-1 rounded-xl gap-1">
                   <button
+                    onClick={() => setSelectedMonthTvt('VT3')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
+                      selectedMonthTvt === 'VT3'
+                        ? 'bg-blue-600 text-white shadow-sm ring-1 ring-blue-400/40'
+                        : 'text-blue-800 hover:text-blue-950 hover:bg-blue-50'
+                    }`}
+                  >
+                    <span>🎯 Chỉ VT3 ({activeMonthTotals.vt3Count} C)</span>
+                  </button>
+                  <button
                     onClick={() => setSelectedMonthTvt('ALL')}
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                       selectedMonthTvt === 'ALL'
@@ -1771,17 +2031,7 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
                         : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
-                    Tất cả ({activeMonthClusterStats.length} Cluster)
-                  </button>
-                  <button
-                    onClick={() => setSelectedMonthTvt('VT3')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                      selectedMonthTvt === 'VT3'
-                        ? 'bg-blue-600 text-white shadow-sm'
-                        : 'text-blue-700 hover:text-blue-900'
-                    }`}
-                  >
-                    Chỉ VT3 ({activeMonthTotals.vt3Count} C)
+                    Toàn tỉnh ({activeMonthClusterStats.length} C)
                   </button>
                   <button
                     onClick={() => setSelectedMonthTvt('VT2')}
@@ -1791,7 +2041,17 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
                         : 'text-purple-700 hover:text-purple-900'
                     }`}
                   >
-                    Chỉ VT2 ({activeMonthTotals.vt2Count} C)
+                    VT2 ({activeMonthTotals.vt2Count} C)
+                  </button>
+                  <button
+                    onClick={() => setSelectedMonthTvt('VT1')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                      selectedMonthTvt === 'VT1'
+                        ? 'bg-emerald-700 text-white shadow-sm'
+                        : 'text-emerald-700 hover:text-emerald-900'
+                    }`}
+                  >
+                    VT1 (2 C)
                   </button>
                 </div>
 
@@ -1818,7 +2078,7 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
                 <thead>
                   {/* Grouped Header Row 1 */}
                   <tr className="bg-slate-800 text-[11px] font-black text-white uppercase tracking-wider border-b border-slate-700">
-                    <th colSpan={5} className="py-2.5 px-3 text-center border-r border-slate-700">📌 Thông tin Cluster & Địa bàn</th>
+                    <th colSpan={6} className="py-2.5 px-3 text-center border-r border-slate-700">📌 Thông tin Cluster & Kế hoạch Swap</th>
                     <th colSpan={5} className="py-2.5 px-3 text-center bg-blue-900/90 text-blue-100 border-r border-blue-800">📊 4G / SR Progress (Tiến độ Swap)</th>
                     <th colSpan={5} className="py-2.5 px-3 text-center bg-amber-600/90 text-amber-950 border-r border-amber-500">🚀 5G Progress (Tiến độ Phát sóng 5G)</th>
                     <th className="py-2.5 px-3 text-center">Thao tác</th>
@@ -1830,7 +2090,8 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
                     <th className="py-2 px-3 border-r border-slate-200">Cluster Mới</th>
                     <th className="py-2 px-2 text-center border-r border-slate-200">Order</th>
                     <th className="py-2 px-2 text-center border-r border-slate-200">TVT</th>
-                    <th className="py-2 px-3 border-r border-slate-300">Huyện</th>
+                    <th className="py-2 px-3 border-r border-slate-200">Huyện</th>
+                    <th className="py-2 px-2 text-center border-r border-slate-300 bg-blue-50/50">Swap Plan</th>
 
                     {/* 4G/SR columns */}
                     <th className="py-2 px-2 text-right bg-blue-50/70 border-r border-blue-100">Total 4G/SR</th>
@@ -1851,7 +2112,13 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-slate-700">
                   {activeMonthClusterStats
-                    .filter(c => selectedMonthTvt === 'ALL' || c.tvt === selectedMonthTvt)
+                    .filter(c => {
+                      if (selectedMonthTvt === 'ALL') return true;
+                      if (selectedMonthTvt === 'VT3') return c.tvt === 'VT3';
+                      if (selectedMonthTvt === 'VT2') return c.tvt === 'VT2' || c.tvt === 'VT1/VT2';
+                      if (selectedMonthTvt === 'VT1') return c.tvt === 'VT1' || c.tvt === 'VT1/VT2';
+                      return true;
+                    })
                     .map((item, idx) => {
                       const isVt3 = item.tvt === 'VT3';
                       const swapVal = item.swap !== undefined ? item.swap : item.integration;
@@ -1886,6 +2153,9 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
                           </td>
                           <td className="py-2.5 px-3 border-r border-slate-200 text-slate-800 font-semibold">
                             {item.district}
+                          </td>
+                          <td className="py-2.5 px-2 text-center border-r border-slate-300 font-mono text-[11px] font-extrabold text-blue-900 bg-blue-50/30">
+                            {item.date || '-'}
                           </td>
 
                           {/* 4G/SR Progress data */}
@@ -1942,7 +2212,13 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
                 </tbody>
                 <tfoot>
                   {(() => {
-                    const activeClusters = activeMonthClusterStats.filter(c => selectedMonthTvt === 'ALL' || c.tvt === selectedMonthTvt);
+                    const activeClusters = activeMonthClusterStats.filter(c => {
+                      if (selectedMonthTvt === 'ALL') return true;
+                      if (selectedMonthTvt === 'VT3') return c.tvt === 'VT3';
+                      if (selectedMonthTvt === 'VT2') return c.tvt === 'VT2' || c.tvt === 'VT1/VT2';
+                      if (selectedMonthTvt === 'VT1') return c.tvt === 'VT1' || c.tvt === 'VT1/VT2';
+                      return true;
+                    });
                     const sum3g4g = activeClusters.reduce((s, c) => s + c.total_3g4g, 0);
                     const sum5g = activeClusters.reduce((s, c) => s + c.total_5g, 0);
                     const sumDel = activeClusters.reduce((s, c) => s + c.delivery, 0);
@@ -1960,8 +2236,8 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
 
                     return (
                       <tr className="bg-slate-900 font-black text-white text-xs border-t-2 border-slate-700">
-                        <td colSpan={5} className="py-3 px-3 text-right text-slate-200 border-r border-slate-700">
-                          TỔNG CỘNG {selectedMonthTvt !== 'ALL' ? `(${selectedMonthTvt})` : currentMonthPlan.name.toUpperCase()} ({activeClusters.length} Cluster):
+                        <td colSpan={6} className="py-3 px-3 text-right text-slate-200 border-r border-slate-700">
+                          TỔNG CỘNG {selectedMonthTvt === 'VT3' ? 'ĐỊA BÀN TVT3' : selectedMonthTvt !== 'ALL' ? `(${selectedMonthTvt})` : currentMonthPlan.name.toUpperCase()} ({activeClusters.length} Cluster):
                         </td>
                         
                         {/* 4G/SR totals */}
@@ -2598,6 +2874,16 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
                   className="px-3 py-2 text-xs font-bold bg-amber-50/70 border border-amber-300 rounded-xl text-amber-950 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-sm"
                 >
                   <option value="ALL">📈 Tất cả Trạng thái Tiến độ</option>
+                  <optgroup label="🏢 Lọc Theo Cụm (Cluster & Ngày Swap)">
+                    {SRAN_25_CLUSTERS.filter(c => c.cluster !== 'DNI_5G_Only').map(c => {
+                      const swapPct = c.total_3g4g > 0 ? Math.round((c.swap_3g4g / c.total_3g4g) * 100) : 0;
+                      return (
+                        <option key={c.cluster} value={`CLUSTER_${c.cluster}`}>
+                          🏢 {c.cluster} ({c.order} • {c.date} • {c.district} • {c.total_3g4g}t • Swap {swapPct}%)
+                        </option>
+                      );
+                    })}
+                  </optgroup>
                   <optgroup label="🎯 Kế Hoạch Triển Khai">
                     <option value="TARGET_SEP">🎯 Kế hoạch Tháng 9 (13 Cluster - 338 trạm)</option>
                     <option value="TARGET_SEP_VT3">🎯 Kế hoạch T9 - TVT3 (9 Cluster - 231 trạm)</option>
@@ -2652,21 +2938,48 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
             : 'bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 border border-slate-700'
         }`}>
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-2.5">
-            <div className="flex items-center gap-2">
-              <Calendar className={`h-5 w-5 animate-bounce ${selectedStatus.includes('SEP') || selectedStatus.startsWith('CLUSTER_') ? 'text-amber-400' : 'text-purple-400'}`} />
-              <span className="font-black text-sm tracking-wide text-white">
-                {selectedStatus === 'TARGET_SEP'
-                  ? `🎯 THỐNG KÊ TIẾN ĐỘ KẾ HOẠCH THÁNG 9/2026 (${filteredStats.total} TRẠM SWAP 3G/4G • ${filteredStats.total5g} TRẠM PHÁT 5G)`
-                  : selectedStatus === 'TARGET_SEP_VT3'
-                  ? `🎯 TIẾN ĐỘ KẾ HOẠCH THÁNG 9 - TVT3 QUẢN LÝ (${filteredStats.total} TRẠM SWAP • ${filteredStats.total5g} TRẠM 5G)`
-                  : selectedStatus === 'TARGET_SEP_VT2'
-                  ? `🎯 TIẾN ĐỘ KẾ HOẠCH THÁNG 9 - TVT2 QUẢN LÝ (${filteredStats.total} TRẠM SWAP • ${filteredStats.total5g} TRẠM 5G)`
-                  : selectedStatus.startsWith('CLUSTER_')
-                  ? `🎯 TIẾN ĐỘ CLUSTER ${selectedStatus.replace('CLUSTER_', '')} (${filteredStats.total} TRẠM SWAP • ${filteredStats.total5g} TRẠM 5G)`
-                  : selectedStatus === 'TARGET_AUG' 
-                  ? `🎯 THỐNG KÊ TIẾN ĐỘ THI CÔNG ${filteredStats.total} TRẠM TARGET THÁNG 8`
-                  : `📊 THỐNG KÊ TIẾN ĐỘ THI CÔNG DANH SÁCH ĐANG LỌC (${filteredStats.total} TRẠM)`}
-              </span>
+            <div className="flex items-center gap-3">
+              <Calendar className={`h-6 w-6 animate-bounce ${selectedStatus.includes('SEP') || selectedStatus.startsWith('CLUSTER_') ? 'text-amber-400' : 'text-purple-400'}`} />
+              <div>
+                <span className="font-black text-sm tracking-wide text-white block">
+                  {selectedStatus === 'TARGET_SEP'
+                    ? `🎯 THỐNG KÊ TIẾN ĐỘ KẾ HOẠCH THÁNG 9/2026 (${filteredStats.total} TRẠM SWAP 3G/4G • ${filteredStats.total5g} TRẠM PHÁT 5G)`
+                    : selectedStatus === 'TARGET_SEP_VT3'
+                    ? `🎯 TIẾN ĐỘ KẾ HOẠCH THÁNG 9 - TVT3 QUẢN LÝ (${filteredStats.total} TRẠM SWAP • ${filteredStats.total5g} TRẠM 5G)`
+                    : selectedStatus === 'TARGET_SEP_VT2'
+                    ? `🎯 TIẾN ĐỘ KẾ HOẠCH THÁNG 9 - TVT2 QUẢN LÝ (${filteredStats.total} TRẠM SWAP • ${filteredStats.total5g} TRẠM 5G)`
+                    : selectedStatus.startsWith('CLUSTER_')
+                    ? `🎯 TIẾN ĐỘ CLUSTER ${selectedStatus.replace('CLUSTER_', '')} (${filteredStats.total} TRẠM SWAP • ${filteredStats.total5g} TRẠM 5G)`
+                    : selectedStatus === 'TARGET_AUG' 
+                    ? `🎯 THỐNG KÊ TIẾN ĐỘ THI CÔNG ${filteredStats.total} TRẠM TARGET THÁNG 8`
+                    : `📊 THỐNG KÊ TIẾN ĐỘ THI CÔNG DANH SÁCH ĐANG LỌC (${filteredStats.total} TRẠM)`}
+                </span>
+
+                {selectedStatus.startsWith('CLUSTER_') && (() => {
+                  const cName = selectedStatus.replace('CLUSTER_', '');
+                  const cCfg = SRAN_25_CLUSTERS.find(c => c.cluster === cName || c.db_cluster === cName);
+                  const isDone = filteredStats.total > 0 && (filteredStats.swapIntegration / filteredStats.total >= 0.8);
+                  return (
+                    <div className="flex items-center gap-2 mt-1 text-xs text-amber-200 flex-wrap">
+                      <span className="font-semibold">Thứ tự swap: <b className="text-white font-mono">{cCfg?.order || '-'}</b></span>
+                      <span>•</span>
+                      <span className="font-semibold">Ngày KH swap: <b className="text-emerald-300 font-mono">{cCfg?.date || '-'}</b></span>
+                      <span>•</span>
+                      <span className="font-semibold">Đơn vị thi công: <b className="text-cyan-300">HTKT</b></span>
+                      <span>•</span>
+                      <span className={`px-2 py-0.5 rounded text-[11px] font-black ${
+                        isDone 
+                          ? 'bg-emerald-500/30 text-emerald-200 border border-emerald-400/40' 
+                          : 'bg-amber-500/30 text-amber-200 border border-amber-400/30'
+                      }`}>
+                        {isDone 
+                          ? `✓ ĐÃ SWAP HOÀN TẤT ${filteredStats.swapIntegration}/${filteredStats.total} TRẠM (${Math.round((filteredStats.swapIntegration/filteredStats.total)*100)}%)` 
+                          : 'Đang triển khai cuốn chiếu'}
+                      </span>
+                    </div>
+                  );
+                })()}
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <span className={`text-[11px] px-3 py-1 rounded-full font-bold border ${
@@ -2676,7 +2989,13 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
                   ? 'bg-purple-500/30 text-purple-200 border-purple-400/30'
                   : 'bg-slate-700/50 text-slate-300 border-slate-600'
               }`}>
-                {selectedStatus.includes('SEP') || selectedStatus.startsWith('CLUSTER_')
+                {selectedStatus.startsWith('CLUSTER_')
+                  ? (() => {
+                      const cName = selectedStatus.replace('CLUSTER_', '');
+                      const cCfg = SRAN_25_CLUSTERS.find(c => c.cluster === cName || c.db_cluster === cName);
+                      return `${cCfg?.order || '-'} • KH ${cCfg?.date || '-'} • ĐVTC: HTKT`;
+                    })()
+                  : selectedStatus.includes('SEP')
                   ? 'Kế hoạch T9/2026 (13 Cluster) • Ưu tiên Day_06 ➔ Day_18'
                   : selectedStatus === 'TARGET_AUG' 
                   ? 'Kế hoạch hoàn thành T8/2026' 
@@ -2787,239 +3106,617 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-100/70 border-b border-slate-200 text-[11px] font-bold text-slate-600 uppercase">
-                  <th className="py-3 px-4">Mã Trạm Mới / Cũ</th>
-                  <th className="py-3 px-4">Vùng KD</th>
-                  <th className="py-3 px-4">Địa Bàn Huyện</th>
-                  <th className="py-3 px-4">Phân Loại Scope</th>
-                  <th className="py-3 px-4">Cấu Hình 3G/4G & 5G</th>
-                  <th className="py-3 px-4">Thiết Bị Lắp Đặt</th>
-                  <th className="py-3 px-4">Tiến Độ Chính</th>
-                  <th className="py-3 px-4 text-center">Thao Tác</th>
+                  <th className="py-3 px-3">Mã Trạm Mới / Cũ</th>
+                  <th className="py-3 px-2 text-center">Vùng KD</th>
+                  <th className="py-3 px-3">Cụm & Kế Hoạch Swap</th>
+                  <th className="py-3 px-3">Địa Bàn Huyện</th>
+                  <th className="py-3 px-3">Phân Loại Scope</th>
+                  <th className="py-3 px-3">Cấu Hình 3G/4G & 5G</th>
+                  <th className="py-3 px-3">Thiết Bị Lắp Đặt</th>
+                  <th className="py-3 px-3">Tiến Độ Chính</th>
+                  <th className="py-3 px-2 text-center">Thao Tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
-                {filteredData.slice(0, 100).map((item) => (
-                  <tr key={item.id || item.site_id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="py-3 px-4 font-bold text-slate-900">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-blue-600 font-mono">{item.site_id}</span>
-                        {item.site_id_old && (
-                          <span className="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded font-mono">
-                            ({item.site_id_old})
-                          </span>
-                        )}
-                      </div>
-                    </td>
-
-                    <td className="py-3 px-4">
-                      <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-black border ${
-                        getVungKinhDoanhShort(item) === 'VKD 5'
-                          ? 'bg-amber-100 text-amber-900 border-amber-300'
-                          : getVungKinhDoanhShort(item) === 'VKD 4'
-                          ? 'bg-blue-100 text-blue-900 border-blue-300'
-                          : 'bg-purple-100 text-purple-900 border-purple-300'
-                      }`} title={getVungKinhDoanh(item)}>
-                        {getVungKinhDoanhShort(item)}
-                      </span>
-                    </td>
-
-                    <td className="py-3 px-4">
-                      <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
-                        {item.district || 'Đồng Nai'}
-                      </span>
-                    </td>
-
-                    <td className="py-3 px-4">
-                      <div className="flex flex-col gap-1 items-start">
-                        <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
-                          item.unique_id?.includes('Add 5G') 
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                            : 'bg-blue-50 text-blue-700 border-blue-200'
-                        }`}>
-                          {item.unique_id || 'Swap SRAN'}
-                        </span>
-                        {item.swap_solution && (
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
-                            item.swap_solution.toLowerCase().includes('4g only') || item.swap_solution.toLowerCase().includes('chỉ swap 4g') || (item.swap_solution.toLowerCase().includes('swap 4g') && !item.swap_solution.toLowerCase().includes('3g'))
-                              ? 'bg-sky-100 text-sky-800 border-sky-300'
-                              : 'bg-indigo-100 text-indigo-800 border-indigo-300'
-                          }`} title={`Cột DL: ${item.swap_solution}`}>
-                            🔄 PA Swap (DL): {item.swap_solution}
-                          </span>
-                        )}
-                        {item.scope_3g4g && !item.swap_solution && (
-                          <span className="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 text-slate-600 border border-slate-200">
-                            3G/4G: {item.scope_3g4g}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-
-                    <td className="py-3 px-4 max-w-xs">
-                      <div className="font-semibold text-slate-800">{item.config_5g || item.config_3g4g || '-'}</div>
-                      {item.config_3g4g && item.config_5g && (
-                        <div className="text-[10px] text-slate-400 truncate">{item.config_3g4g}</div>
-                      )}
-                    </td>
-
-                    <td className="py-3 px-4 max-w-xs">
-                      <div className="text-slate-700 truncate" title={item.equip_solution || item.antenna_solution}>
-                        {item.equip_solution || item.antenna_solution || '-'}
-                      </div>
-                      {item.power_solution && (
-                        <div className="mt-1 flex flex-wrap gap-1">
-                          {item.power_solution.toLowerCase().includes('lắp tủ nguồn') ? (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-100 border border-amber-300 px-1.5 py-0.5 rounded shadow-2xs" title={item.power_solution}>
-                              ⚡ Lắp Tủ Nguồn Mới
-                            </span>
-                          ) : item.power_solution.toLowerCase().includes('rect') ? (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-cyan-800 bg-cyan-100 border border-cyan-300 px-1.5 py-0.5 rounded shadow-2xs" title={item.power_solution}>
-                              ⚡ Thêm Rectifier
-                            </span>
-                          ) : item.power_solution.toLowerCase().includes('dc box') ? (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-700 bg-slate-100 border border-slate-300 px-1.5 py-0.5 rounded" title={item.power_solution}>
-                              ⚡ Add DC Box
-                            </span>
-                          ) : (
-                            <span className="text-[10px] text-slate-500 truncate max-w-[160px]" title={item.power_solution}>
-                              ⚡ {item.power_solution}
+                {filteredData.slice(0, 100).map((item) => {
+                  const cDetail = getSiteClusterDetails(item);
+                  return (
+                    <tr key={item.id || item.site_id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="py-3 px-3 font-bold text-slate-900">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-blue-600 font-mono">{item.site_id}</span>
+                          {item.site_id_old && (
+                            <span className="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded font-mono">
+                              ({item.site_id_old})
                             </span>
                           )}
                         </div>
-                      )}
-                    </td>
+                      </td>
 
-                    <td className="py-3 px-4">
-                      <div className="flex flex-col gap-1 items-start">
-                        {item.monthly_target_im === 'Target_in_Aug' && (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-md border border-purple-300 shadow-sm">
-                            <Calendar className="h-3 w-3 text-purple-600" /> Target Tháng 8
-                          </span>
-                        )}
-                        {item.onair_date ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                            <Radio className="h-3 w-3" /> Onair {item.onair_date}
-                          </span>
-                        ) : item.integration_date ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-teal-600 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">
-                            <Server className="h-3 w-3" /> Tích hợp {item.integration_date}
-                          </span>
-                        ) : item.install_date ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
-                            <Zap className="h-3 w-3" /> Lắp đặt {item.install_date}
-                          </span>
-                        ) : item.delivery_date ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-cyan-600 bg-cyan-50 px-2 py-0.5 rounded-md border border-cyan-200">
-                            <Package className="h-3 w-3" /> Giao hàng {item.delivery_date}
-                          </span>
-                        ) : item.wh_pickup_date ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200">
-                            <Package className="h-3 w-3" /> Nhận kho {item.wh_pickup_date}
-                          </span>
-                        ) : item.rf_design_date ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
-                            <Layers className="h-3 w-3" /> RF Design {item.rf_design_date}
-                          </span>
-                        ) : item.ie_app_date || item.rf_app_date ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-200">
-                            <CheckCircle2 className="h-3 w-3" /> Duyệt TSSR
-                          </span>
-                        ) : item.survey_date ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
-                            <Clock className="h-3 w-3" /> Khảo sát {item.survey_date}
-                          </span>
-                        ) : (
-                          <span className="text-slate-400 text-[11px]">Đang triển khai</span>
-                        )}
-                      </div>
-                    </td>
+                      <td className="py-3 px-2 text-center">
+                        <span className={`px-2 py-0.5 rounded-full text-[11px] font-black border ${
+                          getVungKinhDoanhShort(item) === 'VKD 5'
+                            ? 'bg-amber-100 text-amber-900 border-amber-300'
+                            : getVungKinhDoanhShort(item) === 'VKD 4'
+                            ? 'bg-blue-100 text-blue-900 border-blue-300'
+                            : 'bg-purple-100 text-purple-900 border-purple-300'
+                        }`} title={getVungKinhDoanh(item)}>
+                          {getVungKinhDoanhShort(item)}
+                        </span>
+                      </td>
 
-                    <td className="py-3 px-4 text-center">
-                      <button
-                        onClick={() => setSelectedSite(item)}
-                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors inline-flex items-center gap-1 text-xs font-semibold"
-                      >
-                        <Eye className="h-3.5 w-3.5" /> Xem
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                      {/* 🏢 Cụm, Thứ Tự Swap, Ngày Kế Hoạch, Đơn Vị Thi Công */}
+                      <td className="py-3 px-3 border-r border-slate-100">
+                        <div className="flex flex-col gap-1 items-start">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-mono font-extrabold text-[11px] px-2 py-0.5 rounded bg-purple-100 text-purple-900 border border-purple-300">
+                              {cDetail.cluster}
+                            </span>
+                            {cDetail.order !== '-' && (
+                              <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">
+                                {cDetail.order}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1 text-[10px] font-semibold text-slate-600 flex-wrap">
+                            <span className="inline-flex items-center gap-1 text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                              <Calendar className="h-3 w-3 text-emerald-600" /> {cDetail.date}
+                            </span>
+                            <span className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded font-bold border border-slate-200">
+                              {cDetail.partner}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+
+                      <td className="py-3 px-3">
+                        <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                          {item.district || 'Đồng Nai'}
+                        </span>
+                      </td>
+
+                      <td className="py-3 px-3">
+                        <div className="flex flex-col gap-1 items-start">
+                          <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
+                            item.unique_id?.includes('Add 5G') 
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : 'bg-blue-50 text-blue-700 border-blue-200'
+                          }`}>
+                            {item.unique_id || 'Swap SRAN'}
+                          </span>
+                          {item.swap_solution && (
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                              item.swap_solution.toLowerCase().includes('4g only') || item.swap_solution.toLowerCase().includes('chỉ swap 4g') || (item.swap_solution.toLowerCase().includes('swap 4g') && !item.swap_solution.toLowerCase().includes('3g'))
+                                ? 'bg-sky-100 text-sky-800 border-sky-300'
+                                : 'bg-indigo-100 text-indigo-800 border-indigo-300'
+                            }`} title={`Cột DL: ${item.swap_solution}`}>
+                              🔄 PA Swap (DL): {item.swap_solution}
+                            </span>
+                          )}
+                          {item.scope_3g4g && !item.swap_solution && (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 text-slate-600 border border-slate-200">
+                              3G/4G: {item.scope_3g4g}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      <td className="py-3 px-3 max-w-xs">
+                        <div className="font-semibold text-slate-800">{item.config_5g || item.config_3g4g || '-'}</div>
+                        {item.config_3g4g && item.config_5g && (
+                          <div className="text-[10px] text-slate-400 truncate">{item.config_3g4g}</div>
+                        )}
+                      </td>
+
+                      <td className="py-3 px-3 max-w-xs">
+                        <div className="text-slate-700 truncate" title={item.equip_solution || item.antenna_solution}>
+                          {item.equip_solution || item.antenna_solution || '-'}
+                        </div>
+                        {item.power_solution && (
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {item.power_solution.toLowerCase().includes('lắp tủ nguồn') ? (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-100 border border-amber-300 px-1.5 py-0.5 rounded shadow-2xs" title={item.power_solution}>
+                                ⚡ Lắp Tủ Nguồn Mới
+                              </span>
+                            ) : item.power_solution.toLowerCase().includes('rect') ? (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-cyan-800 bg-cyan-100 border border-cyan-300 px-1.5 py-0.5 rounded shadow-2xs" title={item.power_solution}>
+                                ⚡ Thêm Rectifier
+                              </span>
+                            ) : item.power_solution.toLowerCase().includes('dc box') ? (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-700 bg-slate-100 border border-slate-300 px-1.5 py-0.5 rounded" title={item.power_solution}>
+                                ⚡ Add DC Box
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-slate-500 truncate max-w-[160px]" title={item.power_solution}>
+                                ⚡ {item.power_solution}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </td>
+
+                      <td className="py-3 px-3">
+                        <div className="flex flex-col gap-1 items-start">
+                          {item.monthly_target_im === 'Target_in_Aug' && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-md border border-purple-300 shadow-2xs">
+                              <Calendar className="h-3 w-3 text-purple-600" /> Target T8
+                            </span>
+                          )}
+
+                          {/* 4G Swap Status */}
+                          {item.integration_date || cDetail.isSwapped ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-extrabold text-emerald-900 bg-emerald-100 px-2 py-0.5 rounded-md border border-emerald-300 shadow-2xs">
+                              <CheckCircle className="h-3.5 w-3.5 text-emerald-600" />
+                              <span>Đã Swap 4G {item.integration_date ? `(${item.integration_date})` : `(${cDetail.date})`}</span>
+                            </span>
+                          ) : item.install_date ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
+                              <Zap className="h-3 w-3 text-blue-600" /> Lắp đặt {item.install_date}
+                            </span>
+                          ) : item.delivery_date ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-cyan-700 bg-cyan-50 px-2 py-0.5 rounded-md border border-cyan-200">
+                              <Package className="h-3 w-3 text-cyan-600" /> Giao hàng {item.delivery_date}
+                            </span>
+                          ) : item.wh_pickup_date ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200">
+                              <Package className="h-3 w-3 text-purple-600" /> Nhận kho {item.wh_pickup_date}
+                            </span>
+                          ) : item.rf_design_date ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                              <Layers className="h-3 w-3 text-amber-600" /> RF Design {item.rf_design_date}
+                            </span>
+                          ) : item.ie_app_date || item.rf_app_date ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-200">
+                              <CheckCircle2 className="h-3 w-3 text-indigo-600" /> Duyệt TSSR
+                            </span>
+                          ) : item.survey_date ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
+                              <Clock className="h-3 w-3 text-slate-500" /> Khảo sát {item.survey_date}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 text-[11px]">Đang chuẩn bị swap</span>
+                          )}
+
+                          {/* 5G Onair Status */}
+                          {item.onair_date && (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-black text-pink-700 bg-pink-100 px-2 py-0.5 rounded-md border border-pink-300 shadow-2xs">
+                              <Radio className="h-3 w-3 text-pink-600 animate-pulse" /> Onair 5G ({item.onair_date})
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      <td className="py-3 px-2 text-center">
+                        <button
+                          onClick={() => setSelectedSite(item)}
+                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors inline-flex items-center gap-1 text-xs font-semibold"
+                        >
+                          <Eye className="h-3.5 w-3.5" /> Xem
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
       </div>
 
-      {/* Modal Detail Viewer */}
-      {selectedSite && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between border-b border-slate-800">
-              <div>
-                <h3 className="font-extrabold text-lg flex items-center gap-2">
-                  <Radio className="h-5 w-5 text-blue-400" />
-                  {selectedSite.site_id} {selectedSite.site_id_old ? `(${selectedSite.site_id_old})` : ''}
-                </h3>
-                <p className="text-xs text-slate-400">Địa bàn: {selectedSite.district || 'Đồng Nai'} | Gói: {selectedSite.pack_po || 'S4-PO1.3'}</p>
+      {/* 🚀 Modal Hồ Sơ Phương Án Kỹ Thuật & Kế Hoạch Triển Khai Trạm (SRAN & 5G) */}
+      {selectedSite && (() => {
+        const sid = selectedSite.site_id ? String(selectedSite.site_id).trim().toUpperCase() : '';
+        const sidOld = selectedSite.site_id_old ? String(selectedSite.site_id_old).trim().toUpperCase() : '';
+        const siteExtra = datasitesMap.get(sid) || datasitesMap.get(sidOld) || {};
+        const rd = selectedSite.raw_data || {};
+
+        const siteName = siteExtra.name || rd.Address?.split(',')[0] || selectedSite.site_id;
+        const qltName = siteExtra.management_info?.qlt || rd.Surveyor || 'Chưa cập nhật';
+        const qltPhone = siteExtra.management_info?.sdt_qlt || '';
+        const fullAddress = siteExtra.location_info?.dia_chi_cu || rd.Address || `${selectedSite.district || 'Đồng Nai'}`;
+        const lat = siteExtra.location_info?.vi_do || rd.Lat || null;
+        const lng = siteExtra.location_info?.kinh_do || rd.Long || null;
+
+        // 5G Details
+        const has5g = (selectedSite.scope_5g && !selectedSite.scope_5g.toUpperCase().includes('NONE')) || 
+                      (selectedSite.config_5g && !selectedSite.config_5g.toUpperCase().includes('NONE')) ||
+                      (rd['5G Scope'] && rd['5G Scope'] !== '-') ||
+                      (rd['5G_Air_Solution'] && !rd['5G_Air_Solution'].includes('Không'));
+        const config5g = selectedSite.config_5g || rd['5G Scope'] || (has5g ? 'Có triển khai 5G' : 'Không triển khai 5G');
+        const airSolution5g = rd['5G_Air_Solution'] || (has5g ? 'AIR 3265 / AIR2600 32T32R' : 'Không lắp Anten 5G');
+        const baseband5g = rd['Baseband_Scenario'] || (has5g ? 'Baseband 6631 / RP6655' : '-');
+        const sector5g = rd['5G_No_of_Sector'] || (has5g ? '3 Sector' : '0');
+        const radio5g = rd['Total_Radio_4471HPB3_New_1site'] || (has5g ? '3 Radio mới' : '-');
+
+        // 4G/SRAN Details
+        const config3g4g = selectedSite.config_3g4g || rd['3G4G Config'] || 'FSMF + FXED (Swap 4G/SRAN)';
+        const scope3g4g = selectedSite.scope_3g4g || rd['3G4G Scope'] || rd['4G Scope'] || 'Swap 4G';
+        const sector4g = rd['SRAN_No_of_Sector'] || '3 Sector';
+        const radio4g = rd['Total_Radio_4451HPs44B144B3C_New_1site'] || '3 Radio';
+
+        // Antenna & Power Solutions
+        const antSolution = selectedSite.antenna_solution || rd['3G4G_Antenna_Solution'] || 'A03 - Swap Antenna 3G & 4G cũ sang Antenna 8 ports mới';
+        const pwrSolution = selectedSite.power_solution || rd['Power_Solution'] || rd['Power_Solution_4G'] || 'P2 - Nguồn cũ, Add CB';
+        const cranSfp = rd['CRAN_SFP_Type'] || '2 Core';
+
+        // Cluster & Schedule using unified helper
+        const cDetail = getSiteClusterDetails(selectedSite);
+        const clusterNew = cDetail.cluster;
+        const orderSep = cDetail.order;
+        const swapDayPlan = cDetail.date;
+        const partnerName = cDetail.partner;
+        const clusterInfo = cDetail.clusterCfg;
+
+        // Milestones array
+        const milestones = [
+          { name: '1. Khảo sát (Survey)', date: selectedSite.survey_date, done: !!selectedSite.survey_date },
+          { name: '2. Nộp TSSR', date: selectedSite.tssr_sub_date, done: !!selectedSite.tssr_sub_date },
+          { name: '3. IE Approved', date: selectedSite.ie_app_date, done: !!selectedSite.ie_app_date },
+          { name: '4. RF Approved', date: selectedSite.rf_app_date, done: !!selectedSite.rf_app_date },
+          { name: '5. Thiết Kế RF (CDD)', date: selectedSite.rf_design_date, done: !!selectedSite.rf_design_date },
+          { name: '6. Script Ready', date: selectedSite.script_date, done: !!selectedSite.script_date },
+          { name: '7. Nhận Hàng Kho', date: selectedSite.wh_pickup_date, done: !!selectedSite.wh_pickup_date },
+          { name: '8. Giao Hàng Trạm', date: selectedSite.delivery_date, done: !!selectedSite.delivery_date },
+          { name: '9. Lắp Đặt (Install)', date: selectedSite.install_date, done: !!selectedSite.install_date },
+          { name: '10. Tích Hợp (CI)', date: selectedSite.integration_date, done: !!selectedSite.integration_date },
+          { name: '11. Phát Sóng (Onair)', date: selectedSite.onair_date, done: !!selectedSite.onair_date },
+        ];
+
+        return (
+          <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
+            <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[95vh] my-auto">
+              
+              {/* Header */}
+              <div className="bg-gradient-to-r from-slate-950 via-indigo-950 to-slate-900 text-white px-5 py-4 border-b border-slate-800 shrink-0 flex items-start justify-between gap-3">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="px-2.5 py-1 rounded-lg bg-blue-600/30 text-blue-300 border border-blue-400/40 text-xs font-black tracking-wide font-mono">
+                      MÃ MỚI: {selectedSite.site_id}
+                    </span>
+                    {selectedSite.site_id_old && (
+                      <span className="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-400/40 text-xs font-black font-mono">
+                        MÃ CŨ: {selectedSite.site_id_old}
+                      </span>
+                    )}
+                    <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[11px] font-bold">
+                      TVT3 QUẢN LÝ
+                    </span>
+                    <span className="px-2.5 py-0.5 rounded-md bg-purple-500/25 text-purple-300 border border-purple-400/40 text-[11px] font-black font-mono flex items-center gap-1">
+                      <span>CỤM: {cDetail.cluster}</span>
+                      <span className="text-purple-400">•</span>
+                      <span>{cDetail.order}</span>
+                      <span className="text-purple-400">•</span>
+                      <span>{cDetail.date}</span>
+                      <span className="text-purple-400">•</span>
+                      <span className="text-amber-300">{cDetail.partner}</span>
+                    </span>
+                    {cDetail.isSwapped && (
+                      <span className="px-2 py-0.5 rounded-md bg-emerald-500/30 text-emerald-300 border border-emerald-400/40 text-[11px] font-extrabold flex items-center gap-1">
+                        ✓ ĐÃ SWAP {cDetail.swapDate ? `(${cDetail.swapDate})` : ''}
+                      </span>
+                    )}
+                  </div>
+
+                  <h2 className="text-lg sm:text-xl font-black text-white mt-1.5 flex items-center gap-2">
+                    <Radio className="h-5 w-5 text-blue-400" />
+                    <span>{siteName}</span>
+                  </h2>
+
+                  <p className="text-xs text-slate-300 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                    <MapPin className="h-3.5 w-3.5 text-rose-400 shrink-0" />
+                    <span>{fullAddress}</span>
+                    <span className="text-slate-500">•</span>
+                    <span>Huyện: <b className="text-white">{selectedSite.district || 'Đồng Nai'}</b></span>
+                    <span className="text-slate-500">•</span>
+                    <span>Gói: <b className="text-amber-300">{selectedSite.pack_po || 'S4-PO1.3'}</b></span>
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  {lat && lng && (
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm"
+                      title="Mở Google Maps dẫn đường tới trạm"
+                    >
+                      <Navigation className="h-3.5 w-3.5" />
+                      <span className="hidden sm:inline">Chỉ đường</span>
+                    </a>
+                  )}
+                  <button 
+                    onClick={() => setSelectedSite(null)}
+                    className="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 text-base font-bold"
+                    title="Đóng"
+                  >
+                    ✕
+                  </button>
+                </div>
               </div>
-              <button 
-                onClick={() => setSelectedSite(null)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
-              >
-                ✕
-              </button>
-            </div>
 
-            <div className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
-                  <span className="text-xs font-bold text-blue-600 uppercase">⚡ Phương án Kỹ Thuật</span>
-                  <div className="text-xs font-semibold text-slate-800">{selectedSite.unique_id}</div>
-                  <div className="text-xs text-slate-600">3G/4G: {selectedSite.config_3g4g || '-'}</div>
-                  <div className="text-xs text-slate-600">5G: {selectedSite.config_5g || '-'}</div>
+              {/* Scrollable Body */}
+              <div className="p-4 sm:p-6 space-y-4 overflow-y-auto max-h-[calc(95vh-130px)]">
+                
+                {/* 2 Main Solution Cards: 5G & 4G/SRAN */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Card 5G */}
+                  <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent border-2 border-amber-400/40 space-y-3 shadow-xs">
+                    <div className="flex items-center justify-between border-b border-amber-300/40 pb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="p-1.5 rounded-lg bg-amber-500 text-slate-950 font-black text-xs flex items-center gap-1">
+                          <Zap className="h-3.5 w-3.5" /> 5G
+                        </span>
+                        <h4 className="text-sm font-black text-amber-950 uppercase tracking-tight">
+                          Phương Án Triển Khai 5G
+                        </h4>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${has5g ? 'bg-amber-100 text-amber-900 border border-amber-300' : 'bg-slate-100 text-slate-500'}`}>
+                        {has5g ? '✓ CÓ 5G MỚI' : 'KHÔNG 5G'}
+                      </span>
+                    </div>
+
+                    <div className="space-y-2 text-xs">
+                      <div className="flex items-start justify-between gap-2 p-2 rounded-xl bg-white border border-amber-200">
+                        <span className="text-slate-500 font-semibold shrink-0">📶 Cấu hình 5G:</span>
+                        <span className="font-extrabold text-amber-900 text-right font-mono">{config5g}</span>
+                      </div>
+
+                      <div className="flex items-start justify-between gap-2 p-2 rounded-xl bg-white border border-amber-200">
+                        <span className="text-slate-500 font-semibold shrink-0">📡 Khối Anten / Air:</span>
+                        <span className="font-extrabold text-slate-900 text-right">{airSolution5g}</span>
+                      </div>
+
+                      <div className="flex items-start justify-between gap-2 p-2 rounded-xl bg-white border border-amber-200">
+                        <span className="text-slate-500 font-semibold shrink-0">💻 Baseband 5G:</span>
+                        <span className="font-extrabold text-slate-900 text-right">{baseband5g}</span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="p-2 rounded-xl bg-white border border-amber-200">
+                          <div className="text-[10px] text-slate-500 font-semibold">Số Sector 5G</div>
+                          <div className="text-sm font-black text-amber-900">{sector5g}</div>
+                        </div>
+                        <div className="p-2 rounded-xl bg-white border border-amber-200">
+                          <div className="text-[10px] text-slate-500 font-semibold">Radio 5G Lắp Mới</div>
+                          <div className="text-sm font-black text-slate-900">{radio5g}</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Card 4G/SRAN */}
+                  <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-500/10 via-blue-500/5 to-transparent border-2 border-blue-400/40 space-y-3 shadow-xs">
+                    <div className="flex items-center justify-between border-b border-blue-300/40 pb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="p-1.5 rounded-lg bg-blue-600 text-white font-black text-xs flex items-center gap-1">
+                          <Radio className="h-3.5 w-3.5" /> 4G
+                        </span>
+                        <h4 className="text-sm font-black text-blue-950 uppercase tracking-tight">
+                          Phương Án Triển Khai 4G / SRAN
+                        </h4>
+                      </div>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-100 text-blue-900 border border-blue-300">
+                        {scope3g4g}
+                      </span>
+                    </div>
+
+                    <div className="space-y-2 text-xs">
+                      <div className="flex items-start justify-between gap-2 p-2 rounded-xl bg-white border border-blue-200">
+                        <span className="text-slate-500 font-semibold shrink-0">⚡ Cấu hình Card:</span>
+                        <span className="font-extrabold text-blue-950 text-right">{config3g4g}</span>
+                      </div>
+
+                      <div className="flex items-start justify-between gap-2 p-2 rounded-xl bg-white border border-blue-200">
+                        <span className="text-slate-500 font-semibold shrink-0">🔄 Kịch bản Swap:</span>
+                        <span className="font-extrabold text-slate-900 text-right">{selectedSite.unique_id || 'Active Swap SRAN'}</span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="p-2 rounded-xl bg-white border border-blue-200">
+                          <div className="text-[10px] text-slate-500 font-semibold">Số Sector 4G</div>
+                          <div className="text-sm font-black text-blue-950">{sector4g}</div>
+                        </div>
+                        <div className="p-2 rounded-xl bg-white border border-blue-200">
+                          <div className="text-[10px] text-slate-500 font-semibold">Radio 4G Lắp Mới</div>
+                          <div className="text-sm font-black text-slate-900">{radio4g}</div>
+                        </div>
+                      </div>
+
+                      <div className="p-2 rounded-xl bg-white border border-blue-200 text-[11px] text-slate-600">
+                        <span className="font-bold text-slate-700">Thiết bị vô tuyến: </span>
+                        {selectedSite.equip_solution || 'Single Band / Dual Band'}
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
-                  <span className="text-xs font-bold text-emerald-600 uppercase">⚙️ Thiết Bị & Nguồn</span>
-                  <div className="text-xs text-slate-700">{selectedSite.equip_solution || 'Chưa cập nhật'}</div>
-                  <div className="text-xs text-slate-600">Anten: {selectedSite.antenna_solution || '-'}</div>
-                  <div className="text-xs text-slate-600">Nguồn: {selectedSite.power_solution || '-'}</div>
+                {/* Antenna, Power & Cluster Info */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Antenna & Power */}
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
+                    <h4 className="text-xs font-black text-slate-800 uppercase tracking-tight flex items-center gap-1.5">
+                      <Cpu className="h-4 w-4 text-emerald-600" />
+                      <span>Giải Pháp Anten & Nguồn Điện</span>
+                    </h4>
+
+                    <div className="space-y-2 text-xs">
+                      <div className="p-2.5 rounded-xl bg-white border border-slate-200">
+                        <div className="text-[10px] text-slate-500 font-bold uppercase">📡 Giải Pháp Anten:</div>
+                        <div className="font-bold text-slate-800 mt-0.5">{antSolution}</div>
+                      </div>
+
+                      <div className="p-2.5 rounded-xl bg-white border border-slate-200">
+                        <div className="text-[10px] text-slate-500 font-bold uppercase">🔌 Giải Pháp Nguồn:</div>
+                        <div className="font-bold text-slate-800 mt-0.5">{pwrSolution}</div>
+                      </div>
+
+                      <div className="flex items-center justify-between p-2 rounded-xl bg-white border border-slate-200">
+                        <span className="text-slate-500 font-semibold">Truyền dẫn CRAN / SFP:</span>
+                        <span className="font-black text-slate-800">{cranSfp}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Cluster & Schedule Info */}
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-black text-slate-800 uppercase tracking-tight flex items-center gap-1.5">
+                        <Calendar className="h-4 w-4 text-purple-600" />
+                        <span>Kế Hoạch Cụm & Đơn Vị Thi Công</span>
+                      </h4>
+                      {cDetail.isSwapped && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
+                          ✓ ĐÃ HOÀN TẤT SWAP
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="space-y-2 text-xs">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="p-2.5 rounded-xl bg-white border border-slate-200">
+                          <div className="text-[10px] text-slate-500 font-semibold">Cụm Triển Khai</div>
+                          <div className="font-black text-purple-900 font-mono text-sm">{cDetail.cluster}</div>
+                        </div>
+                        <div className="p-2.5 rounded-xl bg-white border border-slate-200">
+                          <div className="text-[10px] text-slate-500 font-semibold">Thứ Tự Swap</div>
+                          <div className="font-black text-blue-900 font-mono text-sm">{cDetail.order}</div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="p-2.5 rounded-xl bg-white border border-slate-200">
+                          <div className="text-[10px] text-slate-500 font-semibold">Ngày Kế Hoạch Swap</div>
+                          <div className="font-black text-emerald-800 text-sm">
+                            {cDetail.date}
+                          </div>
+                        </div>
+                        <div className="p-2.5 rounded-xl bg-white border border-slate-200">
+                          <div className="text-[10px] text-slate-500 font-semibold">Đơn Vị Thi Công</div>
+                          <div className="font-black text-slate-900 text-sm">{cDetail.partner}</div>
+                        </div>
+                      </div>
+
+                      {clusterInfo && (
+                        <div className="p-2 rounded-xl bg-purple-50 border border-purple-200 text-[11px] text-purple-950 flex items-center justify-between">
+                          <span>Tiến độ cụm {cDetail.cluster}:</span>
+                          <b>Giao {clusterInfo.del_3g4g}/{clusterInfo.total_3g4g} • Lắp {clusterInfo.ins_3g4g} • Swap {clusterInfo.swap_3g4g}/{clusterInfo.total_3g4g} ({Math.round((clusterInfo.swap_3g4g || 0) / (clusterInfo.total_3g4g || 1) * 100)}%)</b>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
+
+                {/* 11 Milestones Pipeline */}
+                <div className="p-4 rounded-2xl bg-slate-900 text-white space-y-3">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-200 flex items-center gap-1.5">
+                      <Activity className="h-4 w-4 text-emerald-400" />
+                      <span>Mốc Tiến Độ 11 Bước Triển Khai Thực Tế</span>
+                    </h4>
+                    <span className="text-[11px] text-slate-400">
+                      {milestones.filter(m => m.done).length} / 11 bước hoàn thành
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+                    {milestones.map((m, idx) => (
+                      <div
+                        key={idx}
+                        className={`p-2.5 rounded-xl border transition-all ${
+                          m.done 
+                            ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-200' 
+                            : 'bg-slate-800/60 border-slate-700/60 text-slate-400'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between text-[10px] font-bold">
+                          <span>{m.name.split('.')[0]}</span>
+                          {m.done ? (
+                            <CheckCircle className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                          ) : (
+                            <Clock className="h-3.5 w-3.5 text-slate-500 shrink-0" />
+                          )}
+                        </div>
+                        <div className="text-[11px] font-extrabold text-white mt-1 truncate">
+                          {m.name.split('. ')[1]}
+                        </div>
+                        <div className="text-[10px] mt-0.5 font-mono">
+                          {m.date ? (
+                            <span className="text-emerald-300 font-bold">{m.date}</span>
+                          ) : (
+                            <span className="text-slate-500 italic">Chưa có</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Personnel & Operations */}
+                <div className="p-4 rounded-2xl bg-blue-50/70 border border-blue-200 space-y-2.5">
+                  <h4 className="text-xs font-black text-blue-950 uppercase tracking-tight flex items-center gap-1.5">
+                    <Phone className="h-4 w-4 text-blue-600" />
+                    <span>Quản Lý Tuyến & Vận Hành Địa Bàn TVT3</span>
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                    <div className="p-2.5 rounded-xl bg-white border border-blue-200">
+                      <div className="text-[10px] text-slate-500 font-semibold">Cán Bộ Quản Lý Tuyến (QLT)</div>
+                      <div className="font-extrabold text-slate-900 text-sm mt-0.5">{qltName}</div>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-white border border-blue-200">
+                      <div className="text-[10px] text-slate-500 font-semibold">Số Điện Thoại QLT</div>
+                      <div className="font-extrabold text-blue-700 text-sm mt-0.5">
+                        {qltPhone ? (
+                          <a href={`tel:${qltPhone}`} className="hover:underline flex items-center gap-1">
+                            <Phone className="h-3 w-3" /> {qltPhone}
+                          </a>
+                        ) : (
+                          <span className="text-slate-400 font-normal">Chưa cập nhật SĐT</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-white border border-blue-200">
+                      <div className="text-[10px] text-slate-500 font-semibold">Tọa Độ GPS (Lat, Long)</div>
+                      <div className="font-mono text-xs font-bold text-slate-800 mt-0.5">
+                        {lat && lng ? `${lat}, ${lng}` : 'Chưa cập nhật'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Remarks & Issues */}
+                {selectedSite.remarks && (
+                  <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-300 text-xs text-amber-950 space-y-1">
+                    <div className="font-bold flex items-center gap-1.5 text-amber-900">
+                      <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
+                      <span>Ghi Chú Kỹ Thuật & Tồn Đọng Dự Án:</span>
+                    </div>
+                    <div className="text-slate-700 pl-5">{selectedSite.remarks}</div>
+                  </div>
+                )}
+
               </div>
 
-              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
-                <span className="text-xs font-bold text-indigo-600 uppercase">📈 Mốc Tiến Độ 11 Bước</span>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs text-slate-700">
-                  <div>Khảo sát: <b>{selectedSite.survey_date || '-'}</b></div>
-                  <div>Nộp TSSR: <b>{selectedSite.tssr_sub_date || '-'}</b></div>
-                  <div>IE Approved: <b>{selectedSite.ie_app_date || '-'}</b></div>
-                  <div>RF Approved: <b>{selectedSite.rf_app_date || '-'}</b></div>
-                  <div>RF Design: <b>{selectedSite.rf_design_date || '-'}</b></div>
-                  <div>Script Ready: <b>{selectedSite.script_date || '-'}</b></div>
-                  <div>WH Pickup: <b>{selectedSite.wh_pickup_date || '-'}</b></div>
-                  <div>Delivery: <b>{selectedSite.delivery_date || '-'}</b></div>
-                  <div>Onair: <b className="text-emerald-600">{selectedSite.onair_date || '-'}</b></div>
+              {/* Footer */}
+              <div className="px-6 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0">
+                <div className="text-[11px] text-slate-500">
+                  Dữ liệu kỹ thuật chuẩn hóa từ hồ sơ thiết kế SRAN 5G S4-PO1.3
                 </div>
+                <button
+                  onClick={() => setSelectedSite(null)}
+                  className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl shadow-sm transition-all"
+                >
+                  Đóng Hồ Sơ
+                </button>
               </div>
 
-              {selectedSite.remarks && (
-                <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900">
-                  <b>Ghi chú & Tồn đọng:</b> {selectedSite.remarks}
-                </div>
-              )}
-            </div>
-
-            <div className="px-6 py-3 bg-slate-50 border-t border-slate-200 text-right">
-              <button
-                onClick={() => setSelectedSite(null)}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold rounded-xl"
-              >
-                Đóng
-              </button>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Modal Drilldown Site Viewer */}
       {drilldownModal && (

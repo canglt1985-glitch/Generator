@@ -117,7 +117,7 @@ def parse_e_invoice_xml(xml_content, source_name="Tải lên thủ công"):
     for tag in ["MTCau", "MaTraCuu", "LookupCode", "SearchCode", "MaTC", "MTCode", "SecretCode", "MaTCu"]:
         val = find_val(root, tag)
         if val:
-            ma_tra_cuu = val
+            ma_tra_cuu = "".join(val.split())
             break
     invoice_data["ma_tra_cuu"] = ma_tra_cuu
 
@@ -332,13 +332,28 @@ def parse_invoice_from_html(html_content, source_name="Gmail"):
 
         # Fallback to robust regexes on email text if still empty
         if not ma_tra_cuu:
-            ma_tra_cuu_match = re.search(r'(?:m\u00e3 tra c\u1ee9u|m\u00e3 nh\u1eadn h\u00f3a \u0111\u01a1n|m\u00e3 b\u1ea3o m\u1eadt|m\u00e3 nh\u1eadn h\u0111|ma tra cuu|lookup code|code)\s*:\s*([A-Z0-9]+)', text, re.IGNORECASE)
-            if ma_tra_cuu_match:
-                ma_tra_cuu = ma_tra_cuu_match.group(1).strip()
-            else:
-                ma_tra_cuu_match = re.search(r'(?:m\u00e3 tra c\u1ee9u|m\u00e3 nh\u1eadn|m\u00e3 b\u1ea3o m\u1eadt)\s*[^A-Z0-9]*\s*([A-Z0-9]{6,12})', text, re.IGNORECASE)
+            # 1. Viettel vinvoice specific check
+            if "vinvoice" in (invoice_url or "").lower() or "vinvoice" in text.lower():
+                v_match = re.search(r'(?:Mã số bí mật|Mã bí mật|Mã tra cứu)\s*[:\s]+\s*([A-Za-z0-9\s]{15,30})', text, re.IGNORECASE)
+                if v_match:
+                    clean_code = re.sub(r'[^A-Za-z0-9]', '', v_match.group(1))
+                    if len(clean_code) >= 15:
+                        ma_tra_cuu = clean_code[:15].upper()
+
+            # 2. General multi-part or single token
+            if not ma_tra_cuu:
+                ma_tra_cuu_match = re.search(r'(?:m\u00e3 tra c\u1ee9u|m\u00e3 nh\u1eadn h\u00f3a \u0111\u01a1n|m\u00e3 b\u1ea3o m\u1eadt|m\u00e3 nh\u1eadn h\u0111|ma tra cuu|lookup code|code)\s*:\s*([A-Z0-9]+(?:\s+[A-Z0-9]+)?)', text, re.IGNORECASE)
                 if ma_tra_cuu_match:
-                    ma_tra_cuu = ma_tra_cuu_match.group(1).strip()
+                    raw_c = ma_tra_cuu_match.group(1).strip()
+                    parts = raw_c.split()
+                    if len(parts) == 1:
+                        ma_tra_cuu = parts[0]
+                    elif len(parts) == 2 and all(p.isalnum() for p in parts) and len(''.join(parts)) <= 30:
+                        ma_tra_cuu = ''.join(parts).upper()
+                else:
+                    ma_tra_cuu_match = re.search(r'(?:m\u00e3 tra c\u1ee9u|m\u00e3 nh\u1eadn|m\u00e3 b\u1ea3o m\u1eadt)\s*[^A-Z0-9]*\s*([A-Z0-9]{6,30})', text, re.IGNORECASE)
+                    if ma_tra_cuu_match:
+                        ma_tra_cuu = ma_tra_cuu_match.group(1).strip()
 
         if not kh_hd:
             kh_hd_match = re.search(r'(?:k\u00fd hi\u1ec7u m\u1eabu s\u1ed1 h\u00f3a \u0111\u01a1n|k\u00fd hi\u1ec7u m\u1eabu s\u1ed1|k\u00fd hi\u1ec7u h\u00f3a \u0111\u01a1n|k\u00fd hi\u1ec7u|ky hieu|serial|pattern)\s*:\s*([A-Z0-9/\-]+)', text, re.IGNORECASE)
@@ -613,15 +628,38 @@ def parse_invoice_from_pdf(pdf_bytes, source_name="Gmail PDF"):
         loai_chi_phi = "Mua dầu" if has_fuel or any(k in seller_name.lower() or k in text.lower() for k in ["xăng", "dầu", "diesel", "fuel", "do", "dầu do"]) else "Chi phí khác"
 
         ma_tra_cuu = ""
-        ma_tra_cuu_patterns = [
-            r'(?:Mã tra cứu|Mã số tra cứu|Invoice code|Mã bí mật|Mã số bí mật|Mã bảo mật|Mã nhận hóa đơn)\s*(?:\([^)]*\))?\s*:\s*([a-z0-9\-]+)',
-            r'(?:Mã tra cứu|Mã số tra cứu|Invoice code|Mã bí mật|Mã số bí mật|Mã bảo mật|Mã nhận hóa đơn)\s+([a-z0-9\-]{6,25})'
-        ]
-        for pat in ma_tra_cuu_patterns:
-            match = re.search(pat, text, re.IGNORECASE)
-            if match:
-                ma_tra_cuu = match.group(1).strip()
-                break
+        # 1. Viettel Invoice (vinvoice) specific handling:
+        # Viettel codes (mã số bí mật) are ALWAYS 15 alphanumeric characters.
+        # Due to PDF font kerning/layout, pypdf text extraction frequently splits characters with spaces (e.g. "9YRGNWZYEMMOV AO")
+        if "vinvoice" in invoice_url.lower() or "vinvoice" in text.lower():
+            v_match = re.search(r'(?:Mã số bí mật|Mã bí mật|Mã tra cứu)\s*[:\s]+\s*([A-Za-z0-9\s]{15,30})', text, re.IGNORECASE)
+            if v_match:
+                clean_code = re.sub(r'[^A-Za-z0-9]', '', v_match.group(1))
+                if len(clean_code) >= 15:
+                    ma_tra_cuu = clean_code[:15].upper()
+
+        # 2. General handling: inspect line after label and handle multi-part tokens separated by spaces (e.g. kerning splits)
+        if not ma_tra_cuu:
+            match_line = re.search(r'(?:Mã tra cứu|Mã số tra cứu|Invoice code|Mã bí mật|Mã số bí mật|Mã bảo mật|Mã nhận hóa đơn)\s*(?:\([^)]*\))?\s*[:\s]+\s*([A-Za-z0-9\-]+(?:\s+[A-Za-z0-9\-]+)?)', text, re.IGNORECASE)
+            if match_line:
+                raw_code = match_line.group(1).strip()
+                parts = raw_code.split()
+                if len(parts) == 1:
+                    ma_tra_cuu = parts[0]
+                elif len(parts) == 2 and all(re.match(r'^[A-Za-z0-9\-]+$', p) for p in parts) and len(''.join(parts)) <= 30:
+                    ma_tra_cuu = ''.join(parts).upper()
+
+        # 3. Fallback standard patterns
+        if not ma_tra_cuu:
+            ma_tra_cuu_patterns = [
+                r'(?:Mã tra cứu|Mã số tra cứu|Invoice code|Mã bí mật|Mã số bí mật|Mã bảo mật|Mã nhận hóa đơn)\s*(?:\([^)]*\))?\s*:\s*([a-z0-9\-]+)',
+                r'(?:Mã tra cứu|Mã số tra cứu|Invoice code|Mã bí mật|Mã số bí mật|Mã bảo mật|Mã nhận hóa đơn)\s+([a-z0-9\-]{6,30})'
+            ]
+            for pat in ma_tra_cuu_patterns:
+                match = re.search(pat, text, re.IGNORECASE)
+                if match:
+                    ma_tra_cuu = match.group(1).strip()
+                    break
             
         kh_hd = ""
         kh_hd_match = re.search(r'Ký hiệu\s*(?:\([^)]*\))?\s*:\s*([A-Z0-9/\-]+)', text, re.IGNORECASE)

@@ -292,7 +292,13 @@ if __name__ == '__main__':
     app.config['SCHEDULER_TIMEZONE'] = 'Asia/Ho_Chi_Minh'
     scheduler.init_app(app)
 
-    if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+    # Legacy background scheduler & Telegram bot thread in web-app are disabled by default.
+    # All background scrapers, Telegram bot polling and reports have been migrated to backend/run_workers.py (V2).
+    ENABLE_LEGACY_SCHEDULER = os.getenv("ENABLE_LEGACY_SCHEDULER", "false").lower() in ("true", "1")
+    if not ENABLE_LEGACY_SCHEDULER:
+        print("ℹ️ [Scheduler] Legacy APScheduler & Bot thread in web-app are DISABLED to prevent duplicate alerts (managed by backend/run_workers.py).")
+        print("   Set ENABLE_LEGACY_SCHEDULER=true in .env only if running standalone web-app without backend daemon.")
+    elif not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
         scheduler.add_job(
             id='fetch_outages_task', 
             func=scheduled_outage_fetch, 

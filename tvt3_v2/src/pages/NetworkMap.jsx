@@ -3,7 +3,8 @@ import { supabase } from '../supabaseClient';
 import { 
   MapPin, Search, Server, Compass, AlertCircle, Radio, 
   Layers, Copy, Check, Maximize2, Minimize2,
-  ChevronLeft, ChevronRight, ChevronDown, X, Zap, RefreshCw
+  ChevronLeft, ChevronRight, ChevronDown, X, Zap, RefreshCw,
+  Phone, Navigation, ExternalLink
 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, Circle, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -283,19 +284,14 @@ const getSiteSranCategory = (site, sranMap) => {
 
 // Custom HTML DivIcon to display Site ID / PTM ID directly on map as a small labeled chip
 // Tiêu đề chỉ hiển thị tên trạm (không kèm tiền tố dài dòng), viền màu sắc phân biệt công nghệ
-const createSiteDivIcon = (id, type, infraCategory = null, sranCategory = null) => {
+const createSiteDivIcon = (id, type, infraCategory = null, sranCategory = null, isCompact = false) => {
   let chipClass = 'border border-blue-400/60 bg-blue-600/90 text-white shadow-sm';
   let iconPrefix = '';
 
   if (type === 'Hoạt động') {
-    // Trạm hoạt động: Chỉ hiển thị tên trạm, viền màu phân biệt công nghệ
-    // - 5G Onair: Viền Hồng Neon phát sáng rực rỡ
-    // - 4G ERA: Viền Xanh Cyan Điện tử phát sáng (không trùng màu xanh lá của CSHT)
-    // - 4G Thường: Viền Xanh Dương thanh gọn
     chipClass = sranCategory?.borderClass || 'border border-blue-400/60 bg-blue-600/90 text-white shadow-sm';
     iconPrefix = '';
   } else if (infraCategory) {
-    // Dự án CSHT: Nền màu theo ý kiến Sở (Xanh lá Sở duyệt, Tím Dùng chung, Vàng Đã KS, Cam QH)
     chipClass = `${infraCategory.bgGradient} text-white`;
     iconPrefix = `${infraCategory.icon} `;
   } else if (type === 'Quy hoạch') {
@@ -303,15 +299,41 @@ const createSiteDivIcon = (id, type, infraCategory = null, sranCategory = null) 
     iconPrefix = '📍 ';
   }
   
+  // Chế độ thu gọn khi zoom xa (< 13): Chấm tròn 8px phát sáng màu công nghệ để tránh đè chùm trên mobile
+  if (isCompact) {
+    const dotColor = type === 'Hoạt động' ? (sranCategory?.color || '#3b82f6') : (infraCategory?.color || '#f59e0b');
+    return L.divIcon({
+      html: `<div style="background-color: ${dotColor}; width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid white; box-shadow: 0 0 4px ${dotColor}; transform: translate(-50%, -50%); cursor: pointer;"></div>`,
+      className: 'bg-transparent border-none',
+      iconSize: [0, 0],
+      iconAnchor: [0, 0]
+    });
+  }
+
   return L.divIcon({
-    html: `<div class="flex items-center justify-center px-1 py-[1px] rounded-[3px] text-[7.5px] font-black tracking-tighter whitespace-nowrap ${chipClass} transition-transform duration-100 hover:scale-125 active:scale-95" style="transform: translate(-50%, -50%); min-width: 20px; line-height: 1;">
+    html: `<div class="flex items-center justify-center px-1 py-[1px] rounded-[3px] text-[7.5px] font-black tracking-tighter whitespace-nowrap ${chipClass} transition-transform duration-100 hover:scale-125 active:scale-95 shadow-sm" style="transform: translate(-50%, -50%); min-width: 20px; line-height: 1;">
              ${iconPrefix}${id}
            </div>`,
-    className: 'bg-transparent border-none', // Removes default leaflet white square wrapper styles
+    className: 'bg-transparent border-none',
     iconSize: [0, 0],
     iconAnchor: [0, 0]
   });
 };
+
+// Helper component to track map zoom changes
+function MapEventsTracker({ onZoomChange }) {
+  const map = useMap();
+  useEffect(() => {
+    const handleZoom = () => {
+      onZoomChange(map.getZoom());
+    };
+    map.on('zoomend', handleZoom);
+    return () => {
+      map.off('zoomend', handleZoom);
+    };
+  }, [map, onZoomChange]);
+  return null;
+}
 
 // Helper component to dynamically handle map resize on fullscreen toggle
 function MapResizeHandler({ isFullscreen }) {
@@ -364,6 +386,9 @@ export default function NetworkMap() {
   const [validationError, setValidationError] = useState('');
   const [mapCenter, setMapCenter] = useState([11.201, 107.221]); // Default coordinates for Dong Nai
   const [zoomLevel, setZoomLevel] = useState(11);
+  const [currentZoom, setCurrentZoom] = useState(11);
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+  const [selectedMobileStation, setSelectedMobileStation] = useState(null);
   
   // Layer Toggles - Hệ thống phân lớp bản đồ đa lựa chọn (Multi-select layers)
   const [layerActiveSites, setLayerActiveSites] = useState(true); // Trạm hoạt động 3G/4G hiện hữu
@@ -382,6 +407,15 @@ export default function NetworkMap() {
   const [bottomSheetState, setBottomSheetState] = useState('collapsed'); // 'collapsed' | 'half' | 'full'
   const [selectedTileLayer, setSelectedTileLayer] = useState('google_satellite'); // Mặc định Vệ tinh thuần theo yêu cầu
   const [showLayersPopup, setShowLayersPopup] = useState(false);
+
+  // Lắng nghe kích thước màn hình để tự động điều chỉnh UX Mobile / Desktop
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Lắng nghe phím Escape để thoát chế độ toàn màn hình
   useEffect(() => {
@@ -980,7 +1014,10 @@ export default function NetworkMap() {
           lat: parseFloat(s.location_info.vi_do),
           lng: parseFloat(s.location_info.kinh_do),
           type: s.sranCategory?.shortLabel || 'Hoạt động',
-          badgeClass: s.sranCategory?.badgeClass || 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+          techType: s.sranCategory?.key === 'onair_5g' ? '5G' : s.sranCategory?.key === 'swapped_4g_era' ? '4G ERA' : '4G',
+          badgeClass: s.sranCategory?.badgeClass || 'bg-blue-500/10 text-blue-400 border border-blue-500/20',
+          rawSite: s,
+          rawCat: s.sranCategory
         };
       });
 
@@ -999,8 +1036,9 @@ export default function NetworkMap() {
         name: `${p.category.icon} ${p.category.shortLabel}${p.ward ? ` • ${p.ward}` : ''}`,
         lat: parseFloat(p.latitude_survey || p.latitude_plan),
         lng: parseFloat(p.longitude_survey || p.longitude_plan),
-        type: p.category.shortLabel,
-        badgeClass: p.category.badgeClass
+        type: 'Quy hoạch',
+        badgeClass: p.category.badgeClass,
+        rawProject: p
       }));
 
     const allFiltered = [...filteredActive, ...filteredProjects].slice(0, 8);
@@ -1016,13 +1054,35 @@ export default function NetworkMap() {
     // Tự động bật phân lớp tương ứng nếu đang bị tắt để người dùng thấy ngay trạm vừa tìm
     if (item.type === 'Quy hoạch') {
       if (!layerPlanningInfra) setLayerPlanningInfra(true);
+      if (item.rawProject) {
+        setSelectedMobileStation({
+          type: 'planning',
+          proj: item.rawProject,
+          code: item.code,
+          cat: item.rawProject.category,
+          lat: item.lat,
+          lng: item.lng
+        });
+      }
     } else {
       if (item.techType === '5G' && !layer5gOnair) setLayer5gOnair(true);
       else if (item.techType === '4G ERA' && !layer4gEra) setLayer4gEra(true);
       else if (!layerActiveSites) setLayerActiveSites(true);
+
+      if (item.rawSite) {
+        setSelectedMobileStation({
+          type: 'active',
+          site: item.rawSite,
+          lat: item.lat,
+          lng: item.lng,
+          displayName: item.code,
+          name: item.oldCode,
+          cat: item.rawCat
+        });
+      }
     }
 
-    showToast(`Đã di chuyển tới trạm ${item.code}`);
+    showToast(`Đã chọn trạm ${item.code}`);
   };
 
   // Submit Unified Search (GPS Coordinates, Station Code, or Place Name)
@@ -1082,6 +1142,16 @@ export default function NetworkMap() {
       else if (matchedActive.sranCategory?.key === 'swapped_4g_era' && !layer4gEra) setLayer4gEra(true);
       else if (!layerActiveSites) setLayerActiveSites(true);
 
+      setSelectedMobileStation({
+        type: 'active',
+        site: matchedActive,
+        lat,
+        lng,
+        displayName: displayTitle,
+        name: oldId,
+        cat: matchedActive.sranCategory
+      });
+
       showToast(`Đã tìm thấy trạm: ${displayTitle} (${matchedActive.sranCategory?.label || 'Hoạt động'})`);
       return;
     }
@@ -1097,6 +1167,15 @@ export default function NetworkMap() {
       setZoomLevel(16);
 
       if (!layerPlanningInfra) setLayerPlanningInfra(true);
+
+      setSelectedMobileStation({
+        type: 'planning',
+        proj: matchedProject,
+        code: matchedProject.planning_id_old || matchedProject.planning_id_new,
+        cat: matchedProject.category,
+        lat,
+        lng
+      });
 
       showToast(`Đã tìm thấy dự án ${matchedProject.planning_id_old || matchedProject.planning_id_new} (${matchedProject.category.label})`);
       return;
@@ -1367,7 +1446,7 @@ export default function NetworkMap() {
       <div className={`relative w-full overflow-hidden transition-all duration-300 ${
         isFullscreen 
           ? 'fixed inset-0 z-[2000] w-screen h-screen bg-slate-950' 
-          : 'h-[calc(100vh-100px)] min-h-[580px] rounded-2xl border border-slate-700/60 bg-slate-900 shadow-2xl'
+          : 'h-[calc(100dvh-64px)] md:h-[calc(100vh-100px)] min-h-[500px] rounded-none md:rounded-2xl border-0 md:border md:border-slate-700/60 bg-slate-900 shadow-2xl'
       }`}>
 
         {/* 1. Desktop Top-Left Floating Search Box & Results Drawer */}
@@ -1492,29 +1571,39 @@ export default function NetworkMap() {
         </div>
 
         {/* 2. Mobile Top Floating Search Pill */}
-        <div className="absolute top-3 left-3 right-3 z-[1000] flex lg:hidden flex-col gap-1 pointer-events-auto font-sans">
-          <form onSubmit={handleUnifiedSearch} className="relative">
-            <div className="bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-full px-3.5 py-1.5 shadow-xl flex items-center gap-2">
-              <Search className="h-4 w-4 text-slate-400 shrink-0" />
+        <div className="absolute top-2.5 left-2.5 right-2.5 z-[1000] flex lg:hidden flex-col gap-1.5 pointer-events-auto font-sans">
+          <form onSubmit={handleUnifiedSearch} className="relative w-full">
+            <div className="bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-full pl-3 pr-1.5 py-1 shadow-xl flex items-center gap-1.5">
+              <Search className="h-4 w-4 text-cyan-400 shrink-0" />
               <input
                 type="text"
                 value={coordinateInput}
                 onChange={(e) => handleUnifiedQueryChange(e.target.value)}
-                placeholder="Mã trạm (VD: DNLK51) hoặc tọa độ..."
-                className="bg-transparent border-none outline-none text-white text-xs w-full placeholder-slate-500 font-sans"
+                placeholder="Tìm mã trạm (VD: DNLK51) hoặc tọa độ..."
+                className="bg-transparent border-none outline-none text-white text-xs w-full placeholder-slate-500 font-sans min-w-0"
               />
               {coordinateInput && (
                 <button
                   type="button"
                   onClick={() => { setCoordinateInput(''); setSearchSuggestions([]); }}
-                  className="p-1 text-slate-400 hover:text-white text-xs cursor-pointer"
+                  className="p-1 text-slate-400 hover:text-white shrink-0 cursor-pointer"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
               )}
               <button
+                type="button"
+                onClick={handleToggleGPS}
+                className={`p-1.5 rounded-full transition-all shrink-0 cursor-pointer ${
+                  useGPS ? 'bg-cyan-500/30 text-cyan-400 ring-1 ring-cyan-400 animate-pulse' : 'text-slate-400 hover:text-white'
+                }`}
+                title={useGPS ? "Đang theo dõi GPS (Bấm để tắt)" : "Định vị vị trí của tôi"}
+              >
+                <Compass className={`h-4 w-4 ${useGPS ? 'animate-spin text-cyan-400' : ''}`} style={{ animationDuration: useGPS ? '6s' : '0s' }} />
+              </button>
+              <button
                 type="submit"
-                className="px-2.5 py-1 bg-cyan-600 active:bg-cyan-500 text-white rounded-full font-bold text-[11px] shrink-0 cursor-pointer"
+                className="px-3.5 py-1 bg-gradient-to-r from-cyan-600 to-blue-600 active:scale-95 text-white rounded-full font-bold text-xs shrink-0 cursor-pointer shadow-md shadow-cyan-600/30 min-w-[50px] text-center"
               >
                 Tìm
               </button>
@@ -1522,21 +1611,21 @@ export default function NetworkMap() {
 
             {/* Mobile Suggestions Dropdown */}
             {searchSuggestions.length > 0 && (
-              <div className="absolute left-0 right-0 top-full mt-1.5 z-[1100] bg-slate-900/95 backdrop-blur-md border border-slate-700 rounded-2xl shadow-2xl divide-y divide-slate-800/80 max-h-52 overflow-y-auto font-sans">
+              <div className="absolute left-0 right-0 top-full mt-1.5 z-[1100] bg-slate-900/95 backdrop-blur-xl border border-slate-700/90 rounded-2xl shadow-2xl divide-y divide-slate-800/80 max-h-56 overflow-y-auto font-sans">
                 {searchSuggestions.map((item) => (
                   <button
                     key={item.id}
                     type="button"
                     onClick={() => handleSelectSuggestion(item)}
-                    className="w-full text-left px-3.5 py-2 hover:bg-slate-800 transition-colors flex flex-col gap-0.5 cursor-pointer"
+                    className="w-full text-left px-3.5 py-2 hover:bg-slate-800/90 active:bg-slate-800 transition-colors flex flex-col gap-0.5 cursor-pointer"
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-bold text-cyan-400 text-xs">{item.code}</span>
-                      <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400">
+                      <span className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded ${item.badgeClass || 'bg-blue-500/10 text-blue-400'}`}>
                         {item.type}
                       </span>
                     </div>
-                    <span className="text-[9px] text-slate-400 truncate">{item.name}</span>
+                    <span className="text-[10px] text-slate-400 truncate">{item.name}</span>
                   </button>
                 ))}
               </div>
@@ -1544,7 +1633,7 @@ export default function NetworkMap() {
           </form>
 
           {validationError && (
-            <div className="bg-red-500/10 border border-red-500/30 rounded-xl px-3 py-1.5 text-red-400 text-[10.5px] flex items-center gap-1.5">
+            <div className="bg-red-500/15 border border-red-500/40 rounded-xl px-3 py-1.5 text-red-400 text-[10.5px] flex items-center gap-1.5 backdrop-blur-md shadow-lg">
               <AlertCircle className="h-3 w-3 shrink-0" />
               <span>{validationError}</span>
             </div>
@@ -1567,7 +1656,7 @@ export default function NetworkMap() {
             </button>
 
             {showLayersPopup && (
-              <div className="absolute right-12 bottom-0 w-72 sm:w-80 bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-2xl p-3 shadow-2xl space-y-3 text-xs text-white z-[1100] max-h-[85vh] overflow-y-auto font-sans">
+              <div className="fixed inset-x-3 bottom-20 sm:absolute sm:right-12 sm:bottom-0 sm:inset-x-auto sm:w-80 bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-2xl p-3 shadow-2xl space-y-3 text-xs text-white z-[1100] max-h-[75vh] sm:max-h-[85vh] overflow-y-auto font-sans">
                 <div className="flex items-center justify-between pb-1.5 border-b border-slate-800">
                   <div className="flex items-center gap-1.5 text-cyan-400 font-bold text-xs">
                     <Layers className="h-4 w-4" />
@@ -1930,6 +2019,7 @@ export default function NetworkMap() {
         >
           <MapResizeHandler isFullscreen={isFullscreen} />
           <ChangeView center={mapCenter} zoom={zoomLevel} />
+          <MapEventsTracker onZoomChange={setCurrentZoom} />
           {!layerLastmile && <MapClickListener onClick={(lat, lng) => executeScan(lat, lng)} />}
 
           <TileLayer
@@ -2017,9 +2107,33 @@ export default function NetworkMap() {
                     <div key={site.site_id}>
                       <Marker 
                         position={[lat, lng]} 
-                        icon={createSiteDivIcon(name, 'Hoạt động', null, cat)}
+                        icon={createSiteDivIcon(name, 'Hoạt động', null, cat, currentZoom < 13 && isMobile)}
+                        eventHandlers={{
+                          click: (e) => {
+                            setSelectedMobileStation({
+                              type: 'active',
+                              site,
+                              lat,
+                              lng,
+                              displayName,
+                              name,
+                              cat
+                            });
+                            if (isMobile) {
+                              setTimeout(() => {
+                                e.target?.closePopup?.();
+                              }, 50);
+                              const map = e.target._map;
+                              if (map) {
+                                const targetPoint = map.project([lat, lng], map.getZoom()).subtract([0, 130]);
+                                const targetLatLng = map.unproject(targetPoint, map.getZoom());
+                                map.panTo(targetLatLng, { animate: true });
+                              }
+                            }
+                          }
+                        }}
                       >
-                        <Popup>
+                        <Popup autoPan={true} autoPanPadding={[20, 80]} maxWidth={300} keepInView={true}>
                           <div className="font-sans text-xs flex flex-col gap-1.5 max-w-[280px]">
                             <div className="flex items-center justify-between border-b border-slate-200 pb-1">
                               <div>
@@ -2186,6 +2300,14 @@ export default function NetworkMap() {
                       weight: 4.5, 
                       opacity: 0.9 
                     }}
+                    eventHandlers={{
+                      click: () => {
+                        setSelectedMobileStation({
+                          type: 'lastmile',
+                          line
+                        });
+                      }
+                    }}
                   >
                     <Popup>
                       <div className="font-sans text-xs p-2.5 space-y-1.5 bg-white text-slate-800" style={{ minWidth: '220px' }}>
@@ -2233,9 +2355,32 @@ export default function NetworkMap() {
                     <div key={proj.planning_id_new || proj.project_id}>
                       <Marker 
                         position={[lat, lng]} 
-                        icon={createSiteDivIcon(code, 'Quy hoạch', cat)}
+                        icon={createSiteDivIcon(code, 'Quy hoạch', cat, null, currentZoom < 13 && isMobile)}
+                        eventHandlers={{
+                          click: (e) => {
+                            setSelectedMobileStation({
+                              type: 'planning',
+                              proj,
+                              code,
+                              cat,
+                              lat,
+                              lng
+                            });
+                            if (isMobile) {
+                              setTimeout(() => {
+                                e.target?.closePopup?.();
+                              }, 50);
+                              const map = e.target._map;
+                              if (map) {
+                                const targetPoint = map.project([lat, lng], map.getZoom()).subtract([0, 130]);
+                                const targetLatLng = map.unproject(targetPoint, map.getZoom());
+                                map.panTo(targetLatLng, { animate: true });
+                              }
+                            }
+                          }
+                        }}
                       >
-                        <Popup>
+                        <Popup autoPan={true} autoPanPadding={[20, 80]} maxWidth={300} keepInView={true}>
                           <div className="font-sans text-xs flex flex-col gap-1.5 max-w-[280px]">
                             <div className="flex items-center justify-between border-b border-slate-200 pb-1">
                               <strong className={`block text-sm font-bold ${cat.textColor}`}>{code}</strong>
@@ -2367,6 +2512,249 @@ export default function NetworkMap() {
               )}
         </MapContainer>
       </div>
+      {/* 8. Mobile Station Details Bottom Sheet (Modern Floating Sheet Card) */}
+      {selectedMobileStation && isMobile && (
+        <div className="fixed inset-x-2 bottom-2 z-[2500] pointer-events-auto sm:hidden animate-in slide-in-from-bottom duration-200">
+          <div className="bg-slate-900/95 backdrop-blur-xl border border-slate-700/90 rounded-2xl p-3.5 shadow-[0_-8px_30px_rgba(0,0,0,0.6)] text-white max-h-[70vh] overflow-y-auto font-sans space-y-2.5">
+            {/* Handle bar */}
+            <div className="w-10 h-1 rounded-full bg-slate-600/60 mx-auto -mt-1 mb-2" />
+
+            {/* Header */}
+            <div className="flex items-start justify-between gap-2 border-b border-slate-800 pb-2">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <h3 className={`text-sm font-extrabold truncate ${
+                    selectedMobileStation.type === 'active' 
+                      ? (selectedMobileStation.cat?.textColor || 'text-cyan-400')
+                      : (selectedMobileStation.cat?.textColor || 'text-amber-400')
+                  }`}>
+                    {selectedMobileStation.displayName || selectedMobileStation.code || 'Chi tiết trạm'}
+                  </h3>
+                  {selectedMobileStation.cat && (
+                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold ${selectedMobileStation.cat.badgeClass}`}>
+                      {selectedMobileStation.cat.icon} {selectedMobileStation.cat.shortLabel || selectedMobileStation.cat.label}
+                    </span>
+                  )}
+                </div>
+                {selectedMobileStation.site?.name && (
+                  <p className="text-[11px] text-slate-400 truncate mt-0.5">
+                    {selectedMobileStation.site.name}
+                  </p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedMobileStation(null)}
+                className="h-7 w-7 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center shrink-0 cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Nội dung chi tiết */}
+            {selectedMobileStation.type === 'active' && (() => {
+              const s = selectedMobileStation.site;
+              const cat = selectedMobileStation.cat;
+              const lat = selectedMobileStation.lat;
+              const lng = selectedMobileStation.lng;
+              const name = selectedMobileStation.name;
+              const vp = s.management_info?.vung_phu;
+              const tm = s.management_info?.tram_main && s.management_info.tram_main !== 'KHÔNG' ? s.management_info.tram_main : null;
+              const isCran = vp && vp.toUpperCase().includes('CRAN');
+
+              return (
+                <div className="space-y-2 text-xs">
+                  {/* Vùng phủ & Trạm main */}
+                  {vp && (
+                    <div className="flex items-center justify-between bg-slate-800/40 rounded-lg p-2 border border-slate-700/50">
+                      <span className="text-slate-400 font-medium">🌐 Vùng phủ:</span>
+                      <span className="font-bold text-slate-200">
+                        {vp} {isCran && tm ? `(Main: ${tm})` : ''}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Người QLT & Số điện thoại */}
+                  {s.management_info?.qlt && (
+                    <div className="flex items-center justify-between bg-slate-800/60 rounded-lg p-2 border border-slate-700/70">
+                      <div className="flex items-center gap-1.5 text-slate-300">
+                        <span className="font-medium">👤 QLT:</span>
+                        <span className="font-bold text-white">{s.management_info.qlt}</span>
+                      </div>
+                      {s.management_info.sdt_qlt ? (
+                        <a
+                          href={`tel:${s.management_info.sdt_qlt}`}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white rounded-lg font-bold text-[11px] shadow-sm shadow-emerald-600/30"
+                        >
+                          <Phone className="h-3 w-3" />
+                          <span>Gọi {s.management_info.sdt_qlt}</span>
+                        </a>
+                      ) : (
+                        <span className="text-slate-500 text-[11px]">Chưa có SĐT</span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Cấu hình 5G / 4G */}
+                  {(cat?.sranInfo?.config_5g || cat?.sranInfo?.config_4g) && (
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {cat.sranInfo.config_5g && (
+                        <div className="bg-pink-950/40 border border-pink-700/40 rounded-lg p-1.5 text-[10.5px]">
+                          <span className="text-pink-300 block">⚡ 5G:</span>
+                          <span className="font-mono font-bold text-pink-200">{cat.sranInfo.config_5g}</span>
+                        </div>
+                      )}
+                      {cat.sranInfo.config_4g && (
+                        <div className="bg-slate-800/40 border border-slate-700/50 rounded-lg p-1.5 text-[10.5px]">
+                          <span className="text-slate-400 block">🔄 4G:</span>
+                          <span className="font-mono font-bold text-slate-200">{cat.sranInfo.config_4g}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Tọa độ */}
+                  <div className="flex items-center justify-between text-[11px] text-slate-400 pt-0.5">
+                    <span className="font-mono">{lat.toFixed(6)}, {lng.toFixed(6)}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyCoords(lat, lng, `tọa độ trạm ${name}`)}
+                      className="text-cyan-400 hover:underline flex items-center gap-1 font-semibold"
+                    >
+                      <Copy className="h-3 w-3" /> Copy tọa độ
+                    </button>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="grid grid-cols-3 gap-1.5 pt-1">
+                    <a
+                      href={`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-1 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 active:scale-95 text-white rounded-xl text-xs font-bold shadow-md shadow-cyan-600/30 text-center"
+                    >
+                      <Navigation className="h-3.5 w-3.5" />
+                      <span>Dẫn đường</span>
+                    </a>
+                    <a
+                      href={`/datasites?search=${name}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-1 py-2 bg-slate-800 hover:bg-slate-700 active:scale-95 text-cyan-300 border border-slate-700 rounded-xl text-xs font-bold text-center"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      <span>Datasite</span>
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyStationInfo(s, lat, lng, selectedMobileStation.displayName)}
+                      className="flex items-center justify-center gap-1 py-2 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 border border-slate-700 rounded-xl text-xs font-bold text-center"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                      <span>Sao chép</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Nếu là trạm Quy hoạch */}
+            {selectedMobileStation.type === 'planning' && (() => {
+              const p = selectedMobileStation.proj;
+              const cat = selectedMobileStation.cat;
+              const lat = selectedMobileStation.lat;
+              const lng = selectedMobileStation.lng;
+              const code = selectedMobileStation.code;
+
+              return (
+                <div className="space-y-2 text-xs">
+                  {(p.ward || p.district) && (
+                    <div className="text-slate-300 text-xs font-medium">
+                      📍 Địa bàn: <b className="text-white">{p.ward ? `${p.ward}, ` : ''}{p.district || 'Đồng Nai'}</b>
+                    </div>
+                  )}
+                  <div className={`p-2.5 rounded-xl text-[11px] space-y-1 ${cat.popupBg || 'bg-slate-800/60'}`}>
+                    <div className="font-extrabold flex items-center justify-between">
+                      <span>{cat.icon} {cat.label}</span>
+                      {p.skhcn_status && <span className="opacity-80 text-[10px]">{p.skhcn_status}</span>}
+                    </div>
+                    {p.notes && <div className="pt-1 border-t border-black/10">📝 <b>Ghi chú:</b> {p.notes}</div>}
+                    {p.sharing_partner && <div className="text-purple-700 font-bold">🤝 <b>Dùng chung:</b> {p.sharing_partner}</div>}
+                  </div>
+
+                  <div className="flex items-center justify-between text-[11px] text-slate-400">
+                    <span className="font-mono">{lat.toFixed(6)}, {lng.toFixed(6)}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyCoords(lat, lng, `tọa độ quy hoạch ${code}`)}
+                      className="text-cyan-400 hover:underline flex items-center gap-1 font-semibold"
+                    >
+                      <Copy className="h-3 w-3" /> Copy tọa độ
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <a
+                      href={`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-1 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 active:scale-95 text-white rounded-xl text-xs font-bold shadow-md shadow-cyan-600/30 text-center"
+                    >
+                      <Navigation className="h-3.5 w-3.5" />
+                      <span>Dẫn đường Google Maps</span>
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyProjectInfo(p, lat, lng, code)}
+                      className="flex items-center justify-center gap-1 py-2 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 border border-slate-700 rounded-xl text-xs font-bold text-center"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                      <span>Sao chép dự án</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Nếu là Lastmile */}
+            {selectedMobileStation.type === 'lastmile' && (() => {
+              const line = selectedMobileStation.line;
+              return (
+                <div className="space-y-2 text-xs">
+                  <div className="font-bold text-cyan-400 flex items-center gap-1.5">
+                    <Radio className="h-4 w-4 shrink-0" />
+                    <span>Tuyến: {line.hubOldId || line.hubId} ➔ {line.siteOldId || line.siteId}</span>
+                  </div>
+                  <div className="bg-slate-800/50 p-2 rounded-lg space-y-1 text-[11px] text-slate-300">
+                    <div>• Kiểu kết nối: <b className="text-white">{line.loai_ket_noi || 'Cáp quang'} {line.isBackup ? '(Ring)' : ''}</b></div>
+                    <div>• Chủ đầu tư: <b className="text-white">{line.chu_dau_tu_cap || 'Chưa rõ'}</b></div>
+                    <div>• Đơn vị vận hành: <b className="text-white">{line.don_vi_van_hanh_cap || 'Chưa rõ'}</b></div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <a
+                      href={`/datasites?search=${line.hubOldId || line.hubId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-1 py-2 bg-slate-800 text-slate-200 rounded-xl text-xs font-bold border border-slate-700"
+                    >
+                      Trạm MAIN ({line.hubOldId || line.hubId})
+                    </a>
+                    <a
+                      href={`/datasites?search=${line.siteOldId || line.siteId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-1 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold"
+                    >
+                      Trạm LASTMILE ({line.siteOldId || line.siteId})
+                    </a>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
