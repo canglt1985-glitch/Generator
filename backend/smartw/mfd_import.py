@@ -41,8 +41,11 @@ def parse_smartw_date(date_str: str) -> datetime | None:
 def classify_event(start_dt: datetime, end_dt: datetime, duration_min: int) -> str:
     if duration_min < 10:
         if not end_dt:
-            return 'approved'
+            return 'pending'
         return 'skip'
+    # Các trạm chạy máy trên 15h (900 phút) bắt buộc phải qua phê duyệt (sự cố hy hữu / cúp điện sớm đóng trễ)
+    if duration_min > 900:
+        return 'pending'
     return 'approved'
 
 def get_pretax_price(fuel_type: str, date_str: str = None) -> float:

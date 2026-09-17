@@ -1550,6 +1550,27 @@ export default function Generator() {
         }
       }
 
+      // --- RULE 5: CA CHẠY MÁY TRÊN 15H PHẢI ĐƯỢC PHÊ DUYỆT (Chờ duyệt sự cố hy hữu / cúp sớm đóng trễ) ---
+      siteLogs.forEach(log => {
+        const runtime = parseFloat(log.run_details?.thoi_gian_hoat_dong) || parseFloat(log.run_details?.thoi_gian_chay) || 0;
+        const status = log.run_details?.status || 'approved';
+        if (runtime > 15.0 && status === 'pending') {
+          const fuel = parseFloat(log.run_details?.nhien_lieu_tieu_hao) || 0;
+          const cost = parseFloat(log.run_details?.thanh_tien) || 0;
+          const anomId = `OVER_15H_APPROVAL_${log.gen_log_id || (site.site_id + '_' + log.date)}`;
+          anomalies.push({
+            id: anomId,
+            log_id: log.gen_log_id,
+            type: 'OVER_15H_RUN',
+            severity: 'high',
+            site_id: site.site_id,
+            date: log.date,
+            title: 'Chạy máy trên 15h cần phê duyệt',
+            desc: `Ghi nhận máy phát chạy ${runtime.toFixed(1)}h ngày ${log.date} (${fuel}L - ${cost.toLocaleString()}đ). Quy định chạy > 15h phải được phê duyệt khi có giải trình cúp điện sớm/đóng điện trễ hoặc sự cố hy hữu.`
+          });
+        }
+      });
+
     });
 
     // Sắp xếp các cảnh báo: Severity High lên trước, sau đó là ngày mới nhất
@@ -1562,12 +1583,13 @@ export default function Generator() {
       return dateB - dateA;
     });
 
-    // Lọc trùng theo site_id (chỉ giữ lại 1 dòng cảnh báo quan trọng/mới nhất cho mỗi trạm)
+    // Lọc trùng (chỉ giữ lại 1 dòng cảnh báo cho mỗi loại/trạm, riêng ca chạy >15h hiển thị theo từng ca log)
     const uniqueAnomalies = [];
-    const seenSites = new Set();
+    const seenKeys = new Set();
     for (const anom of sortedAnomalies) {
-      if (!seenSites.has(anom.site_id)) {
-        seenSites.add(anom.site_id);
+      const key = anom.type === 'OVER_15H_RUN' ? anom.id : `${anom.site_id}_${anom.type}`;
+      if (!seenKeys.has(key)) {
+        seenKeys.add(key);
         uniqueAnomalies.push(anom);
       }
     }
@@ -1597,7 +1619,7 @@ export default function Generator() {
         ghi_chu: logNotes.trim() || null,
         operator: logOperator.trim() || null,
         source: "manual",
-        status: "approved"
+        status: runtime > 15.0 ? "pending" : "approved"
       }
     };
 
@@ -2804,6 +2826,7 @@ export default function Generator() {
                                       {anom.type === 'CONSECUTIVE_REFILL' && (anom.title.includes('xăng') || anom.desc.includes('xăng') ? 'Đổ xăng không chạy' : 'Đổ dầu không chạy')}
                                       {anom.type === 'QUARTERLY_DISCREPANCY' && 'Lệch nhiên liệu quý'}
                                       {anom.type === 'INACTIVE_GEN' && 'Máy phát ngủ quên'}
+                                      {anom.type === 'OVER_15H_RUN' && 'Chạy > 15h cần duyệt'}
                                     </td>
                                     <td className="px-4 py-3 whitespace-nowrap font-bold text-slate-800">{anom.title}</td>
                                     <td className="px-4 py-3 max-w-sm truncate text-slate-500" title={anom.desc}>{anom.desc}</td>
