@@ -15,31 +15,31 @@ export const SRAN_25_CLUSTERS = [
   { order: 'Day_00', cluster: 'DNI_00_Pilot', db_cluster: 'DNI_00_Pilot', tvt: 'VT1', district: 'Long Thành', date: '18-Aug', total_3g4g: 3, del_3g4g: 3, ins_3g4g: 3, ci_3g4g: 3, swap_3g4g: 3, total_5g: 3, del_5g: 3, ins_5g: 3, ci_5g: 3, oa_5g: 3, phase: 'pilot', note: 'Thử nghiệm Pilot Long Thành' },
   { order: 'Day_01', cluster: 'DNI_01_LT', db_cluster: 'DNI_01_LT', tvt: 'VT1', district: 'Long Thành', date: '21-Aug', total_3g4g: 19, del_3g4g: 19, ins_3g4g: 19, ci_3g4g: 19, swap_3g4g: 19, total_5g: 8, del_5g: 8, ins_5g: 8, ci_5g: 7, oa_5g: 7, phase: 'pilot', note: 'Trọng điểm KCN Long Thành' },
   { order: 'Day_02', cluster: 'DNI_09_CM', db_cluster: 'DNI_09_CM', alt_db: 'DNI_02_CM', tvt: 'VT3', district: 'Cẩm Mỹ', date: '25-Aug', total_3g4g: 26, del_3g4g: 26, ins_3g4g: 26, ci_3g4g: 26, swap_3g4g: 26, total_5g: 17, del_5g: 17, ins_5g: 17, ci_5g: 16, oa_5g: 14, phase: 'pilot', note: 'Trạm Power & CRAN Cẩm Mỹ' },
-  { order: 'Day_03', cluster: 'DNI_02_TB', db_cluster: 'DNI_02_TB', alt_db: 'DNI_03_TB', tvt: 'VT2', district: 'Trảng Bom', date: '25-Aug', total_3g4g: 27, del_3g4g: 25, ins_3g4g: 25, ci_3g4g: 24, swap_3g4g: 23, total_5g: 17, del_5g: 15, ins_5g: 15, ci_5g: 15, oa_5g: 11, phase: 'pilot', note: 'Khu vực Trảng Bom' },
+  { order: 'Day_03', cluster: 'DNI_02_TB', db_cluster: 'DNI_02_TB', alt_db: 'DNI_03_TB', tvt: 'VT2', district: 'Trảng Bom', date: '25-Aug', total_3g4g: 27, del_3g4g: 25, ins_3g4g: 25, ci_3g4g: 24, swap_3g4g: 24, total_5g: 17, del_5g: 15, ins_5g: 15, ci_5g: 15, oa_5g: 11, phase: 'pilot', note: 'Khu vực Trảng Bom' },
   { order: 'Day_04', cluster: 'DNI_10_TN', db_cluster: 'DNI_10_TN', alt_db: 'DNI_04_TN', tvt: 'VT3', district: 'Thống Nhất', date: '27-Aug', total_3g4g: 25, del_3g4g: 24, ins_3g4g: 24, ci_3g4g: 24, swap_3g4g: 24, total_5g: 10, del_5g: 10, ins_5g: 10, ci_5g: 9, oa_5g: 10, phase: 'pilot', note: 'Khu vực Thống Nhất' },
   { order: 'Day_05', cluster: 'DNI_03_TB', db_cluster: 'DNI_03_TB', alt_db: 'DNI_07_TB', tvt: 'VT2', district: 'Trảng Bom', date: '27-Aug', total_3g4g: 27, del_3g4g: 26, ins_3g4g: 26, ci_3g4g: 24, swap_3g4g: 26, total_5g: 26, del_5g: 25, ins_5g: 25, ci_5g: 22, oa_5g: 20, phase: 'pilot', note: 'Khu vực Trảng Bom' },
   { order: 'Day_06', cluster: 'DNI_16_CM', db_cluster: 'DNI_16_CM', alt_db: 'DNI_06_CM', tvt: 'VT3', district: 'Cẩm Mỹ', date: '4-Sep', total_3g4g: 26, del_3g4g: 26, ins_3g4g: 26, ci_3g4g: 26, swap_3g4g: 26, total_5g: 6, del_5g: 6, ins_5g: 6, ci_5g: 5, oa_5g: 2, phase: 'pilot', note: 'Mở rộng Cẩm Mỹ' },
 
   // Giai đoạn 2: Thi công trọng điểm Tháng 9 (14 Cluster)
-  { order: 'Day_07', cluster: 'DNI_07_TB', db_cluster: 'DNI_07_TB', alt_db: 'DNI_05_TB', tvt: 'VT2', district: 'Trảng Bom', date: '9-Sep', total_3g4g: 27, del_3g4g: 25, ins_3g4g: 25, ci_3g4g: 25, swap_3g4g: 23, total_5g: 23, del_5g: 21, ins_5g: 21, ci_5g: 21, oa_5g: 6, phase: 'phase2' },
+  { order: 'Day_07', cluster: 'DNI_07_TB', db_cluster: 'DNI_07_TB', alt_db: 'DNI_05_TB', tvt: 'VT2', district: 'Trảng Bom', date: '9-Sep', total_3g4g: 27, del_3g4g: 26, ins_3g4g: 26, ci_3g4g: 26, swap_3g4g: 26, total_5g: 23, del_5g: 21, ins_5g: 21, ci_5g: 21, oa_5g: 6, phase: 'phase2' },
   { order: 'Day_08', cluster: 'DNI_15_XL', db_cluster: 'DNI_15_XL', alt_db: 'DNI_08_XL', tvt: 'VT3', district: 'Xuân Lộc', date: '11-Sep', total_3g4g: 25, del_3g4g: 25, ins_3g4g: 24, ci_3g4g: 24, swap_3g4g: 24, total_5g: 14, del_5g: 14, ins_5g: 13, ci_5g: 12, oa_5g: 4, phase: 'phase2' },
   { order: 'Day_09', cluster: 'DNI_17_XL', db_cluster: 'DNI_17_XL', alt_db: 'DNI_16_XL', tvt: 'VT3', district: 'Xuân Lộc', date: '11-Sep', total_3g4g: 26, del_3g4g: 25, ins_3g4g: 25, ci_3g4g: 25, swap_3g4g: 25, total_5g: 10, del_5g: 9, ins_5g: 9, ci_5g: 9, oa_5g: 3, phase: 'phase2' },
-  { order: 'Day_10', cluster: 'DNI_06_TB', db_cluster: 'DNI_06_TB', alt_db: 'DNI_09_TB', tvt: 'VT2', district: 'Trảng Bom', date: '15-Sep', total_3g4g: 27, del_3g4g: 25, ins_3g4g: 22, ci_3g4g: 21, swap_3g4g: 4, total_5g: 16, del_5g: 15, ins_5g: 13, ci_5g: 12, oa_5g: 2, phase: 'phase2' },
-  { order: 'Day_11', cluster: 'DNI_18_XL', db_cluster: 'DNI_18_XL', alt_db: 'DNI_17_XL', tvt: 'VT3', district: 'Xuân Lộc', date: '15-Sep', total_3g4g: 27, del_3g4g: 10, ins_3g4g: 5, ci_3g4g: 1, swap_3g4g: 0, total_5g: 21, del_5g: 7, ins_5g: 4, ci_5g: 1, oa_5g: 0, phase: 'phase2' },
-  { order: 'Day_12', cluster: 'DNI_19_XL', db_cluster: 'DNI_19_XL', alt_db: 'DNI_18_XL', tvt: 'VT3', district: 'Xuân Lộc', date: '18-Sep', total_3g4g: 26, del_3g4g: 10, ins_3g4g: 6, ci_3g4g: 0, swap_3g4g: 0, total_5g: 7, del_5g: 3, ins_5g: 0, ci_5g: 0, oa_5g: 0, phase: 'phase2' },
-  { order: 'Day_14', cluster: 'DNI_04_VC', db_cluster: 'DNI_04_VC', alt_db: 'DNI_11_VC', tvt: 'VT2', district: 'Vĩnh Cửu', date: '18-Sep', total_3g4g: 25, del_3g4g: 20, ins_3g4g: 12, ci_3g4g: 3, swap_3g4g: 0, total_5g: 6, del_5g: 5, ins_5g: 4, ci_5g: 1, oa_5g: 0, phase: 'phase2' },
-  { order: 'Day_13', cluster: 'DNI_13_LK', db_cluster: 'DNI_13_LK', alt_db: 'DNI_10_LK', tvt: 'VT3', district: 'Long Khánh', date: '22-Sep', total_3g4g: 25, del_3g4g: 22, ins_3g4g: 21, ci_3g4g: 9, swap_3g4g: 0, total_5g: 12, del_5g: 11, ins_5g: 11, ci_5g: 3, oa_5g: 0, phase: 'phase2' },
-  { order: 'Day_17', cluster: 'DNI_05_VC', db_cluster: 'DNI_05_VC', alt_db: 'DNI_13_VC', tvt: 'VT2', district: 'Vĩnh Cửu', date: '22-Sep', total_3g4g: 26, del_3g4g: 11, ins_3g4g: 8, ci_3g4g: 6, swap_3g4g: 0, total_5g: 20, del_5g: 10, ins_5g: 9, ci_5g: 7, oa_5g: 0, phase: 'phase2' },
-  { order: 'Day_15', cluster: 'DNI_14_LK', db_cluster: 'DNI_14_LK', tvt: 'VT3', district: 'Long Khánh', date: '25-Sep', total_3g4g: 26, del_3g4g: 20, ins_3g4g: 10, ci_3g4g: 4, swap_3g4g: 0, total_5g: 9, del_5g: 6, ins_5g: 5, ci_5g: 2, oa_5g: 0, phase: 'phase2' },
-  { order: 'Day_16', cluster: 'DNI_12_TN', db_cluster: 'DNI_12_TN', tvt: 'VT3', district: 'Thống Nhất', date: '25-Sep', total_3g4g: 26, del_3g4g: 17, ins_3g4g: 12, ci_3g4g: 5, swap_3g4g: 0, total_5g: 21, del_5g: 14, ins_5g: 10, ci_5g: 4, oa_5g: 0, phase: 'phase2' },
-  { order: 'Day_19', cluster: 'DNI_11_VC', db_cluster: 'DNI_11_VC', alt_db: 'DNI_15_VC', tvt: 'VT2', district: 'Vĩnh Cửu', date: '25-Sep', total_3g4g: 26, del_3g4g: 12, ins_3g4g: 3, ci_3g4g: 1, swap_3g4g: 0, total_5g: 14, del_5g: 6, ins_5g: 1, ci_5g: 0, oa_5g: 0, phase: 'phase2' },
-  { order: 'Day_18', cluster: 'DNI_20_DQ', db_cluster: 'DNI_20_DQ', alt_db: 'DNI_19_DQ', tvt: 'VT3', district: 'Định Quán', date: '29-Sep', total_3g4g: 26, del_3g4g: 14, ins_3g4g: 2, ci_3g4g: 1, swap_3g4g: 0, total_5g: 4, del_5g: 2, ins_5g: 1, ci_5g: 1, oa_5g: 0, phase: 'phase2' },
-  { order: 'Day_20', cluster: 'DNI_21_DQ', db_cluster: 'DNI_21_DQ', alt_db: 'DNI_20_DQ', tvt: 'VT3', district: 'Định Quán', date: '29-Sep', total_3g4g: 25, del_3g4g: 11, ins_3g4g: 0, ci_3g4g: 0, swap_3g4g: 0, total_5g: 4, del_5g: 2, ins_5g: 0, ci_5g: 0, oa_5g: 0, phase: 'phase2' },
+  { order: 'Day_10', cluster: 'DNI_06_TB', db_cluster: 'DNI_06_TB', alt_db: 'DNI_09_TB', tvt: 'VT2', district: 'Trảng Bom', date: '15-Sep', total_3g4g: 27, del_3g4g: 27, ins_3g4g: 26, ci_3g4g: 25, swap_3g4g: 25, total_5g: 16, del_5g: 15, ins_5g: 13, ci_5g: 12, oa_5g: 2, phase: 'phase2' },
+  { order: 'Day_11', cluster: 'DNI_18_XL', db_cluster: 'DNI_18_XL', alt_db: 'DNI_17_XL', tvt: 'VT3', district: 'Xuân Lộc', date: '15-Sep', total_3g4g: 25, del_3g4g: 24, ins_3g4g: 24, ci_3g4g: 24, swap_3g4g: 24, total_5g: 21, del_5g: 7, ins_5g: 4, ci_5g: 1, oa_5g: 0, phase: 'phase2' },
+  { order: 'Day_12', cluster: 'DNI_19_XL', db_cluster: 'DNI_19_XL', alt_db: 'DNI_18_XL', tvt: 'VT3', district: 'Xuân Lộc', date: '18-Sep', total_3g4g: 25, del_3g4g: 24, ins_3g4g: 24, ci_3g4g: 24, swap_3g4g: 24, total_5g: 7, del_5g: 3, ins_5g: 0, ci_5g: 0, oa_5g: 0, phase: 'phase2' },
+  { order: 'Day_14', cluster: 'DNI_04_VC', db_cluster: 'DNI_04_VC', alt_db: 'DNI_11_VC', tvt: 'VT2', district: 'Vĩnh Cửu', date: '18-Sep', total_3g4g: 26, del_3g4g: 26, ins_3g4g: 26, ci_3g4g: 26, swap_3g4g: 25, total_5g: 6, del_5g: 5, ins_5g: 4, ci_5g: 1, oa_5g: 0, phase: 'phase2' },
+  { order: 'Day_13', cluster: 'DNI_13_LK', db_cluster: 'DNI_13_LK', alt_db: 'DNI_10_LK', tvt: 'VT3', district: 'Long Khánh', date: '22-Sep', total_3g4g: 26, del_3g4g: 24, ins_3g4g: 19, ci_3g4g: 21, swap_3g4g: 0, total_5g: 12, del_5g: 11, ins_5g: 11, ci_5g: 3, oa_5g: 0, phase: 'phase2' },
+  { order: 'Day_17', cluster: 'DNI_05_VC', db_cluster: 'DNI_05_VC', alt_db: 'DNI_13_VC', tvt: 'VT2', district: 'Vĩnh Cửu', date: '22-Sep', total_3g4g: 27, del_3g4g: 27, ins_3g4g: 25, ci_3g4g: 22, swap_3g4g: 0, total_5g: 20, del_5g: 10, ins_5g: 9, ci_5g: 7, oa_5g: 0, phase: 'phase2' },
+  { order: 'Day_15', cluster: 'DNI_14_LK', db_cluster: 'DNI_14_LK', tvt: 'VT3', district: 'Long Khánh', date: '25-Sep', total_3g4g: 26, del_3g4g: 26, ins_3g4g: 18, ci_3g4g: 20, swap_3g4g: 0, total_5g: 9, del_5g: 6, ins_5g: 5, ci_5g: 2, oa_5g: 0, phase: 'phase2' },
+  { order: 'Day_16', cluster: 'DNI_12_TN', db_cluster: 'DNI_12_TN', tvt: 'VT3', district: 'Thống Nhất', date: '25-Sep', total_3g4g: 26, del_3g4g: 23, ins_3g4g: 12, ci_3g4g: 1, swap_3g4g: 0, total_5g: 21, del_5g: 14, ins_5g: 10, ci_5g: 4, oa_5g: 0, phase: 'phase2' },
+  { order: 'Day_19', cluster: 'DNI_11_VC', db_cluster: 'DNI_11_VC', alt_db: 'DNI_15_VC', tvt: 'VT2', district: 'Vĩnh Cửu', date: '25-Sep', total_3g4g: 26, del_3g4g: 24, ins_3g4g: 8, ci_3g4g: 3, swap_3g4g: 0, total_5g: 14, del_5g: 6, ins_5g: 1, ci_5g: 0, oa_5g: 0, phase: 'phase2' },
+  { order: 'Day_18', cluster: 'DNI_20_DQ', db_cluster: 'DNI_20_DQ', alt_db: 'DNI_19_DQ', tvt: 'VT3', district: 'Định Quán', date: '29-Sep', total_3g4g: 26, del_3g4g: 23, ins_3g4g: 16, ci_3g4g: 4, swap_3g4g: 1, total_5g: 4, del_5g: 2, ins_5g: 1, ci_5g: 1, oa_5g: 0, phase: 'phase2' },
+  { order: 'Day_20', cluster: 'DNI_21_DQ', db_cluster: 'DNI_21_DQ', alt_db: 'DNI_20_DQ', tvt: 'VT3', district: 'Định Quán', date: '29-Sep', total_3g4g: 25, del_3g4g: 21, ins_3g4g: 7, ci_3g4g: 0, swap_3g4g: 0, total_5g: 4, del_5g: 2, ins_5g: 0, ci_5g: 0, oa_5g: 0, phase: 'phase2' },
 
   // Giai đoạn 3: Nước rút về đích Tháng 10 (3 Cluster)
-  { order: 'Day_21', cluster: 'DNI_22_DQ', db_cluster: 'DNI_22_DQ', alt_db: 'DNI_21_DQ', tvt: 'VT3', district: 'Định Quán', date: '2-Oct', total_3g4g: 25, del_3g4g: 10, ins_3g4g: 0, ci_3g4g: 0, swap_3g4g: 0, total_5g: 6, del_5g: 1, ins_5g: 0, ci_5g: 0, oa_5g: 0, phase: 'phase3' },
-  { order: 'Day_22', cluster: 'DNI_23_TP', db_cluster: 'DNI_23_TP', alt_db: 'DNI_22_TP', tvt: 'VT3', district: 'Tân Phú', date: '6-Oct', total_3g4g: 26, del_3g4g: 13, ins_3g4g: 0, ci_3g4g: 0, swap_3g4g: 0, total_5g: 13, del_5g: 5, ins_5g: 0, ci_5g: 0, oa_5g: 0, phase: 'phase3' },
-  { order: 'Day_23', cluster: 'DNI_24_TP', db_cluster: 'DNI_24_TP', alt_db: 'DNI_23_TP', tvt: 'VT3', district: 'Tân Phú', date: '6-Oct', total_3g4g: 25, del_3g4g: 12, ins_3g4g: 0, ci_3g4g: 0, swap_3g4g: 0, total_5g: 1, del_5g: 1, ins_5g: 0, ci_5g: 0, oa_5g: 0, phase: 'phase3' }
+  { order: 'Day_21', cluster: 'DNI_22_DQ', db_cluster: 'DNI_22_DQ', alt_db: 'DNI_21_DQ', tvt: 'VT3', district: 'Định Quán', date: '2-Oct', total_3g4g: 25, del_3g4g: 22, ins_3g4g: 3, ci_3g4g: 1, swap_3g4g: 0, total_5g: 6, del_5g: 1, ins_5g: 0, ci_5g: 0, oa_5g: 0, phase: 'phase3' },
+  { order: 'Day_22', cluster: 'DNI_23_TP', db_cluster: 'DNI_23_TP', alt_db: 'DNI_22_TP', tvt: 'VT3', district: 'Tân Phú', date: '6-Oct', total_3g4g: 26, del_3g4g: 24, ins_3g4g: 1, ci_3g4g: 1, swap_3g4g: 0, total_5g: 13, del_5g: 5, ins_5g: 0, ci_5g: 0, oa_5g: 0, phase: 'phase3' },
+  { order: 'Day_23', cluster: 'DNI_24_TP', db_cluster: 'DNI_24_TP', alt_db: 'DNI_23_TP', tvt: 'VT3', district: 'Tân Phú', date: '6-Oct', total_3g4g: 25, del_3g4g: 22, ins_3g4g: 0, ci_3g4g: 0, swap_3g4g: 0, total_5g: 1, del_5g: 1, ins_5g: 0, ci_5g: 0, oa_5g: 0, phase: 'phase3' }
 ];
 
 export const AUGUST_2026_CLUSTERS = SRAN_25_CLUSTERS.filter(c => c.phase === 'pilot');
@@ -68,7 +68,7 @@ export const MONTHLY_PLANS_CONFIG = {
     themeColor: 'emerald',
     gradient: 'from-emerald-600 to-teal-800',
     clusters: SRAN_25_CLUSTERS.filter(c => c.phase === 'pilot'),
-    desc: '8 Cluster (Day_00 ➔ Day_06 + 5G_Only) • 176 trạm 4G • 106 trạm 5G'
+    desc: '8 Cluster (Day_00 ➔ Day_06 + 5G_Only) • 153 trạm 4G • 106 trạm 5G'
   },
   phase2: {
     id: 'phase2',
@@ -101,7 +101,7 @@ export const MONTHLY_PLANS_CONFIG = {
     themeColor: 'emerald',
     gradient: 'from-emerald-600 to-teal-800',
     clusters: SRAN_25_CLUSTERS.filter(c => c.phase === 'pilot'),
-    desc: '8 Cluster khởi động (176 trạm 4G • 106 trạm 5G)'
+    desc: '8 Cluster khởi động (153 trạm 4G • 106 trạm 5G)'
   },
   sep: {
     id: 'sep',

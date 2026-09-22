@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
+import { SRAN_25_CLUSTERS } from './Sran5gProject';
 import { 
   MapPin, Search, Server, Compass, AlertCircle, Radio, 
   Layers, Copy, Check, Maximize2, Minimize2,
@@ -197,17 +198,38 @@ const getSiteSranCategory = (site, sranMap) => {
 
   const cname = (sran.raw_data?.Cluster_Name || '').toUpperCase();
   const cnew = (sran.raw_data?.Cluster_New || '').toUpperCase();
+  const order = (sran.raw_data?.Order_Sep || sran.raw_data?.Swap_Order || '').toUpperCase();
   
-  // 5 Cụm đã hoàn tất Swap ERA chính xác (Cẩm Mỹ Day_02, Thống Nhất Day_04, Cẩm Mỹ Day_06, Xuân Lộc 15, Xuân Lộc 17)
-  // Các cụm Long Khánh (DNLK47, DNLK18...), Định Quán, Tân Phú chưa swap
-  const isSwappedCluster = (
-    cname === 'DNI_02_CM' || cnew === 'DNI_02_CM' || cname === 'DNI_09_CM' || cnew === 'DNI_09_CM' ||
-    cname === 'DNI_04_TN' || cnew === 'DNI_04_TN' || cname === 'DNI_10_TN' || cnew === 'DNI_10_TN' ||
-    cname === 'DNI_06_CM' || cnew === 'DNI_16_CM' || cname === 'DNI_16_CM' ||
-    cnew === 'DNI_15_XL' || cname === 'DNI_08_XL' ||
-    cnew === 'DNI_17_XL' || cname === 'DNI_16_XL' ||
-    cname === 'DNI_01_LT' || cname === 'DNI_00_PILOT'
-  );
+  // Tìm cấu hình cluster trong danh mục 25 Cluster SRAN
+  const clusterCfg = SRAN_25_CLUSTERS.find(c => {
+    if (order && c.order && order === c.order.toUpperCase()) return true;
+    if (cnew && (c.cluster?.toUpperCase() === cnew || c.db_cluster?.toUpperCase() === cnew)) return true;
+    if (cname && (c.cluster?.toUpperCase() === cname || c.db_cluster?.toUpperCase() === cname || (c.alt_db && c.alt_db?.toUpperCase() === cname))) return true;
+    return false;
+  });
+
+  // 14 Cụm đã hoàn tất Swap ERA: Cụm có tỷ lệ swap >= 80% trong cấu hình tiến độ SRAN_25_CLUSTERS
+  const isSwappedCluster = clusterCfg 
+    ? (clusterCfg.swap_3g4g > 0 && (clusterCfg.swap_3g4g / (clusterCfg.total_3g4g || 1)) >= 0.8) 
+    : (
+      cname === 'DNI_00_PILOT' || cnew === 'DNI_00_PILOT' ||
+      cname === 'DNI_01_LT' || cnew === 'DNI_01_LT' ||
+      cname === 'DNI_02_CM' || cnew === 'DNI_02_CM' || cname === 'DNI_09_CM' || cnew === 'DNI_09_CM' ||
+      cname === 'DNI_02_TB' || cnew === 'DNI_02_TB' || cname === 'DNI_03_TB' || cnew === 'DNI_03_TB' ||
+      cname === 'DNI_04_TN' || cnew === 'DNI_04_TN' || cname === 'DNI_10_TN' || cnew === 'DNI_10_TN' ||
+      cname === 'DNI_07_TB' || cnew === 'DNI_07_TB' ||
+      cname === 'DNI_06_CM' || cnew === 'DNI_16_CM' || cname === 'DNI_16_CM' ||
+      cname === 'DNI_05_TB' ||
+      cnew === 'DNI_15_XL' || cname === 'DNI_08_XL' ||
+      cnew === 'DNI_17_XL' || cname === 'DNI_16_XL' ||
+      cnew === 'DNI_06_TB' || cname === 'DNI_09_TB' ||
+      cnew === 'DNI_18_XL' || cname === 'DNI_17_XL' ||
+      cnew === 'DNI_19_XL' || cname === 'DNI_18_XL' ||
+      cnew === 'DNI_04_VC' || cname === 'DNI_11_VC'
+    );
+
+  // Trạm đã swap: Nằm trong Cụm đã swap hoặc trạm đã có ngày tích hợp (integration_date)
+  const isSiteSwapped = isSwappedCluster || !!sran.integration_date;
 
   const hasOnair = !!sran.onair_date;
 
@@ -225,12 +247,12 @@ const getSiteSranCategory = (site, sranMap) => {
     onair_date: sran.onair_date,
     integration_date: sran.integration_date,
     install_date: sran.install_date,
-    cluster_name: sran.raw_data?.Cluster_New || sran.raw_data?.Cluster_Name || sran.district || 'Cụm SRAN',
-    in_swapped_cluster: isSwappedCluster
+    cluster_name: clusterCfg?.cluster || sran.raw_data?.Cluster_New || sran.raw_data?.Cluster_Name || sran.district || 'Cụm SRAN',
+    in_swapped_cluster: isSiteSwapped
   };
 
-  // 1. Trạm phát sóng 5G: Đã có ngày Onair hoặc nằm trong 5 Cụm đã Swap có cấu hình 5G
-  if (hasOnair || (isSwappedCluster && is5g)) {
+  // 1. Trạm phát sóng 5G: Đã có ngày Onair hoặc nằm trong Cụm đã Swap có cấu hình 5G
+  if (hasOnair || (isSiteSwapped && is5g)) {
     return {
       key: 'onair_5g',
       label: '5G Đang phát sóng',
@@ -247,8 +269,8 @@ const getSiteSranCategory = (site, sranMap) => {
     };
   }
 
-  // 2. Trạm đã swap sang 4G ERA: Nằm trong 5 Cụm đã swap
-  if (isSwappedCluster) {
+  // 2. Trạm đã swap sang 4G ERA: Nằm trong Cụm đã swap hoặc trạm đã hoàn tất Swap ERA
+  if (isSiteSwapped) {
     return {
       key: 'swapped_4g_era',
       label: '4G ERA Đã Swap',
