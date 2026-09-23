@@ -71,8 +71,8 @@ export function exportB4RepairProposal({ items = [], datasites = [], targetCateg
   // Build lookup dictionary from datasites array
   const siteMap = {};
   datasites.forEach(s => {
-    const sId = (s.site_id || '').toUpperCase().strip ? (s.site_id || '').toUpperCase().strip() : (s.site_id || '').toUpperCase().trim();
-    const sOld = (s.site_id_old || '').toUpperCase().trim();
+    const sId = String(s.site_id || '').trim().toUpperCase();
+    const sOld = String(s.site_id_old || '').trim().toUpperCase();
     if (sId) siteMap[sId] = s;
     if (sOld) siteMap[sOld] = s;
   });
@@ -109,7 +109,7 @@ export function exportB4RepairProposal({ items = [], datasites = [], targetCateg
   const rows = [headerRow1, headerRow2];
 
   items.forEach((item, idx) => {
-    const rawSiteId = (item.site_id || item.site_code || item.tram || '').toUpperCase().trim();
+    const rawSiteId = String(item.site_id || item.site_code || item.tram || '').trim().toUpperCase();
     
     // Check if station has special ERP book transfer mapping
     const erpMap = STATION_ERP_MAPPINGS[rawSiteId];

@@ -22,8 +22,8 @@ export default function VhktRan() {
       if (data) {
         const mapping = {};
         data.forEach(s => {
-          const newId = (s.site_id || '').trim().toUpperCase();
-          const oldId = (s.site_id_old || '').trim().toUpperCase();
+          const newId = String(s.site_id || '').trim().toUpperCase();
+          const oldId = String(s.site_id_old || '').trim().toUpperCase();
           if (newId && oldId) {
             mapping[newId] = oldId;
             mapping[oldId] = newId;
@@ -205,7 +205,7 @@ export default function VhktRan() {
   // Cross-check: check if MĐ site has active MPĐ running (matching both full site, base site, and old ID)
   const activeMpdSites = new Set();
   mpdActive.filter(a => a.status === 'ACTIVE').forEach(a => {
-    const raw = (a.site || '').trim().toUpperCase();
+    const raw = String(a.site || '').trim().toUpperCase();
     if (raw) {
       const { fullSite, baseSite, oldId } = getSiteDetails(raw);
       if (fullSite) activeMpdSites.add(fullSite);
@@ -221,7 +221,7 @@ export default function VhktRan() {
   };
 
   // Card counts (active only)
-  const mdCount = new Set(mdActive.filter(a => a.status === 'ACTIVE').map(a => (a.site || '').trim().toUpperCase()).filter(Boolean)).size;
+  const mdCount = new Set(mdActive.filter(a => a.status === 'ACTIVE').map(a => String(a.site || '').trim().toUpperCase()).filter(Boolean)).size;
   const mpdCount = mpdActive.filter(a => a.status === 'ACTIVE').length;
   const mllCount = mllActive.filter(a => a.status === 'ACTIVE').length;
   const cellCount = cellActive.filter(a => a.status === 'ACTIVE').length;
@@ -275,7 +275,7 @@ export default function VhktRan() {
     // Search query
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toUpperCase();
-      const matchSite = fullSite.includes(q) || (baseSite && baseSite.includes(q)) || (oldId && oldId.toUpperCase().includes(q));
+      const matchSite = fullSite.includes(q) || (baseSite && baseSite.includes(q)) || (oldId && String(oldId).toUpperCase().includes(q));
       if (matchSite) return true;
       const matchExtra = extraSearchFields.some(field => String(field || '').toUpperCase().includes(q));
       if (!matchExtra) return false;

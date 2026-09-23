@@ -196,8 +196,8 @@ export default function Generator() {
   // Helper mapping: Site_ID -> Site_ID (Site_ID_Old)
   const getSiteLabel = (siteId) => {
     if (!siteId) return 'N/A';
-    const sId = siteId.trim().toUpperCase();
-    const st = stations.find(s => s.site_id === sId || (s.site_id_old && s.site_id_old.trim().toUpperCase() === sId));
+    const sId = String(siteId).trim().toUpperCase();
+    const st = stations.find(s => s.site_id === sId || (s.site_id_old && String(s.site_id_old).trim().toUpperCase() === sId));
     if (st) {
       return st.site_id_old ? `${st.site_id} (${st.site_id_old})` : st.site_id;
     }
@@ -207,8 +207,8 @@ export default function Generator() {
   // Helper lấy thông tin trạm
   const getSiteName = (siteId) => {
     if (!siteId) return '';
-    const sId = siteId.trim().toUpperCase();
-    const st = stations.find(s => s.site_id === sId || (s.site_id_old && s.site_id_old.trim().toUpperCase() === sId));
+    const sId = String(siteId).trim().toUpperCase();
+    const st = stations.find(s => s.site_id === sId || (s.site_id_old && String(s.site_id_old).trim().toUpperCase() === sId));
     return st ? st.name : '';
   };
 
@@ -250,8 +250,8 @@ export default function Generator() {
   // Tính định mức từ cấu hình trạm (có xét ngày điều chuyển thực tế)
   const getStationSpecs = (siteId, logDate) => {
     if (!siteId) return null;
-    const sId = siteId.trim().toUpperCase();
-    const st = stations.find(s => s.site_id === sId || (s.site_id_old && s.site_id_old.trim().toUpperCase() === sId));
+    const sId = String(siteId).trim().toUpperCase();
+    const st = stations.find(s => s.site_id === sId || (s.site_id_old && String(s.site_id_old).trim().toUpperCase() === sId));
     if (st && st.infrastructure_info?.may_phat_dien?.mpd) {
       const mpds = st.infrastructure_info.may_phat_dien.mpd;
       if (mpds.length > 0) {
@@ -385,7 +385,7 @@ export default function Generator() {
       const runtime = parseFloat(log.run_details?.thoi_gian_hoat_dong) || 0;
       const fuel = parseFloat(log.run_details?.nhien_lieu_tieu_hao) || 0;
       const thanhTien = parseFloat(log.run_details?.thanh_tien) || 0;
-      const fuelTypeUpper = (log.run_details?.nhien_lieu_loai || log.run_details?.nhien_lieu || 'Dầu').toUpperCase();
+      const fuelTypeUpper = String(log.run_details?.nhien_lieu_loai || log.run_details?.nhien_lieu || 'Dầu').toUpperCase();
       const status = log.run_details?.status || 'approved';
       const isXang = fuelTypeUpper.includes('XĂNG') || fuelTypeUpper.includes('XANG');
       const vat = (log.date && log.date >= '2026-03-26') ? 0 : Math.round(thanhTien * 0.08);
@@ -441,8 +441,8 @@ export default function Generator() {
     let result = invoices;
     if (isFromAug2026 && selectedGroupFilter !== 'all') {
       result = result.filter(inv => {
-        const mst = (inv.buyer_mst || '').trim();
-        const bname = (inv.buyer_name || '').toUpperCase();
+        const mst = String(inv.buyer_mst || '').trim();
+        const bname = String(inv.buyer_name || '').toUpperCase();
         const isG1 = mst.includes('0100686209-129') || bname.includes('ĐỒNG NAI') || bname.includes('DONG NAI');
         return selectedGroupFilter === 'group1' ? isG1 : !isG1;
       });
@@ -450,8 +450,8 @@ export default function Generator() {
 
     if (invoiceBuyerFilter !== 'all') {
       result = result.filter(inv => {
-        const mst = (inv.buyer_mst || '').trim();
-        const bname = (inv.buyer_name || '').toUpperCase();
+        const mst = String(inv.buyer_mst || '').trim();
+        const bname = String(inv.buyer_name || '').toUpperCase();
         const isG1 = mst.includes('0100686209-129') || bname.includes('ĐỒNG NAI') || bname.includes('DONG NAI');
         return invoiceBuyerFilter === 'dong_nai' ? isG1 : !isG1;
       });
@@ -460,11 +460,11 @@ export default function Generator() {
     if (!searchQuery.trim()) return result;
     const q = searchQuery.toLowerCase();
     return result.filter(inv => 
-      (inv.invoice_number || '').toLowerCase().includes(q) ||
-      (inv.seller_name || '').toLowerCase().includes(q) ||
-      (inv.seller_mst || '').toLowerCase().includes(q) ||
-      (inv.buyer_name || '').toLowerCase().includes(q) ||
-      (inv.buyer_mst || '').toLowerCase().includes(q)
+      String(inv.invoice_number || '').toLowerCase().includes(q) ||
+      String(inv.seller_name || '').toLowerCase().includes(q) ||
+      String(inv.seller_mst || '').toLowerCase().includes(q) ||
+      String(inv.buyer_name || '').toLowerCase().includes(q) ||
+      String(inv.buyer_mst || '').toLowerCase().includes(q)
     );
   }, [invoices, searchQuery, isFromAug2026, selectedGroupFilter, invoiceBuyerFilter]);
 
@@ -498,15 +498,15 @@ export default function Generator() {
       }
 
       // Resolve Seller & Buyer for tax non-cash payment threshold check
-      let rawSeller = (inv.seller_name || 'Cây xăng chưa rõ').trim();
+      let rawSeller = String(inv.seller_name || 'Cây xăng chưa rõ').trim();
       let sellerName = rawSeller;
       const sUp = rawSeller.toUpperCase();
       if (sUp.includes('NAM TRUNG PHONG')) sellerName = 'CTY TNHH MTV TM XĂNG DẦU NAM TRUNG PHONG';
       else if (sUp.includes('TÍN NGHĨA')) sellerName = 'CÔNG TY CP XĂNG DẦU TÍN NGHĨA';
       else if (sUp.includes('THÀNH MINH PHÁT')) sellerName = 'CTY TNHH TM & DV THÀNH MINH PHÁT';
 
-      const bMst = (inv.buyer_mst || '').trim();
-      const bName = (inv.buyer_name || '').toUpperCase();
+      const bMst = String(inv.buyer_mst || '').trim();
+      const bName = String(inv.buyer_name || '').toUpperCase();
       let buyerName = 'MobiFone Toàn Cầu';
       if (bMst.includes('0100686209-129') || bName.includes('ĐỒNG NAI')) {
         buyerName = 'MobiFone Đồng Nai';
@@ -637,7 +637,7 @@ export default function Generator() {
 
       const runtime = parseFloat(log.run_details?.thoi_gian_hoat_dong) || 0;
       const fuel = parseFloat(log.run_details?.nhien_lieu_tieu_hao) || 0;
-      const fuelTypeUpper = (log.run_details?.nhien_lieu_loai || log.run_details?.nhien_lieu || 'DẦU').toUpperCase();
+      const fuelTypeUpper = String(log.run_details?.nhien_lieu_loai || log.run_details?.nhien_lieu || 'DẦU').toUpperCase();
       const isXang = fuelTypeUpper.includes('XĂNG') || fuelTypeUpper.includes('XANG');
 
       if (isG1) {
@@ -659,8 +659,8 @@ export default function Generator() {
     let g2_inv_dau_amount = 0, g2_inv_xang_amount = 0;
 
     invoices.forEach(inv => {
-      const mst = (inv.buyer_mst || inv.buyer_tax_code || '').trim();
-      const bname = (inv.buyer_name || inv.buyer_legal_name || '').toUpperCase();
+      const mst = String(inv.buyer_mst || inv.buyer_tax_code || '').trim();
+      const bname = String(inv.buyer_name || inv.buyer_legal_name || '').toUpperCase();
       const isG1 = mst.includes('0100686209-129') || bname.includes('ĐỒNG NAI') || bname.includes('DONG NAI') || bname.includes('KHU VỰC 8');
       const total = parseFloat(inv.total_amount_with_vat || inv.total_amount) || 0;
 
@@ -823,16 +823,16 @@ export default function Generator() {
     
     if (targetGroup === 'group1' || (!targetGroup && selectedGroupFilter === 'group1')) {
       targetInvs = invoices.filter(inv => {
-        const mst = (inv.buyer_mst || inv.buyer_tax_code || '').trim();
-        const bname = (inv.buyer_name || inv.buyer_legal_name || '').toUpperCase();
+        const mst = String(inv.buyer_mst || inv.buyer_tax_code || '').trim();
+        const bname = String(inv.buyer_name || inv.buyer_legal_name || '').toUpperCase();
         return mst.includes('0100686209-129') || bname.includes('ĐỒNG NAI') || bname.includes('DONG NAI') || bname.includes('KHU VỰC 8');
       });
       groupName = 'Nhom_1_MobiFone_Dong_Nai';
       groupTitle = 'Nhóm 1: MobiFone Đồng Nai (67 Trạm)';
     } else if (targetGroup === 'group2' || (!targetGroup && selectedGroupFilter === 'group2')) {
       targetInvs = invoices.filter(inv => {
-        const mst = (inv.buyer_mst || inv.buyer_tax_code || '').trim();
-        const bname = (inv.buyer_name || inv.buyer_legal_name || '').toUpperCase();
+        const mst = String(inv.buyer_mst || inv.buyer_tax_code || '').trim();
+        const bname = String(inv.buyer_name || inv.buyer_legal_name || '').toUpperCase();
         return !(mst.includes('0100686209-129') || bname.includes('ĐỒNG NAI') || bname.includes('DONG NAI') || bname.includes('KHU VỰC 8'));
       });
       groupName = 'Nhom_2_MobiFone_Toan_Cau';
@@ -1313,17 +1313,17 @@ export default function Generator() {
     const canonicalMap = {};
     stations.forEach(s => {
       if (s.site_id) {
-        const canonical = s.site_id.toUpperCase();
+        const canonical = String(s.site_id).toUpperCase();
         canonicalMap[canonical] = canonical;
         if (s.site_id_old) {
-          canonicalMap[s.site_id_old.toUpperCase()] = canonical;
+          canonicalMap[String(s.site_id_old).toUpperCase()] = canonical;
         }
       }
     });
 
     const getCanonicalId = (id) => {
       if (!id) return '';
-      const upper = id.toUpperCase();
+      const upper = String(id).toUpperCase();
       return canonicalMap[upper] || upper;
     };
 
@@ -1358,7 +1358,7 @@ export default function Generator() {
 
     // Duyệt qua từng trạm ở V2
     stations.forEach(site => {
-      const siteId = site.site_id.toUpperCase();
+      const siteId = String(site.site_id || '').toUpperCase();
       const specs = getStationSpecs(siteId);
       
       const siteLogs = logsBySite[siteId] || [];
@@ -2934,8 +2934,8 @@ export default function Generator() {
                       <tbody className="bg-white divide-y divide-gray-100 text-[13px] text-gray-700">
                         {filteredInvoices.map((inv) => {
                           const { xang, dau } = getInvoiceFuelQty(inv);
-                          const bMst = (inv.buyer_mst || '').trim();
-                          const bName = (inv.buyer_name || '').toUpperCase();
+                          const bMst = String(inv.buyer_mst || '').trim();
+                          const bName = String(inv.buyer_name || '').toUpperCase();
                           const isG1 = bMst.includes('0100686209-129') || bName.includes('ĐỒNG NAI') || bName.includes('DONG NAI');
                           
                           return (

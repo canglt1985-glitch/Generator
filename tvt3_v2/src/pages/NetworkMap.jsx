@@ -191,8 +191,8 @@ const getSiteSranCategory = (site, sranMap) => {
     };
   }
 
-  const scope5gUpper = (sran.scope_5g || sran.raw_data?.['5G_Scope'] || sran.raw_data?.['5G Scope'] || '').toUpperCase();
-  const config5gUpper = (sran.config_5g || sran.raw_data?.['5G_Config'] || sran.raw_data?.['5G Config'] || '').toUpperCase();
+  const scope5gUpper = String(sran.scope_5g || sran.raw_data?.['5G_Scope'] || sran.raw_data?.['5G Scope'] || '').toUpperCase();
+  const config5gUpper = String(sran.config_5g || sran.raw_data?.['5G_Config'] || sran.raw_data?.['5G Config'] || '').toUpperCase();
   const isDual5g = Boolean(
     sran.raw_data?.Is_5G_Dual_Layer === true ||
     sran.raw_data?.['5G_Layers'] === 2 ||
@@ -203,17 +203,17 @@ const getSiteSranCategory = (site, sranMap) => {
   const is5g = isDual5g ||
                (scope5gUpper && !scope5gUpper.includes('NONE') && scope5gUpper !== '-' && (scope5gUpper.includes('NR') || scope5gUpper.includes('5G') || scope5gUpper.includes('26') || scope5gUpper.includes('38'))) ||
                (config5gUpper && config5gUpper.includes('5G')) ||
-               (sran.unique_id && sran.unique_id.toUpperCase().includes('5G'));
+               (sran.unique_id && String(sran.unique_id).toUpperCase().includes('5G'));
 
-  const cname = (sran.raw_data?.Cluster_Name || '').toUpperCase();
-  const cnew = (sran.raw_data?.Cluster_New || '').toUpperCase();
-  const order = (sran.raw_data?.Order_Sep || sran.raw_data?.Swap_Order || '').toUpperCase();
+  const cname = String(sran.raw_data?.Cluster_Name || '').toUpperCase();
+  const cnew = String(sran.raw_data?.Cluster_New || '').toUpperCase();
+  const order = String(sran.raw_data?.Order_Sep || sran.raw_data?.Swap_Order || '').toUpperCase();
   
   // Tìm cấu hình cluster trong danh mục 25 Cluster SRAN (không dùng alt_db để tránh nhập nhằng cụm)
   const clusterCfg = SRAN_25_CLUSTERS.find(c => {
-    if (order && c.order && order === c.order.toUpperCase()) return true;
-    if (cnew && (c.cluster?.toUpperCase() === cnew || c.db_cluster?.toUpperCase() === cnew)) return true;
-    if (cname && (c.cluster?.toUpperCase() === cname || c.db_cluster?.toUpperCase() === cname)) return true;
+    if (order && c.order && order === String(c.order || '').toUpperCase()) return true;
+    if (cnew && (String(c.cluster || '').toUpperCase() === cnew || String(c.db_cluster || '').toUpperCase() === cnew)) return true;
+    if (cname && (String(c.cluster || '').toUpperCase() === cname || String(c.db_cluster || '').toUpperCase() === cname)) return true;
     return false;
   });
 
@@ -227,8 +227,8 @@ const getSiteSranCategory = (site, sranMap) => {
   const swapDate = rawSwapDate ? String(rawSwapDate).substring(0, 10) : null;
   const hasSwap3g4g = Boolean(rawSwapDate);
 
-  const rawCfg = (sran.config_3g4g || sran.raw_data?.['3G4G Config'] || '').toUpperCase();
-  const rawSol = (sran.raw_data?.['Swap Solution'] || sran.raw_data?.['Swap_Solution'] || '').toUpperCase();
+  const rawCfg = String(sran.config_3g4g || sran.raw_data?.['3G4G Config'] || '').toUpperCase();
+  const rawSol = String(sran.raw_data?.['Swap Solution'] || sran.raw_data?.['Swap_Solution'] || '').toUpperCase();
   const is4gOnly = rawCfg.includes('4G ONLY') || (rawSol.includes('SWAP:4G') && !rawSol.includes('3G'));
   const config4g = (rawCfg === '0' || rawCfg === '-') ? null : (is4gOnly ? '4G Only' : 'SRAN');
 
@@ -483,11 +483,11 @@ export default function NetworkMap() {
     // 1. Xây dựng bảng tra cứu từ sranTrackerData
     const sranMap = new Map();
     sranTrackerData.forEach(s => {
-      if (s.site_id) sranMap.set(s.site_id.toUpperCase(), s);
-      if (s.site_id_old) sranMap.set(s.site_id_old.toUpperCase(), s);
-      if (s.raw_data && s.raw_data.Radio_ID) sranMap.set(s.raw_data.Radio_ID.toUpperCase(), s);
-      if (s.raw_data && s.raw_data.Baseband_ID) sranMap.set(s.raw_data.Baseband_ID.toUpperCase(), s);
-      if (s.raw_data && s.raw_data['Site_ID (New)']) sranMap.set(s.raw_data['Site_ID (New)'].toUpperCase(), s);
+      if (s.site_id) sranMap.set(String(s.site_id).toUpperCase(), s);
+      if (s.site_id_old) sranMap.set(String(s.site_id_old).toUpperCase(), s);
+      if (s.raw_data && s.raw_data.Radio_ID) sranMap.set(String(s.raw_data.Radio_ID).toUpperCase(), s);
+      if (s.raw_data && s.raw_data.Baseband_ID) sranMap.set(String(s.raw_data.Baseband_ID).toUpperCase(), s);
+      if (s.raw_data && s.raw_data['Site_ID (New)']) sranMap.set(String(s.raw_data['Site_ID (New)']).toUpperCase(), s);
     });
 
     const counts = {
@@ -937,7 +937,7 @@ export default function NetworkMap() {
 
     const vp = site?.management_info?.vung_phu;
     const tm = site?.management_info?.tram_main && site.management_info.tram_main !== 'KHÔNG' ? site.management_info.tram_main : '';
-    const isCran = vp && vp.toUpperCase().includes('CRAN');
+    const isCran = vp && String(vp).toUpperCase().includes('CRAN');
     if (vp) {
       if (isCran && tm) {
         lines.push(`Vùng phủ: ${vp} (Trạm Main: ${tm})`);
@@ -2277,7 +2277,7 @@ export default function NetworkMap() {
                             {site.management_info?.vung_phu && (() => {
                               const vp = site.management_info.vung_phu;
                               const tm = site.management_info.tram_main && site.management_info.tram_main !== 'KHÔNG' ? site.management_info.tram_main : null;
-                              const isCran = vp.toUpperCase().includes('CRAN');
+                              const isCran = String(vp).toUpperCase().includes('CRAN');
                               return (
                                 <div className="space-y-0.5 text-[10.5px]">
                                   <div className="flex items-center justify-between">
@@ -2662,7 +2662,7 @@ export default function NetworkMap() {
               const name = selectedMobileStation.name;
               const vp = s.management_info?.vung_phu;
               const tm = s.management_info?.tram_main && s.management_info.tram_main !== 'KHÔNG' ? s.management_info.tram_main : null;
-              const isCran = vp && vp.toUpperCase().includes('CRAN');
+              const isCran = vp && String(vp).toUpperCase().includes('CRAN');
 
               return (
                 <div className="space-y-2 text-xs">

@@ -595,7 +595,7 @@ export function addMapSheet(workbook, sheetTitle, logs = [], stations = [], invo
     const hours = parseFloat(rd.thoi_gian_hoat_dong) || 0;
     const lit = parseFloat(rd.nhien_lieu_tieu_hao) || 0;
     const tt = parseFloat(rd.thanh_tien) || 0;
-    const nl = (rd.nhien_lieu_loai || rd.nhien_lieu || 'DẦU').toUpperCase();
+    const nl = String(rd.nhien_lieu_loai || rd.nhien_lieu || 'DẦU').toUpperCase();
     const isXang = nl.includes('XĂNG') || nl.includes('XANG');
 
     const targetMap = isXang ? gasSiteMap : oilSiteMap;
@@ -853,8 +853,8 @@ export function addSurplusHDSheet(workbook, sheetTitle, surplusInvoices = [], mo
     if (!dg && lit > 0) dg = Math.round(tot / lit);
     const itemsStr = JSON.stringify(items).toLowerCase();
     const isXang = itemsStr.includes('xăng') || itemsStr.includes('ron');
-    const bmst = (inv.buyer_mst || inv.buyer_tax_code || '').trim();
-    const bname = (bmst.includes('0100686209-129') || (inv.buyer_name || '').toUpperCase().includes('ĐỒNG NAI')) ? 'MobiFone Đồng Nai' : 'MobiFone Toàn Cầu';
+    const bmst = String(inv.buyer_mst || inv.buyer_tax_code || '').trim();
+    const bname = (bmst.includes('0100686209-129') || String(inv.buyer_name || '').toUpperCase().includes('ĐỒNG NAI')) ? 'MobiFone Đồng Nai' : 'MobiFone Toàn Cầu';
 
     const row = ws.addRow([
       idx + 1,
@@ -943,13 +943,13 @@ export async function exportOfficialMFDReport({
 
     // 2. Split invoices into 2 groups
     const g1Invoices = invoices.filter(inv => {
-      const mst = (inv.buyer_mst || inv.buyer_tax_code || '').trim();
-      const bname = (inv.buyer_name || inv.buyer_legal_name || '').toUpperCase();
+      const mst = String(inv.buyer_mst || inv.buyer_tax_code || '').trim();
+      const bname = String(inv.buyer_name || inv.buyer_legal_name || '').toUpperCase();
       return mst.includes('0100686209-129') || bname.includes('ĐỒNG NAI') || bname.includes('DONG NAI') || bname.includes('KHU VỰC 8');
     });
     const g2Invoices = invoices.filter(inv => {
-      const mst = (inv.buyer_mst || inv.buyer_tax_code || '').trim();
-      const bname = (inv.buyer_name || inv.buyer_legal_name || '').toUpperCase();
+      const mst = String(inv.buyer_mst || inv.buyer_tax_code || '').trim();
+      const bname = String(inv.buyer_name || inv.buyer_legal_name || '').toUpperCase();
       return !(mst.includes('0100686209-129') || bname.includes('ĐỒNG NAI') || bname.includes('DONG NAI') || bname.includes('KHU VỰC 8'));
     });
 
@@ -1047,8 +1047,8 @@ export async function exportSiteInvoiceMapReport({ logs, stations, invoices, mon
   });
 
   const g1Invoices = invoices.filter(inv => {
-    const mst = (inv.buyer_mst || inv.buyer_tax_code || '').trim();
-    const bname = (inv.buyer_name || inv.buyer_legal_name || '').toUpperCase();
+    const mst = String(inv.buyer_mst || inv.buyer_tax_code || '').trim();
+    const bname = String(inv.buyer_name || inv.buyer_legal_name || '').toUpperCase();
     return mst.includes('0100686209-129') || bname.includes('ĐỒNG NAI') || bname.includes('DONG NAI') || bname.includes('KHU VỰC 8');
   });
 
@@ -1066,7 +1066,7 @@ export async function exportSiteInvoiceMapReport({ logs, stations, invoices, mon
     const tt = parseFloat(rd.thanh_tien) || 0;
     const vat = tt * 0.08;
     const ttVat = tt + vat;
-    const nl = (rd.nhien_lieu_loai || rd.nhien_lieu || 'DẦU').toUpperCase();
+    const nl = String(rd.nhien_lieu_loai || rd.nhien_lieu || 'DẦU').toUpperCase();
     const isXang = nl.includes('XĂNG') || nl.includes('XANG');
 
     if (!siteMap[sid]) {

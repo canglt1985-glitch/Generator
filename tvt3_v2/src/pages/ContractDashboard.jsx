@@ -204,7 +204,7 @@ export default function ContractDashboard() {
       const flags = getContractFlags(c);
       const cl = c.datasites?.classification || {};
       const chuThe = (c.contractor_info?.chu_the_hop_dong || c.contractor_info?.chu_nha || '').trim().toLowerCase();
-      const loaiHinhDauTu = (cl.hinh_thuc_dau_tu || '').toUpperCase();
+      const loaiHinhDauTu = String(cl.hinh_thuc_dau_tu || '').toUpperCase();
       const isVnpt = flags.includes('tram_vnpt') || chuThe.includes('viễn thông đồng nai') || chuThe.includes('vnpt') || loaiHinhDauTu.includes('VNPT');
       const isCsht = loaiHinhDauTu.includes('CSHT') || loaiHinhDauTu.includes('ĐỐI TÁC');
       const isMbf = !isVnpt && !isCsht;

@@ -161,7 +161,7 @@ export default function Sran5gProject() {
       });
     }
 
-    const is5gSite = (d) => (d.scope_5g && d.scope_5g.toUpperCase().includes('5G') && !d.scope_5g.toUpperCase().includes('NONE')) || (d.unique_id && d.unique_id.toUpperCase().includes('5G'));
+    const is5gSite = (d) => (d.scope_5g && String(d.scope_5g).toUpperCase().includes('5G') && !String(d.scope_5g).toUpperCase().includes('NONE')) || (d.unique_id && String(d.unique_id).toUpperCase().includes('5G'));
 
     let matched = [];
     if (type === 'ONAIR_5G') {
@@ -261,7 +261,7 @@ export default function Sran5gProject() {
     const hasOnair5g = Boolean(rawOnair);
     const onairDate = rawOnair ? String(rawOnair).substring(0, 10) : null;
 
-    const scopeUpper = (site.scope_5g || rd['5G_Scope'] || rd['5G Scope'] || '').toUpperCase();
+    const scopeUpper = String(site.scope_5g || rd['5G_Scope'] || rd['5G Scope'] || '').toUpperCase();
     const isDual5g = Boolean(
       rd.Is_5G_Dual_Layer === true ||
       rd['5G_Layers'] === 2 ||
@@ -437,9 +437,9 @@ export default function Sran5gProject() {
 
       let matchScope = selectedScope === 'ALL';
       if (!matchScope) {
-        const scopeUpper = (item.scope_5g || item.raw_data?.['5G_Scope'] || '').toUpperCase();
-        const cfgUpper = (item.config_5g || item.raw_data?.['5G_Config'] || '').toUpperCase();
-        const uidUpper = (item.unique_id || '').toUpperCase();
+        const scopeUpper = String(item.scope_5g || item.raw_data?.['5G_Scope'] || '').toUpperCase();
+        const cfgUpper = String(item.config_5g || item.raw_data?.['5G_Config'] || '').toUpperCase();
+        const uidUpper = String(item.unique_id || '').toUpperCase();
         const isDual5gItem = Boolean(
           item.raw_data?.Is_5G_Dual_Layer === true ||
           item.raw_data?.['5G_Layers'] === 2 ||
@@ -542,7 +542,7 @@ export default function Sran5gProject() {
     const overallTotal = data.length;
 
     const isDual5gSite = (d) => {
-      const scope = (d.scope_5g || d.raw_data?.['5G_Scope'] || '').toUpperCase();
+      const scope = String(d.scope_5g || d.raw_data?.['5G_Scope'] || '').toUpperCase();
       return d.raw_data?.Is_5G_Dual_Layer === true ||
              d.raw_data?.['5G_Layers'] === 2 ||
              (scope.includes('38') && scope.includes('26')) ||
@@ -550,9 +550,9 @@ export default function Sran5gProject() {
     };
 
     const is5gSite = (d) => {
-      const scope = (d.scope_5g || d.raw_data?.['5G_Scope'] || '').toUpperCase();
-      const cfg = (d.config_5g || d.raw_data?.['5G_Config'] || '').toUpperCase();
-      const uid = (d.unique_id || '').toUpperCase();
+      const scope = String(d.scope_5g || d.raw_data?.['5G_Scope'] || '').toUpperCase();
+      const cfg = String(d.config_5g || d.raw_data?.['5G_Config'] || '').toUpperCase();
+      const uid = String(d.unique_id || '').toUpperCase();
       return isDual5gSite(d) ||
              (scope && !scope.includes('NONE') && scope !== '-' && (scope.includes('NR') || scope.includes('5G') || scope.includes('26') || scope.includes('38'))) ||
              (cfg && cfg.includes('5G')) ||
@@ -653,16 +653,16 @@ export default function Sran5gProject() {
       });
 
       const is5gSite = (d) => {
-        const scope = (d.scope_5g || d.raw_data?.['5G_Scope'] || '').toUpperCase();
-        const cfg = (d.config_5g || d.raw_data?.['5G_Config'] || '').toUpperCase();
-        const uid = (d.unique_id || '').toUpperCase();
+        const scope = String(d.scope_5g || d.raw_data?.['5G_Scope'] || '').toUpperCase();
+        const cfg = String(d.config_5g || d.raw_data?.['5G_Config'] || '').toUpperCase();
+        const uid = String(d.unique_id || '').toUpperCase();
         return d.raw_data?.Is_5G_Dual_Layer === true ||
                (scope && !scope.includes('NONE') && scope !== '-' && (scope.includes('NR') || scope.includes('5G') || scope.includes('26') || scope.includes('38'))) ||
                (cfg && cfg.includes('5G')) ||
                (uid && uid.includes('5G'));
       };
       const isDual5gSite = (d) => {
-        const scope = (d.scope_5g || d.raw_data?.['5G_Scope'] || '').toUpperCase();
+        const scope = String(d.scope_5g || d.raw_data?.['5G_Scope'] || '').toUpperCase();
         return d.raw_data?.Is_5G_Dual_Layer === true ||
                d.raw_data?.['5G_Layers'] === 2 ||
                (scope.includes('38') && scope.includes('26')) ||
@@ -751,7 +751,7 @@ export default function Sran5gProject() {
       const clusterSites = data.filter(d => 
         (d.raw_data?.Cluster_Name === c.db_cluster || d.raw_data?.Cluster_Name === c.cluster || d.raw_data?.Cluster_New === c.cluster)
       );
-      const is5gSite = (d) => (d.scope_5g && d.scope_5g.toUpperCase().includes('5G') && !d.scope_5g.toUpperCase().includes('NONE')) || (d.unique_id && d.unique_id.toUpperCase().includes('5G'));
+      const is5gSite = (d) => (d.scope_5g && String(d.scope_5g).toUpperCase().includes('5G') && !String(d.scope_5g).toUpperCase().includes('NONE')) || (d.unique_id && String(d.unique_id).toUpperCase().includes('5G'));
       const count5g = clusterSites.filter(is5gSite).length;
       const survey = clusterSites.filter(d => d.survey_date).length;
       const tssr = clusterSites.filter(d => d.ie_app_date || d.rf_app_date || d.tssr_sub_date).length;
@@ -795,7 +795,7 @@ export default function Sran5gProject() {
     const total = filteredData.length;
     if (total === 0) return null;
 
-    const is5gSite = (d) => (d.scope_5g && d.scope_5g.toUpperCase().includes('5G') && !d.scope_5g.toUpperCase().includes('NONE')) || (d.unique_id && d.unique_id.toUpperCase().includes('5G'));
+    const is5gSite = (d) => (d.scope_5g && String(d.scope_5g).toUpperCase().includes('5G') && !String(d.scope_5g).toUpperCase().includes('NONE')) || (d.unique_id && String(d.unique_id).toUpperCase().includes('5G'));
     const total5g = filteredData.filter(is5gSite).length;
     const totalSwap = filteredData.filter(d => !is5gSite(d)).length > 0 ? filteredData.filter(d => !is5gSite(d)).length : total;
 
@@ -848,7 +848,7 @@ export default function Sran5gProject() {
       const target = vkdMap[key];
       if (target) {
         target.total++;
-        const is5g = (item.scope_5g && item.scope_5g.toUpperCase().includes('5G') && !item.scope_5g.toUpperCase().includes('NONE')) || (item.unique_id && item.unique_id.toUpperCase().includes('5G'));
+        const is5g = (item.scope_5g && String(item.scope_5g).toUpperCase().includes('5G') && !String(item.scope_5g).toUpperCase().includes('NONE')) || (item.unique_id && String(item.unique_id).toUpperCase().includes('5G'));
         const isSingle = !is5g && item.config_3g4g && (item.config_3g4g.toLowerCase().includes('4g only') || item.config_3g4g.toLowerCase().includes('tháo dỡ 4g'));
         if (is5g) target.add5g++;
         else if (isSingle) target.swap4g++;
@@ -884,7 +884,7 @@ export default function Sran5gProject() {
         distMap[d] = { district: d, total: 0, swap4g: 0, add5g: 0, augTarget: 0, survey: 0, tssr: 0, rfDesign: 0, wh: 0, delivery: 0, install: 0, integration: 0, onair: 0, onair5g: 0, integration5g: 0 };
       }
       distMap[d].total++;
-      const is5g = (item.scope_5g && item.scope_5g.toUpperCase().includes('5G') && !item.scope_5g.toUpperCase().includes('NONE')) || (item.unique_id && item.unique_id.toUpperCase().includes('5G'));
+      const is5g = (item.scope_5g && String(item.scope_5g).toUpperCase().includes('5G') && !String(item.scope_5g).toUpperCase().includes('NONE')) || (item.unique_id && String(item.unique_id).toUpperCase().includes('5G'));
       if (item.config_3g4g && (item.config_3g4g.includes('Tháo dỡ 4G Only') || item.config_3g4g.includes('4G Only'))) distMap[d].swap4g++;
       if (is5g) distMap[d].add5g++;
       if (item.monthly_target_im && String(item.monthly_target_im).includes('Aug')) distMap[d].augTarget++;
@@ -1537,7 +1537,7 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
                   const sidOld = m.site_id_old ? String(m.site_id_old).trim().toUpperCase() : '';
                   const extra = datasitesMap.get(sid) || datasitesMap.get(sidOld) || {};
                   const rd = m.raw_data || {};
-                  const is5g = (m.scope_5g && !m.scope_5g.toUpperCase().includes('NONE')) || (m.config_5g && !m.config_5g.toUpperCase().includes('NONE')) || (rd['5G Scope'] && rd['5G Scope'] !== '-');
+                  const is5g = (m.scope_5g && !String(m.scope_5g).toUpperCase().includes('NONE')) || (m.config_5g && !String(m.config_5g).toUpperCase().includes('NONE')) || (rd['5G Scope'] && rd['5G Scope'] !== '-');
                   const cDetail = getSiteClusterDetails(m);
 
                   return (

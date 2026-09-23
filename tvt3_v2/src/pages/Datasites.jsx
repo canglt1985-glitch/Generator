@@ -1751,16 +1751,16 @@ export default function Datasites() {
               // MPĐ
               const mpdList = Array.isArray(mpd.mpd) ? mpd.mpd : [];
               acc.mpd_total += mpdList.length;
-              acc.mpd_ok += mpdList.filter(m => (m.tinh_trang || '').toUpperCase().includes('TỐT')).length;
-              acc.mpd_bad += mpdList.filter(m => (m.tinh_trang || '').toUpperCase().includes('HỎNG')).length;
+              acc.mpd_ok += mpdList.filter(m => String(m.tinh_trang || '').toUpperCase().includes('TỐT')).length;
+              acc.mpd_bad += mpdList.filter(m => String(m.tinh_trang || '').toUpperCase().includes('HỎNG')).length;
               if (mpdList.length > 0) acc.mpd_sites++;
 
               // Accu đề & ATS con lồng bên trong MPĐ
               mpdList.forEach(m => {
                 const accuDe = Array.isArray(m.accu_de) ? m.accu_de : [];
                 acc.accu_de_total += accuDe.length;
-                acc.accu_de_ok += accuDe.filter(a => (a.tinh_trang || '').toUpperCase().includes('TỐT')).length;
-                acc.accu_de_bad += accuDe.filter(a => (a.tinh_trang || '').toUpperCase().includes('HỎNG')).length;
+                acc.accu_de_ok += accuDe.filter(a => String(a.tinh_trang || '').toUpperCase().includes('TỐT')).length;
+                acc.accu_de_bad += accuDe.filter(a => String(a.tinh_trang || '').toUpperCase().includes('HỎNG')).length;
 
                 const ats = Array.isArray(m.ats) ? m.ats : [];
                 acc.ats_total += ats.length;
@@ -1769,22 +1769,22 @@ export default function Datasites() {
               // Tủ nguồn
               const tn = Array.isArray(nguon.tu_nguon) ? nguon.tu_nguon : [];
               acc.tunguon_total += tn.length;
-              acc.tunguon_ok += tn.filter(t => (t.tinh_trang || '').toUpperCase().includes('TỐT')).length;
+              acc.tunguon_ok += tn.filter(t => String(t.tinh_trang || '').toUpperCase().includes('TỐT')).length;
               if (tn.length > 0) acc.tunguon_sites++;
 
               // Tổ accu con lồng bên trong Tủ nguồn
               tn.forEach(t => {
                 const ta = Array.isArray(t.to_accu) ? t.to_accu : [];
                 acc.toaccu_total += ta.length;
-                acc.toaccu_ok += ta.filter(x => (x.tinh_trang || '').toUpperCase().includes('TỐT')).length;
-                acc.toaccu_bad += ta.filter(x => (x.tinh_trang || '').toUpperCase().includes('HỎNG')).length;
+                acc.toaccu_ok += ta.filter(x => String(x.tinh_trang || '').toUpperCase().includes('TỐT')).length;
+                acc.toaccu_bad += ta.filter(x => String(x.tinh_trang || '').toUpperCase().includes('HỎNG')).length;
               });
 
               // Máy lạnh
               const ml = Array.isArray(infra.may_lanh) ? infra.may_lanh : [];
               acc.ml_total += ml.length;
-              acc.ml_ok += ml.filter(m => (m.tinh_trang || '').toUpperCase().includes('TỐT')).length;
-              acc.ml_bad += ml.filter(m => (m.tinh_trang || '').toUpperCase().includes('HỎNG')).length;
+              acc.ml_ok += ml.filter(m => String(m.tinh_trang || '').toUpperCase().includes('TỐT')).length;
+              acc.ml_bad += ml.filter(m => String(m.tinh_trang || '').toUpperCase().includes('HỎNG')).length;
               if (ml.length > 0) acc.ml_sites++;
 
               // CWDM
@@ -1807,7 +1807,7 @@ export default function Datasites() {
               if (hasChinh || hasPhu) {
                 acc.trans_sites++;
                 const cdt = (tech.chu_dau_tu_cap || '').trim().toLowerCase();
-                const lkn = (tech.loai_ket_noi || '').trim().toUpperCase();
+                const lkn = String(tech.loai_ket_noi || '').trim().toUpperCase();
                 
                 if (lkn.includes('MW') || lkn.includes('VI BA')) {
                   acc.trans_mw++;
@@ -2361,7 +2361,7 @@ export default function Datasites() {
                           });
 
                           [...mpdList, ...ml, ...accuDeList, ...atsList, ...toAccuList].forEach(item => {
-                            if (item.tinh_trang?.toUpperCase().includes('HỎNG')) {
+                            if (String(item.tinh_trang || '').toUpperCase().includes('HỎNG')) {
                               brokenItems.push({
                                 site_id: site.site_id,
                                 site_id_old: site.site_id_old,
