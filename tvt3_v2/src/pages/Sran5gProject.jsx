@@ -11,35 +11,35 @@ import * as XLSX from 'xlsx';
 
 export const SRAN_25_CLUSTERS = [
   // Giai đoạn 1: Pilot & Khởi động (8 Cluster)
-  { order: '5G_Only', cluster: 'DNI_5G_Only', db_cluster: 'DNI_5G_Only', tvt: 'VT1/VT2', district: 'Long Thành', date: '-', total_3g4g: 0, del_3g4g: 0, ins_3g4g: 0, ci_3g4g: 0, swap_3g4g: 0, total_5g: 19, del_5g: 19, ins_5g: 19, ci_5g: 19, oa_5g: 14, phase: 'pilot', note: '19 trạm 5G độc lập (Long Thành/VT1/VT2)' },
-  { order: 'Day_00', cluster: 'DNI_00_Pilot', db_cluster: 'DNI_00_Pilot', tvt: 'VT1', district: 'Long Thành', date: '18-Aug', total_3g4g: 3, del_3g4g: 3, ins_3g4g: 3, ci_3g4g: 3, swap_3g4g: 3, total_5g: 3, del_5g: 3, ins_5g: 3, ci_5g: 3, oa_5g: 3, phase: 'pilot', note: 'Thử nghiệm Pilot Long Thành' },
-  { order: 'Day_01', cluster: 'DNI_01_LT', db_cluster: 'DNI_01_LT', tvt: 'VT1', district: 'Long Thành', date: '21-Aug', total_3g4g: 19, del_3g4g: 19, ins_3g4g: 19, ci_3g4g: 19, swap_3g4g: 19, total_5g: 8, del_5g: 8, ins_5g: 8, ci_5g: 7, oa_5g: 7, phase: 'pilot', note: 'Trọng điểm KCN Long Thành' },
-  { order: 'Day_02', cluster: 'DNI_09_CM', db_cluster: 'DNI_09_CM', alt_db: 'DNI_02_CM', tvt: 'VT3', district: 'Cẩm Mỹ', date: '25-Aug', total_3g4g: 26, del_3g4g: 26, ins_3g4g: 26, ci_3g4g: 26, swap_3g4g: 26, total_5g: 17, del_5g: 17, ins_5g: 17, ci_5g: 16, oa_5g: 14, phase: 'pilot', note: 'Trạm Power & CRAN Cẩm Mỹ' },
-  { order: 'Day_03', cluster: 'DNI_02_TB', db_cluster: 'DNI_02_TB', alt_db: 'DNI_03_TB', tvt: 'VT2', district: 'Trảng Bom', date: '25-Aug', total_3g4g: 27, del_3g4g: 25, ins_3g4g: 25, ci_3g4g: 24, swap_3g4g: 24, total_5g: 17, del_5g: 15, ins_5g: 15, ci_5g: 15, oa_5g: 11, phase: 'pilot', note: 'Khu vực Trảng Bom' },
-  { order: 'Day_04', cluster: 'DNI_10_TN', db_cluster: 'DNI_10_TN', alt_db: 'DNI_04_TN', tvt: 'VT3', district: 'Thống Nhất', date: '27-Aug', total_3g4g: 25, del_3g4g: 24, ins_3g4g: 24, ci_3g4g: 24, swap_3g4g: 24, total_5g: 10, del_5g: 10, ins_5g: 10, ci_5g: 9, oa_5g: 10, phase: 'pilot', note: 'Khu vực Thống Nhất' },
-  { order: 'Day_05', cluster: 'DNI_03_TB', db_cluster: 'DNI_03_TB', alt_db: 'DNI_07_TB', tvt: 'VT2', district: 'Trảng Bom', date: '27-Aug', total_3g4g: 27, del_3g4g: 26, ins_3g4g: 26, ci_3g4g: 24, swap_3g4g: 26, total_5g: 26, del_5g: 25, ins_5g: 25, ci_5g: 22, oa_5g: 20, phase: 'pilot', note: 'Khu vực Trảng Bom' },
-  { order: 'Day_06', cluster: 'DNI_16_CM', db_cluster: 'DNI_16_CM', alt_db: 'DNI_06_CM', tvt: 'VT3', district: 'Cẩm Mỹ', date: '4-Sep', total_3g4g: 26, del_3g4g: 26, ins_3g4g: 26, ci_3g4g: 26, swap_3g4g: 26, total_5g: 6, del_5g: 6, ins_5g: 6, ci_5g: 5, oa_5g: 2, phase: 'pilot', note: 'Mở rộng Cẩm Mỹ' },
+  { order: '5G_Only', cluster: 'DNI_5G_Only', db_cluster: 'DNI_5G_Only', tvt: 'VT1/VT2/VT3', district: 'Toàn tỉnh', date: '-', total_3g4g: 0, del_3g4g: 0, ins_3g4g: 0, ci_3g4g: 0, swap_3g4g: 0, total_5g: 32, dual_5g: 0, single_5g: 32, del_5g: 19, ins_5g: 19, ci_5g: 0, oa_5g: 14, phase: 'pilot', note: '32 trạm 5G độc lập (toàn tỉnh Đồng Nai)' },
+  { order: 'Day_00', cluster: 'DNI_00_Pilot', db_cluster: 'DNI_00_Pilot', tvt: 'VT1', district: 'Long Thành', date: '18-Aug', total_3g4g: 3, del_3g4g: 3, ins_3g4g: 3, ci_3g4g: 3, swap_3g4g: 3, total_5g: 3, dual_5g: 0, single_5g: 3, del_5g: 3, ins_5g: 3, ci_5g: 3, oa_5g: 3, phase: 'pilot', note: 'Thử nghiệm Pilot Long Thành' },
+  { order: 'Day_01', cluster: 'DNI_01_LT', db_cluster: 'DNI_01_LT', tvt: 'VT1', district: 'Long Thành', date: '21-Aug', total_3g4g: 19, del_3g4g: 19, ins_3g4g: 19, ci_3g4g: 19, swap_3g4g: 19, total_5g: 8, dual_5g: 0, single_5g: 8, del_5g: 8, ins_5g: 8, ci_5g: 8, oa_5g: 7, phase: 'pilot', note: 'Trọng điểm KCN Long Thành' },
+  { order: 'Day_02', cluster: 'DNI_09_CM', db_cluster: 'DNI_09_CM', tvt: 'VT3', district: 'Cẩm Mỹ', date: '25-Aug', total_3g4g: 26, del_3g4g: 26, ins_3g4g: 26, ci_3g4g: 26, swap_3g4g: 26, total_5g: 17, dual_5g: 0, single_5g: 17, del_5g: 17, ins_5g: 17, ci_5g: 17, oa_5g: 14, phase: 'pilot', note: 'Trạm Power & CRAN Cẩm Mỹ' },
+  { order: 'Day_03', cluster: 'DNI_02_TB', db_cluster: 'DNI_02_TB', tvt: 'VT2', district: 'Trảng Bom', date: '25-Aug', total_3g4g: 27, del_3g4g: 25, ins_3g4g: 25, ci_3g4g: 24, swap_3g4g: 24, total_5g: 17, dual_5g: 5, single_5g: 12, del_5g: 15, ins_5g: 15, ci_5g: 15, oa_5g: 11, phase: 'pilot', note: 'Trảng Bom (5 trạm 5G 2 lớp)' },
+  { order: 'Day_04', cluster: 'DNI_10_TN', db_cluster: 'DNI_10_TN', tvt: 'VT3', district: 'Thống Nhất', date: '27-Aug', total_3g4g: 25, del_3g4g: 24, ins_3g4g: 24, ci_3g4g: 24, swap_3g4g: 24, total_5g: 10, dual_5g: 0, single_5g: 10, del_5g: 10, ins_5g: 10, ci_5g: 10, oa_5g: 10, phase: 'pilot', note: 'Khu vực Thống Nhất' },
+  { order: 'Day_05', cluster: 'DNI_03_TB', db_cluster: 'DNI_03_TB', tvt: 'VT2', district: 'Trảng Bom', date: '27-Aug', total_3g4g: 26, del_3g4g: 25, ins_3g4g: 25, ci_3g4g: 25, swap_3g4g: 25, total_5g: 26, dual_5g: 7, single_5g: 19, del_5g: 25, ins_5g: 25, ci_5g: 25, oa_5g: 21, phase: 'pilot', note: 'Trảng Bom (7 trạm 5G 2 lớp)' },
+  { order: 'Day_06', cluster: 'DNI_16_CM', db_cluster: 'DNI_16_CM', tvt: 'VT3', district: 'Cẩm Mỹ', date: '4-Sep', total_3g4g: 26, del_3g4g: 26, ins_3g4g: 26, ci_3g4g: 26, swap_3g4g: 26, total_5g: 6, dual_5g: 0, single_5g: 6, del_5g: 6, ins_5g: 6, ci_5g: 6, oa_5g: 2, phase: 'pilot', note: 'Mở rộng Cẩm Mỹ' },
 
   // Giai đoạn 2: Thi công trọng điểm Tháng 9 (14 Cluster)
-  { order: 'Day_07', cluster: 'DNI_07_TB', db_cluster: 'DNI_07_TB', alt_db: 'DNI_05_TB', tvt: 'VT2', district: 'Trảng Bom', date: '9-Sep', total_3g4g: 27, del_3g4g: 26, ins_3g4g: 26, ci_3g4g: 26, swap_3g4g: 26, total_5g: 23, del_5g: 21, ins_5g: 21, ci_5g: 21, oa_5g: 6, phase: 'phase2' },
-  { order: 'Day_08', cluster: 'DNI_15_XL', db_cluster: 'DNI_15_XL', alt_db: 'DNI_08_XL', tvt: 'VT3', district: 'Xuân Lộc', date: '11-Sep', total_3g4g: 25, del_3g4g: 25, ins_3g4g: 24, ci_3g4g: 24, swap_3g4g: 24, total_5g: 14, del_5g: 14, ins_5g: 13, ci_5g: 12, oa_5g: 4, phase: 'phase2' },
-  { order: 'Day_09', cluster: 'DNI_17_XL', db_cluster: 'DNI_17_XL', alt_db: 'DNI_16_XL', tvt: 'VT3', district: 'Xuân Lộc', date: '11-Sep', total_3g4g: 26, del_3g4g: 25, ins_3g4g: 25, ci_3g4g: 25, swap_3g4g: 25, total_5g: 10, del_5g: 9, ins_5g: 9, ci_5g: 9, oa_5g: 3, phase: 'phase2' },
-  { order: 'Day_10', cluster: 'DNI_06_TB', db_cluster: 'DNI_06_TB', alt_db: 'DNI_09_TB', tvt: 'VT2', district: 'Trảng Bom', date: '15-Sep', total_3g4g: 27, del_3g4g: 27, ins_3g4g: 26, ci_3g4g: 25, swap_3g4g: 25, total_5g: 16, del_5g: 15, ins_5g: 13, ci_5g: 12, oa_5g: 2, phase: 'phase2' },
-  { order: 'Day_11', cluster: 'DNI_18_XL', db_cluster: 'DNI_18_XL', alt_db: 'DNI_17_XL', tvt: 'VT3', district: 'Xuân Lộc', date: '15-Sep', total_3g4g: 25, del_3g4g: 24, ins_3g4g: 24, ci_3g4g: 24, swap_3g4g: 24, total_5g: 21, del_5g: 7, ins_5g: 4, ci_5g: 1, oa_5g: 0, phase: 'phase2' },
-  { order: 'Day_12', cluster: 'DNI_19_XL', db_cluster: 'DNI_19_XL', alt_db: 'DNI_18_XL', tvt: 'VT3', district: 'Xuân Lộc', date: '18-Sep', total_3g4g: 25, del_3g4g: 24, ins_3g4g: 24, ci_3g4g: 24, swap_3g4g: 24, total_5g: 7, del_5g: 3, ins_5g: 0, ci_5g: 0, oa_5g: 0, phase: 'phase2' },
-  { order: 'Day_14', cluster: 'DNI_04_VC', db_cluster: 'DNI_04_VC', alt_db: 'DNI_11_VC', tvt: 'VT2', district: 'Vĩnh Cửu', date: '18-Sep', total_3g4g: 26, del_3g4g: 26, ins_3g4g: 26, ci_3g4g: 26, swap_3g4g: 25, total_5g: 6, del_5g: 5, ins_5g: 4, ci_5g: 1, oa_5g: 0, phase: 'phase2' },
-  { order: 'Day_13', cluster: 'DNI_13_LK', db_cluster: 'DNI_13_LK', alt_db: 'DNI_10_LK', tvt: 'VT3', district: 'Long Khánh', date: '22-Sep', total_3g4g: 26, del_3g4g: 24, ins_3g4g: 19, ci_3g4g: 21, swap_3g4g: 0, total_5g: 12, del_5g: 11, ins_5g: 11, ci_5g: 3, oa_5g: 0, phase: 'phase2' },
-  { order: 'Day_17', cluster: 'DNI_05_VC', db_cluster: 'DNI_05_VC', alt_db: 'DNI_13_VC', tvt: 'VT2', district: 'Vĩnh Cửu', date: '22-Sep', total_3g4g: 27, del_3g4g: 27, ins_3g4g: 25, ci_3g4g: 22, swap_3g4g: 0, total_5g: 20, del_5g: 10, ins_5g: 9, ci_5g: 7, oa_5g: 0, phase: 'phase2' },
-  { order: 'Day_15', cluster: 'DNI_14_LK', db_cluster: 'DNI_14_LK', tvt: 'VT3', district: 'Long Khánh', date: '25-Sep', total_3g4g: 26, del_3g4g: 26, ins_3g4g: 18, ci_3g4g: 20, swap_3g4g: 0, total_5g: 9, del_5g: 6, ins_5g: 5, ci_5g: 2, oa_5g: 0, phase: 'phase2' },
-  { order: 'Day_16', cluster: 'DNI_12_TN', db_cluster: 'DNI_12_TN', tvt: 'VT3', district: 'Thống Nhất', date: '25-Sep', total_3g4g: 26, del_3g4g: 23, ins_3g4g: 12, ci_3g4g: 1, swap_3g4g: 0, total_5g: 21, del_5g: 14, ins_5g: 10, ci_5g: 4, oa_5g: 0, phase: 'phase2' },
-  { order: 'Day_19', cluster: 'DNI_11_VC', db_cluster: 'DNI_11_VC', alt_db: 'DNI_15_VC', tvt: 'VT2', district: 'Vĩnh Cửu', date: '25-Sep', total_3g4g: 26, del_3g4g: 24, ins_3g4g: 8, ci_3g4g: 3, swap_3g4g: 0, total_5g: 14, del_5g: 6, ins_5g: 1, ci_5g: 0, oa_5g: 0, phase: 'phase2' },
-  { order: 'Day_18', cluster: 'DNI_20_DQ', db_cluster: 'DNI_20_DQ', alt_db: 'DNI_19_DQ', tvt: 'VT3', district: 'Định Quán', date: '29-Sep', total_3g4g: 26, del_3g4g: 23, ins_3g4g: 16, ci_3g4g: 4, swap_3g4g: 1, total_5g: 4, del_5g: 2, ins_5g: 1, ci_5g: 1, oa_5g: 0, phase: 'phase2' },
-  { order: 'Day_20', cluster: 'DNI_21_DQ', db_cluster: 'DNI_21_DQ', alt_db: 'DNI_20_DQ', tvt: 'VT3', district: 'Định Quán', date: '29-Sep', total_3g4g: 25, del_3g4g: 21, ins_3g4g: 7, ci_3g4g: 0, swap_3g4g: 0, total_5g: 4, del_5g: 2, ins_5g: 0, ci_5g: 0, oa_5g: 0, phase: 'phase2' },
+  { order: 'Day_07', cluster: 'DNI_07_TB', db_cluster: 'DNI_07_TB', tvt: 'VT2', district: 'Trảng Bom', date: '9-Sep', total_3g4g: 27, del_3g4g: 26, ins_3g4g: 26, ci_3g4g: 26, swap_3g4g: 26, total_5g: 23, dual_5g: 3, single_5g: 20, del_5g: 22, ins_5g: 22, ci_5g: 22, oa_5g: 12, phase: 'phase2', note: 'Trảng Bom (3 trạm 5G 2 lớp)' },
+  { order: 'Day_08', cluster: 'DNI_15_XL', db_cluster: 'DNI_15_XL', tvt: 'VT3', district: 'Xuân Lộc', date: '11-Sep', total_3g4g: 25, del_3g4g: 25, ins_3g4g: 24, ci_3g4g: 24, swap_3g4g: 24, total_5g: 14, dual_5g: 0, single_5g: 14, del_5g: 14, ins_5g: 13, ci_5g: 13, oa_5g: 8, phase: 'phase2', note: 'Xuân Lộc' },
+  { order: 'Day_09', cluster: 'DNI_17_XL', db_cluster: 'DNI_17_XL', tvt: 'VT3', district: 'Xuân Lộc', date: '11-Sep', total_3g4g: 26, del_3g4g: 25, ins_3g4g: 25, ci_3g4g: 25, swap_3g4g: 25, total_5g: 10, dual_5g: 0, single_5g: 10, del_5g: 9, ins_5g: 9, ci_5g: 9, oa_5g: 5, phase: 'phase2', note: 'Xuân Lộc' },
+  { order: 'Day_10', cluster: 'DNI_06_TB', db_cluster: 'DNI_06_TB', tvt: 'VT2', district: 'Trảng Bom', date: '15-Sep', total_3g4g: 27, del_3g4g: 27, ins_3g4g: 26, ci_3g4g: 26, swap_3g4g: 25, total_5g: 16, dual_5g: 4, single_5g: 12, del_5g: 16, ins_5g: 15, ci_5g: 15, oa_5g: 11, phase: 'phase2', note: 'Trảng Bom (4 trạm 5G 2 lớp)' },
+  { order: 'Day_11', cluster: 'DNI_18_XL', db_cluster: 'DNI_18_XL', tvt: 'VT3', district: 'Xuân Lộc', date: '15-Sep', total_3g4g: 25, del_3g4g: 24, ins_3g4g: 24, ci_3g4g: 24, swap_3g4g: 24, total_5g: 12, dual_5g: 0, single_5g: 12, del_5g: 11, ins_5g: 11, ci_5g: 11, oa_5g: 7, phase: 'phase2', note: 'Xuân Lộc' },
+  { order: 'Day_12', cluster: 'DNI_19_XL', db_cluster: 'DNI_19_XL', tvt: 'VT3', district: 'Xuân Lộc', date: '18-Sep', total_3g4g: 23, del_3g4g: 22, ins_3g4g: 22, ci_3g4g: 22, swap_3g4g: 22, total_5g: 6, dual_5g: 0, single_5g: 6, del_5g: 6, ins_5g: 6, ci_5g: 6, oa_5g: 4, phase: 'phase2', note: 'Xuân Lộc' },
+  { order: 'Day_14', cluster: 'DNI_04_VC', db_cluster: 'DNI_04_VC', tvt: 'VT2', district: 'Vĩnh Cửu', date: '18-Sep', total_3g4g: 25, del_3g4g: 25, ins_3g4g: 25, ci_3g4g: 25, swap_3g4g: 24, total_5g: 19, dual_5g: 1, single_5g: 18, del_5g: 19, ins_5g: 19, ci_5g: 19, oa_5g: 9, phase: 'phase2', note: 'Vĩnh Cửu (1 trạm 5G 2 lớp)' },
+  { order: 'Day_13', cluster: 'DNI_13_LK', db_cluster: 'DNI_13_LK', tvt: 'VT3', district: 'Long Khánh', date: '22-Sep', total_3g4g: 26, del_3g4g: 24, ins_3g4g: 24, ci_3g4g: 24, swap_3g4g: 23, total_5g: 21, dual_5g: 6, single_5g: 15, del_5g: 20, ins_5g: 20, ci_5g: 20, oa_5g: 3, phase: 'phase2', note: 'Long Khánh (6 trạm 5G 2 lớp)' },
+  { order: 'Day_17', cluster: 'DNI_05_VC', db_cluster: 'DNI_05_VC', tvt: 'VT2', district: 'Vĩnh Cửu', date: '22-Sep', total_3g4g: 27, del_3g4g: 27, ins_3g4g: 27, ci_3g4g: 27, swap_3g4g: 27, total_5g: 21, dual_5g: 5, single_5g: 16, del_5g: 21, ins_5g: 21, ci_5g: 21, oa_5g: 0, phase: 'phase2', note: 'Vĩnh Cửu (5 trạm 5G 2 lớp)' },
+  { order: 'Day_15', cluster: 'DNI_14_LK', db_cluster: 'DNI_14_LK', tvt: 'VT3', district: 'Long Khánh', date: '25-Sep', total_3g4g: 26, del_3g4g: 26, ins_3g4g: 23, ci_3g4g: 21, swap_3g4g: 21, total_5g: 9, dual_5g: 1, single_5g: 8, del_5g: 9, ins_5g: 9, ci_5g: 8, oa_5g: 0, phase: 'phase2', note: 'Long Khánh (1 trạm 5G 2 lớp)' },
+  { order: 'Day_16', cluster: 'DNI_12_TN', db_cluster: 'DNI_12_TN', tvt: 'VT3', district: 'Thống Nhất', date: '25-Sep', total_3g4g: 25, del_3g4g: 23, ins_3g4g: 15, ci_3g4g: 1, swap_3g4g: 0, total_5g: 14, dual_5g: 4, single_5g: 10, del_5g: 13, ins_5g: 9, ci_5g: 0, oa_5g: 0, phase: 'phase2', note: 'Thống Nhất (4 trạm 5G 2 lớp)' },
+  { order: 'Day_19', cluster: 'DNI_11_VC', db_cluster: 'DNI_11_VC', tvt: 'VT2', district: 'Vĩnh Cửu', date: '25-Sep', total_3g4g: 26, del_3g4g: 25, ins_3g4g: 17, ci_3g4g: 4, swap_3g4g: 0, total_5g: 4, dual_5g: 0, single_5g: 4, del_5g: 4, ins_5g: 4, ci_5g: 1, oa_5g: 0, phase: 'phase2', note: 'Vĩnh Cửu' },
+  { order: 'Day_18', cluster: 'DNI_20_DQ', db_cluster: 'DNI_20_DQ', tvt: 'VT3', district: 'Định Quán', date: '29-Sep', total_3g4g: 25, del_3g4g: 22, ins_3g4g: 16, ci_3g4g: 4, swap_3g4g: 1, total_5g: 7, dual_5g: 0, single_5g: 7, del_5g: 5, ins_5g: 3, ci_5g: 1, oa_5g: 0, phase: 'phase2', note: 'Định Quán Cụm 20 (26 trạm)' },
+  { order: 'Day_20', cluster: 'DNI_21_DQ', db_cluster: 'DNI_21_DQ', tvt: 'VT3', district: 'Định Quán', date: '29-Sep', total_3g4g: 25, del_3g4g: 21, ins_3g4g: 9, ci_3g4g: 0, swap_3g4g: 0, total_5g: 4, dual_5g: 0, single_5g: 4, del_5g: 4, ins_5g: 1, ci_5g: 0, oa_5g: 0, phase: 'phase2', note: 'Định Quán Cụm 21 (25 trạm)' },
 
   // Giai đoạn 3: Nước rút về đích Tháng 10 (3 Cluster)
-  { order: 'Day_21', cluster: 'DNI_22_DQ', db_cluster: 'DNI_22_DQ', alt_db: 'DNI_21_DQ', tvt: 'VT3', district: 'Định Quán', date: '2-Oct', total_3g4g: 25, del_3g4g: 22, ins_3g4g: 3, ci_3g4g: 1, swap_3g4g: 0, total_5g: 6, del_5g: 1, ins_5g: 0, ci_5g: 0, oa_5g: 0, phase: 'phase3' },
-  { order: 'Day_22', cluster: 'DNI_23_TP', db_cluster: 'DNI_23_TP', alt_db: 'DNI_22_TP', tvt: 'VT3', district: 'Tân Phú', date: '6-Oct', total_3g4g: 26, del_3g4g: 24, ins_3g4g: 1, ci_3g4g: 1, swap_3g4g: 0, total_5g: 13, del_5g: 5, ins_5g: 0, ci_5g: 0, oa_5g: 0, phase: 'phase3' },
-  { order: 'Day_23', cluster: 'DNI_24_TP', db_cluster: 'DNI_24_TP', alt_db: 'DNI_23_TP', tvt: 'VT3', district: 'Tân Phú', date: '6-Oct', total_3g4g: 25, del_3g4g: 22, ins_3g4g: 0, ci_3g4g: 0, swap_3g4g: 0, total_5g: 1, del_5g: 1, ins_5g: 0, ci_5g: 0, oa_5g: 0, phase: 'phase3' }
+  { order: 'Day_21', cluster: 'DNI_22_DQ', db_cluster: 'DNI_22_DQ', tvt: 'VT3', district: 'Định Quán', date: '2-Oct', total_3g4g: 25, del_3g4g: 22, ins_3g4g: 4, ci_3g4g: 1, swap_3g4g: 0, total_5g: 6, dual_5g: 0, single_5g: 6, del_5g: 5, ins_5g: 0, ci_5g: 0, oa_5g: 0, phase: 'phase3', note: 'Định Quán Cụm 22 (25 trạm)' },
+  { order: 'Day_22', cluster: 'DNI_23_TP', db_cluster: 'DNI_23_TP', tvt: 'VT3', district: 'Tân Phú', date: '6-Oct', total_3g4g: 26, del_3g4g: 24, ins_3g4g: 3, ci_3g4g: 1, swap_3g4g: 0, total_5g: 13, dual_5g: 0, single_5g: 13, del_5g: 12, ins_5g: 2, ci_5g: 1, oa_5g: 0, phase: 'phase3', note: 'Tân Phú Cụm 23 (26 trạm)' },
+  { order: 'Day_23', cluster: 'DNI_24_TP', db_cluster: 'DNI_24_TP', tvt: 'VT3', district: 'Tân Phú', date: '6-Oct', total_3g4g: 25, del_3g4g: 22, ins_3g4g: 1, ci_3g4g: 0, swap_3g4g: 0, total_5g: 1, dual_5g: 0, single_5g: 1, del_5g: 1, ins_5g: 0, ci_5g: 0, oa_5g: 0, phase: 'phase3', note: 'Tân Phú Cụm 24 (25 trạm)' }
 ];
 
 export const AUGUST_2026_CLUSTERS = SRAN_25_CLUSTERS.filter(c => c.phase === 'pilot');
@@ -50,14 +50,14 @@ export const NOVEMBER_2026_CLUSTERS = SRAN_25_CLUSTERS;
 export const MONTHLY_PLANS_CONFIG = {
   all: {
     id: 'all',
-    name: 'Báo Cáo 25 Cluster SRAN (592 4G • 307 5G)',
+    name: 'Báo Cáo 25 Cluster SRAN (592 4G • 319 5G • 36 Dual 5G)',
     shortName: 'Tất cả 25 Cluster',
     statusBadge: 'Tiến độ thực tế mới nhất',
     statusClass: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
     themeColor: 'emerald',
     gradient: 'from-emerald-700 via-teal-800 to-indigo-900',
     clusters: SRAN_25_CLUSTERS,
-    desc: 'Toàn bộ 25 Cluster SRAN • 592 trạm 4G/SR • 307 trạm 5G • 15 Cụm TVT3'
+    desc: 'Toàn bộ 25 Cluster SRAN • 624 trạm • 319 trạm 5G (36 trạm 2 lớp 2600+3800) • 15 Cụm TVT3'
   },
   pilot: {
     id: 'pilot',
@@ -243,7 +243,7 @@ export default function Sran5gProject() {
     const clusterCfg = SRAN_25_CLUSTERS.find(c => {
       if (order && c.order && order === c.order) return true;
       if (cnew && (c.cluster === cnew || c.db_cluster === cnew)) return true;
-      if (cname && (c.cluster === cname || c.db_cluster === cname || c.alt_db === cname)) return true;
+      if (cname && (c.cluster === cname || c.db_cluster === cname)) return true;
       return false;
     });
 
@@ -251,9 +251,23 @@ export default function Sran5gProject() {
     const displayOrder = clusterCfg?.order || (order && String(order).startsWith('Day_') ? order : '-');
     const date = clusterCfg?.date || rd.Swap_Day_Plan || '-';
 
-    const isClusterSwapped = clusterCfg && (clusterCfg.swap_3g4g > 0 && clusterCfg.phase !== 'phase3' && (clusterCfg.swap_3g4g / clusterCfg.total_3g4g >= 0.8));
-    const isSwapped = !!site.integration_date || isClusterSwapped;
-    const swapDate = site.integration_date || (isClusterSwapped ? clusterCfg?.date : null);
+    // Cột Swap 3G4G là đã swap
+    const rawSwap3g4g = rd['Swap 3G4G'] || rd['Swap_3G4G'] || rd['Swap 3G/4G'] || site.swap_date || null;
+    const isSwapped = Boolean(rawSwap3g4g);
+    const swapDate = rawSwap3g4g ? String(rawSwap3g4g).substring(0, 10) : null;
+
+    // Cột BC on-air là onair 5G
+    const rawOnair = site.onair_date || rd['On-air'] || rd['OnAir 5G MBF'] || rd['BC on-air'] || rd['BC On-air'] || null;
+    const hasOnair5g = Boolean(rawOnair);
+    const onairDate = rawOnair ? String(rawOnair).substring(0, 10) : null;
+
+    const scopeUpper = (site.scope_5g || rd['5G_Scope'] || rd['5G Scope'] || '').toUpperCase();
+    const isDual5g = Boolean(
+      rd.Is_5G_Dual_Layer === true ||
+      rd['5G_Layers'] === 2 ||
+      (scopeUpper.includes('38') && scopeUpper.includes('26')) ||
+      scopeUpper.includes('+')
+    );
 
     return {
       cluster,
@@ -263,7 +277,9 @@ export default function Sran5gProject() {
       clusterCfg,
       isSwapped,
       swapDate,
-      hasOnair5g: !!site.onair_date
+      hasOnair5g,
+      onairDate,
+      isDual5g
     };
   };
 
@@ -421,11 +437,28 @@ export default function Sran5gProject() {
 
       let matchScope = selectedScope === 'ALL';
       if (!matchScope) {
-        const is5gItem = (item.scope_5g && item.scope_5g.toUpperCase().includes('5G') && !item.scope_5g.toUpperCase().includes('NONE')) || (item.unique_id && item.unique_id.toUpperCase().includes('5G'));
+        const scopeUpper = (item.scope_5g || item.raw_data?.['5G_Scope'] || '').toUpperCase();
+        const cfgUpper = (item.config_5g || item.raw_data?.['5G_Config'] || '').toUpperCase();
+        const uidUpper = (item.unique_id || '').toUpperCase();
+        const isDual5gItem = Boolean(
+          item.raw_data?.Is_5G_Dual_Layer === true ||
+          item.raw_data?.['5G_Layers'] === 2 ||
+          (scopeUpper.includes('38') && scopeUpper.includes('26')) ||
+          scopeUpper.includes('+')
+        );
+        const is5gItem = isDual5gItem ||
+          Boolean((scopeUpper && !scopeUpper.includes('NONE') && scopeUpper !== '-' && (scopeUpper.includes('5G') || scopeUpper.includes('NR') || scopeUpper.includes('26') || scopeUpper.includes('38'))) ||
+          (cfgUpper && cfgUpper.includes('5G')) ||
+          (uidUpper && uidUpper.includes('5G')));
+
         const isSinglebandItem = !is5gItem && item.config_3g4g && (item.config_3g4g.toLowerCase().includes('4g only') || item.config_3g4g.toLowerCase().includes('tháo dỡ 4g'));
         const isDualbandItem = !is5gItem && !isSinglebandItem;
 
-        if (selectedScope === 'ADD_5G') {
+        if (selectedScope === 'ADD_5G_DUAL') {
+          matchScope = isDual5gItem;
+        } else if (selectedScope === 'ADD_5G_SINGLE') {
+          matchScope = is5gItem && !isDual5gItem;
+        } else if (selectedScope === 'ADD_5G') {
           matchScope = is5gItem;
         } else if (selectedScope === 'SWAP_3G4G_BOTH') {
           matchScope = isDualbandItem;
@@ -456,9 +489,7 @@ export default function Sran5gProject() {
             matchStatus = true;
           } else if (clusterCfg.cluster === cnew || clusterCfg.db_cluster === cnew) {
             matchStatus = true;
-          } else if (!order && clusterCfg.alt_db && cname === clusterCfg.alt_db) {
-            matchStatus = true;
-          } else if (!order && !cnew && (clusterCfg.cluster === cname || clusterCfg.db_cluster === cname)) {
+          } else if (clusterCfg.cluster === cname || clusterCfg.db_cluster === cname) {
             matchStatus = true;
           } else {
             matchStatus = false;
@@ -510,10 +541,27 @@ export default function Sran5gProject() {
     const activeTotal = activeDataset.length;
     const overallTotal = data.length;
 
-    const add5g = activeDataset.filter(d => 
-      (d.scope_5g && d.scope_5g.toUpperCase().includes('5G') && !d.scope_5g.toUpperCase().includes('NONE')) || 
-      (d.unique_id && d.unique_id.toUpperCase().includes('5G'))
-    ).length;
+    const isDual5gSite = (d) => {
+      const scope = (d.scope_5g || d.raw_data?.['5G_Scope'] || '').toUpperCase();
+      return d.raw_data?.Is_5G_Dual_Layer === true ||
+             d.raw_data?.['5G_Layers'] === 2 ||
+             (scope.includes('38') && scope.includes('26')) ||
+             scope.includes('+');
+    };
+
+    const is5gSite = (d) => {
+      const scope = (d.scope_5g || d.raw_data?.['5G_Scope'] || '').toUpperCase();
+      const cfg = (d.config_5g || d.raw_data?.['5G_Config'] || '').toUpperCase();
+      const uid = (d.unique_id || '').toUpperCase();
+      return isDual5gSite(d) ||
+             (scope && !scope.includes('NONE') && scope !== '-' && (scope.includes('NR') || scope.includes('5G') || scope.includes('26') || scope.includes('38'))) ||
+             (cfg && cfg.includes('5G')) ||
+             (uid && uid.includes('5G'));
+    };
+
+    const add5g = activeDataset.filter(is5gSite).length;
+    const dual5g = activeDataset.filter(isDual5gSite).length;
+    const single5g = add5g - dual5g;
 
     const checkIsSingleband = (d) => {
       const swapSol = (d.swap_solution || '').toLowerCase();
@@ -533,14 +581,12 @@ export default function Sran5gProject() {
     };
 
     const swap4gOnly = activeDataset.filter(d => {
-      const is5g = (d.scope_5g && d.scope_5g.toUpperCase().includes('5G') && !d.scope_5g.toUpperCase().includes('NONE')) || (d.unique_id && d.unique_id.toUpperCase().includes('5G'));
-      if (is5g) return false;
+      if (is5gSite(d)) return false;
       return checkIsSingleband(d);
     }).length;
 
     const swapBoth3g4g = activeDataset.filter(d => {
-      const is5g = (d.scope_5g && d.scope_5g.toUpperCase().includes('5G') && !d.scope_5g.toUpperCase().includes('NONE')) || (d.unique_id && d.unique_id.toUpperCase().includes('5G'));
-      if (is5g) return false;
+      if (is5gSite(d)) return false;
       return !checkIsSingleband(d);
     }).length;
 
@@ -572,13 +618,12 @@ export default function Sran5gProject() {
     const onair = activeDataset.filter(d => d.onair_date).length;
 
     // Separated 5G specific milestones
-    const is5gSite = (d) => (d.scope_5g && d.scope_5g.toUpperCase().includes('5G') && !d.scope_5g.toUpperCase().includes('NONE')) || (d.unique_id && d.unique_id.toUpperCase().includes('5G'));
     const onair5g = activeDataset.filter(d => d.onair_date && is5gSite(d)).length;
     const integration5g = activeDataset.filter(d => d.integration_date && is5gSite(d)).length;
     const total4gSwap = swap4gOnly + swapBoth3g4g + (activeTotal - swap4gOnly - swapBoth3g4g - add5g >= 0 ? 0 : 0);
 
     return { 
-      activeTotal, overallTotal, swap4gOnly, swapBoth3g4g, add5g, 
+      activeTotal, overallTotal, swap4gOnly, swapBoth3g4g, add5g, dual5g, single5g,
       total4gSwap: (swap4gOnly + swapBoth3g4g) > 0 ? (swap4gOnly + swapBoth3g4g + add5g) : activeTotal,
       surveyDone, tssrApproved, rfDesignApproved, augTarget, sepTarget, sepTargetVT3, sepTargetVT2,
       whPickup, deliveryDone, installDone, integrationDone, onair,
@@ -604,13 +649,28 @@ export default function Sran5gProject() {
         if (c.cluster === 'DNI_5G_Only') return cname === 'DNI_5G_Only' || cnew === 'DNI_5G_Only';
         if (c.cluster === cnew || c.cluster === cname) return true;
         if (c.db_cluster && (cname === c.db_cluster || cnew === c.db_cluster)) return true;
-        if (c.alt_db && (cname === c.alt_db || cnew === c.alt_db)) return true;
         return false;
       });
 
-      const is5gSite = (d) => (d.scope_5g && d.scope_5g.toUpperCase().includes('5G') && !d.scope_5g.toUpperCase().includes('NONE')) || (d.unique_id && d.unique_id.toUpperCase().includes('5G'));
+      const is5gSite = (d) => {
+        const scope = (d.scope_5g || d.raw_data?.['5G_Scope'] || '').toUpperCase();
+        const cfg = (d.config_5g || d.raw_data?.['5G_Config'] || '').toUpperCase();
+        const uid = (d.unique_id || '').toUpperCase();
+        return d.raw_data?.Is_5G_Dual_Layer === true ||
+               (scope && !scope.includes('NONE') && scope !== '-' && (scope.includes('NR') || scope.includes('5G') || scope.includes('26') || scope.includes('38'))) ||
+               (cfg && cfg.includes('5G')) ||
+               (uid && uid.includes('5G'));
+      };
+      const isDual5gSite = (d) => {
+        const scope = (d.scope_5g || d.raw_data?.['5G_Scope'] || '').toUpperCase();
+        return d.raw_data?.Is_5G_Dual_Layer === true ||
+               d.raw_data?.['5G_Layers'] === 2 ||
+               (scope.includes('38') && scope.includes('26')) ||
+               scope.includes('+');
+      };
       
       const count5gInDb = clusterSites.filter(is5gSite).length;
+      const countDual5gInDb = clusterSites.filter(isDual5gSite).length;
       const count5g = Math.min(c.total_5g, count5gInDb > 0 ? count5gInDb : c.total_5g);
 
       const rawSurvey = clusterSites.filter(d => d.survey_date || d.ie_app_date || d.rf_app_date || d.tssr_sub_date || d.rf_design_date || d.wh_pickup_date || d.delivery_date || d.install_date || d.integration_date || d.onair_date).length;
@@ -620,25 +680,26 @@ export default function Sran5gProject() {
       const rawDelivery = clusterSites.filter(d => d.delivery_date || d.install_date || d.integration_date || d.onair_date).length;
       const rawInstall = clusterSites.filter(d => d.install_date || d.integration_date || d.onair_date).length;
       const rawIntegration = clusterSites.filter(d => d.integration_date || d.onair_date).length;
-      const rawOnair = clusterSites.filter(d => d.onair_date).length;
-      const rawOnair5g = clusterSites.filter(d => d.onair_date && is5gSite(d)).length;
+      const rawSwap = clusterSites.filter(d => Boolean(d.raw_data?.['Swap 3G4G'] || d.raw_data?.['Swap_3G4G'] || d.swap_date)).length;
+      const rawOnair = clusterSites.filter(d => Boolean(d.onair_date || d.raw_data?.['On-air'] || d.raw_data?.['OnAir 5G MBF'])).length;
+      const rawOnair5g = clusterSites.filter(d => Boolean(d.onair_date || d.raw_data?.['On-air'] || d.raw_data?.['OnAir 5G MBF']) && is5gSite(d)).length;
 
       const survey = Math.min(c.total_3g4g, rawSurvey);
       const tssr = Math.min(c.total_3g4g, rawTssr);
       const rf = Math.min(c.total_3g4g, rawRf);
       const wh = Math.min(c.total_3g4g, rawWh);
-      const onair = Math.min(c.total_3g4g, rawOnair);
+      const onair = rawOnair;
 
       // Use exact report progress metrics from Excel report when defined
       const delivery = c.del_3g4g !== undefined ? c.del_3g4g : Math.min(c.total_3g4g, rawDelivery);
       const install = c.ins_3g4g !== undefined ? c.ins_3g4g : Math.min(c.total_3g4g, rawInstall);
       const integration = c.ci_3g4g !== undefined ? c.ci_3g4g : Math.min(c.total_3g4g, rawIntegration);
-      const swap = c.swap_3g4g !== undefined ? c.swap_3g4g : Math.min(c.total_3g4g, rawOnair);
+      const swap = rawSwap > 0 ? rawSwap : (c.swap_3g4g !== undefined ? c.swap_3g4g : 0);
 
       const del5g = c.del_5g !== undefined ? c.del_5g : Math.min(c.total_5g, rawDelivery);
       const ins5g = c.ins_5g !== undefined ? c.ins_5g : Math.min(c.total_5g, rawInstall);
       const ci5g = c.ci_5g !== undefined ? c.ci_5g : Math.min(c.total_5g, rawIntegration);
-      const oa5g = c.oa_5g !== undefined ? c.oa_5g : Math.min(c.total_5g, rawOnair5g);
+      const oa5g = rawOnair5g > 0 ? rawOnair5g : (c.oa_5g !== undefined ? c.oa_5g : 0);
 
       return {
         ...c,
@@ -745,14 +806,14 @@ export default function Sran5gProject() {
     const delivery = filteredData.filter(d => d.delivery_date || d.install_date || d.integration_date || d.onair_date).length;
     const install = filteredData.filter(d => d.install_date || d.integration_date || d.onair_date).length;
     
-    // Swap 3G/4G integration count
-    const swapIntegration = filteredData.filter(d => d.integration_date || getSiteClusterDetails(d).isSwapped).length;
+    // Swap 3G/4G count từ cột Swap 3G4G
+    const swapIntegration = filteredData.filter(d => Boolean(d.raw_data?.['Swap 3G4G'] || d.raw_data?.['Swap_3G4G'] || d.swap_date || getSiteClusterDetails(d).isSwapped)).length;
     const integration = filteredData.filter(d => d.integration_date).length;
     const integration5g = filteredData.filter(d => d.integration_date && is5gSite(d)).length;
 
-    // 5G Onair count (Only 5G as requested by user!)
-    const onair5g = filteredData.filter(d => d.onair_date && is5gSite(d)).length;
-    const allOnair = filteredData.filter(d => d.onair_date).length;
+    // 5G Onair count từ cột BC on-air (chỉ tính trạm có 5G đã Onair)
+    const onair5g = filteredData.filter(d => Boolean(d.onair_date || d.raw_data?.['On-air'] || d.raw_data?.['OnAir 5G MBF']) && is5gSite(d)).length;
+    const allOnair = filteredData.filter(d => Boolean(d.onair_date || d.raw_data?.['On-air'] || d.raw_data?.['OnAir 5G MBF'])).length;
 
     return { 
       total, 
@@ -2760,7 +2821,14 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
                 <Zap className="h-4 w-4 text-emerald-600" />
               </div>
               <div className="text-2xl font-black text-emerald-700">{stats.add5g}</div>
-              <div className="text-[11px] text-emerald-600 mt-1 font-medium">Add 5G NR26 / Swap 5G ({stats.activeTotal > 0 ? ((stats.add5g / stats.activeTotal) * 100).toFixed(1) : 0}%)</div>
+              <div className="text-[11px] text-emerald-700 mt-1 font-semibold flex items-center gap-1.5 flex-wrap">
+                <span className="bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded text-[10px] font-bold border border-purple-300">
+                  ⚡ 2 Lớp: {stats.dual5g}
+                </span>
+                <span className="bg-pink-100 text-pink-800 px-1.5 py-0.5 rounded text-[10px] font-bold border border-pink-300">
+                  📶 1 Lớp: {stats.single5g}
+                </span>
+              </div>
             </div>
 
             <div className="bg-white p-3.5 rounded-xl border border-cyan-200 bg-cyan-50/20 shadow-sm">
@@ -2863,7 +2931,9 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
                   className="px-3 py-2 text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
                 >
                   <option value="ALL">⚡ Tất cả Phân loại Scope ({stats.activeTotal} trạm)</option>
-                  <option value="ADD_5G">⚡ 1. Phát sóng 5G / Lắp 5G ({stats.add5g} trạm)</option>
+                  <option value="ADD_5G_DUAL">⚡ 1a. 5G 2 Lớp (2600 + 3800 MHz) ({stats.dual5g} trạm)</option>
+                  <option value="ADD_5G_SINGLE">📶 1b. 5G 1 Lớp (2600 MHz) ({stats.single5g} trạm)</option>
+                  <option value="ADD_5G">⚡ 1. Tất cả trạm 5G ({stats.add5g} trạm)</option>
                   <option value="SWAP_3G4G_BOTH">🔄 2. Swap 3G/4G Dualband ({stats.swapBoth3g4g} trạm)</option>
                   <option value="SWAP_4G_ONLY">📱 3. Swap 4G Only Singleband ({stats.swap4gOnly} trạm)</option>
                 </select>
@@ -3202,9 +3272,21 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
                       </td>
 
                       <td className="py-3 px-3 max-w-xs">
-                        <div className="font-semibold text-slate-800">{item.config_5g || item.config_3g4g || '-'}</div>
-                        {item.config_3g4g && item.config_5g && (
-                          <div className="text-[10px] text-slate-400 truncate">{item.config_3g4g}</div>
+                        <div>
+                          {item.raw_data?.Is_5G_Dual_Layer ? (
+                            <span className="inline-flex items-center gap-1 font-black text-[11px] text-purple-200 bg-purple-900 px-2 py-0.5 rounded border border-purple-500 shadow-[0_0_8px_rgba(126,34,206,0.4)]">
+                              ⚡ 5G 2 Lớp (2600 + 3800)
+                            </span>
+                          ) : item.scope_5g && item.scope_5g !== 'None' && item.scope_5g !== '-' ? (
+                            <span className="inline-flex items-center gap-1 font-bold text-[11px] text-pink-700 bg-pink-50 px-2 py-0.5 rounded border border-pink-200">
+                              📶 {item.scope_5g}
+                            </span>
+                          ) : (
+                            <span className="font-semibold text-slate-800">{item.config_5g || item.config_3g4g || '-'}</span>
+                          )}
+                        </div>
+                        {item.config_3g4g && (item.config_5g || item.raw_data?.Is_5G_Dual_Layer) && (
+                          <div className="text-[10px] text-slate-400 truncate mt-0.5">{item.config_3g4g}</div>
                         )}
                       </td>
 
@@ -3244,10 +3326,10 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
                           )}
 
                           {/* 4G Swap Status */}
-                          {item.integration_date || cDetail.isSwapped ? (
+                          {cDetail.isSwapped ? (
                             <span className="inline-flex items-center gap-1 text-[11px] font-extrabold text-emerald-900 bg-emerald-100 px-2 py-0.5 rounded-md border border-emerald-300 shadow-2xs">
                               <CheckCircle className="h-3.5 w-3.5 text-emerald-600" />
-                              <span>Đã Swap 4G {item.integration_date ? `(${item.integration_date})` : `(${cDetail.date})`}</span>
+                              <span>Đã Swap 3G/4G {cDetail.swapDate ? `(${cDetail.swapDate})` : ''}</span>
                             </span>
                           ) : item.install_date ? (
                             <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
@@ -3278,9 +3360,14 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
                           )}
 
                           {/* 5G Onair Status */}
-                          {item.onair_date && (
-                            <span className="inline-flex items-center gap-1 text-[11px] font-black text-pink-700 bg-pink-100 px-2 py-0.5 rounded-md border border-pink-300 shadow-2xs">
-                              <Radio className="h-3 w-3 text-pink-600 animate-pulse" /> Onair 5G ({item.onair_date})
+                          {cDetail.hasOnair5g && (
+                            <span className={`inline-flex items-center gap-1 text-[11px] font-black px-2 py-0.5 rounded-md border shadow-2xs ${
+                              cDetail.isDual5g 
+                                ? 'text-purple-900 bg-purple-100 border-purple-300' 
+                                : 'text-pink-700 bg-pink-100 border-pink-300'
+                            }`}>
+                              <Radio className={`h-3 w-3 animate-pulse ${cDetail.isDual5g ? 'text-purple-600' : 'text-pink-600'}`} /> 
+                              {cDetail.isDual5g ? `⚡ Onair 5G 2 Lớp (${cDetail.onairDate})` : `📶 Onair 5G (${cDetail.onairDate})`}
                             </span>
                           )}
                         </div>
@@ -3822,7 +3909,17 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
                           </span>
                         </td>
                         <td className="py-2.5 px-3">
-                          <div className="font-bold text-slate-800">{item.config_5g || item.scope_5g || item.config_3g4g || '5G NR26'}</div>
+                          {item.raw_data?.Is_5G_Dual_Layer ? (
+                            <span className="inline-flex items-center gap-1 font-black text-[11px] text-purple-200 bg-purple-900 px-2 py-0.5 rounded border border-purple-500 shadow-[0_0_8px_rgba(126,34,206,0.4)]">
+                              ⚡ 5G 2 Lớp (2600 + 3800)
+                            </span>
+                          ) : item.scope_5g && item.scope_5g !== 'None' && item.scope_5g !== '-' ? (
+                            <span className="inline-flex items-center gap-1 font-bold text-[11px] text-pink-700 bg-pink-50 px-2 py-0.5 rounded border border-pink-200">
+                              📶 {item.scope_5g}
+                            </span>
+                          ) : (
+                            <div className="font-bold text-slate-800">{item.config_5g || item.config_3g4g || '5G NR26'}</div>
+                          )}
                           {item.power_solution && (
                             <div className="text-[10px] text-amber-700 truncate max-w-[180px]">⚡ {item.power_solution}</div>
                           )}

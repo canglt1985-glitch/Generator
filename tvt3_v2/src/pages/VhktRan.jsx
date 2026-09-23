@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Radio, Zap, BarChart3, RefreshCw, Smartphone, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Radio, Zap, BarChart3, RefreshCw, Smartphone, CheckCircle, AlertTriangle, Search, X, Sparkles, Filter } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 
 export default function VhktRan() {
@@ -12,6 +12,8 @@ export default function VhktRan() {
   const [vhktData, setVhktData] = useState([]);
   const [vhktScrapedAt, setVhktScrapedAt] = useState('');
   const [lastFetchTime, setLastFetchTime] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [techFilter, setTechFilter] = useState('ALL'); // 'ALL', 'ERA_ALL', '4G', '5G', 'SRAN'
 
   // Fetch site id mapping dynamically
   async function fetchSiteMap() {
@@ -145,12 +147,77 @@ export default function VhktRan() {
     return !closedNocStatuses.includes(nocStatus) && !closedWoStatuses.includes(trangThaiWo);
   });
 
-  // Cross-check: check if MĐ site has active MPĐ running
-  const activeMpdSites = new Set(
-    mpdActive.filter(a => a.status === 'ACTIVE').map(a => (a.site || '').trim().toUpperCase()).filter(Boolean)
-  );
+  // Parse site code to identify ERA technology suffixes: L (4G), UL (SRAN 3G4G), N (5G)
+  function parseSiteAndTech(site) {
+    if (!site) return { fullSite: '', baseSite: '', tech: null, techLabel: '', badgeColor: '' };
+    const fullSite = String(site).trim().toUpperCase();
+    let baseSite = fullSite;
+    let tech = null;
+    let techLabel = '';
+    let badgeColor = '';
+
+    if (fullSite.endsWith('UL') && fullSite.length > 4) {
+      baseSite = fullSite.slice(0, -2);
+      tech = 'SRAN';
+      techLabel = 'SRAN 3G4G';
+      badgeColor = 'bg-sky-100 text-sky-800 border-sky-300 dark:bg-sky-900/40 dark:text-sky-300 dark:border-sky-700';
+    } else if (fullSite.endsWith('N') && fullSite.length > 3) {
+      baseSite = fullSite.slice(0, -1);
+      tech = '5G';
+      techLabel = '5G';
+      badgeColor = 'bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-900/40 dark:text-purple-300 dark:border-purple-700';
+    } else if (fullSite.endsWith('L') && fullSite.length > 3) {
+      baseSite = fullSite.slice(0, -1);
+      tech = '4G';
+      techLabel = '4G';
+      badgeColor = 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-900/40 dark:text-emerald-300 dark:border-emerald-700';
+    }
+
+    return { fullSite, baseSite, tech, techLabel, badgeColor };
+  }
+
+  // Get full site mapping details: new ID, old ID, tech info
+  function getSiteDetails(site) {
+    if (!site) return { newId: '', oldId: '', tech: null, techLabel: '', badgeColor: '', fullSite: '', baseSite: '' };
+    const { fullSite, baseSite, tech, techLabel, badgeColor } = parseSiteAndTech(site);
+    
+    // Look up in siteMap: check fullSite first, then baseSite
+    const mapped = siteMap[fullSite] || (baseSite ? siteMap[baseSite] : '');
+    let newId = fullSite;
+    let oldId = '';
+
+    if (mapped && mapped !== fullSite && mapped !== baseSite) {
+      if (mapped.length <= 6 && fullSite.length >= 7) {
+        newId = fullSite;
+        oldId = mapped;
+      } else if (fullSite.length <= 6 && mapped.length >= 7) {
+        newId = mapped;
+        oldId = fullSite;
+      } else {
+        newId = fullSite;
+        oldId = mapped;
+      }
+    }
+
+    return { newId, oldId, tech, techLabel, badgeColor, fullSite, baseSite };
+  }
+
+  // Cross-check: check if MĐ site has active MPĐ running (matching both full site, base site, and old ID)
+  const activeMpdSites = new Set();
+  mpdActive.filter(a => a.status === 'ACTIVE').forEach(a => {
+    const raw = (a.site || '').trim().toUpperCase();
+    if (raw) {
+      const { fullSite, baseSite, oldId } = getSiteDetails(raw);
+      if (fullSite) activeMpdSites.add(fullSite);
+      if (baseSite) activeMpdSites.add(baseSite);
+      if (oldId) activeMpdSites.add(oldId);
+    }
+  });
+
   const isMpdRunningOnSite = (site) => {
-    return activeMpdSites.has((site || '').trim().toUpperCase());
+    if (!site) return false;
+    const { fullSite, baseSite, oldId } = getSiteDetails(site);
+    return activeMpdSites.has(fullSite) || (baseSite && activeMpdSites.has(baseSite)) || (oldId && activeMpdSites.has(oldId));
   };
 
   // Card counts (active only)
@@ -169,25 +236,104 @@ export default function VhktRan() {
     });
   };
 
-  // Helper to render site labels stacked
+  // Helper to render site labels stacked with clear tech badge and prominent, large, bold old site ID
   function renderSiteLabel(site) {
     if (!site) return <span className="font-mono text-gray-400">--</span>;
-    const siteUpper = site.toUpperCase();
-    const mapped = siteMap[siteUpper];
-    if (mapped && mapped !== siteUpper) {
-      // If site starts with DN, it's the new ID, mapped is the old ID
-      const isNewId = siteUpper.startsWith('DN');
-      const newId = isNewId ? siteUpper : mapped;
-      const oldId = isNewId ? mapped : siteUpper;
-      return (
-        <div className="flex flex-col items-start leading-tight text-left">
-          <span className="font-bold text-blue-600 font-mono tracking-wide text-xs sm:text-[13px]">{newId}</span>
-          <span className="text-[10px] text-gray-400 font-mono">{oldId}</span>
+    const { newId, oldId, tech, techLabel, badgeColor } = getSiteDetails(site);
+
+    return (
+      <div className="flex flex-col items-start leading-tight text-left py-0.5">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="font-bold text-blue-600 dark:text-blue-400 font-mono tracking-wide text-xs sm:text-[13px]">
+            {newId}
+          </span>
+          {tech && (
+            <span className={`px-1.5 py-0.2 rounded text-[9px] font-black border uppercase tracking-wider ${badgeColor}`}>
+              {techLabel}
+            </span>
+          )}
         </div>
-      );
-    }
-    return <span className="font-bold text-blue-600 font-mono text-xs sm:text-[13px]">{site}</span>;
+        {oldId && oldId !== newId && (
+          <span className="font-black text-slate-900 dark:text-white font-mono text-sm sm:text-[15px] tracking-wide mt-0.5 block">
+            {oldId}
+          </span>
+        )}
+      </div>
+    );
   }
+
+  // Filter helper across search query & tech filters
+  function matchesFilter(site, extraSearchFields = []) {
+    const { fullSite, baseSite, oldId, tech } = getSiteDetails(site);
+
+    // Technology Filter
+    if (techFilter === 'ERA_ALL' && !tech) return false;
+    if (techFilter === '4G' && tech !== '4G') return false;
+    if (techFilter === '5G' && tech !== '5G') return false;
+    if (techFilter === 'SRAN' && tech !== 'SRAN') return false;
+
+    // Search query
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toUpperCase();
+      const matchSite = fullSite.includes(q) || (baseSite && baseSite.includes(q)) || (oldId && oldId.toUpperCase().includes(q));
+      if (matchSite) return true;
+      const matchExtra = extraSearchFields.some(field => String(field || '').toUpperCase().includes(q));
+      if (!matchExtra) return false;
+    }
+
+    return true;
+  }
+
+  // Current active list for stats and filtering
+  const currentTabRawList = activeTab === 'md' ? mdActive
+    : activeTab === 'mpd' ? mpdActive
+    : activeTab === 'mll' ? mllActive
+    : activeTab === 'mll_cell' ? cellActive
+    : activeTab === 'vhkt' ? vhktData
+    : activePakhList;
+
+  const currentTabSiteExtractor = (item) => {
+    if (!item) return '';
+    if (activeTab === 'vhkt') return item.tram;
+    if (activeTab === 'pakh') return item.ma_tram || item.maTram;
+    return item.site;
+  };
+
+  const eraTabStats = {
+    total: currentTabRawList.length,
+    eraTotal: 0,
+    g4: 0,
+    g5: 0,
+    sran: 0,
+  };
+
+  currentTabRawList.forEach(item => {
+    const site = currentTabSiteExtractor(item);
+    const { tech } = parseSiteAndTech(site);
+    if (tech) {
+      eraTabStats.eraTotal += 1;
+      if (tech === '4G') eraTabStats.g4 += 1;
+      if (tech === '5G') eraTabStats.g5 += 1;
+      if (tech === 'SRAN') eraTabStats.sran += 1;
+    }
+  });
+
+  // Filtered lists for each tab
+  const displayedMd = sortAlarms(mdActive.filter(a => matchesFilter(a.site, [a.alarm_name, a.network])));
+  const displayedMpd = sortAlarms(mpdActive.filter(a => matchesFilter(a.site, [a.alarm_name, a.ne_type])));
+  const displayedMll = sortAlarms(mllActive.filter(a => matchesFilter(a.site, [a.network, a.vendor])));
+  const displayedCell = sortAlarms(cellActive.filter(a => matchesFilter(a.site, [a.cellid, a.network, a.alarm_name, a.vendor])));
+  const displayedVhkt = [...vhktData]
+    .filter(r => matchesFilter(r.tram))
+    .sort((a, b) => (b.md_so_lan || 0) - (a.md_so_lan || 0));
+  const displayedPakh = activePakhList.filter(p =>
+    matchesFilter(p.ma_tram || p.maTram, [
+      p.so_thue_bao || p.soThueBao,
+      p.noi_dung_phan_anh || p.noiDungPhanAnh,
+      p.phuong_xa || p.phuongXa,
+      p.tinh_thanh_pho || p.tinhThanhPho
+    ])
+  );
 
   // Format date helper (dd/mm/yyyy hh:mm:ss)
   function formatDateTime(isoString) {
@@ -324,18 +470,148 @@ export default function VhktRan() {
         })}
       </div>
 
-      {/* Info Status Bar */}
-      <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-500">
-        <span className="inline-flex h-2 w-2 rounded-full bg-green-500"></span>
-        <span>
-          {activeTab === 'vhkt' ? (
-            vhktScrapedAt ? `Cập nhật báo cáo lúc: ${formatDateTime(vhktScrapedAt)}` : 'Chờ dữ liệu SLA...'
-          ) : activeTab === 'pakh' ? (
-            pakhScrapedAt ? `Cập nhật phản ánh lúc: ${formatDateTime(pakhScrapedAt)}` : 'Chờ dữ liệu phản ánh...'
-          ) : (
-            lastFetchTime ? `Cập nhật alarm lúc: ${lastFetchTime}` : 'Đang tải cảnh báo...'
+      {/* Search & ERA Technology Filter Toolbar */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-3 sm:p-4 shadow-2xs space-y-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          {/* Search Box */}
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Tìm Site ID (mới/cũ), trạm, nội dung cảnh báo..."
+              className="w-full pl-9 pr-8 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-slate-800 placeholder-slate-400"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded cursor-pointer"
+                title="Xóa tìm kiếm"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Quick Info Status */}
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-[11px] text-slate-500 self-start sm:self-auto shrink-0">
+            <span className="inline-flex h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
+            <span>
+              {activeTab === 'vhkt' ? (
+                vhktScrapedAt ? `SLA: ${formatDateTime(vhktScrapedAt)}` : 'Chờ dữ liệu SLA...'
+              ) : activeTab === 'pakh' ? (
+                pakhScrapedAt ? `PAKH: ${formatDateTime(pakhScrapedAt)}` : 'Chờ dữ liệu phản ánh...'
+              ) : (
+                lastFetchTime ? `Alarm: ${lastFetchTime}` : 'Đang tải cảnh báo...'
+              )}
+            </span>
+          </div>
+        </div>
+
+        {/* ERA Technology Filter Pills */}
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap pt-1 border-t border-slate-100 text-xs">
+          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1 mr-1">
+            <Filter className="h-3 w-3" /> Lọc ERA:
+          </span>
+
+          <button
+            onClick={() => setTechFilter('ALL')}
+            className={`px-2.5 py-1 rounded-lg font-bold text-xs transition-all cursor-pointer flex items-center gap-1.5 ${
+              techFilter === 'ALL'
+                ? 'bg-slate-800 text-white shadow-xs'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'
+            }`}
+          >
+            <span>Tất cả</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+              techFilter === 'ALL' ? 'bg-slate-700 text-slate-200' : 'bg-slate-200 text-slate-600'
+            }`}>
+              {currentTabRawList.length}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setTechFilter('ERA_ALL')}
+            className={`px-2.5 py-1 rounded-lg font-bold text-xs transition-all cursor-pointer flex items-center gap-1.5 ${
+              techFilter === 'ERA_ALL'
+                ? 'bg-amber-600 text-white shadow-xs ring-2 ring-amber-300'
+                : 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200'
+            }`}
+            title="Các trạm đã swap thiết bị ERA (có đuôi L, UL, N)"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            <span>ERA Swap</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+              techFilter === 'ERA_ALL' ? 'bg-amber-700 text-amber-100' : 'bg-amber-200/80 text-amber-800'
+            }`}>
+              {eraTabStats.eraTotal}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setTechFilter('4G')}
+            className={`px-2.5 py-1 rounded-lg font-bold text-xs transition-all cursor-pointer flex items-center gap-1.5 ${
+              techFilter === '4G'
+                ? 'bg-emerald-600 text-white shadow-xs ring-2 ring-emerald-300'
+                : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200'
+            }`}
+            title="Trạm 4G ERA (đuôi L)"
+          >
+            <span>4G (L)</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+              techFilter === '4G' ? 'bg-emerald-700 text-emerald-100' : 'bg-emerald-200/80 text-emerald-800'
+            }`}>
+              {eraTabStats.g4}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setTechFilter('5G')}
+            className={`px-2.5 py-1 rounded-lg font-bold text-xs transition-all cursor-pointer flex items-center gap-1.5 ${
+              techFilter === '5G'
+                ? 'bg-purple-600 text-white shadow-xs ring-2 ring-purple-300'
+                : 'bg-purple-50 text-purple-800 hover:bg-purple-100 border border-purple-200'
+            }`}
+            title="Trạm 5G ERA (đuôi N)"
+          >
+            <span>5G (N)</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+              techFilter === '5G' ? 'bg-purple-700 text-purple-100' : 'bg-purple-200/80 text-purple-800'
+            }`}>
+              {eraTabStats.g5}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setTechFilter('SRAN')}
+            className={`px-2.5 py-1 rounded-lg font-bold text-xs transition-all cursor-pointer flex items-center gap-1.5 ${
+              techFilter === 'SRAN'
+                ? 'bg-blue-600 text-white shadow-xs ring-2 ring-blue-300'
+                : 'bg-blue-50 text-blue-800 hover:bg-blue-100 border border-blue-200'
+            }`}
+            title="Trạm SRAN 3G/4G ERA (đuôi UL)"
+          >
+            <span>SRAN (UL)</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+              techFilter === 'SRAN' ? 'bg-blue-700 text-blue-100' : 'bg-blue-200/80 text-blue-800'
+            }`}>
+              {eraTabStats.sran}
+            </span>
+          </button>
+
+          {(techFilter !== 'ALL' || searchQuery) && (
+            <button
+              onClick={() => {
+                setTechFilter('ALL');
+                setSearchQuery('');
+              }}
+              className="text-[11px] font-semibold text-slate-500 hover:text-red-600 underline ml-auto cursor-pointer"
+            >
+              Đặt lại bộ lọc
+            </button>
           )}
-        </span>
+        </div>
       </div>
 
       {/* Main Data Container */}
@@ -350,9 +626,21 @@ export default function VhktRan() {
             {/* Tab: Mất điện MĐ */}
             {activeTab === 'md' && (
               <div className="divide-y divide-gray-200">
-                {mdActive.length === 0 ? (
-                  <div className="p-12 text-center text-gray-400 text-sm">
-                    ✅ Không có alarm MĐ nào. Tất cả trạm đang có điện lưới.
+                {displayedMd.length === 0 ? (
+                  <div className="p-12 text-center text-gray-500 text-sm space-y-2">
+                    {mdActive.length === 0 ? (
+                      <p>✅ Không có alarm MĐ nào. Tất cả trạm đang có điện lưới.</p>
+                    ) : (
+                      <>
+                        <p className="font-semibold">🔍 Không có trạm nào khớp với bộ lọc ERA hoặc từ khóa tìm kiếm.</p>
+                        <button
+                          onClick={() => { setTechFilter('ALL'); setSearchQuery(''); }}
+                          className="text-xs text-blue-600 hover:underline font-semibold cursor-pointer"
+                        >
+                          Xóa bộ lọc để xem tất cả {mdActive.length} cảnh báo MĐ
+                        </button>
+                      </>
+                    )}
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
@@ -369,14 +657,14 @@ export default function VhktRan() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
-                        {sortAlarms(mdActive).map(a => {
+                        {displayedMd.map(a => {
                           const hasGen = isMpdRunningOnSite(a.site);
                           const isCleared = a.status === 'CLEARED';
                           return (
                             <tr key={a.id} className="hover:bg-gray-50 transition-colors">
                               <td className="py-3 px-2 sm:px-4">
-                                <div className="flex items-center justify-start gap-2 max-w-[150px] mx-auto text-left">
-                                  <span className="text-base leading-none">
+                                <div className="flex items-center justify-start gap-2.5 min-w-[130px] max-w-[190px] mx-auto text-left">
+                                  <span className="text-base leading-none shrink-0">
                                     {isCleared ? '✅' : (hasGen ? '🟢' : '🔴')}
                                   </span>
                                   {renderSiteLabel(a.site)}
@@ -409,9 +697,21 @@ export default function VhktRan() {
             {/* Tab: Máy phát điện MPĐ */}
             {activeTab === 'mpd' && (
               <div className="divide-y divide-gray-200">
-                {mpdActive.length === 0 ? (
-                  <div className="p-12 text-center text-gray-400 text-sm">
-                    Chưa có trạm nào chạy máy phát.
+                {displayedMpd.length === 0 ? (
+                  <div className="p-12 text-center text-gray-500 text-sm space-y-2">
+                    {mpdActive.length === 0 ? (
+                      <p>Chưa có trạm nào chạy máy phát.</p>
+                    ) : (
+                      <>
+                        <p className="font-semibold">🔍 Không có trạm nào khớp với bộ lọc ERA hoặc từ khóa tìm kiếm.</p>
+                        <button
+                          onClick={() => { setTechFilter('ALL'); setSearchQuery(''); }}
+                          className="text-xs text-blue-600 hover:underline font-semibold cursor-pointer"
+                        >
+                          Xóa bộ lọc để xem tất cả {mpdActive.length} trạm chạy máy phát
+                        </button>
+                      </>
+                    )}
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
@@ -428,11 +728,11 @@ export default function VhktRan() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
-                        {sortAlarms(mpdActive).map(a => (
+                        {displayedMpd.map(a => (
                           <tr key={a.id} className="hover:bg-gray-50 transition-colors">
                             <td className="py-3 px-2 sm:px-4">
-                              <div className="flex items-center justify-start gap-2 max-w-[150px] mx-auto text-left">
-                                <span className="text-base leading-none">
+                              <div className="flex items-center justify-start gap-2.5 min-w-[130px] max-w-[190px] mx-auto text-left">
+                                <span className="text-base leading-none shrink-0">
                                   {a.status === 'CLEARED' ? '✅' : '🟢'}
                                 </span>
                                 {renderSiteLabel(a.site)}
@@ -464,9 +764,21 @@ export default function VhktRan() {
             {/* Tab: Mất liên lạc MLL */}
             {activeTab === 'mll' && (
               <div className="divide-y divide-gray-200">
-                {mllActive.length === 0 ? (
-                  <div className="p-12 text-center text-gray-400 text-sm">
-                    ✅ Tất cả trạm đang liên lạc bình thường.
+                {displayedMll.length === 0 ? (
+                  <div className="p-12 text-center text-gray-500 text-sm space-y-2">
+                    {mllActive.length === 0 ? (
+                      <p>✅ Tất cả trạm đang liên lạc bình thường.</p>
+                    ) : (
+                      <>
+                        <p className="font-semibold">🔍 Không có trạm nào khớp với bộ lọc ERA hoặc từ khóa tìm kiếm.</p>
+                        <button
+                          onClick={() => { setTechFilter('ALL'); setSearchQuery(''); }}
+                          className="text-xs text-blue-600 hover:underline font-semibold cursor-pointer"
+                        >
+                          Xóa bộ lọc để xem tất cả {mllActive.length} trạm mất liên lạc
+                        </button>
+                      </>
+                    )}
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
@@ -483,11 +795,11 @@ export default function VhktRan() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
-                        {sortAlarms(mllActive).map(a => (
+                        {displayedMll.map(a => (
                           <tr key={a.id} className="hover:bg-gray-50 transition-colors">
                             <td className="py-3 px-2 sm:px-4">
-                              <div className="flex items-center justify-start gap-2 max-w-[150px] mx-auto text-left">
-                                <span className="text-base leading-none">
+                              <div className="flex items-center justify-start gap-2.5 min-w-[130px] max-w-[190px] mx-auto text-left">
+                                <span className="text-base leading-none shrink-0">
                                   {a.status === 'CLEARED' ? '✅' : '🔴'}
                                 </span>
                                 {renderSiteLabel(a.site)}
@@ -523,9 +835,21 @@ export default function VhktRan() {
             {/* Tab: CellOff */}
             {activeTab === 'mll_cell' && (
               <div className="divide-y divide-gray-200">
-                {cellActive.length === 0 ? (
-                  <div className="p-12 text-center text-gray-400 text-sm">
-                    ✅ Tất cả cell đang hoạt động bình thường.
+                {displayedCell.length === 0 ? (
+                  <div className="p-12 text-center text-gray-500 text-sm space-y-2">
+                    {cellActive.length === 0 ? (
+                      <p>✅ Tất cả cell đang hoạt động bình thường.</p>
+                    ) : (
+                      <>
+                        <p className="font-semibold">🔍 Không có cell nào khớp với bộ lọc ERA hoặc từ khóa tìm kiếm.</p>
+                        <button
+                          onClick={() => { setTechFilter('ALL'); setSearchQuery(''); }}
+                          className="text-xs text-blue-600 hover:underline font-semibold cursor-pointer"
+                        >
+                          Xóa bộ lọc để xem tất cả {cellActive.length} cảnh báo Cell Off
+                        </button>
+                      </>
+                    )}
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
@@ -544,11 +868,11 @@ export default function VhktRan() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
-                        {sortAlarms(cellActive).map(a => (
+                        {displayedCell.map(a => (
                           <tr key={a.id} className="hover:bg-gray-50 transition-colors">
                             <td className="py-3 px-2 sm:px-4 font-mono font-bold">
-                              <div className="flex items-center justify-start gap-2 max-w-[150px] mx-auto text-left">
-                                <span className="text-base leading-none">
+                              <div className="flex items-center justify-start gap-2.5 min-w-[130px] max-w-[190px] mx-auto text-left">
+                                <span className="text-base leading-none shrink-0">
                                   {a.status === 'CLEARED' ? '✅' : '🔴'}
                                 </span>
                                 {renderSiteLabel(a.site)}
@@ -586,9 +910,21 @@ export default function VhktRan() {
             {/* Tab: SLA (VHKT) */}
             {activeTab === 'vhkt' && (
               <div className="divide-y divide-gray-200">
-                {vhktData.length === 0 ? (
-                  <div className="p-12 text-center text-gray-400 text-sm">
-                    📊 SLA được cập nhật 1 lần/sáng (7:20 AM) — dữ liệu ngày hôm qua.
+                {displayedVhkt.length === 0 ? (
+                  <div className="p-12 text-center text-gray-500 text-sm space-y-2">
+                    {vhktData.length === 0 ? (
+                      <p>📊 SLA được cập nhật 1 lần/sáng (7:20 AM) — dữ liệu ngày hôm qua.</p>
+                    ) : (
+                      <>
+                        <p className="font-semibold">🔍 Không có dữ liệu SLA nào khớp với bộ lọc ERA hoặc từ khóa tìm kiếm.</p>
+                        <button
+                          onClick={() => { setTechFilter('ALL'); setSearchQuery(''); }}
+                          className="text-xs text-blue-600 hover:underline font-semibold cursor-pointer"
+                        >
+                          Xóa bộ lọc để xem tất cả {vhktData.length} trạm trong báo cáo SLA
+                        </button>
+                      </>
+                    )}
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
@@ -626,43 +962,43 @@ export default function VhktRan() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
-                        {[...vhktData]
-                          .sort((a, b) => (b.md_so_lan || 0) - (a.md_so_lan || 0))
-                          .map((r, i) => {
-                            const isMdSla = (r.md_sla || '').toLowerCase().includes('đạt');
-                            const isMllSla = (r.mll_sla || '').toLowerCase().includes('đạt');
-                            return (
-                              <tr key={i} className="hover:bg-gray-50 transition-colors">
-                                <td className="py-3 px-2 sm:px-4 font-mono font-bold text-center">
+                        {displayedVhkt.map((r, i) => {
+                          const isMdSla = (r.md_sla || '').toLowerCase().includes('đạt');
+                          const isMllSla = (r.mll_sla || '').toLowerCase().includes('đạt');
+                          return (
+                            <tr key={i} className="hover:bg-gray-50 transition-colors">
+                              <td className="py-3 px-2 sm:px-4 font-mono font-bold text-center">
+                                <div className="flex items-center justify-center min-w-[120px] max-w-[180px] mx-auto">
                                   {renderSiteLabel(r.tram)}
-                                </td>
-                                <td className="py-3 px-1 text-center font-mono">{r.md_so_lan || 0}</td>
-                                <td className="py-3 px-1 text-center font-mono">{r.md_phut || 0}</td>
-                                <td className="py-3 px-1 text-center">
-                                  {r.md_sla ? (
-                                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                                      isMdSla ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
-                                    }`}>
-                                      {isMdSla ? 'Đạt' : '✗'}
-                                    </span>
-                                  ) : '--'}
-                                </td>
-                                <td className="py-3 px-1 text-center font-mono">{r.mpd_so_lan || 0}</td>
-                                <td className="py-3 px-1 text-center font-mono">{r.mpd_phut || 0}</td>
-                                <td className="py-3 px-1 text-center font-mono">{r.mll_so_lan || 0}</td>
-                                <td className="py-3 px-1 text-center font-mono">{r.mll_phut || 0}</td>
-                                <td className="py-3 px-1 text-center">
-                                  {r.mll_sla ? (
-                                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                                      isMllSla ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
-                                    }`}>
-                                      {isMllSla ? 'Đạt' : '✗'}
-                                    </span>
-                                  ) : '--'}
-                                </td>
-                              </tr>
-                            );
-                          })}
+                                </div>
+                              </td>
+                              <td className="py-3 px-1 text-center font-mono">{r.md_so_lan || 0}</td>
+                              <td className="py-3 px-1 text-center font-mono">{r.md_phut || 0}</td>
+                              <td className="py-3 px-1 text-center">
+                                {r.md_sla ? (
+                                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                    isMdSla ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
+                                  }`}>
+                                    {isMdSla ? 'Đạt' : '✗'}
+                                  </span>
+                                ) : '--'}
+                              </td>
+                              <td className="py-3 px-1 text-center font-mono">{r.mpd_so_lan || 0}</td>
+                              <td className="py-3 px-1 text-center font-mono">{r.mpd_phut || 0}</td>
+                              <td className="py-3 px-1 text-center font-mono">{r.mll_so_lan || 0}</td>
+                              <td className="py-3 px-1 text-center font-mono">{r.mll_phut || 0}</td>
+                              <td className="py-3 px-1 text-center">
+                                {r.mll_sla ? (
+                                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                    isMllSla ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
+                                  }`}>
+                                    {isMllSla ? 'Đạt' : '✗'}
+                                  </span>
+                                ) : '--'}
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -673,9 +1009,21 @@ export default function VhktRan() {
             {/* Tab: PAKH */}
             {activeTab === 'pakh' && (
               <div className="divide-y divide-gray-200">
-                {activePakhList.length === 0 ? (
-                  <div className="p-12 text-center text-gray-400 text-sm">
-                    ✅ Không có phản ánh khách hàng (PAKH) nào cần xử lý.
+                {displayedPakh.length === 0 ? (
+                  <div className="p-12 text-center text-gray-500 text-sm space-y-2">
+                    {activePakhList.length === 0 ? (
+                      <p>✅ Không có phản ánh khách hàng (PAKH) nào cần xử lý.</p>
+                    ) : (
+                      <>
+                        <p className="font-semibold">🔍 Không có phản ánh nào khớp với bộ lọc ERA hoặc từ khóa tìm kiếm.</p>
+                        <button
+                          onClick={() => { setTechFilter('ALL'); setSearchQuery(''); }}
+                          className="text-xs text-blue-600 hover:underline font-semibold cursor-pointer"
+                        >
+                          Xóa bộ lọc để xem tất cả {activePakhList.length} phản ánh khách hàng
+                        </button>
+                      </>
+                    )}
                   </div>
                 ) : (
                   <div>
@@ -688,12 +1036,12 @@ export default function VhktRan() {
                             <th className="py-3 px-2 sm:px-4 text-left">THỜI GIAN NHẬN</th>
                             <th className="py-3 px-2 sm:px-4 text-left">ĐỊA BÀN</th>
                             <th className="py-3 px-2 sm:px-4 text-left">NỘI DUNG PHẢN ÁNH</th>
-                            <th className="py-3 px-2 sm:px-4 text-left">TRẠM / CELL</th>
+                            <th className="py-3 px-2 sm:px-4 text-center">TRẠM / CELL</th>
                             <th className="py-3 px-2 sm:px-4 text-center">HẠN CÒN LẠI</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100 text-left">
-                          {activePakhList.map((p, i) => {
+                          {displayedPakh.map((p, i) => {
                             const soThueBao = p.so_thue_bao || p.soThueBao || '--';
                             const loaiThueBao = p.loai_thue_bao || p.loaiThueBao || '--';
                             const thoiGianGhiNhan = p.thoi_gian_ghi_nhan || p.thoiGianGhiNhan;
@@ -723,9 +1071,9 @@ export default function VhktRan() {
                                   {noiDungPhanAnh}
                                 </td>
                                 <td className="py-3 px-2 sm:px-4 text-center">
-                                  <span className="inline-block px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-100 text-[10px] font-extrabold font-mono">
-                                    {maTram}
-                                  </span>
+                                  <div className="inline-block">
+                                    {renderSiteLabel(maTram)}
+                                  </div>
                                 </td>
                                 <td className="py-3 px-2 sm:px-4 text-center">
                                   <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold font-mono tracking-tight ${
@@ -745,7 +1093,7 @@ export default function VhktRan() {
 
                     {/* Mobile View: Compact Cards */}
                     <div className="lg:hidden grid grid-cols-1 md:grid-cols-2 gap-3 p-3 bg-slate-50">
-                      {activePakhList.map((p, i) => {
+                      {displayedPakh.map((p, i) => {
                         const soThueBao = p.so_thue_bao || p.soThueBao || '--';
                         const loaiThueBao = p.loai_thue_bao || p.loaiThueBao || '';
                         const thoiGianGhiNhan = p.thoi_gian_ghi_nhan || p.thoiGianGhiNhan;
@@ -783,7 +1131,7 @@ export default function VhktRan() {
                               <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[10px] text-slate-500 font-mono mb-2 bg-slate-50 p-2 rounded-lg border border-slate-100">
                                 <div>
                                   <span className="text-[9px] text-slate-400 block font-sans">TRẠM / CELL</span>
-                                  <span className="font-extrabold text-purple-700 text-[10px]">{maTram}</span>
+                                  <div className="mt-0.5">{renderSiteLabel(maTram)}</div>
                                 </div>
                                 <div>
                                   <span className="text-[9px] text-slate-400 block font-sans">THỜI GIAN NHẬN</span>
