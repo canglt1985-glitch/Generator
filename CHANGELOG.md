@@ -1,6 +1,19 @@
 # Changelog
 
-## [2026-07-15]
+## [2026-09-24]
+### Added
+- **Telegram MLL Bot Overhaul (@LKH_VHKT_BOT)**:
+  - Bóc tách độc lập sự cố **Downlink truyền dẫn (đứt link IP)** ra khỏi danh sách trạm MLL di động.
+  - Tự động chuẩn hóa và gộp 2 đầu cảnh báo ngược chiều đối xứng (`A TO B` và `B TO A`) thành 1 sự cố link vật lý duy nhất.
+  - Tự động lọc chỉ hiển thị các link có ít nhất 1 đầu trạm thuộc địa bàn TVT3.
+  - Định dạng hiển thị chuẩn nhắc nhập nguyên nhân MLL theo tên ngắn QLT: `🔹 Tên_QLT (count): Mã_mới (Mã_cũ)` và `🔹 Downlink (count): Cặp_Mã_cũ (Cặp_Mã_mới)`.
+
+### Fixed
+- **Frontend Runtime Crash Immunity**:
+  - Khắc phục triệt để lỗi runtime `TypeError: ...toUpperCase is not a function` do dữ liệu nguồn từ Excel hoặc Supabase trả về kiểu số nguyên (`Swap_Order`, `5G_Scope`, `buyer_name`, `nhien_lieu_loai`).
+  - Bọc an toàn `String(...)` trên tất cả các trang và tiện ích xuất Excel: `NetworkMap.jsx`, `Generator.jsx`, `Sran5gProject.jsx`, `VhktRan.jsx`, `Datasites.jsx`, `ContractDashboard.jsx`, `mfdStatementExporter.js`, `b4RepairExporter.js`.
+
+
 ### Added
 - **Excel Export Enhancement**: Bổ sung các cột thông tin `Site ID Cũ`, `Địa Chỉ Đặt Trạm`, `Vĩ Độ` và `Kinh Độ` vào file xuất Excel hợp đồng nhà trạm, giúp anh em quản lý dễ dàng tra cứu dữ liệu địa bàn của trạm.
 - **MFD Backfill (July 01 - 11)**: Quét và đồng bộ hóa thành công tổng cộng 34 log chạy máy phát điện mới từ ngày 01/07/2026 đến nay vào cơ sở dữ liệu Supabase, nâng cao tính chính xác của dữ liệu lịch sử.
