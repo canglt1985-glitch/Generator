@@ -285,6 +285,18 @@ def main():
                 except Exception as e:
                     logger.error(f"Failed to sync configs in loop: {e}")
 
+            # Job K: Auto-recovery probe for SmartW (Check every 30s when disconnected)
+            if (now - last_run.get("smartw_probe_time", datetime.min)).total_seconds() >= 30:
+                last_run["smartw_probe_time"] = now
+                try:
+                    from smartw_worker import _load_status, check_smartw_connectivity
+                    w_status = _load_status()
+                    if w_status.get("smartw_disconnected") and check_smartw_connectivity():
+                        logger.info("🟢 Phát hiện đã khôi phục kết nối SmartW (VPN active)! Kích hoạt kiểm tra ngay...")
+                        run_job("smartw_alarm", [python_exe, os.path.join(current_dir, "smartw_worker.py"), "--job", "alarm"])
+                except Exception as probe_err:
+                    logger.debug(f"SmartW recovery probe error: {probe_err}")
+
             # Check every 10 seconds
             time.sleep(10)
 

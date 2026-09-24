@@ -406,6 +406,115 @@ def _send_viber_report(lines: list, token: str = None, sender: str = None):
 _send_viber_messages = _send_viber_report
 
 
+def _send_telegram_report(text: str):
+    """Send a notification message to Telegram report chat."""
+    if not text:
+        return
+    token = None
+    chat_id = None
+    config_path = os.path.join(current_dir, 'data', 'system_config.json')
+    if os.path.exists(config_path):
+        try:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                cfg = json.load(f)
+                token = cfg.get('telegram_bot_token')
+                chat_id = cfg.get('telegram_report_chat_id')
+        except Exception:
+            pass
+    if not token:
+        token = os.getenv("TELEGRAM_TOKEN")
+    if not chat_id:
+        chat_id = os.getenv("TELEGRAM_CHAT_ID")
+        
+    if not token or not chat_id:
+        logger.warning("Telegram report token or chat_id not configured.")
+        return
+
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    payload = {
+        "chat_id": chat_id,
+        "text": text
+    }
+    try:
+        r = requests.post(url, json=payload, timeout=10)
+        logger.info(f"Telegram notification sent: {r.status_code}")
+    except Exception as e:
+        logger.error(f"Failed to send Telegram notification: {e}")
+
+
+def notify_smartw_connection_status(is_connected: bool):
+    """Gửi thông báo trạng thái kết nối ngắn gọn (1-2 dòng) lên cả Viber và Telegram."""
+    if is_connected:
+        text = "✅ Đã kết nối lại SmartW thành công. Tiếp tục gửi cảnh báo!"
+    else:
+        text = "⚠️ Mất kết nối SmartW. Tạm ngưng gửi cảnh báo!"
+
+    # 1. Gửi lên Viber (Group Giám sát RAN qua viber_bot_token_alarms)
+    try:
+        _send_viber_report([text])
+        logger.info(f"SmartW Connection Guard: Đã gửi thông báo tới Viber -> {text}")
+    except Exception as ve:
+        logger.error(f"Lỗi gửi thông báo trạng thái kết nối tới Viber: {ve}")
+
+    # 2. Gửi lên Telegram (Kênh Báo cáo qua telegram_report_chat_id)
+    try:
+        _send_telegram_report(text)
+        logger.info(f"SmartW Connection Guard: Đã gửi thông báo tới Telegram -> {text}")
+    except Exception as te:
+        logger.error(f"Lỗi gửi thông báo trạng thái kết nối tới Telegram: {te}")
+
+
+def check_smartw_connectivity(host="smartw.mobifone.vn", port=443, timeout=3.0) -> bool:
+    """Kiểm tra nhanh kết nối TCP tới SmartW (3s), tránh mở Playwright khi chưa có VPN."""
+    import socket
+    try:
+        sock = socket.create_connection((host, port), timeout=timeout)
+        sock.close()
+        return True
+    except Exception:
+        return False
+
+
+def ensure_smartw_connectivity_guard(source: str = "poll") -> bool:
+    """
+    Kiểm tra nhanh kết nối SmartW trước khi bắt đầu cào dữ liệu.
+    - Nếu không kết nối được (chưa bật VPN/rớt mạng):
+      + Tăng login_fail_count.
+      + Sau 2 lần fail liên tiếp: Gửi thông báo '⚠️ Mất kết nối SmartW. Tạm ngưng gửi cảnh báo!' (1 lần duy nhất).
+      + Trả về False (không khởi động Playwright Chromium).
+    - Nếu kết nối được:
+      + Trả về True để tiếp tục chạy cào dữ liệu.
+    """
+    if not check_smartw_connectivity():
+        status = _load_status()
+        status['login_fail_count'] = status.get('login_fail_count', 0) + 1
+        fail_count = status['login_fail_count']
+        logger.warning(f"SmartW Connection Guard ({source}): Không thể kết nối tới smartw.mobifone.vn:443 (Thất bại #{fail_count})")
+        
+        # Ngưỡng 2 lần fail liên tiếp -> phát thông báo và ngắt cảnh báo
+        if fail_count >= 2 and not status.get('smartw_disconnected'):
+            notify_smartw_connection_status(is_connected=False)
+            status['smartw_disconnected'] = True
+            
+        _save_status(status)
+        return False
+        
+    return True
+
+
+def on_smartw_login_success():
+    """Gọi khi đăng nhập SmartW thành công để xử lý khôi phục kết nối và reset lỗi."""
+    status = _load_status()
+    # Nếu trước đó từng bị đánh dấu mất kết nối -> gửi thông báo khôi phục
+    if status.get('smartw_disconnected'):
+        notify_smartw_connection_status(is_connected=True)
+        status['smartw_disconnected'] = False
+        
+    status['login_fail_count'] = 0
+    status['viber_sso_error_sent'] = False
+    _save_status(status)
+
+
 def _load_smartw_json(filename: str) -> list:
     """Helper to load alarm JSON files from DATA_DIR. Returns the 'data' list."""
     path = os.path.join(DATA_DIR, filename)
@@ -461,6 +570,8 @@ def _load_status() -> dict:
                     data['login_fail_count'] = 0
                 if 'viber_sso_error_sent' not in data:
                     data['viber_sso_error_sent'] = False
+                if 'smartw_disconnected' not in data:
+                    data['smartw_disconnected'] = False
                 return data
         except (json.JSONDecodeError, IOError):
             pass
@@ -471,7 +582,8 @@ def _load_status() -> dict:
         'is_running': False,
         'scheduler_enabled': False,
         'login_fail_count': 0,
-        'viber_sso_error_sent': False
+        'viber_sso_error_sent': False,
+        'smartw_disconnected': False
     }
 
 
@@ -485,10 +597,15 @@ def _save_status(status: dict):
 VIBER_LOGIN_FAIL_THRESHOLD = MAX_LOGIN_FAILURES
 
 def _record_login_failure(status: dict, source: str):
-    """Increment login failure count and send a notification to Viber if threshold is reached."""
+    """Increment login failure count and send a notification if threshold is reached."""
     status['login_fail_count'] = status.get('login_fail_count', 0) + 1
     fail_count = status['login_fail_count']
     logger.warning(f'SmartW Worker ({source}): Login failure #{fail_count}/{MAX_LOGIN_FAILURES}')
+    
+    # Ngưỡng 2 lần fail liên tiếp -> phát thông báo mất kết nối nếu chưa phát
+    if fail_count >= 2 and not status.get('smartw_disconnected'):
+        notify_smartw_connection_status(is_connected=False)
+        status['smartw_disconnected'] = True
     
     # Notify Viber if threshold reached and notification not sent yet
     if fail_count >= VIBER_LOGIN_FAIL_THRESHOLD:
@@ -1483,6 +1600,12 @@ def run_pakh_poll(job_type: str = 'pakh'):
     config = load_smartw_config()
     if not config:
         logger.warning('SmartW Worker: Not configured, skipping PAKH poll')
+        _release_lock()
+        return
+
+    # Connection guard: skip opening browser if SmartW is unreachable
+    if not ensure_smartw_connectivity_guard(job_type):
+        _release_lock()
         return
 
     # Circuit breaker
@@ -1490,6 +1613,7 @@ def run_pakh_poll(job_type: str = 'pakh'):
     fail_count = status.get('login_fail_count', 0)
     if fail_count >= MAX_LOGIN_FAILURES:
         logger.warning(f'SmartW Worker: PAKH polling PAUSED — {fail_count} login failures.')
+        _release_lock()
         return
 
     _is_running = True
@@ -1547,8 +1671,8 @@ def run_pakh_poll(job_type: str = 'pakh'):
             if any(kw in err_lower for kw in ['login', 'credentials']):
                 _record_login_failure(status, 'pakh')
         else:
-            status['login_fail_count'] = 0
-            status['viber_sso_error_sent'] = False
+            on_smartw_login_success()
+            status = _load_status()
 
             # Clear stale errors on success
             status['errors'] = [
@@ -1687,6 +1811,12 @@ def run_alarm_poll():
     config = load_smartw_config()
     if not config:
         logger.warning('SmartW Worker: Not configured, skipping poll')
+        _release_lock()
+        return
+
+    # Connection guard: skip opening browser if SmartW is unreachable (no VPN)
+    if not ensure_smartw_connectivity_guard("alarm"):
+        _release_lock()
         return
 
     # Circuit breaker: stop if too many consecutive login failures
@@ -1695,6 +1825,7 @@ def run_alarm_poll():
     if fail_count >= MAX_LOGIN_FAILURES:
         logger.warning(f'SmartW Worker: ⛔ Polling PAUSED — {fail_count} consecutive login failures. '
                        'Cập nhật lại mật khẩu trong Admin → SmartW Config để tiếp tục.')
+        _release_lock()
         return
 
     _is_running = True
@@ -1787,9 +1918,9 @@ def run_alarm_poll():
                         f'MLL: {len(result.get("mll", []))}, '
                         f'MLL Cell: {len(result.get("mll_cell", []))}')
 
-            # Login succeeded → reset failure counter
-            status['login_fail_count'] = 0
-            status['viber_sso_error_sent'] = False
+            # Login succeeded → reset failure counter & notify recovery if previously disconnected
+            on_smartw_login_success()
+            status = _load_status()
 
             # Clear stale alarm errors on success
             status['errors'] = [
@@ -2147,6 +2278,12 @@ def run_vhkt_poll(target_date: str = None):
     config = load_smartw_config()
     if not config:
         logger.warning('SmartW Worker: Not configured, skipping VHKT poll')
+        _release_lock()
+        return
+
+    # Connection guard: skip opening browser if SmartW is unreachable (no VPN)
+    if not ensure_smartw_connectivity_guard("vhkt"):
+        _release_lock()
         return
 
     # Circuit breaker: stop if too many consecutive login failures
@@ -2154,6 +2291,7 @@ def run_vhkt_poll(target_date: str = None):
     fail_count = status.get('login_fail_count', 0)
     if fail_count >= MAX_LOGIN_FAILURES:
         logger.warning(f'SmartW Worker: ⛔ VHKT polling PAUSED — {fail_count} consecutive login failures.')
+        _release_lock()
         return
 
     _is_running = True
@@ -2217,9 +2355,9 @@ def run_vhkt_poll(target_date: str = None):
         else:
             logger.info(f'SmartW Worker: ✅ VHKT poll done — {len(result.get("vhkt", []))} records')
 
-            # Login succeeded → reset failure counter
-            status['login_fail_count'] = 0
-            status['viber_sso_error_sent'] = False
+            # Login succeeded → reset failure counter & notify recovery if previously disconnected
+            on_smartw_login_success()
+            status = _load_status()
 
             # Clear stale VHKT errors on success
             status['errors'] = [
@@ -2454,13 +2592,20 @@ def run_mfd_import_poll(target_date: str = None):
     config = load_smartw_config()
     if not config:
         logger.warning('SmartW Worker: Not configured, skipping MFĐ import')
+        _release_lock()
         return {'error': 'SmartW not configured'}
+
+    # Connection guard: skip opening browser if SmartW is unreachable (no VPN)
+    if not ensure_smartw_connectivity_guard("mfd"):
+        _release_lock()
+        return {'error': 'SmartW not reachable (no VPN)'}
 
     # Circuit breaker
     status = _load_status()
     fail_count = status.get('login_fail_count', 0)
     if fail_count >= MAX_LOGIN_FAILURES:
         logger.warning(f'SmartW Worker: MFĐ import PAUSED — {fail_count} login failures.')
+        _release_lock()
         return {'error': 'Login paused'}
 
     _is_running = True
@@ -2563,8 +2708,8 @@ def run_mfd_import_poll(target_date: str = None):
                 _record_login_failure(status, 'mfd_import')
         else:
             # Scrape OK → run import logic (needs Flask app context)
-            status['login_fail_count'] = 0
-            status['viber_sso_error_sent'] = False
+            on_smartw_login_success()
+            status = _load_status()
             raw_data = scrape_result.get('data', [])
 
             if raw_data:
@@ -2658,6 +2803,11 @@ def send_periodic_full_report():
     """Send a full status report to Viber Channel (Periodic 2-hour Review).
     Explicitly triggered by scheduler even if no changes occur.
     """
+    status = _load_status()
+    if status.get('smartw_disconnected'):
+        logger.info("SmartW Worker: SmartW đang mất kết nối (chưa bật VPN). Tạm ngưng gửi báo cáo định kỳ 2H.")
+        return
+
     logger.info("SmartW Worker: 🕒 Starting periodic 2-hour review report...")
     
     # 1. Load latest active data from disk
@@ -2868,13 +3018,20 @@ def run_mll_cause_poll(target_date: str = None):
     config = load_smartw_config()
     if not config:
         logger.warning('SmartW Worker: Not configured, skipping MLL cause poll')
+        _release_lock()
         return {'error': 'SmartW not configured'}
+
+    # Connection guard: skip opening browser if SmartW is unreachable (no VPN)
+    if not ensure_smartw_connectivity_guard("mll_cause"):
+        _release_lock()
+        return {'error': 'SmartW not reachable (no VPN)'}
 
     # Circuit breaker
     status = _load_status()
     fail_count = status.get('login_fail_count', 0)
     if fail_count >= MAX_LOGIN_FAILURES:
         logger.warning(f'SmartW Worker: ⛔ MLL cause polling PAUSED — {fail_count} login failures.')
+        _release_lock()
         return {'error': 'Login paused'}
 
     _is_running = True
@@ -2901,6 +3058,7 @@ def run_mll_cause_poll(target_date: str = None):
         _release_lock()
 
     if isinstance(res, dict) and 'missing_count' in res:
+        on_smartw_login_success()
         logger.info(f"SmartW Worker: MLL Cause Audit complete. Total scanned: {res['total_scanned']}, Missing: {res['missing_count']}")
         _send_mll_cause_viber_report(res)
     else:
