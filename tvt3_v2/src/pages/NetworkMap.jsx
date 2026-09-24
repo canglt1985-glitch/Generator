@@ -361,12 +361,42 @@ const getSiteSranCategory = (site, sranMap) => {
 // Custom HTML DivIcon to display Site ID / PTM ID directly on map as a small labeled chip
 // Tiêu đề chỉ hiển thị tên trạm (không kèm tiền tố dài dòng), viền màu sắc phân biệt công nghệ
 const createSiteDivIcon = (id, type, infraCategory = null, sranCategory = null, isCompact = false) => {
+  // 1. Ký hiệu Độc quyền & Riêng biệt dành cho Trạm MORAN 4G (VNPT làm Host)
+  if (sranCategory?.key === 'moran_vnpt_host') {
+    if (isCompact) {
+      // Zoom xa: Biểu tượng Kim cương Diamond hổ phách phát sáng neon lấp lánh
+      return L.divIcon({
+        html: `<div style="width: 14px; height: 14px; background: linear-gradient(135deg, #f59e0b, #d97706); border: 2px solid #ffffff; border-radius: 3px; transform: translate(-50%, -50%) rotate(45deg); box-shadow: 0 0 10px #f59e0b, 0 0 18px #ea580c; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                 <div style="width: 4px; height: 4px; background: #ffffff; border-radius: 50%;"></div>
+               </div>`,
+        className: 'bg-transparent border-none',
+        iconSize: [0, 0],
+        iconAnchor: [0, 0]
+      });
+    }
+
+    // Zoom gần: Marker Pin cờ hiệu phát sóng độc quyền với biểu tượng bắt tay 🤝 kèm nhãn [VNPT Host]
+    return L.divIcon({
+      html: `<div class="relative flex flex-col items-center group cursor-pointer transition-transform duration-100 hover:scale-125 active:scale-95 font-sans" style="transform: translate(-50%, -100%);">
+               <div class="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 text-white font-black text-[8px] tracking-tight border-2 border-amber-300 shadow-[0_0_14px_rgba(245,158,11,1)] whitespace-nowrap">
+                 <span class="text-[10px] leading-none">🤝</span>
+                 <span class="font-extrabold tracking-tight">${id}</span>
+                 <span class="text-[6.5px] px-1 py-[0.5px] bg-slate-950/80 rounded text-amber-300 font-bold border border-amber-400/40 uppercase">VNPT Host</span>
+               </div>
+               <div style="width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid #d97706; margin-top: -1px; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.6));"></div>
+             </div>`,
+      className: 'bg-transparent border-none',
+      iconSize: [0, 0],
+      iconAnchor: [0, 0]
+    });
+  }
+
   let chipClass = 'border border-blue-400/60 bg-blue-600/90 text-white shadow-sm';
   let iconPrefix = '';
 
   if (type === 'Hoạt động') {
     chipClass = sranCategory?.borderClass || 'border border-blue-400/60 bg-blue-600/90 text-white shadow-sm';
-    iconPrefix = sranCategory?.key === 'onair_5g_dual' ? '⚡ ' : sranCategory?.key === 'onair_5g' ? '📶 ' : sranCategory?.key === 'moran_vnpt_host' ? '🤝 ' : '';
+    iconPrefix = sranCategory?.key === 'onair_5g_dual' ? '⚡ ' : sranCategory?.key === 'onair_5g' ? '📶 ' : '';
   } else if (infraCategory) {
     chipClass = `${infraCategory.bgGradient} text-white`;
     iconPrefix = `${infraCategory.icon} `;
@@ -378,11 +408,10 @@ const createSiteDivIcon = (id, type, infraCategory = null, sranCategory = null, 
   // Chế độ thu gọn khi zoom xa (< 13): Chấm tròn phát sáng màu công nghệ để tránh đè chùm trên mobile
   if (isCompact) {
     const isDual = sranCategory?.key === 'onair_5g_dual';
-    const isMoran = sranCategory?.key === 'moran_vnpt_host';
     const dotColor = type === 'Hoạt động' ? (sranCategory?.color || '#3b82f6') : (infraCategory?.color || '#f59e0b');
-    const size = isDual ? '11px' : isMoran ? '10px' : '8px';
-    const border = isDual ? '2px solid #f3e8ff' : isMoran ? '2px solid #fef3c7' : '1.5px solid white';
-    const shadow = isDual ? '0 0 10px #7e22ce, 0 0 16px #a855f7' : isMoran ? '0 0 10px #f59e0b, 0 0 14px #d97706' : `0 0 4px ${dotColor}`;
+    const size = isDual ? '11px' : '8px';
+    const border = isDual ? '2px solid #f3e8ff' : '1.5px solid white';
+    const shadow = isDual ? '0 0 10px #7e22ce, 0 0 16px #a855f7' : `0 0 4px ${dotColor}`;
     return L.divIcon({
       html: `<div style="background-color: ${dotColor}; width: ${size}; height: ${size}; border-radius: 50%; border: ${border}; box-shadow: ${shadow}; transform: translate(-50%, -50%); cursor: pointer;"></div>`,
       className: 'bg-transparent border-none',
@@ -1652,6 +1681,97 @@ export default function NetworkMap() {
                 </div>
               </div>
             )}
+
+            {/* Quick Layer Filter Chips (Desktop) */}
+            <div className="pt-2 border-t border-slate-800/80 flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+              <button
+                type="button"
+                onClick={() => {
+                  const next = !layerMoran;
+                  setLayerMoran(next);
+                  showToast(next ? 'Đã bật lớp trạm MORAN 4G (VNPT Host)' : 'Đã tắt lớp trạm MORAN 4G');
+                }}
+                className={`px-2.5 py-1 rounded-lg text-[10.5px] font-black flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap shadow-sm border ${
+                  layerMoran
+                    ? 'bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 text-white border-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.7)] ring-1 ring-amber-400/80'
+                    : 'bg-slate-950/70 text-slate-400 border-slate-700/80 hover:text-slate-200'
+                }`}
+                title="Bật/Tắt Lớp Trạm MORAN 4G (VNPT Host)"
+              >
+                <span>🤝 MORAN 4G</span>
+                <span className={`px-1.5 py-0.2 rounded-full text-[9px] font-black ${layerMoran ? 'bg-black/50 text-amber-200' : 'bg-slate-800 text-slate-400'}`}>
+                  {activeSiteCounts.moran_vnpt_host}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const next = !layer5gDual;
+                  setLayer5gDual(next);
+                  showToast(next ? 'Đã bật lớp 5G 2 Lớp' : 'Đã tắt lớp 5G 2 Lớp');
+                }}
+                className={`px-2 py-1 rounded-lg text-[10px] font-extrabold flex items-center gap-1 transition-all cursor-pointer whitespace-nowrap border ${
+                  layer5gDual
+                    ? 'bg-purple-900/80 text-purple-200 border-purple-500 shadow-[0_0_8px_rgba(126,34,206,0.5)]'
+                    : 'bg-slate-950/70 text-slate-400 border-slate-700/80 hover:text-slate-200'
+                }`}
+              >
+                <span>⚡ 5G 2 Lớp</span>
+                <span className="text-[8.5px] px-1 rounded-full bg-purple-950/80">{activeSiteCounts.onair_5g_dual}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const next = !layer5gOnair;
+                  setLayer5gOnair(next);
+                  showToast(next ? 'Đã bật lớp 5G 1 Lớp' : 'Đã tắt lớp 5G 1 Lớp');
+                }}
+                className={`px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer whitespace-nowrap border ${
+                  layer5gOnair
+                    ? 'bg-pink-900/80 text-pink-200 border-pink-500 shadow-[0_0_8px_rgba(236,72,153,0.5)]'
+                    : 'bg-slate-950/70 text-slate-400 border-slate-700/80 hover:text-slate-200'
+                }`}
+              >
+                <span>📶 5G 1 Lớp</span>
+                <span className="text-[8.5px] px-1 rounded-full bg-pink-950/80">{activeSiteCounts.onair_5g}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const next = !layer4gEra;
+                  setLayer4gEra(next);
+                  showToast(next ? 'Đã bật lớp 4G ERA' : 'Đã tắt lớp 4G ERA');
+                }}
+                className={`px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer whitespace-nowrap border ${
+                  layer4gEra
+                    ? 'bg-cyan-900/80 text-cyan-200 border-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.5)]'
+                    : 'bg-slate-950/70 text-slate-400 border-slate-700/80 hover:text-slate-200'
+                }`}
+              >
+                <span>🔄 4G ERA</span>
+                <span className="text-[8.5px] px-1 rounded-full bg-cyan-950/80">{activeSiteCounts.swapped_4g_era}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const next = !layerActiveSites;
+                  setLayerActiveSites(next);
+                  showToast(next ? 'Đã bật lớp 4G Hiện hữu' : 'Đã tắt lớp 4G Hiện hữu');
+                }}
+                className={`px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer whitespace-nowrap border ${
+                  layerActiveSites
+                    ? 'bg-blue-900/80 text-blue-200 border-blue-500'
+                    : 'bg-slate-950/70 text-slate-400 border-slate-700/80 hover:text-slate-200'
+                }`}
+              >
+                <span>🔵 4G Khác</span>
+                <span className="text-[8.5px] px-1 rounded-full bg-blue-950/80">{activeSiteCounts.normal_4g}</span>
+              </button>
+            </div>
           </div>
 
           {/* Desktop Collapsible Nearest Stations Drawer */}
@@ -1735,6 +1855,70 @@ export default function NetworkMap() {
               </div>
             )}
           </form>
+
+          {/* Mobile Quick Layer Filter Chips */}
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 px-0.5">
+            <button
+              type="button"
+              onClick={() => {
+                const next = !layerMoran;
+                setLayerMoran(next);
+                showToast(next ? 'Đã bật lớp trạm MORAN 4G (VNPT Host)' : 'Đã tắt lớp trạm MORAN 4G');
+              }}
+              className={`px-2.5 py-1 rounded-full text-[10px] font-black flex items-center gap-1 shrink-0 transition-all border shadow-sm ${
+                layerMoran
+                  ? 'bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 text-white border-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.6)]'
+                  : 'bg-slate-900/90 text-slate-400 border-slate-700/80'
+              }`}
+            >
+              <span>🤝 MORAN 4G</span>
+              <span className={`px-1 py-0.2 rounded-full text-[8.5px] font-black ${layerMoran ? 'bg-black/50 text-amber-200' : 'bg-slate-800'}`}>
+                {activeSiteCounts.moran_vnpt_host}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const next = !layer5gDual;
+                setLayer5gDual(next);
+                showToast(next ? 'Đã bật lớp 5G 2 Lớp' : 'Đã tắt lớp 5G 2 Lớp');
+              }}
+              className={`px-2 py-1 rounded-full text-[10px] font-bold flex items-center gap-1 shrink-0 border ${
+                layer5gDual ? 'bg-purple-900/90 text-purple-200 border-purple-500' : 'bg-slate-900/90 text-slate-400 border-slate-700/80'
+              }`}
+            >
+              <span>⚡ 5G 2 Lớp</span>
+              <span className="text-[8.5px] px-1 rounded-full bg-purple-950">{activeSiteCounts.onair_5g_dual}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const next = !layer5gOnair;
+                setLayer5gOnair(next);
+                showToast(next ? 'Đã bật lớp 5G 1 Lớp' : 'Đã tắt lớp 5G 1 Lớp');
+              }}
+              className={`px-2 py-1 rounded-full text-[10px] font-bold flex items-center gap-1 shrink-0 border ${
+                layer5gOnair ? 'bg-pink-900/90 text-pink-200 border-pink-500' : 'bg-slate-900/90 text-slate-400 border-slate-700/80'
+              }`}
+            >
+              <span>📶 5G 1 Lớp</span>
+              <span className="text-[8.5px] px-1 rounded-full bg-pink-950">{activeSiteCounts.onair_5g}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const next = !layer4gEra;
+                setLayer4gEra(next);
+                showToast(next ? 'Đã bật lớp 4G ERA' : 'Đã tắt lớp 4G ERA');
+              }}
+              className={`px-2 py-1 rounded-full text-[10px] font-bold flex items-center gap-1 shrink-0 border ${
+                layer4gEra ? 'bg-cyan-900/90 text-cyan-200 border-cyan-500' : 'bg-slate-900/90 text-slate-400 border-slate-700/80'
+              }`}
+            >
+              <span>🔄 4G ERA</span>
+              <span className="text-[8.5px] px-1 rounded-full bg-cyan-950">{activeSiteCounts.swapped_4g_era}</span>
+            </button>
+          </div>
 
           {validationError && (
             <div className="bg-red-500/15 border border-red-500/40 rounded-xl px-3 py-1.5 text-red-400 text-[10.5px] flex items-center gap-1.5 backdrop-blur-md shadow-lg">
