@@ -375,24 +375,22 @@ const createSiteDivIcon = (id, type, infraCategory = null, sranCategory = null, 
   if (sranCategory?.key === 'moran_vnpt_host') {
     const cleanId = cleanMoranSiteId(id);
     if (isCompact) {
-      // Zoom xa: Biểu tượng Kim cương Diamond hổ phách phát sáng neon lấp lánh
+      // Zoom xa: Biểu tượng Kim cương Diamond hổ phách mini phát sáng
       return L.divIcon({
-        html: `<div style="width: 14px; height: 14px; background: linear-gradient(135deg, #f59e0b, #d97706); border: 2px solid #ffffff; border-radius: 3px; transform: translate(-50%, -50%) rotate(45deg); box-shadow: 0 0 10px #f59e0b, 0 0 18px #ea580c; cursor: pointer; display: flex; align-items: center; justify-content: center;">
-                 <div style="width: 4px; height: 4px; background: #ffffff; border-radius: 50%;"></div>
-               </div>`,
+        html: `<div style="width: 10px; height: 10px; background: linear-gradient(135deg, #f59e0b, #d97706); border: 1.5px solid #ffffff; border-radius: 2px; transform: translate(-50%, -50%) rotate(45deg); box-shadow: 0 0 8px #f59e0b; cursor: pointer;"></div>`,
         className: 'bg-transparent border-none',
         iconSize: [0, 0],
         iconAnchor: [0, 0]
       });
     }
 
-    // Zoom gần: Cờ hiệu viền phát sáng màu vàng cam hổ phách, nhãn mã trạm rút gọn (VD: XLO082M)
+    // Zoom gần: Cờ hiệu viền phát sáng màu vàng cam hổ phách, chỉ lớn hơn trạm hiện hữu 1 tí xíu
     return L.divIcon({
-      html: `<div class="relative flex flex-col items-center group cursor-pointer transition-transform duration-100 hover:scale-125 active:scale-95 font-sans" style="transform: translate(-50%, -100%);">
-               <div class="px-2 py-0.5 rounded-md bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 text-white font-black text-[9px] tracking-tight border-2 border-amber-300 shadow-[0_0_14px_rgba(245,158,11,1)] whitespace-nowrap">
+      html: `<div class="relative flex flex-col items-center group cursor-pointer transition-transform duration-100 hover:scale-125 active:scale-95 font-sans" style="transform: translate(-50%, -100%); line-height: 1;">
+               <div class="px-1.5 py-[1px] rounded-[3px] bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 text-white font-black text-[8px] tracking-tight border border-amber-300 shadow-[0_0_8px_rgba(245,158,11,0.9)] whitespace-nowrap">
                  ${cleanId}
                </div>
-               <div style="width: 0; height: 0; border-left: 4.5px solid transparent; border-right: 4.5px solid transparent; border-top: 5.5px solid #d97706; margin-top: -1px; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.6));"></div>
+               <div style="width: 0; height: 0; border-left: 3px solid transparent; border-right: 3px solid transparent; border-top: 3.5px solid #ea580c; margin-top: -0.5px; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.5));"></div>
              </div>`,
       className: 'bg-transparent border-none',
       iconSize: [0, 0],
@@ -758,6 +756,17 @@ export default function NetworkMap() {
     if (!toQL) return 'Tổ VT3';
     return toQL;
   };
+
+  // Đóng cửa sổ và xóa điểm chọn đo đạc trên bản đồ (Clear)
+  const handleClearCustomerLocation = useCallback(() => {
+    setCustomerLocation(null);
+    setNearestSites([]);
+    setCableRoute(null);
+    setCoordinateInput('');
+    setCustomTargetSearch('');
+    setValidationError('');
+    showToast('Đã xóa điểm đo và đóng cửa sổ trạm lân cận');
+  }, []);
 
   // Handle map click or manual coordinates input to run nearest sites calculation
   const executeScan = useCallback((lat, lng) => {
@@ -1372,16 +1381,26 @@ export default function NetworkMap() {
             <Server size={12} className="text-cyan-400" />
             Các trạm lân cận ({nearestSites.length})
           </h4>
-          {isCompact && (
+          <div className="flex items-center gap-1">
+            {isCompact && (
+              <button
+                type="button"
+                onClick={() => setIsSidebarOpen(false)}
+                className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                title="Thu gọn bảng (‹)"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+            )}
             <button
               type="button"
-              onClick={() => setIsSidebarOpen(false)}
-              className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
-              title="Thu gọn bảng (‹)"
+              onClick={handleClearCustomerLocation}
+              className="p-1 rounded-lg bg-rose-950/40 hover:bg-rose-900/80 text-rose-400 hover:text-rose-200 border border-rose-600/40 hover:border-rose-500 transition-all cursor-pointer"
+              title="Đóng cửa sổ & Bỏ chọn vị trí (✕)"
             >
-              <ChevronLeft className="h-4 w-4" />
+              <X className="h-4 w-4" />
             </button>
-          )}
+          </div>
         </div>
 
         {/* Ô tìm kiếm trạm đích bất kỳ để kéo cáp (VD: DNLK24) */}
@@ -1687,80 +1706,17 @@ export default function NetworkMap() {
                     {isSidebarOpen ? <ChevronLeft className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
                     <span>{isSidebarOpen ? 'Thu gọn' : 'Mở rộng'}</span>
                   </button>
+                  <button
+                    type="button"
+                    onClick={handleClearCustomerLocation}
+                    className="p-1 rounded bg-rose-950/80 hover:bg-rose-900 border border-rose-600/50 text-rose-300 hover:text-white cursor-pointer transition-colors"
+                    title="Đóng cửa sổ & Bỏ chọn vị trí (✕)"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
                 </div>
               </div>
             )}
-
-            {/* Quick Layer Filter Chips (Desktop) */}
-            <div className="pt-2 border-t border-slate-800/80 flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-              <button
-                type="button"
-                onClick={() => {
-                  const next = !layer5gDual;
-                  setLayer5gDual(next);
-                  showToast(next ? 'Đã bật lớp 5G 2 Lớp' : 'Đã tắt lớp 5G 2 Lớp');
-                }}
-                className={`px-2 py-1 rounded-lg text-[10px] font-extrabold flex items-center gap-1 transition-all cursor-pointer whitespace-nowrap border ${
-                  layer5gDual
-                    ? 'bg-purple-900/80 text-purple-200 border-purple-500 shadow-[0_0_8px_rgba(126,34,206,0.5)]'
-                    : 'bg-slate-950/70 text-slate-400 border-slate-700/80 hover:text-slate-200'
-                }`}
-              >
-                <span>⚡ 5G 2 Lớp</span>
-                <span className="text-[8.5px] px-1 rounded-full bg-purple-950/80">{activeSiteCounts.onair_5g_dual}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  const next = !layer5gOnair;
-                  setLayer5gOnair(next);
-                  showToast(next ? 'Đã bật lớp 5G 1 Lớp' : 'Đã tắt lớp 5G 1 Lớp');
-                }}
-                className={`px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer whitespace-nowrap border ${
-                  layer5gOnair
-                    ? 'bg-pink-900/80 text-pink-200 border-pink-500 shadow-[0_0_8px_rgba(236,72,153,0.5)]'
-                    : 'bg-slate-950/70 text-slate-400 border-slate-700/80 hover:text-slate-200'
-                }`}
-              >
-                <span>📶 5G 1 Lớp</span>
-                <span className="text-[8.5px] px-1 rounded-full bg-pink-950/80">{activeSiteCounts.onair_5g}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  const next = !layer4gEra;
-                  setLayer4gEra(next);
-                  showToast(next ? 'Đã bật lớp 4G ERA' : 'Đã tắt lớp 4G ERA');
-                }}
-                className={`px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer whitespace-nowrap border ${
-                  layer4gEra
-                    ? 'bg-cyan-900/80 text-cyan-200 border-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.5)]'
-                    : 'bg-slate-950/70 text-slate-400 border-slate-700/80 hover:text-slate-200'
-                }`}
-              >
-                <span>🔄 4G ERA</span>
-                <span className="text-[8.5px] px-1 rounded-full bg-cyan-950/80">{activeSiteCounts.swapped_4g_era}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  const next = !layerActiveSites;
-                  setLayerActiveSites(next);
-                  showToast(next ? 'Đã bật lớp 4G Hiện hữu' : 'Đã tắt lớp 4G Hiện hữu');
-                }}
-                className={`px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer whitespace-nowrap border ${
-                  layerActiveSites
-                    ? 'bg-blue-900/80 text-blue-200 border-blue-500'
-                    : 'bg-slate-950/70 text-slate-400 border-slate-700/80 hover:text-slate-200'
-                }`}
-              >
-                <span>🔵 4G Khác</span>
-                <span className="text-[8.5px] px-1 rounded-full bg-blue-950/80">{activeSiteCounts.normal_4g}</span>
-              </button>
-            </div>
           </div>
 
           {/* Desktop Collapsible Nearest Stations Drawer */}
@@ -1772,14 +1728,24 @@ export default function NetworkMap() {
 
           {/* Desktop Mini Tab when Drawer is collapsed */}
           {customerLocation && !isSidebarOpen && (
-            <button
-              type="button"
-              onClick={() => setIsSidebarOpen(true)}
-              className="bg-slate-900/95 hover:bg-slate-800 border border-cyan-500/50 text-cyan-400 rounded-xl px-3 py-2 shadow-2xl flex items-center gap-2 font-bold text-xs transition-all w-fit cursor-pointer animate-in fade-in"
-            >
-              <ChevronRight className="h-4 w-4" />
-              <span>Trạm lân cận ({nearestSites.length})</span>
-            </button>
+            <div className="flex items-center gap-1.5 animate-in fade-in">
+              <button
+                type="button"
+                onClick={() => setIsSidebarOpen(true)}
+                className="bg-slate-900/95 hover:bg-slate-800 border border-cyan-500/50 text-cyan-400 rounded-xl px-3 py-2 shadow-2xl flex items-center gap-2 font-bold text-xs transition-all w-fit cursor-pointer"
+              >
+                <ChevronRight className="h-4 w-4" />
+                <span>Trạm lân cận ({nearestSites.length})</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleClearCustomerLocation}
+                className="bg-slate-900/95 hover:bg-rose-950/80 border border-rose-500/50 text-rose-400 hover:text-white rounded-xl p-2 shadow-2xl transition-all cursor-pointer"
+                title="Đóng cửa sổ & Bỏ chọn vị trí (✕)"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
           )}
         </div>
 
@@ -1844,52 +1810,6 @@ export default function NetworkMap() {
               </div>
             )}
           </form>
-
-          {/* Mobile Quick Layer Filter Chips */}
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 px-0.5">
-            <button
-              type="button"
-              onClick={() => {
-                const next = !layer5gDual;
-                setLayer5gDual(next);
-                showToast(next ? 'Đã bật lớp 5G 2 Lớp' : 'Đã tắt lớp 5G 2 Lớp');
-              }}
-              className={`px-2 py-1 rounded-full text-[10px] font-bold flex items-center gap-1 shrink-0 border ${
-                layer5gDual ? 'bg-purple-900/90 text-purple-200 border-purple-500' : 'bg-slate-900/90 text-slate-400 border-slate-700/80'
-              }`}
-            >
-              <span>⚡ 5G 2 Lớp</span>
-              <span className="text-[8.5px] px-1 rounded-full bg-purple-950">{activeSiteCounts.onair_5g_dual}</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                const next = !layer5gOnair;
-                setLayer5gOnair(next);
-                showToast(next ? 'Đã bật lớp 5G 1 Lớp' : 'Đã tắt lớp 5G 1 Lớp');
-              }}
-              className={`px-2 py-1 rounded-full text-[10px] font-bold flex items-center gap-1 shrink-0 border ${
-                layer5gOnair ? 'bg-pink-900/90 text-pink-200 border-pink-500' : 'bg-slate-900/90 text-slate-400 border-slate-700/80'
-              }`}
-            >
-              <span>📶 5G 1 Lớp</span>
-              <span className="text-[8.5px] px-1 rounded-full bg-pink-950">{activeSiteCounts.onair_5g}</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                const next = !layer4gEra;
-                setLayer4gEra(next);
-                showToast(next ? 'Đã bật lớp 4G ERA' : 'Đã tắt lớp 4G ERA');
-              }}
-              className={`px-2 py-1 rounded-full text-[10px] font-bold flex items-center gap-1 shrink-0 border ${
-                layer4gEra ? 'bg-cyan-900/90 text-cyan-200 border-cyan-500' : 'bg-slate-900/90 text-slate-400 border-slate-700/80'
-              }`}
-            >
-              <span>🔄 4G ERA</span>
-              <span className="text-[8.5px] px-1 rounded-full bg-cyan-950">{activeSiteCounts.swapped_4g_era}</span>
-            </button>
-          </div>
 
           {validationError && (
             <div className="bg-red-500/15 border border-red-500/40 rounded-xl px-3 py-1.5 text-red-400 text-[10.5px] flex items-center gap-1.5 backdrop-blur-md shadow-lg">
@@ -2288,6 +2208,19 @@ export default function NetworkMap() {
                 )}
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
+                {customerLocation && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleClearCustomerLocation();
+                    }}
+                    className="p-1 rounded bg-rose-950/80 hover:bg-rose-900 border border-rose-500/50 text-rose-300 hover:text-white cursor-pointer"
+                    title="Đóng cửa sổ & Bỏ chọn vị trí (✕)"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
                 {bottomSheetState === 'collapsed' ? (
                   <button
                     type="button"
@@ -2346,13 +2279,22 @@ export default function NetworkMap() {
                       <div className="font-sans text-xs flex flex-col gap-1.5 p-0.5 max-w-[270px]">
                         <div className="flex items-center justify-between border-b border-slate-200 pb-1">
                           <strong className="text-red-500 font-bold text-xs flex items-center gap-1">📍 VỊ TRÍ ĐỊNH VỊ</strong>
-                          <button 
-                            onClick={() => handleCopyCoords(customerLocation.lat, customerLocation.lng, 'Vị trí chọn')}
-                            className="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold border border-slate-300 flex items-center gap-1 transition-all"
-                            title="Sao chép Tọa độ GPS (Google Maps format)"
-                          >
-                            <Copy className="h-3 w-3 text-cyan-600" /> Copy Lat,Lng
-                          </button>
+                          <div className="flex items-center gap-1">
+                            <button 
+                              onClick={() => handleCopyCoords(customerLocation.lat, customerLocation.lng, 'Vị trí chọn')}
+                              className="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold border border-slate-300 flex items-center gap-1 transition-all"
+                              title="Sao chép Tọa độ GPS (Google Maps format)"
+                            >
+                              <Copy className="h-3 w-3 text-cyan-600" /> Copy
+                            </button>
+                            <button 
+                              onClick={handleClearCustomerLocation}
+                              className="p-1 rounded text-[10px] bg-rose-50 hover:bg-rose-100 text-rose-600 font-semibold border border-rose-200 flex items-center transition-all cursor-pointer"
+                              title="Xóa điểm đo (✕)"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
                         </div>
                         
                         <div className="bg-slate-50 border border-slate-200 rounded p-1.5 font-mono text-[10px] text-slate-800 flex items-center justify-between">
