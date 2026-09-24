@@ -7126,5 +7126,239 @@
     "to_ql": "VT3",
     "huyen": "Xuân Lộc",
     "xa": "Phường Xuân Lộc"
+  },
+  "DNITPHM1": {
+    "site_id": "DNITPHM1",
+    "site_id_old": "UL_TPH044M_DNI",
+    "name": "Tà Lài M1 (Host UL_TPH044M_DNI)",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Tà Lài"
+  },
+  "UL_TPH044M_DNI": {
+    "site_id": "DNITPHM1",
+    "site_id_old": "UL_TPH044M_DNI",
+    "name": "Tà Lài M1 (Host UL_TPH044M_DNI)",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Tà Lài"
+  },
+  "DNIXLOM1": {
+    "site_id": "DNIXLOM1",
+    "site_id_old": "UL_XLO088M_DNI",
+    "name": "Xuân Thành M1 (Host UL_XLO088M_DNI)",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Thành"
+  },
+  "UL_XLO088M_DNI": {
+    "site_id": "DNIXLOM1",
+    "site_id_old": "UL_XLO088M_DNI",
+    "name": "Xuân Thành M1 (Host UL_XLO088M_DNI)",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Thành"
+  },
+  "DNIDQUM1": {
+    "site_id": "DNIDQUM1",
+    "site_id_old": "UL_DQU082M_DNI",
+    "name": "Phú Vinh M1 (Host UL_DQU082M_DNI)",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Phú Vinh"
+  },
+  "UL_DQU082M_DNI": {
+    "site_id": "DNIDQUM1",
+    "site_id_old": "UL_DQU082M_DNI",
+    "name": "Phú Vinh M1 (Host UL_DQU082M_DNI)",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Phú Vinh"
+  },
+  "DNILKHM1": {
+    "site_id": "DNILKHM1",
+    "site_id_old": "UL_LKH701B_DNI",
+    "name": "Bình Lộc M1 (Host UL_LKH701B_DNI)",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bình Lộc"
+  },
+  "UL_LKH701B_DNI": {
+    "site_id": "DNILKHM1",
+    "site_id_old": "UL_LKH701B_DNI",
+    "name": "Bình Lộc M1 (Host UL_LKH701B_DNI)",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bình Lộc"
+  },
+  "DNILKHM2": {
+    "site_id": "DNILKHM2",
+    "site_id_old": "UL_LKH703B_DNI",
+    "name": "Hàng Gòn M2 (Host UL_LKH703B_DNI)",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Hàng Gòn"
+  },
+  "UL_LKH703B_DNI": {
+    "site_id": "DNILKHM2",
+    "site_id_old": "UL_LKH703B_DNI",
+    "name": "Hàng Gòn M2 (Host UL_LKH703B_DNI)",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Hàng Gòn"
+  },
+  "DNITPHM2": {
+    "site_id": "DNITPHM2",
+    "site_id_old": "4G-TPH053M-DNI",
+    "name": "Tà Lài M2 (Host 4G-TPH053M-DNI)",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Tà Lài"
+  },
+  "4G-TPH053M-DNI": {
+    "site_id": "DNITPHM2",
+    "site_id_old": "4G-TPH053M-DNI",
+    "name": "Tà Lài M2 (Host 4G-TPH053M-DNI)",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Tà Lài"
+  },
+  "DNIXLOM2": {
+    "site_id": "DNIXLOM2",
+    "site_id_old": "UL_XLO084M_DNI",
+    "name": "Xuân Thành M2 (Host UL_XLO084M_DNI)",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Thành"
+  },
+  "UL_XLO084M_DNI": {
+    "site_id": "DNIXLOM2",
+    "site_id_old": "UL_XLO084M_DNI",
+    "name": "Xuân Thành M2 (Host UL_XLO084M_DNI)",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Thành"
+  },
+  "DNIDQUM2": {
+    "site_id": "DNIDQUM2",
+    "site_id_old": "4G-DQU097M-DNI",
+    "name": "La Ngà M2 (Host 4G-DQU097M-DNI)",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã La Ngà"
+  },
+  "4G-DQU097M-DNI": {
+    "site_id": "DNIDQUM2",
+    "site_id_old": "4G-DQU097M-DNI",
+    "name": "La Ngà M2 (Host 4G-DQU097M-DNI)",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã La Ngà"
+  },
+  "DNICMYM1": {
+    "site_id": "DNICMYM1",
+    "site_id_old": "UL_CMY058M_DNI",
+    "name": "Cẩm Mỹ M1 (Host UL_CMY058M_DNI)",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Cẩm Mỹ"
+  },
+  "UL_CMY058M_DNI": {
+    "site_id": "DNICMYM1",
+    "site_id_old": "UL_CMY058M_DNI",
+    "name": "Cẩm Mỹ M1 (Host UL_CMY058M_DNI)",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Cẩm Mỹ"
+  },
+  "DNIXLOM3": {
+    "site_id": "DNIXLOM3",
+    "site_id_old": "UL_XLO082M_DNI",
+    "name": "Xuân Thành M3 (Host UL_XLO082M_DNI)",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Thành"
+  },
+  "UL_XLO082M_DNI": {
+    "site_id": "DNIXLOM3",
+    "site_id_old": "UL_XLO082M_DNI",
+    "name": "Xuân Thành M3 (Host UL_XLO082M_DNI)",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Thành"
+  },
+  "DNICMYM2": {
+    "site_id": "DNICMYM2",
+    "site_id_old": "UL_CMY051M_DNI",
+    "name": "Sông Ray M2 (Host UL_CMY051M_DNI)",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Sông Ray"
+  },
+  "UL_CMY051M_DNI": {
+    "site_id": "DNICMYM2",
+    "site_id_old": "UL_CMY051M_DNI",
+    "name": "Sông Ray M2 (Host UL_CMY051M_DNI)",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Sông Ray"
+  },
+  "DNICMYM3": {
+    "site_id": "DNICMYM3",
+    "site_id_old": "4G-CMY075M-DNI",
+    "name": "Xuân Định M3 (Host 4G-CMY075M-DNI)",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Định"
+  },
+  "4G-CMY075M-DNI": {
+    "site_id": "DNICMYM3",
+    "site_id_old": "4G-CMY075M-DNI",
+    "name": "Xuân Định M3 (Host 4G-CMY075M-DNI)",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Định"
+  },
+  "DNICMYM4": {
+    "site_id": "DNICMYM4",
+    "site_id_old": "4G-CMY059M-DNI",
+    "name": "Xuân Định M4 (Host 4G-CMY059M-DNI)",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Định"
+  },
+  "4G-CMY059M-DNI": {
+    "site_id": "DNICMYM4",
+    "site_id_old": "4G-CMY059M-DNI",
+    "name": "Xuân Định M4 (Host 4G-CMY059M-DNI)",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Định"
   }
 }

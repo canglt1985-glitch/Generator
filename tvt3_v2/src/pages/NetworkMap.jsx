@@ -173,6 +173,41 @@ const getInfraProjectCategory = (proj) => {
 
 // Helper phân loại trạng thái trạm Hoạt động theo dữ liệu dự án SRAN (5G Onair, 4G ERA Swap, 4G Legacy)
 const getSiteSranCategory = (site, sranMap) => {
+  // 0. Nhận diện trạm MORAN 4G (VNPT làm Host, MobiFone phát sóng ké)
+  const isMoran = Boolean(
+    site.site_id === 'DNIXLOM0' ||
+    (site.ptm_id && (String(site.ptm_id).toLowerCase().includes('host') || String(site.ptm_id).toLowerCase().includes('moran'))) ||
+    site.classification?.loai_tram === 'MORAN' ||
+    site.management_info?.moran
+  );
+
+  if (isMoran) {
+    const hostName = site.ptm_id || 'VNPT Host';
+    const cshtId = site.classification?.ma_csht || null;
+    const vendor = site.classification?.vendor || 'ERICSSON';
+    return {
+      key: 'moran_vnpt_host',
+      label: 'MORAN 4G (VNPT Host)',
+      shortLabel: 'MORAN 4G',
+      icon: '🤝',
+      color: '#f59e0b',
+      borderClass: 'border-2 border-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.95)] ring-2 ring-amber-500/60 bg-amber-950/95 text-amber-200 font-extrabold',
+      badgeClass: 'bg-amber-500/20 text-amber-400 border border-amber-500/50 font-bold',
+      textColor: 'text-amber-400 font-black',
+      isMoran: true,
+      sranInfo: {
+        site_id: site.site_id,
+        host_name: hostName,
+        csht_id: cshtId,
+        vendor: vendor,
+        partner: 'VNPT',
+        phan_loai: site.classification?.phan_loai || 'Chính thức',
+        van_ban: site.classification?.van_ban || '5299/TT1-VT (24/09/2026)',
+        status_note: `Trạm MORAN 4G • ${hostName} (${vendor})`
+      }
+    };
+  }
+
   const s1 = site.site_id ? String(site.site_id).trim().toUpperCase() : '';
   const s2 = site.site_id_old ? String(site.site_id_old).trim().toUpperCase() : '';
   const sran = sranMap ? (sranMap.get(s1) || sranMap.get(s2)) : null;
@@ -331,7 +366,7 @@ const createSiteDivIcon = (id, type, infraCategory = null, sranCategory = null, 
 
   if (type === 'Hoạt động') {
     chipClass = sranCategory?.borderClass || 'border border-blue-400/60 bg-blue-600/90 text-white shadow-sm';
-    iconPrefix = sranCategory?.key === 'onair_5g_dual' ? '⚡ ' : sranCategory?.key === 'onair_5g' ? '📶 ' : '';
+    iconPrefix = sranCategory?.key === 'onair_5g_dual' ? '⚡ ' : sranCategory?.key === 'onair_5g' ? '📶 ' : sranCategory?.key === 'moran_vnpt_host' ? '🤝 ' : '';
   } else if (infraCategory) {
     chipClass = `${infraCategory.bgGradient} text-white`;
     iconPrefix = `${infraCategory.icon} `;
@@ -343,10 +378,11 @@ const createSiteDivIcon = (id, type, infraCategory = null, sranCategory = null, 
   // Chế độ thu gọn khi zoom xa (< 13): Chấm tròn phát sáng màu công nghệ để tránh đè chùm trên mobile
   if (isCompact) {
     const isDual = sranCategory?.key === 'onair_5g_dual';
+    const isMoran = sranCategory?.key === 'moran_vnpt_host';
     const dotColor = type === 'Hoạt động' ? (sranCategory?.color || '#3b82f6') : (infraCategory?.color || '#f59e0b');
-    const size = isDual ? '11px' : '8px';
-    const border = isDual ? '2px solid #f3e8ff' : '1.5px solid white';
-    const shadow = isDual ? '0 0 10px #7e22ce, 0 0 16px #a855f7' : `0 0 4px ${dotColor}`;
+    const size = isDual ? '11px' : isMoran ? '10px' : '8px';
+    const border = isDual ? '2px solid #f3e8ff' : isMoran ? '2px solid #fef3c7' : '1.5px solid white';
+    const shadow = isDual ? '0 0 10px #7e22ce, 0 0 16px #a855f7' : isMoran ? '0 0 10px #f59e0b, 0 0 14px #d97706' : `0 0 4px ${dotColor}`;
     return L.divIcon({
       html: `<div style="background-color: ${dotColor}; width: ${size}; height: ${size}; border-radius: 50%; border: ${border}; box-shadow: ${shadow}; transform: translate(-50%, -50%); cursor: pointer;"></div>`,
       className: 'bg-transparent border-none',
@@ -440,6 +476,7 @@ export default function NetworkMap() {
   const [layer5gDual, setLayer5gDual] = useState(true); // Trạm 5G 2 Lớp (2600 + 3800 MHz)
   const [layer5gOnair, setLayer5gOnair] = useState(true); // Trạm 5G 1 Lớp (2600 MHz)
   const [layer4gEra, setLayer4gEra] = useState(true); // Trạm 4G ERA Swap
+  const [layerMoran, setLayerMoran] = useState(true); // Trạm MORAN 4G (VNPT Host)
   const [layerPlanningInfra, setLayerPlanningInfra] = useState(false); // Trạm CSHT Quy hoạch
   const [layerLastmile, setLayerLastmile] = useState(false); // Tuyến truyền dẫn Last Mile
   const [sranTrackerData, setSranTrackerData] = useState([]);
@@ -494,6 +531,7 @@ export default function NetworkMap() {
       onair_5g_dual: 0,
       onair_5g: 0,
       swapped_4g_era: 0,
+      moran_vnpt_host: 0,
       normal_4g: 0,
       total: activeSites.length
     };
@@ -797,7 +835,7 @@ export default function NetworkMap() {
         const [sitesRes, projectsRes, sranRes1, sranRes2] = await Promise.all([
           supabase
             .from('datasites')
-            .select('site_id, site_id_old, name, location_info, management_info, technical_info'),
+            .select('site_id, site_id_old, ptm_id, name, location_info, management_info, technical_info, classification'),
           supabase
             .from('infrastructure_projects')
             .select('project_id, planning_id_new, planning_id_old, latitude_survey, longitude_survey, latitude_plan, longitude_plan, survey_status, overall_status, skhcn_status, notes, conflict_notes, district, ward, address, priority, sharing_partner, shared_site_id'),
@@ -1031,16 +1069,23 @@ export default function NetworkMap() {
 
     const query = val.trim().toLowerCase();
 
-    // 1. Filter Active Sites (Kèm nhãn công nghệ 5G / 4G ERA, hỗ trợ tìm theo cả Site ID cũ và Site ID mới)
+    // 1. Filter Active Sites (Kèm nhãn công nghệ 5G / 4G ERA / MORAN 4G, hỗ trợ tìm theo cả Site ID cũ và Site ID mới)
     const filteredActive = categorizedActiveSites
       .filter(s => {
         const oldId = (s.site_id_old || '').toLowerCase();
         const newId = (s.site_id || '').toLowerCase();
         const sranId = (s.sranCategory?.sranInfo?.site_id || '').toLowerCase();
+        const ptm = (s.ptm_id || '').toLowerCase();
+        const hostName = (s.sranCategory?.sranInfo?.host_name || '').toLowerCase();
+        const csht = (s.classification?.ma_csht || '').toLowerCase();
         return (
           oldId.includes(query) || 
           newId.includes(query) ||
           sranId.includes(query) ||
+          ptm.includes(query) ||
+          hostName.includes(query) ||
+          csht.includes(query) ||
+          ((query.includes('moran') || query.includes('host') || query.includes('sharing')) && s.sranCategory?.key === 'moran_vnpt_host') ||
           (query.includes('5g') && (s.sranCategory?.key === 'onair_5g' || s.sranCategory?.key === 'onair_5g_dual')) ||
           ((query.includes('2 lop') || query.includes('dual')) && s.sranCategory?.key === 'onair_5g_dual') ||
           (query.includes('1 lop') && s.sranCategory?.key === 'onair_5g') ||
@@ -1063,7 +1108,7 @@ export default function NetworkMap() {
           lat: parseFloat(s.location_info.vi_do),
           lng: parseFloat(s.location_info.kinh_do),
           type: s.sranCategory?.shortLabel || 'Hoạt động',
-          techType: s.sranCategory?.key === 'onair_5g_dual' ? '5G 2 Lớp' : s.sranCategory?.key === 'onair_5g' ? '5G 1 Lớp' : s.sranCategory?.key === 'swapped_4g_era' ? '4G ERA' : '4G',
+          techType: s.sranCategory?.key === 'onair_5g_dual' ? '5G 2 Lớp' : s.sranCategory?.key === 'onair_5g' ? '5G 1 Lớp' : s.sranCategory?.key === 'swapped_4g_era' ? '4G ERA' : s.sranCategory?.key === 'moran_vnpt_host' ? 'MORAN 4G' : '4G',
           badgeClass: s.sranCategory?.badgeClass || 'bg-blue-500/10 text-blue-400 border border-blue-500/20',
           rawSite: s,
           rawCat: s.sranCategory
@@ -1113,10 +1158,12 @@ export default function NetworkMap() {
           lng: item.lng
         });
       }
+    } else {
       if (item.techType === '5G 2 Lớp' && !layer5gDual) setLayer5gDual(true);
       else if (item.techType === '5G 1 Lớp' && !layer5gOnair) setLayer5gOnair(true);
       else if (item.techType === '5G' && (!layer5gOnair || !layer5gDual)) { setLayer5gOnair(true); setLayer5gDual(true); }
       else if (item.techType === '4G ERA' && !layer4gEra) setLayer4gEra(true);
+      else if (item.techType === 'MORAN 4G' && !layerMoran) setLayerMoran(true);
       else if (!layerActiveSites) setLayerActiveSites(true);
 
       if (item.rawSite) {
@@ -1162,16 +1209,21 @@ export default function NetworkMap() {
 
     const query = inputVal.toLowerCase();
 
-    // B. Check Active Sites (kèm nhận diện nhãn công nghệ 5G / 4G ERA & hỗ trợ Site ID cũ / mới)
+    // B. Check Active Sites (kèm nhận diện nhãn công nghệ 5G / 4G ERA / MORAN & hỗ trợ Site ID cũ / mới)
     const matchedActive = categorizedActiveSites.find(s => {
       const oldId = (s.site_id_old || '').toLowerCase();
       const newId = (s.site_id || '').toLowerCase();
       const sranId = (s.sranCategory?.sranInfo?.site_id || '').toLowerCase();
+      const ptm = (s.ptm_id || '').toLowerCase();
+      const hostName = (s.sranCategory?.sranInfo?.host_name || '').toLowerCase();
+      const csht = (s.classification?.ma_csht || '').toLowerCase();
       const combined = `${oldId} - ${newId}`.toLowerCase();
       
       return (
         oldId === query || newId === query || sranId === query || combined === query ||
+        ptm === query || hostName === query || csht === query ||
         oldId.includes(query) || newId.includes(query) || sranId.includes(query) ||
+        ptm.includes(query) || hostName.includes(query) || csht.includes(query) ||
         (query.length >= 4 && (query.includes(oldId) || (newId && query.includes(newId))))
       );
     });
@@ -1191,6 +1243,7 @@ export default function NetworkMap() {
       if (matchedActive.sranCategory?.key === 'onair_5g_dual' && !layer5gDual) setLayer5gDual(true);
       else if (matchedActive.sranCategory?.key === 'onair_5g' && !layer5gOnair) setLayer5gOnair(true);
       else if (matchedActive.sranCategory?.key === 'swapped_4g_era' && !layer4gEra) setLayer4gEra(true);
+      else if (matchedActive.sranCategory?.key === 'moran_vnpt_host' && !layerMoran) setLayerMoran(true);
       else if (!layerActiveSites) setLayerActiveSites(true);
 
       setSelectedMobileStation({
@@ -1767,6 +1820,7 @@ export default function NetworkMap() {
                           setLayer5gDual(true);
                           setLayer5gOnair(true);
                           setLayer4gEra(true);
+                          setLayerMoran(true);
                           setLayerPlanningInfra(true);
                           setLayerLastmile(true);
                           showToast('Đã bật tất cả phân lớp');
@@ -1783,6 +1837,7 @@ export default function NetworkMap() {
                           setLayer5gDual(false);
                           setLayer5gOnair(false);
                           setLayer4gEra(false);
+                          setLayerMoran(false);
                           setLayerPlanningInfra(false);
                           setLayerLastmile(false);
                           showToast('Đã tắt tất cả phân lớp');
@@ -1880,6 +1935,28 @@ export default function NetworkMap() {
                       </div>
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-700/50 shrink-0">
                         {activeSiteCounts.swapped_4g_era}
+                      </span>
+                    </label>
+
+                    {/* Layer 3b: MORAN 4G (VNPT Host) */}
+                    <label className="flex items-center justify-between p-2 rounded-xl bg-amber-950/30 hover:bg-amber-950/60 border border-amber-600/50 cursor-pointer transition-colors shadow-sm">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <input
+                          type="checkbox"
+                          checked={layerMoran}
+                          onChange={(e) => setLayerMoran(e.target.checked)}
+                          className="rounded border-amber-500 text-amber-500 focus:ring-amber-500 h-4 w-4 bg-slate-900 cursor-pointer"
+                        />
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold text-amber-200 flex items-center gap-1.5">
+                            <span className="h-2 w-2 rounded-full bg-amber-400 shrink-0"></span>
+                            <span className="text-amber-300 font-extrabold flex items-center gap-1">🤝 MORAN 4G <span className="text-[10px] font-normal text-amber-400">(VNPT Host)</span></span>
+                          </div>
+                          <div className="text-[10px] text-amber-400/80 truncate">MobiFone phát sóng ké CSHT VNPT (RAN Sharing)</div>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-900 text-amber-200 border border-amber-500/70 shrink-0 shadow-[0_0_8px_rgba(245,158,11,0.5)]">
+                        {activeSiteCounts.moran_vnpt_host}
                       </span>
                     </label>
 
@@ -2159,13 +2236,14 @@ export default function NetworkMap() {
                 </>
               )}
 
-              {/* Render danh sách Trạm hoạt động - Phân loại 5G 2 Lớp, 5G 1 Lớp, 4G Swap ERA & 4G Hiện hữu (Đa lựa chọn phân lớp) */}
+              {/* Render danh sách Trạm hoạt động - Phân loại 5G 2 Lớp, 5G 1 Lớp, 4G Swap ERA, MORAN 4G & 4G Hiện hữu (Đa lựa chọn phân lớp) */}
               {categorizedActiveSites
                 .filter(site => {
                   const catKey = site.sranCategory?.key;
                   if (catKey === 'onair_5g_dual') return layer5gDual;
                   if (catKey === 'onair_5g') return layer5gOnair;
                   if (catKey === 'swapped_4g_era') return layer4gEra;
+                  if (catKey === 'moran_vnpt_host') return layerMoran;
                   return layerActiveSites;
                 })
                 .map(site => {
@@ -2228,6 +2306,33 @@ export default function NetworkMap() {
                                 <Copy className="h-3 w-3 text-cyan-600" /> Copy
                               </button>
                             </div>
+
+                            {/* Khối thông tin đặc thù Trạm MORAN 4G (VNPT Host) */}
+                            {cat?.key === 'moran_vnpt_host' && (
+                              <div className="bg-amber-50 border border-amber-300 rounded-lg p-2.5 text-[11px] space-y-1.5 shadow-sm">
+                                <div className="flex items-center justify-between text-amber-900 font-extrabold pb-1 border-b border-amber-200">
+                                  <span className="flex items-center gap-1">🤝 Trạm MORAN 4G (VNPT Host)</span>
+                                  <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-200/80 text-amber-900 font-extrabold border border-amber-300">Chính thức</span>
+                                </div>
+                                <div className="flex items-center justify-between text-slate-700">
+                                  <span className="text-slate-500 font-medium">🏢 Host VNPT:</span>
+                                  <span className="font-mono font-bold text-amber-900">{site.ptm_id || cat.sranInfo?.host_name}</span>
+                                </div>
+                                {cat.sranInfo?.csht_id && (
+                                  <div className="flex items-center justify-between text-slate-700">
+                                    <span className="text-slate-500 font-medium">🏷️ Mã CSHT:</span>
+                                    <span className="font-mono font-bold text-slate-800">{cat.sranInfo.csht_id}</span>
+                                  </div>
+                                )}
+                                <div className="flex items-center justify-between text-slate-700">
+                                  <span className="text-slate-500 font-medium">⚙️ Vendor VNPT:</span>
+                                  <span className="font-semibold text-slate-800">{cat.sranInfo?.vendor || 'ERICSSON'}</span>
+                                </div>
+                                <div className="text-[10px] text-amber-800 italic pt-1 border-t border-amber-200/80">
+                                  MobiFone phát sóng ké CSHT VNPT (RAN Sharing đợt 1/2026 - VB 5299)
+                                </div>
+                              </div>
+                            )}
 
                             {/* Khối cấu hình 5G / 4G / Swap nếu có */}
                             {(cat?.sranInfo?.config_5g || cat?.sranInfo?.config_4g || cat?.sranInfo?.swap_date) && (
@@ -2694,6 +2799,33 @@ export default function NetworkMap() {
                       ) : (
                         <span className="text-slate-500 text-[11px]">Chưa có SĐT</span>
                       )}
+                    </div>
+                  )}
+
+                  {/* Thông tin trạm MORAN 4G (VNPT Host) */}
+                  {cat?.key === 'moran_vnpt_host' && (
+                    <div className="bg-amber-950/40 border border-amber-600/50 rounded-xl p-2.5 text-xs space-y-1.5 shadow-sm">
+                      <div className="flex items-center justify-between text-amber-300 font-extrabold pb-1 border-b border-amber-700/40">
+                        <span className="flex items-center gap-1.5">🤝 Trạm MORAN 4G (VNPT Host)</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">Chính thức</span>
+                      </div>
+                      <div className="flex items-center justify-between text-slate-300 pt-0.5">
+                        <span className="text-slate-400">🏢 Host VNPT:</span>
+                        <span className="font-mono font-bold text-amber-200">{s.ptm_id || cat.sranInfo?.host_name}</span>
+                      </div>
+                      {cat.sranInfo?.csht_id && (
+                        <div className="flex items-center justify-between text-slate-300">
+                          <span className="text-slate-400">🏷️ Mã CSHT VNPT:</span>
+                          <span className="font-mono text-slate-200 font-semibold">{cat.sranInfo.csht_id}</span>
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between text-slate-300">
+                        <span className="text-slate-400">⚙️ Thiết bị Host:</span>
+                        <span className="font-semibold text-slate-200">{cat.sranInfo?.vendor || 'ERICSSON'}</span>
+                      </div>
+                      <div className="text-[10.5px] text-amber-300/80 italic pt-1 border-t border-amber-700/30">
+                        MobiFone phát sóng ké CSHT VNPT (RAN Sharing đợt 1/2026 - VB 5299)
+                      </div>
                     </div>
                   )}
 
