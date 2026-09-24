@@ -358,11 +358,22 @@ const getSiteSranCategory = (site, sranMap) => {
   };
 };
 
+// Hàm chuẩn hóa & rút gọn mã trạm MORAN (VD: UL_XLO082M_DNI -> XLO082M, 4G-TPH053M-DNI -> TPH053M)
+const cleanMoranSiteId = (rawId) => {
+  if (!rawId) return '';
+  return String(rawId)
+    .replace(/^VNPT host\s*/i, '')
+    .replace(/^(UL_|4G-|U_|MBF_)/i, '')
+    .replace(/(_DNI|-DNI)$/i, '')
+    .trim();
+};
+
 // Custom HTML DivIcon to display Site ID / PTM ID directly on map as a small labeled chip
 // Tiêu đề chỉ hiển thị tên trạm (không kèm tiền tố dài dòng), viền màu sắc phân biệt công nghệ
 const createSiteDivIcon = (id, type, infraCategory = null, sranCategory = null, isCompact = false) => {
   // 1. Ký hiệu Độc quyền & Riêng biệt dành cho Trạm MORAN 4G (VNPT làm Host)
   if (sranCategory?.key === 'moran_vnpt_host') {
+    const cleanId = cleanMoranSiteId(id);
     if (isCompact) {
       // Zoom xa: Biểu tượng Kim cương Diamond hổ phách phát sáng neon lấp lánh
       return L.divIcon({
@@ -375,15 +386,13 @@ const createSiteDivIcon = (id, type, infraCategory = null, sranCategory = null, 
       });
     }
 
-    // Zoom gần: Marker Pin cờ hiệu phát sóng độc quyền với biểu tượng bắt tay 🤝 kèm nhãn [VNPT Host]
+    // Zoom gần: Cờ hiệu viền phát sáng màu vàng cam hổ phách, nhãn mã trạm rút gọn (VD: XLO082M)
     return L.divIcon({
       html: `<div class="relative flex flex-col items-center group cursor-pointer transition-transform duration-100 hover:scale-125 active:scale-95 font-sans" style="transform: translate(-50%, -100%);">
-               <div class="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 text-white font-black text-[8px] tracking-tight border-2 border-amber-300 shadow-[0_0_14px_rgba(245,158,11,1)] whitespace-nowrap">
-                 <span class="text-[10px] leading-none">🤝</span>
-                 <span class="font-extrabold tracking-tight">${id}</span>
-                 <span class="text-[6.5px] px-1 py-[0.5px] bg-slate-950/80 rounded text-amber-300 font-bold border border-amber-400/40 uppercase">VNPT Host</span>
+               <div class="px-2 py-0.5 rounded-md bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 text-white font-black text-[9px] tracking-tight border-2 border-amber-300 shadow-[0_0_14px_rgba(245,158,11,1)] whitespace-nowrap">
+                 ${cleanId}
                </div>
-               <div style="width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid #d97706; margin-top: -1px; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.6));"></div>
+               <div style="width: 0; height: 0; border-left: 4.5px solid transparent; border-right: 4.5px solid transparent; border-top: 5.5px solid #d97706; margin-top: -1px; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.6));"></div>
              </div>`,
       className: 'bg-transparent border-none',
       iconSize: [0, 0],
@@ -1687,26 +1696,6 @@ export default function NetworkMap() {
               <button
                 type="button"
                 onClick={() => {
-                  const next = !layerMoran;
-                  setLayerMoran(next);
-                  showToast(next ? 'Đã bật lớp trạm MORAN 4G (VNPT Host)' : 'Đã tắt lớp trạm MORAN 4G');
-                }}
-                className={`px-2.5 py-1 rounded-lg text-[10.5px] font-black flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap shadow-sm border ${
-                  layerMoran
-                    ? 'bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 text-white border-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.7)] ring-1 ring-amber-400/80'
-                    : 'bg-slate-950/70 text-slate-400 border-slate-700/80 hover:text-slate-200'
-                }`}
-                title="Bật/Tắt Lớp Trạm MORAN 4G (VNPT Host)"
-              >
-                <span>🤝 MORAN 4G</span>
-                <span className={`px-1.5 py-0.2 rounded-full text-[9px] font-black ${layerMoran ? 'bg-black/50 text-amber-200' : 'bg-slate-800 text-slate-400'}`}>
-                  {activeSiteCounts.moran_vnpt_host}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
                   const next = !layer5gDual;
                   setLayer5gDual(next);
                   showToast(next ? 'Đã bật lớp 5G 2 Lớp' : 'Đã tắt lớp 5G 2 Lớp');
@@ -1858,24 +1847,6 @@ export default function NetworkMap() {
 
           {/* Mobile Quick Layer Filter Chips */}
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 px-0.5">
-            <button
-              type="button"
-              onClick={() => {
-                const next = !layerMoran;
-                setLayerMoran(next);
-                showToast(next ? 'Đã bật lớp trạm MORAN 4G (VNPT Host)' : 'Đã tắt lớp trạm MORAN 4G');
-              }}
-              className={`px-2.5 py-1 rounded-full text-[10px] font-black flex items-center gap-1 shrink-0 transition-all border shadow-sm ${
-                layerMoran
-                  ? 'bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 text-white border-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.6)]'
-                  : 'bg-slate-900/90 text-slate-400 border-slate-700/80'
-              }`}
-            >
-              <span>🤝 MORAN 4G</span>
-              <span className={`px-1 py-0.2 rounded-full text-[8.5px] font-black ${layerMoran ? 'bg-black/50 text-amber-200' : 'bg-slate-800'}`}>
-                {activeSiteCounts.moran_vnpt_host}
-              </span>
-            </button>
             <button
               type="button"
               onClick={() => {
