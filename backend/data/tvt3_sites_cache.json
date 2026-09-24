@@ -1,0 +1,7130 @@
+{
+  "DNIDGI16": {
+    "site_id": "DNIDGI16",
+    "site_id_old": "DNTN30",
+    "name": "Dầu Giây 16",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNTN30": {
+    "site_id": "DNIDGI16",
+    "site_id_old": "DNTN30",
+    "name": "Dầu Giây 16",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNILKH15": {
+    "site_id": "DNILKH15",
+    "site_id_old": "DNLKS1",
+    "name": "Long Khánh 15",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Long Khánh"
+  },
+  "DNLKS1": {
+    "site_id": "DNILKH15",
+    "site_id_old": "DNLKS1",
+    "name": "Long Khánh 15",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Long Khánh"
+  },
+  "DNIXBA06": {
+    "site_id": "DNIXBA06",
+    "site_id_old": "DNXL27",
+    "name": "Xuân Bắc 6",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Bắc"
+  },
+  "DNXL27": {
+    "site_id": "DNIXBA06",
+    "site_id_old": "DNXL27",
+    "name": "Xuân Bắc 6",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Bắc"
+  },
+  "DNIPLA00": {
+    "site_id": "DNIPLA00",
+    "site_id_old": "DNTP01",
+    "name": "Phú Lâm",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Phú Lâm"
+  },
+  "DNTP01": {
+    "site_id": "DNIPLA00",
+    "site_id_old": "DNTP01",
+    "name": "Phú Lâm",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Phú Lâm"
+  },
+  "DNIHGO03": {
+    "site_id": "DNIHGO03",
+    "site_id_old": "DNLK16",
+    "name": "Hàng Gòn 3",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Hàng Gòn"
+  },
+  "DNLK16": {
+    "site_id": "DNIHGO03",
+    "site_id_old": "DNLK16",
+    "name": "Hàng Gòn 3",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Hàng Gòn"
+  },
+  "DNILKH07": {
+    "site_id": "DNILKH07",
+    "site_id_old": "DNLK26",
+    "name": "Long Khánh 7",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Long Khánh"
+  },
+  "DNLK26": {
+    "site_id": "DNILKH07",
+    "site_id_old": "DNLK26",
+    "name": "Long Khánh 7",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Long Khánh"
+  },
+  "DNISRA02": {
+    "site_id": "DNISRA02",
+    "site_id_old": "DNCM23",
+    "name": "Sông Ray 2",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Sông Ray"
+  },
+  "DNCM23": {
+    "site_id": "DNISRA02",
+    "site_id_old": "DNCM23",
+    "name": "Sông Ray 2",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Sông Ray"
+  },
+  "DNIXHO16": {
+    "site_id": "DNIXHO16",
+    "site_id_old": "DNXL63",
+    "name": "Xuân Hòa 16",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Hòa"
+  },
+  "DNXL63": {
+    "site_id": "DNIXHO16",
+    "site_id_old": "DNXL63",
+    "name": "Xuân Hòa 16",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Hòa"
+  },
+  "DNIDGI26": {
+    "site_id": "DNIDGI26",
+    "site_id_old": "DNTN52",
+    "name": "Dầu Giây 26",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNTN52": {
+    "site_id": "DNIDGI26",
+    "site_id_old": "DNTN52",
+    "name": "Dầu Giây 26",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNIXDI09": {
+    "site_id": "DNIXDI09",
+    "site_id_old": "DNXL72",
+    "name": "Xuân Định 9",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Định"
+  },
+  "DNXL72": {
+    "site_id": "DNIXDI09",
+    "site_id_old": "DNXL72",
+    "name": "Xuân Định 9",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Định"
+  },
+  "DNIHGO08": {
+    "site_id": "DNIHGO08",
+    "site_id_old": "DNLK70",
+    "name": "Hàng Gòn 8",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Hàng Gòn"
+  },
+  "DNLK70": {
+    "site_id": "DNIHGO08",
+    "site_id_old": "DNLK70",
+    "name": "Hàng Gòn 8",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Hàng Gòn"
+  },
+  "DNIXDO03": {
+    "site_id": "DNIXDO03",
+    "site_id_old": "DNCM08",
+    "name": "Xuân Đông 3",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Đông"
+  },
+  "DNCM08": {
+    "site_id": "DNIXDO03",
+    "site_id_old": "DNCM08",
+    "name": "Xuân Đông 3",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Đông"
+  },
+  "DNITNH01": {
+    "site_id": "DNITNH01",
+    "site_id_old": "DNDQ06",
+    "name": "Thống Nhất 1",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Thống Nhất"
+  },
+  "DNDQ06": {
+    "site_id": "DNITNH01",
+    "site_id_old": "DNDQ06",
+    "name": "Thống Nhất 1",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Thống Nhất"
+  },
+  "DNIXLO32": {
+    "site_id": "DNIXLO32",
+    "site_id_old": "DNIXLO32",
+    "name": "KDL Núi Chứa Chan (Macro)",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNIBVI05": {
+    "site_id": "DNIBVI05",
+    "site_id_old": "DNLK28",
+    "name": "Bảo Vinh 5",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bảo Vinh"
+  },
+  "DNLK28": {
+    "site_id": "DNIBVI05",
+    "site_id_old": "DNLK28",
+    "name": "Bảo Vinh 5",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bảo Vinh"
+  },
+  "DNIXQU00": {
+    "site_id": "DNIXQU00",
+    "site_id_old": "DNCM09",
+    "name": "Xuân Quế",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Quế"
+  },
+  "DNCM09": {
+    "site_id": "DNIXQU00",
+    "site_id_old": "DNCM09",
+    "name": "Xuân Quế",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Quế"
+  },
+  "DNIXLO33": {
+    "site_id": "DNIXLO33",
+    "site_id_old": "DNIXLO33",
+    "name": "KDL Núi Chứa Chan (CRAN)",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNILKH13": {
+    "site_id": "DNILKH13",
+    "site_id_old": "DNLK73",
+    "name": "Long Khánh 13",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Long Khánh"
+  },
+  "DNLK73": {
+    "site_id": "DNILKH13",
+    "site_id_old": "DNLK73",
+    "name": "Long Khánh 13",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Long Khánh"
+  },
+  "DNIHGO09": {
+    "site_id": "DNIHGO09",
+    "site_id_old": "DNLK71",
+    "name": "Hàng Gòn 9",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Hàng Gòn"
+  },
+  "DNLK71": {
+    "site_id": "DNIHGO09",
+    "site_id_old": "DNLK71",
+    "name": "Hàng Gòn 9",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Hàng Gòn"
+  },
+  "DNITPU14": {
+    "site_id": "DNITPU14",
+    "site_id_old": "DNTP54",
+    "name": "Tân Phú 14",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Phường Tân Phú"
+  },
+  "DNTP54": {
+    "site_id": "DNITPU14",
+    "site_id_old": "DNTP54",
+    "name": "Tân Phú 14",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Phường Tân Phú"
+  },
+  "DNIXLO16": {
+    "site_id": "DNIXLO16",
+    "site_id_old": "DNXL41",
+    "name": "Xuân Lộc 16",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNXL41": {
+    "site_id": "DNIXLO16",
+    "site_id_old": "DNXL41",
+    "name": "Xuân Lộc 16",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNIXDO09": {
+    "site_id": "DNIXDO09",
+    "site_id_old": "DNCM39",
+    "name": "Xuân Đông 9",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Đông"
+  },
+  "DNCM39": {
+    "site_id": "DNIXDO09",
+    "site_id_old": "DNCM39",
+    "name": "Xuân Đông 9",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Đông"
+  },
+  "DNIDQU06": {
+    "site_id": "DNIDQU06",
+    "site_id_old": "DNDQ18",
+    "name": "Định Quán 6",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNDQ18": {
+    "site_id": "DNIDQU06",
+    "site_id_old": "DNDQ18",
+    "name": "Định Quán 6",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNIXTC01": {
+    "site_id": "DNIXTC01",
+    "site_id_old": "DNXL17",
+    "name": "Xuân Thành 1",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Thành"
+  },
+  "DNXL17": {
+    "site_id": "DNIXTC01",
+    "site_id_old": "DNXL17",
+    "name": "Xuân Thành 1",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Thành"
+  },
+  "DNIPLA11": {
+    "site_id": "DNIPLA11",
+    "site_id_old": "DNTP44",
+    "name": "Phú Lâm 11",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Phú Lâm"
+  },
+  "DNTP44": {
+    "site_id": "DNIPLA11",
+    "site_id_old": "DNTP44",
+    "name": "Phú Lâm 11",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Phú Lâm"
+  },
+  "DNIHGO02": {
+    "site_id": "DNIHGO02",
+    "site_id_old": "DNLK09",
+    "name": "Hàng Gòn 2",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Hàng Gòn"
+  },
+  "DNLK09": {
+    "site_id": "DNIHGO02",
+    "site_id_old": "DNLK09",
+    "name": "Hàng Gòn 2",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Hàng Gòn"
+  },
+  "DNIXDU01": {
+    "site_id": "DNIXDU01",
+    "site_id_old": "DNCM16",
+    "name": "Xuân Đường 1",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Đường"
+  },
+  "DNCM16": {
+    "site_id": "DNIXDU01",
+    "site_id_old": "DNCM16",
+    "name": "Xuân Đường 1",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Đường"
+  },
+  "DNIDGI21": {
+    "site_id": "DNIDGI21",
+    "site_id_old": "DNTN38",
+    "name": "Dầu Giây 21",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNTN38": {
+    "site_id": "DNIDGI21",
+    "site_id_old": "DNTN38",
+    "name": "Dầu Giây 21",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNIBLC01": {
+    "site_id": "DNIBLC01",
+    "site_id_old": "DNLK06",
+    "name": "Bình Lộc 1",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bình Lộc"
+  },
+  "DNLK06": {
+    "site_id": "DNIBLC01",
+    "site_id_old": "DNLK06",
+    "name": "Bình Lộc 1",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bình Lộc"
+  },
+  "DNINCT05": {
+    "site_id": "DNINCT05",
+    "site_id_old": "DNTP47",
+    "name": "Nam Cát Tiên 5",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Nam Cát Tiên"
+  },
+  "DNTP47": {
+    "site_id": "DNINCT05",
+    "site_id_old": "DNTP47",
+    "name": "Nam Cát Tiên 5",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Nam Cát Tiên"
+  },
+  "DNIDGI13": {
+    "site_id": "DNIDGI13",
+    "site_id_old": "DNTN23",
+    "name": "Dầu Giây 13",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNTN23": {
+    "site_id": "DNIDGI13",
+    "site_id_old": "DNTN23",
+    "name": "Dầu Giây 13",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNIGKI08": {
+    "site_id": "DNIGKI08",
+    "site_id_old": "DNTN27",
+    "name": "Gia Kiệm 8",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Xã Gia Kiệm"
+  },
+  "DNTN27": {
+    "site_id": "DNIGKI08",
+    "site_id_old": "DNTN27",
+    "name": "Gia Kiệm 8",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Xã Gia Kiệm"
+  },
+  "DNILNA00": {
+    "site_id": "DNILNA00",
+    "site_id_old": "DNDQ01",
+    "name": "La Ngà",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã La Ngà"
+  },
+  "DNDQ01": {
+    "site_id": "DNILNA00",
+    "site_id_old": "DNDQ01",
+    "name": "La Ngà",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã La Ngà"
+  },
+  "DNIXDO07": {
+    "site_id": "DNIXDO07",
+    "site_id_old": "DNCM34",
+    "name": "Xuân Đông 7",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Đông"
+  },
+  "DNCM34": {
+    "site_id": "DNIXDO07",
+    "site_id_old": "DNCM34",
+    "name": "Xuân Đông 7",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Đông"
+  },
+  "DNITLA07": {
+    "site_id": "DNITLA07",
+    "site_id_old": "DNTP37",
+    "name": "Tà Lài 7",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Tà Lài"
+  },
+  "DNTP37": {
+    "site_id": "DNITLA07",
+    "site_id_old": "DNTP37",
+    "name": "Tà Lài 7",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Tà Lài"
+  },
+  "DNIDGI02": {
+    "site_id": "DNIDGI02",
+    "site_id_old": "DNTN00",
+    "name": "Dầu Giây 2",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNTN00": {
+    "site_id": "DNIDGI02",
+    "site_id_old": "DNTN00",
+    "name": "Dầu Giây 2",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNIXDO02": {
+    "site_id": "DNIXDO02",
+    "site_id_old": "DNCM05",
+    "name": "Xuân Đông 2",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Đông"
+  },
+  "DNCM05": {
+    "site_id": "DNIXDO02",
+    "site_id_old": "DNCM05",
+    "name": "Xuân Đông 2",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Đông"
+  },
+  "DNITPU08": {
+    "site_id": "DNITPU08",
+    "site_id_old": "DNTP23",
+    "name": "Tân Phú 8",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Phường Tân Phú"
+  },
+  "DNTP23": {
+    "site_id": "DNITPU08",
+    "site_id_old": "DNTP23",
+    "name": "Tân Phú 8",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Phường Tân Phú"
+  },
+  "DNIPLA06": {
+    "site_id": "DNIPLA06",
+    "site_id_old": "DNTP21",
+    "name": "Phú Lâm 6",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Phú Lâm"
+  },
+  "DNTP21": {
+    "site_id": "DNIPLA06",
+    "site_id_old": "DNTP21",
+    "name": "Phú Lâm 6",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Phú Lâm"
+  },
+  "DNIGKI10": {
+    "site_id": "DNIGKI10",
+    "site_id_old": "DNTN41",
+    "name": "Gia Kiệm 10",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Xã Gia Kiệm"
+  },
+  "DNTN41": {
+    "site_id": "DNIGKI10",
+    "site_id_old": "DNTN41",
+    "name": "Gia Kiệm 10",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Xã Gia Kiệm"
+  },
+  "DNIXDO01": {
+    "site_id": "DNIXDO01",
+    "site_id_old": "DNCM03",
+    "name": "Xuân Đông 1",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Đông"
+  },
+  "DNCM03": {
+    "site_id": "DNIXDO01",
+    "site_id_old": "DNCM03",
+    "name": "Xuân Đông 1",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Đông"
+  },
+  "DNIXHO00": {
+    "site_id": "DNIXHO00",
+    "site_id_old": "DNXL05",
+    "name": "Xuân Hòa",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Hòa"
+  },
+  "DNXL05": {
+    "site_id": "DNIXHO00",
+    "site_id_old": "DNXL05",
+    "name": "Xuân Hòa",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Hòa"
+  },
+  "DNIDQU16": {
+    "site_id": "DNIDQU16",
+    "site_id_old": "DNDQ49",
+    "name": "Định Quán 16",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNDQ49": {
+    "site_id": "DNIDQU16",
+    "site_id_old": "DNDQ49",
+    "name": "Định Quán 16",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNILNA05": {
+    "site_id": "DNILNA05",
+    "site_id_old": "DNDQ31",
+    "name": "La Ngà 5",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã La Ngà"
+  },
+  "DNDQ31": {
+    "site_id": "DNILNA05",
+    "site_id_old": "DNDQ31",
+    "name": "La Ngà 5",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã La Ngà"
+  },
+  "DNIXHO14": {
+    "site_id": "DNIXHO14",
+    "site_id_old": "DNXL50",
+    "name": "Xuân Hòa 14",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Hòa"
+  },
+  "DNXL50": {
+    "site_id": "DNIXHO14",
+    "site_id_old": "DNXL50",
+    "name": "Xuân Hòa 14",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Hòa"
+  },
+  "DNITNS01": {
+    "site_id": "DNITNS01",
+    "site_id_old": "DNDQ27",
+    "name": "Thanh Sơn 1",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Thanh Sơn"
+  },
+  "DNDQ27": {
+    "site_id": "DNITNS01",
+    "site_id_old": "DNDQ27",
+    "name": "Thanh Sơn 1",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Thanh Sơn"
+  },
+  "DNIBVI04": {
+    "site_id": "DNIBVI04",
+    "site_id_old": "DNLK27",
+    "name": "Bảo Vinh 4",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bảo Vinh"
+  },
+  "DNLK27": {
+    "site_id": "DNIBVI04",
+    "site_id_old": "DNLK27",
+    "name": "Bảo Vinh 4",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bảo Vinh"
+  },
+  "DNIXHO13": {
+    "site_id": "DNIXHO13",
+    "site_id_old": "DNXL49",
+    "name": "Xuân Hòa 13",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Hòa"
+  },
+  "DNXL49": {
+    "site_id": "DNIXHO13",
+    "site_id_old": "DNXL49",
+    "name": "Xuân Hòa 13",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Hòa"
+  },
+  "DNIPLA10": {
+    "site_id": "DNIPLA10",
+    "site_id_old": "DNTP35",
+    "name": "Phú Lâm 10",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Phú Lâm"
+  },
+  "DNTP35": {
+    "site_id": "DNIPLA10",
+    "site_id_old": "DNTP35",
+    "name": "Phú Lâm 10",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Phú Lâm"
+  },
+  "DNIGKI12": {
+    "site_id": "DNIGKI12",
+    "site_id_old": "DNTN43",
+    "name": "Gia Kiệm 12",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Xã Gia Kiệm"
+  },
+  "DNTN43": {
+    "site_id": "DNIGKI12",
+    "site_id_old": "DNTN43",
+    "name": "Gia Kiệm 12",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Xã Gia Kiệm"
+  },
+  "DNIXQU02": {
+    "site_id": "DNIXQU02",
+    "site_id_old": "DNCM26",
+    "name": "Xuân Quế 2",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Quế"
+  },
+  "DNCM26": {
+    "site_id": "DNIXQU02",
+    "site_id_old": "DNCM26",
+    "name": "Xuân Quế 2",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Quế"
+  },
+  "DNIXDO12": {
+    "site_id": "DNIXDO12",
+    "site_id_old": "DNCM46",
+    "name": "Xuân Đông 12",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Đông"
+  },
+  "DNCM46": {
+    "site_id": "DNIXDO12",
+    "site_id_old": "DNCM46",
+    "name": "Xuân Đông 12",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Đông"
+  },
+  "DNIBLC05": {
+    "site_id": "DNIBLC05",
+    "site_id_old": "DNLK24",
+    "name": "Bình Lộc 5",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bình Lộc"
+  },
+  "DNLK24": {
+    "site_id": "DNIBLC05",
+    "site_id_old": "DNLK24",
+    "name": "Bình Lộc 5",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bình Lộc"
+  },
+  "DNIXLA01": {
+    "site_id": "DNIXLA01",
+    "site_id_old": "DNLK14",
+    "name": "Xuân Lập 1",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Xuân Lập"
+  },
+  "DNLK14": {
+    "site_id": "DNIXLA01",
+    "site_id_old": "DNLK14",
+    "name": "Xuân Lập 1",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Xuân Lập"
+  },
+  "DNIXLA03": {
+    "site_id": "DNIXLA03",
+    "site_id_old": "DNLK20",
+    "name": "Xuân Lập 3",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Xuân Lập"
+  },
+  "DNLK20": {
+    "site_id": "DNIXLA03",
+    "site_id_old": "DNLK20",
+    "name": "Xuân Lập 3",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Xuân Lập"
+  },
+  "DNIXLO10": {
+    "site_id": "DNIXLO10",
+    "site_id_old": "DNXL29",
+    "name": "Xuân Lộc 10",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNXL29": {
+    "site_id": "DNIXLO10",
+    "site_id_old": "DNXL29",
+    "name": "Xuân Lộc 10",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNIPLA02": {
+    "site_id": "DNIPLA02",
+    "site_id_old": "DNTP06",
+    "name": "Phú Lâm 2",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Phú Lâm"
+  },
+  "DNTP06": {
+    "site_id": "DNIPLA02",
+    "site_id_old": "DNTP06",
+    "name": "Phú Lâm 2",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Phú Lâm"
+  },
+  "DNIXDI02": {
+    "site_id": "DNIXDI02",
+    "site_id_old": "DNXL04",
+    "name": "Xuân Định 2",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Định"
+  },
+  "DNXL04": {
+    "site_id": "DNIXDI02",
+    "site_id_old": "DNXL04",
+    "name": "Xuân Định 2",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Định"
+  },
+  "DNIXDU04": {
+    "site_id": "DNIXDU04",
+    "site_id_old": "DNLT04",
+    "name": "Xuân Đường 4",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Long Thành",
+    "xa": "Xã Xuân Đường"
+  },
+  "DNLT04": {
+    "site_id": "DNIXDU04",
+    "site_id_old": "DNLT04",
+    "name": "Xuân Đường 4",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Long Thành",
+    "xa": "Xã Xuân Đường"
+  },
+  "DNIPLA01": {
+    "site_id": "DNIPLA01",
+    "site_id_old": "DNTP02",
+    "name": "Phú Lâm 1",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Phú Lâm"
+  },
+  "DNTP02": {
+    "site_id": "DNIPLA01",
+    "site_id_old": "DNTP02",
+    "name": "Phú Lâm 1",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Phú Lâm"
+  },
+  "DNIXBA01": {
+    "site_id": "DNIXBA01",
+    "site_id_old": "DNDQ30",
+    "name": "Xuân Bắc 1",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Xuân Bắc"
+  },
+  "DNDQ30": {
+    "site_id": "DNIXBA01",
+    "site_id_old": "DNDQ30",
+    "name": "Xuân Bắc 1",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Xuân Bắc"
+  },
+  "DNINCT04": {
+    "site_id": "DNINCT04",
+    "site_id_old": "DNTP34",
+    "name": "Nam Cát Tiên 4",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Nam Cát Tiên"
+  },
+  "DNTP34": {
+    "site_id": "DNINCT04",
+    "site_id_old": "DNTP34",
+    "name": "Nam Cát Tiên 4",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Nam Cát Tiên"
+  },
+  "DNIBLC16": {
+    "site_id": "DNIBLC16",
+    "site_id_old": "DNTN14",
+    "name": "Bình Lộc 16",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Bình Lộc"
+  },
+  "DNTN14": {
+    "site_id": "DNIBLC16",
+    "site_id_old": "DNTN14",
+    "name": "Bình Lộc 16",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Bình Lộc"
+  },
+  "DNIBVI14": {
+    "site_id": "DNIBVI14",
+    "site_id_old": "DNLK42",
+    "name": "Bảo Vinh 14",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bảo Vinh"
+  },
+  "DNLK42": {
+    "site_id": "DNIBVI14",
+    "site_id_old": "DNLK42",
+    "name": "Bảo Vinh 14",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bảo Vinh"
+  },
+  "DNIPHO03": {
+    "site_id": "DNIPHO03",
+    "site_id_old": "DNDQ33",
+    "name": "Phú Hòa 3",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Phú Hòa"
+  },
+  "DNDQ33": {
+    "site_id": "DNIPHO03",
+    "site_id_old": "DNDQ33",
+    "name": "Phú Hòa 3",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Phú Hòa"
+  },
+  "DNIPLY02": {
+    "site_id": "DNIPLY02",
+    "site_id_old": "DNVC35",
+    "name": "Phú Lý 2",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Vĩnh Cửu",
+    "xa": "Xã Phú Lý"
+  },
+  "DNVC35": {
+    "site_id": "DNIPLY02",
+    "site_id_old": "DNVC35",
+    "name": "Phú Lý 2",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Vĩnh Cửu",
+    "xa": "Xã Phú Lý"
+  },
+  "DNIBLC17": {
+    "site_id": "DNIBLC17",
+    "site_id_old": "DNTN15",
+    "name": "Bình Lộc 17",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Bình Lộc"
+  },
+  "DNTN15": {
+    "site_id": "DNIBLC17",
+    "site_id_old": "DNTN15",
+    "name": "Bình Lộc 17",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Bình Lộc"
+  },
+  "DNIDQU18": {
+    "site_id": "DNIDQU18",
+    "site_id_old": "DNDQ54",
+    "name": "Định Quán 18",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNDQ54": {
+    "site_id": "DNIDQU18",
+    "site_id_old": "DNDQ54",
+    "name": "Định Quán 18",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNILKH08": {
+    "site_id": "DNILKH08",
+    "site_id_old": "DNLK33",
+    "name": "Long Khánh 8",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Long Khánh"
+  },
+  "DNLK33": {
+    "site_id": "DNILKH08",
+    "site_id_old": "DNLK33",
+    "name": "Long Khánh 8",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Long Khánh"
+  },
+  "DNIXLO05": {
+    "site_id": "DNIXLO05",
+    "site_id_old": "DNXL13",
+    "name": "Xuân Lộc 5",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNXL13": {
+    "site_id": "DNIXLO05",
+    "site_id_old": "DNXL13",
+    "name": "Xuân Lộc 5",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNIXLO01": {
+    "site_id": "DNIXLO01",
+    "site_id_old": "DNXL02",
+    "name": "Xuân Lộc 1",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNXL02": {
+    "site_id": "DNIXLO01",
+    "site_id_old": "DNXL02",
+    "name": "Xuân Lộc 1",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNICMY06": {
+    "site_id": "DNICMY06",
+    "site_id_old": "DNCM17",
+    "name": "Cẩm Mỹ 6",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Cẩm Mỹ"
+  },
+  "DNCM17": {
+    "site_id": "DNICMY06",
+    "site_id_old": "DNCM17",
+    "name": "Cẩm Mỹ 6",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Cẩm Mỹ"
+  },
+  "DNIDQU02": {
+    "site_id": "DNIDQU02",
+    "site_id_old": "DNDQ11",
+    "name": "Định Quán 2",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNDQ11": {
+    "site_id": "DNIDQU02",
+    "site_id_old": "DNDQ11",
+    "name": "Định Quán 2",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNIDGI32": {
+    "site_id": "DNIDGI32",
+    "site_id_old": "DNTNL2",
+    "name": "Dầu Giây 32",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNTNL2": {
+    "site_id": "DNIDGI32",
+    "site_id_old": "DNTNL2",
+    "name": "Dầu Giây 32",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNIBLC08": {
+    "site_id": "DNIBLC08",
+    "site_id_old": "DNLK40",
+    "name": "Bình Lộc 8",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bình Lộc"
+  },
+  "DNLK40": {
+    "site_id": "DNIBLC08",
+    "site_id_old": "DNLK40",
+    "name": "Bình Lộc 8",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bình Lộc"
+  },
+  "DNISRA03": {
+    "site_id": "DNISRA03",
+    "site_id_old": "DNCM24",
+    "name": "Sông Ray 3",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Sông Ray"
+  },
+  "DNCM24": {
+    "site_id": "DNISRA03",
+    "site_id_old": "DNCM24",
+    "name": "Sông Ray 3",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Sông Ray"
+  },
+  "DNITPU13": {
+    "site_id": "DNITPU13",
+    "site_id_old": "DNTP53",
+    "name": "Tân Phú 13",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Phường Tân Phú"
+  },
+  "DNTP53": {
+    "site_id": "DNITPU13",
+    "site_id_old": "DNTP53",
+    "name": "Tân Phú 13",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Phường Tân Phú"
+  },
+  "DNIXBA08": {
+    "site_id": "DNIXBA08",
+    "site_id_old": "DNXL46",
+    "name": "Xuân Bắc 8",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Bắc"
+  },
+  "DNXL46": {
+    "site_id": "DNIXBA08",
+    "site_id_old": "DNXL46",
+    "name": "Xuân Bắc 8",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Bắc"
+  },
+  "DNIDGI29": {
+    "site_id": "DNIDGI29",
+    "site_id_old": "DNTN57",
+    "name": "Dầu Giây 29",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNTN57": {
+    "site_id": "DNIDGI29",
+    "site_id_old": "DNTN57",
+    "name": "Dầu Giây 29",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNIXDO06": {
+    "site_id": "DNIXDO06",
+    "site_id_old": "DNCM32",
+    "name": "Xuân Đông 6",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Đông"
+  },
+  "DNCM32": {
+    "site_id": "DNIXDO06",
+    "site_id_old": "DNCM32",
+    "name": "Xuân Đông 6",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Đông"
+  },
+  "DNIDQU21": {
+    "site_id": "DNIDQU21",
+    "site_id_old": "DNDQ58",
+    "name": "Định Quán 21",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNDQ58": {
+    "site_id": "DNIDQU21",
+    "site_id_old": "DNDQ58",
+    "name": "Định Quán 21",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNIXQU03": {
+    "site_id": "DNIXQU03",
+    "site_id_old": "DNCM27",
+    "name": "Xuân Quế 3",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Quế"
+  },
+  "DNCM27": {
+    "site_id": "DNIXQU03",
+    "site_id_old": "DNCM27",
+    "name": "Xuân Quế 3",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Quế"
+  },
+  "DNIXQU07": {
+    "site_id": "DNIXQU07",
+    "site_id_old": "DNCM49",
+    "name": "Xuân Quế 7",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Quế"
+  },
+  "DNCM49": {
+    "site_id": "DNIXQU07",
+    "site_id_old": "DNCM49",
+    "name": "Xuân Quế 7",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Quế"
+  },
+  "DNIXPH02": {
+    "site_id": "DNIXPH02",
+    "site_id_old": "DNXL39",
+    "name": "Xuân Phú 2",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Phú"
+  },
+  "DNXL39": {
+    "site_id": "DNIXPH02",
+    "site_id_old": "DNXL39",
+    "name": "Xuân Phú 2",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Phú"
+  },
+  "DNIBLC13": {
+    "site_id": "DNIBLC13",
+    "site_id_old": "DNLK74",
+    "name": "Bình Lộc 13",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bình Lộc"
+  },
+  "DNLK74": {
+    "site_id": "DNIBLC13",
+    "site_id_old": "DNLK74",
+    "name": "Bình Lộc 13",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bình Lộc"
+  },
+  "DNICMY04": {
+    "site_id": "DNICMY04",
+    "site_id_old": "DNCM12",
+    "name": "Cẩm Mỹ 4",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Cẩm Mỹ"
+  },
+  "DNCM12": {
+    "site_id": "DNICMY04",
+    "site_id_old": "DNCM12",
+    "name": "Cẩm Mỹ 4",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Cẩm Mỹ"
+  },
+  "DNIXPH06": {
+    "site_id": "DNIXPH06",
+    "site_id_old": "DNXL70",
+    "name": "Xuân Phú 6",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Phú"
+  },
+  "DNXL70": {
+    "site_id": "DNIXPH06",
+    "site_id_old": "DNXL70",
+    "name": "Xuân Phú 6",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Phú"
+  },
+  "DNIXLO22": {
+    "site_id": "DNIXLO22",
+    "site_id_old": "DNXL66",
+    "name": "Xuân Lộc 22",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNXL66": {
+    "site_id": "DNIXLO22",
+    "site_id_old": "DNXL66",
+    "name": "Xuân Lộc 22",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNISRA05": {
+    "site_id": "DNISRA05",
+    "site_id_old": "DNCM40",
+    "name": "Sông Ray 5",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Sông Ray"
+  },
+  "DNCM40": {
+    "site_id": "DNISRA05",
+    "site_id_old": "DNCM40",
+    "name": "Sông Ray 5",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Sông Ray"
+  },
+  "DNTNS1": {
+    "site_id": "DNTNS1",
+    "site_id_old": "DNTNS1",
+    "name": "Dầu Giây",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNITNH12": {
+    "site_id": "DNITNH12",
+    "site_id_old": "DNTN06",
+    "name": "Thống Nhất 12",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Xã Thống Nhất"
+  },
+  "DNTN06": {
+    "site_id": "DNITNH12",
+    "site_id_old": "DNTN06",
+    "name": "Thống Nhất 12",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Xã Thống Nhất"
+  },
+  "DNICMY10": {
+    "site_id": "DNICMY10",
+    "site_id_old": "DNCM29",
+    "name": "Cẩm Mỹ 10",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Cẩm Mỹ"
+  },
+  "DNCM29": {
+    "site_id": "DNICMY10",
+    "site_id_old": "DNCM29",
+    "name": "Cẩm Mỹ 10",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Cẩm Mỹ"
+  },
+  "DNIGKI15": {
+    "site_id": "DNIGKI15",
+    "site_id_old": "DNTN49",
+    "name": "Gia Kiệm 15",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Xã Gia Kiệm"
+  },
+  "DNTN49": {
+    "site_id": "DNIGKI15",
+    "site_id_old": "DNTN49",
+    "name": "Gia Kiệm 15",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Xã Gia Kiệm"
+  },
+  "DNIGKI09": {
+    "site_id": "DNIGKI09",
+    "site_id_old": "DNTN32",
+    "name": "Gia Kiệm 9",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Xã Gia Kiệm"
+  },
+  "DNTN32": {
+    "site_id": "DNIGKI09",
+    "site_id_old": "DNTN32",
+    "name": "Gia Kiệm 9",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Xã Gia Kiệm"
+  },
+  "DNIXDO14": {
+    "site_id": "DNIXDO14",
+    "site_id_old": "DNCM51",
+    "name": "Xuân Đông 14",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Đông"
+  },
+  "DNCM51": {
+    "site_id": "DNIXDO14",
+    "site_id_old": "DNCM51",
+    "name": "Xuân Đông 14",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Đông"
+  },
+  "DNITNH08": {
+    "site_id": "DNITNH08",
+    "site_id_old": "DNDQ53",
+    "name": "Thống Nhất 8",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Thống Nhất"
+  },
+  "DNDQ53": {
+    "site_id": "DNITNH08",
+    "site_id_old": "DNDQ53",
+    "name": "Thống Nhất 8",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Thống Nhất"
+  },
+  "DNINCT03": {
+    "site_id": "DNINCT03",
+    "site_id_old": "DNTP33",
+    "name": "Nam Cát Tiên 3",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Nam Cát Tiên"
+  },
+  "DNTP33": {
+    "site_id": "DNINCT03",
+    "site_id_old": "DNTP33",
+    "name": "Nam Cát Tiên 3",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Nam Cát Tiên"
+  },
+  "DNIDQN1": {
+    "site_id": "DNIDQN1",
+    "site_id_old": "DNIDQN1",
+    "name": "La Ngà 1",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã La Ngà"
+  },
+  "DNIDQU14": {
+    "site_id": "DNIDQU14",
+    "site_id_old": "DNDQ40",
+    "name": "Định Quán 14",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNDQ40": {
+    "site_id": "DNIDQU14",
+    "site_id_old": "DNDQ40",
+    "name": "Định Quán 14",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNIPLA03": {
+    "site_id": "DNIPLA03",
+    "site_id_old": "DNTP14",
+    "name": "Phú Lâm 3",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Phú Lâm"
+  },
+  "DNTP14": {
+    "site_id": "DNIPLA03",
+    "site_id_old": "DNTP14",
+    "name": "Phú Lâm 3",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Phú Lâm"
+  },
+  "DNIXLO24": {
+    "site_id": "DNIXLO24",
+    "site_id_old": "DNXL68",
+    "name": "Xuân Lộc 24",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNXL68": {
+    "site_id": "DNIXLO24",
+    "site_id_old": "DNXL68",
+    "name": "Xuân Lộc 24",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNIXLO17": {
+    "site_id": "DNIXLO17",
+    "site_id_old": "DNXL51",
+    "name": "Xuân Lộc 17",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNXL51": {
+    "site_id": "DNIXLO17",
+    "site_id_old": "DNXL51",
+    "name": "Xuân Lộc 17",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNIDGI03": {
+    "site_id": "DNIDGI03",
+    "site_id_old": "DNTN03",
+    "name": "Dầu Giây 3",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNTN03": {
+    "site_id": "DNIDGI03",
+    "site_id_old": "DNTN03",
+    "name": "Dầu Giây 3",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNILKH06": {
+    "site_id": "DNILKH06",
+    "site_id_old": "DNLK22",
+    "name": "Long Khánh 6",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Long Khánh"
+  },
+  "DNLK22": {
+    "site_id": "DNILKH06",
+    "site_id_old": "DNLK22",
+    "name": "Long Khánh 6",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Long Khánh"
+  },
+  "DNIXQU01": {
+    "site_id": "DNIXQU01",
+    "site_id_old": "DNCM15",
+    "name": "Xuân Quế 1",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Quế"
+  },
+  "DNCM15": {
+    "site_id": "DNIXQU01",
+    "site_id_old": "DNCM15",
+    "name": "Xuân Quế 1",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Quế"
+  },
+  "DNISRA04": {
+    "site_id": "DNISRA04",
+    "site_id_old": "DNCM35",
+    "name": "Sông Ray 4",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Sông Ray"
+  },
+  "DNCM35": {
+    "site_id": "DNISRA04",
+    "site_id_old": "DNCM35",
+    "name": "Sông Ray 4",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Sông Ray"
+  },
+  "DNIXDO11": {
+    "site_id": "DNIXDO11",
+    "site_id_old": "DNCM45",
+    "name": "Xuân Đông 11",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Đông"
+  },
+  "DNCM45": {
+    "site_id": "DNIXDO11",
+    "site_id_old": "DNCM45",
+    "name": "Xuân Đông 11",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Đông"
+  },
+  "DNIXDU06": {
+    "site_id": "DNIXDU06",
+    "site_id_old": "DNLT22",
+    "name": "Xuân Đường 6",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Long Thành",
+    "xa": "Xã Xuân Đường"
+  },
+  "DNLT22": {
+    "site_id": "DNIXDU06",
+    "site_id_old": "DNLT22",
+    "name": "Xuân Đường 6",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Long Thành",
+    "xa": "Xã Xuân Đường"
+  },
+  "DNIXDU02": {
+    "site_id": "DNIXDU02",
+    "site_id_old": "DNCM18",
+    "name": "Xuân Đường 2",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Đường"
+  },
+  "DNCM18": {
+    "site_id": "DNIXDU02",
+    "site_id_old": "DNCM18",
+    "name": "Xuân Đường 2",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Đường"
+  },
+  "DNISRA08": {
+    "site_id": "DNISRA08",
+    "site_id_old": "DNCM54",
+    "name": "Sông Ray 8",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Sông Ray"
+  },
+  "DNCM54": {
+    "site_id": "DNISRA08",
+    "site_id_old": "DNCM54",
+    "name": "Sông Ray 8",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Sông Ray"
+  },
+  "DNIPLY01": {
+    "site_id": "DNIPLY01",
+    "site_id_old": "DNVC31",
+    "name": "Phú Lý 1",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Vĩnh Cửu",
+    "xa": "Xã Phú Lý"
+  },
+  "DNVC31": {
+    "site_id": "DNIPLY01",
+    "site_id_old": "DNVC31",
+    "name": "Phú Lý 1",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Vĩnh Cửu",
+    "xa": "Xã Phú Lý"
+  },
+  "DNIXPH04": {
+    "site_id": "DNIXPH04",
+    "site_id_old": "DNXL62",
+    "name": "Xuân Phú 4",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Phú"
+  },
+  "DNXL62": {
+    "site_id": "DNIXPH04",
+    "site_id_old": "DNXL62",
+    "name": "Xuân Phú 4",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Phú"
+  },
+  "DNITLA13": {
+    "site_id": "DNITLA13",
+    "site_id_old": "DNTP48",
+    "name": "Tà Lài 13",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Tà Lài"
+  },
+  "DNTP48": {
+    "site_id": "DNITLA13",
+    "site_id_old": "DNTP48",
+    "name": "Tà Lài 13",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Tà Lài"
+  },
+  "DNILKH04": {
+    "site_id": "DNILKH04",
+    "site_id_old": "DNLK12",
+    "name": "Long Khánh 4",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Long Khánh"
+  },
+  "DNLK12": {
+    "site_id": "DNILKH04",
+    "site_id_old": "DNLK12",
+    "name": "Long Khánh 4",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Long Khánh"
+  },
+  "DNIXDI00": {
+    "site_id": "DNIXDI00",
+    "site_id_old": "DNCM06",
+    "name": "Xuân Định",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Định"
+  },
+  "DNCM06": {
+    "site_id": "DNIXDI00",
+    "site_id_old": "DNCM06",
+    "name": "Xuân Định",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Định"
+  },
+  "DNIXLO23": {
+    "site_id": "DNIXLO23",
+    "site_id_old": "DNXL67",
+    "name": "Xuân Lộc 23",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNXL67": {
+    "site_id": "DNIXLO23",
+    "site_id_old": "DNXL67",
+    "name": "Xuân Lộc 23",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNIPLY00": {
+    "site_id": "DNIPLY00",
+    "site_id_old": "DNVC03",
+    "name": "Phú Lý",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Vĩnh Cửu",
+    "xa": "Xã Phú Lý"
+  },
+  "DNVC03": {
+    "site_id": "DNIPLY00",
+    "site_id_old": "DNVC03",
+    "name": "Phú Lý",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Vĩnh Cửu",
+    "xa": "Xã Phú Lý"
+  },
+  "DNICMY03": {
+    "site_id": "DNICMY03",
+    "site_id_old": "DNCM10",
+    "name": "Cẩm Mỹ 3",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Cẩm Mỹ"
+  },
+  "DNCM10": {
+    "site_id": "DNICMY03",
+    "site_id_old": "DNCM10",
+    "name": "Cẩm Mỹ 3",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Cẩm Mỹ"
+  },
+  "DNILKH12": {
+    "site_id": "DNILKH12",
+    "site_id_old": "DNLK49",
+    "name": "Long Khánh 12",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Long Khánh"
+  },
+  "DNLK49": {
+    "site_id": "DNILKH12",
+    "site_id_old": "DNLK49",
+    "name": "Long Khánh 12",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Long Khánh"
+  },
+  "DNITNS05": {
+    "site_id": "DNITNS05",
+    "site_id_old": "DNDQ61",
+    "name": "Thanh Sơn 5",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Thanh Sơn"
+  },
+  "DNDQ61": {
+    "site_id": "DNITNS05",
+    "site_id_old": "DNDQ61",
+    "name": "Thanh Sơn 5",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Thanh Sơn"
+  },
+  "DNICMY09": {
+    "site_id": "DNICMY09",
+    "site_id_old": "DNCM25",
+    "name": "Cẩm Mỹ 9",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Cẩm Mỹ"
+  },
+  "DNCM25": {
+    "site_id": "DNICMY09",
+    "site_id_old": "DNCM25",
+    "name": "Cẩm Mỹ 9",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Cẩm Mỹ"
+  },
+  "DNIDGI11": {
+    "site_id": "DNIDGI11",
+    "site_id_old": "DNTN20",
+    "name": "Dầu Giây 11",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNTN20": {
+    "site_id": "DNIDGI11",
+    "site_id_old": "DNTN20",
+    "name": "Dầu Giây 11",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNIXHO04": {
+    "site_id": "DNIXHO04",
+    "site_id_old": "DNXL21",
+    "name": "Xuân Hòa 4",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Hòa"
+  },
+  "DNXL21": {
+    "site_id": "DNIXHO04",
+    "site_id_old": "DNXL21",
+    "name": "Xuân Hòa 4",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Hòa"
+  },
+  "DNIXHO03": {
+    "site_id": "DNIXHO03",
+    "site_id_old": "DNXL20",
+    "name": "Xuân Hòa 3",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Hòa"
+  },
+  "DNXL20": {
+    "site_id": "DNIXHO03",
+    "site_id_old": "DNXL20",
+    "name": "Xuân Hòa 3",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Hòa"
+  },
+  "DNIDGI27": {
+    "site_id": "DNIDGI27",
+    "site_id_old": "DNTN54",
+    "name": "Dầu Giây 27",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNTN54": {
+    "site_id": "DNIDGI27",
+    "site_id_old": "DNTN54",
+    "name": "Dầu Giây 27",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNIXLO25": {
+    "site_id": "DNIXLO25",
+    "site_id_old": "DNXL71",
+    "name": "Xuân Lộc 25",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNXL71": {
+    "site_id": "DNIXLO25",
+    "site_id_old": "DNXL71",
+    "name": "Xuân Lộc 25",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNIXBA11": {
+    "site_id": "DNIXBA11",
+    "site_id_old": "DNXL79",
+    "name": "Xuân Bắc 11",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Bắc"
+  },
+  "DNXL79": {
+    "site_id": "DNIXBA11",
+    "site_id_old": "DNXL79",
+    "name": "Xuân Bắc 11",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Bắc"
+  },
+  "DNISRA06": {
+    "site_id": "DNISRA06",
+    "site_id_old": "DNCM43",
+    "name": "Sông Ray 6",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Sông Ray"
+  },
+  "DNCM43": {
+    "site_id": "DNISRA06",
+    "site_id_old": "DNCM43",
+    "name": "Sông Ray 6",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Sông Ray"
+  },
+  "DNITNH10": {
+    "site_id": "DNITNH10",
+    "site_id_old": "DNDQ67",
+    "name": "Thống Nhất 10",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Thống Nhất"
+  },
+  "DNDQ67": {
+    "site_id": "DNITNH10",
+    "site_id_old": "DNDQ67",
+    "name": "Thống Nhất 10",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Thống Nhất"
+  },
+  "DNIXDI07": {
+    "site_id": "DNIXDI07",
+    "site_id_old": "DNXL55",
+    "name": "Xuân Định 7",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Định"
+  },
+  "DNXL55": {
+    "site_id": "DNIXDI07",
+    "site_id_old": "DNXL55",
+    "name": "Xuân Định 7",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Định"
+  },
+  "DNIDGI10": {
+    "site_id": "DNIDGI10",
+    "site_id_old": "DNTN19",
+    "name": "Dầu Giây 10",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNTN19": {
+    "site_id": "DNIDGI10",
+    "site_id_old": "DNTN19",
+    "name": "Dầu Giây 10",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNIDGI19": {
+    "site_id": "DNIDGI19",
+    "site_id_old": "DNTN36",
+    "name": "Dầu Giây 19",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNTN36": {
+    "site_id": "DNIDGI19",
+    "site_id_old": "DNTN36",
+    "name": "Dầu Giây 19",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNIHGO00": {
+    "site_id": "DNIHGO00",
+    "site_id_old": "DNLK03",
+    "name": "Hàng Gòn",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Hàng Gòn"
+  },
+  "DNLK03": {
+    "site_id": "DNIHGO00",
+    "site_id_old": "DNLK03",
+    "name": "Hàng Gòn",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Hàng Gòn"
+  },
+  "DNIXLO28": {
+    "site_id": "DNIXLO28",
+    "site_id_old": "DNXL81",
+    "name": "Xuân Lộc 28",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNXL81": {
+    "site_id": "DNIXLO28",
+    "site_id_old": "DNXL81",
+    "name": "Xuân Lộc 28",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNIXLO12": {
+    "site_id": "DNIXLO12",
+    "site_id_old": "DNXL33",
+    "name": "Xuân Lộc 12",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNXL33": {
+    "site_id": "DNIXLO12",
+    "site_id_old": "DNXL33",
+    "name": "Xuân Lộc 12",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNIGKI14": {
+    "site_id": "DNIGKI14",
+    "site_id_old": "DNTN48",
+    "name": "Gia Kiệm 14",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Xã Gia Kiệm"
+  },
+  "DNTN48": {
+    "site_id": "DNIGKI14",
+    "site_id_old": "DNTN48",
+    "name": "Gia Kiệm 14",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Xã Gia Kiệm"
+  },
+  "DNIXDI01": {
+    "site_id": "DNIXDI01",
+    "site_id_old": "DNCM28",
+    "name": "Xuân Định 1",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Định"
+  },
+  "DNCM28": {
+    "site_id": "DNIXDI01",
+    "site_id_old": "DNCM28",
+    "name": "Xuân Định 1",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Định"
+  },
+  "DNIXHO18": {
+    "site_id": "DNIXHO18",
+    "site_id_old": "DNXL74",
+    "name": "Xuân Hòa 18",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Hòa"
+  },
+  "DNXL74": {
+    "site_id": "DNIXHO18",
+    "site_id_old": "DNXL74",
+    "name": "Xuân Hòa 18",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Hòa"
+  },
+  "DNICMY07": {
+    "site_id": "DNICMY07",
+    "site_id_old": "DNCM19",
+    "name": "Cẩm Mỹ 7",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Cẩm Mỹ"
+  },
+  "DNCM19": {
+    "site_id": "DNICMY07",
+    "site_id_old": "DNCM19",
+    "name": "Cẩm Mỹ 7",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Cẩm Mỹ"
+  },
+  "DNIDQU12": {
+    "site_id": "DNIDQU12",
+    "site_id_old": "DNDQ37",
+    "name": "Định Quán 12",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNDQ37": {
+    "site_id": "DNIDQU12",
+    "site_id_old": "DNDQ37",
+    "name": "Định Quán 12",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNITNH02": {
+    "site_id": "DNITNH02",
+    "site_id_old": "DNDQ10",
+    "name": "Thống Nhất 2",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Thống Nhất"
+  },
+  "DNDQ10": {
+    "site_id": "DNITNH02",
+    "site_id_old": "DNDQ10",
+    "name": "Thống Nhất 2",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Thống Nhất"
+  },
+  "DNIPVI00": {
+    "site_id": "DNIPVI00",
+    "site_id_old": "DNDQ02",
+    "name": "Phú Vinh",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Phú Vinh"
+  },
+  "DNDQ02": {
+    "site_id": "DNIPVI00",
+    "site_id_old": "DNDQ02",
+    "name": "Phú Vinh",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Phú Vinh"
+  },
+  "DNIDGI24": {
+    "site_id": "DNIDGI24",
+    "site_id_old": "DNTN47",
+    "name": "Dầu Giây 24",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNTN47": {
+    "site_id": "DNIDGI24",
+    "site_id_old": "DNTN47",
+    "name": "Dầu Giây 24",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNIXLO06": {
+    "site_id": "DNIXLO06",
+    "site_id_old": "DNXL14",
+    "name": "Xuân Lộc 6",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNXL14": {
+    "site_id": "DNIXLO06",
+    "site_id_old": "DNXL14",
+    "name": "Xuân Lộc 6",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNIDGI12": {
+    "site_id": "DNIDGI12",
+    "site_id_old": "DNTN21",
+    "name": "Dầu Giây 12",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNTN21": {
+    "site_id": "DNIDGI12",
+    "site_id_old": "DNTN21",
+    "name": "Dầu Giây 12",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNITLA14": {
+    "site_id": "DNITLA14",
+    "site_id_old": "DNTP51",
+    "name": "Tà Lài 14",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Tà Lài"
+  },
+  "DNTP51": {
+    "site_id": "DNITLA14",
+    "site_id_old": "DNTP51",
+    "name": "Tà Lài 14",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Tà Lài"
+  },
+  "DNIXPH03": {
+    "site_id": "DNIXPH03",
+    "site_id_old": "DNXL48",
+    "name": "Xuân Phú 3",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Phú"
+  },
+  "DNXL48": {
+    "site_id": "DNIXPH03",
+    "site_id_old": "DNXL48",
+    "name": "Xuân Phú 3",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Phú"
+  },
+  "DNIDQU20": {
+    "site_id": "DNIDQU20",
+    "site_id_old": "DNDQ57",
+    "name": "Định Quán 20",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNDQ57": {
+    "site_id": "DNIDQU20",
+    "site_id_old": "DNDQ57",
+    "name": "Định Quán 20",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNIXLO18": {
+    "site_id": "DNIXLO18",
+    "site_id_old": "DNXL56",
+    "name": "Xuân Lộc 18",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNXL56": {
+    "site_id": "DNIXLO18",
+    "site_id_old": "DNXL56",
+    "name": "Xuân Lộc 18",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNIXTC07": {
+    "site_id": "DNIXTC07",
+    "site_id_old": "DNXL65",
+    "name": "Xuân Thành 7",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Thành"
+  },
+  "DNXL65": {
+    "site_id": "DNIXTC07",
+    "site_id_old": "DNXL65",
+    "name": "Xuân Thành 7",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Thành"
+  },
+  "DNIHGO06": {
+    "site_id": "DNIHGO06",
+    "site_id_old": "DNLK31",
+    "name": "Hàng Gòn 6",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Hàng Gòn"
+  },
+  "DNLK31": {
+    "site_id": "DNIHGO06",
+    "site_id_old": "DNLK31",
+    "name": "Hàng Gòn 6",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Hàng Gòn"
+  },
+  "DNIBLC03": {
+    "site_id": "DNIBLC03",
+    "site_id_old": "DNLK17",
+    "name": "Bình Lộc 3",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bình Lộc"
+  },
+  "DNLK17": {
+    "site_id": "DNIBLC03",
+    "site_id_old": "DNLK17",
+    "name": "Bình Lộc 3",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bình Lộc"
+  },
+  "DNIDQU22": {
+    "site_id": "DNIDQU22",
+    "site_id_old": "DNDQ60",
+    "name": "Định Quán 22",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNDQ60": {
+    "site_id": "DNIDQU22",
+    "site_id_old": "DNDQ60",
+    "name": "Định Quán 22",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNIPHO04": {
+    "site_id": "DNIPHO04",
+    "site_id_old": "DNDQ35",
+    "name": "Phú Hòa 4",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Phú Hòa"
+  },
+  "DNDQ35": {
+    "site_id": "DNIPHO04",
+    "site_id_old": "DNDQ35",
+    "name": "Phú Hòa 4",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Phú Hòa"
+  },
+  "DNIXTC00": {
+    "site_id": "DNIXTC00",
+    "site_id_old": "DNXL10",
+    "name": "Xuân Thành",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Thành"
+  },
+  "DNXL10": {
+    "site_id": "DNIXTC00",
+    "site_id_old": "DNXL10",
+    "name": "Xuân Thành",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Thành"
+  },
+  "DNIXLO09": {
+    "site_id": "DNIXLO09",
+    "site_id_old": "DNXL23",
+    "name": "Xuân Lộc 9",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNXL23": {
+    "site_id": "DNIXLO09",
+    "site_id_old": "DNXL23",
+    "name": "Xuân Lộc 9",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNITNS02": {
+    "site_id": "DNITNS02",
+    "site_id_old": "DNDQ41",
+    "name": "Thanh Sơn 2",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Thanh Sơn"
+  },
+  "DNDQ41": {
+    "site_id": "DNITNS02",
+    "site_id_old": "DNDQ41",
+    "name": "Thanh Sơn 2",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Thanh Sơn"
+  },
+  "DNIXTC05": {
+    "site_id": "DNIXTC05",
+    "site_id_old": "DNXL47",
+    "name": "Xuân Thành 5",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Thành"
+  },
+  "DNXL47": {
+    "site_id": "DNIXTC05",
+    "site_id_old": "DNXL47",
+    "name": "Xuân Thành 5",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Thành"
+  },
+  "DNITPU09": {
+    "site_id": "DNITPU09",
+    "site_id_old": "DNTP27",
+    "name": "Tân Phú 9",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Phường Tân Phú"
+  },
+  "DNTP27": {
+    "site_id": "DNITPU09",
+    "site_id_old": "DNTP27",
+    "name": "Tân Phú 9",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Phường Tân Phú"
+  },
+  "DNCMS1": {
+    "site_id": "DNCMS1",
+    "site_id_old": "DNCMS1",
+    "name": "Cẩm Mỹ",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Cẩm Mỹ"
+  },
+  "DNIXDO08": {
+    "site_id": "DNIXDO08",
+    "site_id_old": "DNCM37",
+    "name": "Xuân Đông 8",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Đông"
+  },
+  "DNCM37": {
+    "site_id": "DNIXDO08",
+    "site_id_old": "DNCM37",
+    "name": "Xuân Đông 8",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Đông"
+  },
+  "DNIXDI03": {
+    "site_id": "DNIXDI03",
+    "site_id_old": "DNXL16",
+    "name": "Xuân Định 3",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Định"
+  },
+  "DNXL16": {
+    "site_id": "DNIXDI03",
+    "site_id_old": "DNXL16",
+    "name": "Xuân Định 3",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Định"
+  },
+  "DNILNA06": {
+    "site_id": "DNILNA06",
+    "site_id_old": "DNDQ32",
+    "name": "La Ngà 6",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã La Ngà"
+  },
+  "DNDQ32": {
+    "site_id": "DNILNA06",
+    "site_id_old": "DNDQ32",
+    "name": "La Ngà 6",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã La Ngà"
+  },
+  "DNIXHO17": {
+    "site_id": "DNIXHO17",
+    "site_id_old": "DNXL69",
+    "name": "Xuân Hòa 17",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Hòa"
+  },
+  "DNXL69": {
+    "site_id": "DNIXHO17",
+    "site_id_old": "DNXL69",
+    "name": "Xuân Hòa 17",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Hòa"
+  },
+  "DNIHGO01": {
+    "site_id": "DNIHGO01",
+    "site_id_old": "DNLK04",
+    "name": "Hàng Gòn 1",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Hàng Gòn"
+  },
+  "DNLK04": {
+    "site_id": "DNIHGO01",
+    "site_id_old": "DNLK04",
+    "name": "Hàng Gòn 1",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Hàng Gòn"
+  },
+  "DNIXHO06": {
+    "site_id": "DNIXHO06",
+    "site_id_old": "DNXL24",
+    "name": "Xuân Hòa 6",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Hòa"
+  },
+  "DNXL24": {
+    "site_id": "DNIXHO06",
+    "site_id_old": "DNXL24",
+    "name": "Xuân Hòa 6",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Hòa"
+  },
+  "DNIXHO01": {
+    "site_id": "DNIXHO01",
+    "site_id_old": "DNXL06",
+    "name": "Xuân Hòa 1",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Hòa"
+  },
+  "DNXL06": {
+    "site_id": "DNIXHO01",
+    "site_id_old": "DNXL06",
+    "name": "Xuân Hòa 1",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Hòa"
+  },
+  "DNIBVI07": {
+    "site_id": "DNIBVI07",
+    "site_id_old": "DNLK36",
+    "name": "Bảo Vinh 7",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bảo Vinh"
+  },
+  "DNLK36": {
+    "site_id": "DNIBVI07",
+    "site_id_old": "DNLK36",
+    "name": "Bảo Vinh 7",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bảo Vinh"
+  },
+  "DNIPVI02": {
+    "site_id": "DNIPVI02",
+    "site_id_old": "DNDQ20",
+    "name": "Phú Vinh 2",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Phú Vinh"
+  },
+  "DNDQ20": {
+    "site_id": "DNIPVI02",
+    "site_id_old": "DNDQ20",
+    "name": "Phú Vinh 2",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Phú Vinh"
+  },
+  "DNIXLOM0": {
+    "site_id": "DNIXLOM0",
+    "site_id_old": "MBF_DNXL01",
+    "name": "Tân Minh M0",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Tân Minh"
+  },
+  "MBF_DNXL01": {
+    "site_id": "DNIXLOM0",
+    "site_id_old": "MBF_DNXL01",
+    "name": "Tân Minh M0",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Tân Minh"
+  },
+  "DNITLA08": {
+    "site_id": "DNITLA08",
+    "site_id_old": "DNTP38",
+    "name": "Tà Lài 8",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Tà Lài"
+  },
+  "DNTP38": {
+    "site_id": "DNITLA08",
+    "site_id_old": "DNTP38",
+    "name": "Tà Lài 8",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Tà Lài"
+  },
+  "DNIXTCBP": {
+    "site_id": "DNIXTCBP",
+    "site_id_old": "DNIXTCBP",
+    "name": "K3-Z30A",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Thành"
+  },
+  "DNITNS04": {
+    "site_id": "DNITNS04",
+    "site_id_old": "DNDQ52",
+    "name": "Thanh Sơn 4",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Thanh Sơn"
+  },
+  "DNDQ52": {
+    "site_id": "DNITNS04",
+    "site_id_old": "DNDQ52",
+    "name": "Thanh Sơn 4",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Thanh Sơn"
+  },
+  "DNIXDU03": {
+    "site_id": "DNIXDU03",
+    "site_id_old": "DNCM21",
+    "name": "Xuân Đường 3",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Đường"
+  },
+  "DNCM21": {
+    "site_id": "DNIXDU03",
+    "site_id_old": "DNCM21",
+    "name": "Xuân Đường 3",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Đường"
+  },
+  "DNINCT00": {
+    "site_id": "DNINCT00",
+    "site_id_old": "DNTP00",
+    "name": "Nam Cát Tiên",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Nam Cát Tiên"
+  },
+  "DNTP00": {
+    "site_id": "DNINCT00",
+    "site_id_old": "DNTP00",
+    "name": "Nam Cát Tiên",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Nam Cát Tiên"
+  },
+  "DNIBVI09": {
+    "site_id": "DNIBVI09",
+    "site_id_old": "DNLK51",
+    "name": "Bảo Vinh 9",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bảo Vinh"
+  },
+  "DNLK51": {
+    "site_id": "DNIBVI09",
+    "site_id_old": "DNLK51",
+    "name": "Bảo Vinh 9",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bảo Vinh"
+  },
+  "DNITNS06": {
+    "site_id": "DNITNS06",
+    "site_id_old": "DNDQ71",
+    "name": "Thanh Sơn 6",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Thanh Sơn"
+  },
+  "DNDQ71": {
+    "site_id": "DNITNS06",
+    "site_id_old": "DNDQ71",
+    "name": "Thanh Sơn 6",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Thanh Sơn"
+  },
+  "DNIXLO00": {
+    "site_id": "DNIXLO00",
+    "site_id_old": "DNXL01",
+    "name": "Xuân Lộc",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNXL01": {
+    "site_id": "DNIXLO00",
+    "site_id_old": "DNXL01",
+    "name": "Xuân Lộc",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNIXLO13": {
+    "site_id": "DNIXLO13",
+    "site_id_old": "DNXL37",
+    "name": "Xuân Lộc 13",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNXL37": {
+    "site_id": "DNIXLO13",
+    "site_id_old": "DNXL37",
+    "name": "Xuân Lộc 13",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNITPU12": {
+    "site_id": "DNITPU12",
+    "site_id_old": "DNTP30",
+    "name": "Tân Phú 12",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Phường Tân Phú"
+  },
+  "DNTP30": {
+    "site_id": "DNITPU12",
+    "site_id_old": "DNTP30",
+    "name": "Tân Phú 12",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Phường Tân Phú"
+  },
+  "DNITLA11": {
+    "site_id": "DNITLA11",
+    "site_id_old": "DNTP45",
+    "name": "Tà Lài 11",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Tà Lài"
+  },
+  "DNTP45": {
+    "site_id": "DNITLA11",
+    "site_id_old": "DNTP45",
+    "name": "Tà Lài 11",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Tà Lài"
+  },
+  "DNITLA12": {
+    "site_id": "DNITLA12",
+    "site_id_old": "DNTP46",
+    "name": "Tà Lài 12",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Tà Lài"
+  },
+  "DNTP46": {
+    "site_id": "DNITLA12",
+    "site_id_old": "DNTP46",
+    "name": "Tà Lài 12",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Tà Lài"
+  },
+  "DNITNH09": {
+    "site_id": "DNITNH09",
+    "site_id_old": "DNDQ65",
+    "name": "Thống Nhất 9",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Thống Nhất"
+  },
+  "DNDQ65": {
+    "site_id": "DNITNH09",
+    "site_id_old": "DNDQ65",
+    "name": "Thống Nhất 9",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Thống Nhất"
+  },
+  "DNIDGI17": {
+    "site_id": "DNIDGI17",
+    "site_id_old": "DNTN31",
+    "name": "Dầu Giây 17",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNTN31": {
+    "site_id": "DNIDGI17",
+    "site_id_old": "DNTN31",
+    "name": "Dầu Giây 17",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNIXHO07": {
+    "site_id": "DNIXHO07",
+    "site_id_old": "DNXL26",
+    "name": "Xuân Hòa 7",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Hòa"
+  },
+  "DNXL26": {
+    "site_id": "DNIXHO07",
+    "site_id_old": "DNXL26",
+    "name": "Xuân Hòa 7",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Hòa"
+  },
+  "DNIXPH01": {
+    "site_id": "DNIXPH01",
+    "site_id_old": "DNXL08",
+    "name": "Xuân Phú 1",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Phú"
+  },
+  "DNXL08": {
+    "site_id": "DNIXPH01",
+    "site_id_old": "DNXL08",
+    "name": "Xuân Phú 1",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Phú"
+  },
+  "DNIXLO08": {
+    "site_id": "DNIXLO08",
+    "site_id_old": "DNXL19",
+    "name": "Xuân Lộc 8",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNXL19": {
+    "site_id": "DNIXLO08",
+    "site_id_old": "DNXL19",
+    "name": "Xuân Lộc 8",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNIGKI04": {
+    "site_id": "DNIGKI04",
+    "site_id_old": "DNTN11",
+    "name": "Gia Kiệm 4",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Xã Gia Kiệm"
+  },
+  "DNTN11": {
+    "site_id": "DNIGKI04",
+    "site_id_old": "DNTN11",
+    "name": "Gia Kiệm 4",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Xã Gia Kiệm"
+  },
+  "DNISRA07": {
+    "site_id": "DNISRA07",
+    "site_id_old": "DNCM50",
+    "name": "Sông Ray 7",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Sông Ray"
+  },
+  "DNCM50": {
+    "site_id": "DNISRA07",
+    "site_id_old": "DNCM50",
+    "name": "Sông Ray 7",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Sông Ray"
+  },
+  "DNIXDO00": {
+    "site_id": "DNIXDO00",
+    "site_id_old": "DNCM02",
+    "name": "Xuân Đông",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Đông"
+  },
+  "DNCM02": {
+    "site_id": "DNIXDO00",
+    "site_id_old": "DNCM02",
+    "name": "Xuân Đông",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Đông"
+  },
+  "DNIXHO02": {
+    "site_id": "DNIXHO02",
+    "site_id_old": "DNXL09",
+    "name": "Xuân Hòa 2",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Hòa"
+  },
+  "DNXL09": {
+    "site_id": "DNIXHO02",
+    "site_id_old": "DNXL09",
+    "name": "Xuân Hòa 2",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Hòa"
+  },
+  "DNICMY05": {
+    "site_id": "DNICMY05",
+    "site_id_old": "DNCM13",
+    "name": "Cẩm Mỹ 5",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Cẩm Mỹ"
+  },
+  "DNCM13": {
+    "site_id": "DNICMY05",
+    "site_id_old": "DNCM13",
+    "name": "Cẩm Mỹ 5",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Cẩm Mỹ"
+  },
+  "DNIDQU24": {
+    "site_id": "DNIDQU24",
+    "site_id_old": "DNDQ68",
+    "name": "Định Quán 24",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNDQ68": {
+    "site_id": "DNIDQU24",
+    "site_id_old": "DNDQ68",
+    "name": "Định Quán 24",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNIBLC02": {
+    "site_id": "DNIBLC02",
+    "site_id_old": "DNLK11",
+    "name": "Bình Lộc 2",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bình Lộc"
+  },
+  "DNLK11": {
+    "site_id": "DNIBLC02",
+    "site_id_old": "DNLK11",
+    "name": "Bình Lộc 2",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bình Lộc"
+  },
+  "DNICMY01": {
+    "site_id": "DNICMY01",
+    "site_id_old": "DNCM04",
+    "name": "Cẩm Mỹ 1",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Cẩm Mỹ"
+  },
+  "DNCM04": {
+    "site_id": "DNICMY01",
+    "site_id_old": "DNCM04",
+    "name": "Cẩm Mỹ 1",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Cẩm Mỹ"
+  },
+  "DNITNH16": {
+    "site_id": "DNITNH16",
+    "site_id_old": "DNTN33",
+    "name": "Thống Nhất 16",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Xã Thống Nhất"
+  },
+  "DNTN33": {
+    "site_id": "DNITNH16",
+    "site_id_old": "DNTN33",
+    "name": "Thống Nhất 16",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Xã Thống Nhất"
+  },
+  "DNIDQU07": {
+    "site_id": "DNIDQU07",
+    "site_id_old": "DNDQ19",
+    "name": "Định Quán 7",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNDQ19": {
+    "site_id": "DNIDQU07",
+    "site_id_old": "DNDQ19",
+    "name": "Định Quán 7",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNIDGI20": {
+    "site_id": "DNIDGI20",
+    "site_id_old": "DNTN37",
+    "name": "Dầu Giây 20",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNTN37": {
+    "site_id": "DNIDGI20",
+    "site_id_old": "DNTN37",
+    "name": "Dầu Giây 20",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNIDQU19": {
+    "site_id": "DNIDQU19",
+    "site_id_old": "DNDQ55",
+    "name": "Định Quán 19",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNDQ55": {
+    "site_id": "DNIDQU19",
+    "site_id_old": "DNDQ55",
+    "name": "Định Quán 19",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNITPU01": {
+    "site_id": "DNITPU01",
+    "site_id_old": "DNTP05",
+    "name": "Tân Phú 1",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Phường Tân Phú"
+  },
+  "DNTP05": {
+    "site_id": "DNITPU01",
+    "site_id_old": "DNTP05",
+    "name": "Tân Phú 1",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Phường Tân Phú"
+  },
+  "DNIPHO01": {
+    "site_id": "DNIPHO01",
+    "site_id_old": "DNDQ09",
+    "name": "Phú Hòa 1",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Phú Hòa"
+  },
+  "DNDQ09": {
+    "site_id": "DNIPHO01",
+    "site_id_old": "DNDQ09",
+    "name": "Phú Hòa 1",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Phú Hòa"
+  },
+  "DNIXBA00": {
+    "site_id": "DNIXBA00",
+    "site_id_old": "DNDQ21",
+    "name": "Xuân Bắc",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Xuân Bắc"
+  },
+  "DNDQ21": {
+    "site_id": "DNIXBA00",
+    "site_id_old": "DNDQ21",
+    "name": "Xuân Bắc",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Xuân Bắc"
+  },
+  "DNIDGI04": {
+    "site_id": "DNIDGI04",
+    "site_id_old": "DNTN04",
+    "name": "Dầu Giây 4",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNTN04": {
+    "site_id": "DNIDGI04",
+    "site_id_old": "DNTN04",
+    "name": "Dầu Giây 4",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNIDGI22": {
+    "site_id": "DNIDGI22",
+    "site_id_old": "DNTN39",
+    "name": "Dầu Giây 22",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNTN39": {
+    "site_id": "DNIDGI22",
+    "site_id_old": "DNTN39",
+    "name": "Dầu Giây 22",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNILKH05": {
+    "site_id": "DNILKH05",
+    "site_id_old": "DNLK21",
+    "name": "Long Khánh 5",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Long Khánh"
+  },
+  "DNLK21": {
+    "site_id": "DNILKH05",
+    "site_id_old": "DNLK21",
+    "name": "Long Khánh 5",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Long Khánh"
+  },
+  "DNIDGI14": {
+    "site_id": "DNIDGI14",
+    "site_id_old": "DNTN28",
+    "name": "Dầu Giây 14",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNTN28": {
+    "site_id": "DNIDGI14",
+    "site_id_old": "DNTN28",
+    "name": "Dầu Giây 14",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNITPU02": {
+    "site_id": "DNITPU02",
+    "site_id_old": "DNTP10",
+    "name": "Tân Phú 2",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Phường Tân Phú"
+  },
+  "DNTP10": {
+    "site_id": "DNITPU02",
+    "site_id_old": "DNTP10",
+    "name": "Tân Phú 2",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Phường Tân Phú"
+  },
+  "DNITLA10": {
+    "site_id": "DNITLA10",
+    "site_id_old": "DNTP42",
+    "name": "Tà Lài 10",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Tà Lài"
+  },
+  "DNTP42": {
+    "site_id": "DNITLA10",
+    "site_id_old": "DNTP42",
+    "name": "Tà Lài 10",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Tà Lài"
+  },
+  "DNIXQU04": {
+    "site_id": "DNIXQU04",
+    "site_id_old": "DNCM33",
+    "name": "Xuân Quế 4",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Quế"
+  },
+  "DNCM33": {
+    "site_id": "DNIXQU04",
+    "site_id_old": "DNCM33",
+    "name": "Xuân Quế 4",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Quế"
+  },
+  "DNITNH00": {
+    "site_id": "DNITNH00",
+    "site_id_old": "DNDQ04",
+    "name": "Thống Nhất",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Thống Nhất"
+  },
+  "DNDQ04": {
+    "site_id": "DNITNH00",
+    "site_id_old": "DNDQ04",
+    "name": "Thống Nhất",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Thống Nhất"
+  },
+  "DNINCT06": {
+    "site_id": "DNINCT06",
+    "site_id_old": "DNTP52",
+    "name": "Nam Cát Tiên 6",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Nam Cát Tiên"
+  },
+  "DNTP52": {
+    "site_id": "DNINCT06",
+    "site_id_old": "DNTP52",
+    "name": "Nam Cát Tiên 6",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Nam Cát Tiên"
+  },
+  "DNILNA07": {
+    "site_id": "DNILNA07",
+    "site_id_old": "DNDQ51",
+    "name": "La Ngà 7",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã La Ngà"
+  },
+  "DNDQ51": {
+    "site_id": "DNILNA07",
+    "site_id_old": "DNDQ51",
+    "name": "La Ngà 7",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã La Ngà"
+  },
+  "DNIXHO15": {
+    "site_id": "DNIXHO15",
+    "site_id_old": "DNXL53",
+    "name": "Xuân Hòa 15",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Hòa"
+  },
+  "DNXL53": {
+    "site_id": "DNIXHO15",
+    "site_id_old": "DNXL53",
+    "name": "Xuân Hòa 15",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Hòa"
+  },
+  "DNIGKI13": {
+    "site_id": "DNIGKI13",
+    "site_id_old": "DNTN45",
+    "name": "Gia Kiệm 13",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Xã Gia Kiệm"
+  },
+  "DNTN45": {
+    "site_id": "DNIGKI13",
+    "site_id_old": "DNTN45",
+    "name": "Gia Kiệm 13",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Xã Gia Kiệm"
+  },
+  "DNITPU11": {
+    "site_id": "DNITPU11",
+    "site_id_old": "DNTP29",
+    "name": "Tân Phú 11",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Phường Tân Phú"
+  },
+  "DNTP29": {
+    "site_id": "DNITPU11",
+    "site_id_old": "DNTP29",
+    "name": "Tân Phú 11",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Phường Tân Phú"
+  },
+  "DNITNH17": {
+    "site_id": "DNITNH17",
+    "site_id_old": "DNTN34",
+    "name": "Thống Nhất 17",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Xã Thống Nhất"
+  },
+  "DNTN34": {
+    "site_id": "DNITNH17",
+    "site_id_old": "DNTN34",
+    "name": "Thống Nhất 17",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Xã Thống Nhất"
+  },
+  "DNIDQU23": {
+    "site_id": "DNIDQU23",
+    "site_id_old": "DNDQ63",
+    "name": "Định Quán 23",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNDQ63": {
+    "site_id": "DNIDQU23",
+    "site_id_old": "DNDQ63",
+    "name": "Định Quán 23",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNIDGI07": {
+    "site_id": "DNIDGI07",
+    "site_id_old": "DNTN09",
+    "name": "Dầu Giây 7",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNTN09": {
+    "site_id": "DNIDGI07",
+    "site_id_old": "DNTN09",
+    "name": "Dầu Giây 7",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNILKH03": {
+    "site_id": "DNILKH03",
+    "site_id_old": "DNLK10",
+    "name": "Long Khánh 3",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Long Khánh"
+  },
+  "DNLK10": {
+    "site_id": "DNILKH03",
+    "site_id_old": "DNLK10",
+    "name": "Long Khánh 3",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Long Khánh"
+  },
+  "DNIGKI03": {
+    "site_id": "DNIGKI03",
+    "site_id_old": "DNTN10",
+    "name": "Gia Kiệm 3",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Xã Gia Kiệm"
+  },
+  "DNTN10": {
+    "site_id": "DNIGKI03",
+    "site_id_old": "DNTN10",
+    "name": "Gia Kiệm 3",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Xã Gia Kiệm"
+  },
+  "DNILNA04": {
+    "site_id": "DNILNA04",
+    "site_id_old": "DNDQ14",
+    "name": "La Ngà 4",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã La Ngà"
+  },
+  "DNDQ14": {
+    "site_id": "DNILNA04",
+    "site_id_old": "DNDQ14",
+    "name": "La Ngà 4",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã La Ngà"
+  },
+  "DNIXLO04": {
+    "site_id": "DNIXLO04",
+    "site_id_old": "DNXL12",
+    "name": "Xuân Lộc 4",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNXL12": {
+    "site_id": "DNIXLO04",
+    "site_id_old": "DNXL12",
+    "name": "Xuân Lộc 4",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNIGKI05": {
+    "site_id": "DNIGKI05",
+    "site_id_old": "DNTN13",
+    "name": "Gia Kiệm 5",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Xã Gia Kiệm"
+  },
+  "DNTN13": {
+    "site_id": "DNIGKI05",
+    "site_id_old": "DNTN13",
+    "name": "Gia Kiệm 5",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Xã Gia Kiệm"
+  },
+  "DNIBVI03": {
+    "site_id": "DNIBVI03",
+    "site_id_old": "DNLK23",
+    "name": "Bảo Vinh 3",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bảo Vinh"
+  },
+  "DNLK23": {
+    "site_id": "DNIBVI03",
+    "site_id_old": "DNLK23",
+    "name": "Bảo Vinh 3",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bảo Vinh"
+  },
+  "DNIXBA04": {
+    "site_id": "DNIXBA04",
+    "site_id_old": "DNDQ62",
+    "name": "Xuân Bắc 4",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Xuân Bắc"
+  },
+  "DNDQ62": {
+    "site_id": "DNIXBA04",
+    "site_id_old": "DNDQ62",
+    "name": "Xuân Bắc 4",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Xuân Bắc"
+  },
+  "DNIXQU05": {
+    "site_id": "DNIXQU05",
+    "site_id_old": "DNCM38",
+    "name": "Xuân Quế 5",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Quế"
+  },
+  "DNCM38": {
+    "site_id": "DNIXQU05",
+    "site_id_old": "DNCM38",
+    "name": "Xuân Quế 5",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Quế"
+  },
+  "DNITNH06": {
+    "site_id": "DNITNH06",
+    "site_id_old": "DNDQ46",
+    "name": "Thống Nhất 6",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Thống Nhất"
+  },
+  "DNDQ46": {
+    "site_id": "DNITNH06",
+    "site_id_old": "DNDQ46",
+    "name": "Thống Nhất 6",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Thống Nhất"
+  },
+  "DNICMY12": {
+    "site_id": "DNICMY12",
+    "site_id_old": "DNCM36",
+    "name": "Cẩm Mỹ 12",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Cẩm Mỹ"
+  },
+  "DNCM36": {
+    "site_id": "DNICMY12",
+    "site_id_old": "DNCM36",
+    "name": "Cẩm Mỹ 12",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Cẩm Mỹ"
+  },
+  "DNIXHO10": {
+    "site_id": "DNIXHO10",
+    "site_id_old": "DNXL36",
+    "name": "Xuân Hòa 10",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Hòa"
+  },
+  "DNXL36": {
+    "site_id": "DNIXHO10",
+    "site_id_old": "DNXL36",
+    "name": "Xuân Hòa 10",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Hòa"
+  },
+  "DNIXBA07": {
+    "site_id": "DNIXBA07",
+    "site_id_old": "DNXL31",
+    "name": "Xuân Bắc 7",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Bắc"
+  },
+  "DNXL31": {
+    "site_id": "DNIXBA07",
+    "site_id_old": "DNXL31",
+    "name": "Xuân Bắc 7",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Bắc"
+  },
+  "DNIXLO11": {
+    "site_id": "DNIXLO11",
+    "site_id_old": "DNXL30",
+    "name": "Xuân Lộc 11",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNXL30": {
+    "site_id": "DNIXLO11",
+    "site_id_old": "DNXL30",
+    "name": "Xuân Lộc 11",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNIXTCAP": {
+    "site_id": "DNIXTCAP",
+    "site_id_old": "DNIXTCAP",
+    "name": "K2-Z30A",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Thành"
+  },
+  "DNIXHO08": {
+    "site_id": "DNIXHO08",
+    "site_id_old": "DNXL28",
+    "name": "Xuân Hòa 8",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Hòa"
+  },
+  "DNXL28": {
+    "site_id": "DNIXHO08",
+    "site_id_old": "DNXL28",
+    "name": "Xuân Hòa 8",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Hòa"
+  },
+  "DNIXLA04": {
+    "site_id": "DNIXLA04",
+    "site_id_old": "DNLK38",
+    "name": "Xuân Lập 4",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Xuân Lập"
+  },
+  "DNLK38": {
+    "site_id": "DNIXLA04",
+    "site_id_old": "DNLK38",
+    "name": "Xuân Lập 4",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Xuân Lập"
+  },
+  "DNIHGO07": {
+    "site_id": "DNIHGO07",
+    "site_id_old": "DNLK39",
+    "name": "Hàng Gòn 7",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Hàng Gòn"
+  },
+  "DNLK39": {
+    "site_id": "DNIHGO07",
+    "site_id_old": "DNLK39",
+    "name": "Hàng Gòn 7",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Hàng Gòn"
+  },
+  "DNIBLC10": {
+    "site_id": "DNIBLC10",
+    "site_id_old": "DNLK44",
+    "name": "Bình Lộc 10",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bình Lộc"
+  },
+  "DNLK44": {
+    "site_id": "DNIBLC10",
+    "site_id_old": "DNLK44",
+    "name": "Bình Lộc 10",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bình Lộc"
+  },
+  "DNILKH1": {
+    "site_id": "DNILKH1",
+    "site_id_old": "DNILKH1",
+    "name": "Bình Lộc 1",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bình Lộc"
+  },
+  "DNICMYAP": {
+    "site_id": "DNICMYAP",
+    "site_id_old": "DNICMYAP",
+    "name": "CAX Xuân Đông",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xuân Đông"
+  },
+  "DNILKH14": {
+    "site_id": "DNILKH14",
+    "site_id_old": "DNLK75",
+    "name": "Long Khánh 14",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Long Khánh"
+  },
+  "DNLK75": {
+    "site_id": "DNILKH14",
+    "site_id_old": "DNLK75",
+    "name": "Long Khánh 14",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Long Khánh"
+  },
+  "DNIDQU01": {
+    "site_id": "DNIDQU01",
+    "site_id_old": "DNDQ03",
+    "name": "Định Quán 1",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNDQ03": {
+    "site_id": "DNIDQU01",
+    "site_id_old": "DNDQ03",
+    "name": "Định Quán 1",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNITPU07": {
+    "site_id": "DNITPU07",
+    "site_id_old": "DNTP19",
+    "name": "Tân Phú 7",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Phường Tân Phú"
+  },
+  "DNTP19": {
+    "site_id": "DNITPU07",
+    "site_id_old": "DNTP19",
+    "name": "Tân Phú 7",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Phường Tân Phú"
+  },
+  "DNITNH11": {
+    "site_id": "DNITNH11",
+    "site_id_old": "DNDQL1",
+    "name": "Thống Nhất 11",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Thống Nhất"
+  },
+  "DNDQL1": {
+    "site_id": "DNITNH11",
+    "site_id_old": "DNDQL1",
+    "name": "Thống Nhất 11",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Thống Nhất"
+  },
+  "DNIPLA09": {
+    "site_id": "DNIPLA09",
+    "site_id_old": "DNTP32",
+    "name": "Phú Lâm 9",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Phú Lâm"
+  },
+  "DNTP32": {
+    "site_id": "DNIPLA09",
+    "site_id_old": "DNTP32",
+    "name": "Phú Lâm 9",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Phú Lâm"
+  },
+  "DNIXDI10": {
+    "site_id": "DNIXDI10",
+    "site_id_old": "DNXL80",
+    "name": "Xuân Định 10",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Định"
+  },
+  "DNXL80": {
+    "site_id": "DNIXDI10",
+    "site_id_old": "DNXL80",
+    "name": "Xuân Định 10",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Định"
+  },
+  "DNIHGO05": {
+    "site_id": "DNIHGO05",
+    "site_id_old": "DNLK30",
+    "name": "Hàng Gòn 5",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Hàng Gòn"
+  },
+  "DNLK30": {
+    "site_id": "DNIHGO05",
+    "site_id_old": "DNLK30",
+    "name": "Hàng Gòn 5",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Hàng Gòn"
+  },
+  "DNIDQU25": {
+    "site_id": "DNIDQU25",
+    "site_id_old": "DNDQ70",
+    "name": "Định Quán 25",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNDQ70": {
+    "site_id": "DNIDQU25",
+    "site_id_old": "DNDQ70",
+    "name": "Định Quán 25",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNIBLC07": {
+    "site_id": "DNIBLC07",
+    "site_id_old": "DNLK37",
+    "name": "Bình Lộc 7",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bình Lộc"
+  },
+  "DNLK37": {
+    "site_id": "DNIBLC07",
+    "site_id_old": "DNLK37",
+    "name": "Bình Lộc 7",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bình Lộc"
+  },
+  "DNIXDI08": {
+    "site_id": "DNIXDI08",
+    "site_id_old": "DNXL58",
+    "name": "Xuân Định 8",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Định"
+  },
+  "DNXL58": {
+    "site_id": "DNIXDI08",
+    "site_id_old": "DNXL58",
+    "name": "Xuân Định 8",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Định"
+  },
+  "DNIXLO03": {
+    "site_id": "DNIXLO03",
+    "site_id_old": "DNXL11",
+    "name": "Xuân Lộc 3",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNXL11": {
+    "site_id": "DNIXLO03",
+    "site_id_old": "DNXL11",
+    "name": "Xuân Lộc 3",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNITNS00": {
+    "site_id": "DNITNS00",
+    "site_id_old": "DNDQ22",
+    "name": "Thanh Sơn",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Thanh Sơn"
+  },
+  "DNDQ22": {
+    "site_id": "DNITNS00",
+    "site_id_old": "DNDQ22",
+    "name": "Thanh Sơn",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Thanh Sơn"
+  },
+  "DNITLA02": {
+    "site_id": "DNITLA02",
+    "site_id_old": "DNTP09",
+    "name": "Tà Lài 2",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Tà Lài"
+  },
+  "DNTP09": {
+    "site_id": "DNITLA02",
+    "site_id_old": "DNTP09",
+    "name": "Tà Lài 2",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Tà Lài"
+  },
+  "DNIPHO05": {
+    "site_id": "DNIPHO05",
+    "site_id_old": "DNTP08",
+    "name": "Phú Hòa 5",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Phú Hòa"
+  },
+  "DNTP08": {
+    "site_id": "DNIPHO05",
+    "site_id_old": "DNTP08",
+    "name": "Phú Hòa 5",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Phú Hòa"
+  },
+  "DNIDQU11": {
+    "site_id": "DNIDQU11",
+    "site_id_old": "DNDQ36",
+    "name": "Định Quán 11",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNDQ36": {
+    "site_id": "DNIDQU11",
+    "site_id_old": "DNDQ36",
+    "name": "Định Quán 11",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNIBLC18": {
+    "site_id": "DNIBLC18",
+    "site_id_old": "DNTN46",
+    "name": "Bình Lộc 18",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Bình Lộc"
+  },
+  "DNTN46": {
+    "site_id": "DNIBLC18",
+    "site_id_old": "DNTN46",
+    "name": "Bình Lộc 18",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Bình Lộc"
+  },
+  "DNIXQU06": {
+    "site_id": "DNIXQU06",
+    "site_id_old": "DNCM48",
+    "name": "Xuân Quế 6",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Quế"
+  },
+  "DNCM48": {
+    "site_id": "DNIXQU06",
+    "site_id_old": "DNCM48",
+    "name": "Xuân Quế 6",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Quế"
+  },
+  "DNIBLC14": {
+    "site_id": "DNIBLC14",
+    "site_id_old": "DNLKI0",
+    "name": "Bình Lộc 14",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bình Lộc"
+  },
+  "DNLKI0": {
+    "site_id": "DNIBLC14",
+    "site_id_old": "DNLKI0",
+    "name": "Bình Lộc 14",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bình Lộc"
+  },
+  "DNIXLO21": {
+    "site_id": "DNIXLO21",
+    "site_id_old": "DNXL61",
+    "name": "Xuân Lộc 21",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNXL61": {
+    "site_id": "DNIXLO21",
+    "site_id_old": "DNXL61",
+    "name": "Xuân Lộc 21",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNICMY02": {
+    "site_id": "DNICMY02",
+    "site_id_old": "DNCM07",
+    "name": "Cẩm Mỹ 2",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Cẩm Mỹ"
+  },
+  "DNCM07": {
+    "site_id": "DNICMY02",
+    "site_id_old": "DNCM07",
+    "name": "Cẩm Mỹ 2",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Cẩm Mỹ"
+  },
+  "DNIDQU04": {
+    "site_id": "DNIDQU04",
+    "site_id_old": "DNDQ16",
+    "name": "Định Quán 4",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNDQ16": {
+    "site_id": "DNIDQU04",
+    "site_id_old": "DNDQ16",
+    "name": "Định Quán 4",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNILKH02": {
+    "site_id": "DNILKH02",
+    "site_id_old": "DNLK08",
+    "name": "Long Khánh 2",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Long Khánh"
+  },
+  "DNLK08": {
+    "site_id": "DNILKH02",
+    "site_id_old": "DNLK08",
+    "name": "Long Khánh 2",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Long Khánh"
+  },
+  "DNIXDO13": {
+    "site_id": "DNIXDO13",
+    "site_id_old": "DNCM47",
+    "name": "Xuân Đông 13",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Đông"
+  },
+  "DNCM47": {
+    "site_id": "DNIXDO13",
+    "site_id_old": "DNCM47",
+    "name": "Xuân Đông 13",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Đông"
+  },
+  "DNINCT01": {
+    "site_id": "DNINCT01",
+    "site_id_old": "DNTP22",
+    "name": "Nam Cát Tiên 1",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Nam Cát Tiên"
+  },
+  "DNTP22": {
+    "site_id": "DNINCT01",
+    "site_id_old": "DNTP22",
+    "name": "Nam Cát Tiên 1",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Nam Cát Tiên"
+  },
+  "DNITNH03": {
+    "site_id": "DNITNH03",
+    "site_id_old": "DNDQ28",
+    "name": "Thống Nhất 3",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Thống Nhất"
+  },
+  "DNDQ28": {
+    "site_id": "DNITNH03",
+    "site_id_old": "DNDQ28",
+    "name": "Thống Nhất 3",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Thống Nhất"
+  },
+  "DNIDGI31": {
+    "site_id": "DNIDGI31",
+    "site_id_old": "DNTNL1",
+    "name": "Dầu Giây 31",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNTNL1": {
+    "site_id": "DNIDGI31",
+    "site_id_old": "DNTNL1",
+    "name": "Dầu Giây 31",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNIBLC00": {
+    "site_id": "DNIBLC00",
+    "site_id_old": "DNLK01",
+    "name": "Bình Lộc",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bình Lộc"
+  },
+  "DNLK01": {
+    "site_id": "DNIBLC00",
+    "site_id_old": "DNLK01",
+    "name": "Bình Lộc",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bình Lộc"
+  },
+  "DNITNH13": {
+    "site_id": "DNITNH13",
+    "site_id_old": "DNTN17",
+    "name": "Thống Nhất 13",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Xã Thống Nhất"
+  },
+  "DNTN17": {
+    "site_id": "DNITNH13",
+    "site_id_old": "DNTN17",
+    "name": "Thống Nhất 13",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Xã Thống Nhất"
+  },
+  "DNIXLO20": {
+    "site_id": "DNIXLO20",
+    "site_id_old": "DNXL60",
+    "name": "Xuân Lộc 20",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNXL60": {
+    "site_id": "DNIXLO20",
+    "site_id_old": "DNXL60",
+    "name": "Xuân Lộc 20",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNIDGI00": {
+    "site_id": "DNIDGI00",
+    "site_id_old": "DNCM42",
+    "name": "Dầu Giây",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNCM42": {
+    "site_id": "DNIDGI00",
+    "site_id_old": "DNCM42",
+    "name": "Dầu Giây",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNILKH01": {
+    "site_id": "DNILKH01",
+    "site_id_old": "DNLK07",
+    "name": "Long Khánh 1",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Long Khánh"
+  },
+  "DNLK07": {
+    "site_id": "DNILKH01",
+    "site_id_old": "DNLK07",
+    "name": "Long Khánh 1",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Long Khánh"
+  },
+  "DNIPLA08": {
+    "site_id": "DNIPLA08",
+    "site_id_old": "DNTP26",
+    "name": "Phú Lâm 8",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Phú Lâm"
+  },
+  "DNTP26": {
+    "site_id": "DNIPLA08",
+    "site_id_old": "DNTP26",
+    "name": "Phú Lâm 8",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Phú Lâm"
+  },
+  "DNITNH05": {
+    "site_id": "DNITNH05",
+    "site_id_old": "DNDQ43",
+    "name": "Thống Nhất 5",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Thống Nhất"
+  },
+  "DNDQ43": {
+    "site_id": "DNITNH05",
+    "site_id_old": "DNDQ43",
+    "name": "Thống Nhất 5",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Thống Nhất"
+  },
+  "DNITLA06": {
+    "site_id": "DNITLA06",
+    "site_id_old": "DNTP36",
+    "name": "Tà Lài 6",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Tà Lài"
+  },
+  "DNTP36": {
+    "site_id": "DNITLA06",
+    "site_id_old": "DNTP36",
+    "name": "Tà Lài 6",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Tà Lài"
+  },
+  "DNITNH15": {
+    "site_id": "DNITNH15",
+    "site_id_old": "DNTN26",
+    "name": "Thống Nhất 15",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Xã Thống Nhất"
+  },
+  "DNTN26": {
+    "site_id": "DNITNH15",
+    "site_id_old": "DNTN26",
+    "name": "Thống Nhất 15",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Xã Thống Nhất"
+  },
+  "DNIXQU09": {
+    "site_id": "DNIXQU09",
+    "site_id_old": "DNCM57",
+    "name": "Xuân Quế 9",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Quế"
+  },
+  "DNCM57": {
+    "site_id": "DNIXQU09",
+    "site_id_old": "DNCM57",
+    "name": "Xuân Quế 9",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Quế"
+  },
+  "DNIXLO27": {
+    "site_id": "DNIXLO27",
+    "site_id_old": "DNXL77",
+    "name": "Xuân Lộc 27",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNXL77": {
+    "site_id": "DNIXLO27",
+    "site_id_old": "DNXL77",
+    "name": "Xuân Lộc 27",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNIDQU09": {
+    "site_id": "DNIDQU09",
+    "site_id_old": "DNDQ26",
+    "name": "Định Quán 9",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNDQ26": {
+    "site_id": "DNIDQU09",
+    "site_id_old": "DNDQ26",
+    "name": "Định Quán 9",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNIBLC11": {
+    "site_id": "DNIBLC11",
+    "site_id_old": "DNLK47",
+    "name": "Bình Lộc 11",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bình Lộc"
+  },
+  "DNLK47": {
+    "site_id": "DNIBLC11",
+    "site_id_old": "DNLK47",
+    "name": "Bình Lộc 11",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bình Lộc"
+  },
+  "DNIXDO04": {
+    "site_id": "DNIXDO04",
+    "site_id_old": "DNCM22",
+    "name": "Xuân Đông 4",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Đông"
+  },
+  "DNCM22": {
+    "site_id": "DNIXDO04",
+    "site_id_old": "DNCM22",
+    "name": "Xuân Đông 4",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Đông"
+  },
+  "DNIBVI01": {
+    "site_id": "DNIBVI01",
+    "site_id_old": "DNLK02",
+    "name": "Bảo Vinh 1",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bảo Vinh"
+  },
+  "DNLK02": {
+    "site_id": "DNIBVI01",
+    "site_id_old": "DNLK02",
+    "name": "Bảo Vinh 1",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bảo Vinh"
+  },
+  "DNIGKI00": {
+    "site_id": "DNIGKI00",
+    "site_id_old": "DNTN01",
+    "name": "Gia Kiệm",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Xã Gia Kiệm"
+  },
+  "DNTN01": {
+    "site_id": "DNIGKI00",
+    "site_id_old": "DNTN01",
+    "name": "Gia Kiệm",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Xã Gia Kiệm"
+  },
+  "DNIBLC15": {
+    "site_id": "DNIBLC15",
+    "site_id_old": "DNLKX1",
+    "name": "Bình Lộc 15",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bình Lộc"
+  },
+  "DNLKX1": {
+    "site_id": "DNIBLC15",
+    "site_id_old": "DNLKX1",
+    "name": "Bình Lộc 15",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bình Lộc"
+  },
+  "DNITNH07": {
+    "site_id": "DNITNH07",
+    "site_id_old": "DNDQ47",
+    "name": "Thống Nhất 7",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Thống Nhất"
+  },
+  "DNDQ47": {
+    "site_id": "DNITNH07",
+    "site_id_old": "DNDQ47",
+    "name": "Thống Nhất 7",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Thống Nhất"
+  },
+  "DNIXDI04": {
+    "site_id": "DNIXDI04",
+    "site_id_old": "DNXL32",
+    "name": "Xuân Định 4",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Định"
+  },
+  "DNXL32": {
+    "site_id": "DNIXDI04",
+    "site_id_old": "DNXL32",
+    "name": "Xuân Định 4",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Định"
+  },
+  "DNIBLC04": {
+    "site_id": "DNIBLC04",
+    "site_id_old": "DNLK19",
+    "name": "Bình Lộc 4",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bình Lộc"
+  },
+  "DNLK19": {
+    "site_id": "DNIBLC04",
+    "site_id_old": "DNLK19",
+    "name": "Bình Lộc 4",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bình Lộc"
+  },
+  "DNIXTC02": {
+    "site_id": "DNIXTC02",
+    "site_id_old": "DNXL18",
+    "name": "Xuân Thành 2",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Thành"
+  },
+  "DNXL18": {
+    "site_id": "DNIXTC02",
+    "site_id_old": "DNXL18",
+    "name": "Xuân Thành 2",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Thành"
+  },
+  "DNIDQU10": {
+    "site_id": "DNIDQU10",
+    "site_id_old": "DNDQ34",
+    "name": "Định Quán 10",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNDQ34": {
+    "site_id": "DNIDQU10",
+    "site_id_old": "DNDQ34",
+    "name": "Định Quán 10",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNIDQU03": {
+    "site_id": "DNIDQU03",
+    "site_id_old": "DNDQ15",
+    "name": "Định Quán 3",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNDQ15": {
+    "site_id": "DNIDQU03",
+    "site_id_old": "DNDQ15",
+    "name": "Định Quán 3",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNIDGI30": {
+    "site_id": "DNIDGI30",
+    "site_id_old": "DNTN60",
+    "name": "Dầu Giây 30",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNTN60": {
+    "site_id": "DNIDGI30",
+    "site_id_old": "DNTN60",
+    "name": "Dầu Giây 30",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNIXBA02": {
+    "site_id": "DNIXBA02",
+    "site_id_old": "DNDQ39",
+    "name": "Xuân Bắc 2",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Xuân Bắc"
+  },
+  "DNDQ39": {
+    "site_id": "DNIXBA02",
+    "site_id_old": "DNDQ39",
+    "name": "Xuân Bắc 2",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Xuân Bắc"
+  },
+  "DNIXLA06": {
+    "site_id": "DNIXLA06",
+    "site_id_old": "DNLK50",
+    "name": "Xuân Lập 6",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Xuân Lập"
+  },
+  "DNLK50": {
+    "site_id": "DNIXLA06",
+    "site_id_old": "DNLK50",
+    "name": "Xuân Lập 6",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Xuân Lập"
+  },
+  "DNIXLO14": {
+    "site_id": "DNIXLO14",
+    "site_id_old": "DNXL38",
+    "name": "Xuân Lộc 14",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNXL38": {
+    "site_id": "DNIXLO14",
+    "site_id_old": "DNXL38",
+    "name": "Xuân Lộc 14",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNIGKI01": {
+    "site_id": "DNIGKI01",
+    "site_id_old": "DNTN02",
+    "name": "Gia Kiệm 1",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Xã Gia Kiệm"
+  },
+  "DNTN02": {
+    "site_id": "DNIGKI01",
+    "site_id_old": "DNTN02",
+    "name": "Gia Kiệm 1",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Xã Gia Kiệm"
+  },
+  "DNIXTC03": {
+    "site_id": "DNIXTC03",
+    "site_id_old": "DNXL25",
+    "name": "Xuân Thành 3",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Thành"
+  },
+  "DNXL25": {
+    "site_id": "DNIXTC03",
+    "site_id_old": "DNXL25",
+    "name": "Xuân Thành 3",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Thành"
+  },
+  "DNICMY13": {
+    "site_id": "DNICMY13",
+    "site_id_old": "DNCM44",
+    "name": "Cẩm Mỹ 13",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Cẩm Mỹ"
+  },
+  "DNCM44": {
+    "site_id": "DNICMY13",
+    "site_id_old": "DNCM44",
+    "name": "Cẩm Mỹ 13",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Cẩm Mỹ"
+  },
+  "DNIGKI07": {
+    "site_id": "DNIGKI07",
+    "site_id_old": "DNTN25",
+    "name": "Gia Kiệm 7",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Xã Gia Kiệm"
+  },
+  "DNTN25": {
+    "site_id": "DNIGKI07",
+    "site_id_old": "DNTN25",
+    "name": "Gia Kiệm 7",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Xã Gia Kiệm"
+  },
+  "DNIGKI11": {
+    "site_id": "DNIGKI11",
+    "site_id_old": "DNTN42",
+    "name": "Gia Kiệm 11",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Xã Gia Kiệm"
+  },
+  "DNTN42": {
+    "site_id": "DNIGKI11",
+    "site_id_old": "DNTN42",
+    "name": "Gia Kiệm 11",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Xã Gia Kiệm"
+  },
+  "DNITPU10": {
+    "site_id": "DNITPU10",
+    "site_id_old": "DNTP28",
+    "name": "Tân Phú 10",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Phường Tân Phú"
+  },
+  "DNTP28": {
+    "site_id": "DNITPU10",
+    "site_id_old": "DNTP28",
+    "name": "Tân Phú 10",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Phường Tân Phú"
+  },
+  "DNIDQU08": {
+    "site_id": "DNIDQU08",
+    "site_id_old": "DNDQ24",
+    "name": "Định Quán 8",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNDQ24": {
+    "site_id": "DNIDQU08",
+    "site_id_old": "DNDQ24",
+    "name": "Định Quán 8",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNIPVI03": {
+    "site_id": "DNIPVI03",
+    "site_id_old": "DNDQ25",
+    "name": "Phú Vinh 3",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Phú Vinh"
+  },
+  "DNDQ25": {
+    "site_id": "DNIPVI03",
+    "site_id_old": "DNDQ25",
+    "name": "Phú Vinh 3",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Phú Vinh"
+  },
+  "DNILNA01": {
+    "site_id": "DNILNA01",
+    "site_id_old": "DNDQ05",
+    "name": "La Ngà 1",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã La Ngà"
+  },
+  "DNDQ05": {
+    "site_id": "DNILNA01",
+    "site_id_old": "DNDQ05",
+    "name": "La Ngà 1",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã La Ngà"
+  },
+  "DNIDGI05": {
+    "site_id": "DNIDGI05",
+    "site_id_old": "DNTN07",
+    "name": "Dầu Giây 5",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNTN07": {
+    "site_id": "DNIDGI05",
+    "site_id_old": "DNTN07",
+    "name": "Dầu Giây 5",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNIXDO10": {
+    "site_id": "DNIXDO10",
+    "site_id_old": "DNCM41",
+    "name": "Xuân Đông 10",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Đông"
+  },
+  "DNCM41": {
+    "site_id": "DNIXDO10",
+    "site_id_old": "DNCM41",
+    "name": "Xuân Đông 10",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Đông"
+  },
+  "DNIDGI18": {
+    "site_id": "DNIDGI18",
+    "site_id_old": "DNTN35",
+    "name": "Dầu Giây 18",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNTN35": {
+    "site_id": "DNIDGI18",
+    "site_id_old": "DNTN35",
+    "name": "Dầu Giây 18",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNIPVI05": {
+    "site_id": "DNIPVI05",
+    "site_id_old": "DNDQ64",
+    "name": "Phú Vinh 5",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Phú Vinh"
+  },
+  "DNDQ64": {
+    "site_id": "DNIPVI05",
+    "site_id_old": "DNDQ64",
+    "name": "Phú Vinh 5",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Phú Vinh"
+  },
+  "DNITLA00": {
+    "site_id": "DNITLA00",
+    "site_id_old": "DNTP03",
+    "name": "Tà Lài",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Tà Lài"
+  },
+  "DNTP03": {
+    "site_id": "DNITLA00",
+    "site_id_old": "DNTP03",
+    "name": "Tà Lài",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Tà Lài"
+  },
+  "DNICMY11": {
+    "site_id": "DNICMY11",
+    "site_id_old": "DNCM30",
+    "name": "Cẩm Mỹ 11",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Cẩm Mỹ"
+  },
+  "DNCM30": {
+    "site_id": "DNICMY11",
+    "site_id_old": "DNCM30",
+    "name": "Cẩm Mỹ 11",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Cẩm Mỹ"
+  },
+  "DNIXDU05": {
+    "site_id": "DNIXDU05",
+    "site_id_old": "DNLT06",
+    "name": "Xuân Đường 5",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Long Thành",
+    "xa": "Xã Xuân Đường"
+  },
+  "DNLT06": {
+    "site_id": "DNIXDU05",
+    "site_id_old": "DNLT06",
+    "name": "Xuân Đường 5",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Long Thành",
+    "xa": "Xã Xuân Đường"
+  },
+  "DNIXLO29": {
+    "site_id": "DNIXLO29",
+    "site_id_old": "DNXL82",
+    "name": "Xuân Lộc 29",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNXL82": {
+    "site_id": "DNIXLO29",
+    "site_id_old": "DNXL82",
+    "name": "Xuân Lộc 29",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNIXHO12": {
+    "site_id": "DNIXHO12",
+    "site_id_old": "DNXL44",
+    "name": "Xuân Hòa 12",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Hòa"
+  },
+  "DNXL44": {
+    "site_id": "DNIXHO12",
+    "site_id_old": "DNXL44",
+    "name": "Xuân Hòa 12",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Hòa"
+  },
+  "DNIXPH05": {
+    "site_id": "DNIXPH05",
+    "site_id_old": "DNXL64",
+    "name": "Xuân Phú 5",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Phú"
+  },
+  "DNXL64": {
+    "site_id": "DNIXPH05",
+    "site_id_old": "DNXL64",
+    "name": "Xuân Phú 5",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Phú"
+  },
+  "DNIXLO15": {
+    "site_id": "DNIXLO15",
+    "site_id_old": "DNXL40",
+    "name": "Xuân Lộc 15",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNXL40": {
+    "site_id": "DNIXLO15",
+    "site_id_old": "DNXL40",
+    "name": "Xuân Lộc 15",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNILKH11": {
+    "site_id": "DNILKH11",
+    "site_id_old": "DNLK45",
+    "name": "Long Khánh 11",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Long Khánh"
+  },
+  "DNLK45": {
+    "site_id": "DNILKH11",
+    "site_id_old": "DNLK45",
+    "name": "Long Khánh 11",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Long Khánh"
+  },
+  "DNIXLA05": {
+    "site_id": "DNIXLA05",
+    "site_id_old": "DNLK41",
+    "name": "Xuân Lập 5",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Xuân Lập"
+  },
+  "DNLK41": {
+    "site_id": "DNIXLA05",
+    "site_id_old": "DNLK41",
+    "name": "Xuân Lập 5",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Xuân Lập"
+  },
+  "DNIXBA09": {
+    "site_id": "DNIXBA09",
+    "site_id_old": "DNXL52",
+    "name": "Xuân Bắc 9",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Bắc"
+  },
+  "DNXL52": {
+    "site_id": "DNIXBA09",
+    "site_id_old": "DNXL52",
+    "name": "Xuân Bắc 9",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Bắc"
+  },
+  "DNITNH18": {
+    "site_id": "DNITNH18",
+    "site_id_old": "DNTN40",
+    "name": "Thống Nhất 18",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Xã Thống Nhất"
+  },
+  "DNTN40": {
+    "site_id": "DNITNH18",
+    "site_id_old": "DNTN40",
+    "name": "Thống Nhất 18",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Xã Thống Nhất"
+  },
+  "DNILNA02": {
+    "site_id": "DNILNA02",
+    "site_id_old": "DNDQ12",
+    "name": "La Ngà 2",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã La Ngà"
+  },
+  "DNDQ12": {
+    "site_id": "DNILNA02",
+    "site_id_old": "DNDQ12",
+    "name": "La Ngà 2",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã La Ngà"
+  },
+  "DNIXDI06": {
+    "site_id": "DNIXDI06",
+    "site_id_old": "DNXL45",
+    "name": "Xuân Định 6",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Định"
+  },
+  "DNXL45": {
+    "site_id": "DNIXDI06",
+    "site_id_old": "DNXL45",
+    "name": "Xuân Định 6",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Định"
+  },
+  "DNIBVI11": {
+    "site_id": "DNIBVI11",
+    "site_id_old": "DNLK65",
+    "name": "Bảo Vinh 11",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bảo Vinh"
+  },
+  "DNLK65": {
+    "site_id": "DNIBVI11",
+    "site_id_old": "DNLK65",
+    "name": "Bảo Vinh 11",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bảo Vinh"
+  },
+  "DNIBLC09": {
+    "site_id": "DNIBLC09",
+    "site_id_old": "DNLK43",
+    "name": "Bình Lộc 9",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bình Lộc"
+  },
+  "DNLK43": {
+    "site_id": "DNIBLC09",
+    "site_id_old": "DNLK43",
+    "name": "Bình Lộc 9",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bình Lộc"
+  },
+  "DNICMY08": {
+    "site_id": "DNICMY08",
+    "site_id_old": "DNCM20",
+    "name": "Cẩm Mỹ 8",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Cẩm Mỹ"
+  },
+  "DNCM20": {
+    "site_id": "DNICMY08",
+    "site_id_old": "DNCM20",
+    "name": "Cẩm Mỹ 8",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Cẩm Mỹ"
+  },
+  "DNIXBA05": {
+    "site_id": "DNIXBA05",
+    "site_id_old": "DNXL03",
+    "name": "Xuân Bắc 5",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Bắc"
+  },
+  "DNXL03": {
+    "site_id": "DNIXBA05",
+    "site_id_old": "DNXL03",
+    "name": "Xuân Bắc 5",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Bắc"
+  },
+  "DNIXHO09": {
+    "site_id": "DNIXHO09",
+    "site_id_old": "DNXL35",
+    "name": "Xuân Hòa 9",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Hòa"
+  },
+  "DNXL35": {
+    "site_id": "DNIXHO09",
+    "site_id_old": "DNXL35",
+    "name": "Xuân Hòa 9",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Hòa"
+  },
+  "DNIXHO11": {
+    "site_id": "DNIXHO11",
+    "site_id_old": "DNXL43",
+    "name": "Xuân Hòa 11",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Hòa"
+  },
+  "DNXL43": {
+    "site_id": "DNIXHO11",
+    "site_id_old": "DNXL43",
+    "name": "Xuân Hòa 11",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Hòa"
+  },
+  "DNITLA04": {
+    "site_id": "DNITLA04",
+    "site_id_old": "DNTP15",
+    "name": "Tà Lài 4",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Tà Lài"
+  },
+  "DNTP15": {
+    "site_id": "DNITLA04",
+    "site_id_old": "DNTP15",
+    "name": "Tà Lài 4",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Tà Lài"
+  },
+  "DNITPU00": {
+    "site_id": "DNITPU00",
+    "site_id_old": "DNTP04",
+    "name": "Tân Phú",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Phường Tân Phú"
+  },
+  "DNTP04": {
+    "site_id": "DNITPU00",
+    "site_id_old": "DNTP04",
+    "name": "Tân Phú",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Phường Tân Phú"
+  },
+  "DNITLA03": {
+    "site_id": "DNITLA03",
+    "site_id_old": "DNTP12",
+    "name": "Tà Lài 3",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Tà Lài"
+  },
+  "DNTP12": {
+    "site_id": "DNITLA03",
+    "site_id_old": "DNTP12",
+    "name": "Tà Lài 3",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Tà Lài"
+  },
+  "DNITPU05": {
+    "site_id": "DNITPU05",
+    "site_id_old": "DNTP16",
+    "name": "Tân Phú 5",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Phường Tân Phú"
+  },
+  "DNTP16": {
+    "site_id": "DNITPU05",
+    "site_id_old": "DNTP16",
+    "name": "Tân Phú 5",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Phường Tân Phú"
+  },
+  "DNIBVI00": {
+    "site_id": "DNIBVI00",
+    "site_id_old": "DNLK00",
+    "name": "Bảo Vinh",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bảo Vinh"
+  },
+  "DNLK00": {
+    "site_id": "DNIBVI00",
+    "site_id_old": "DNLK00",
+    "name": "Bảo Vinh",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bảo Vinh"
+  },
+  "DNIBLC12": {
+    "site_id": "DNIBLC12",
+    "site_id_old": "DNLK48",
+    "name": "Bình Lộc 12",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bình Lộc"
+  },
+  "DNLK48": {
+    "site_id": "DNIBLC12",
+    "site_id_old": "DNLK48",
+    "name": "Bình Lộc 12",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bình Lộc"
+  },
+  "DNIBVI08": {
+    "site_id": "DNIBVI08",
+    "site_id_old": "DNLK46",
+    "name": "Bảo Vinh 8",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bảo Vinh"
+  },
+  "DNLK46": {
+    "site_id": "DNIBVI08",
+    "site_id_old": "DNLK46",
+    "name": "Bảo Vinh 8",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bảo Vinh"
+  },
+  "DNISRA01": {
+    "site_id": "DNISRA01",
+    "site_id_old": "DNCM11",
+    "name": "Sông Ray 1",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Sông Ray"
+  },
+  "DNCM11": {
+    "site_id": "DNISRA01",
+    "site_id_old": "DNCM11",
+    "name": "Sông Ray 1",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Sông Ray"
+  },
+  "DNIDGI23": {
+    "site_id": "DNIDGI23",
+    "site_id_old": "DNTN44",
+    "name": "Dầu Giây 23",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNTN44": {
+    "site_id": "DNIDGI23",
+    "site_id_old": "DNTN44",
+    "name": "Dầu Giây 23",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNIGKI06": {
+    "site_id": "DNIGKI06",
+    "site_id_old": "DNTN16",
+    "name": "Gia Kiệm 6",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Xã Gia Kiệm"
+  },
+  "DNTN16": {
+    "site_id": "DNIGKI06",
+    "site_id_old": "DNTN16",
+    "name": "Gia Kiệm 6",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Xã Gia Kiệm"
+  },
+  "DNICMY00": {
+    "site_id": "DNICMY00",
+    "site_id_old": "DNCM01",
+    "name": "Cẩm Mỹ",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Cẩm Mỹ"
+  },
+  "DNCM01": {
+    "site_id": "DNICMY00",
+    "site_id_old": "DNCM01",
+    "name": "Cẩm Mỹ",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Cẩm Mỹ"
+  },
+  "DNINCT02": {
+    "site_id": "DNINCT02",
+    "site_id_old": "DNTP25",
+    "name": "Nam Cát Tiên 2",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Nam Cát Tiên"
+  },
+  "DNTP25": {
+    "site_id": "DNINCT02",
+    "site_id_old": "DNTP25",
+    "name": "Nam Cát Tiên 2",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Nam Cát Tiên"
+  },
+  "DNIXLO26": {
+    "site_id": "DNIXLO26",
+    "site_id_old": "DNXL75",
+    "name": "Xuân Lộc 26",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNXL75": {
+    "site_id": "DNIXLO26",
+    "site_id_old": "DNXL75",
+    "name": "Xuân Lộc 26",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNITLA09": {
+    "site_id": "DNITLA09",
+    "site_id_old": "DNTP39",
+    "name": "Tà Lài 9",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Tà Lài"
+  },
+  "DNTP39": {
+    "site_id": "DNITLA09",
+    "site_id_old": "DNTP39",
+    "name": "Tà Lài 9",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Tà Lài"
+  },
+  "DNITPU06": {
+    "site_id": "DNITPU06",
+    "site_id_old": "DNTP17",
+    "name": "Tân Phú 6",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Phường Tân Phú"
+  },
+  "DNTP17": {
+    "site_id": "DNITPU06",
+    "site_id_old": "DNTP17",
+    "name": "Tân Phú 6",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Phường Tân Phú"
+  },
+  "DNIXBA10": {
+    "site_id": "DNIXBA10",
+    "site_id_old": "DNXL54",
+    "name": "Xuân Bắc 10",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Bắc"
+  },
+  "DNXL54": {
+    "site_id": "DNIXBA10",
+    "site_id_old": "DNXL54",
+    "name": "Xuân Bắc 10",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Bắc"
+  },
+  "DNIPLA05": {
+    "site_id": "DNIPLA05",
+    "site_id_old": "DNTP20",
+    "name": "Phú Lâm 5",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Phú Lâm"
+  },
+  "DNTP20": {
+    "site_id": "DNIPLA05",
+    "site_id_old": "DNTP20",
+    "name": "Phú Lâm 5",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Phú Lâm"
+  },
+  "DNIPLA04": {
+    "site_id": "DNIPLA04",
+    "site_id_old": "DNTP18",
+    "name": "Phú Lâm 4",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Phú Lâm"
+  },
+  "DNTP18": {
+    "site_id": "DNIPLA04",
+    "site_id_old": "DNTP18",
+    "name": "Phú Lâm 4",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Phú Lâm"
+  },
+  "DNILKH00": {
+    "site_id": "DNILKH00",
+    "site_id_old": "DNLK05",
+    "name": "Long Khánh",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Long Khánh"
+  },
+  "DNLK05": {
+    "site_id": "DNILKH00",
+    "site_id_old": "DNLK05",
+    "name": "Long Khánh",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Long Khánh"
+  },
+  "DNITPU03": {
+    "site_id": "DNITPU03",
+    "site_id_old": "DNTP11",
+    "name": "Tân Phú 3",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Phường Tân Phú"
+  },
+  "DNTP11": {
+    "site_id": "DNITPU03",
+    "site_id_old": "DNTP11",
+    "name": "Tân Phú 3",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Phường Tân Phú"
+  },
+  "DNITPU04": {
+    "site_id": "DNITPU04",
+    "site_id_old": "DNTP13",
+    "name": "Tân Phú 4",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Phường Tân Phú"
+  },
+  "DNTP13": {
+    "site_id": "DNITPU04",
+    "site_id_old": "DNTP13",
+    "name": "Tân Phú 4",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Phường Tân Phú"
+  },
+  "DNIXDI05": {
+    "site_id": "DNIXDI05",
+    "site_id_old": "DNXL42",
+    "name": "Xuân Định 5",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Định"
+  },
+  "DNXL42": {
+    "site_id": "DNIXDI05",
+    "site_id_old": "DNXL42",
+    "name": "Xuân Định 5",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Định"
+  },
+  "DNIXDO05": {
+    "site_id": "DNIXDO05",
+    "site_id_old": "DNCM31",
+    "name": "Xuân Đông 5",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Đông"
+  },
+  "DNCM31": {
+    "site_id": "DNIXDO05",
+    "site_id_old": "DNCM31",
+    "name": "Xuân Đông 5",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Đông"
+  },
+  "DNIXDU07": {
+    "site_id": "DNIXDU07",
+    "site_id_old": "DNLT69",
+    "name": "Xuân Đường 7",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Long Thành",
+    "xa": "Xã Xuân Đường"
+  },
+  "DNLT69": {
+    "site_id": "DNIXDU07",
+    "site_id_old": "DNLT69",
+    "name": "Xuân Đường 7",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Long Thành",
+    "xa": "Xã Xuân Đường"
+  },
+  "DNIXTC04": {
+    "site_id": "DNIXTC04",
+    "site_id_old": "DNXL34",
+    "name": "Xuân Thành 4",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Thành"
+  },
+  "DNXL34": {
+    "site_id": "DNIXTC04",
+    "site_id_old": "DNXL34",
+    "name": "Xuân Thành 4",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Thành"
+  },
+  "DNIDGI06": {
+    "site_id": "DNIDGI06",
+    "site_id_old": "DNTN08",
+    "name": "Dầu Giây 6",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNTN08": {
+    "site_id": "DNIDGI06",
+    "site_id_old": "DNTN08",
+    "name": "Dầu Giây 6",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNIXLA02": {
+    "site_id": "DNIXLA02",
+    "site_id_old": "DNLK15",
+    "name": "Xuân Lập 2",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Xuân Lập"
+  },
+  "DNLK15": {
+    "site_id": "DNIXLA02",
+    "site_id_old": "DNLK15",
+    "name": "Xuân Lập 2",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Xuân Lập"
+  },
+  "DNIXLO07": {
+    "site_id": "DNIXLO07",
+    "site_id_old": "DNXL15",
+    "name": "Xuân Lộc 7",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNXL15": {
+    "site_id": "DNIXLO07",
+    "site_id_old": "DNXL15",
+    "name": "Xuân Lộc 7",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNIXLO31": {
+    "site_id": "DNIXLO31",
+    "site_id_old": "DNXL86",
+    "name": "Xuân Lộc 31",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNXL86": {
+    "site_id": "DNIXLO31",
+    "site_id_old": "DNXL86",
+    "name": "Xuân Lộc 31",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNIXHO05": {
+    "site_id": "DNIXHO05",
+    "site_id_old": "DNXL22",
+    "name": "Xuân Hòa 5",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Hòa"
+  },
+  "DNXL22": {
+    "site_id": "DNIXHO05",
+    "site_id_old": "DNXL22",
+    "name": "Xuân Hòa 5",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Hòa"
+  },
+  "DNIDGI08": {
+    "site_id": "DNIDGI08",
+    "site_id_old": "DNTN12",
+    "name": "Dầu Giây 8",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNTN12": {
+    "site_id": "DNIDGI08",
+    "site_id_old": "DNTN12",
+    "name": "Dầu Giây 8",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNIHGO04": {
+    "site_id": "DNIHGO04",
+    "site_id_old": "DNLK25",
+    "name": "Hàng Gòn 4",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Hàng Gòn"
+  },
+  "DNLK25": {
+    "site_id": "DNIHGO04",
+    "site_id_old": "DNLK25",
+    "name": "Hàng Gòn 4",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Hàng Gòn"
+  },
+  "DNIPVI01": {
+    "site_id": "DNIPVI01",
+    "site_id_old": "DNDQ07",
+    "name": "Phú Vinh 1",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Phú Vinh"
+  },
+  "DNDQ07": {
+    "site_id": "DNIPVI01",
+    "site_id_old": "DNDQ07",
+    "name": "Phú Vinh 1",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Phú Vinh"
+  },
+  "DNIBVI10": {
+    "site_id": "DNIBVI10",
+    "site_id_old": "DNLK60",
+    "name": "Bảo Vinh 10",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bảo Vinh"
+  },
+  "DNLK60": {
+    "site_id": "DNIBVI10",
+    "site_id_old": "DNLK60",
+    "name": "Bảo Vinh 10",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bảo Vinh"
+  },
+  "DNICMY14": {
+    "site_id": "DNICMY14",
+    "site_id_old": "DNCM56",
+    "name": "Cẩm Mỹ 14",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Cẩm Mỹ"
+  },
+  "DNCM56": {
+    "site_id": "DNICMY14",
+    "site_id_old": "DNCM56",
+    "name": "Cẩm Mỹ 14",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Cẩm Mỹ"
+  },
+  "DNIPVI04": {
+    "site_id": "DNIPVI04",
+    "site_id_old": "DNDQ44",
+    "name": "Phú Vinh 4",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Phú Vinh"
+  },
+  "DNDQ44": {
+    "site_id": "DNIPVI04",
+    "site_id_old": "DNDQ44",
+    "name": "Phú Vinh 4",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Phú Vinh"
+  },
+  "DNIXHO19": {
+    "site_id": "DNIXHO19",
+    "site_id_old": "DNXL76",
+    "name": "Xuân Hòa 19",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Hòa"
+  },
+  "DNXL76": {
+    "site_id": "DNIXHO19",
+    "site_id_old": "DNXL76",
+    "name": "Xuân Hòa 19",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Hòa"
+  },
+  "DNISRA00": {
+    "site_id": "DNISRA00",
+    "site_id_old": "DNCM00",
+    "name": "Sông Ray",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Sông Ray"
+  },
+  "DNCM00": {
+    "site_id": "DNISRA00",
+    "site_id_old": "DNCM00",
+    "name": "Sông Ray",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Sông Ray"
+  },
+  "DNILNA03": {
+    "site_id": "DNILNA03",
+    "site_id_old": "DNDQ13",
+    "name": "La Ngà 3",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã La Ngà"
+  },
+  "DNDQ13": {
+    "site_id": "DNILNA03",
+    "site_id_old": "DNDQ13",
+    "name": "La Ngà 3",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã La Ngà"
+  },
+  "DNIBVI02": {
+    "site_id": "DNIBVI02",
+    "site_id_old": "DNLK18",
+    "name": "Bảo Vinh 2",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bảo Vinh"
+  },
+  "DNLK18": {
+    "site_id": "DNIBVI02",
+    "site_id_old": "DNLK18",
+    "name": "Bảo Vinh 2",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bảo Vinh"
+  },
+  "DNIXQU08": {
+    "site_id": "DNIXQU08",
+    "site_id_old": "DNCM55",
+    "name": "Xuân Quế 8",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Quế"
+  },
+  "DNCM55": {
+    "site_id": "DNIXQU08",
+    "site_id_old": "DNCM55",
+    "name": "Xuân Quế 8",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Quế"
+  },
+  "DNIXTC06": {
+    "site_id": "DNIXTC06",
+    "site_id_old": "DNXL57",
+    "name": "Xuân Thành 6",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Thành"
+  },
+  "DNXL57": {
+    "site_id": "DNIXTC06",
+    "site_id_old": "DNXL57",
+    "name": "Xuân Thành 6",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Thành"
+  },
+  "DNIDGI28": {
+    "site_id": "DNIDGI28",
+    "site_id_old": "DNTN55",
+    "name": "Dầu Giây 28",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNTN55": {
+    "site_id": "DNIDGI28",
+    "site_id_old": "DNTN55",
+    "name": "Dầu Giây 28",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNIBLC06": {
+    "site_id": "DNIBLC06",
+    "site_id_old": "DNLK29",
+    "name": "Bình Lộc 6",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bình Lộc"
+  },
+  "DNLK29": {
+    "site_id": "DNIBLC06",
+    "site_id_old": "DNLK29",
+    "name": "Bình Lộc 6",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bình Lộc"
+  },
+  "DNIXPH07": {
+    "site_id": "DNIXPH07",
+    "site_id_old": "DNXL73",
+    "name": "Xuân Phú 7",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Phú"
+  },
+  "DNXL73": {
+    "site_id": "DNIXPH07",
+    "site_id_old": "DNXL73",
+    "name": "Xuân Phú 7",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Phú"
+  },
+  "DNIDGI09": {
+    "site_id": "DNIDGI09",
+    "site_id_old": "DNTN18",
+    "name": "Dầu Giây 9",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNTN18": {
+    "site_id": "DNIDGI09",
+    "site_id_old": "DNTN18",
+    "name": "Dầu Giây 9",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNITNH14": {
+    "site_id": "DNITNH14",
+    "site_id_old": "DNTN24",
+    "name": "Thống Nhất 14",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Xã Thống Nhất"
+  },
+  "DNTN24": {
+    "site_id": "DNITNH14",
+    "site_id_old": "DNTN24",
+    "name": "Thống Nhất 14",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Xã Thống Nhất"
+  },
+  "DNIPHO02": {
+    "site_id": "DNIPHO02",
+    "site_id_old": "DNDQ23",
+    "name": "Phú Hòa 2",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Phú Hòa"
+  },
+  "DNDQ23": {
+    "site_id": "DNIPHO02",
+    "site_id_old": "DNDQ23",
+    "name": "Phú Hòa 2",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Phú Hòa"
+  },
+  "DNITNS03": {
+    "site_id": "DNITNS03",
+    "site_id_old": "DNDQ42",
+    "name": "Thanh Sơn 3",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Thanh Sơn"
+  },
+  "DNDQ42": {
+    "site_id": "DNITNS03",
+    "site_id_old": "DNDQ42",
+    "name": "Thanh Sơn 3",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Thanh Sơn"
+  },
+  "DNIPHO00": {
+    "site_id": "DNIPHO00",
+    "site_id_old": "DNDQ08",
+    "name": "Phú Hòa",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Phú Hòa"
+  },
+  "DNDQ08": {
+    "site_id": "DNIPHO00",
+    "site_id_old": "DNDQ08",
+    "name": "Phú Hòa",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Phú Hòa"
+  },
+  "DNIPLA07": {
+    "site_id": "DNIPLA07",
+    "site_id_old": "DNTP24",
+    "name": "Phú Lâm 7",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Phú Lâm"
+  },
+  "DNTP24": {
+    "site_id": "DNIPLA07",
+    "site_id_old": "DNTP24",
+    "name": "Phú Lâm 7",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Phú Lâm"
+  },
+  "DNIDQU05": {
+    "site_id": "DNIDQU05",
+    "site_id_old": "DNDQ17",
+    "name": "Định Quán 5",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNDQ17": {
+    "site_id": "DNIDQU05",
+    "site_id_old": "DNDQ17",
+    "name": "Định Quán 5",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNIXHO20": {
+    "site_id": "DNIXHO20",
+    "site_id_old": "DNXL78",
+    "name": "Xuân Hòa 20",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Hòa"
+  },
+  "DNXL78": {
+    "site_id": "DNIXHO20",
+    "site_id_old": "DNXL78",
+    "name": "Xuân Hòa 20",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Hòa"
+  },
+  "DNITNH04": {
+    "site_id": "DNITNH04",
+    "site_id_old": "DNDQ29",
+    "name": "Thống Nhất 4",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Thống Nhất"
+  },
+  "DNDQ29": {
+    "site_id": "DNITNH04",
+    "site_id_old": "DNDQ29",
+    "name": "Thống Nhất 4",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Thống Nhất"
+  },
+  "DNIDQU17": {
+    "site_id": "DNIDQU17",
+    "site_id_old": "DNDQ50",
+    "name": "Định Quán 17",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNDQ50": {
+    "site_id": "DNIDQU17",
+    "site_id_old": "DNDQ50",
+    "name": "Định Quán 17",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNITLA01": {
+    "site_id": "DNITLA01",
+    "site_id_old": "DNTP07",
+    "name": "Tà Lài 1",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Tà Lài"
+  },
+  "DNTP07": {
+    "site_id": "DNITLA01",
+    "site_id_old": "DNTP07",
+    "name": "Tà Lài 1",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Tà Lài"
+  },
+  "DNIDGI15": {
+    "site_id": "DNIDGI15",
+    "site_id_old": "DNTN29",
+    "name": "Dầu Giây 15",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNTN29": {
+    "site_id": "DNIDGI15",
+    "site_id_old": "DNTN29",
+    "name": "Dầu Giây 15",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNITLA05": {
+    "site_id": "DNITLA05",
+    "site_id_old": "DNTP31",
+    "name": "Tà Lài 5",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Tà Lài"
+  },
+  "DNTP31": {
+    "site_id": "DNITLA05",
+    "site_id_old": "DNTP31",
+    "name": "Tà Lài 5",
+    "qlt": "Trần Hoài Nam",
+    "to_ql": "VT3",
+    "huyen": "Tân Phú",
+    "xa": "Xã Tà Lài"
+  },
+  "DNIDGI25": {
+    "site_id": "DNIDGI25",
+    "site_id_old": "DNTN51",
+    "name": "Dầu Giây 25",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNTN51": {
+    "site_id": "DNIDGI25",
+    "site_id_old": "DNTN51",
+    "name": "Dầu Giây 25",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNIBVI12": {
+    "site_id": "DNIBVI12",
+    "site_id_old": "DNLK72",
+    "name": "Bảo Vinh 12",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bảo Vinh"
+  },
+  "DNLK72": {
+    "site_id": "DNIBVI12",
+    "site_id_old": "DNLK72",
+    "name": "Bảo Vinh 12",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bảo Vinh"
+  },
+  "DNIXLO19": {
+    "site_id": "DNIXLO19",
+    "site_id_old": "DNXL59",
+    "name": "Xuân Lộc 19",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNXL59": {
+    "site_id": "DNIXLO19",
+    "site_id_old": "DNXL59",
+    "name": "Xuân Lộc 19",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNIXBA03": {
+    "site_id": "DNIXBA03",
+    "site_id_old": "DNDQ59",
+    "name": "Xuân Bắc 3",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Xuân Bắc"
+  },
+  "DNDQ59": {
+    "site_id": "DNIXBA03",
+    "site_id_old": "DNDQ59",
+    "name": "Xuân Bắc 3",
+    "qlt": "Lê Văn Tân",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Xuân Bắc"
+  },
+  "DNIXPH00": {
+    "site_id": "DNIXPH00",
+    "site_id_old": "DNXL00",
+    "name": "Xuân Phú",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Phú"
+  },
+  "DNXL00": {
+    "site_id": "DNIXPH00",
+    "site_id_old": "DNXL00",
+    "name": "Xuân Phú",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Xã Xuân Phú"
+  },
+  "DNIBVI13": {
+    "site_id": "DNIBVI13",
+    "site_id_old": "DNLK76",
+    "name": "Bảo Vinh 13",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bảo Vinh"
+  },
+  "DNLK76": {
+    "site_id": "DNIBVI13",
+    "site_id_old": "DNLK76",
+    "name": "Bảo Vinh 13",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bảo Vinh"
+  },
+  "DNIDQU13": {
+    "site_id": "DNIDQU13",
+    "site_id_old": "DNDQ38",
+    "name": "Định Quán 13",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNDQ38": {
+    "site_id": "DNIDQU13",
+    "site_id_old": "DNDQ38",
+    "name": "Định Quán 13",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNIXLO30": {
+    "site_id": "DNIXLO30",
+    "site_id_old": "DNXL83",
+    "name": "Xuân Lộc 30",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNXL83": {
+    "site_id": "DNIXLO30",
+    "site_id_old": "DNXL83",
+    "name": "Xuân Lộc 30",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNIDGI01": {
+    "site_id": "DNIDGI01",
+    "site_id_old": "DNTN58",
+    "name": "Dầu Giây 1",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNTN58": {
+    "site_id": "DNIDGI01",
+    "site_id_old": "DNTN58",
+    "name": "Dầu Giây 1",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Phường Dầu Giây"
+  },
+  "DNIXDO15": {
+    "site_id": "DNIXDO15",
+    "site_id_old": "DNCM52",
+    "name": "Xuân Đông 15",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Đông"
+  },
+  "DNCM52": {
+    "site_id": "DNIXDO15",
+    "site_id_old": "DNCM52",
+    "name": "Xuân Đông 15",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Đông"
+  },
+  "DNIDQU00": {
+    "site_id": "DNIDQU00",
+    "site_id_old": "DNDQ00",
+    "name": "Định Quán",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNDQ00": {
+    "site_id": "DNIDQU00",
+    "site_id_old": "DNDQ00",
+    "name": "Định Quán",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNIDQU15": {
+    "site_id": "DNIDQU15",
+    "site_id_old": "DNDQ45",
+    "name": "Định Quán 15",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNDQ45": {
+    "site_id": "DNIDQU15",
+    "site_id_old": "DNDQ45",
+    "name": "Định Quán 15",
+    "qlt": "Bùi Quang Thế",
+    "to_ql": "VT3",
+    "huyen": "Định Quán",
+    "xa": "Xã Định Quán"
+  },
+  "DNIXLA00": {
+    "site_id": "DNIXLA00",
+    "site_id_old": "DNLK13",
+    "name": "Xuân Lập",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Xuân Lập"
+  },
+  "DNLK13": {
+    "site_id": "DNIXLA00",
+    "site_id_old": "DNLK13",
+    "name": "Xuân Lập",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Xuân Lập"
+  },
+  "DNILKH10": {
+    "site_id": "DNILKH10",
+    "site_id_old": "DNLK35",
+    "name": "Long Khánh 10",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Long Khánh"
+  },
+  "DNLK35": {
+    "site_id": "DNILKH10",
+    "site_id_old": "DNLK35",
+    "name": "Long Khánh 10",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Long Khánh"
+  },
+  "DNIBVI06": {
+    "site_id": "DNIBVI06",
+    "site_id_old": "DNLK32",
+    "name": "Bảo Vinh 6",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bảo Vinh"
+  },
+  "DNLK32": {
+    "site_id": "DNIBVI06",
+    "site_id_old": "DNLK32",
+    "name": "Bảo Vinh 6",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Bảo Vinh"
+  },
+  "DNILKH09": {
+    "site_id": "DNILKH09",
+    "site_id_old": "DNLK34",
+    "name": "Long Khánh 9",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Long Khánh"
+  },
+  "DNLK34": {
+    "site_id": "DNILKH09",
+    "site_id_old": "DNLK34",
+    "name": "Long Khánh 9",
+    "qlt": "Lê Trần Vĩnh",
+    "to_ql": "VT3",
+    "huyen": "Long Khánh",
+    "xa": "Phường Long Khánh"
+  },
+  "DNIXDU00": {
+    "site_id": "DNIXDU00",
+    "site_id_old": "DNCM14",
+    "name": "Xuân Đường",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Đường"
+  },
+  "DNCM14": {
+    "site_id": "DNIXDU00",
+    "site_id_old": "DNCM14",
+    "name": "Xuân Đường",
+    "qlt": "Dương Minh Châu",
+    "to_ql": "VT3",
+    "huyen": "Cẩm Mỹ",
+    "xa": "Xã Xuân Đường"
+  },
+  "DNIGKI02": {
+    "site_id": "DNIGKI02",
+    "site_id_old": "DNTN05",
+    "name": "Gia Kiệm 2",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Xã Gia Kiệm"
+  },
+  "DNTN05": {
+    "site_id": "DNIGKI02",
+    "site_id_old": "DNTN05",
+    "name": "Gia Kiệm 2",
+    "qlt": "Lê Thành Thái",
+    "to_ql": "VT3",
+    "huyen": "Thống Nhất",
+    "xa": "Xã Gia Kiệm"
+  },
+  "DNIXLO02": {
+    "site_id": "DNIXLO02",
+    "site_id_old": "DNXL07",
+    "name": "Xuân Lộc 2",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "DNXL07": {
+    "site_id": "DNIXLO02",
+    "site_id_old": "DNXL07",
+    "name": "Xuân Lộc 2",
+    "qlt": "Trần Như Vinh",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  },
+  "ILA-DNIXLC": {
+    "site_id": "ILA-DNIXLC",
+    "site_id_old": "ILA-DNIXLC",
+    "name": "Xuân Lộc IXLC",
+    "qlt": "Trần Ngọc Khuân",
+    "to_ql": "VT3",
+    "huyen": "Xuân Lộc",
+    "xa": "Phường Xuân Lộc"
+  }
+}
