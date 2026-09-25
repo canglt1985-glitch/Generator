@@ -1026,26 +1026,35 @@ class SmartWScraper:
         summary_url = f'{BASE_URL}/smartw/import-rp-site-mll/data.htm?' + urlencode(summary_params)
         logger.info(f'SmartW Scrape MLL Cause Summary: {summary_url[:100]}...')
         try:
-            summary_raw = await self._fetch_alarm_data(summary_url, {})
-            if summary_raw and isinstance(summary_raw, list):
-                for s_item in summary_raw:
-                    t_name = str(s_item.get('to_vt') or s_item.get('team') or s_item.get('tenTo') or s_item.get('dept') or s_item.get('trungTam') or '').upper()
-                    chua_du = int(s_item.get('chuaDuNguyenNhan') or s_item.get('chua_du_nguyen_nhan') or s_item.get('chuaDuNn') or 0)
-                    chua_xd = int(s_item.get('chuaXacDinhNguyenNhan') or s_item.get('chua_xac_dinh_nguyen_nhan') or 0)
+            summary_resp = await self._page.evaluate('''async (url) => {
+                try {
+                    const res = await fetch(url, { credentials: "include" });
+                    if (!res.ok) return { ok: false, status: res.status };
+                    const text = await res.text();
+                    return { ok: true, data: text };
+                } catch(e) { return { ok: false, error: e.message }; }
+            }''', summary_url)
+            if summary_resp.get('ok') and summary_resp.get('data'):
+                summary_raw = json.loads(summary_resp['data'])
+                if summary_raw and isinstance(summary_raw, list):
+                    for s_item in summary_raw:
+                        t_name = str(s_item.get('to_vt') or s_item.get('team') or s_item.get('tenTo') or s_item.get('dept') or s_item.get('trungTam') or '').upper()
+                        chua_du = int(s_item.get('chuaDuNguyenNhan') or s_item.get('chua_du_nguyen_nhan') or s_item.get('chuaDuNn') or 0)
+                        chua_xd = int(s_item.get('chuaXacDinhNguyenNhan') or s_item.get('chua_xac_dinh_nguyen_nhan') or 0)
 
-                    is_match_tvt3 = ('TVT3' in t_name or 'TVT 3' in t_name or 'DONG_NAI_PVT_TVT3' in t_name or 'ĐỒNG NAI 3' in t_name or len(summary_raw) == 1)
-                    if is_match_tvt3 and chua_du == 0 and chua_xd == 0:
-                        logger.info(f'SmartW MLL Cause Summary: Official SmartW report shows 0 missing causes for TVT3! ({s_item})')
-                        res = {
-                            'total_scanned': int(s_item.get('tong') or s_item.get('total') or 0),
-                            'ended_scanned': int(s_item.get('tong') or s_item.get('total') or 0),
-                            'missing_count': 0,
-                            'missing_records': [],
-                            'date_range': f'{sdate_start.strftime("%d/%m/%Y")} -> {edate_end.strftime("%d/%m/%Y")}',
-                            'scraped_at': datetime.now().isoformat()
-                        }
-                        self._save_json(res, 'mll_cause_missing.json')
-                        return res
+                        is_match_tvt3 = ('TVT3' in t_name or 'TVT 3' in t_name or 'DONG_NAI_PVT_TVT3' in t_name or 'ĐỒNG NAI 3' in t_name or len(summary_raw) == 1)
+                        if is_match_tvt3 and chua_du == 0 and chua_xd == 0:
+                            logger.info(f'SmartW MLL Cause Summary: Official SmartW report shows 0 missing causes for TVT3! ({s_item})')
+                            res = {
+                                'total_scanned': int(s_item.get('tong') or s_item.get('total') or 0),
+                                'ended_scanned': int(s_item.get('tong') or s_item.get('total') or 0),
+                                'missing_count': 0,
+                                'missing_records': [],
+                                'date_range': f'{sdate_start.strftime("%d/%m/%Y")} -> {edate_end.strftime("%d/%m/%Y")}',
+                                'scraped_at': datetime.now().isoformat()
+                            }
+                            self._save_json(res, 'mll_cause_missing.json')
+                            return res
         except Exception as se:
             logger.warning(f'SmartW MLL Cause Summary check error: {se}')
 
@@ -1056,9 +1065,18 @@ class SmartWScraper:
 
         records = []
         try:
-            raw_data = await self._fetch_alarm_data(data_url, {})
-            if isinstance(raw_data, list) and raw_data:
-                records = raw_data
+            detail_resp = await self._page.evaluate('''async (url) => {
+                try {
+                    const res = await fetch(url, { credentials: "include" });
+                    if (!res.ok) return { ok: false, status: res.status };
+                    const text = await res.text();
+                    return { ok: true, data: text };
+                } catch(e) { return { ok: false, error: e.message }; }
+            }''', data_url)
+            if detail_resp.get('ok') and detail_resp.get('data'):
+                parsed_json = json.loads(detail_resp['data'])
+                if isinstance(parsed_json, list):
+                    records = parsed_json
         except Exception as e:
             logger.warning(f'SmartW MLL Cause JSON fetch failed: {e}')
 

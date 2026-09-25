@@ -2760,6 +2760,15 @@ def run_mfd_import_poll(target_date: str = None):
         except Exception as fb_err:
             logger.warning(f'SmartW Worker: Fallback MPD sync failed: {fb_err}')
 
+        # Step 5: Merge overlapping & contiguous runs (keep longer or connect continuously)
+        try:
+            from smartw.mfd_import import resolve_overlapping_logs
+            merged = resolve_overlapping_logs()
+            if merged:
+                logger.info(f'SmartW Worker: Resolved & merged {merged} overlapping/contiguous generator logs')
+        except Exception as merge_err:
+            logger.warning(f'SmartW Worker: Overlap resolution failed: {merge_err}')
+
         status['last_mfd_import'] = datetime.now().isoformat()
 
     except Exception as e:

@@ -466,83 +466,172 @@ def import_mfd_data(raw_data: list[dict]) -> dict:
 
     return result
 
-def resolve_overlapping_logs(raw_data: list[dict]) -> int:
+def resolve_overlapping_logs(raw_data: list[dict] = None, target_dates: list[str] = None) -> int:
+    """
+    Resolve overlapping and contiguous generator runs on Supabase V2:
+    1. If a log is enclosed in another log on the same site & date:
+       Keep the longer run ('lấy cái nào chạy nhiều hơn').
+    2. If logs overlap partially or are contiguous/adjacent (gap <= 15 minutes):
+       Merge them into a single continuous run ('nối thời gian lại cho liên tục'):
+       - new_start = min(start_A, start_B)
+       - new_end = max(end_A, end_B)
+       - Recalculate duration, fuel consumption and cost based on station quota and daily fuel price.
+       - Delete redundant/absorbed log from database.
+    """
     if not supabase:
         return 0
-        
+
     affected_dates = set()
-    for record in raw_data:
-        start_dt = parse_smartw_date(record.get('sdate'))
-        if start_dt:
-            affected_dates.add(start_dt.strftime('%Y-%m-%d'))
-            
+    if target_dates:
+        affected_dates.update(target_dates)
+    if raw_data:
+        for record in raw_data:
+            start_dt = parse_smartw_date(record.get('sdate'))
+            if start_dt:
+                affected_dates.add(start_dt.strftime('%Y-%m-%d'))
+
     if not affected_dates:
-        return 0
-        
-    deleted_count = 0
+        # Default to checking past 7 days
+        for d in range(7):
+            affected_dates.add((datetime.now() - timedelta(days=d)).strftime('%Y-%m-%d'))
+
+    merged_count = 0
     try:
         for target_date in affected_dates:
             res = supabase.table("generator_logs").select("*").eq("date", target_date).execute()
             logs = res.data or []
-            
+            if len(logs) < 2:
+                continue
+
             by_station = {}
             for log in logs:
                 details = log.get("run_details") or {}
                 gio_bd = details.get("gio_bat_dau")
+                gio_kt = details.get("gio_ket_thuc")
                 duration = details.get("thoi_gian_hoat_dong")
-                
-                if not gio_bd or duration is None:
+
+                if not gio_bd:
                     continue
-                    
+
                 site_id = log.get("site_id")
-                if site_id not in by_station:
-                    by_station[site_id] = []
-                    
+                if not site_id:
+                    continue
+
                 try:
                     start_dt = datetime.strptime(f"{target_date} {gio_bd}", "%Y-%m-%d %H:%M")
-                    duration_hours = float(duration)
-                    end_dt = start_dt + timedelta(hours=duration_hours)
-                    
-                    by_station[site_id].append({
+                    if gio_kt:
+                        end_dt = datetime.strptime(f"{target_date} {gio_kt}", "%Y-%m-%d %H:%M")
+                        if end_dt < start_dt:
+                            end_dt += timedelta(days=1)
+                    else:
+                        duration_hours = float(duration) if duration is not None else 1.0
+                        end_dt = start_dt + timedelta(hours=duration_hours)
+
+                    duration_hours = round((end_dt - start_dt).total_seconds() / 3600.0, 2)
+                    by_station.setdefault(site_id, []).append({
                         'log': log,
                         'start_dt': start_dt,
                         'end_dt': end_dt,
                         'duration': duration_hours,
-                        'alarm_id': details.get("smartw_alarm_id")
+                        'alarm_id': details.get("smartw_alarm_id"),
+                        'status': details.get("status", "pending")
                     })
                 except Exception as ex:
-                    logger.warning(f"Error parsing log overlap times: {ex}")
-                    
+                    logger.warning(f"Error parsing log overlap times for {site_id}: {ex}")
+
             for site_id, station_logs in by_station.items():
                 if len(station_logs) < 2:
                     continue
-                    
-                station_logs.sort(key=lambda x: x['duration'], reverse=True)
-                kept_logs = []
-                
-                for item in station_logs:
-                    is_overlapping = False
-                    for kept in kept_logs:
-                        overlap_start = max(item['start_dt'], kept['start_dt'])
-                        overlap_end = min(item['end_dt'], kept['end_dt'])
-                        if overlap_start < overlap_end:
-                            is_overlapping = True
-                            break
-                            
-                    if is_overlapping:
-                        logger.info(f"V2 Overlap: Deleting log {item['log']['gen_log_id']} for {site_id}")
-                        supabase.table("generator_logs").delete().eq("gen_log_id", item['log']['gen_log_id']).execute()
-                        deleted_count += 1
+
+                # Sort chronologically by start time
+                station_logs.sort(key=lambda x: x['start_dt'])
+
+                i = 0
+                while i < len(station_logs) - 1:
+                    cur = station_logs[i]
+                    nxt = station_logs[i + 1]
+
+                    # Gap in minutes between end of cur and start of nxt
+                    gap_min = (nxt['start_dt'] - cur['end_dt']).total_seconds() / 60.0
+
+                    # Condition to merge: overlap (gap < 0) or contiguous within 15 minutes (0 <= gap <= 15)
+                    # or identical alarm_id
+                    is_overlap = gap_min <= 15.0
+                    is_same_alarm = bool(cur['alarm_id'] and cur['alarm_id'] == nxt['alarm_id'])
+
+                    if is_overlap or is_same_alarm:
+                        # 1. Enclosed case: one range completely covers the other
+                        # 2. Partial overlap or adjacent: merge start to min, end to max
+                        merged_start = min(cur['start_dt'], nxt['start_dt'])
+                        merged_end = max(cur['end_dt'], nxt['end_dt'])
+                        merged_duration = round((merged_end - merged_start).total_seconds() / 3600.0, 2)
+
+                        # Determine primary surviving log (prefer 'approved' status, then longer duration)
+                        if cur['status'] == 'approved' and nxt['status'] != 'approved':
+                            surviving = cur
+                            absorbed = nxt
+                        elif nxt['status'] == 'approved' and cur['status'] != 'approved':
+                            surviving = nxt
+                            absorbed = cur
+                        else:
+                            surviving = cur if cur['duration'] >= nxt['duration'] else nxt
+                            absorbed = nxt if surviving is cur else cur
+
+                        s_log = surviving['log']
+                        a_log = absorbed['log']
+                        s_details = dict(s_log.get("run_details") or {})
+                        a_details = a_log.get("run_details") or {}
+
+                        # Recalculate specs & costs
+                        dinh_muc_qc = float(s_details.get("dinh_muc_quy_chuan") or s_details.get("dinh_muc") or 2.3)
+                        dinh_muc_tt = float(s_details.get("dinh_muc_thuc_te") or dinh_muc_qc)
+                        don_gia = float(s_details.get("don_gia") or 27540)
+
+                        new_start_str = merged_start.strftime("%H:%M")
+                        new_end_str = merged_end.strftime("%H:%M")
+
+                        s_details["gio_bat_dau"] = new_start_str
+                        s_details["gio_ket_thuc"] = new_end_str
+                        s_details["thoi_gian_hoat_dong"] = merged_duration
+                        s_details["nhien_lieu_tieu_hao"] = round(merged_duration * dinh_muc_qc, 2)
+                        s_details["nhien_lieu_tieu_hao_thuc_te"] = round(merged_duration * dinh_muc_tt, 2)
+                        s_details["thanh_tien"] = round(s_details["nhien_lieu_tieu_hao"] * don_gia)
+
+                        # Check overnight
+                        if merged_end.date() > merged_start.date():
+                            if "(Chạy qua đêm)" not in (s_details.get("ghi_chu") or ""):
+                                s_details["ghi_chu"] = f"(Chạy qua đêm) {s_details.get('ghi_chu') or ''}".strip()
+
+                        # Merge note
+                        cur_note = s_details.get("ghi_chu") or ""
+                        abs_note = a_details.get("ghi_chu") or ""
+                        if abs_note and abs_note not in cur_note:
+                            cur_note = f"{cur_note} | {abs_note}".strip(' |')
+                        if "(Nối liên tục)" not in cur_note:
+                            cur_note = f"{cur_note} (Nối liên tục {new_start_str}-{new_end_str})".strip()
+                        s_details["ghi_chu"] = cur_note
+
+                        logger.info(f"V2 Overlap/Contiguous Merge: {site_id} on {target_date} -> {new_start_str}-{new_end_str} ({merged_duration}h). Absorbed {a_log['gen_log_id']}")
+
+                        # Update surviving log on Supabase
+                        supabase.table("generator_logs").update({
+                            "run_details": s_details
+                        }).eq("gen_log_id", s_log["gen_log_id"]).execute()
+
+                        # Delete absorbed redundant log from Supabase
+                        supabase.table("generator_logs").delete().eq("gen_log_id", a_log["gen_log_id"]).execute()
+                        merged_count += 1
+
+                        # Update cur node in memory and continue chaining
+                        cur['start_dt'] = merged_start
+                        cur['end_dt'] = merged_end
+                        cur['duration'] = merged_duration
+                        cur['log']['run_details'] = s_details
+                        cur['status'] = s_details.get("status", "pending")
+                        station_logs.pop(i + 1)
                     else:
-                        if item['alarm_id']:
-                            dup_alarm = [k for k in kept_logs if k['alarm_id'] == item['alarm_id']]
-                            if dup_alarm:
-                                logger.info(f"V2 Alarm Duplicate: Deleting log {item['log']['gen_log_id']}")
-                                supabase.table("generator_logs").delete().eq("gen_log_id", item['log']['gen_log_id']).execute()
-                                deleted_count += 1
-                                continue
-                        kept_logs.append(item)
+                        i += 1
     except Exception as e:
         logger.error(f"Failed to resolve overlaps on V2 database: {e}")
-        
-    return deleted_count
+
+    return merged_count
