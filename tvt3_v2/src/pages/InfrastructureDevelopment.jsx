@@ -333,6 +333,11 @@ export default function InfrastructureDevelopment() {
   // Calculate comprehensive CSHT stats (filtered to TVT3 scope)
   const tvt3ScopeProjects = projects.filter(proj => {
     return tvt3Districts.includes(proj.district) ||
+      proj.district === 'TVT3' ||
+      proj.region === 'TVT3' ||
+      proj.planning_id_new?.startsWith('26DNa') ||
+      proj.planning_id_new?.startsWith('DNIXTC') ||
+      proj.planning_id_new?.startsWith('QLCL_') ||
       proj.planning_id_new?.startsWith('TVT3_') ||
       proj.planning_id_new?.startsWith('VKD3_') ||
       proj.planning_id_new?.startsWith('VKD4_') ||
@@ -418,6 +423,11 @@ export default function InfrastructureDevelopment() {
   // Filtered projects (strict TVT3 only)
   const filteredProjects = projects.filter(proj => {
     const isTv3Site = tvt3Districts.includes(proj.district) ||
+      proj.district === 'TVT3' ||
+      proj.region === 'TVT3' ||
+      proj.planning_id_new?.startsWith('26DNa') ||
+      proj.planning_id_new?.startsWith('DNIXTC') ||
+      proj.planning_id_new?.startsWith('QLCL_') ||
       proj.planning_id_new?.startsWith('TVT3_') ||
       proj.planning_id_new?.startsWith('VKD3_') ||
       proj.planning_id_new?.startsWith('VKD4_') ||
