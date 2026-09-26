@@ -382,7 +382,7 @@ export default function VhktRan() {
   const generateMessageText = (section = 'all') => {
     const lines = [];
 
-    if (section === 'all' || section === 'md') {
+    if ((section === 'all' && groupedMd.length > 0) || section === 'md') {
       lines.push('⚡ MAC:');
       if (groupedMd.length === 0) {
         lines.push('  • (Không có)');
@@ -392,7 +392,7 @@ export default function VhktRan() {
       lines.push('');
     }
 
-    if (section === 'all' || section === 'mpd') {
+    if ((section === 'all' && groupedMpd.length > 0) || section === 'mpd') {
       lines.push('🔋 GEN:');
       if (groupedMpd.length === 0) {
         lines.push('  • (Không có)');
@@ -402,7 +402,7 @@ export default function VhktRan() {
       lines.push('');
     }
 
-    if (section === 'all' || section === 'mll') {
+    if ((section === 'all' && groupedMll.length > 0) || section === 'mll') {
       lines.push('📵 MLL:');
       if (groupedMll.length === 0) {
         lines.push('  • (Không có)');
@@ -412,16 +412,18 @@ export default function VhktRan() {
       lines.push('');
     }
 
-    if (section === 'all' || section === 'mll_cell') {
-      if (groupedCell.length > 0 || section === 'mll_cell') {
-        lines.push('📡 CELL OFF:');
-        if (groupedCell.length === 0) {
-          lines.push('  • (Không có)');
-        } else {
-          groupedCell.forEach(a => lines.push(`  ${formatCellOffLine(a)}`));
-        }
-        lines.push('');
+    if ((section === 'all' && groupedCell.length > 0) || section === 'mll_cell') {
+      lines.push('📡 CELL OFF:');
+      if (groupedCell.length === 0) {
+        lines.push('  • (Không có)');
+      } else {
+        groupedCell.forEach(a => lines.push(`  ${formatCellOffLine(a)}`));
       }
+      lines.push('');
+    }
+
+    if (section === 'all' && lines.length === 0) {
+      return '✅ Hiện tại không có cảnh báo nào!';
     }
 
     return lines.join('\n').trim();
@@ -765,11 +767,27 @@ export default function VhktRan() {
               <div>
                 {/* Mobile View: High density message layout */}
                 <div className="block sm:hidden p-3 bg-slate-50 space-y-3">
-                  <MobileMessageCard title="MAC" icon="⚡" alarms={groupedMd} sectionKey="md" />
-                  <MobileMessageCard title="GEN" icon="🔋" alarms={groupedMpd} sectionKey="mpd" />
-                  <MobileMessageCard title="MLL" icon="📵" alarms={groupedMll} sectionKey="mll" />
-                  {groupedCell.length > 0 && (
-                    <MobileMessageCard title="CELL OFF" icon="📡" alarms={groupedCell} sectionKey="mll_cell" />
+                  {totalActiveCount === 0 ? (
+                    <div className="bg-white rounded-2xl p-6 text-center text-slate-500 border border-slate-200 shadow-2xs font-mono">
+                      <span className="text-2xl mb-1.5 block">✅</span>
+                      <p className="font-bold text-slate-800 text-sm">Hiện tại không có cảnh báo nào</p>
+                      <p className="text-xs text-slate-400 mt-1">Hệ thống mạng đang vận hành ổn định</p>
+                    </div>
+                  ) : (
+                    <>
+                      {groupedMd.length > 0 && (
+                        <MobileMessageCard title="MAC" icon="⚡" alarms={groupedMd} sectionKey="md" />
+                      )}
+                      {groupedMpd.length > 0 && (
+                        <MobileMessageCard title="GEN" icon="🔋" alarms={groupedMpd} sectionKey="mpd" />
+                      )}
+                      {groupedMll.length > 0 && (
+                        <MobileMessageCard title="MLL" icon="📵" alarms={groupedMll} sectionKey="mll" />
+                      )}
+                      {groupedCell.length > 0 && (
+                        <MobileMessageCard title="CELL OFF" icon="📡" alarms={groupedCell} sectionKey="mll_cell" />
+                      )}
+                    </>
                   )}
                 </div>
 
@@ -803,15 +821,19 @@ export default function VhktRan() {
                     </pre>
                   </div>
 
-                  {/* 3-column dashboard */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <MobileMessageCard title="MAC" icon="⚡" alarms={groupedMd} sectionKey="md" />
-                    <MobileMessageCard title="GEN" icon="🔋" alarms={groupedMpd} sectionKey="mpd" />
-                    <MobileMessageCard title="MLL" icon="📵" alarms={groupedMll} sectionKey="mll" />
-                  </div>
-                  {groupedCell.length > 0 && (
-                    <div>
-                      <MobileMessageCard title="CELL OFF" icon="📡" alarms={groupedCell} sectionKey="mll_cell" />
+                  {/* Active cards grid: chỉ hiển thị các mục có cảnh báo */}
+                  {totalActiveCount === 0 ? (
+                    <div className="bg-white rounded-2xl p-8 text-center text-slate-500 border border-slate-200 shadow-sm font-mono">
+                      <span className="text-3xl mb-2 block">✅</span>
+                      <p className="font-bold text-slate-800 text-base">Hiện tại không có cảnh báo nào</p>
+                      <p className="text-xs text-slate-400 mt-1">Hệ thống mạng đang vận hành ổn định</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {groupedMd.length > 0 && <MobileMessageCard title="MAC" icon="⚡" alarms={groupedMd} sectionKey="md" />}
+                      {groupedMpd.length > 0 && <MobileMessageCard title="GEN" icon="🔋" alarms={groupedMpd} sectionKey="mpd" />}
+                      {groupedMll.length > 0 && <MobileMessageCard title="MLL" icon="📵" alarms={groupedMll} sectionKey="mll" />}
+                      {groupedCell.length > 0 && <MobileMessageCard title="CELL OFF" icon="📡" alarms={groupedCell} sectionKey="mll_cell" />}
                     </div>
                   )}
                 </div>
