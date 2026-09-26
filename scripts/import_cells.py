@@ -155,10 +155,9 @@ for i in range(0, total_records, batch_size):
 
 print("🎉 Upsert to Supabase completed successfully!")
 
-# Write site_cell_count.json to backend/data/ and web-app/data/
+# Write site_cell_count.json to backend/data/
 json_paths = [
-    os.path.join(project_dir, 'backend', 'data', 'site_cell_count.json'),
-    os.path.join(project_dir, 'web-app', 'data', 'site_cell_count.json')
+    os.path.join(project_dir, 'backend', 'data', 'site_cell_count.json')
 ]
 
 for p in json_paths:
