@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Radio, Zap, BarChart3, RefreshCw, Smartphone, CheckCircle, AlertTriangle, Search, X, Sparkles, Filter } from 'lucide-react';
+import { Radio, RefreshCw, Search, X, Copy, Check } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 
 export default function VhktRan() {
-  const [activeTab, setActiveTab] = useState('md');
+  const [activeTab, setActiveTab] = useState('all');
   const [alarms, setAlarms] = useState([]);
   const [siteMap, setSiteMap] = useState({});
   const [loading, setLoading] = useState(true);
@@ -13,7 +13,7 @@ export default function VhktRan() {
   const [vhktScrapedAt, setVhktScrapedAt] = useState('');
   const [lastFetchTime, setLastFetchTime] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [techFilter, setTechFilter] = useState('ALL'); // 'ALL', 'ERA_ALL', '4G', '5G', 'SRAN'
+  const [copiedSection, setCopiedSection] = useState('');
 
   // Fetch site id mapping dynamically
   async function fetchSiteMap() {
@@ -36,18 +36,13 @@ export default function VhktRan() {
     }
   }
 
-  // Fetch alarms from Supabase (both ACTIVE and CLEARED)
+  // Fetch only ACTIVE alarms from Supabase (cleared alarms removed)
   async function fetchAlarms() {
     try {
-      // Fetch only active alarms and recently cleared alarms (last 24 hours) to avoid Supabase 1000-row limit
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      const yesterdayStr = yesterday.toISOString();
-
       const { data } = await supabase
         .from('smartw_alarms')
         .select('*')
-        .or(`status.eq.ACTIVE,edate.gte.${yesterdayStr}`);
+        .eq('status', 'ACTIVE');
       if (data) {
         setAlarms(data);
       }
@@ -122,16 +117,8 @@ export default function VhktRan() {
     };
   }, []);
 
-  // Filter alarms: keep ACTIVE ones, and CLEARED ones that ended within 2 hours
-  const filteredAlarms = alarms.filter(a => {
-    if (a.status === 'ACTIVE') return true;
-    if (a.status === 'CLEARED' && a.edate) {
-      const clearTime = new Date(a.edate);
-      const diffHours = (new Date() - clearTime) / (1000 * 60 * 60);
-      return diffHours <= 2; // within 2 hours
-    }
-    return false;
-  });
+  // Filter alarms: keep only ACTIVE alarms
+  const filteredAlarms = alarms.filter(a => a.status === 'ACTIVE');
 
   const mdActive = filteredAlarms.filter(a => a.alarm_type === 'md');
   const mpdActive = filteredAlarms.filter(a => a.alarm_type === 'mpd');
@@ -183,18 +170,18 @@ export default function VhktRan() {
     
     // Look up in siteMap: check fullSite first, then baseSite
     const mapped = siteMap[fullSite] || (baseSite ? siteMap[baseSite] : '');
-    let newId = fullSite;
+    let newId = baseSite || fullSite;
     let oldId = '';
 
     if (mapped && mapped !== fullSite && mapped !== baseSite) {
-      if (mapped.length <= 6 && fullSite.length >= 7) {
-        newId = fullSite;
+      if (mapped.length <= 6 && (fullSite.length >= 7 || (baseSite && baseSite.length >= 7))) {
+        newId = baseSite || fullSite;
         oldId = mapped;
-      } else if (fullSite.length <= 6 && mapped.length >= 7) {
+      } else if ((fullSite.length <= 6 || (baseSite && baseSite.length <= 6)) && mapped.length >= 7) {
         newId = mapped;
-        oldId = fullSite;
+        oldId = baseSite || fullSite;
       } else {
-        newId = fullSite;
+        newId = baseSite || fullSite;
         oldId = mapped;
       }
     }
@@ -202,9 +189,97 @@ export default function VhktRan() {
     return { newId, oldId, tech, techLabel, badgeColor, fullSite, baseSite };
   }
 
-  // Cross-check: check if MĐ site has active MPĐ running (matching both full site, base site, and old ID)
+  // Extract clean network label (4G, 3G, 5G, SRAN)
+  function getAlarmNetwork(alarm) {
+    if (!alarm) return '';
+    const rawNet = String(alarm.network || alarm.ne_type || '').toUpperCase().trim();
+    if (rawNet.includes('5G') || rawNet.includes('NR')) return '5G';
+    if (rawNet.includes('4G') || rawNet.includes('LTE')) return '4G';
+    if (rawNet.includes('3G') || rawNet.includes('WCDMA')) return '3G';
+    if (rawNet.includes('2G') || rawNet.includes('GSM')) return '2G';
+    
+    // Fallback to site suffix tech
+    const site = String(alarm.site || '').toUpperCase().trim();
+    if (site.endsWith('UL')) return 'SRAN';
+    if (site.endsWith('N')) return '5G';
+    if (site.endsWith('L')) return '4G';
+    
+    return rawNet || '';
+  }
+
+  // Format date helper for message view (DD/MM HH:mm)
+  function formatMessageDate(isoString) {
+    if (!isoString) return '--/-- --:--';
+    const d = new Date(isoString);
+    if (isNaN(d.getTime())) return '--/-- --:--';
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    return `${day}/${month} ${hours}:${minutes}`;
+  }
+
+  // Format line as user specified: • DNIDQU02 (DNDQ11) [4G] - 26/09 08:17
+  function formatAlarmLine(alarm) {
+    if (!alarm) return '';
+    const { newId, oldId } = getSiteDetails(alarm.site);
+    const net = getAlarmNetwork(alarm);
+    const dateStr = formatMessageDate(alarm.sdate);
+    const oldStr = oldId && oldId !== newId ? ` (${oldId})` : '';
+    const netStr = net ? ` [${net}]` : '';
+    const cellStr = alarm.cellid ? ` (${alarm.cellid})` : '';
+    return `• ${newId}${oldStr}${netStr}${cellStr} - ${dateStr}`;
+  }
+
+  // Group alarms by unique station (keep earliest start time)
+  function groupAlarmsForSection(alarmList) {
+    const map = new Map();
+    alarmList.forEach(a => {
+      const { newId, baseSite, fullSite } = getSiteDetails(a.site);
+      const key = (baseSite || newId || fullSite || '').toUpperCase();
+      if (!key) return;
+
+      if (!map.has(key)) {
+        map.set(key, a);
+      } else {
+        const existing = map.get(key);
+        const existingTime = existing.sdate ? new Date(existing.sdate).getTime() : Infinity;
+        const curTime = a.sdate ? new Date(a.sdate).getTime() : Infinity;
+        if (curTime < existingTime) {
+          map.set(key, a);
+        }
+      }
+    });
+
+    return Array.from(map.values()).sort((a, b) => {
+      const timeA = a.sdate ? new Date(a.sdate).getTime() : 0;
+      const timeB = b.sdate ? new Date(b.sdate).getTime() : 0;
+      return timeB - timeA;
+    });
+  }
+
+  // Group cell alarms by site + cell
+  function groupCellAlarms(alarmList) {
+    const map = new Map();
+    alarmList.forEach(a => {
+      const { newId, baseSite, fullSite } = getSiteDetails(a.site);
+      const siteKey = (baseSite || newId || fullSite || '').toUpperCase();
+      const cellKey = String(a.cellid || '').toUpperCase().trim();
+      const key = `${siteKey}_${cellKey}`;
+      if (!map.has(key)) {
+        map.set(key, a);
+      }
+    });
+    return Array.from(map.values()).sort((a, b) => {
+      const timeA = a.sdate ? new Date(a.sdate).getTime() : 0;
+      const timeB = b.sdate ? new Date(b.sdate).getTime() : 0;
+      return timeB - timeA;
+    });
+  }
+
+  // Cross-check: check if MĐ site has active MPĐ running
   const activeMpdSites = new Set();
-  mpdActive.filter(a => a.status === 'ACTIVE').forEach(a => {
+  mpdActive.forEach(a => {
     const raw = String(a.site || '').trim().toUpperCase();
     if (raw) {
       const { fullSite, baseSite, oldId } = getSiteDetails(raw);
@@ -220,23 +295,145 @@ export default function VhktRan() {
     return activeMpdSites.has(fullSite) || (baseSite && activeMpdSites.has(baseSite)) || (oldId && activeMpdSites.has(oldId));
   };
 
-  // Card counts (active only)
-  const mdCount = new Set(mdActive.filter(a => a.status === 'ACTIVE').map(a => String(a.site || '').trim().toUpperCase()).filter(Boolean)).size;
-  const mpdCount = mpdActive.filter(a => a.status === 'ACTIVE').length;
-  const mllCount = mllActive.filter(a => a.status === 'ACTIVE').length;
-  const cellCount = cellActive.filter(a => a.status === 'ACTIVE').length;
+  // Filter helper across search query
+  function matchesFilter(site, extraSearchFields = []) {
+    if (!searchQuery.trim()) return true;
+    const { fullSite, baseSite, oldId } = getSiteDetails(site);
+    const q = searchQuery.trim().toUpperCase();
+    const matchSite = (fullSite && fullSite.includes(q)) || 
+                      (baseSite && baseSite.includes(q)) || 
+                      (oldId && String(oldId).toUpperCase().includes(q));
+    if (matchSite) return true;
+    return extraSearchFields.some(field => String(field || '').toUpperCase().includes(q));
+  }
 
-  // Sort function: ACTIVE first, then newest first (sdate DESC)
+  // Sort function: newest first (sdate DESC)
   const sortAlarms = (list) => {
     return [...list].sort((a, b) => {
-      if (a.status !== b.status) return a.status === 'ACTIVE' ? -1 : 1;
       const dateA = a.sdate ? new Date(a.sdate) : 0;
       const dateB = b.sdate ? new Date(b.sdate) : 0;
       return dateB - dateA;
     });
   };
 
-  // Helper to render site labels stacked with clear tech badge and prominent, large, bold old site ID
+  // Filtered lists for each tab
+  const displayedMd = sortAlarms(mdActive.filter(a => matchesFilter(a.site, [a.alarm_name, a.network])));
+  const displayedMpd = sortAlarms(mpdActive.filter(a => matchesFilter(a.site, [a.alarm_name, a.ne_type])));
+  const displayedMll = sortAlarms(mllActive.filter(a => matchesFilter(a.site, [a.network, a.vendor])));
+  const displayedCell = sortAlarms(cellActive.filter(a => matchesFilter(a.site, [a.cellid, a.network, a.alarm_name, a.vendor])));
+  const displayedVhkt = [...vhktData]
+    .filter(r => matchesFilter(r.tram))
+    .sort((a, b) => (b.md_so_lan || 0) - (a.md_so_lan || 0));
+  const displayedPakh = activePakhList.filter(p =>
+    matchesFilter(p.ma_tram || p.maTram, [
+      p.so_thue_bao || p.soThueBao,
+      p.noi_dung_phan_anh || p.noiDungPhanAnh,
+      p.phuong_xa || p.phuongXa,
+      p.tinh_thanh_pho || p.tinhThanhPho
+    ])
+  );
+
+  // Grouped active alarms for message style
+  const groupedMd = groupAlarmsForSection(displayedMd);
+  const groupedMpd = groupAlarmsForSection(displayedMpd);
+  const groupedMll = groupAlarmsForSection(displayedMll);
+  const groupedCell = groupCellAlarms(displayedCell);
+
+  // Card counts (unique active sites)
+  const mdCount = groupedMd.length;
+  const mpdCount = groupedMpd.length;
+  const mllCount = groupedMll.length;
+  const cellCount = groupedCell.length;
+  const totalActiveCount = mdCount + mpdCount + mllCount + cellCount;
+
+  // Generate plain text message matching user format
+  const generateMessageText = (section = 'all') => {
+    const lines = [];
+
+    if (section === 'all' || section === 'md') {
+      lines.push('⚡ MAC:');
+      if (groupedMd.length === 0) {
+        lines.push('  • (Không có)');
+      } else {
+        groupedMd.forEach(a => lines.push(`  ${formatAlarmLine(a)}`));
+      }
+      lines.push('');
+    }
+
+    if (section === 'all' || section === 'mpd') {
+      lines.push('🔋 GEN:');
+      if (groupedMpd.length === 0) {
+        lines.push('  • (Không có)');
+      } else {
+        groupedMpd.forEach(a => lines.push(`  ${formatAlarmLine(a)}`));
+      }
+      lines.push('');
+    }
+
+    if (section === 'all' || section === 'mll') {
+      lines.push('📵 MLL:');
+      if (groupedMll.length === 0) {
+        lines.push('  • (Không có)');
+      } else {
+        groupedMll.forEach(a => lines.push(`  ${formatAlarmLine(a)}`));
+      }
+      lines.push('');
+    }
+
+    if (section === 'all' || section === 'mll_cell') {
+      if (groupedCell.length > 0 || section === 'mll_cell') {
+        lines.push('📡 CELL OFF:');
+        if (groupedCell.length === 0) {
+          lines.push('  • (Không có)');
+        } else {
+          groupedCell.forEach(a => lines.push(`  ${formatAlarmLine(a)}`));
+        }
+        lines.push('');
+      }
+    }
+
+    return lines.join('\n').trim();
+  };
+
+  // Copy to clipboard handler
+  const handleCopy = async (sectionKey) => {
+    const text = generateMessageText(sectionKey);
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      setCopiedSection(sectionKey);
+      setTimeout(() => setCopiedSection(''), 2200);
+    } catch (err) {
+      console.error('Failed to copy message:', err);
+    }
+  };
+
+  // Format full date time for tables (dd/mm/yyyy hh:mm:ss)
+  function formatDateTime(isoString) {
+    if (!isoString) return '--';
+    const d = new Date(isoString);
+    if (isNaN(d)) return '--';
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    const seconds = String(d.getSeconds()).padStart(2, '0');
+    return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+  }
+
+  // Render site label for desktop table
   function renderSiteLabel(site) {
     if (!site) return <span className="font-mono text-gray-400">--</span>;
     const { newId, oldId, tech, techLabel, badgeColor } = getSiteDetails(site);
@@ -262,117 +459,77 @@ export default function VhktRan() {
     );
   }
 
-  // Filter helper across search query & tech filters
-  function matchesFilter(site, extraSearchFields = []) {
-    const { fullSite, baseSite, oldId, tech } = getSiteDetails(site);
-
-    // Technology Filter
-    if (techFilter === 'ERA_ALL' && !tech) return false;
-    if (techFilter === '4G' && tech !== '4G') return false;
-    if (techFilter === '5G' && tech !== '5G') return false;
-    if (techFilter === 'SRAN' && tech !== 'SRAN') return false;
-
-    // Search query
-    if (searchQuery.trim()) {
-      const q = searchQuery.trim().toUpperCase();
-      const matchSite = fullSite.includes(q) || (baseSite && baseSite.includes(q)) || (oldId && String(oldId).toUpperCase().includes(q));
-      if (matchSite) return true;
-      const matchExtra = extraSearchFields.some(field => String(field || '').toUpperCase().includes(q));
-      if (!matchExtra) return false;
-    }
-
-    return true;
-  }
-
-  // Current active list for stats and filtering
-  const currentTabRawList = activeTab === 'md' ? mdActive
-    : activeTab === 'mpd' ? mpdActive
-    : activeTab === 'mll' ? mllActive
-    : activeTab === 'mll_cell' ? cellActive
-    : activeTab === 'vhkt' ? vhktData
-    : activePakhList;
-
-  const currentTabSiteExtractor = (item) => {
-    if (!item) return '';
-    if (activeTab === 'vhkt') return item.tram;
-    if (activeTab === 'pakh') return item.ma_tram || item.maTram;
-    return item.site;
-  };
-
-  const eraTabStats = {
-    total: currentTabRawList.length,
-    eraTotal: 0,
-    g4: 0,
-    g5: 0,
-    sran: 0,
-  };
-
-  currentTabRawList.forEach(item => {
-    const site = currentTabSiteExtractor(item);
-    const { tech } = parseSiteAndTech(site);
-    if (tech) {
-      eraTabStats.eraTotal += 1;
-      if (tech === '4G') eraTabStats.g4 += 1;
-      if (tech === '5G') eraTabStats.g5 += 1;
-      if (tech === 'SRAN') eraTabStats.sran += 1;
-    }
-  });
-
-  // Filtered lists for each tab
-  const displayedMd = sortAlarms(mdActive.filter(a => matchesFilter(a.site, [a.alarm_name, a.network])));
-  const displayedMpd = sortAlarms(mpdActive.filter(a => matchesFilter(a.site, [a.alarm_name, a.ne_type])));
-  const displayedMll = sortAlarms(mllActive.filter(a => matchesFilter(a.site, [a.network, a.vendor])));
-  const displayedCell = sortAlarms(cellActive.filter(a => matchesFilter(a.site, [a.cellid, a.network, a.alarm_name, a.vendor])));
-  const displayedVhkt = [...vhktData]
-    .filter(r => matchesFilter(r.tram))
-    .sort((a, b) => (b.md_so_lan || 0) - (a.md_so_lan || 0));
-  const displayedPakh = activePakhList.filter(p =>
-    matchesFilter(p.ma_tram || p.maTram, [
-      p.so_thue_bao || p.soThueBao,
-      p.noi_dung_phan_anh || p.noiDungPhanAnh,
-      p.phuong_xa || p.phuongXa,
-      p.tinh_thanh_pho || p.tinhThanhPho
-    ])
-  );
-
-  // Format date helper (dd/mm/yyyy hh:mm:ss)
-  function formatDateTime(isoString) {
-    if (!isoString) return '--';
-    const d = new Date(isoString);
-    if (isNaN(d)) return '--';
-    const day = String(d.getDate()).padStart(2, '0');
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const year = d.getFullYear();
-    const hours = String(d.getHours()).padStart(2, '0');
-    const minutes = String(d.getMinutes()).padStart(2, '0');
-    const seconds = String(d.getSeconds()).padStart(2, '0');
-    return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
-  }
-
-  // Format time only (hh:mm:ss)
-  function formatTimeWithSeconds(isoString) {
-    if (!isoString) return '--:--:--';
-    const d = new Date(isoString);
-    if (isNaN(d)) return '--:--:--';
-    const hours = String(d.getHours()).padStart(2, '0');
-    const minutes = String(d.getMinutes()).padStart(2, '0');
-    const seconds = String(d.getSeconds()).padStart(2, '0');
-    return `${hours}:${minutes}:${seconds}`;
-  }
-
-  // Render Status Badge
-  function renderStatusBadge(status) {
-    if (status === 'ACTIVE') {
-      return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700 border border-red-200">
-          🔴 ACTIVE
-        </span>
-      );
-    }
+  // Reusable Mobile Message Card
+  function MobileMessageCard({ title, icon, alarms, sectionKey }) {
+    const isCopied = copiedSection === sectionKey;
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-700 border border-green-200">
-        🟢 CLEAR
-      </span>
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-3.5 py-2.5 bg-slate-50 border-b border-slate-100">
+          <div className="flex items-center gap-1.5 font-mono font-bold text-slate-800 text-sm">
+            <span className="text-base">{icon}</span>
+            <span>{title}:</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 font-mono">
+              {alarms.length}
+            </span>
+            <button
+              onClick={() => handleCopy(sectionKey)}
+              className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-slate-600 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg shadow-2xs cursor-pointer active:scale-95 transition-all"
+              title="Sao chép đoạn này"
+            >
+              {isCopied ? (
+                <>
+                  <Check className="h-3.5 w-3.5 text-emerald-600" />
+                  <span className="text-emerald-700 font-bold">Đã chép</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="h-3.5 w-3.5 text-slate-500" />
+                  <span>Chép</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Content list */}
+        <div className="p-3 bg-white">
+          {alarms.length === 0 ? (
+            <div className="text-slate-400 text-xs italic py-1 font-mono pl-2">
+              • (Không có)
+            </div>
+          ) : (
+            <div className="space-y-1.5 font-mono text-xs sm:text-sm">
+              {alarms.map((a, idx) => {
+                const { newId, oldId } = getSiteDetails(a.site);
+                const net = getAlarmNetwork(a);
+                const dateStr = formatMessageDate(a.sdate);
+                const cellStr = a.cellid ? ` (${a.cellid})` : '';
+
+                return (
+                  <div key={idx} className="flex items-baseline gap-1.5 flex-wrap leading-relaxed py-0.5 border-b border-slate-50 last:border-b-0">
+                    <span className="text-slate-400 select-none">•</span>
+                    <span className="font-bold text-blue-600">{newId}</span>
+                    {oldId && oldId !== newId && (
+                      <span className="font-black text-slate-900">({oldId})</span>
+                    )}
+                    {net && (
+                      <span className="font-bold text-emerald-600">[{net}]</span>
+                    )}
+                    {cellStr && (
+                      <span className="font-semibold text-purple-600">{cellStr}</span>
+                    )}
+                    <span className="text-slate-300">-</span>
+                    <span className="text-slate-500 text-[11px] sm:text-xs font-medium">{dateStr}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
     );
   }
 
@@ -386,7 +543,7 @@ export default function VhktRan() {
             VHKT RAN
           </h1>
           <p className="text-xs text-gray-500 mt-1 font-medium">
-            Giám sát vận hành: Lịch Cúp, MĐ, MPĐ, MLL, SLA
+            Giám sát vận hành realtime: MĐ, MPĐ, MLL, SLA, PAKH
           </p>
         </div>
         
@@ -407,16 +564,18 @@ export default function VhktRan() {
       {/* Nav Cards Container - Compact & Horizontal Scrollable on Mobile */}
       <div className="flex flex-row overflow-x-auto gap-2 pb-2 mb-6 scrollbar-thin scrollbar-thumb-slate-200 no-scrollbar">
         {[
-          { id: 'md', label: 'Mất điện', count: mdCount, color: 'amber', icon: '⚠️', minWidth: 'min-w-[85px] sm:min-w-[120px]' },
-          { id: 'mpd', label: 'Máy phát điện', count: mpdCount, color: 'emerald', icon: '🟢', minWidth: 'min-w-[100px] sm:min-w-[120px]' },
-          { id: 'mll', label: 'Mất liên lạc', count: mllCount, color: 'red', icon: '🔴', minWidth: 'min-w-[100px] sm:min-w-[120px]' },
-          { id: 'mll_cell', label: 'Cell Off', count: cellCount, color: 'purple', icon: '📡', minWidth: 'min-w-[85px] sm:min-w-[120px]' },
+          { id: 'all', label: 'Tổng hợp', count: totalActiveCount, color: 'indigo', icon: '📋', minWidth: 'min-w-[85px] sm:min-w-[110px]' },
+          { id: 'md', label: 'Mất điện', count: mdCount, color: 'amber', icon: '⚡', minWidth: 'min-w-[85px] sm:min-w-[115px]' },
+          { id: 'mpd', label: 'Máy phát điện', count: mpdCount, color: 'emerald', icon: '🔋', minWidth: 'min-w-[100px] sm:min-w-[125px]' },
+          { id: 'mll', label: 'Mất liên lạc', count: mllCount, color: 'red', icon: '📵', minWidth: 'min-w-[100px] sm:min-w-[120px]' },
+          { id: 'mll_cell', label: 'Cell Off', count: cellCount, color: 'purple', icon: '📡', minWidth: 'min-w-[85px] sm:min-w-[115px]' },
           { id: 'vhkt', label: 'SLA', count: '📊', color: 'blue', icon: '', minWidth: 'min-w-[70px] sm:min-w-[100px]' },
           { id: 'pakh', label: 'PAKH', count: activePakhList.length, color: 'sky', icon: '💬', minWidth: 'min-w-[80px] sm:min-w-[100px]' },
         ].map(card => {
           const isActive = activeTab === card.id;
           
           const borderColors = {
+            indigo: 'border-l-indigo-500',
             amber: 'border-l-amber-500',
             emerald: 'border-l-emerald-500',
             red: 'border-l-red-500',
@@ -426,6 +585,7 @@ export default function VhktRan() {
           };
           
           const textColors = {
+            indigo: 'text-indigo-700',
             amber: 'text-amber-700',
             emerald: 'text-emerald-700',
             red: 'text-red-700',
@@ -435,6 +595,7 @@ export default function VhktRan() {
           };
 
           const ringColors = {
+            indigo: 'ring-indigo-400',
             amber: 'ring-amber-400',
             emerald: 'ring-emerald-400',
             red: 'ring-red-400',
@@ -470,8 +631,8 @@ export default function VhktRan() {
         })}
       </div>
 
-      {/* Search & ERA Technology Filter Toolbar */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-3 sm:p-4 shadow-2xs space-y-3">
+      {/* Search Toolbar & Copy Button (ERA filter bar removed) */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-3 sm:p-4 shadow-2xs">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           {/* Search Box */}
           <div className="relative flex-1">
@@ -494,123 +655,41 @@ export default function VhktRan() {
             )}
           </div>
 
-          {/* Quick Info Status */}
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-[11px] text-slate-500 self-start sm:self-auto shrink-0">
-            <span className="inline-flex h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
-            <span>
-              {activeTab === 'vhkt' ? (
-                vhktScrapedAt ? `SLA: ${formatDateTime(vhktScrapedAt)}` : 'Chờ dữ liệu SLA...'
-              ) : activeTab === 'pakh' ? (
-                pakhScrapedAt ? `PAKH: ${formatDateTime(pakhScrapedAt)}` : 'Chờ dữ liệu phản ánh...'
-              ) : (
-                lastFetchTime ? `Alarm: ${lastFetchTime}` : 'Đang tải cảnh báo...'
-              )}
-            </span>
-          </div>
-        </div>
-
-        {/* ERA Technology Filter Pills */}
-        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap pt-1 border-t border-slate-100 text-xs">
-          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1 mr-1">
-            <Filter className="h-3 w-3" /> Lọc ERA:
-          </span>
-
-          <button
-            onClick={() => setTechFilter('ALL')}
-            className={`px-2.5 py-1 rounded-lg font-bold text-xs transition-all cursor-pointer flex items-center gap-1.5 ${
-              techFilter === 'ALL'
-                ? 'bg-slate-800 text-white shadow-xs'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'
-            }`}
-          >
-            <span>Tất cả</span>
-            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
-              techFilter === 'ALL' ? 'bg-slate-700 text-slate-200' : 'bg-slate-200 text-slate-600'
-            }`}>
-              {currentTabRawList.length}
-            </span>
-          </button>
-
-          <button
-            onClick={() => setTechFilter('ERA_ALL')}
-            className={`px-2.5 py-1 rounded-lg font-bold text-xs transition-all cursor-pointer flex items-center gap-1.5 ${
-              techFilter === 'ERA_ALL'
-                ? 'bg-amber-600 text-white shadow-xs ring-2 ring-amber-300'
-                : 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200'
-            }`}
-            title="Các trạm đã swap thiết bị ERA (có đuôi L, UL, N)"
-          >
-            <Sparkles className="h-3.5 w-3.5" />
-            <span>ERA Swap</span>
-            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
-              techFilter === 'ERA_ALL' ? 'bg-amber-700 text-amber-100' : 'bg-amber-200/80 text-amber-800'
-            }`}>
-              {eraTabStats.eraTotal}
-            </span>
-          </button>
-
-          <button
-            onClick={() => setTechFilter('4G')}
-            className={`px-2.5 py-1 rounded-lg font-bold text-xs transition-all cursor-pointer flex items-center gap-1.5 ${
-              techFilter === '4G'
-                ? 'bg-emerald-600 text-white shadow-xs ring-2 ring-emerald-300'
-                : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200'
-            }`}
-            title="Trạm 4G ERA (đuôi L)"
-          >
-            <span>4G (L)</span>
-            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
-              techFilter === '4G' ? 'bg-emerald-700 text-emerald-100' : 'bg-emerald-200/80 text-emerald-800'
-            }`}>
-              {eraTabStats.g4}
-            </span>
-          </button>
-
-          <button
-            onClick={() => setTechFilter('5G')}
-            className={`px-2.5 py-1 rounded-lg font-bold text-xs transition-all cursor-pointer flex items-center gap-1.5 ${
-              techFilter === '5G'
-                ? 'bg-purple-600 text-white shadow-xs ring-2 ring-purple-300'
-                : 'bg-purple-50 text-purple-800 hover:bg-purple-100 border border-purple-200'
-            }`}
-            title="Trạm 5G ERA (đuôi N)"
-          >
-            <span>5G (N)</span>
-            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
-              techFilter === '5G' ? 'bg-purple-700 text-purple-100' : 'bg-purple-200/80 text-purple-800'
-            }`}>
-              {eraTabStats.g5}
-            </span>
-          </button>
-
-          <button
-            onClick={() => setTechFilter('SRAN')}
-            className={`px-2.5 py-1 rounded-lg font-bold text-xs transition-all cursor-pointer flex items-center gap-1.5 ${
-              techFilter === 'SRAN'
-                ? 'bg-blue-600 text-white shadow-xs ring-2 ring-blue-300'
-                : 'bg-blue-50 text-blue-800 hover:bg-blue-100 border border-blue-200'
-            }`}
-            title="Trạm SRAN 3G/4G ERA (đuôi UL)"
-          >
-            <span>SRAN (UL)</span>
-            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
-              techFilter === 'SRAN' ? 'bg-blue-700 text-blue-100' : 'bg-blue-200/80 text-blue-800'
-            }`}>
-              {eraTabStats.sran}
-            </span>
-          </button>
-
-          {(techFilter !== 'ALL' || searchQuery) && (
+          {/* Quick Actions & Status */}
+          <div className="flex items-center gap-2 self-end sm:self-auto shrink-0 flex-wrap">
+            {/* Copy full message */}
             <button
-              onClick={() => {
-                setTechFilter('ALL');
-                setSearchQuery('');
-              }}
-              className="text-[11px] font-semibold text-slate-500 hover:text-red-600 underline ml-auto cursor-pointer"
+              onClick={() => handleCopy(activeTab === 'all' ? 'all' : activeTab)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95"
+              title="Sao chép nội dung cảnh báo dạng tin nhắn"
             >
-              Đặt lại bộ lọc
+              {copiedSection === (activeTab === 'all' ? 'all' : activeTab) ? (
+                <>
+                  <Check className="h-4 w-4 text-emerald-600" />
+                  <span className="text-emerald-700">Đã sao chép!</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="h-4 w-4 text-blue-600" />
+                  <span>Sao chép tin nhắn</span>
+                </>
+              )}
             </button>
-          )}
+
+            {/* Realtime timestamp */}
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-[11px] text-slate-500 shrink-0">
+              <span className="inline-flex h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
+              <span>
+                {activeTab === 'vhkt' ? (
+                  vhktScrapedAt ? `SLA: ${formatDateTime(vhktScrapedAt)}` : 'Chờ SLA...'
+                ) : activeTab === 'pakh' ? (
+                  pakhScrapedAt ? `PAKH: ${formatDateTime(pakhScrapedAt)}` : 'Chờ PAKH...'
+                ) : (
+                  lastFetchTime ? `Alarm: ${lastFetchTime}` : 'Đang tải...'
+                )}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -623,287 +702,342 @@ export default function VhktRan() {
           </div>
         ) : (
           <div>
+            {/* Tab: TỔNG HỢP (all) */}
+            {activeTab === 'all' && (
+              <div>
+                {/* Mobile View: High density message layout */}
+                <div className="block sm:hidden p-3 bg-slate-50 space-y-3">
+                  <MobileMessageCard title="MAC" icon="⚡" alarms={groupedMd} sectionKey="md" />
+                  <MobileMessageCard title="GEN" icon="🔋" alarms={groupedMpd} sectionKey="mpd" />
+                  <MobileMessageCard title="MLL" icon="📵" alarms={groupedMll} sectionKey="mll" />
+                  {groupedCell.length > 0 && (
+                    <MobileMessageCard title="CELL OFF" icon="📡" alarms={groupedCell} sectionKey="mll_cell" />
+                  )}
+                </div>
+
+                {/* Desktop View: Preview text box + Grid of cards */}
+                <div className="hidden sm:block p-5 space-y-5">
+                  <div className="bg-slate-900 rounded-2xl p-4 text-slate-100 shadow-md">
+                    <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-800">
+                      <div className="flex items-center gap-2">
+                        <span className="text-base">📋</span>
+                        <span className="font-bold text-sm text-slate-200">Bản tin cảnh báo nhanh (Dạng tin nhắn)</span>
+                      </div>
+                      <button
+                        onClick={() => handleCopy('all')}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer active:scale-95"
+                      >
+                        {copiedSection === 'all' ? (
+                          <>
+                            <Check className="h-4 w-4 text-emerald-300" />
+                            <span className="text-emerald-300">Đã sao chép!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-4 w-4" />
+                            <span>Sao chép toàn bộ</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    <pre className="font-mono text-xs sm:text-sm text-emerald-400 whitespace-pre-wrap leading-relaxed select-all bg-slate-950/70 p-3 rounded-xl border border-slate-800">
+                      {generateMessageText('all')}
+                    </pre>
+                  </div>
+
+                  {/* 3-column dashboard */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <MobileMessageCard title="MAC" icon="⚡" alarms={groupedMd} sectionKey="md" />
+                    <MobileMessageCard title="GEN" icon="🔋" alarms={groupedMpd} sectionKey="mpd" />
+                    <MobileMessageCard title="MLL" icon="📵" alarms={groupedMll} sectionKey="mll" />
+                  </div>
+                  {groupedCell.length > 0 && (
+                    <div>
+                      <MobileMessageCard title="CELL OFF" icon="📡" alarms={groupedCell} sectionKey="mll_cell" />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Tab: Mất điện MĐ */}
             {activeTab === 'md' && (
-              <div className="divide-y divide-gray-200">
-                {displayedMd.length === 0 ? (
-                  <div className="p-12 text-center text-gray-500 text-sm space-y-2">
-                    {mdActive.length === 0 ? (
-                      <p>✅ Không có alarm MĐ nào. Tất cả trạm đang có điện lưới.</p>
-                    ) : (
-                      <>
-                        <p className="font-semibold">🔍 Không có trạm nào khớp với bộ lọc ERA hoặc từ khóa tìm kiếm.</p>
-                        <button
-                          onClick={() => { setTechFilter('ALL'); setSearchQuery(''); }}
-                          className="text-xs text-blue-600 hover:underline font-semibold cursor-pointer"
-                        >
-                          Xóa bộ lọc để xem tất cả {mdActive.length} cảnh báo MĐ
-                        </button>
-                      </>
-                    )}
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-center border-collapse text-xs sm:text-sm">
-                      <thead>
-                        <tr className="border-b border-gray-200 bg-gray-50 text-gray-500 uppercase tracking-wider font-semibold text-[10px] sm:text-xs">
-                          <th className="py-3 px-2 sm:px-4 text-center">SITE ID</th>
-                          <th className="py-3 px-2 sm:px-4 hidden md:table-cell">MẠNG</th>
-                          <th className="py-3 px-2 sm:px-4 text-left">CẢNH BÁO</th>
-                          <th className="py-3 px-2 sm:px-4">BẮT ĐẦU</th>
-                          <th className="py-3 px-2 sm:px-4">KẾT THÚC</th>
-                          <th className="py-3 px-2 sm:px-4">TRẠNG THÁI</th>
-                          <th className="py-3 px-2 sm:px-4">GIỜ</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {displayedMd.map(a => {
-                          const hasGen = isMpdRunningOnSite(a.site);
-                          const isCleared = a.status === 'CLEARED';
-                          return (
-                            <tr key={a.id} className="hover:bg-gray-50 transition-colors">
-                              <td className="py-3 px-2 sm:px-4">
-                                <div className="flex items-center justify-start gap-2.5 min-w-[130px] max-w-[190px] mx-auto text-left">
-                                  <span className="text-base leading-none shrink-0">
-                                    {isCleared ? '✅' : (hasGen ? '🟢' : '🔴')}
-                                  </span>
-                                  {renderSiteLabel(a.site)}
-                                </div>
-                              </td>
-                              <td className="py-3 px-2 sm:px-4 hidden md:table-cell font-semibold text-gray-600">{a.network || '--'}</td>
-                              <td className="py-3 px-2 sm:px-4 text-left text-gray-700">{a.alarm_name || '--'}</td>
-                              <td className="py-3 px-2 sm:px-4 text-gray-500 font-mono text-[11px]">
-                                {a.sdate ? formatDateTime(a.sdate) : '--'}
-                              </td>
-                              <td className="py-3 px-2 sm:px-4 text-gray-500 font-mono text-[11px]">
-                                {a.edate ? formatDateTime(a.edate) : '--'}
-                              </td>
-                              <td className="py-3 px-2 sm:px-4">
-                                {renderStatusBadge(a.status)}
-                              </td>
-                              <td className="py-3 px-2 sm:px-4 font-bold text-amber-500 font-mono">
-                                {(a.duration / 60).toFixed(1)}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+              <div>
+                {/* Mobile View: Message Style */}
+                <div className="block sm:hidden p-3 bg-slate-50 space-y-3">
+                  <MobileMessageCard title="MAC" icon="⚡" alarms={groupedMd} sectionKey="md" />
+                </div>
+
+                {/* Desktop View: Table */}
+                <div className="hidden sm:block divide-y divide-gray-200">
+                  {displayedMd.length === 0 ? (
+                    <div className="p-12 text-center text-gray-500 text-sm space-y-2">
+                      {mdActive.length === 0 ? (
+                        <p>✅ Không có alarm MĐ nào. Tất cả trạm đang có điện lưới.</p>
+                      ) : (
+                        <>
+                          <p className="font-semibold">🔍 Không có trạm nào khớp với từ khóa tìm kiếm.</p>
+                          <button
+                            onClick={() => setSearchQuery('')}
+                            className="text-xs text-blue-600 hover:underline font-semibold cursor-pointer"
+                          >
+                            Xóa tìm kiếm để xem tất cả {mdActive.length} cảnh báo MĐ
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-center border-collapse text-xs sm:text-sm">
+                        <thead>
+                          <tr className="border-b border-gray-200 bg-gray-50 text-gray-500 uppercase tracking-wider font-semibold text-[10px] sm:text-xs">
+                            <th className="py-3 px-2 sm:px-4 text-center">SITE ID</th>
+                            <th className="py-3 px-2 sm:px-4 text-center">MẠNG</th>
+                            <th className="py-3 px-2 sm:px-4 text-left">CẢNH BÁO</th>
+                            <th className="py-3 px-2 sm:px-4 text-center">BẮT ĐẦU</th>
+                            <th className="py-3 px-2 sm:px-4 text-center">GIỜ MĐ</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {displayedMd.map(a => {
+                            const hasGen = isMpdRunningOnSite(a.site);
+                            return (
+                              <tr key={a.id} className="hover:bg-gray-50 transition-colors">
+                                <td className="py-3 px-2 sm:px-4">
+                                  <div className="flex items-center justify-start gap-2.5 min-w-[130px] max-w-[190px] mx-auto text-left">
+                                    <span className="text-base leading-none shrink-0" title={hasGen ? 'Đang chạy MPĐ' : 'Chưa chạy MPĐ'}>
+                                      {hasGen ? '🟢' : '🔴'}
+                                    </span>
+                                    {renderSiteLabel(a.site)}
+                                  </div>
+                                </td>
+                                <td className="py-3 px-2 sm:px-4 text-center font-bold text-emerald-600 font-mono">
+                                  {getAlarmNetwork(a) || a.network || '--'}
+                                </td>
+                                <td className="py-3 px-2 sm:px-4 text-left text-gray-700">{a.alarm_name || '--'}</td>
+                                <td className="py-3 px-2 sm:px-4 text-gray-500 font-mono text-xs">
+                                  {a.sdate ? formatDateTime(a.sdate) : '--'}
+                                </td>
+                                <td className="py-3 px-2 sm:px-4 font-bold text-amber-500 font-mono">
+                                  {(a.duration / 60).toFixed(1)}h
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
             {/* Tab: Máy phát điện MPĐ */}
             {activeTab === 'mpd' && (
-              <div className="divide-y divide-gray-200">
-                {displayedMpd.length === 0 ? (
-                  <div className="p-12 text-center text-gray-500 text-sm space-y-2">
-                    {mpdActive.length === 0 ? (
-                      <p>Chưa có trạm nào chạy máy phát.</p>
-                    ) : (
-                      <>
-                        <p className="font-semibold">🔍 Không có trạm nào khớp với bộ lọc ERA hoặc từ khóa tìm kiếm.</p>
-                        <button
-                          onClick={() => { setTechFilter('ALL'); setSearchQuery(''); }}
-                          className="text-xs text-blue-600 hover:underline font-semibold cursor-pointer"
-                        >
-                          Xóa bộ lọc để xem tất cả {mpdActive.length} trạm chạy máy phát
-                        </button>
-                      </>
-                    )}
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-center border-collapse text-xs sm:text-sm">
-                      <thead>
-                        <tr className="border-b border-gray-200 bg-gray-50 text-gray-500 uppercase tracking-wider font-semibold text-[10px] sm:text-xs">
-                          <th className="py-3 px-2 sm:px-4 text-center">SITE ID</th>
-                          <th className="py-3 px-2 sm:px-4 hidden md:table-cell">LOẠI TB</th>
-                          <th className="py-3 px-2 sm:px-4 text-left">CẢNH BÁO</th>
-                          <th className="py-3 px-2 sm:px-4">BẮT ĐẦU</th>
-                          <th className="py-3 px-2 sm:px-4">KẾT THÚC</th>
-                          <th className="py-3 px-2 sm:px-4">TRẠNG THÁI</th>
-                          <th className="py-3 px-2 sm:px-4">GIỜ</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {displayedMpd.map(a => (
-                          <tr key={a.id} className="hover:bg-gray-50 transition-colors">
-                            <td className="py-3 px-2 sm:px-4">
-                              <div className="flex items-center justify-start gap-2.5 min-w-[130px] max-w-[190px] mx-auto text-left">
-                                <span className="text-base leading-none shrink-0">
-                                  {a.status === 'CLEARED' ? '✅' : '🟢'}
-                                </span>
-                                {renderSiteLabel(a.site)}
-                              </div>
-                            </td>
-                            <td className="py-3 px-2 sm:px-4 hidden md:table-cell font-semibold text-gray-600">{a.ne_type || '--'}</td>
-                            <td className="py-3 px-2 sm:px-4 text-left text-gray-700">{a.alarm_name || '--'}</td>
-                            <td className="py-3 px-2 sm:px-4 text-gray-500 font-mono text-[11px]">
-                              {a.sdate ? formatDateTime(a.sdate) : '--'}
-                            </td>
-                            <td className="py-3 px-2 sm:px-4 text-gray-500 font-mono text-[11px]">
-                              {a.edate ? formatDateTime(a.edate) : '--'}
-                            </td>
-                            <td className="py-3 px-2 sm:px-4">
-                              {renderStatusBadge(a.status)}
-                            </td>
-                            <td className="py-3 px-2 sm:px-4 font-bold text-amber-500 font-mono">
-                              {(a.duration / 60).toFixed(1)}
-                            </td>
+              <div>
+                {/* Mobile View: Message Style */}
+                <div className="block sm:hidden p-3 bg-slate-50 space-y-3">
+                  <MobileMessageCard title="GEN" icon="🔋" alarms={groupedMpd} sectionKey="mpd" />
+                </div>
+
+                {/* Desktop View: Table */}
+                <div className="hidden sm:block divide-y divide-gray-200">
+                  {displayedMpd.length === 0 ? (
+                    <div className="p-12 text-center text-gray-500 text-sm space-y-2">
+                      {mpdActive.length === 0 ? (
+                        <p>✅ Chưa có trạm nào chạy máy phát điện.</p>
+                      ) : (
+                        <>
+                          <p className="font-semibold">🔍 Không có trạm nào khớp với từ khóa tìm kiếm.</p>
+                          <button
+                            onClick={() => setSearchQuery('')}
+                            className="text-xs text-blue-600 hover:underline font-semibold cursor-pointer"
+                          >
+                            Xóa tìm kiếm để xem tất cả {mpdActive.length} trạm chạy máy phát
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-center border-collapse text-xs sm:text-sm">
+                        <thead>
+                          <tr className="border-b border-gray-200 bg-gray-50 text-gray-500 uppercase tracking-wider font-semibold text-[10px] sm:text-xs">
+                            <th className="py-3 px-2 sm:px-4 text-center">SITE ID</th>
+                            <th className="py-3 px-2 sm:px-4 text-center">LOẠI TB</th>
+                            <th className="py-3 px-2 sm:px-4 text-left">CẢNH BÁO</th>
+                            <th className="py-3 px-2 sm:px-4 text-center">BẮT ĐẦU</th>
+                            <th className="py-3 px-2 sm:px-4 text-center">GIỜ CHẠY</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {displayedMpd.map(a => (
+                            <tr key={a.id} className="hover:bg-gray-50 transition-colors">
+                              <td className="py-3 px-2 sm:px-4">
+                                <div className="flex items-center justify-start gap-2.5 min-w-[130px] max-w-[190px] mx-auto text-left">
+                                  <span className="text-base leading-none shrink-0" title="Đang chạy máy phát điện">
+                                    🟢
+                                  </span>
+                                  {renderSiteLabel(a.site)}
+                                </div>
+                              </td>
+                              <td className="py-3 px-2 sm:px-4 text-center font-semibold text-gray-600">{a.ne_type || '--'}</td>
+                              <td className="py-3 px-2 sm:px-4 text-left text-gray-700">{a.alarm_name || '--'}</td>
+                              <td className="py-3 px-2 sm:px-4 text-gray-500 font-mono text-xs">
+                                {a.sdate ? formatDateTime(a.sdate) : '--'}
+                              </td>
+                              <td className="py-3 px-2 sm:px-4 font-bold text-emerald-600 font-mono">
+                                {(a.duration / 60).toFixed(1)}h
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
             {/* Tab: Mất liên lạc MLL */}
             {activeTab === 'mll' && (
-              <div className="divide-y divide-gray-200">
-                {displayedMll.length === 0 ? (
-                  <div className="p-12 text-center text-gray-500 text-sm space-y-2">
-                    {mllActive.length === 0 ? (
-                      <p>✅ Tất cả trạm đang liên lạc bình thường.</p>
-                    ) : (
-                      <>
-                        <p className="font-semibold">🔍 Không có trạm nào khớp với bộ lọc ERA hoặc từ khóa tìm kiếm.</p>
-                        <button
-                          onClick={() => { setTechFilter('ALL'); setSearchQuery(''); }}
-                          className="text-xs text-blue-600 hover:underline font-semibold cursor-pointer"
-                        >
-                          Xóa bộ lọc để xem tất cả {mllActive.length} trạm mất liên lạc
-                        </button>
-                      </>
-                    )}
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-center border-collapse text-xs sm:text-sm">
-                      <thead>
-                        <tr className="border-b border-gray-200 bg-gray-50 text-gray-500 uppercase tracking-wider font-semibold text-[10px] sm:text-xs">
-                          <th className="py-3 px-2 sm:px-4 text-center">SITE ID</th>
-                          <th className="py-3 px-2 sm:px-4 hidden md:table-cell">MẠNG</th>
-                          <th className="py-3 px-2 sm:px-4">BẮT ĐẦU</th>
-                          <th className="py-3 px-2 sm:px-4">KẾT THÚC</th>
-                          <th className="py-3 px-2 sm:px-4">TRẠNG THÁI</th>
-                          <th className="py-3 px-2 sm:px-4">GIỜ</th>
-                          <th className="py-3 px-2 sm:px-4 hidden md:table-cell">VENDOR</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {displayedMll.map(a => (
-                          <tr key={a.id} className="hover:bg-gray-50 transition-colors">
-                            <td className="py-3 px-2 sm:px-4">
-                              <div className="flex items-center justify-start gap-2.5 min-w-[130px] max-w-[190px] mx-auto text-left">
-                                <span className="text-base leading-none shrink-0">
-                                  {a.status === 'CLEARED' ? '✅' : '🔴'}
-                                </span>
-                                {renderSiteLabel(a.site)}
-                              </div>
-                            </td>
-                            <td className="py-3 px-2 sm:px-4 hidden md:table-cell">
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                                {a.network || '--'}
-                              </span>
-                            </td>
-                            <td className="py-3 px-2 sm:px-4 text-gray-500 font-mono text-[11px]">
-                              {a.sdate ? formatDateTime(a.sdate) : '--'}
-                            </td>
-                            <td className="py-3 px-2 sm:px-4 text-gray-500 font-mono text-[11px]">
-                              {a.edate ? formatDateTime(a.edate) : '--'}
-                            </td>
-                            <td className="py-3 px-2 sm:px-4">
-                              {renderStatusBadge(a.status)}
-                            </td>
-                            <td className="py-3 px-2 sm:px-4 font-bold text-amber-500 font-mono">
-                              {(a.duration / 60).toFixed(1)}
-                            </td>
-                            <td className="py-3 px-2 sm:px-4 hidden md:table-cell font-mono text-xs">{a.vendor || '--'}</td>
+              <div>
+                {/* Mobile View: Message Style */}
+                <div className="block sm:hidden p-3 bg-slate-50 space-y-3">
+                  <MobileMessageCard title="MLL" icon="📵" alarms={groupedMll} sectionKey="mll" />
+                </div>
+
+                {/* Desktop View: Table */}
+                <div className="hidden sm:block divide-y divide-gray-200">
+                  {displayedMll.length === 0 ? (
+                    <div className="p-12 text-center text-gray-500 text-sm space-y-2">
+                      {mllActive.length === 0 ? (
+                        <p>✅ Tất cả trạm đang liên lạc bình thường.</p>
+                      ) : (
+                        <>
+                          <p className="font-semibold">🔍 Không có trạm nào khớp với từ khóa tìm kiếm.</p>
+                          <button
+                            onClick={() => setSearchQuery('')}
+                            className="text-xs text-blue-600 hover:underline font-semibold cursor-pointer"
+                          >
+                            Xóa tìm kiếm để xem tất cả {mllActive.length} trạm mất liên lạc
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-center border-collapse text-xs sm:text-sm">
+                        <thead>
+                          <tr className="border-b border-gray-200 bg-gray-50 text-gray-500 uppercase tracking-wider font-semibold text-[10px] sm:text-xs">
+                            <th className="py-3 px-2 sm:px-4 text-center">SITE ID</th>
+                            <th className="py-3 px-2 sm:px-4 text-center">MẠNG</th>
+                            <th className="py-3 px-2 sm:px-4 text-center">BẮT ĐẦU</th>
+                            <th className="py-3 px-2 sm:px-4 text-center">GIỜ MLL</th>
+                            <th className="py-3 px-2 sm:px-4 text-center">VENDOR</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {displayedMll.map(a => (
+                            <tr key={a.id} className="hover:bg-gray-50 transition-colors">
+                              <td className="py-3 px-2 sm:px-4">
+                                <div className="flex items-center justify-start gap-2.5 min-w-[130px] max-w-[190px] mx-auto text-left">
+                                  <span className="text-base leading-none shrink-0" title="Mất liên lạc">
+                                    🔴
+                                  </span>
+                                  {renderSiteLabel(a.site)}
+                                </div>
+                              </td>
+                              <td className="py-3 px-2 sm:px-4 text-center font-bold text-emerald-600 font-mono">
+                                {getAlarmNetwork(a) || a.network || '--'}
+                              </td>
+                              <td className="py-3 px-2 sm:px-4 text-gray-500 font-mono text-xs">
+                                {a.sdate ? formatDateTime(a.sdate) : '--'}
+                              </td>
+                              <td className="py-3 px-2 sm:px-4 font-bold text-red-500 font-mono">
+                                {(a.duration / 60).toFixed(1)}h
+                              </td>
+                              <td className="py-3 px-2 sm:px-4 font-mono text-xs text-slate-600">{a.vendor || '--'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
-            {/* Tab: CellOff */}
+            {/* Tab: Cell Off */}
             {activeTab === 'mll_cell' && (
-              <div className="divide-y divide-gray-200">
-                {displayedCell.length === 0 ? (
-                  <div className="p-12 text-center text-gray-500 text-sm space-y-2">
-                    {cellActive.length === 0 ? (
-                      <p>✅ Tất cả cell đang hoạt động bình thường.</p>
-                    ) : (
-                      <>
-                        <p className="font-semibold">🔍 Không có cell nào khớp với bộ lọc ERA hoặc từ khóa tìm kiếm.</p>
-                        <button
-                          onClick={() => { setTechFilter('ALL'); setSearchQuery(''); }}
-                          className="text-xs text-blue-600 hover:underline font-semibold cursor-pointer"
-                        >
-                          Xóa bộ lọc để xem tất cả {cellActive.length} cảnh báo Cell Off
-                        </button>
-                      </>
-                    )}
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-center border-collapse text-xs sm:text-sm">
-                      <thead>
-                        <tr className="border-b border-gray-200 bg-gray-50 text-gray-500 uppercase tracking-wider font-semibold text-[10px] sm:text-xs">
-                          <th className="py-3 px-2 sm:px-4 text-center">SITE ID</th>
-                          <th className="py-3 px-2 sm:px-4 hidden md:table-cell">CELL ID</th>
-                          <th className="py-3 px-2 sm:px-4 hidden md:table-cell">MẠNG</th>
-                          <th className="py-3 px-2 sm:px-4 text-left">CẢNH BÁO</th>
-                          <th className="py-3 px-2 sm:px-4">BẮT ĐẦU</th>
-                          <th className="py-3 px-2 sm:px-4">KẾT THÚC</th>
-                          <th className="py-3 px-2 sm:px-4">TRẠNG THÁI</th>
-                          <th className="py-3 px-2 sm:px-4">GIỜ</th>
-                          <th className="py-3 px-2 sm:px-4 hidden md:table-cell">VENDOR</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {displayedCell.map(a => (
-                          <tr key={a.id} className="hover:bg-gray-50 transition-colors">
-                            <td className="py-3 px-2 sm:px-4 font-mono font-bold">
-                              <div className="flex items-center justify-start gap-2.5 min-w-[130px] max-w-[190px] mx-auto text-left">
-                                <span className="text-base leading-none shrink-0">
-                                  {a.status === 'CLEARED' ? '✅' : '🔴'}
-                                </span>
-                                {renderSiteLabel(a.site)}
-                              </div>
-                            </td>
-                            <td className="py-3 px-2 sm:px-4 hidden md:table-cell font-mono font-bold text-purple-700">{a.cellid || '--'}</td>
-                            <td className="py-3 px-2 sm:px-4 hidden md:table-cell">
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                                {a.network || '--'}
-                              </span>
-                            </td>
-                            <td className="py-3 px-2 sm:px-4 text-left text-gray-700">{a.alarm_name || '--'}</td>
-                            <td className="py-3 px-2 sm:px-4 text-gray-500 font-mono text-[11px]">
-                              {a.sdate ? formatDateTime(a.sdate) : '--'}
-                            </td>
-                            <td className="py-3 px-2 sm:px-4 text-gray-500 font-mono text-[11px]">
-                              {a.edate ? formatDateTime(a.edate) : '--'}
-                            </td>
-                            <td className="py-3 px-2 sm:px-4">
-                              {renderStatusBadge(a.status)}
-                            </td>
-                            <td className="py-3 px-2 sm:px-4 font-bold text-amber-500 font-mono">
-                              {(a.duration / 60).toFixed(1)}
-                            </td>
-                            <td className="py-3 px-2 sm:px-4 hidden md:table-cell font-mono text-xs">{a.vendor || '--'}</td>
+              <div>
+                {/* Mobile View: Message Style */}
+                <div className="block sm:hidden p-3 bg-slate-50 space-y-3">
+                  <MobileMessageCard title="CELL OFF" icon="📡" alarms={groupedCell} sectionKey="mll_cell" />
+                </div>
+
+                {/* Desktop View: Table */}
+                <div className="hidden sm:block divide-y divide-gray-200">
+                  {displayedCell.length === 0 ? (
+                    <div className="p-12 text-center text-gray-500 text-sm space-y-2">
+                      {cellActive.length === 0 ? (
+                        <p>✅ Tất cả cell đang hoạt động bình thường.</p>
+                      ) : (
+                        <>
+                          <p className="font-semibold">🔍 Không có cell nào khớp với từ khóa tìm kiếm.</p>
+                          <button
+                            onClick={() => setSearchQuery('')}
+                            className="text-xs text-blue-600 hover:underline font-semibold cursor-pointer"
+                          >
+                            Xóa tìm kiếm để xem tất cả {cellActive.length} cảnh báo Cell Off
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-center border-collapse text-xs sm:text-sm">
+                        <thead>
+                          <tr className="border-b border-gray-200 bg-gray-50 text-gray-500 uppercase tracking-wider font-semibold text-[10px] sm:text-xs">
+                            <th className="py-3 px-2 sm:px-4 text-center">SITE ID</th>
+                            <th className="py-3 px-2 sm:px-4 text-center">CELL ID</th>
+                            <th className="py-3 px-2 sm:px-4 text-center">MẠNG</th>
+                            <th className="py-3 px-2 sm:px-4 text-left">CẢNH BÁO</th>
+                            <th className="py-3 px-2 sm:px-4 text-center">BẮT ĐẦU</th>
+                            <th className="py-3 px-2 sm:px-4 text-center">GIỜ CÚP</th>
+                            <th className="py-3 px-2 sm:px-4 text-center">VENDOR</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {displayedCell.map(a => (
+                            <tr key={a.id} className="hover:bg-gray-50 transition-colors">
+                              <td className="py-3 px-2 sm:px-4 font-mono font-bold">
+                                <div className="flex items-center justify-start gap-2.5 min-w-[130px] max-w-[190px] mx-auto text-left">
+                                  <span className="text-base leading-none shrink-0" title="Cell Off">
+                                    🔴
+                                  </span>
+                                  {renderSiteLabel(a.site)}
+                                </div>
+                              </td>
+                              <td className="py-3 px-2 sm:px-4 text-center font-mono font-bold text-purple-700">{a.cellid || '--'}</td>
+                              <td className="py-3 px-2 sm:px-4 text-center font-bold text-emerald-600 font-mono">
+                                {getAlarmNetwork(a) || a.network || '--'}
+                              </td>
+                              <td className="py-3 px-2 sm:px-4 text-left text-gray-700">{a.alarm_name || '--'}</td>
+                              <td className="py-3 px-2 sm:px-4 text-gray-500 font-mono text-xs">
+                                {a.sdate ? formatDateTime(a.sdate) : '--'}
+                              </td>
+                              <td className="py-3 px-2 sm:px-4 font-bold text-amber-500 font-mono">
+                                {(a.duration / 60).toFixed(1)}h
+                              </td>
+                              <td className="py-3 px-2 sm:px-4 font-mono text-xs text-slate-600">{a.vendor || '--'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
@@ -916,12 +1050,12 @@ export default function VhktRan() {
                       <p>📊 SLA được cập nhật 1 lần/sáng (7:20 AM) — dữ liệu ngày hôm qua.</p>
                     ) : (
                       <>
-                        <p className="font-semibold">🔍 Không có dữ liệu SLA nào khớp với bộ lọc ERA hoặc từ khóa tìm kiếm.</p>
+                        <p className="font-semibold">🔍 Không có dữ liệu SLA nào khớp với từ khóa tìm kiếm.</p>
                         <button
-                          onClick={() => { setTechFilter('ALL'); setSearchQuery(''); }}
+                          onClick={() => setSearchQuery('')}
                           className="text-xs text-blue-600 hover:underline font-semibold cursor-pointer"
                         >
-                          Xóa bộ lọc để xem tất cả {vhktData.length} trạm trong báo cáo SLA
+                          Xóa tìm kiếm để xem tất cả {vhktData.length} trạm trong báo cáo SLA
                         </button>
                       </>
                     )}
@@ -1015,12 +1149,12 @@ export default function VhktRan() {
                       <p>✅ Không có phản ánh khách hàng (PAKH) nào cần xử lý.</p>
                     ) : (
                       <>
-                        <p className="font-semibold">🔍 Không có phản ánh nào khớp với bộ lọc ERA hoặc từ khóa tìm kiếm.</p>
+                        <p className="font-semibold">🔍 Không có phản ánh nào khớp với từ khóa tìm kiếm.</p>
                         <button
-                          onClick={() => { setTechFilter('ALL'); setSearchQuery(''); }}
+                          onClick={() => setSearchQuery('')}
                           className="text-xs text-blue-600 hover:underline font-semibold cursor-pointer"
                         >
-                          Xóa bộ lọc để xem tất cả {activePakhList.length} phản ánh khách hàng
+                          Xóa tìm kiếm để xem tất cả {activePakhList.length} phản ánh khách hàng
                         </button>
                       </>
                     )}
@@ -1157,8 +1291,6 @@ export default function VhktRan() {
                 )}
               </div>
             )}
-
-
           </div>
         )}
       </div>
