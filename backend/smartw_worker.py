@@ -3141,11 +3141,7 @@ def send_periodic_mll_report():
         lines.append(f"  • {grp['label']}{net_part} - {grp['t']}{top_tag}")
 
     _send_viber_report(lines)
-    try:
-        _send_telegram_report("\n".join(lines))
-    except Exception as te:
-        logger.warning(f"Failed to forward periodic MLL report to Telegram: {te}")
-    logger.info(f"SmartW Worker: ✅ Sent periodic MLL report for {len(mll_groups)} site(s).")
+    logger.info(f"SmartW Worker: ✅ Sent periodic MLL report to Viber for {len(mll_groups)} site(s).")
 
 
 def _get_site_qlt_short(site_raw: str) -> str:
