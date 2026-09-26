@@ -2225,7 +2225,12 @@ def run_alarm_poll():
                             for site, grp in mll_groups.items():
                                 net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
                                 top_tag = _get_mll_topology_tag(site)
-                                lines_active.append(f"  • {grp['label']}{net_part} - {grp['t']}{top_tag}")
+                                if top_tag:
+                                    clean_tag = top_tag.strip(" -")
+                                    lines_active.append(f"  • {grp['label']}{net_part}")
+                                    lines_active.append(f"    ↳ {grp['t']} • {clean_tag}")
+                                else:
+                                    lines_active.append(f"  • {grp['label']}{net_part} - {grp['t']}")
                                 active_sent_count += 1
                                 for ikey, techs in grp['inc_keys'].items():
                                     existing = sent_active_techs.setdefault(ikey, {'techs': [], 'ts': now_ts})['techs']
@@ -2271,7 +2276,8 @@ def run_alarm_poll():
 
                 cleared_sent_count = 0
                 if unsent_cl_md or unsent_cl_mpd or unsent_cl_mll:
-                    lines_cleared = ["✅ *CLEARED*"]
+                    now_str = datetime.now().strftime("%H:%M")
+                    lines_cleared = [f"✅ *CLEARED (ghi nhận {now_str})*"]
 
                     if unsent_cl_md:
                         cl_mac_groups = {}
@@ -2293,7 +2299,7 @@ def run_alarm_poll():
                             lines_cleared.append("*MAC:*")
                             for site, grp in cl_mac_groups.items():
                                 net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
-                                lines_cleared.append(f"  • {grp['label']}{net_part} - {grp['t']}")
+                                lines_cleared.append(f"  • {grp['label']}{net_part}")
                                 cleared_sent_count += 1
                                 for ikey, techs in grp['inc_keys'].items():
                                     existing = sent_cleared_techs.setdefault(ikey, {'techs': [], 'ts': now_ts})['techs']
@@ -2321,7 +2327,7 @@ def run_alarm_poll():
                             lines_cleared.append("*GEN:*")
                             for site, grp in cl_mpd_groups.items():
                                 net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
-                                lines_cleared.append(f"  • {grp['label']}{net_part} - {grp['t']}")
+                                lines_cleared.append(f"  • {grp['label']}{net_part}")
                                 cleared_sent_count += 1
                                 for ikey, techs in grp['inc_keys'].items():
                                     existing = sent_cleared_techs.setdefault(ikey, {'techs': [], 'ts': now_ts})['techs']
@@ -2349,7 +2355,7 @@ def run_alarm_poll():
                             lines_cleared.append("*MLL:*")
                             for site, grp in mll_cl_groups.items():
                                 net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
-                                lines_cleared.append(f"  • {grp['label']}{net_part} - {grp['t']}")
+                                lines_cleared.append(f"  • {grp['label']}{net_part}")
                                 cleared_sent_count += 1
                                 for ikey, techs in grp['inc_keys'].items():
                                     existing = sent_cleared_techs.setdefault(ikey, {'techs': [], 'ts': now_ts})['techs']
@@ -3060,7 +3066,13 @@ def send_periodic_full_report():
         lines.append("📵 *MLL:*")
         for site, grp in mll_groups.items():
             net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
-            lines.append(f"  • {grp['label']}{net_part} - {grp['t']}")
+            top_tag = _get_mll_topology_tag(site)
+            if top_tag:
+                clean_tag = top_tag.strip(" -")
+                lines.append(f"  • {grp['label']}{net_part}")
+                lines.append(f"    ↳ {grp['t']} • {clean_tag}")
+            else:
+                lines.append(f"  • {grp['label']}{net_part} - {grp['t']}")
             total_active += 1
 
     # ── Section 4: CELLOFF ──
@@ -3076,13 +3088,20 @@ def send_periodic_full_report():
         lines.append("📡 *CELLOFF* (" + str(len(seen_cells)) + " cell):")
         for cid, alarm in seen_cells.items():
             site = _site_key(alarm)
-            old_id = _old_id(site)
-            old_part = f" ({old_id})" if old_id and old_id != site else ""
+            base_id, old_id, _ = _resolve_base_site_and_tech(site, '')
+            label = old_id if old_id else (base_id if base_id else site)
+
+            cell_code = str(alarm.get('cellid') or alarm.get('cell_id') or cid).strip().upper()
+            for prefix in (site, base_id, old_id):
+                if prefix and len(prefix) >= 4 and cell_code.startswith(prefix.upper()):
+                    cell_code = cell_code[len(prefix):]
+                    break
+            cell_code = cell_code.lstrip('_-') or cid
+
             net = _norm_net(alarm.get('network') or '')
-            t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '', full=True)
             net_part = f" [{net}]" if net else ''
-            display_cid = str(alarm.get('cellid') or alarm.get('cell_id') or cid)
-            lines.append(f"  • {display_cid}{old_part}{net_part} - {t}")
+            t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '', full=False)
+            lines.append(f"  • {label}: {cell_code}{net_part} - {t}")
             total_active += 1
 
     if total_active > 0:
@@ -3138,7 +3157,12 @@ def send_periodic_mll_report():
     for site, grp in mll_groups.items():
         net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
         top_tag = _get_mll_topology_tag(site)
-        lines.append(f"  • {grp['label']}{net_part} - {grp['t']}{top_tag}")
+        if top_tag:
+            clean_tag = top_tag.strip(" -")
+            lines.append(f"  • {grp['label']}{net_part}")
+            lines.append(f"    ↳ {grp['t']} • {clean_tag}")
+        else:
+            lines.append(f"  • {grp['label']}{net_part} - {grp['t']}")
 
     _send_viber_report(lines)
     logger.info(f"SmartW Worker: ✅ Sent periodic MLL report to Viber for {len(mll_groups)} site(s).")
