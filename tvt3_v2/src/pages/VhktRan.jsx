@@ -188,6 +188,49 @@ export default function VhktRan() {
     return { newId, oldId, tech, techLabel, badgeColor, fullSite, baseSite };
   }
 
+  // Resolve site mapping specifically for PAKH station/cell strings
+  function resolvePakhSite(rawTram) {
+    const raw = String(rawTram || '').trim().toUpperCase();
+    if (!raw) return { newId: '', oldId: '' };
+
+    // 1. Exact match in siteMap
+    if (siteMap[raw]) {
+      const mapped = siteMap[raw];
+      if (raw.length >= 7 && mapped.length <= 6) return { newId: raw, oldId: mapped };
+      if (raw.length <= 6 && mapped.length >= 7) return { newId: mapped, oldId: raw };
+      return { newId: raw, oldId: mapped };
+    }
+
+    // 2. Try 8-char prefix (e.g. DNIXTC00CM3GB -> DNIXTC00)
+    if (raw.length >= 8) {
+      const prefix8 = raw.slice(0, 8);
+      if (siteMap[prefix8]) {
+        return { newId: prefix8, oldId: siteMap[prefix8] };
+      }
+    }
+
+    // 3. Try 6-char prefix (e.g. DNDQ41M4BB -> DNDQ41)
+    if (raw.length >= 6) {
+      const prefix6 = raw.slice(0, 6);
+      if (siteMap[prefix6]) {
+        const mapped = siteMap[prefix6];
+        if (mapped.length >= 7) return { newId: mapped, oldId: prefix6 };
+        return { newId: prefix6, oldId: mapped };
+      }
+    }
+
+    // 4. Substring search in siteMap keys
+    for (const k of Object.keys(siteMap)) {
+      if (k.length >= 6 && raw.includes(k)) {
+        const v = siteMap[k];
+        if (k.length >= 7) return { newId: k, oldId: v };
+        return { newId: v, oldId: k };
+      }
+    }
+
+    return { newId: raw, oldId: '' };
+  }
+
   // Extract clean network label (4G, 3G, 5G, SRAN)
   function getAlarmNetwork(alarm) {
     if (!alarm) return '';
@@ -384,25 +427,22 @@ export default function VhktRan() {
     return lines.join('\n').trim();
   };
 
-  // Generate plain text for PAKH
+  // Generate plain text for PAKH matching user format
   const generatePakhMessageText = () => {
-    const lines = ['💬 PAKH TỒN ĐỌNG:'];
+    const lines = ['⏳ *PAKH TỒN ĐỌNG*', ''];
     if (activePakhList.length === 0) {
-      lines.push('  • (Không có)');
+      lines.push('• (Không có phản ánh tồn đọng)');
     } else {
       activePakhList.forEach(p => {
-        const soThueBao = p.so_thue_bao || p.soThueBao || '--';
-        const loaiThueBao = p.loai_thue_bao || p.loaiThueBao ? ` [${p.loai_thue_bao || p.loaiThueBao}]` : '';
-        const maTram = p.ma_tram || p.maTram || '--';
-        const { newId, oldId } = getSiteDetails(maTram);
-        const siteDisplay = oldId || newId || maTram;
-        const tgConLai = p.tgclTtml || p.tg_con_lai || p.tgConLai || '--';
-        const diaBan = p.phuong_xa || p.phuongXa ? ` (${p.phuong_xa || p.phuongXa})` : '';
-        const noiDung = p.noi_dung_phan_anh || p.noiDungPhanAnh || '';
-        lines.push(`  • ${soThueBao}${loaiThueBao} - ${siteDisplay}${diaBan} - Hạn: ${tgConLai}`);
-        if (noiDung) {
-          lines.push(`    ↳ ${noiDung}`);
-        }
+        const sdt = p.so_thue_bao || p.soThueBao || '--';
+        const tram = p.ma_tram || p.maTram || '--';
+        const tg = p.tgclTtml || p.tg_con_lai || p.tgConLai || '--';
+        const { newId, oldId } = resolvePakhSite(tram);
+        const sitePair = newId && oldId && newId !== oldId 
+          ? `(${newId} / ${oldId})` 
+          : (newId || oldId ? `(${newId || oldId})` : '');
+        lines.push(`• SĐT: ${sdt} - Trạm: ${tram} ${sitePair}`.trim());
+        lines.push(`  ⏳ Hạn còn lại: ${tg}`);
       });
     }
     return lines.join('\n').trim();
@@ -1103,7 +1143,7 @@ export default function VhktRan() {
               </div>
             )}
 
-            {/* Tab: PAKH - Mobile hiển thị dạng tin nhắn tồn đọng */}
+            {/* Tab: PAKH - Mobile hiển thị dạng tin nhắn chuẩn mẫu */}
             {activeTab === 'pakh' && (
               <div>
                 {/* Mobile View: PAKH tồn đọng dạng tin nhắn */}
@@ -1112,7 +1152,7 @@ export default function VhktRan() {
                     {/* Header */}
                     <div className="flex items-center justify-between px-3.5 py-2.5 bg-slate-50 border-b border-slate-100">
                       <div className="flex items-center gap-1.5 font-mono font-bold text-slate-800 text-sm">
-                        <span className="text-base">💬</span>
+                        <span className="text-base">⏳</span>
                         <span>PAKH TỒN ĐỌNG:</span>
                       </div>
                       <div className="flex items-center gap-2">
@@ -1139,53 +1179,46 @@ export default function VhktRan() {
                       </div>
                     </div>
 
-                    {/* Content List dạng tin nhắn */}
-                    <div className="p-3 bg-white space-y-2.5 font-mono text-xs">
+                    {/* Content List dạng tin nhắn y hệt mẫu user */}
+                    <div className="p-3 bg-white space-y-3 font-mono text-xs sm:text-sm">
                       {displayedPakh.length === 0 ? (
                         <div className="text-slate-400 text-xs italic py-1 pl-2">
                           • (Không có phản ánh tồn đọng)
                         </div>
                       ) : (
                         displayedPakh.map((p, idx) => {
-                          const soThueBao = p.so_thue_bao || p.soThueBao || '--';
-                          const loaiThueBao = p.loai_thue_bao || p.loaiThueBao || '';
-                          const maTram = p.ma_tram || p.maTram || '--';
-                          const { newId, oldId } = getSiteDetails(maTram);
-                          const siteDisplay = oldId || newId || maTram;
-                          const tgConLai = p.tgclTtml || p.tg_con_lai || p.tgConLai || '--';
-                          const isUrgent = String(tgConLai).includes('giờ') && parseInt(tgConLai) <= 12;
-                          const noiDung = p.noi_dung_phan_anh || p.noiDungPhanAnh || '';
-                          const diaBan = p.phuong_xa || p.phuongXa ? `${p.phuong_xa || p.phuongXa}, ${p.tinh_thanh_pho || p.tinhThanhPho || ''}` : (p.tinh_thanh_pho || p.tinhThanhPho || '');
+                          const sdt = p.so_thue_bao || p.soThueBao || '--';
+                          const tram = p.ma_tram || p.maTram || '--';
+                          const tg = p.tgclTtml || p.tg_con_lai || p.tgConLai || '--';
+                          const { newId, oldId } = resolvePakhSite(tram);
+                          const isUrgent = String(tg).includes('phút') || (String(tg).includes('giờ') && parseInt(tg) <= 12);
 
                           return (
-                            <div key={idx} className="border-b border-slate-100 pb-2.5 last:border-b-0 last:pb-0">
-                              <div className="flex items-baseline gap-1.5 flex-wrap leading-relaxed">
+                            <div key={idx} className="border-b border-slate-100 pb-2.5 last:border-b-0 last:pb-0 leading-relaxed">
+                              <div className="flex items-baseline gap-1 flex-wrap">
                                 <span className="text-slate-400 select-none">•</span>
-                                <span className="font-bold text-blue-600">{soThueBao}</span>
-                                {loaiThueBao && (
-                                  <span className="px-1 py-0.2 rounded bg-slate-100 text-[8px] font-bold text-slate-600 border border-slate-200 uppercase tracking-tight">
-                                    {loaiThueBao}
+                                <span className="text-slate-500 font-medium">SĐT:</span>
+                                <span className="font-bold text-blue-600">{sdt}</span>
+                                <span className="text-slate-300">-</span>
+                                <span className="text-slate-500 font-medium">Trạm:</span>
+                                <span className="font-bold text-slate-800">{tram}</span>
+                                {newId && oldId && newId !== oldId ? (
+                                  <span className="font-semibold text-slate-600">
+                                    (<span className="text-blue-600 font-bold">{newId}</span> / <span className="text-slate-900 font-black">{oldId}</span>)
                                   </span>
-                                )}
-                                <span className="text-slate-300">-</span>
-                                <span className="font-black text-slate-900">{siteDisplay}</span>
-                                {diaBan && (
-                                  <span className="text-slate-500 font-sans text-[10px]">[{diaBan}]</span>
-                                )}
-                                <span className="text-slate-300">-</span>
-                                <span className={`px-1.5 py-0.2 rounded text-[10px] font-bold tracking-tight ${
-                                  isUrgent
-                                    ? 'bg-red-100 text-red-800 border border-red-200 animate-pulse'
-                                    : 'bg-amber-100 text-amber-800 border border-amber-200'
+                                ) : (newId || oldId) ? (
+                                  <span className="font-semibold text-slate-600">({newId || oldId})</span>
+                                ) : null}
+                              </div>
+                              <div className="pl-3.5 mt-0.5 flex items-center gap-1.5 text-[11px] sm:text-xs">
+                                <span>⏳</span>
+                                <span className="text-slate-500 font-medium">Hạn còn lại:</span>
+                                <span className={`font-bold px-1.5 py-0.2 rounded text-[11px] ${
+                                  isUrgent ? 'bg-red-100 text-red-700 animate-pulse' : 'bg-amber-100 text-amber-800'
                                 }`}>
-                                  ⏱️ {tgConLai}
+                                  {tg}
                                 </span>
                               </div>
-                              {noiDung && (
-                                <div className="pl-3.5 mt-1 text-[11px] font-sans text-slate-600 leading-normal line-clamp-2" title={noiDung}>
-                                  ↳ {noiDung}
-                                </div>
-                              )}
                             </div>
                           );
                         })
