@@ -9,6 +9,9 @@ instance/
 *.sqlite
 *.sqlite3
 
+# ── Dependencies ──
+node_modules/
+
 # ── Virtual Environment ──
 .venv/
 venv/
