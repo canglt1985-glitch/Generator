@@ -2276,8 +2276,7 @@ def run_alarm_poll():
 
                 cleared_sent_count = 0
                 if unsent_cl_md or unsent_cl_mpd or unsent_cl_mll:
-                    now_str = datetime.now().strftime("%H:%M")
-                    lines_cleared = [f"✅ *CLEARED (ghi nhận {now_str})*"]
+                    lines_cleared = ["✅ *CLEARED*"]
 
                     if unsent_cl_md:
                         cl_mac_groups = {}
