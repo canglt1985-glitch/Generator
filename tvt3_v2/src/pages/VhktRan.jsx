@@ -119,10 +119,31 @@ export default function VhktRan() {
   // Filter alarms: keep only ACTIVE alarms
   const filteredAlarms = alarms.filter(a => a.status === 'ACTIVE');
 
+  // Intelligent sanitization: identify cell-level alarms misclassified as mll
+  const isCellLevelAlarm = (a) => {
+    if (a.alarm_type === 'mll_cell') return true;
+    if (a.alarm_type === 'mll') {
+      if (a.cellid) return true;
+      const neType = String(a.ne_type || a.neType || '').toUpperCase().trim();
+      if (neType === 'CELL') return true;
+      const info = String(a.alarm_info || a.alarmInfo || '');
+      if (/EUtranCellFDD|UtranCell|GsmCell|Cell=/i.test(info)) return true;
+    }
+    return false;
+  };
+
   const mdActive = filteredAlarms.filter(a => a.alarm_type === 'md');
   const mpdActive = filteredAlarms.filter(a => a.alarm_type === 'mpd');
-  const mllActive = filteredAlarms.filter(a => a.alarm_type === 'mll');
-  const cellActive = filteredAlarms.filter(a => a.alarm_type === 'mll_cell');
+  const mllActive = filteredAlarms.filter(a => a.alarm_type === 'mll' && !isCellLevelAlarm(a));
+  const cellActive = filteredAlarms
+    .filter(a => isCellLevelAlarm(a))
+    .map(a => {
+      if (a.alarm_type === 'mll' && !a.cellid) {
+        const m = String(a.alarm_info || '').match(/(?:EUtranCellFDD|UtranCell|GsmCell|Cell)=([A-Za-z0-9_]+)/i);
+        return m ? { ...a, cellid: m[1], alarm_type: 'mll_cell' } : { ...a, alarm_type: 'mll_cell' };
+      }
+      return a;
+    });
 
   // Filter out closed/processed tickets
   const activePakhList = pakhList.filter(p => {

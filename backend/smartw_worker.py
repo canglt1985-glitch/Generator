@@ -4,6 +4,7 @@ Handles alarm polling (15 min), VHKT morning poll, clear detection, and status t
 Uses a PERSISTENT scraper session to avoid re-login every poll cycle.
 """
 import os
+import re
 import json
 import shutil
 import asyncio
@@ -910,12 +911,24 @@ def sync_alarms_to_supabase(result: dict):
             sdate_iso = parse_to_iso(sdate_str)
             edate_iso = parse_to_iso(edate_str)
             
+            # Auto-detect cell-level alarms misclassified by SmartW under 'mll'
+            actual_t = t
+            cellid = (alarm.get('cellid') or '').strip()
+            ne_type = str(alarm.get('neType') or '').strip().upper()
+            obj_ref = str(alarm.get('objectReference') or '').strip()
+            if not cellid and obj_ref:
+                m_cell = re.search(r'(?:EUtranCellFDD|UtranCell|GsmCell|Cell)=([A-Za-z0-9_]+)', obj_ref, re.IGNORECASE)
+                if m_cell:
+                    cellid = m_cell.group(1).strip()
+            
+            if t == 'mll' and (ne_type == 'CELL' or bool(cellid)):
+                actual_t = 'mll_cell'
+
             # Construct a unique, deterministic ID using UUIDv5
-            if t == 'mll_cell':
-                cellid = (alarm.get('cellid') or '').strip()
-                val_str = f"{t}_{site}_{cellid}_{alarm_name}_{sdate_str}"
+            if actual_t == 'mll_cell':
+                val_str = f"{actual_t}_{site}_{cellid}_{alarm_name}_{sdate_str}"
             else:
-                val_str = f"{t}_{site}_{alarm_name}_{sdate_str}"
+                val_str = f"{actual_t}_{site}_{alarm_name}_{sdate_str}"
                 
             rec_id = str(uuid.uuid5(uuid.NAMESPACE_OID, val_str))
             has_clear = bool(alarm.get('clear_time') or alarm.get('edate') or alarm.get('edateStr') or alarm.get('ket_thuc'))
@@ -928,11 +941,11 @@ def sync_alarms_to_supabase(result: dict):
                 "id": rec_id,
                 "site": site,
                 "network": alarm.get('network'),
-                "cellid": alarm.get('cellid') if t == 'mll_cell' else None,
+                "cellid": cellid if actual_t == 'mll_cell' else None,
                 "vendor": alarm.get('vendor'),
                 "alarm_name": alarm_name,
                 "alarm_info": (alarm.get('alarmInfo') or alarm.get('alarm_info') or '').strip() or None,
-                "alarm_type": t,
+                "alarm_type": actual_t,
                 "sdate": sdate_iso,
                 "sdate_str": sdate_str,
                 "edate": edate_iso,
@@ -2843,8 +2856,26 @@ def send_periodic_full_report():
     # 1. Load latest active data from disk
     md_list = [r for r in _load_smartw_json('md.json') if _is_managed_site(_site_key(r))]
     mpd_list = [r for r in _load_smartw_json('mpd.json') if _is_managed_site(_site_key(r))]
-    mll_list = [r for r in _load_smartw_json('mll.json') if _is_managed_site(_site_key(r))]
-    cell_list = [r for r in _load_smartw_json('mll_cell.json') if _is_managed_site(_site_key(r))]
+    raw_mll_list = [r for r in _load_smartw_json('mll.json') if _is_managed_site(_site_key(r))]
+    raw_cell_list = [r for r in _load_smartw_json('mll_cell.json') if _is_managed_site(_site_key(r))]
+    
+    # Lọc tách cảnh báo cấp Cell bị SmartW xếp nhầm vào mll
+    mll_list = []
+    cell_list = list(raw_cell_list)
+    for r in raw_mll_list:
+        ne_type = str(r.get('neType') or '').strip().upper()
+        obj_ref = str(r.get('objectReference') or '').strip()
+        cid = str(r.get('cellid') or '').strip()
+        if not cid and obj_ref:
+            m_cell = re.search(r'(?:EUtranCellFDD|UtranCell|GsmCell|Cell)=([A-Za-z0-9_]+)', obj_ref, re.IGNORECASE)
+            if m_cell:
+                cid = m_cell.group(1).strip()
+        if ne_type == 'CELL' or cid:
+            r_copy = dict(r)
+            r_copy['cellid'] = cid
+            cell_list.append(r_copy)
+        else:
+            mll_list.append(r)
     
     # Check if empty
     if not any([md_list, mpd_list, mll_list, cell_list]):
