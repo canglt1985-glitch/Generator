@@ -256,6 +256,13 @@ def main():
                 last_run["smartw_report_key"] = report_key
                 run_job("smartw_report", [python_exe, os.path.join(current_dir, "smartw_worker.py"), "--job", "report"])
 
+            # Job E.1: SmartW Periodic MLL Review (Every 2 hours at minute :25 of ODD hours, e.g. 11:25, 13:25, 15:25...)
+            # Tự động im lặng nếu 0 trạm MLL
+            mll_report_key = f"{today_str}_{now.hour}"
+            if now.hour % 2 != 0 and now.minute == 25 and last_run.get("smartw_mll_report_key") != mll_report_key:
+                last_run["smartw_mll_report_key"] = mll_report_key
+                run_job("smartw_mll_report", [python_exe, os.path.join(current_dir, "smartw_worker.py"), "--job", "mll_report"])
+
             # Job E.2: SmartW PAKH Summary Report (Every 3 hours at minute :35 from 7 AM to 7 PM)
             pakh_summary_key = f"{today_str}_{now.hour}"
             if now.hour in [7, 10, 13, 16, 19] and now.minute == 35 and last_run.get("smartw_pakh_summary_key") != pakh_summary_key:

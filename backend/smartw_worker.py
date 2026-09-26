@@ -11,6 +11,7 @@ import asyncio
 import logging
 import threading
 import requests
+from collections import defaultdict
 from supabase import create_client, Client
 from dotenv import load_dotenv
 
@@ -93,6 +94,11 @@ def _split_site_id(site_id) -> tuple[str, str]:
     return s, ""
 
 _datasites_cache = None
+_topology_cache_built = False
+_main_to_crans = {}
+_site_to_main = {}
+_site_to_partner = {}
+_site_is_local_csg = {}
 
 def _get_datasites_list():
     global _datasites_cache
@@ -101,12 +107,125 @@ def _get_datasites_list():
     if not supabase:
         return []
     try:
-        res = supabase.table("datasites").select("site_id, site_id_old, management_info").execute()
+        res = supabase.table("datasites").select("site_id, site_id_old, management_info, technical_info, classification").execute()
         _datasites_cache = res.data or []
     except Exception as e:
         logger.error(f'SmartW failed to fetch datasites cache: {e}')
         _datasites_cache = []
     return _datasites_cache
+
+
+def _build_topology_cache():
+    """Build in-memory topology dictionary: Main ↔ CRAN, External Cable Partner, Local CSG/LSW."""
+    global _topology_cache_built, _main_to_crans, _site_to_main, _site_to_partner, _site_is_local_csg
+    if _topology_cache_built:
+        return
+    data = _get_datasites_list()
+    if not data:
+        return
+
+    id_lookup = {}
+    id_to_old = {}
+    for r in data:
+        sid = (r.get('site_id') or '').strip().upper()
+        old = (r.get('site_id_old') or '').strip().upper()
+        if sid:
+            id_lookup[sid] = sid
+            if old:
+                id_to_old[sid] = old
+                id_lookup[old] = sid
+
+    m_to_c = defaultdict(list)
+    s_to_m = {}
+    s_to_p = {}
+    s_is_csg = {}
+
+    for r in data:
+        sid = (r.get('site_id') or '').strip().upper()
+        ti = r.get('technical_info') or {}
+        mi = r.get('management_info') or {}
+
+        tm_raw = str(mi.get('tram_main') or ti.get('tram_main_tx') or '').strip()
+        dv_vh = str(ti.get('don_vi_van_hanh_cap') or ti.get('don_vi_van_hanh') or '').strip()
+        route = str(ti.get('last_mile_primary') or '').strip().upper()
+        tb_csg = str(ti.get('thiet_bi_csg') or '').strip().upper()
+
+        # Phân loại Local CSG / LSW
+        if 'LOCAL CSG' in route or ('LOCAL' in dv_vh.upper() and tb_csg == 'CSG'):
+            s_is_csg[sid] = 'CSG'
+        elif 'LOCAL LSW' in route or ('LOCAL' in dv_vh.upper() and tb_csg == 'LSW'):
+            s_is_csg[sid] = 'LSW'
+        elif dv_vh and dv_vh.upper() not in ['KHÔNG', 'NONE', 'NULL', '', 'CÁP LOCAL', 'LOCAL']:
+            s_to_p[sid] = dv_vh
+
+        # Phân loại quan hệ Trạm Main - Trạm CRAN
+        if tm_raw and tm_raw.upper() not in ['KHÔNG', 'NONE', 'NULL', '']:
+            m = re.search(r'([A-Za-z0-9_]+)', tm_raw)
+            raw_code = m.group(1).upper() if m else tm_raw.upper()
+            resolved_main = id_lookup.get(raw_code, raw_code)
+            if resolved_main != sid:
+                main_label = id_to_old.get(resolved_main, resolved_main)
+                s_to_m[sid] = main_label
+                m_to_c[resolved_main].append(sid)
+
+    _main_to_crans = dict(m_to_c)
+    _site_to_main = s_to_m
+    _site_to_partner = s_to_p
+    _site_is_local_csg = s_is_csg
+    _topology_cache_built = True
+
+
+def _get_mll_topology_tag(site_key: str) -> str:
+    """
+    Tạo tag Topology cho bản tin MLL lẻ và báo cáo MLL định kỳ:
+    - Trạm CRAN: '  - [DNCM43 - PITC]' hoặc '  - [DNCM43]'
+    - Trạm Main: ' 👑[5 CRAN: DNTL10, DNTL13...]' hoặc ' 👑[CRAN: DNLK16]' (kèm '  - [CSG]' nếu là local CSG)
+    - Trạm thường có CSG Local: '  - [CSG]'
+    - Trạm thường có cáp đối tác ngoài: '  - [TPCOMS]'
+    - Trạm thuần không tag: ''
+    """
+    _build_topology_cache()
+    if not site_key:
+        return ""
+
+    base_id, old_id, _ = _resolve_base_site_and_tech(site_key)
+    sid = base_id or str(site_key).strip().upper()
+
+    # 1. Trạm Main
+    if sid in _main_to_crans and len(_main_to_crans[sid]) > 0:
+        crans = _main_to_crans[sid]
+        cran_names = [_old_id(c) or c for c in crans]
+        count = len(crans)
+        all_crans = ', '.join(cran_names)
+        tag = f" 👑[CRAN: {all_crans}]" if count == 1 else f" 👑[{count} CRAN: {all_crans}]"
+
+        if _site_is_local_csg.get(sid) == 'CSG':
+            tag += "  - [CSG]"
+        elif _site_is_local_csg.get(sid) == 'LSW':
+            tag += "  - [LSW]"
+        elif sid in _site_to_partner:
+            tag += f"  - [{_site_to_partner[sid]}]"
+        return tag
+
+    # 2. Trạm CRAN
+    if sid in _site_to_main:
+        main_lbl = _site_to_main[sid]
+        partner = _site_to_partner.get(sid, '')
+        if partner:
+            return f"  - [{main_lbl} - {partner}]"
+        return f"  - [{main_lbl}]"
+
+    # 3. Trạm thường có CSG Local
+    if _site_is_local_csg.get(sid) == 'CSG':
+        return "  - [CSG]"
+    if _site_is_local_csg.get(sid) == 'LSW':
+        return "  - [LSW]"
+
+    # 4. Trạm thường có đối tác cáp ngoài (trừ Local)
+    if sid in _site_to_partner:
+        return f"  - [{_site_to_partner[sid]}]"
+
+    return ""
 
 
 
@@ -2105,7 +2224,8 @@ def run_alarm_poll():
                             lines_active.append("*MLL:*")
                             for site, grp in mll_groups.items():
                                 net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
-                                lines_active.append(f"  • {grp['label']}{net_part} - {grp['t']}")
+                                top_tag = _get_mll_topology_tag(site)
+                                lines_active.append(f"  • {grp['label']}{net_part} - {grp['t']}{top_tag}")
                                 active_sent_count += 1
                                 for ikey, techs in grp['inc_keys'].items():
                                     existing = sent_active_techs.setdefault(ikey, {'techs': [], 'ts': now_ts})['techs']
@@ -2972,6 +3092,62 @@ def send_periodic_full_report():
         logger.info("SmartW Worker: 🏠 No active alarms, skipping periodic report.")
 
 
+def send_periodic_mll_report():
+    """Gửi bản tin chuyên biệt về MLL (chạy xen kẽ vào các giờ lẻ :25).
+    Quy tắc:
+    1. Nếu không có trạm nào MLL (0 trạm) -> Hoàn toàn im lặng, không gửi để tránh spam.
+    2. Nếu có trạm MLL -> Nhóm theo trạm, hiển thị chi tiết Trạm Main, Trạm CRAN, Đối tác cáp, CSG.
+    """
+    status = _load_status()
+    if status.get('smartw_disconnected'):
+        logger.info("SmartW Worker: SmartW đang mất kết nối (chưa bật VPN). Tạm ngưng gửi báo cáo MLL định kỳ.")
+        return
+
+    logger.info("SmartW Worker: 🕒 Starting periodic MLL review report (Odd hours)...")
+    raw_mll_list = [r for r in _load_smartw_json('mll.json') if _is_managed_site(_site_key(r))]
+
+    # Lọc tách cảnh báo cấp Cell nếu có
+    mll_list = []
+    for r in raw_mll_list:
+        ne_type = str(r.get('neType') or '').strip().upper()
+        obj_ref = str(r.get('objectReference') or '').strip()
+        cid = str(r.get('cellid') or '').strip()
+        if not cid and obj_ref:
+            m_cell = re.search(r'(?:EUtranCellFDD|UtranCell|GsmCell|Cell)=([A-Za-z0-9_]+)', obj_ref, re.IGNORECASE)
+            if m_cell:
+                cid = m_cell.group(1).strip()
+        if ne_type != 'CELL' and not cid:
+            mll_list.append(r)
+
+    if not mll_list:
+        logger.info("SmartW Worker: 🏠 0 active MLL alarms. Skipping periodic MLL report (Silent on zero).")
+        return
+
+    mll_groups = {}
+    for alarm in mll_list:
+        raw_site = _site_key(alarm)
+        base_id, old_id, tech = _resolve_base_site_and_tech(raw_site, alarm.get('network') or '')
+        t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or alarm.get('sdate') or '', full=False)
+        if base_id not in mll_groups:
+            mll_groups[base_id] = {'label': _get_site_label(base_id), 'nets': [], 't': t}
+        if tech and tech not in mll_groups[base_id]['nets']:
+            mll_groups[base_id]['nets'].append(tech)
+
+    now_str = datetime.now().strftime("%H:%M")
+    lines = [f"📵 *BÁO CÁO MLL ({now_str})*"]
+    for site, grp in mll_groups.items():
+        net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
+        top_tag = _get_mll_topology_tag(site)
+        lines.append(f"  • {grp['label']}{net_part} - {grp['t']}{top_tag}")
+
+    _send_viber_report(lines)
+    try:
+        _send_telegram_report("\n".join(lines))
+    except Exception as te:
+        logger.warning(f"Failed to forward periodic MLL report to Telegram: {te}")
+    logger.info(f"SmartW Worker: ✅ Sent periodic MLL report for {len(mll_groups)} site(s).")
+
+
 def _get_site_qlt_short(site_raw: str) -> str:
     """
     Look up QLT short name (e.g. 'Thái', 'Vinh', 'Khuân') for a given site ID.
@@ -3132,8 +3308,8 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     
     parser = argparse.ArgumentParser(description="SmartW Worker")
-    parser.add_argument('--job', type=str, default='alarm', choices=['alarm', 'vhkt', 'mfd', 'report', 'pakh', 'pakh_delta', 'pakh_summary', 'mll_cause'],
-                        help="Job to run (alarm, vhkt, mfd, report, pakh, pakh_delta, pakh_summary, mll_cause)")
+    parser.add_argument('--job', type=str, default='alarm', choices=['alarm', 'vhkt', 'mfd', 'report', 'mll_report', 'pakh', 'pakh_delta', 'pakh_summary', 'mll_cause'],
+                        help="Job to run (alarm, vhkt, mfd, report, mll_report, pakh, pakh_delta, pakh_summary, mll_cause)")
     parser.add_argument('--date', type=str, default=None,
                         help="Target date for mfd/mll_cause job (YYYY-MM-DD or DD/MM/YYYY)")
     args = parser.parse_args()
@@ -3189,6 +3365,9 @@ if __name__ == '__main__':
     elif args.job == 'report':
         logger.info("Executing periodic report job...")
         send_periodic_full_report()
+    elif args.job == 'mll_report':
+        logger.info("Executing periodic MLL report job...")
+        send_periodic_mll_report()
     elif args.job == 'pakh':
         logger.info("Executing PAKH poll job...")
         run_pakh_poll('pakh')
