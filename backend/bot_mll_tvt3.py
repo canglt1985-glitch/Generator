@@ -20,17 +20,28 @@ Cách chạy:
 """
 
 import os
+import sys
 import re
 import time
 import json
+import socket
 import logging
 import requests
 from collections import defaultdict
 
+# Đường dẫn thư mục và file logs
+current_dir = os.path.dirname(os.path.abspath(__file__))
+logs_dir = os.path.join(current_dir, "logs")
+os.makedirs(logs_dir, exist_ok=True)
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S"
+    datefmt="%Y-%m-%d %H:%M:%S",
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler(os.path.join(logs_dir, "bot_mll.log"), encoding="utf-8")
+    ]
 )
 logger = logging.getLogger("bot_mll_tvt3")
 
@@ -39,8 +50,22 @@ TELEGRAM_TOKEN = os.getenv("TELEGRAM_MLL_TOKEN") or "7899414034:AAGjV9Hvm2z36Hir
 API_URL = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}"
 
 # Đường dẫn file cache trạm TVT3
-current_dir = os.path.dirname(os.path.abspath(__file__))
 CACHE_FILE = os.path.join(current_dir, "data", "tvt3_sites_cache.json")
+
+# Single-instance lock
+_bot_mll_lock_socket = None
+
+def ensure_single_instance(port=59124):
+    global _bot_mll_lock_socket
+    try:
+        _bot_mll_lock_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        _bot_mll_lock_socket.bind(('127.0.0.1', port))
+        _bot_mll_lock_socket.listen(1)
+        logger.info(f"🔒 Single-instance lock acquired on 127.0.0.1:{port}")
+        return True
+    except (socket.error, OSError):
+        logger.error(f"⛔ Đã có một tiến trình bot_mll_tvt3.py khác đang chạy (Port {port} in use). Thoát!")
+        sys.exit(42)
 
 
 def load_sites_cache() -> dict:
@@ -305,17 +330,45 @@ def send_reply(chat_id, text):
         "parse_mode": "Markdown"
     }
     try:
-        requests.post(url, json=payload, timeout=10)
+        res = requests.post(url, json=payload, timeout=10)
+        if res.status_code != 200:
+            logger.warning(f"Telegram parse_mode=Markdown lỗi ({res.text}). Đang gửi lại dạng plain text...")
+            payload.pop("parse_mode", None)
+            res2 = requests.post(url, json=payload, timeout=10)
+            if res2.status_code != 200:
+                logger.error(f"Lỗi gửi tin nhắn Telegram: {res2.text}")
+            else:
+                logger.info(f"✅ Đã gửi phản hồi plain text tới chat_id {chat_id}")
+        else:
+            logger.info(f"✅ Đã gửi phản hồi Markdown tới chat_id {chat_id}")
     except Exception as e:
         logger.error(f"Lỗi gửi tin nhắn Telegram: {e}")
 
 
+def delete_webhook():
+    """Tự động kiểm tra và xóa webhook nếu có để cho phép getUpdates hoạt động."""
+    try:
+        r = requests.post(f"{API_URL}/deleteWebhook?drop_pending_updates=False", timeout=10)
+        info = r.json()
+        if info.get("ok"):
+            logger.info("✅ Đã kiểm tra & xóa webhook Telegram thành công.")
+        else:
+            logger.warning(f"Không thể xóa webhook: {info}")
+    except Exception as e:
+        logger.warning(f"Lỗi gọi deleteWebhook: {e}")
+
+
 def run_bot_polling():
     """Vòng lặp Long Polling nhận tin nhắn liên tục từ Telegram."""
+    ensure_single_instance()
+
     logger.info("==================================================")
     logger.info("🤖 Bot Phân Công MLL TVT3 đang khởi động...")
     logger.info(f"API Token: {TELEGRAM_TOKEN[:10]}...{TELEGRAM_TOKEN[-5:]}")
     logger.info("==================================================")
+
+    # Luôn xóa webhook trước khi bắt đầu polling
+    delete_webhook()
 
     offset = None
     while True:
@@ -327,11 +380,23 @@ def run_bot_polling():
             res = requests.get(req_url, timeout=40)
             data = res.json()
 
-            if data.get("ok") and "result" in data:
+            if not data.get("ok"):
+                err_code = data.get("error_code")
+                desc = data.get("description", "")
+                logger.error(f"Telegram API Lỗi {err_code}: {desc}")
+                # Nếu bị 409 Conflict do webhook bị set lại, tự động xóa webhook ngay
+                if err_code == 409:
+                    logger.warning("Phát hiện Conflict 409 (có webhook kích hoạt). Đang tự động xóa webhook...")
+                    delete_webhook()
+                time.sleep(3)
+                continue
+
+            if "result" in data:
                 for item in data["result"]:
                     offset = item["update_id"] + 1
-                    if "message" in item:
-                        handle_telegram_message(item["message"])
+                    msg = item.get("message") or item.get("channel_post") or item.get("edited_message")
+                    if msg:
+                        handle_telegram_message(msg)
 
         except requests.exceptions.Timeout:
             continue
