@@ -95,5 +95,17 @@
     "dau_do": 27540,
     "dau_v2": 28090,
     "source": "petrolimex"
+  },
+  {
+    "effective_date": "2026-09-25",
+    "xang_ron95": 28080,
+    "dau_do": 32090,
+    "source": "pvoil"
+  },
+  {
+    "effective_date": "2026-09-26",
+    "xang_ron95": 28080,
+    "dau_do": 32090,
+    "source": "pvoil"
   }
 ]
