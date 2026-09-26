@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Radio, RefreshCw, Search, X, Copy, Check } from 'lucide-react';
+import { Radio, RefreshCw, Copy, Check } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 
 export default function VhktRan() {
@@ -12,7 +12,6 @@ export default function VhktRan() {
   const [vhktData, setVhktData] = useState([]);
   const [vhktScrapedAt, setVhktScrapedAt] = useState('');
   const [lastFetchTime, setLastFetchTime] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
   const [copiedSection, setCopiedSection] = useState('');
 
   // Fetch site id mapping dynamically
@@ -219,7 +218,7 @@ export default function VhktRan() {
     return `${day}/${month} ${hours}:${minutes}`;
   }
 
-  // Format line as user specified: • DNIDQU02 (DNDQ11) [4G] - 26/09 08:17
+  // Format line for MAC, GEN, MLL: • DNIDQU02 (DNDQ11) [4G] - 26/09 08:17
   function formatAlarmLine(alarm) {
     if (!alarm) return '';
     const { newId, oldId } = getSiteDetails(alarm.site);
@@ -227,8 +226,19 @@ export default function VhktRan() {
     const dateStr = formatMessageDate(alarm.sdate);
     const oldStr = oldId && oldId !== newId ? ` (${oldId})` : '';
     const netStr = net ? ` [${net}]` : '';
+    return `• ${newId}${oldStr}${netStr} - ${dateStr}`;
+  }
+
+  // Format line for Cell Off (bỏ site ID mới, chỉ hiển thị site cũ và cell ID): • DNXL08 [3G] (DNIXPH01CM3GB) - 26/09 08:33
+  function formatCellOffLine(alarm) {
+    if (!alarm) return '';
+    const { newId, oldId } = getSiteDetails(alarm.site);
+    const siteCode = oldId || newId || alarm.site;
+    const net = getAlarmNetwork(alarm);
+    const netStr = net ? ` [${net}]` : '';
     const cellStr = alarm.cellid ? ` (${alarm.cellid})` : '';
-    return `• ${newId}${oldStr}${netStr}${cellStr} - ${dateStr}`;
+    const dateStr = formatMessageDate(alarm.sdate);
+    return `• ${siteCode}${netStr}${cellStr} - ${dateStr}`;
   }
 
   // Group alarms by unique station (keep earliest start time)
@@ -295,18 +305,6 @@ export default function VhktRan() {
     return activeMpdSites.has(fullSite) || (baseSite && activeMpdSites.has(baseSite)) || (oldId && activeMpdSites.has(oldId));
   };
 
-  // Filter helper across search query
-  function matchesFilter(site, extraSearchFields = []) {
-    if (!searchQuery.trim()) return true;
-    const { fullSite, baseSite, oldId } = getSiteDetails(site);
-    const q = searchQuery.trim().toUpperCase();
-    const matchSite = (fullSite && fullSite.includes(q)) || 
-                      (baseSite && baseSite.includes(q)) || 
-                      (oldId && String(oldId).toUpperCase().includes(q));
-    if (matchSite) return true;
-    return extraSearchFields.some(field => String(field || '').toUpperCase().includes(q));
-  }
-
   // Sort function: newest first (sdate DESC)
   const sortAlarms = (list) => {
     return [...list].sort((a, b) => {
@@ -316,22 +314,13 @@ export default function VhktRan() {
     });
   };
 
-  // Filtered lists for each tab
-  const displayedMd = sortAlarms(mdActive.filter(a => matchesFilter(a.site, [a.alarm_name, a.network])));
-  const displayedMpd = sortAlarms(mpdActive.filter(a => matchesFilter(a.site, [a.alarm_name, a.ne_type])));
-  const displayedMll = sortAlarms(mllActive.filter(a => matchesFilter(a.site, [a.network, a.vendor])));
-  const displayedCell = sortAlarms(cellActive.filter(a => matchesFilter(a.site, [a.cellid, a.network, a.alarm_name, a.vendor])));
-  const displayedVhkt = [...vhktData]
-    .filter(r => matchesFilter(r.tram))
-    .sort((a, b) => (b.md_so_lan || 0) - (a.md_so_lan || 0));
-  const displayedPakh = activePakhList.filter(p =>
-    matchesFilter(p.ma_tram || p.maTram, [
-      p.so_thue_bao || p.soThueBao,
-      p.noi_dung_phan_anh || p.noiDungPhanAnh,
-      p.phuong_xa || p.phuongXa,
-      p.tinh_thanh_pho || p.tinhThanhPho
-    ])
-  );
+  // Filtered lists for each tab (without search box constraint)
+  const displayedMd = sortAlarms(mdActive);
+  const displayedMpd = sortAlarms(mpdActive);
+  const displayedMll = sortAlarms(mllActive);
+  const displayedCell = sortAlarms(cellActive);
+  const displayedVhkt = [...vhktData].sort((a, b) => (b.md_so_lan || 0) - (a.md_so_lan || 0));
+  const displayedPakh = activePakhList;
 
   // Grouped active alarms for message style
   const groupedMd = groupAlarmsForSection(displayedMd);
@@ -386,7 +375,7 @@ export default function VhktRan() {
         if (groupedCell.length === 0) {
           lines.push('  • (Không có)');
         } else {
-          groupedCell.forEach(a => lines.push(`  ${formatAlarmLine(a)}`));
+          groupedCell.forEach(a => lines.push(`  ${formatCellOffLine(a)}`));
         }
         lines.push('');
       }
@@ -395,9 +384,32 @@ export default function VhktRan() {
     return lines.join('\n').trim();
   };
 
-  // Copy to clipboard handler
-  const handleCopy = async (sectionKey) => {
-    const text = generateMessageText(sectionKey);
+  // Generate plain text for PAKH
+  const generatePakhMessageText = () => {
+    const lines = ['💬 PAKH TỒN ĐỌNG:'];
+    if (activePakhList.length === 0) {
+      lines.push('  • (Không có)');
+    } else {
+      activePakhList.forEach(p => {
+        const soThueBao = p.so_thue_bao || p.soThueBao || '--';
+        const loaiThueBao = p.loai_thue_bao || p.loaiThueBao ? ` [${p.loai_thue_bao || p.loaiThueBao}]` : '';
+        const maTram = p.ma_tram || p.maTram || '--';
+        const { newId, oldId } = getSiteDetails(maTram);
+        const siteDisplay = oldId || newId || maTram;
+        const tgConLai = p.tgclTtml || p.tg_con_lai || p.tgConLai || '--';
+        const diaBan = p.phuong_xa || p.phuongXa ? ` (${p.phuong_xa || p.phuongXa})` : '';
+        const noiDung = p.noi_dung_phan_anh || p.noiDungPhanAnh || '';
+        lines.push(`  • ${soThueBao}${loaiThueBao} - ${siteDisplay}${diaBan} - Hạn: ${tgConLai}`);
+        if (noiDung) {
+          lines.push(`    ↳ ${noiDung}`);
+        }
+      });
+    }
+    return lines.join('\n').trim();
+  };
+
+  // Copy to clipboard helper
+  const copyToClipboard = async (text, key) => {
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(text);
@@ -412,11 +424,21 @@ export default function VhktRan() {
         document.execCommand('copy');
         document.body.removeChild(ta);
       }
-      setCopiedSection(sectionKey);
+      setCopiedSection(key);
       setTimeout(() => setCopiedSection(''), 2200);
     } catch (err) {
-      console.error('Failed to copy message:', err);
+      console.error('Failed to copy text:', err);
     }
+  };
+
+  const handleCopy = (sectionKey) => {
+    const text = generateMessageText(sectionKey);
+    copyToClipboard(text, sectionKey);
+  };
+
+  const handleCopyPakh = () => {
+    const text = generatePakhMessageText();
+    copyToClipboard(text, 'pakh');
   };
 
   // Format full date time for tables (dd/mm/yyyy hh:mm:ss)
@@ -433,8 +455,8 @@ export default function VhktRan() {
     return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
   }
 
-  // Render site label for desktop table
-  function renderSiteLabel(site) {
+  // Render site label (showTech = false will omit 4G / SRAN 3G4G / 5G badges)
+  function renderSiteLabel(site, showTech = true) {
     if (!site) return <span className="font-mono text-gray-400">--</span>;
     const { newId, oldId, tech, techLabel, badgeColor } = getSiteDetails(site);
 
@@ -444,7 +466,7 @@ export default function VhktRan() {
           <span className="font-bold text-blue-600 dark:text-blue-400 font-mono tracking-wide text-xs sm:text-[13px]">
             {newId}
           </span>
-          {tech && (
+          {showTech && tech && (
             <span className={`px-1.5 py-0.2 rounded text-[9px] font-black border uppercase tracking-wider ${badgeColor}`}>
               {techLabel}
             </span>
@@ -462,6 +484,8 @@ export default function VhktRan() {
   // Reusable Mobile Message Card
   function MobileMessageCard({ title, icon, alarms, sectionKey }) {
     const isCopied = copiedSection === sectionKey;
+    const isCellOff = sectionKey === 'mll_cell';
+
     return (
       <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
         {/* Header */}
@@ -508,6 +532,26 @@ export default function VhktRan() {
                 const dateStr = formatMessageDate(a.sdate);
                 const cellStr = a.cellid ? ` (${a.cellid})` : '';
 
+                // Cell Off: bỏ site ID mới, chỉ hiển thị site cũ và cell ID
+                if (isCellOff) {
+                  const siteCode = oldId || newId || a.site;
+                  return (
+                    <div key={idx} className="flex items-baseline gap-1.5 flex-wrap leading-relaxed py-0.5 border-b border-slate-50 last:border-b-0">
+                      <span className="text-slate-400 select-none">•</span>
+                      <span className="font-bold text-slate-900">{siteCode}</span>
+                      {net && (
+                        <span className="font-bold text-emerald-600">[{net}]</span>
+                      )}
+                      {cellStr && (
+                        <span className="font-semibold text-purple-600">{cellStr}</span>
+                      )}
+                      <span className="text-slate-300">-</span>
+                      <span className="text-slate-500 text-[11px] sm:text-xs font-medium">{dateStr}</span>
+                    </div>
+                  );
+                }
+
+                // Standard: MAC, GEN, MLL
                 return (
                   <div key={idx} className="flex items-baseline gap-1.5 flex-wrap leading-relaxed py-0.5 border-b border-slate-50 last:border-b-0">
                     <span className="text-slate-400 select-none">•</span>
@@ -517,9 +561,6 @@ export default function VhktRan() {
                     )}
                     {net && (
                       <span className="font-bold text-emerald-600">[{net}]</span>
-                    )}
-                    {cellStr && (
-                      <span className="font-semibold text-purple-600">{cellStr}</span>
                     )}
                     <span className="text-slate-300">-</span>
                     <span className="text-slate-500 text-[11px] sm:text-xs font-medium">{dateStr}</span>
@@ -533,163 +574,140 @@ export default function VhktRan() {
     );
   }
 
+  // Definition of tabs for 2-row layout
+  const row1Tabs = [
+    { id: 'all', label: 'Tổng hợp', shortLabel: 'T.Hợp', count: totalActiveCount, color: 'indigo', icon: '📋' },
+    { id: 'md', label: 'Mất điện', shortLabel: 'M.Điện', count: mdCount, color: 'amber', icon: '⚡' },
+    { id: 'mpd', label: 'Máy phát', shortLabel: 'M.Phát', count: mpdCount, color: 'emerald', icon: '🔋' },
+    { id: 'mll', label: 'Mất liên lạc', shortLabel: 'Mất LL', count: mllCount, color: 'red', icon: '📵' },
+  ];
+
+  const row2Tabs = [
+    { id: 'mll_cell', label: 'Cell Off', shortLabel: 'Cell Off', count: cellCount, color: 'purple', icon: '📡' },
+    { id: 'vhkt', label: 'SLA', shortLabel: 'SLA', count: '📊', color: 'blue', icon: '📊' },
+    { id: 'pakh', label: 'PAKH', shortLabel: 'PAKH', count: activePakhList.length, color: 'sky', icon: '💬' },
+  ];
+
+  const allTabs = [...row1Tabs, ...row2Tabs];
+
+  // Render individual nav card
+  const renderNavCard = (card, isMobile = false) => {
+    const isActive = activeTab === card.id;
+    const borderColors = {
+      indigo: 'border-l-indigo-500',
+      amber: 'border-l-amber-500',
+      emerald: 'border-l-emerald-500',
+      red: 'border-l-red-500',
+      purple: 'border-l-purple-500',
+      blue: 'border-l-blue-500',
+      sky: 'border-l-sky-500',
+    };
+    const textColors = {
+      indigo: 'text-indigo-700',
+      amber: 'text-amber-700',
+      emerald: 'text-emerald-700',
+      red: 'text-red-700',
+      purple: 'text-purple-700',
+      blue: 'text-blue-700',
+      sky: 'text-sky-700',
+    };
+    const ringColors = {
+      indigo: 'ring-indigo-400',
+      amber: 'ring-amber-400',
+      emerald: 'ring-emerald-400',
+      red: 'ring-red-400',
+      purple: 'ring-purple-400',
+      blue: 'ring-blue-400',
+      sky: 'ring-sky-400',
+    };
+
+    return (
+      <button
+        key={card.id}
+        onClick={() => setActiveTab(card.id)}
+        className={`
+          bg-white rounded-xl p-1.5 sm:p-3 text-left transition-all border-l-4 border-y border-r border-y-slate-200 border-r-slate-200
+          hover:shadow-md cursor-pointer flex-1
+          ${borderColors[card.color]}
+          ${isActive ? `ring-2 ${ringColors[card.color]} ring-offset-1 bg-slate-50/60` : ''}
+        `}
+      >
+        <div className="flex items-center gap-0.5 sm:gap-1 mb-0.5 sm:mb-1">
+          {card.icon && <span className="text-xs sm:text-base leading-none">{card.icon}</span>}
+          <span className="text-[9px] sm:text-[11px] text-slate-500 font-semibold uppercase tracking-wider truncate" title={card.label}>
+            {isMobile ? card.shortLabel : card.label}
+          </span>
+        </div>
+        <div className={`text-xs sm:text-lg font-extrabold pl-0.5 ${
+          isActive ? textColors[card.color] : (card.count === 0 || card.count === '0' ? 'text-slate-400' : 'text-slate-700')
+        }`}>
+          {card.count}
+        </div>
+      </button>
+    );
+  };
+
   return (
-    <div className="space-y-6 animate-in fade-in duration-300 text-slate-800">
-      {/* Page Header */}
-      <div className="flex items-center justify-between gap-4 border-b border-gray-200 pb-4">
+    <div className="space-y-4 animate-in fade-in duration-300 text-slate-800">
+      {/* Page Header with Compact Status Badge & Refresh Button */}
+      <div className="flex items-center justify-between gap-2 border-b border-gray-200 pb-3">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2 text-slate-800">
-            <Radio className="h-6 w-6 text-blue-600" />
+          <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2 text-slate-800">
+            <Radio className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
             VHKT RAN
           </h1>
-          <p className="text-xs text-gray-500 mt-1 font-medium">
+          <p className="text-[11px] sm:text-xs text-gray-500 mt-0.5 font-medium">
             Giám sát vận hành realtime: MĐ, MPĐ, MLL, SLA, PAKH
           </p>
         </div>
         
-        {/* Refresh Button */}
-        <button
-          onClick={async () => {
-            setLoading(true);
-            await Promise.all([fetchAlarms(), fetchPakh(), fetchVhktSla()]);
-            setLoading(false);
-          }}
-          className="flex items-center gap-1.5 px-4 py-2 border border-blue-600 text-blue-600 rounded-lg font-semibold text-sm hover:bg-blue-50 transition-colors shadow-sm cursor-pointer"
-        >
-          <RefreshCw className="h-4 w-4" />
-          <span className="hidden sm:inline">Refresh</span>
-        </button>
-      </div>
-
-      {/* Nav Cards Container - Compact & Horizontal Scrollable on Mobile */}
-      <div className="flex flex-row overflow-x-auto gap-2 pb-2 mb-6 scrollbar-thin scrollbar-thumb-slate-200 no-scrollbar">
-        {[
-          { id: 'all', label: 'Tổng hợp', count: totalActiveCount, color: 'indigo', icon: '📋', minWidth: 'min-w-[85px] sm:min-w-[110px]' },
-          { id: 'md', label: 'Mất điện', count: mdCount, color: 'amber', icon: '⚡', minWidth: 'min-w-[85px] sm:min-w-[115px]' },
-          { id: 'mpd', label: 'Máy phát điện', count: mpdCount, color: 'emerald', icon: '🔋', minWidth: 'min-w-[100px] sm:min-w-[125px]' },
-          { id: 'mll', label: 'Mất liên lạc', count: mllCount, color: 'red', icon: '📵', minWidth: 'min-w-[100px] sm:min-w-[120px]' },
-          { id: 'mll_cell', label: 'Cell Off', count: cellCount, color: 'purple', icon: '📡', minWidth: 'min-w-[85px] sm:min-w-[115px]' },
-          { id: 'vhkt', label: 'SLA', count: '📊', color: 'blue', icon: '', minWidth: 'min-w-[70px] sm:min-w-[100px]' },
-          { id: 'pakh', label: 'PAKH', count: activePakhList.length, color: 'sky', icon: '💬', minWidth: 'min-w-[80px] sm:min-w-[100px]' },
-        ].map(card => {
-          const isActive = activeTab === card.id;
-          
-          const borderColors = {
-            indigo: 'border-l-indigo-500',
-            amber: 'border-l-amber-500',
-            emerald: 'border-l-emerald-500',
-            red: 'border-l-red-500',
-            purple: 'border-l-purple-500',
-            blue: 'border-l-blue-500',
-            sky: 'border-l-sky-500',
-          };
-          
-          const textColors = {
-            indigo: 'text-indigo-700',
-            amber: 'text-amber-700',
-            emerald: 'text-emerald-700',
-            red: 'text-red-700',
-            purple: 'text-purple-700',
-            blue: 'text-blue-700',
-            sky: 'text-sky-700',
-          };
-
-          const ringColors = {
-            indigo: 'ring-indigo-400',
-            amber: 'ring-amber-400',
-            emerald: 'ring-emerald-400',
-            red: 'ring-red-400',
-            purple: 'ring-purple-400',
-            blue: 'ring-blue-400',
-            sky: 'ring-sky-400',
-          };
-
-          return (
-            <button
-              key={card.id}
-              onClick={() => setActiveTab(card.id)}
-              className={`
-                bg-white rounded-xl p-1.5 sm:p-3 text-left transition-all border-l-4 border-y border-r border-y-slate-200 border-r-slate-200
-                hover:shadow-md cursor-pointer flex-1 ${card.minWidth}
-                ${borderColors[card.color]}
-                ${isActive ? `ring-2 ${ringColors[card.color]} ring-offset-1` : ''}
-              `}
-            >
-              <div className="flex items-center gap-0.5 sm:gap-1 mb-0.5 sm:mb-1">
-                {card.icon && <span className="text-xs sm:text-base">{card.icon}</span>}
-                <span className="text-[9px] sm:text-[11px] text-slate-500 font-semibold uppercase tracking-wider truncate" title={card.label}>
-                  {card.label}
-                </span>
-              </div>
-              <div className={`text-xs sm:text-lg font-extrabold pl-0.5 ${
-                isActive ? textColors[card.color] : (card.count === 0 || card.count === '0' ? 'text-slate-400' : 'text-slate-700')
-              }`}>
-                {card.count}
-              </div>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Search Toolbar & Copy Button (ERA filter bar removed) */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-3 sm:p-4 shadow-2xs">
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-          {/* Search Box */}
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Tìm Site ID (mới/cũ), trạm, nội dung cảnh báo..."
-              className="w-full pl-9 pr-8 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-slate-800 placeholder-slate-400"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded cursor-pointer"
-                title="Xóa tìm kiếm"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-
-          {/* Quick Actions & Status */}
-          <div className="flex items-center gap-2 self-end sm:self-auto shrink-0 flex-wrap">
-            {/* Copy full message */}
-            <button
-              onClick={() => handleCopy(activeTab === 'all' ? 'all' : activeTab)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95"
-              title="Sao chép nội dung cảnh báo dạng tin nhắn"
-            >
-              {copiedSection === (activeTab === 'all' ? 'all' : activeTab) ? (
-                <>
-                  <Check className="h-4 w-4 text-emerald-600" />
-                  <span className="text-emerald-700">Đã sao chép!</span>
-                </>
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Status Indicator */}
+          <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[11px] text-slate-500">
+            <span className="inline-flex h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
+            <span>
+              {activeTab === 'vhkt' ? (
+                vhktScrapedAt ? `SLA: ${formatDateTime(vhktScrapedAt)}` : 'Chờ SLA...'
+              ) : activeTab === 'pakh' ? (
+                pakhScrapedAt ? `PAKH: ${formatDateTime(pakhScrapedAt)}` : 'Chờ PAKH...'
               ) : (
-                <>
-                  <Copy className="h-4 w-4 text-blue-600" />
-                  <span>Sao chép tin nhắn</span>
-                </>
+                lastFetchTime ? `Alarm: ${lastFetchTime}` : 'Đang tải...'
               )}
-            </button>
-
-            {/* Realtime timestamp */}
-            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-[11px] text-slate-500 shrink-0">
-              <span className="inline-flex h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
-              <span>
-                {activeTab === 'vhkt' ? (
-                  vhktScrapedAt ? `SLA: ${formatDateTime(vhktScrapedAt)}` : 'Chờ SLA...'
-                ) : activeTab === 'pakh' ? (
-                  pakhScrapedAt ? `PAKH: ${formatDateTime(pakhScrapedAt)}` : 'Chờ PAKH...'
-                ) : (
-                  lastFetchTime ? `Alarm: ${lastFetchTime}` : 'Đang tải...'
-                )}
-              </span>
-            </div>
+            </span>
           </div>
+
+          {/* Refresh Button */}
+          <button
+            onClick={async () => {
+              setLoading(true);
+              await Promise.all([fetchAlarms(), fetchPakh(), fetchVhktSla()]);
+              setLoading(false);
+            }}
+            className="flex items-center gap-1 px-3 py-1.5 border border-blue-600 text-blue-600 rounded-lg font-semibold text-xs sm:text-sm hover:bg-blue-50 transition-colors shadow-2xs cursor-pointer"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Nav Cards Container - 2 Rows on Mobile (không cần trượt qua), Single Row on Desktop */}
+      <div>
+        {/* Mobile View: 2 Fixed Rows */}
+        <div className="block sm:hidden space-y-1.5 mb-2">
+          {/* Row 1: 4 Tabs */}
+          <div className="grid grid-cols-4 gap-1.5">
+            {row1Tabs.map(card => renderNavCard(card, true))}
+          </div>
+          {/* Row 2: 3 Tabs */}
+          <div className="grid grid-cols-3 gap-1.5">
+            {row2Tabs.map(card => renderNavCard(card, true))}
+          </div>
+        </div>
+
+        {/* Desktop View: Single Row */}
+        <div className="hidden sm:grid sm:grid-cols-7 gap-2 mb-4">
+          {allTabs.map(card => renderNavCard(card, false))}
         </div>
       </div>
 
@@ -772,19 +790,7 @@ export default function VhktRan() {
                 <div className="hidden sm:block divide-y divide-gray-200">
                   {displayedMd.length === 0 ? (
                     <div className="p-12 text-center text-gray-500 text-sm space-y-2">
-                      {mdActive.length === 0 ? (
-                        <p>✅ Không có alarm MĐ nào. Tất cả trạm đang có điện lưới.</p>
-                      ) : (
-                        <>
-                          <p className="font-semibold">🔍 Không có trạm nào khớp với từ khóa tìm kiếm.</p>
-                          <button
-                            onClick={() => setSearchQuery('')}
-                            className="text-xs text-blue-600 hover:underline font-semibold cursor-pointer"
-                          >
-                            Xóa tìm kiếm để xem tất cả {mdActive.length} cảnh báo MĐ
-                          </button>
-                        </>
-                      )}
+                      <p>✅ Không có alarm MĐ nào. Tất cả trạm đang có điện lưới.</p>
                     </div>
                   ) : (
                     <div className="overflow-x-auto">
@@ -844,19 +850,7 @@ export default function VhktRan() {
                 <div className="hidden sm:block divide-y divide-gray-200">
                   {displayedMpd.length === 0 ? (
                     <div className="p-12 text-center text-gray-500 text-sm space-y-2">
-                      {mpdActive.length === 0 ? (
-                        <p>✅ Chưa có trạm nào chạy máy phát điện.</p>
-                      ) : (
-                        <>
-                          <p className="font-semibold">🔍 Không có trạm nào khớp với từ khóa tìm kiếm.</p>
-                          <button
-                            onClick={() => setSearchQuery('')}
-                            className="text-xs text-blue-600 hover:underline font-semibold cursor-pointer"
-                          >
-                            Xóa tìm kiếm để xem tất cả {mpdActive.length} trạm chạy máy phát
-                          </button>
-                        </>
-                      )}
+                      <p>✅ Chưa có trạm nào chạy máy phát điện.</p>
                     </div>
                   ) : (
                     <div className="overflow-x-auto">
@@ -911,19 +905,7 @@ export default function VhktRan() {
                 <div className="hidden sm:block divide-y divide-gray-200">
                   {displayedMll.length === 0 ? (
                     <div className="p-12 text-center text-gray-500 text-sm space-y-2">
-                      {mllActive.length === 0 ? (
-                        <p>✅ Tất cả trạm đang liên lạc bình thường.</p>
-                      ) : (
-                        <>
-                          <p className="font-semibold">🔍 Không có trạm nào khớp với từ khóa tìm kiếm.</p>
-                          <button
-                            onClick={() => setSearchQuery('')}
-                            className="text-xs text-blue-600 hover:underline font-semibold cursor-pointer"
-                          >
-                            Xóa tìm kiếm để xem tất cả {mllActive.length} trạm mất liên lạc
-                          </button>
-                        </>
-                      )}
+                      <p>✅ Tất cả trạm đang liên lạc bình thường.</p>
                     </div>
                   ) : (
                     <div className="overflow-x-auto">
@@ -980,26 +962,14 @@ export default function VhktRan() {
                 <div className="hidden sm:block divide-y divide-gray-200">
                   {displayedCell.length === 0 ? (
                     <div className="p-12 text-center text-gray-500 text-sm space-y-2">
-                      {cellActive.length === 0 ? (
-                        <p>✅ Tất cả cell đang hoạt động bình thường.</p>
-                      ) : (
-                        <>
-                          <p className="font-semibold">🔍 Không có cell nào khớp với từ khóa tìm kiếm.</p>
-                          <button
-                            onClick={() => setSearchQuery('')}
-                            className="text-xs text-blue-600 hover:underline font-semibold cursor-pointer"
-                          >
-                            Xóa tìm kiếm để xem tất cả {cellActive.length} cảnh báo Cell Off
-                          </button>
-                        </>
-                      )}
+                      <p>✅ Tất cả cell đang hoạt động bình thường.</p>
                     </div>
                   ) : (
                     <div className="overflow-x-auto">
                       <table className="w-full text-center border-collapse text-xs sm:text-sm">
                         <thead>
                           <tr className="border-b border-gray-200 bg-gray-50 text-gray-500 uppercase tracking-wider font-semibold text-[10px] sm:text-xs">
-                            <th className="py-3 px-2 sm:px-4 text-center">SITE ID</th>
+                            <th className="py-3 px-2 sm:px-4 text-center">SITE ID CŨ</th>
                             <th className="py-3 px-2 sm:px-4 text-center">CELL ID</th>
                             <th className="py-3 px-2 sm:px-4 text-center">MẠNG</th>
                             <th className="py-3 px-2 sm:px-4 text-left">CẢNH BÁO</th>
@@ -1009,30 +979,34 @@ export default function VhktRan() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                          {displayedCell.map(a => (
-                            <tr key={a.id} className="hover:bg-gray-50 transition-colors">
-                              <td className="py-3 px-2 sm:px-4 font-mono font-bold">
-                                <div className="flex items-center justify-start gap-2.5 min-w-[130px] max-w-[190px] mx-auto text-left">
-                                  <span className="text-base leading-none shrink-0" title="Cell Off">
-                                    🔴
-                                  </span>
-                                  {renderSiteLabel(a.site)}
-                                </div>
-                              </td>
-                              <td className="py-3 px-2 sm:px-4 text-center font-mono font-bold text-purple-700">{a.cellid || '--'}</td>
-                              <td className="py-3 px-2 sm:px-4 text-center font-bold text-emerald-600 font-mono">
-                                {getAlarmNetwork(a) || a.network || '--'}
-                              </td>
-                              <td className="py-3 px-2 sm:px-4 text-left text-gray-700">{a.alarm_name || '--'}</td>
-                              <td className="py-3 px-2 sm:px-4 text-gray-500 font-mono text-xs">
-                                {a.sdate ? formatDateTime(a.sdate) : '--'}
-                              </td>
-                              <td className="py-3 px-2 sm:px-4 font-bold text-amber-500 font-mono">
-                                {(a.duration / 60).toFixed(1)}h
-                              </td>
-                              <td className="py-3 px-2 sm:px-4 font-mono text-xs text-slate-600">{a.vendor || '--'}</td>
-                            </tr>
-                          ))}
+                          {displayedCell.map(a => {
+                            const { newId, oldId } = getSiteDetails(a.site);
+                            const siteCode = oldId || newId || a.site;
+                            return (
+                              <tr key={a.id} className="hover:bg-gray-50 transition-colors">
+                                <td className="py-3 px-2 sm:px-4 font-mono font-bold text-center">
+                                  <div className="flex items-center justify-center gap-2">
+                                    <span className="text-base leading-none shrink-0" title="Cell Off">
+                                      🔴
+                                    </span>
+                                    <span className="font-black text-slate-900">{siteCode}</span>
+                                  </div>
+                                </td>
+                                <td className="py-3 px-2 sm:px-4 text-center font-mono font-bold text-purple-700">{a.cellid || '--'}</td>
+                                <td className="py-3 px-2 sm:px-4 text-center font-bold text-emerald-600 font-mono">
+                                  {getAlarmNetwork(a) || a.network || '--'}
+                                </td>
+                                <td className="py-3 px-2 sm:px-4 text-left text-gray-700">{a.alarm_name || '--'}</td>
+                                <td className="py-3 px-2 sm:px-4 text-gray-500 font-mono text-xs">
+                                  {a.sdate ? formatDateTime(a.sdate) : '--'}
+                                </td>
+                                <td className="py-3 px-2 sm:px-4 font-bold text-amber-500 font-mono">
+                                  {(a.duration / 60).toFixed(1)}h
+                                </td>
+                                <td className="py-3 px-2 sm:px-4 font-mono text-xs text-slate-600">{a.vendor || '--'}</td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
@@ -1041,24 +1015,12 @@ export default function VhktRan() {
               </div>
             )}
 
-            {/* Tab: SLA (VHKT) */}
+            {/* Tab: SLA (VHKT) - Bỏ hiển thị badge ERA */}
             {activeTab === 'vhkt' && (
               <div className="divide-y divide-gray-200">
                 {displayedVhkt.length === 0 ? (
                   <div className="p-12 text-center text-gray-500 text-sm space-y-2">
-                    {vhktData.length === 0 ? (
-                      <p>📊 SLA được cập nhật 1 lần/sáng (7:20 AM) — dữ liệu ngày hôm qua.</p>
-                    ) : (
-                      <>
-                        <p className="font-semibold">🔍 Không có dữ liệu SLA nào khớp với từ khóa tìm kiếm.</p>
-                        <button
-                          onClick={() => setSearchQuery('')}
-                          className="text-xs text-blue-600 hover:underline font-semibold cursor-pointer"
-                        >
-                          Xóa tìm kiếm để xem tất cả {vhktData.length} trạm trong báo cáo SLA
-                        </button>
-                      </>
-                    )}
+                    <p>📊 SLA được cập nhật 1 lần/sáng (7:20 AM) — dữ liệu ngày hôm qua.</p>
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
@@ -1103,7 +1065,8 @@ export default function VhktRan() {
                             <tr key={i} className="hover:bg-gray-50 transition-colors">
                               <td className="py-3 px-2 sm:px-4 font-mono font-bold text-center">
                                 <div className="flex items-center justify-center min-w-[120px] max-w-[180px] mx-auto">
-                                  {renderSiteLabel(r.tram)}
+                                  {/* Bỏ hiển thị badge ERA trong SLA: showTech = false */}
+                                  {renderSiteLabel(r.tram, false)}
                                 </div>
                               </td>
                               <td className="py-3 px-1 text-center font-mono">{r.md_so_lan || 0}</td>
@@ -1140,119 +1103,77 @@ export default function VhktRan() {
               </div>
             )}
 
-            {/* Tab: PAKH */}
+            {/* Tab: PAKH - Mobile hiển thị dạng tin nhắn tồn đọng */}
             {activeTab === 'pakh' && (
-              <div className="divide-y divide-gray-200">
-                {displayedPakh.length === 0 ? (
-                  <div className="p-12 text-center text-gray-500 text-sm space-y-2">
-                    {activePakhList.length === 0 ? (
-                      <p>✅ Không có phản ánh khách hàng (PAKH) nào cần xử lý.</p>
-                    ) : (
-                      <>
-                        <p className="font-semibold">🔍 Không có phản ánh nào khớp với từ khóa tìm kiếm.</p>
+              <div>
+                {/* Mobile View: PAKH tồn đọng dạng tin nhắn */}
+                <div className="block lg:hidden p-3 bg-slate-50">
+                  <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
+                    {/* Header */}
+                    <div className="flex items-center justify-between px-3.5 py-2.5 bg-slate-50 border-b border-slate-100">
+                      <div className="flex items-center gap-1.5 font-mono font-bold text-slate-800 text-sm">
+                        <span className="text-base">💬</span>
+                        <span>PAKH TỒN ĐỌNG:</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 font-mono">
+                          {displayedPakh.length}
+                        </span>
                         <button
-                          onClick={() => setSearchQuery('')}
-                          className="text-xs text-blue-600 hover:underline font-semibold cursor-pointer"
+                          onClick={handleCopyPakh}
+                          className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-slate-600 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg shadow-2xs cursor-pointer active:scale-95 transition-all"
+                          title="Sao chép PAKH tồn đọng"
                         >
-                          Xóa tìm kiếm để xem tất cả {activePakhList.length} phản ánh khách hàng
+                          {copiedSection === 'pakh' ? (
+                            <>
+                              <Check className="h-3.5 w-3.5 text-emerald-600" />
+                              <span className="text-emerald-700 font-bold">Đã chép</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="h-3.5 w-3.5 text-slate-500" />
+                              <span>Chép</span>
+                            </>
+                          )}
                         </button>
-                      </>
-                    )}
-                  </div>
-                ) : (
-                  <div>
-                    {/* Desktop View: Table */}
-                    <div className="hidden lg:block overflow-x-auto">
-                      <table className="w-full text-center border-collapse text-xs sm:text-sm">
-                        <thead>
-                          <tr className="border-b border-gray-200 bg-gray-50 text-gray-500 uppercase tracking-wider font-semibold text-[10px] sm:text-xs">
-                            <th className="py-3 px-2 sm:px-4 text-center">PAKH</th>
-                            <th className="py-3 px-2 sm:px-4 text-left">THỜI GIAN NHẬN</th>
-                            <th className="py-3 px-2 sm:px-4 text-left">ĐỊA BÀN</th>
-                            <th className="py-3 px-2 sm:px-4 text-left">NỘI DUNG PHẢN ÁNH</th>
-                            <th className="py-3 px-2 sm:px-4 text-center">TRẠM / CELL</th>
-                            <th className="py-3 px-2 sm:px-4 text-center">HẠN CÒN LẠI</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100 text-left">
-                          {displayedPakh.map((p, i) => {
-                            const soThueBao = p.so_thue_bao || p.soThueBao || '--';
-                            const loaiThueBao = p.loai_thue_bao || p.loaiThueBao || '--';
-                            const thoiGianGhiNhan = p.thoi_gian_ghi_nhan || p.thoiGianGhiNhan;
-                            const tinhThanhPho = p.tinh_thanh_pho || p.tinhThanhPho || '--';
-                            const phuongXa = p.phuong_xa || p.phuongXa || '';
-                            const noiDungPhanAnh = p.noi_dung_phan_anh || p.noiDungPhanAnh || '--';
-                            const maTram = p.ma_tram || p.maTram || '--';
-                            const tgConLai = p.tgclTtml || p.tg_con_lai || p.tgConLai || '--';
-                            return (
-                              <tr key={i} className="hover:bg-gray-50 transition-colors">
-                                <td className="py-3 px-2 sm:px-4 text-center font-bold text-blue-600 font-mono">
-                                  {soThueBao}
-                                  <div>
-                                    <span className="inline-block px-1 py-0.2 rounded bg-slate-100 text-[9px] font-bold text-slate-600 border border-slate-200 uppercase tracking-tight mt-0.5">
-                                      {loaiThueBao}
-                                    </span>
-                                  </div>
-                                </td>
-                                <td className="py-3 px-2 sm:px-4 text-gray-500 font-mono text-[11px]">
-                                  {thoiGianGhiNhan ? formatDateTime(thoiGianGhiNhan) : '--'}
-                                </td>
-                                <td className="py-3 px-2 sm:px-4 text-gray-700">
-                                  <div className="font-semibold text-slate-800 text-xs">{tinhThanhPho}</div>
-                                  <div className="text-[10px] text-gray-500">{phuongXa}</div>
-                                </td>
-                                <td className="py-3 px-2 sm:px-4 text-gray-600 max-w-xs sm:max-w-md truncate whitespace-pre-wrap text-xs font-sans" title={noiDungPhanAnh}>
-                                  {noiDungPhanAnh}
-                                </td>
-                                <td className="py-3 px-2 sm:px-4 text-center">
-                                  <div className="inline-block">
-                                    {renderSiteLabel(maTram)}
-                                  </div>
-                                </td>
-                                <td className="py-3 px-2 sm:px-4 text-center">
-                                  <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold font-mono tracking-tight ${
-                                    String(tgConLai).includes('giờ') && parseInt(tgConLai) <= 12
-                                      ? 'bg-red-100 text-red-800 border border-red-200 animate-pulse'
-                                      : 'bg-amber-100 text-amber-800 border border-amber-200'
-                                  }`}>
-                                    {tgConLai}
-                                  </span>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
+                      </div>
                     </div>
 
-                    {/* Mobile View: Compact Cards */}
-                    <div className="lg:hidden grid grid-cols-1 md:grid-cols-2 gap-3 p-3 bg-slate-50">
-                      {displayedPakh.map((p, i) => {
-                        const soThueBao = p.so_thue_bao || p.soThueBao || '--';
-                        const loaiThueBao = p.loai_thue_bao || p.loaiThueBao || '';
-                        const thoiGianGhiNhan = p.thoi_gian_ghi_nhan || p.thoiGianGhiNhan;
-                        const tinhThanhPho = p.tinh_thanh_pho || p.tinhThanhPho || '--';
-                        const phuongXa = p.phuong_xa || p.phuongXa || '';
-                        const noiDungPhanAnh = p.noi_dung_phan_anh || p.noiDungPhanAnh || '--';
-                        const maTram = p.ma_tram || p.maTram || '--';
-                        const tgConLai = p.tgclTtml || p.tg_con_lai || p.tgConLai || '--';
-                        const isUrgent = String(tgConLai).includes('giờ') && parseInt(tgConLai) <= 12;
-                        return (
-                          <div key={i} className="bg-white rounded-xl border border-slate-200 p-3 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
-                            <div>
-                              {/* Header: SĐT & Hạn còn lại */}
-                              <div className="flex items-center justify-between gap-2 mb-2">
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-xs font-bold text-blue-600 font-mono">
-                                    {soThueBao}
+                    {/* Content List dạng tin nhắn */}
+                    <div className="p-3 bg-white space-y-2.5 font-mono text-xs">
+                      {displayedPakh.length === 0 ? (
+                        <div className="text-slate-400 text-xs italic py-1 pl-2">
+                          • (Không có phản ánh tồn đọng)
+                        </div>
+                      ) : (
+                        displayedPakh.map((p, idx) => {
+                          const soThueBao = p.so_thue_bao || p.soThueBao || '--';
+                          const loaiThueBao = p.loai_thue_bao || p.loaiThueBao || '';
+                          const maTram = p.ma_tram || p.maTram || '--';
+                          const { newId, oldId } = getSiteDetails(maTram);
+                          const siteDisplay = oldId || newId || maTram;
+                          const tgConLai = p.tgclTtml || p.tg_con_lai || p.tgConLai || '--';
+                          const isUrgent = String(tgConLai).includes('giờ') && parseInt(tgConLai) <= 12;
+                          const noiDung = p.noi_dung_phan_anh || p.noiDungPhanAnh || '';
+                          const diaBan = p.phuong_xa || p.phuongXa ? `${p.phuong_xa || p.phuongXa}, ${p.tinh_thanh_pho || p.tinhThanhPho || ''}` : (p.tinh_thanh_pho || p.tinhThanhPho || '');
+
+                          return (
+                            <div key={idx} className="border-b border-slate-100 pb-2.5 last:border-b-0 last:pb-0">
+                              <div className="flex items-baseline gap-1.5 flex-wrap leading-relaxed">
+                                <span className="text-slate-400 select-none">•</span>
+                                <span className="font-bold text-blue-600">{soThueBao}</span>
+                                {loaiThueBao && (
+                                  <span className="px-1 py-0.2 rounded bg-slate-100 text-[8px] font-bold text-slate-600 border border-slate-200 uppercase tracking-tight">
+                                    {loaiThueBao}
                                   </span>
-                                  {loaiThueBao && (
-                                    <span className="px-1 py-0.2 rounded bg-slate-100 text-[8px] font-bold text-slate-500 border border-slate-200 uppercase tracking-tight">
-                                      {loaiThueBao}
-                                    </span>
-                                  )}
-                                </div>
-                                <span className={`px-1 py-0.2 rounded text-[9px] font-bold tracking-tight uppercase ${
+                                )}
+                                <span className="text-slate-300">-</span>
+                                <span className="font-black text-slate-900">{siteDisplay}</span>
+                                {diaBan && (
+                                  <span className="text-slate-500 font-sans text-[10px]">[{diaBan}]</span>
+                                )}
+                                <span className="text-slate-300">-</span>
+                                <span className={`px-1.5 py-0.2 rounded text-[10px] font-bold tracking-tight ${
                                   isUrgent
                                     ? 'bg-red-100 text-red-800 border border-red-200 animate-pulse'
                                     : 'bg-amber-100 text-amber-800 border border-amber-200'
@@ -1260,35 +1181,88 @@ export default function VhktRan() {
                                   ⏱️ {tgConLai}
                                 </span>
                               </div>
-
-                              {/* Metadata Grid */}
-                              <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[10px] text-slate-500 font-mono mb-2 bg-slate-50 p-2 rounded-lg border border-slate-100">
-                                <div>
-                                  <span className="text-[9px] text-slate-400 block font-sans">TRẠM / CELL</span>
-                                  <div className="mt-0.5">{renderSiteLabel(maTram)}</div>
+                              {noiDung && (
+                                <div className="pl-3.5 mt-1 text-[11px] font-sans text-slate-600 leading-normal line-clamp-2" title={noiDung}>
+                                  ↳ {noiDung}
                                 </div>
-                                <div>
-                                  <span className="text-[9px] text-slate-400 block font-sans">THỜI GIAN NHẬN</span>
-                                  <span className="text-slate-600 text-[10px]">{thoiGianGhiNhan ? formatDateTime(thoiGianGhiNhan) : '--'}</span>
-                                </div>
-                                <div className="col-span-2 mt-0.5">
-                                  <span className="text-[9px] text-slate-400 block font-sans">ĐỊA BÀN</span>
-                                  <span className="text-slate-700 font-semibold font-sans text-[10px]">{phuongXa ? `${phuongXa}, ` : ''}{tinhThanhPho}</span>
-                                </div>
-                              </div>
-
-                              {/* Nội dung phản ánh */}
-                              <div className="text-[11px] text-slate-600 font-sans whitespace-pre-wrap leading-relaxed mt-2 bg-slate-50/50 p-2 rounded-lg border border-dashed border-slate-200">
-                                <span className="text-[9px] text-slate-400 block font-bold mb-0.5">NỘI DUNG PHẢN ÁNH:</span>
-                                {noiDungPhanAnh}
-                              </div>
+                              )}
                             </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })
+                      )}
                     </div>
                   </div>
-                )}
+                </div>
+
+                {/* Desktop View: Full Table */}
+                <div className="hidden lg:block overflow-x-auto">
+                  {displayedPakh.length === 0 ? (
+                    <div className="p-12 text-center text-gray-500 text-sm space-y-2">
+                      <p>✅ Không có phản ánh khách hàng (PAKH) nào cần xử lý.</p>
+                    </div>
+                  ) : (
+                    <table className="w-full text-center border-collapse text-xs sm:text-sm">
+                      <thead>
+                        <tr className="border-b border-gray-200 bg-gray-50 text-gray-500 uppercase tracking-wider font-semibold text-[10px] sm:text-xs">
+                          <th className="py-3 px-2 sm:px-4 text-center">PAKH</th>
+                          <th className="py-3 px-2 sm:px-4 text-left">THỜI GIAN NHẬN</th>
+                          <th className="py-3 px-2 sm:px-4 text-left">ĐỊA BÀN</th>
+                          <th className="py-3 px-2 sm:px-4 text-left">NỘI DUNG PHẢN ÁNH</th>
+                          <th className="py-3 px-2 sm:px-4 text-center">TRẠM / CELL</th>
+                          <th className="py-3 px-2 sm:px-4 text-center">HẠN CÒN LẠI</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 text-left">
+                        {displayedPakh.map((p, i) => {
+                          const soThueBao = p.so_thue_bao || p.soThueBao || '--';
+                          const loaiThueBao = p.loai_thue_bao || p.loaiThueBao || '--';
+                          const thoiGianGhiNhan = p.thoi_gian_ghi_nhan || p.thoiGianGhiNhan;
+                          const tinhThanhPho = p.tinh_thanh_pho || p.tinhThanhPho || '--';
+                          const phuongXa = p.phuong_xa || p.phuongXa || '';
+                          const noiDungPhanAnh = p.noi_dung_phan_anh || p.noiDungPhanAnh || '--';
+                          const maTram = p.ma_tram || p.maTram || '--';
+                          const tgConLai = p.tgclTtml || p.tg_con_lai || p.tgConLai || '--';
+                          return (
+                            <tr key={i} className="hover:bg-gray-50 transition-colors">
+                              <td className="py-3 px-2 sm:px-4 text-center font-bold text-blue-600 font-mono">
+                                {soThueBao}
+                                <div>
+                                  <span className="inline-block px-1 py-0.2 rounded bg-slate-100 text-[9px] font-bold text-slate-600 border border-slate-200 uppercase tracking-tight mt-0.5">
+                                    {loaiThueBao}
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="py-3 px-2 sm:px-4 text-gray-500 font-mono text-[11px]">
+                                {thoiGianGhiNhan ? formatDateTime(thoiGianGhiNhan) : '--'}
+                              </td>
+                              <td className="py-3 px-2 sm:px-4 text-gray-700">
+                                <div className="font-semibold text-slate-800 text-xs">{tinhThanhPho}</div>
+                                <div className="text-[10px] text-gray-500">{phuongXa}</div>
+                              </td>
+                              <td className="py-3 px-2 sm:px-4 text-gray-600 max-w-xs sm:max-w-md truncate whitespace-pre-wrap text-xs font-sans" title={noiDungPhanAnh}>
+                                {noiDungPhanAnh}
+                              </td>
+                              <td className="py-3 px-2 sm:px-4 text-center">
+                                <div className="inline-block">
+                                  {renderSiteLabel(maTram)}
+                                </div>
+                              </td>
+                              <td className="py-3 px-2 sm:px-4 text-center">
+                                <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold font-mono tracking-tight ${
+                                  String(tgConLai).includes('giờ') && parseInt(tgConLai) <= 12
+                                    ? 'bg-red-100 text-red-800 border border-red-200 animate-pulse'
+                                    : 'bg-amber-100 text-amber-800 border border-amber-200'
+                                }`}>
+                                  {tgConLai}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
               </div>
             )}
           </div>
