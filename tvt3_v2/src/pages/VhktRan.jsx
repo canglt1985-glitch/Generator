@@ -523,37 +523,101 @@ export default function VhktRan() {
     );
   }
 
-  // Reusable Mobile Message Card
+  // Render single alarm row (Guaranteed 1 single row on mobile with zero line breaks)
+  function renderAlarmRow(a, idx, isCellOff) {
+    const { newId, oldId } = getSiteDetails(a.site);
+    const net = getAlarmNetwork(a);
+    const dateStr = formatMessageDate(a.sdate);
+    const cellStr = a.cellid ? ` (${a.cellid})` : '';
+
+    if (isCellOff) {
+      const siteCode = oldId || newId || a.site;
+      return (
+        <div
+          key={idx}
+          className="flex items-center justify-between gap-1 py-1 px-1 border-b border-slate-100 last:border-b-0 hover:bg-slate-50 transition-colors font-mono"
+        >
+          {/* Left side: Bullet + Site Code + Net + Cell ID (Never wraps) */}
+          <div className="flex items-center gap-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-xs sm:text-[13px]">
+            <span className="text-slate-400 select-none shrink-0">•</span>
+            <span className="font-bold text-slate-900 shrink-0">{siteCode}</span>
+            {net && (
+              <span className="font-bold text-emerald-600 shrink-0">[{net}]</span>
+            )}
+            {cellStr && (
+              <span className="font-semibold text-purple-600 truncate text-[11px] sm:text-xs">
+                {cellStr}
+              </span>
+            )}
+          </div>
+
+          {/* Right side: Date & Time (Strictly on same row, pinned right) */}
+          <div className="shrink-0 text-slate-500 text-[11px] sm:text-xs font-medium pl-1 whitespace-nowrap">
+            <span className="text-slate-300 mr-1">-</span>
+            <span>{dateStr}</span>
+          </div>
+        </div>
+      );
+    }
+
+    // Standard: MAC, GEN, MLL
+    return (
+      <div
+        key={idx}
+        className="flex items-center justify-between gap-1 py-1 px-1 border-b border-slate-100 last:border-b-0 hover:bg-slate-50 transition-colors font-mono"
+      >
+        {/* Left side: Bullet + New ID + Old ID + Net (Never wraps) */}
+        <div className="flex items-center gap-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-xs sm:text-[13px]">
+          <span className="text-slate-400 select-none shrink-0">•</span>
+          <span className="font-bold text-blue-600 shrink-0">{newId}</span>
+          {oldId && oldId !== newId && (
+            <span className="font-black text-slate-900 shrink-0">({oldId})</span>
+          )}
+          {net && (
+            <span className="font-bold text-emerald-600 shrink-0">[{net}]</span>
+          )}
+        </div>
+
+        {/* Right side: Date & Time (Strictly on same row, pinned right) */}
+        <div className="shrink-0 text-slate-500 text-[11px] sm:text-xs font-medium pl-1 whitespace-nowrap">
+          <span className="text-slate-300 mr-1">-</span>
+          <span>{dateStr}</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Reusable Mobile Message Card for individual tabs
   function MobileMessageCard({ title, icon, alarms, sectionKey }) {
     const isCopied = copiedSection === sectionKey;
     const isCellOff = sectionKey === 'mll_cell';
 
     return (
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
+      <div className="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-3.5 py-2.5 bg-slate-50 border-b border-slate-100">
-          <div className="flex items-center gap-1.5 font-mono font-bold text-slate-800 text-sm">
-            <span className="text-base">{icon}</span>
+        <div className="flex items-center justify-between px-3 py-1.5 bg-slate-50 border-b border-slate-100">
+          <div className="flex items-center gap-1.5 font-mono font-bold text-slate-800 text-xs sm:text-sm">
+            <span className="text-sm sm:text-base">{icon}</span>
             <span>{title}:</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 font-mono">
+            <span className="text-[10px] sm:text-[11px] font-bold px-1.5 py-0.2 rounded-full bg-slate-200 text-slate-700 font-mono">
               {alarms.length}
             </span>
             <button
               onClick={() => handleCopy(sectionKey)}
-              className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-slate-600 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg shadow-2xs cursor-pointer active:scale-95 transition-all"
+              className="flex items-center gap-1 px-2 py-0.5 text-xs font-semibold text-slate-600 bg-white hover:bg-slate-100 border border-slate-200 rounded-md shadow-2xs cursor-pointer active:scale-95 transition-all"
               title="Sao chép đoạn này"
             >
               {isCopied ? (
                 <>
-                  <Check className="h-3.5 w-3.5 text-emerald-600" />
-                  <span className="text-emerald-700 font-bold">Đã chép</span>
+                  <Check className="h-3 w-3 text-emerald-600" />
+                  <span className="text-emerald-700 font-bold text-[11px]">Đã chép</span>
                 </>
               ) : (
                 <>
-                  <Copy className="h-3.5 w-3.5 text-slate-500" />
-                  <span>Chép</span>
+                  <Copy className="h-3 w-3 text-slate-500" />
+                  <span className="text-[11px]">Chép</span>
                 </>
               )}
             </button>
@@ -561,54 +625,14 @@ export default function VhktRan() {
         </div>
 
         {/* Content list */}
-        <div className="p-3 bg-white">
+        <div className="p-2 bg-white">
           {alarms.length === 0 ? (
             <div className="text-slate-400 text-xs italic py-1 font-mono pl-2">
               • (Không có)
             </div>
           ) : (
-            <div className="space-y-1.5 font-mono text-xs sm:text-sm">
-              {alarms.map((a, idx) => {
-                const { newId, oldId } = getSiteDetails(a.site);
-                const net = getAlarmNetwork(a);
-                const dateStr = formatMessageDate(a.sdate);
-                const cellStr = a.cellid ? ` (${a.cellid})` : '';
-
-                // Cell Off: bỏ site ID mới, chỉ hiển thị site cũ và cell ID
-                if (isCellOff) {
-                  const siteCode = oldId || newId || a.site;
-                  return (
-                    <div key={idx} className="flex items-baseline gap-1.5 flex-wrap leading-relaxed py-0.5 border-b border-slate-50 last:border-b-0">
-                      <span className="text-slate-400 select-none">•</span>
-                      <span className="font-bold text-slate-900">{siteCode}</span>
-                      {net && (
-                        <span className="font-bold text-emerald-600">[{net}]</span>
-                      )}
-                      {cellStr && (
-                        <span className="font-semibold text-purple-600">{cellStr}</span>
-                      )}
-                      <span className="text-slate-300">-</span>
-                      <span className="text-slate-500 text-[11px] sm:text-xs font-medium">{dateStr}</span>
-                    </div>
-                  );
-                }
-
-                // Standard: MAC, GEN, MLL
-                return (
-                  <div key={idx} className="flex items-baseline gap-1.5 flex-wrap leading-relaxed py-0.5 border-b border-slate-50 last:border-b-0">
-                    <span className="text-slate-400 select-none">•</span>
-                    <span className="font-bold text-blue-600">{newId}</span>
-                    {oldId && oldId !== newId && (
-                      <span className="font-black text-slate-900">({oldId})</span>
-                    )}
-                    {net && (
-                      <span className="font-bold text-emerald-600">[{net}]</span>
-                    )}
-                    <span className="text-slate-300">-</span>
-                    <span className="text-slate-500 text-[11px] sm:text-xs font-medium">{dateStr}</span>
-                  </div>
-                );
-              })}
+            <div className="space-y-0.5">
+              {alarms.map((a, idx) => renderAlarmRow(a, idx, isCellOff))}
             </div>
           )}
         </div>
@@ -765,29 +789,143 @@ export default function VhktRan() {
             {/* Tab: TỔNG HỢP (all) */}
             {activeTab === 'all' && (
               <div>
-                {/* Mobile View: High density message layout */}
-                <div className="block sm:hidden p-3 bg-slate-50 space-y-3">
+                {/* Mobile View: High density unified message layout (No wasted white space) */}
+                <div className="block sm:hidden p-2 bg-slate-100/60">
                   {totalActiveCount === 0 ? (
-                    <div className="bg-white rounded-2xl p-6 text-center text-slate-500 border border-slate-200 shadow-2xs font-mono">
+                    <div className="bg-white rounded-xl p-5 text-center text-slate-500 border border-slate-200 shadow-2xs font-mono">
                       <span className="text-2xl mb-1.5 block">✅</span>
                       <p className="font-bold text-slate-800 text-sm">Hiện tại không có cảnh báo nào</p>
                       <p className="text-xs text-slate-400 mt-1">Hệ thống mạng đang vận hành ổn định</p>
                     </div>
                   ) : (
-                    <>
-                      {groupedMd.length > 0 && (
-                        <MobileMessageCard title="MAC" icon="⚡" alarms={groupedMd} sectionKey="md" />
-                      )}
-                      {groupedMpd.length > 0 && (
-                        <MobileMessageCard title="GEN" icon="🔋" alarms={groupedMpd} sectionKey="mpd" />
-                      )}
-                      {groupedMll.length > 0 && (
-                        <MobileMessageCard title="MLL" icon="📵" alarms={groupedMll} sectionKey="mll" />
-                      )}
-                      {groupedCell.length > 0 && (
-                        <MobileMessageCard title="CELL OFF" icon="📡" alarms={groupedCell} sectionKey="mll_cell" />
-                      )}
-                    </>
+                    <div className="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
+                      {/* Top Header */}
+                      <div className="flex items-center justify-between px-3 py-2 bg-slate-900 text-white">
+                        <div className="flex items-center gap-1.5 font-mono font-bold text-xs sm:text-sm">
+                          <span>⚡</span>
+                          <span>BẢN TIN NHANH</span>
+                          <span className="ml-1 text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-slate-800 text-amber-300 border border-slate-700">
+                            {totalActiveCount}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => handleCopy('all')}
+                          className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 rounded-md cursor-pointer active:scale-95 transition-all shadow-2xs"
+                          title="Sao chép toàn bộ bản tin"
+                        >
+                          {copiedSection === 'all' ? (
+                            <>
+                              <Check className="h-3 w-3 text-emerald-300" />
+                              <span className="text-emerald-300 text-[11px] font-bold">Đã chép</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="h-3 w-3 text-white" />
+                              <span className="text-[11px]">Chép hết</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+
+                      {/* Content Sections inside 1 Single Box */}
+                      <div className="p-2 space-y-2">
+                        {/* ⚡ MAC */}
+                        {groupedMd.length > 0 && (
+                          <div>
+                            <div className="flex items-center justify-between py-0.5 px-1.5 bg-amber-50/80 border border-amber-200/60 rounded-md mb-0.5">
+                              <span className="font-mono font-bold text-xs text-amber-900 flex items-center gap-1">
+                                <span>⚡ MAC:</span>
+                                <span className="text-[10px] bg-amber-200 text-amber-900 px-1.5 py-0.2 rounded-full">
+                                  {groupedMd.length}
+                                </span>
+                              </span>
+                              <button
+                                onClick={() => handleCopy('md')}
+                                className="text-[11px] font-medium text-amber-800 hover:text-amber-950 flex items-center gap-0.5 cursor-pointer"
+                              >
+                                {copiedSection === 'md' ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
+                                <span>{copiedSection === 'md' ? 'Đã chép' : 'Chép'}</span>
+                              </button>
+                            </div>
+                            <div className="space-y-0.5 px-0.5">
+                              {groupedMd.map((a, idx) => renderAlarmRow(a, idx, false))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 🔋 GEN */}
+                        {groupedMpd.length > 0 && (
+                          <div>
+                            <div className="flex items-center justify-between py-0.5 px-1.5 bg-emerald-50/80 border border-emerald-200/60 rounded-md mb-0.5">
+                              <span className="font-mono font-bold text-xs text-emerald-900 flex items-center gap-1">
+                                <span>🔋 GEN:</span>
+                                <span className="text-[10px] bg-emerald-200 text-emerald-900 px-1.5 py-0.2 rounded-full">
+                                  {groupedMpd.length}
+                                </span>
+                              </span>
+                              <button
+                                onClick={() => handleCopy('mpd')}
+                                className="text-[11px] font-medium text-emerald-800 hover:text-emerald-950 flex items-center gap-0.5 cursor-pointer"
+                              >
+                                {copiedSection === 'mpd' ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
+                                <span>{copiedSection === 'mpd' ? 'Đã chép' : 'Chép'}</span>
+                              </button>
+                            </div>
+                            <div className="space-y-0.5 px-0.5">
+                              {groupedMpd.map((a, idx) => renderAlarmRow(a, idx, false))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 📵 MLL */}
+                        {groupedMll.length > 0 && (
+                          <div>
+                            <div className="flex items-center justify-between py-0.5 px-1.5 bg-red-50/80 border border-red-200/60 rounded-md mb-0.5">
+                              <span className="font-mono font-bold text-xs text-red-900 flex items-center gap-1">
+                                <span>📵 MLL:</span>
+                                <span className="text-[10px] bg-red-200 text-red-900 px-1.5 py-0.2 rounded-full">
+                                  {groupedMll.length}
+                                </span>
+                              </span>
+                              <button
+                                onClick={() => handleCopy('mll')}
+                                className="text-[11px] font-medium text-red-800 hover:text-red-950 flex items-center gap-0.5 cursor-pointer"
+                              >
+                                {copiedSection === 'mll' ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
+                                <span>{copiedSection === 'mll' ? 'Đã chép' : 'Chép'}</span>
+                              </button>
+                            </div>
+                            <div className="space-y-0.5 px-0.5">
+                              {groupedMll.map((a, idx) => renderAlarmRow(a, idx, false))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 📡 CELL OFF */}
+                        {groupedCell.length > 0 && (
+                          <div>
+                            <div className="flex items-center justify-between py-0.5 px-1.5 bg-purple-50/80 border border-purple-200/60 rounded-md mb-0.5">
+                              <span className="font-mono font-bold text-xs text-purple-900 flex items-center gap-1">
+                                <span>📡 CELL OFF:</span>
+                                <span className="text-[10px] bg-purple-200 text-purple-900 px-1.5 py-0.2 rounded-full">
+                                  {groupedCell.length}
+                                </span>
+                              </span>
+                              <button
+                                onClick={() => handleCopy('mll_cell')}
+                                className="text-[11px] font-medium text-purple-800 hover:text-purple-950 flex items-center gap-0.5 cursor-pointer"
+                              >
+                                {copiedSection === 'mll_cell' ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
+                                <span>{copiedSection === 'mll_cell' ? 'Đã chép' : 'Chép'}</span>
+                              </button>
+                            </div>
+                            <div className="space-y-0.5 px-0.5">
+                              {groupedCell.map((a, idx) => renderAlarmRow(a, idx, true))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   )}
                 </div>
 
