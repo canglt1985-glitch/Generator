@@ -110,9 +110,29 @@ export default function VhktRan() {
       })
       .subscribe();
 
+    // Background polling fallback every 30 seconds (crucial for mobile when WebSockets sleep)
+    const pollInterval = setInterval(() => {
+      fetchAlarms();
+    }, 30000);
+
+    // Auto-refresh immediately when user switches back to tab or unlocks phone
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchAlarms();
+      }
+    };
+    const handleFocus = () => {
+      fetchAlarms();
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
     return () => {
       supabase.removeChannel(alarmsSubscription);
       supabase.removeChannel(configSubscription);
+      clearInterval(pollInterval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
     };
   }, []);
 
@@ -749,10 +769,18 @@ export default function VhktRan() {
         </div>
         
         <div className="flex items-center gap-2 shrink-0">
-          {/* Status Indicator */}
-          <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[11px] text-slate-500">
+          {/* Status Indicator / Fast Refresh Tap */}
+          <div 
+            onClick={async () => {
+              setLoading(true);
+              await Promise.all([fetchAlarms(), fetchPakh(), fetchVhktSla()]);
+              setLoading(false);
+            }}
+            title="Nhấn để làm mới ngay"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg text-[11px] text-slate-600 cursor-pointer active:scale-95 transition-all select-none"
+          >
             <span className="inline-flex h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
-            <span>
+            <span className="font-medium">
               {activeTab === 'vhkt' ? (
                 vhktScrapedAt ? `SLA: ${formatDateTime(vhktScrapedAt)}` : 'Chờ SLA...'
               ) : activeTab === 'pakh' ? (
