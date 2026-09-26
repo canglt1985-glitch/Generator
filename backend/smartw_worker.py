@@ -464,9 +464,9 @@ def _fmt_sdate(sdate_str: str, full: bool = False) -> str:
             if full:
                 return dt.strftime('%d/%m %H:%M')
             else:
-                # If alarm is from another day, always show full date
+                # If alarm is from another day, show date only (%d/%m) so it fits Viber mobile width (<= 27 chars)
                 if dt.date() != datetime.now().date():
-                    return dt.strftime('%d/%m %H:%M')
+                    return dt.strftime('%d/%m')
                 return dt.strftime('%H:%M')
                 
     except Exception:
@@ -2228,7 +2228,7 @@ def run_alarm_poll():
                                 if top_tag:
                                     clean_tag = top_tag.strip(" -")
                                     lines_active.append(f"  • {grp['label']}{net_part}")
-                                    lines_active.append(f"    ↳ {grp['t']} • {clean_tag}")
+                                    lines_active.append(f"  ↳ {grp['t']} • {clean_tag}")
                                 else:
                                     lines_active.append(f"  • {grp['label']}{net_part} - {grp['t']}")
                                 active_sent_count += 1
@@ -3055,7 +3055,7 @@ def send_periodic_full_report():
         for alarm in mll_list:
             site = _site_key(alarm)
             net = _norm_net(alarm.get('network') or '')
-            t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '', full=True)
+            t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '', full=False)
             if site not in mll_groups:
                 mll_groups[site] = {'label': _get_site_label(site), 'nets': [], 't': t}
             if net and net not in mll_groups[site]['nets']:
@@ -3069,7 +3069,7 @@ def send_periodic_full_report():
             if top_tag:
                 clean_tag = top_tag.strip(" -")
                 lines.append(f"  • {grp['label']}{net_part}")
-                lines.append(f"    ↳ {grp['t']} • {clean_tag}")
+                lines.append(f"  ↳ {grp['t']} • {clean_tag}")
             else:
                 lines.append(f"  • {grp['label']}{net_part} - {grp['t']}")
             total_active += 1
@@ -3151,15 +3151,14 @@ def send_periodic_mll_report():
         if tech and tech not in mll_groups[base_id]['nets']:
             mll_groups[base_id]['nets'].append(tech)
 
-    now_str = datetime.now().strftime("%H:%M")
-    lines = [f"📵 *BÁO CÁO MLL ({now_str})*"]
+    lines = ["📵 *BÁO CÁO MLL*"]
     for site, grp in mll_groups.items():
         net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
         top_tag = _get_mll_topology_tag(site)
         if top_tag:
             clean_tag = top_tag.strip(" -")
             lines.append(f"  • {grp['label']}{net_part}")
-            lines.append(f"    ↳ {grp['t']} • {clean_tag}")
+            lines.append(f"  ↳ {grp['t']} • {clean_tag}")
         else:
             lines.append(f"  • {grp['label']}{net_part} - {grp['t']}")
 
