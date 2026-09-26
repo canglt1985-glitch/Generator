@@ -876,9 +876,20 @@ def sync_alarms_to_supabase(result: dict):
     def parse_to_iso(date_str):
         if not date_str:
             return None
-        for fmt in ['%d/%m/%Y %H:%M:%S', '%d/%m/%Y %H:%M', '%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M']:
+        cleaned = str(date_str).strip()
+        if 'T' in cleaned:
             try:
-                dt = datetime.strptime(date_str.strip(), fmt)
+                dt = datetime.fromisoformat(cleaned.replace('Z', '+00:00'))
+                return dt.strftime('%Y-%m-%dT%H:%M:%S+07:00')
+            except Exception:
+                pass
+        for fmt in [
+            '%d/%m/%Y %H:%M:%S', '%d/%m/%Y %H:%M',
+            '%Y-%m-%d %H:%M:%S.%f', '%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M',
+            '%Y-%m-%dT%H:%M:%S.%f', '%Y-%m-%dT%H:%M:%S'
+        ]:
+            try:
+                dt = datetime.strptime(cleaned, fmt)
                 return dt.isoformat() + '+07:00'
             except ValueError:
                 continue
@@ -907,7 +918,8 @@ def sync_alarms_to_supabase(result: dict):
                 val_str = f"{t}_{site}_{alarm_name}_{sdate_str}"
                 
             rec_id = str(uuid.uuid5(uuid.NAMESPACE_OID, val_str))
-            status_val = "CLEARED" if edate_iso else "ACTIVE"
+            has_clear = bool(alarm.get('clear_time') or alarm.get('edate') or alarm.get('edateStr') or alarm.get('ket_thuc'))
+            status_val = "CLEARED" if (has_clear or edate_iso) else "ACTIVE"
             
             if status_val == "ACTIVE":
                 active_ids_in_scrape.add(rec_id)
@@ -930,12 +942,21 @@ def sync_alarms_to_supabase(result: dict):
             })
 
     if all_rows:
+        # Deduplicate all_rows by id to prevent Postgres Error 21000:
+        # "ON CONFLICT DO UPDATE command cannot affect row a second time"
+        unique_rows_map = {}
+        for row in all_rows:
+            rid = row["id"]
+            if rid not in unique_rows_map or row["status"] == "ACTIVE":
+                unique_rows_map[rid] = row
+        deduped_rows = list(unique_rows_map.values())
+
         try:
             chunk_size = 100
-            for i in range(0, len(all_rows), chunk_size):
-                chunk = all_rows[i:i+chunk_size]
+            for i in range(0, len(deduped_rows), chunk_size):
+                chunk = deduped_rows[i:i+chunk_size]
                 supabase.table("smartw_alarms").upsert(chunk).execute()
-            logger.info(f"Supabase Sync: Upserted {len(all_rows)} active/cleared alarms.")
+            logger.info(f"Supabase Sync: Upserted {len(deduped_rows)} active/cleared alarms.")
         except Exception as e:
             logger.error(f"Supabase Sync Error: Failed to upsert alarms: {e}")
 
