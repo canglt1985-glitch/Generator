@@ -2168,8 +2168,7 @@ def run_alarm_poll():
                             lines_active.append("*MAC:*")
                             for site, grp in mac_groups.items():
                                 net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
-                                lines_active.append(f"• {grp['label']}{net_part}")
-                                lines_active.append(f"  ↳ {grp['t']}")
+                                lines_active.append(f"• {grp['label']}{net_part} - {grp['t']}")
                                 active_sent_count += 1
                                 for ikey, techs in grp['inc_keys'].items():
                                     existing = sent_active_techs.setdefault(ikey, {'techs': [], 'ts': now_ts})['techs']
@@ -2197,8 +2196,7 @@ def run_alarm_poll():
                             lines_active.append("*GEN:*")
                             for site, grp in mpd_groups.items():
                                 net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
-                                lines_active.append(f"• {grp['label']}{net_part}")
-                                lines_active.append(f"  ↳ {grp['t']}")
+                                lines_active.append(f"• {grp['label']}{net_part} - {grp['t']}")
                                 active_sent_count += 1
                                 for ikey, techs in grp['inc_keys'].items():
                                     existing = sent_active_techs.setdefault(ikey, {'techs': [], 'ts': now_ts})['techs']
@@ -2232,8 +2230,7 @@ def run_alarm_poll():
                                     lines_active.append(f"• {grp['label']}{net_part}")
                                     lines_active.append(f"  ↳ {grp['t']} • {clean_tag}")
                                 else:
-                                    lines_active.append(f"• {grp['label']}{net_part}")
-                                    lines_active.append(f"  ↳ {grp['t']}")
+                                    lines_active.append(f"• {grp['label']}{net_part} - {grp['t']}")
                                 active_sent_count += 1
                                 for ikey, techs in grp['inc_keys'].items():
                                     existing = sent_active_techs.setdefault(ikey, {'techs': [], 'ts': now_ts})['techs']
@@ -3031,8 +3028,7 @@ def send_periodic_full_report():
                 mac_groups[site]['nets'].append(net)
         for site, grp in mac_groups.items():
             net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
-            lines.append(f"• {grp['label']}{net_part}")
-            lines.append(f"  ↳ {grp['t']}")
+            lines.append(f"• {grp['label']}{net_part} - {grp['t']}")
             total_active += 1
 
     # ── Section 2: GEN ──
@@ -3050,8 +3046,7 @@ def send_periodic_full_report():
                 mpd_groups[site]['nets'].append(net)
         for site, grp in mpd_groups.items():
             net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
-            lines.append(f"• {grp['label']}{net_part}")
-            lines.append(f"  ↳ {grp['t']}")
+            lines.append(f"• {grp['label']}{net_part} - {grp['t']}")
             total_active += 1
 
     # ── Section 3: MLL ──
@@ -3076,8 +3071,7 @@ def send_periodic_full_report():
                 lines.append(f"• {grp['label']}{net_part}")
                 lines.append(f"  ↳ {grp['t']} • {clean_tag}")
             else:
-                lines.append(f"• {grp['label']}{net_part}")
-                lines.append(f"  ↳ {grp['t']}")
+                lines.append(f"• {grp['label']}{net_part} - {grp['t']}")
             total_active += 1
 
     # ── Section 4: CELLOFF ──
@@ -3166,8 +3160,7 @@ def send_periodic_mll_report():
             lines.append(f"• {grp['label']}{net_part}")
             lines.append(f"  ↳ {grp['t']} • {clean_tag}")
         else:
-            lines.append(f"• {grp['label']}{net_part}")
-            lines.append(f"  ↳ {grp['t']}")
+            lines.append(f"• {grp['label']}{net_part} - {grp['t']}")
 
     _send_viber_report(lines)
     logger.info(f"SmartW Worker: ✅ Sent periodic MLL report to Viber for {len(mll_groups)} site(s).")
@@ -3265,8 +3258,7 @@ def _send_mll_cause_viber_report(audit_result: dict):
             if tot > 0:
                 dates = sorted(qlt_counts[qlt].keys(), reverse=True)
                 date_breakdown = ' | '.join(f'{d}: {qlt_counts[qlt][d]}' for d in dates)
-                lines.append(f"🔹 *{qlt}:* *{tot}* sự cố")
-                lines.append(f"  ↳ {date_breakdown}")
+                lines.append(f"🔹 *{qlt}:* *{tot}* sự cố ({date_breakdown})")
 
     # Send to Viber group TVT3-Giám sát Ran (uses viber_bot_token_alarms)
     _send_viber_report(lines)
