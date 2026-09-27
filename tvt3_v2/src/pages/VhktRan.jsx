@@ -313,15 +313,22 @@ export default function VhktRan() {
     return `• ${newId}${oldStr}${netStr} - ${dateStr}`;
   }
 
-  // Format line for Cell Off (bỏ site ID mới, chỉ hiển thị site cũ và cell ID): • DNXL08 [3G] (DNIXPH01CM3GB) - 26/09 08:33
+  // Format line for Cell Off
   function formatCellOffLine(alarm) {
     if (!alarm) return '';
+    const dateStr = formatMessageDate(alarm.sdate);
+
+    // Grouped entry: "• DNTN34: sector C [SRAN] - 12:41"
+    if (alarm._grouped) {
+      return `• ${alarm._label}: sector ${alarm._sector} [${alarm._techTag}] - ${dateStr}`;
+    }
+
+    // Single cell: "• DNXL08 [3G] (DNIXPH01CM3GB) - 26/09 08:33"
     const { newId, oldId } = getSiteDetails(alarm.site);
     const siteCode = oldId || newId || alarm.site;
     const net = getAlarmNetwork(alarm);
     const netStr = net ? ` [${net}]` : '';
     const cellStr = alarm.cellid ? ` (${alarm.cellid})` : '';
-    const dateStr = formatMessageDate(alarm.sdate);
     return `• ${siteCode}${netStr}${cellStr} - ${dateStr}`;
   }
 
@@ -354,17 +361,72 @@ export default function VhktRan() {
 
   // Group cell alarms by site + cell
   function groupCellAlarms(alarmList) {
-    const map = new Map();
+    // Step 1: Dedup by site+cellid
+    const dedup = new Map();
     alarmList.forEach(a => {
-      const { newId, baseSite, fullSite } = getSiteDetails(a.site);
+      const { baseSite, newId, fullSite } = getSiteDetails(a.site);
       const siteKey = (baseSite || newId || fullSite || '').toUpperCase();
       const cellKey = String(a.cellid || '').toUpperCase().trim();
       const key = `${siteKey}_${cellKey}`;
-      if (!map.has(key)) {
-        map.set(key, a);
+      if (!dedup.has(key)) dedup.set(key, a);
+    });
+    const unique = Array.from(dedup.values());
+
+    // Step 2: Group by site + sector (last char of cell code after stripping site prefix)
+    const sectorGroups = new Map();
+    unique.forEach(a => {
+      const { baseSite, newId, oldId, fullSite } = getSiteDetails(a.site);
+      const siteKey = (baseSite || newId || fullSite || '').toUpperCase();
+      const label = oldId || newId || a.site;
+
+      let cellCode = String(a.cellid || '').toUpperCase().trim();
+      // Strip site prefix from cell code
+      for (const prefix of [fullSite, baseSite, newId, oldId]) {
+        if (prefix && prefix.length >= 4 && cellCode.startsWith(prefix.toUpperCase())) {
+          cellCode = cellCode.slice(prefix.length);
+          break;
+        }
+      }
+      cellCode = cellCode.replace(/^[_-]+/, '') || String(a.cellid || '');
+
+      const sector = cellCode.length > 0 && /[A-Z]/.test(cellCode.slice(-1)) ? cellCode.slice(-1) : '?';
+      const net = getAlarmNetwork(a) || a.network || '';
+      const groupKey = `${label}_${sector}`;
+
+      if (!sectorGroups.has(groupKey)) {
+        sectorGroups.set(groupKey, { label, sector, nets: new Set(), cells: [], alarms: [], earliest: a });
+      }
+      const grp = sectorGroups.get(groupKey);
+      if (net) grp.nets.add(net);
+      grp.cells.push(cellCode);
+      grp.alarms.push(a);
+      // Track earliest alarm time
+      if (a.sdate && (!grp.earliest.sdate || new Date(a.sdate) < new Date(grp.earliest.sdate))) {
+        grp.earliest = a;
       }
     });
-    return Array.from(map.values()).sort((a, b) => {
+
+    // Step 3: Build result - single cells stay as-is, multi-cell groups get tagged
+    const result = [];
+    sectorGroups.forEach(grp => {
+      if (grp.cells.length === 1) {
+        result.push(grp.alarms[0]); // Single cell: unchanged
+      } else {
+        // Multi-cell same sector: create grouped entry
+        const techTag = grp.nets.size > 1 ? 'SRAN' : (Array.from(grp.nets)[0] || '?');
+        const grouped = {
+          ...grp.earliest,
+          _grouped: true,
+          _sector: grp.sector,
+          _techTag: techTag,
+          _cellCount: grp.cells.length,
+          _label: grp.label,
+        };
+        result.push(grouped);
+      }
+    });
+
+    return result.sort((a, b) => {
       const timeA = a.sdate ? new Date(a.sdate).getTime() : 0;
       const timeB = b.sdate ? new Date(b.sdate).getTime() : 0;
       return timeB - timeA;
@@ -586,7 +648,30 @@ export default function VhktRan() {
     const cellStr = a.cellid ? ` (${a.cellid})` : '';
 
     if (isCellOff) {
-      const siteCode = oldId || newId || a.site;
+      const siteCode = a._grouped ? a._label : (oldId || newId || a.site);
+
+      // Grouped entry: show "sector C [SRAN]" or "sector A [4G]"
+      if (a._grouped) {
+        return (
+          <div
+            key={idx}
+            className="flex items-center justify-between gap-1 py-1 px-1 border-b border-slate-100 last:border-b-0 hover:bg-slate-50 transition-colors font-mono"
+          >
+            <div className="flex items-center gap-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-xs sm:text-[13px]">
+              <span className="text-slate-400 select-none shrink-0">•</span>
+              <span className="font-bold text-slate-900 shrink-0">{siteCode}:</span>
+              <span className="font-semibold text-purple-600 shrink-0">sector {a._sector}</span>
+              <span className={`font-bold shrink-0 ${a._techTag === 'SRAN' ? 'text-orange-600' : 'text-emerald-600'}`}>[{a._techTag}]</span>
+            </div>
+            <div className="shrink-0 text-slate-500 text-[11px] sm:text-xs font-medium pl-1 whitespace-nowrap">
+              <span className="text-slate-300 mr-1">-</span>
+              <span>{dateStr}</span>
+            </div>
+          </div>
+        );
+      }
+
+      // Single cell: unchanged
       return (
         <div
           key={idx}
