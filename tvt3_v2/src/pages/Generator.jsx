@@ -60,6 +60,31 @@ export default function Generator() {
   const [searchDate, setSearchDate] = useState('');
   const [searchStatus, setSearchStatus] = useState('');
   
+  // Batch selection states for generator logs
+  const [selectedLogIds, setSelectedLogIds] = useState([]);
+
+  const toggleSelectLog = (logId) => {
+    setSelectedLogIds(prev => 
+      prev.includes(logId) ? prev.filter(id => id !== logId) : [...prev, logId]
+    );
+  };
+
+  const toggleSelectAllLogs = (logs) => {
+    if (!logs || logs.length === 0) return;
+    const allIds = logs.map(l => l.gen_log_id);
+    const isAllSelected = allIds.every(id => selectedLogIds.includes(id));
+    if (isAllSelected) {
+      setSelectedLogIds(prev => prev.filter(id => !allIds.includes(id)));
+    } else {
+      setSelectedLogIds(prev => Array.from(new Set([...prev, ...allIds])));
+    }
+  };
+
+  const selectPendingLogs = (logs) => {
+    const pendingIds = logs.filter(l => (l.run_details?.status || 'approved') === 'pending').map(l => l.gen_log_id);
+    setSelectedLogIds(pendingIds);
+  };
+
   // Anomaly dismissal & resolution states
   const [anomalyStatusFilter, setAnomalyStatusFilter] = useState('pending'); // 'pending' | 'resolved' | 'all'
   const [dismissedAnomalies, setDismissedAnomalies] = useState(() => {
@@ -1556,14 +1581,15 @@ export default function Generator() {
         }
       }
 
-      // --- RULE 5: CA CHẠY MÁY TRÊN 15H PHẢI ĐƯỢC PHÊ DUYỆT (Chờ duyệt sự cố hy hữu / cúp sớm đóng trễ) ---
+      // --- RULE 5: CA CHẠY MÁY BẤT THƯỜNG CẦN PHÊ DUYỆT ---
       siteLogs.forEach(log => {
         const runtime = parseFloat(log.run_details?.thoi_gian_hoat_dong) || parseFloat(log.run_details?.thoi_gian_chay) || 0;
         const status = log.run_details?.status || 'approved';
-        if (runtime > 15.0 && status === 'pending') {
+        if (status === 'pending') {
           const fuel = parseFloat(log.run_details?.nhien_lieu_tieu_hao) || 0;
           const cost = parseFloat(log.run_details?.thanh_tien) || 0;
-          const anomId = `OVER_15H_APPROVAL_${log.gen_log_id || (site.site_id + '_' + log.date)}`;
+          const reason = log.run_details?.review_reason || (runtime > 12.0 ? `Chạy máy >12h (${runtime}h) cần phê duyệt` : 'Ca chạy máy cần phê duyệt');
+          const anomId = `PENDING_APPROVAL_${log.gen_log_id || (site.site_id + '_' + log.date)}`;
           anomalies.push({
             id: anomId,
             log_id: log.gen_log_id,
@@ -1571,8 +1597,8 @@ export default function Generator() {
             severity: 'high',
             site_id: site.site_id,
             date: log.date,
-            title: 'Chạy máy trên 15h cần phê duyệt',
-            desc: `Ghi nhận máy phát chạy ${runtime.toFixed(1)}h ngày ${log.date} (${fuel}L - ${cost.toLocaleString()}đ). Quy định chạy > 15h phải được phê duyệt khi có giải trình cúp điện sớm/đóng điện trễ hoặc sự cố hy hữu.`
+            title: 'Ca chạy máy chờ phê duyệt',
+            desc: `Ghi nhận máy phát chạy ${runtime.toFixed(1)}h ngày ${log.date} (${fuel}L - ${cost.toLocaleString()}đ). Lý do: ${reason}`
           });
         }
       });
@@ -1675,6 +1701,32 @@ export default function Generator() {
       fetchData();
     } catch (err) {
       alert("Lỗi duyệt bản ghi: " + err.message);
+    }
+  }
+
+  // Batch approve or reject generator logs
+  async function handleBatchApproveLogs(nextStatus) {
+    if (selectedLogIds.length === 0) return;
+    const actionText = nextStatus === 'approved' ? 'duyệt' : 'từ chối';
+    if (!confirm(`Bạn có chắc chắn muốn ${actionText} ${selectedLogIds.length} trường hợp đã chọn?`)) return;
+
+    try {
+      const count = selectedLogIds.length;
+      const logsToUpdate = genLogs.filter(l => selectedLogIds.includes(l.gen_log_id));
+      const promises = logsToUpdate.map(l => {
+        const runDetails = { ...l.run_details, status: nextStatus };
+        return supabase
+          .from('generator_logs')
+          .update({ run_details: runDetails })
+          .eq('gen_log_id', l.gen_log_id);
+      });
+
+      await Promise.all(promises);
+      setSelectedLogIds([]);
+      alert(`✅ Đã ${actionText} thành công ${count} trường hợp.`);
+      fetchData();
+    } catch (err) {
+      alert("Lỗi khi xử lý hàng loạt: " + err.message);
     }
   }
 
@@ -2565,12 +2617,82 @@ export default function Generator() {
               {/* TAB 1: RUN LOGS */}
               {activeTab === 'logs' && (
                 <div className="min-w-full divide-y divide-gray-200">
+                  {/* Floating / Sticky Batch Action Bar */}
+                  {selectedLogIds.length > 0 && (
+                    <div className="sticky top-0 z-20 flex items-center justify-between bg-blue-50/95 backdrop-blur border-b border-blue-200 px-4 py-2 text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-blue-900">
+                          Đã chọn <span className="bg-blue-600 text-white px-2 py-0.5 rounded-full font-mono">{selectedLogIds.length}</span> ca chạy máy
+                        </span>
+                        <button
+                          onClick={() => setSelectedLogIds([])}
+                          className="text-slate-500 hover:text-slate-700 underline text-xs ml-2 cursor-pointer"
+                        >
+                          Bỏ chọn
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleBatchApproveLogs('approved')}
+                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg shadow-sm transition-all flex items-center gap-1 cursor-pointer"
+                          title="Duyệt tất cả các ca đã tick chọn"
+                        >
+                          <CheckCircle size={14} /> Duyệt đã chọn ({selectedLogIds.length})
+                        </button>
+                        <button
+                          onClick={() => handleBatchApproveLogs('rejected')}
+                          className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg shadow-sm transition-all flex items-center gap-1 cursor-pointer"
+                          title="Từ chối tất cả các ca đã tick chọn"
+                        >
+                          <X size={14} /> Từ chối đã chọn ({selectedLogIds.length})
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Pending Review Notification Bar */}
+                  {stats.pendingCount > 0 && selectedLogIds.length === 0 && (
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-amber-50/90 border border-amber-200 p-2.5 px-3 rounded-lg text-xs m-2 text-amber-900 gap-2">
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle size={16} className="text-amber-600 shrink-0" />
+                        <span>
+                          Phát hiện <strong>{stats.pendingCount}</strong> ca chạy máy bất thường đang <strong>chờ duyệt</strong> (qua đêm sớm, chạy &gt;12h...).
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 self-end sm:self-auto">
+                        {searchStatus !== 'pending' && (
+                          <button
+                            onClick={() => setSearchStatus('pending')}
+                            className="px-2.5 py-1 bg-white border border-amber-300 text-amber-800 hover:bg-amber-100 rounded text-xs font-semibold cursor-pointer transition-colors"
+                          >
+                            Lọc ca chờ duyệt
+                          </button>
+                        )}
+                        <button
+                          onClick={() => selectPendingLogs(filteredLogs)}
+                          className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded text-xs cursor-pointer transition-colors shadow-sm flex items-center gap-1"
+                        >
+                          <CheckCircle2 size={13} /> Tick chọn ({stats.pendingCount}) ca chờ duyệt
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {filteredLogs.length === 0 ? (
                     <div className="text-center py-20 text-slate-400">Không tìm thấy nhật ký chạy máy nào.</div>
                   ) : (
                     <table className="min-w-full divide-y divide-gray-200 text-left">
                       <thead className="bg-gray-50 sticky top-0 z-10 text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-slate-200">
                         <tr className="border-b border-slate-100">
+                          <th scope="col" className="px-2 py-2.5 w-8 text-center">
+                            <input 
+                              type="checkbox" 
+                              className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                              checked={filteredLogs.length > 0 && filteredLogs.every(l => selectedLogIds.includes(l.gen_log_id))}
+                              onChange={() => toggleSelectAllLogs(filteredLogs)}
+                              title="Tick chọn tất cả"
+                            />
+                          </th>
                           <th scope="col" className="px-3 py-2.5">Site ID cũ</th>
                           <th scope="col" className="px-3 py-2.5">Site ID mới</th>
                           <th scope="col" className="px-3 py-2.5">Nguồn</th>
@@ -2587,6 +2709,17 @@ export default function Generator() {
                           <th scope="col" className="px-3 py-2.5 text-right">Thao tác</th>
                         </tr>
                         <tr className="bg-slate-50/50">
+                          <th className="px-2 py-1.5 text-center">
+                            {stats.pendingCount > 0 && (
+                              <button
+                                onClick={() => selectPendingLogs(filteredLogs)}
+                                className="text-[10px] text-amber-700 hover:underline font-bold"
+                                title="Chọn nhanh các ca chờ duyệt"
+                              >
+                                Chờ
+                              </button>
+                            )}
+                          </th>
                           <th className="px-2 py-1.5">
                             <div className="relative">
                               <Search className="absolute left-1.5 top-2.5 h-3 w-3 text-slate-400" />
@@ -2643,6 +2776,7 @@ export default function Generator() {
                           const ghiChu = log.run_details?.ghi_chu || '';
                           const operator = log.run_details?.operator || '';
                           const congSuat = log.run_details?.cong_suat_may || '—';
+                          const reviewReason = log.run_details?.review_reason || '';
                           
                           const stationObj = stations.find(s => s.site_id === log.site_id);
                           const siteIdOld = stationObj ? (stationObj.site_id_old || '—') : '—';
@@ -2653,8 +2787,22 @@ export default function Generator() {
                           return (
                             <tr 
                               key={log.gen_log_id} 
-                              className={`hover:bg-slate-50/50 transition-colors ${status === 'pending' ? 'bg-amber-50/30 font-semibold text-amber-900' : ''}`}
+                              className={`hover:bg-slate-50/50 transition-colors ${
+                                selectedLogIds.includes(log.gen_log_id)
+                                  ? 'bg-blue-50/40'
+                                  : status === 'pending'
+                                  ? 'bg-amber-50/30 font-semibold text-amber-900'
+                                  : ''
+                              }`}
                             >
+                              <td className="px-2 py-2.5 text-center">
+                                <input 
+                                  type="checkbox" 
+                                  className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                  checked={selectedLogIds.includes(log.gen_log_id)}
+                                  onChange={() => toggleSelectLog(log.gen_log_id)}
+                                />
+                              </td>
                               <td className="px-3 py-2.5 whitespace-nowrap font-bold text-slate-900">{siteIdOld}</td>
                               <td className="px-3 py-2.5 whitespace-nowrap font-bold text-blue-700">{siteIdNew}</td>
                               <td className="px-3 py-2.5 whitespace-nowrap">
@@ -2672,8 +2820,14 @@ export default function Generator() {
                               <td className="px-3 py-2.5 whitespace-nowrap font-bold text-blue-600 text-right">{fuel}L</td>
                               <td className="px-3 py-2.5 whitespace-nowrap font-mono text-slate-600 text-right">{donGia ? formatCurrency(donGia).replace(' ₫', '') : '—'}</td>
                               <td className="px-3 py-2.5 whitespace-nowrap font-bold text-slate-900 text-right">{thanhTien ? formatCurrency(thanhTien).replace(' ₫', '') + 'đ' : '—'}</td>
-                              <td className="px-3 py-2.5 max-w-xs truncate text-slate-500" title={ghiChu}>
+                              <td className="px-3 py-2.5 max-w-xs text-slate-500" title={reviewReason ? `[Lý do chờ duyệt: ${reviewReason}]\n${ghiChu}` : ghiChu}>
                                 {operator ? `[${operator}] ` : ''}{ghiChu || '—'}
+                                {reviewReason && status === 'pending' && (
+                                  <div className="text-[10px] text-amber-800 bg-amber-100/90 border border-amber-300 px-1.5 py-0.5 rounded mt-0.5 truncate font-medium flex items-center gap-1">
+                                    <AlertTriangle size={10} className="shrink-0 text-amber-600" />
+                                    <span className="truncate">{reviewReason}</span>
+                                  </div>
+                                )}
                               </td>
                               <td className="px-3 py-2.5 whitespace-nowrap">
                                 {status === 'approved' ? (
@@ -2681,7 +2835,9 @@ export default function Generator() {
                                 ) : status === 'rejected' ? (
                                   <span className="bg-red-50 text-red-700 border border-red-100 text-[10px] font-bold px-1.5 py-0.5 rounded">Từ chối</span>
                                 ) : (
-                                  <span className="bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold px-1.5 py-0.5 rounded">Chờ duyệt</span>
+                                  <span className="bg-amber-50 text-amber-700 border border-amber-300 text-[10px] font-bold px-1.5 py-0.5 rounded inline-flex items-center gap-1" title={reviewReason}>
+                                    <Clock size={10} /> Chờ duyệt
+                                  </span>
                                 )}
                               </td>
                               <td className="px-3 py-2.5 whitespace-nowrap text-right text-xs space-x-1">
@@ -2832,7 +2988,7 @@ export default function Generator() {
                                       {anom.type === 'CONSECUTIVE_REFILL' && (anom.title.includes('xăng') || anom.desc.includes('xăng') ? 'Đổ xăng không chạy' : 'Đổ dầu không chạy')}
                                       {anom.type === 'QUARTERLY_DISCREPANCY' && 'Lệch nhiên liệu quý'}
                                       {anom.type === 'INACTIVE_GEN' && 'Máy phát ngủ quên'}
-                                      {anom.type === 'OVER_15H_RUN' && 'Chạy > 15h cần duyệt'}
+                                      {anom.type === 'OVER_15H_RUN' && 'Chờ phê duyệt'}
                                     </td>
                                     <td className="px-4 py-3 whitespace-nowrap font-bold text-slate-800">{anom.title}</td>
                                     <td className="px-4 py-3 max-w-sm truncate text-slate-500" title={anom.desc}>{anom.desc}</td>
@@ -2840,18 +2996,44 @@ export default function Generator() {
                                       {anom.date !== 'Chưa từng chạy' ? anom.date : 'Chưa từng chạy'}
                                     </td>
                                     <td className="px-4 py-3 whitespace-nowrap text-right">
-                                      <button
-                                        onClick={() => toggleDismissAnomaly(anom.id)}
-                                        className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ml-auto ${
-                                          isDismissed
-                                            ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                                            : 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
-                                        }`}
-                                        title={isDismissed ? 'Mở lại cảnh báo này' : 'Đánh dấu đã xử lý xong cảnh báo này'}
-                                      >
-                                        <CheckCircle size={12} />
-                                        {isDismissed ? 'Hoàn tác' : '✓ Đã xử lý'}
-                                      </button>
+                                      <div className="flex items-center justify-end gap-1.5">
+                                        {anom.log_id && !isDismissed && (
+                                          <>
+                                            <button
+                                              onClick={async () => {
+                                                await handleApproveLog(anom.log_id, 'approved');
+                                                toggleDismissAnomaly(anom.id);
+                                              }}
+                                              className="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shadow-sm"
+                                              title="Duyệt ca chạy máy này"
+                                            >
+                                              <CheckCircle2 size={12} /> Duyệt
+                                            </button>
+                                            <button
+                                              onClick={async () => {
+                                                await handleApproveLog(anom.log_id, 'rejected');
+                                                toggleDismissAnomaly(anom.id);
+                                              }}
+                                              className="px-2 py-1 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shadow-sm"
+                                              title="Từ chối ca chạy máy này"
+                                            >
+                                              <X size={12} /> Từ chối
+                                            </button>
+                                          </>
+                                        )}
+                                        <button
+                                          onClick={() => toggleDismissAnomaly(anom.id)}
+                                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
+                                            isDismissed
+                                              ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                              : 'bg-slate-50 text-slate-700 border border-slate-200 hover:bg-slate-100'
+                                          }`}
+                                          title={isDismissed ? 'Mở lại cảnh báo này' : 'Đánh dấu đã xử lý xong cảnh báo này'}
+                                        >
+                                          <CheckCircle size={12} />
+                                          {isDismissed ? 'Hoàn tác' : 'Đã xem'}
+                                        </button>
+                                      </div>
                                     </td>
                                   </tr>
                                 );
@@ -2891,21 +3073,45 @@ export default function Generator() {
                                   </div>
                                 </div>
 
-                                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
-                                  <span className="flex items-center gap-1 font-mono text-[11px]">
+                                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400 gap-2">
+                                  <span className="flex items-center gap-1 font-mono text-[11px] truncate">
                                     {anom.date !== 'Chưa từng chạy' ? anom.date : 'Lịch sử: Chưa từng chạy'}
                                   </span>
-                                  <button
-                                    onClick={() => toggleDismissAnomaly(anom.id)}
-                                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
-                                      isDismissed
-                                        ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                                        : 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
-                                    }`}
-                                  >
-                                    <CheckCircle size={12} />
-                                    {isDismissed ? 'Hoàn tác' : '✓ Đã xử lý'}
-                                  </button>
+                                  <div className="flex items-center gap-1.5 shrink-0">
+                                    {anom.log_id && !isDismissed && (
+                                      <>
+                                        <button
+                                          onClick={async () => {
+                                            await handleApproveLog(anom.log_id, 'approved');
+                                            toggleDismissAnomaly(anom.id);
+                                          }}
+                                          className="px-2 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-bold"
+                                        >
+                                          Duyệt
+                                        </button>
+                                        <button
+                                          onClick={async () => {
+                                            await handleApproveLog(anom.log_id, 'rejected');
+                                            toggleDismissAnomaly(anom.id);
+                                          }}
+                                          className="px-2 py-1 bg-red-50 text-red-700 border border-red-200 rounded-lg text-xs font-bold"
+                                        >
+                                          Từ chối
+                                        </button>
+                                      </>
+                                    )}
+                                    <button
+                                      onClick={() => toggleDismissAnomaly(anom.id)}
+                                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
+                                        isDismissed
+                                          ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                          : 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
+                                      }`}
+                                    >
+                                      <CheckCircle size={12} />
+                                      {isDismissed ? 'Hoàn tác' : '✓ Đã xử lý'}
+                                    </button>
+                                  </div>
                                 </div>
                               </div>
                             );

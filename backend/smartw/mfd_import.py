@@ -43,9 +43,31 @@ def classify_event(start_dt: datetime, end_dt: datetime, duration_min: int) -> s
         if not end_dt:
             return 'pending'
         return 'skip'
-    # Các trạm chạy máy trên 15h (900 phút) bắt buộc phải qua phê duyệt (sự cố hy hữu / cúp điện sớm đóng trễ)
+    
+    # 1. Phát hiện chạy qua đêm
+    is_overnight = False
+    if start_dt and end_dt:
+        if end_dt.date() > start_dt.date() or end_dt.time() < start_dt.time():
+            is_overnight = True
+            
+    # Qua đêm bắt đầu sớm trước giờ HC (<17h) -> chờ duyệt
+    if is_overnight:
+        if start_dt and start_dt.hour < 17:
+            return 'pending'
+            
+    # 2. Chạy máy >12h (720 phút) không bắt đầu trong khung giờ 5h-9h -> chờ duyệt
+    if duration_min > 720:
+        if start_dt:
+            in_morning_window = (5 <= start_dt.hour < 9) or (start_dt.hour == 9 and start_dt.minute == 0)
+            if not in_morning_window:
+                return 'pending'
+        else:
+            return 'pending'
+            
+    # 3. Chạy quá 15h (900 phút) bất kể khung giờ -> chờ duyệt
     if duration_min > 900:
         return 'pending'
+
     return 'approved'
 
 def get_pretax_price(fuel_type: str, date_str: str = None) -> float:
