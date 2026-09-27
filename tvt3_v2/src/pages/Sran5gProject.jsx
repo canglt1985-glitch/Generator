@@ -7,7 +7,7 @@ import {
   CheckCircle, Sparkles, Navigation
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
-import * as XLSX from 'xlsx';
+
 
 export const SRAN_25_CLUSTERS = [
   // Giai đoạn 1: Pilot & Khởi động (8 Cluster)
@@ -939,7 +939,8 @@ ${clusters.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.district}): ${c
   };
 
   // Generic Export Monthly Plan to Excel (Respecting TVT3 filter and strict month boundaries)
-  const exportMonthlyPlanToExcel = (monthKey = selectedPlanMonth) => {
+  const exportMonthlyPlanToExcel = async (monthKey = selectedPlanMonth) => {
+    const XLSX = await import('xlsx');
     const plan = MONTHLY_PLANS_CONFIG[monthKey] || MONTHLY_PLANS_CONFIG.sep;
     const isVt3Only = selectedMonthTvt === 'VT3';
     const allClusters = plan.clusters;
@@ -1053,7 +1054,8 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
   };
 
   // Export September Plan to Excel
-  const exportSeptemberPlanToExcel = () => {
+  const exportSeptemberPlanToExcel = async () => {
+    const XLSX = await import('xlsx');
     const sepData = data.filter(d => 
       d.monthly_target_im === 'Target_in_Sep' || d.raw_data?.Target_Month === 'Tháng 9' || 
       SEPTEMBER_2026_CLUSTERS.some(c => c.db_cluster === d.raw_data?.Cluster_Name || c.cluster === d.raw_data?.Cluster_Name)
@@ -1165,7 +1167,8 @@ ${septemberClusterStats.map((c, i) => `${i+1}. [${c.order}] ${c.cluster} (${c.tv
   };
 
   // Export Filtered Dataset to Excel
-  const exportFilteredToExcel = () => {
+  const exportFilteredToExcel = async () => {
+    const XLSX = await import('xlsx');
     if (!filteredData || filteredData.length === 0) {
       alert("Không có dữ liệu trạm nào trong danh sách đang lọc để xuất Excel!");
       return;

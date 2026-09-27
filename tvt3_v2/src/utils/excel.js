@@ -1,6 +1,6 @@
-import * as XLSX from 'xlsx';
 
-export const exportContractsToExcel = (contracts) => {
+export const exportContractsToExcel = async (contracts) => {
+  const XLSX = await import('xlsx');
   if (!contracts || contracts.length === 0) {
     alert("Không có dữ liệu để xuất Excel.");
     return;
@@ -66,8 +66,9 @@ export const exportContractsToExcel = (contracts) => {
 export const importContractsFromExcel = (file, onDataRead) => {
   const reader = new FileReader();
   
-  reader.onload = (e) => {
+  reader.onload = async (e) => {
     try {
+      const XLSX = await import('xlsx');
       const data = new Uint8Array(e.target.result);
       const workbook = XLSX.read(data, { type: 'array' });
       

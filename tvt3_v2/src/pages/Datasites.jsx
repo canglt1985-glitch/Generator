@@ -4,7 +4,7 @@ import { supabase } from '../supabaseClient';
 import DatasiteDetailFullscreen from '../components/datasites/DatasiteDetailFullscreen';
 import DatasiteExportModal from '../components/datasites/DatasiteExportModal';
 import DatasiteImportModal from '../components/datasites/DatasiteImportModal';
-import * as XLSX from 'xlsx';
+
 import { useCurrentUser } from '../utils/useCurrentUser';
 
 export default function Datasites() {
@@ -462,13 +462,14 @@ export default function Datasites() {
     return result;
   };
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     const selectedSiteList = exportScope === 'single' ? [exportSiteObj] : filteredData;
     if (selectedSiteList.length === 0) {
       alert("Không có dữ liệu trạm để xuất Excel.");
       return;
     }
     
+    const XLSX = await import('xlsx');
     const wb = XLSX.utils.book_new();
     let hasSheet = false;
     

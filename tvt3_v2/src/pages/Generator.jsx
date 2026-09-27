@@ -4,7 +4,10 @@ import {
   Zap, Calendar, AlertTriangle, FileText, Search, Plus, Trash, 
   Edit, Eye, Clock, CheckCircle2, CheckCircle, CheckCheck, AlertCircle, X, ExternalLink, Filter, RefreshCw
 } from 'lucide-react';
-import * as XLSX from 'xlsx';
+
+// XLSX loaded dynamically on first export
+let _XLSX = null;
+const getXLSX = async () => { if (!_XLSX) _XLSX = await import('xlsx'); return _XLSX; };
 import JSZip from 'jszip';
 
 import { 
@@ -769,7 +772,8 @@ export default function Generator() {
   }, [genLogs, invoices, stations, isFromAug2026]);
 
   // Export to Official Statement Excel (Mẫu 02A-TTNB_NLMPD & HD)
-  const exportToExcel = () => {
+  const exportToExcel = async () => {
+    const XLSX = await getXLSX();
     const targetMonth = Number(filterMonth);
     const targetYear = Number(filterYear);
 
@@ -807,7 +811,8 @@ export default function Generator() {
     });
   };
 
-  const exportInvoicesToExcel = () => {
+  const exportInvoicesToExcel = async () => {
+    const XLSX = await getXLSX();
     const wb = XLSX.utils.book_new();
     const monthStr = filterMonth ? `T${String(filterMonth).padStart(2, '0')}` : 'Ca_Nam';
     const groupLabel = selectedGroupFilter === 'group1' ? 'MobiFone Đồng Nai' : selectedGroupFilter === 'group2' ? 'MobiFone Toàn Cầu' : '';
@@ -1056,7 +1061,8 @@ export default function Generator() {
   };
 
   // Export Anomalies to Excel
-  const exportAnomaliesToExcel = () => {
+  const exportAnomaliesToExcel = async () => {
+    const XLSX = await getXLSX();
     const dataForExcel = anomaliesList.map(anom => {
       const isHigh = anom.severity === 'high';
       const typeStr = 

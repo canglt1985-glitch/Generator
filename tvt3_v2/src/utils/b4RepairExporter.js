@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx';
+
 
 // Standard B4 Repair Categories (Match Sheet "Diễn giải DM hỏng tham chiếu")
 export const B4_REPAIR_CATEGORIES = {
@@ -62,7 +62,8 @@ const STATION_ERP_MAPPINGS = {
  * @param {String} targetCategory 'MPD_CO_DINH' | 'MPD_DI_DONG' | 'DHKK'
  * @param {String} customFileName Optional custom file name
  */
-export function exportB4RepairProposal({ items = [], datasites = [], targetCategory = 'MPD_CO_DINH', customFileName = '' }) {
+export async function exportB4RepairProposal({ items = [], datasites = [], targetCategory = 'MPD_CO_DINH', customFileName = '' }) {
+  const XLSX = await import('xlsx');
   if (!items || items.length === 0) {
     alert('Vui lòng chọn ít nhất 1 tồn tại / thiết bị để xuất Biểu mẫu B4!');
     return;

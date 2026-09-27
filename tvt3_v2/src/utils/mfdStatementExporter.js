@@ -1,4 +1,6 @@
-import ExcelJS from 'exceljs';
+// ExcelJS loaded dynamically on first use (908KB saved from initial bundle)
+let _ExcelJS = null;
+export const getExcelJS = async () => { if (!_ExcelJS) { const m = await import('exceljs'); _ExcelJS = m.default || m; } return _ExcelJS; };
 import { saveAs } from 'file-saver';
 
 /**
@@ -927,6 +929,7 @@ export async function exportOfficialMFDReport({
   selectedGroupFilter = 'all',
   isSpecial67Site = () => false
 }) {
+  const ExcelJS = await getExcelJS();
   const workbook = new ExcelJS.Workbook();
   const isAug2026OrLater = isFromAug2026 || Number(year) > 2026 || (Number(year) === 2026 && Number(month) >= 8);
 
@@ -1035,6 +1038,7 @@ export async function exportOfficialMFDReport({
  * Exports Group 1 Site Cost & Invoice Mapping Report (matching user's template)
  */
 export async function exportSiteInvoiceMapReport({ logs, stations, invoices, month = 8, year = 2026, isSpecial67Site }) {
+  const ExcelJS = await getExcelJS();
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'TVT3 Management System';
   workbook.lastModifiedBy = 'TVT3';

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Radio, RefreshCw, Copy, Check } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 
@@ -460,41 +460,45 @@ export default function VhktRan() {
     });
   };
 
-  // Filtered lists for each tab (without search box constraint)
-  const displayedMd = sortAlarms(mdActive);
-  const displayedMpd = sortAlarms(mpdActive);
-  const displayedMll = sortAlarms(mllActive);
-  const displayedCell = sortAlarms(cellActive);
-  const displayedVhkt = [...vhktData].sort((a, b) => (b.md_so_lan || 0) - (a.md_so_lan || 0));
+  // Filtered lists for each tab (memoized to avoid re-sorting on every render)
+  const displayedMd = useMemo(() => sortAlarms(mdActive), [mdActive]);
+  const displayedMpd = useMemo(() => sortAlarms(mpdActive), [mpdActive]);
+  const displayedMll = useMemo(() => sortAlarms(mllActive), [mllActive]);
+  const displayedCell = useMemo(() => sortAlarms(cellActive), [cellActive]);
+  const displayedVhkt = useMemo(() => [...vhktData].sort((a, b) => (b.md_so_lan || 0) - (a.md_so_lan || 0)), [vhktData]);
   const displayedPakh = activePakhList;
 
-  // Grouped active alarms for message style
-  const groupedMd = groupAlarmsForSection(displayedMd);
-  const groupedMpd = groupAlarmsForSection(displayedMpd);
-  const groupedMll = groupAlarmsForSection(displayedMll);
-  const rawGroupedCell = groupCellAlarms(displayedCell);
+  // Grouped active alarms for message style (memoized)
+  const groupedMd = useMemo(() => groupAlarmsForSection(displayedMd), [displayedMd]);
+  const groupedMpd = useMemo(() => groupAlarmsForSection(displayedMpd), [displayedMpd]);
+  const groupedMll = useMemo(() => groupAlarmsForSection(displayedMll), [displayedMll]);
+  const rawGroupedCell = useMemo(() => groupCellAlarms(displayedCell), [displayedCell]);
 
   // Filter CELLOFF: exclude cells belonging to MLL sites with SAME technology
   // 3G MLL should NOT hide 4G CELLOFF (different tech, different equipment)
-  const mllSiteTechs = new Set();
-  groupedMll.forEach(a => {
-    const { baseSite } = getSiteDetails(a.site);
-    const net = (getAlarmNetwork(a) || a.network || '').toUpperCase();
-    if (baseSite) mllSiteTechs.add(`${baseSite.toUpperCase()}_${net}`);
-  });
-  const groupedCell = rawGroupedCell.filter(a => {
-    const { baseSite } = getSiteDetails(a.site);
-    const net = (getAlarmNetwork(a) || a.network || '').toUpperCase();
-    const bsUp = (baseSite || '').toUpperCase();
-    return !mllSiteTechs.has(`${bsUp}_${net}`);
-  });
+  const groupedCell = useMemo(() => {
+    const mllSiteTechs = new Set();
+    groupedMll.forEach(a => {
+      const { baseSite } = getSiteDetails(a.site);
+      const net = (getAlarmNetwork(a) || a.network || '').toUpperCase();
+      if (baseSite) mllSiteTechs.add(`${baseSite.toUpperCase()}_${net}`);
+    });
+    return rawGroupedCell.filter(a => {
+      const { baseSite } = getSiteDetails(a.site);
+      const net = (getAlarmNetwork(a) || a.network || '').toUpperCase();
+      const bsUp = (baseSite || '').toUpperCase();
+      return !mllSiteTechs.has(`${bsUp}_${net}`);
+    });
+  }, [groupedMll, rawGroupedCell]);
 
-  // Card counts (unique active sites)
-  const mdCount = groupedMd.length;
-  const mpdCount = groupedMpd.length;
-  const mllCount = groupedMll.length;
-  const cellCount = groupedCell.length;
-  const totalActiveCount = mdCount + mpdCount + mllCount + cellCount;
+  // Card counts (memoized)
+  const { mdCount, mpdCount, mllCount, cellCount, totalActiveCount } = useMemo(() => ({
+    mdCount: groupedMd.length,
+    mpdCount: groupedMpd.length,
+    mllCount: groupedMll.length,
+    cellCount: groupedCell.length,
+    totalActiveCount: groupedMd.length + groupedMpd.length + groupedMll.length + groupedCell.length,
+  }), [groupedMd, groupedMpd, groupedMll, groupedCell]);
 
   // Generate plain text message matching user format
   const generateMessageText = (section = 'all') => {

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { useCurrentUser } from '../utils/useCurrentUser';
-import * as XLSX from 'xlsx';
+
 import { generateWordDocument } from '../utils/wordGenerator';
 import { convertNumberToVietnameseWords } from '../utils/contractCalculations';
 import { 
@@ -747,7 +747,8 @@ export default function InfrastructureDevelopment() {
     }
   };
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
+    const XLSX = await import('xlsx');
     try {
       const targetProjects = (filteredProjects && filteredProjects.length > 0) ? filteredProjects : projects;
       if (!targetProjects || targetProjects.length === 0) {

@@ -1,5 +1,3 @@
-import Docxtemplater from 'docxtemplater';
-import PizZip from 'pizzip';
 import { saveAs } from 'file-saver';
 
 /**
@@ -10,6 +8,10 @@ import { saveAs } from 'file-saver';
  */
 export const generateWordBlob = async (templatePath, data) => {
     try {
+        const [{ default: Docxtemplater }, { default: PizZip }] = await Promise.all([
+            import('docxtemplater'),
+            import('pizzip')
+        ]);
         const cacheBusterUrl = `${templatePath}?t=${new Date().getTime()}`;
         const response = await fetch(cacheBusterUrl);
         if (!response.ok) {

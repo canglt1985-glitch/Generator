@@ -8,7 +8,7 @@ import {
 import DatasiteDetailFullscreen from '../components/datasites/DatasiteDetailFullscreen';
 import { useCurrentUser } from '../utils/useCurrentUser';
 import { exportB4RepairProposal, B4_REPAIR_CATEGORIES } from '../utils/b4RepairExporter';
-import * as XLSX from 'xlsx';
+
 
 const getTodayDMY = () => {
   const today = new Date();
@@ -606,7 +606,7 @@ export default function DailyWork() {
     setShowB4ExportDropdown(false);
   }
 
-  function handleExportIssuesExcel() {
+  async function handleExportIssuesExcel() {
     if (filteredDefectsLogs.length === 0) {
       alert("Không có dữ liệu để xuất Excel.");
       return;
@@ -627,6 +627,7 @@ export default function DailyWork() {
       };
     });
 
+    const XLSX = await import('xlsx');
     const worksheet = XLSX.utils.json_to_sheet(dataForExcel);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Tồn tại trạm');
