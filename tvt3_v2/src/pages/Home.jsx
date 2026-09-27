@@ -157,54 +157,57 @@ export default function Home() {
   ];
 
   return (
-    <div className="min-h-[calc(100vh-140px)] flex flex-col justify-center max-w-5xl mx-auto py-6 px-4 animate-in fade-in slide-in-from-bottom-4 duration-300 font-sans">
+    <div className="min-h-[calc(100vh-80px)] flex flex-col justify-start sm:justify-center max-w-5xl mx-auto py-2 sm:py-6 px-2.5 sm:px-4 animate-in fade-in slide-in-from-bottom-2 duration-300 font-sans">
       
-      {/* Welcome Banner - MobiFone Premium Brand Blue Gradient */}
-      <div className="mb-8 text-center md:text-left bg-gradient-to-br from-[#003b7a] via-[#094a8f] to-[#005fb8] border border-blue-800/40 rounded-3xl p-6 shadow-xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 p-8 opacity-10 text-white">
-          <Server size={180} />
-        </div>
-        <div className="relative z-10 space-y-2.5">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/20 border border-white/30 rounded-full text-white text-xs font-bold uppercase tracking-wider">
-            <User size={11} className="text-yellow-300" />
-            <span>{displayRole}</span>
+      {/* Welcome Banner - Compact, clean & simple on mobile */}
+      <div className="mb-2.5 sm:mb-6 bg-gradient-to-r from-[#003b7a] via-[#094a8f] to-[#005fb8] border border-blue-800/30 rounded-xl sm:rounded-2xl p-2.5 sm:p-4 shadow-sm text-white flex items-center justify-between">
+        <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-white/15 border border-white/20 flex items-center justify-center text-yellow-300 shrink-0">
+            <User size={16} className="sm:w-5 sm:h-5" />
           </div>
-          <h2 className="text-2xl md:text-3xl font-extrabold text-white tracking-wide">
-            Chào anh, <span className="text-yellow-300 drop-shadow-sm">{displayName}</span>!
-          </h2>
-          <p className="text-xs text-blue-100/90 font-medium">
-            Hệ thống quản lý vận hành khai thác & Bản đồ số hạ tầng Tổ Viễn thông 3
-          </p>
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <h2 className="text-xs sm:text-base font-bold text-white tracking-tight truncate">
+                Chào anh, <span className="text-yellow-300">{displayName}</span>!
+              </h2>
+              <span className="px-1.5 py-0.2 bg-white/20 border border-white/25 rounded text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-blue-100">
+                {displayRole}
+              </span>
+            </div>
+            <p className="text-[10px] sm:text-xs text-blue-100/80 font-medium truncate">
+              Hệ thống quản lý VHKT & Bản đồ số Tổ 3
+            </p>
+          </div>
         </div>
       </div>
 
       {/* Grid Menu Chức năng */}
-      <div className="space-y-4">
-        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider font-sans mb-3 text-center md:text-left">
+      <div className="space-y-1.5 sm:space-y-4">
+        <h3 className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider font-sans mb-1.5 sm:mb-3 text-center sm:text-left">
           Danh mục chức năng
         </h3>
         
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-4">
           {modules.map((item) => {
             const Icon = item.icon;
             return (
               <div
                 key={item.id}
                 onClick={() => navigate(item.path)}
-                className={`relative flex flex-col items-center justify-center text-center p-5 rounded-2xl border transition-all duration-200 cursor-pointer select-none active:scale-95 group shadow-sm hover:shadow-md ${item.bgColor}`}
+                className={`relative flex flex-col items-center justify-center text-center p-2.5 sm:p-5 rounded-xl sm:rounded-2xl border transition-all duration-200 cursor-pointer select-none active:scale-95 group shadow-xs sm:shadow-sm hover:shadow-md ${item.bgColor}`}
               >
                 {item.badge && (
-                  <span className="absolute -top-2 -right-2 px-2 py-0.5 text-[9px] font-extrabold text-white bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full shadow-md animate-pulse">
+                  <span className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 px-1.5 py-0.2 sm:px-2 sm:py-0.5 text-[8px] sm:text-[9px] font-extrabold text-white bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full shadow-xs sm:shadow-md animate-pulse">
                     {item.badge}
                   </span>
                 )}
-                <div className={`p-3.5 rounded-2xl mb-3.5 transition-all duration-200 group-hover:scale-110 ${item.iconBg}`}>
-                  <Icon className={`h-6 w-6 ${item.color}`} />
+                <div className={`p-2 sm:p-3.5 rounded-xl sm:rounded-2xl mb-1 sm:mb-3 transition-all duration-200 group-hover:scale-110 ${item.iconBg}`}>
+                  <Icon className={`h-4.5 w-4.5 sm:h-6 sm:w-6 ${item.color}`} />
                 </div>
-                <h4 className={`text-[12px] font-bold tracking-wide transition-colors uppercase font-sans ${item.titleColor}`}>
+                <h4 className={`text-[11px] sm:text-[12px] font-bold tracking-tight transition-colors uppercase font-sans line-clamp-1 ${item.titleColor}`}>
                   {item.title}
                 </h4>
-                <span className={`text-[10px] mt-1 max-w-[130px] line-clamp-1 font-medium ${item.descColor}`}>
+                <span className={`text-[9px] sm:text-[10px] mt-0.5 max-w-[130px] line-clamp-1 font-medium ${item.descColor}`}>
                   {item.desc}
                 </span>
               </div>
@@ -214,7 +217,7 @@ export default function Home() {
       </div>
 
       {/* Footer Info */}
-      <div className="mt-8 text-center text-[10px] text-slate-400 flex justify-center items-center gap-1">
+      <div className="mt-3 sm:mt-8 text-center text-[9px] sm:text-[10px] text-slate-400 flex justify-center items-center gap-1">
         <ShieldAlert size={10} />
         <span>Tổ Viễn Thông 3 - MobiFone Đồng Nai © 2026</span>
       </div>
