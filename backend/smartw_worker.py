@@ -3074,14 +3074,15 @@ def send_periodic_full_report():
                 lines.append(f"• {grp['label']}{net_part} - {grp['t']}")
             total_active += 1
 
-    # Collect MLL site base IDs to exclude from CELLOFF (site already MLL → cells are obviously off)
-    mll_sites = set()
+    # Collect MLL site (base_id, tech) pairs to exclude matching CELLOFF
+    # Only filter CELLOFF when same site AND same technology (3G MLL should NOT hide 4G CELLOFF)
+    mll_site_techs = set()
     if mll_list:
         for alarm in mll_list:
             site = _site_key(alarm)
-            base_id, _, _ = _resolve_base_site_and_tech(site, '')
+            base_id, _, tech = _resolve_base_site_and_tech(site, alarm.get('network', ''))
             if base_id:
-                mll_sites.add(base_id.upper())
+                mll_site_techs.add((base_id.upper(), (tech or '').upper()))
 
     # ── Section 4: CELLOFF ──
     is_office_hours = (8 <= datetime.now().hour < 18)
@@ -3092,13 +3093,13 @@ def send_periodic_full_report():
             if cid and cid not in seen_cells: seen_cells[cid] = alarm
             elif not cid: seen_cells[id(alarm)] = alarm
         
-        # Filter out cells belonging to MLL sites
+        # Filter out cells belonging to MLL sites with SAME technology
         filtered_cells = {}
         for cid, alarm in seen_cells.items():
             site = _site_key(alarm)
-            base_id, _, _ = _resolve_base_site_and_tech(site, '')
-            if base_id and base_id.upper() in mll_sites:
-                continue  # Skip: site is already MLL, celloff is redundant
+            base_id, _, tech = _resolve_base_site_and_tech(site, alarm.get('network', ''))
+            if base_id and (base_id.upper(), (tech or '').upper()) in mll_site_techs:
+                continue  # Skip: same site + same tech already in MLL
             filtered_cells[cid] = alarm
 
         if filtered_cells:

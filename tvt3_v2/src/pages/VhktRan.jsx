@@ -474,18 +474,19 @@ export default function VhktRan() {
   const groupedMll = groupAlarmsForSection(displayedMll);
   const rawGroupedCell = groupCellAlarms(displayedCell);
 
-  // Filter CELLOFF: exclude cells belonging to MLL sites (site already MLL → celloff is redundant)
-  const mllSites = new Set();
+  // Filter CELLOFF: exclude cells belonging to MLL sites with SAME technology
+  // 3G MLL should NOT hide 4G CELLOFF (different tech, different equipment)
+  const mllSiteTechs = new Set();
   groupedMll.forEach(a => {
-    const { baseSite, oldId } = getSiteDetails(a.site);
-    if (baseSite) mllSites.add(baseSite.toUpperCase());
-    if (oldId) mllSites.add(oldId.toUpperCase());
+    const { baseSite } = getSiteDetails(a.site);
+    const net = (getAlarmNetwork(a) || a.network || '').toUpperCase();
+    if (baseSite) mllSiteTechs.add(`${baseSite.toUpperCase()}_${net}`);
   });
   const groupedCell = rawGroupedCell.filter(a => {
-    const { baseSite, oldId } = getSiteDetails(a.site);
+    const { baseSite } = getSiteDetails(a.site);
+    const net = (getAlarmNetwork(a) || a.network || '').toUpperCase();
     const bsUp = (baseSite || '').toUpperCase();
-    const oldUp = (oldId || '').toUpperCase();
-    return !(mllSites.has(bsUp) || (oldUp && mllSites.has(oldUp)));
+    return !mllSiteTechs.has(`${bsUp}_${net}`);
   });
 
   // Card counts (unique active sites)
