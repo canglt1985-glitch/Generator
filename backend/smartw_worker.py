@@ -3145,8 +3145,12 @@ def send_periodic_full_report():
                     net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
                     lines.append(f"• {grp['label']}: {grp['cell_codes'][0]}{net_part} - {grp['t']}")
                 else:
-                    # Multiple cells same sector → SRAN
-                    lines.append(f"• {grp['label']}: sector {grp['sector']} [SRAN] - {grp['t']}")
+                    # Multiple cells same sector → check if SRAN (multi-tech) or same tech
+                    if len(grp['nets']) > 1:
+                        tech_tag = "SRAN"
+                    else:
+                        tech_tag = grp['nets'][0] if grp['nets'] else "?"
+                    lines.append(f"• {grp['label']}: sector {grp['sector']} [{tech_tag}] - {grp['t']}")
                 total_active += 1
 
     if total_active > 0:
