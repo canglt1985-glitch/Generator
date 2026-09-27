@@ -695,19 +695,14 @@ export default function VhktRan() {
     );
   }
 
-  // Definition of tabs for 2-row layout
+  // Definition of tabs (simplified: removed individual alarm tabs)
   const row1Tabs = [
     { id: 'all', label: 'Tổng hợp', shortLabel: 'T.Hợp', count: totalActiveCount, color: 'indigo', icon: '📋' },
-    { id: 'md', label: 'Mất điện', shortLabel: 'M.Điện', count: mdCount, color: 'amber', icon: '⚡' },
-    { id: 'mpd', label: 'Máy phát', shortLabel: 'M.Phát', count: mpdCount, color: 'emerald', icon: '🔋' },
-    { id: 'mll', label: 'Mất liên lạc', shortLabel: 'Mất LL', count: mllCount, color: 'red', icon: '📵' },
-  ];
-
-  const row2Tabs = [
-    { id: 'mll_cell', label: 'Cell Off', shortLabel: 'Cell Off', count: cellCount, color: 'purple', icon: '📡' },
     { id: 'vhkt', label: 'SLA', shortLabel: 'SLA', count: '📊', color: 'blue', icon: '📊' },
     { id: 'pakh', label: 'PAKH', shortLabel: 'PAKH', count: activePakhList.length, color: 'sky', icon: '💬' },
   ];
+
+  const row2Tabs = [];
 
   const allTabs = [...row1Tabs, ...row2Tabs];
 
@@ -820,22 +815,17 @@ export default function VhktRan() {
         </div>
       </div>
 
-      {/* Nav Cards Container - 2 Rows on Mobile (không cần trượt qua), Single Row on Desktop */}
+      {/* Nav Cards Container - Single Row */}
       <div>
-        {/* Mobile View: 2 Fixed Rows */}
-        <div className="block sm:hidden space-y-1.5 mb-2">
-          {/* Row 1: 4 Tabs */}
-          <div className="grid grid-cols-4 gap-1.5">
-            {row1Tabs.map(card => renderNavCard(card, true))}
-          </div>
-          {/* Row 2: 3 Tabs */}
+        {/* Mobile View: Single Row with 3 Tabs */}
+        <div className="block sm:hidden mb-2">
           <div className="grid grid-cols-3 gap-1.5">
-            {row2Tabs.map(card => renderNavCard(card, true))}
+            {row1Tabs.map(card => renderNavCard(card, true))}
           </div>
         </div>
 
         {/* Desktop View: Single Row */}
-        <div className="hidden sm:grid sm:grid-cols-7 gap-2 mb-4">
+        <div className="hidden sm:grid sm:grid-cols-3 gap-2 mb-4">
           {allTabs.map(card => renderNavCard(card, false))}
         </div>
       </div>
@@ -1041,242 +1031,6 @@ export default function VhktRan() {
               </div>
             )}
 
-            {/* Tab: Mất điện MĐ */}
-            {activeTab === 'md' && (
-              <div>
-                {/* Mobile View: Message Style */}
-                <div className="block sm:hidden p-3 bg-slate-50 space-y-3">
-                  <MobileMessageCard title="MAC" icon="⚡" alarms={groupedMd} sectionKey="md" />
-                </div>
-
-                {/* Desktop View: Table */}
-                <div className="hidden sm:block divide-y divide-gray-200">
-                  {displayedMd.length === 0 ? (
-                    <div className="p-12 text-center text-gray-500 text-sm space-y-2">
-                      <p>✅ Không có alarm MĐ nào. Tất cả trạm đang có điện lưới.</p>
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-center border-collapse text-xs sm:text-sm">
-                        <thead>
-                          <tr className="border-b border-gray-200 bg-gray-50 text-gray-500 uppercase tracking-wider font-semibold text-[10px] sm:text-xs">
-                            <th className="py-3 px-2 sm:px-4 text-center">SITE ID</th>
-                            <th className="py-3 px-2 sm:px-4 text-center">MẠNG</th>
-                            <th className="py-3 px-2 sm:px-4 text-left">CẢNH BÁO</th>
-                            <th className="py-3 px-2 sm:px-4 text-center">BẮT ĐẦU</th>
-                            <th className="py-3 px-2 sm:px-4 text-center">GIỜ MĐ</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100">
-                          {displayedMd.map(a => {
-                            const hasGen = isMpdRunningOnSite(a.site);
-                            return (
-                              <tr key={a.id} className="hover:bg-gray-50 transition-colors">
-                                <td className="py-3 px-2 sm:px-4">
-                                  <div className="flex items-center justify-start gap-2.5 min-w-[130px] max-w-[190px] mx-auto text-left">
-                                    <span className="text-base leading-none shrink-0" title={hasGen ? 'Đang chạy MPĐ' : 'Chưa chạy MPĐ'}>
-                                      {hasGen ? '🟢' : '🔴'}
-                                    </span>
-                                    {renderSiteLabel(a.site)}
-                                  </div>
-                                </td>
-                                <td className="py-3 px-2 sm:px-4 text-center font-bold text-emerald-600 font-mono">
-                                  {getAlarmNetwork(a) || a.network || '--'}
-                                </td>
-                                <td className="py-3 px-2 sm:px-4 text-left text-gray-700">{a.alarm_name || '--'}</td>
-                                <td className="py-3 px-2 sm:px-4 text-gray-500 font-mono text-xs">
-                                  {a.sdate ? formatDateTime(a.sdate) : '--'}
-                                </td>
-                                <td className="py-3 px-2 sm:px-4 font-bold text-amber-500 font-mono">
-                                  {(a.duration / 60).toFixed(1)}h
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Tab: Máy phát điện MPĐ */}
-            {activeTab === 'mpd' && (
-              <div>
-                {/* Mobile View: Message Style */}
-                <div className="block sm:hidden p-3 bg-slate-50 space-y-3">
-                  <MobileMessageCard title="GEN" icon="🔋" alarms={groupedMpd} sectionKey="mpd" />
-                </div>
-
-                {/* Desktop View: Table */}
-                <div className="hidden sm:block divide-y divide-gray-200">
-                  {displayedMpd.length === 0 ? (
-                    <div className="p-12 text-center text-gray-500 text-sm space-y-2">
-                      <p>✅ Chưa có trạm nào chạy máy phát điện.</p>
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-center border-collapse text-xs sm:text-sm">
-                        <thead>
-                          <tr className="border-b border-gray-200 bg-gray-50 text-gray-500 uppercase tracking-wider font-semibold text-[10px] sm:text-xs">
-                            <th className="py-3 px-2 sm:px-4 text-center">SITE ID</th>
-                            <th className="py-3 px-2 sm:px-4 text-center">LOẠI TB</th>
-                            <th className="py-3 px-2 sm:px-4 text-left">CẢNH BÁO</th>
-                            <th className="py-3 px-2 sm:px-4 text-center">BẮT ĐẦU</th>
-                            <th className="py-3 px-2 sm:px-4 text-center">GIỜ CHẠY</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100">
-                          {displayedMpd.map(a => (
-                            <tr key={a.id} className="hover:bg-gray-50 transition-colors">
-                              <td className="py-3 px-2 sm:px-4">
-                                <div className="flex items-center justify-start gap-2.5 min-w-[130px] max-w-[190px] mx-auto text-left">
-                                  <span className="text-base leading-none shrink-0" title="Đang chạy máy phát điện">
-                                    🟢
-                                  </span>
-                                  {renderSiteLabel(a.site)}
-                                </div>
-                              </td>
-                              <td className="py-3 px-2 sm:px-4 text-center font-semibold text-gray-600">{a.ne_type || '--'}</td>
-                              <td className="py-3 px-2 sm:px-4 text-left text-gray-700">{a.alarm_name || '--'}</td>
-                              <td className="py-3 px-2 sm:px-4 text-gray-500 font-mono text-xs">
-                                {a.sdate ? formatDateTime(a.sdate) : '--'}
-                              </td>
-                              <td className="py-3 px-2 sm:px-4 font-bold text-emerald-600 font-mono">
-                                {(a.duration / 60).toFixed(1)}h
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Tab: Mất liên lạc MLL */}
-            {activeTab === 'mll' && (
-              <div>
-                {/* Mobile View: Message Style */}
-                <div className="block sm:hidden p-3 bg-slate-50 space-y-3">
-                  <MobileMessageCard title="MLL" icon="📵" alarms={groupedMll} sectionKey="mll" />
-                </div>
-
-                {/* Desktop View: Table */}
-                <div className="hidden sm:block divide-y divide-gray-200">
-                  {displayedMll.length === 0 ? (
-                    <div className="p-12 text-center text-gray-500 text-sm space-y-2">
-                      <p>✅ Tất cả trạm đang liên lạc bình thường.</p>
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-center border-collapse text-xs sm:text-sm">
-                        <thead>
-                          <tr className="border-b border-gray-200 bg-gray-50 text-gray-500 uppercase tracking-wider font-semibold text-[10px] sm:text-xs">
-                            <th className="py-3 px-2 sm:px-4 text-center">SITE ID</th>
-                            <th className="py-3 px-2 sm:px-4 text-center">MẠNG</th>
-                            <th className="py-3 px-2 sm:px-4 text-center">BẮT ĐẦU</th>
-                            <th className="py-3 px-2 sm:px-4 text-center">GIỜ MLL</th>
-                            <th className="py-3 px-2 sm:px-4 text-center">VENDOR</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100">
-                          {displayedMll.map(a => (
-                            <tr key={a.id} className="hover:bg-gray-50 transition-colors">
-                              <td className="py-3 px-2 sm:px-4">
-                                <div className="flex items-center justify-start gap-2.5 min-w-[130px] max-w-[190px] mx-auto text-left">
-                                  <span className="text-base leading-none shrink-0" title="Mất liên lạc">
-                                    🔴
-                                  </span>
-                                  {renderSiteLabel(a.site)}
-                                </div>
-                              </td>
-                              <td className="py-3 px-2 sm:px-4 text-center font-bold text-emerald-600 font-mono">
-                                {getAlarmNetwork(a) || a.network || '--'}
-                              </td>
-                              <td className="py-3 px-2 sm:px-4 text-gray-500 font-mono text-xs">
-                                {a.sdate ? formatDateTime(a.sdate) : '--'}
-                              </td>
-                              <td className="py-3 px-2 sm:px-4 font-bold text-red-500 font-mono">
-                                {(a.duration / 60).toFixed(1)}h
-                              </td>
-                              <td className="py-3 px-2 sm:px-4 font-mono text-xs text-slate-600">{a.vendor || '--'}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Tab: Cell Off */}
-            {activeTab === 'mll_cell' && (
-              <div>
-                {/* Mobile View: Message Style */}
-                <div className="block sm:hidden p-3 bg-slate-50 space-y-3">
-                  <MobileMessageCard title="CELL OFF" icon="📡" alarms={groupedCell} sectionKey="mll_cell" />
-                </div>
-
-                {/* Desktop View: Table */}
-                <div className="hidden sm:block divide-y divide-gray-200">
-                  {displayedCell.length === 0 ? (
-                    <div className="p-12 text-center text-gray-500 text-sm space-y-2">
-                      <p>✅ Tất cả cell đang hoạt động bình thường.</p>
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-center border-collapse text-xs sm:text-sm">
-                        <thead>
-                          <tr className="border-b border-gray-200 bg-gray-50 text-gray-500 uppercase tracking-wider font-semibold text-[10px] sm:text-xs">
-                            <th className="py-3 px-2 sm:px-4 text-center">SITE ID CŨ</th>
-                            <th className="py-3 px-2 sm:px-4 text-center">CELL ID</th>
-                            <th className="py-3 px-2 sm:px-4 text-center">MẠNG</th>
-                            <th className="py-3 px-2 sm:px-4 text-left">CẢNH BÁO</th>
-                            <th className="py-3 px-2 sm:px-4 text-center">BẮT ĐẦU</th>
-                            <th className="py-3 px-2 sm:px-4 text-center">GIỜ CÚP</th>
-                            <th className="py-3 px-2 sm:px-4 text-center">VENDOR</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100">
-                          {displayedCell.map(a => {
-                            const { newId, oldId } = getSiteDetails(a.site);
-                            const siteCode = oldId || newId || a.site;
-                            return (
-                              <tr key={a.id} className="hover:bg-gray-50 transition-colors">
-                                <td className="py-3 px-2 sm:px-4 font-mono font-bold text-center">
-                                  <div className="flex items-center justify-center gap-2">
-                                    <span className="text-base leading-none shrink-0" title="Cell Off">
-                                      🔴
-                                    </span>
-                                    <span className="font-black text-slate-900">{siteCode}</span>
-                                  </div>
-                                </td>
-                                <td className="py-3 px-2 sm:px-4 text-center font-mono font-bold text-purple-700">{a.cellid || '--'}</td>
-                                <td className="py-3 px-2 sm:px-4 text-center font-bold text-emerald-600 font-mono">
-                                  {getAlarmNetwork(a) || a.network || '--'}
-                                </td>
-                                <td className="py-3 px-2 sm:px-4 text-left text-gray-700">{a.alarm_name || '--'}</td>
-                                <td className="py-3 px-2 sm:px-4 text-gray-500 font-mono text-xs">
-                                  {a.sdate ? formatDateTime(a.sdate) : '--'}
-                                </td>
-                                <td className="py-3 px-2 sm:px-4 font-bold text-amber-500 font-mono">
-                                  {(a.duration / 60).toFixed(1)}h
-                                </td>
-                                <td className="py-3 px-2 sm:px-4 font-mono text-xs text-slate-600">{a.vendor || '--'}</td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
 
             {/* Tab: SLA (VHKT) - Bỏ hiển thị badge ERA */}
             {activeTab === 'vhkt' && (
