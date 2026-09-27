@@ -3102,8 +3102,8 @@ def send_periodic_full_report():
             filtered_cells[cid] = alarm
 
         if filtered_cells:
-            lines.append("")
-            lines.append("📡 *CELLOFF* (" + str(len(filtered_cells)) + " cell):")
+            # Group cells by site + sector for compact display
+            site_sector_groups = {}
             for cid, alarm in filtered_cells.items():
                 site = _site_key(alarm)
                 base_id, old_id, _ = _resolve_base_site_and_tech(site, '')
@@ -3116,10 +3116,37 @@ def send_periodic_full_report():
                         break
                 cell_code = cell_code.lstrip('_-') or cid
 
+                # Extract sector from last char of cell code (e.g. CM3GC → sector C)
+                sector = cell_code[-1] if cell_code and cell_code[-1].isalpha() else '?'
+
                 net = _norm_net(alarm.get('network') or '')
-                net_part = f" [{net}]" if net else ''
                 t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '', full=False)
-                lines.append(f"• {label}: {cell_code}{net_part} - {t}")
+
+                group_key = f"{label}_{sector}"
+                if group_key not in site_sector_groups:
+                    site_sector_groups[group_key] = {
+                        'label': label, 'sector': sector, 'nets': [],
+                        'cells': [], 't': t, 'cell_codes': []
+                    }
+                if net and net not in site_sector_groups[group_key]['nets']:
+                    site_sector_groups[group_key]['nets'].append(net)
+                site_sector_groups[group_key]['cells'].append(cid)
+                site_sector_groups[group_key]['cell_codes'].append(cell_code)
+                # Keep earliest time
+                if t < site_sector_groups[group_key]['t']:
+                    site_sector_groups[group_key]['t'] = t
+
+            total_cells = sum(len(g['cells']) for g in site_sector_groups.values())
+            lines.append("")
+            lines.append("📡 *CELLOFF* (" + str(total_cells) + " cell):")
+            for gkey, grp in site_sector_groups.items():
+                if len(grp['cells']) == 1:
+                    # Single cell: show cell code + tech directly
+                    net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
+                    lines.append(f"• {grp['label']}: {grp['cell_codes'][0]}{net_part} - {grp['t']}")
+                else:
+                    # Multiple cells same sector → SRAN
+                    lines.append(f"• {grp['label']}: sector {grp['sector']} [SRAN] - {grp['t']}")
                 total_active += 1
 
     if total_active > 0:
