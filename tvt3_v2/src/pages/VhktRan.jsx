@@ -410,7 +410,21 @@ export default function VhktRan() {
   const groupedMd = groupAlarmsForSection(displayedMd);
   const groupedMpd = groupAlarmsForSection(displayedMpd);
   const groupedMll = groupAlarmsForSection(displayedMll);
-  const groupedCell = groupCellAlarms(displayedCell);
+  const rawGroupedCell = groupCellAlarms(displayedCell);
+
+  // Filter CELLOFF: exclude cells belonging to MLL sites (site already MLL → celloff is redundant)
+  const mllSites = new Set();
+  groupedMll.forEach(a => {
+    const { baseSite, oldId } = getSiteDetails(a.site);
+    if (baseSite) mllSites.add(baseSite.toUpperCase());
+    if (oldId) mllSites.add(oldId.toUpperCase());
+  });
+  const groupedCell = rawGroupedCell.filter(a => {
+    const { baseSite, oldId } = getSiteDetails(a.site);
+    const bsUp = (baseSite || '').toUpperCase();
+    const oldUp = (oldId || '').toUpperCase();
+    return !(mllSites.has(bsUp) || (oldUp && mllSites.has(oldUp)));
+  });
 
   // Card counts (unique active sites)
   const mdCount = groupedMd.length;

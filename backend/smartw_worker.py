@@ -3074,6 +3074,15 @@ def send_periodic_full_report():
                 lines.append(f"• {grp['label']}{net_part} - {grp['t']}")
             total_active += 1
 
+    # Collect MLL site base IDs to exclude from CELLOFF (site already MLL → cells are obviously off)
+    mll_sites = set()
+    if mll_list:
+        for alarm in mll_list:
+            site = _site_key(alarm)
+            base_id, _, _ = _resolve_base_site_and_tech(site, '')
+            if base_id:
+                mll_sites.add(base_id.upper())
+
     # ── Section 4: CELLOFF ──
     is_office_hours = (8 <= datetime.now().hour < 18)
     if cell_list and is_office_hours:
@@ -3082,26 +3091,36 @@ def send_periodic_full_report():
             cid = str(alarm.get('cellid') or alarm.get('cell_id') or '').strip().upper()
             if cid and cid not in seen_cells: seen_cells[cid] = alarm
             elif not cid: seen_cells[id(alarm)] = alarm
-            
-        lines.append("")
-        lines.append("📡 *CELLOFF* (" + str(len(seen_cells)) + " cell):")
+        
+        # Filter out cells belonging to MLL sites
+        filtered_cells = {}
         for cid, alarm in seen_cells.items():
             site = _site_key(alarm)
-            base_id, old_id, _ = _resolve_base_site_and_tech(site, '')
-            label = old_id if old_id else (base_id if base_id else site)
+            base_id, _, _ = _resolve_base_site_and_tech(site, '')
+            if base_id and base_id.upper() in mll_sites:
+                continue  # Skip: site is already MLL, celloff is redundant
+            filtered_cells[cid] = alarm
 
-            cell_code = str(alarm.get('cellid') or alarm.get('cell_id') or cid).strip().upper()
-            for prefix in (site, base_id, old_id):
-                if prefix and len(prefix) >= 4 and cell_code.startswith(prefix.upper()):
-                    cell_code = cell_code[len(prefix):]
-                    break
-            cell_code = cell_code.lstrip('_-') or cid
+        if filtered_cells:
+            lines.append("")
+            lines.append("📡 *CELLOFF* (" + str(len(filtered_cells)) + " cell):")
+            for cid, alarm in filtered_cells.items():
+                site = _site_key(alarm)
+                base_id, old_id, _ = _resolve_base_site_and_tech(site, '')
+                label = old_id if old_id else (base_id if base_id else site)
 
-            net = _norm_net(alarm.get('network') or '')
-            net_part = f" [{net}]" if net else ''
-            t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '', full=False)
-            lines.append(f"• {label}: {cell_code}{net_part} - {t}")
-            total_active += 1
+                cell_code = str(alarm.get('cellid') or alarm.get('cell_id') or cid).strip().upper()
+                for prefix in (site, base_id, old_id):
+                    if prefix and len(prefix) >= 4 and cell_code.startswith(prefix.upper()):
+                        cell_code = cell_code[len(prefix):]
+                        break
+                cell_code = cell_code.lstrip('_-') or cid
+
+                net = _norm_net(alarm.get('network') or '')
+                net_part = f" [{net}]" if net else ''
+                t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '', full=False)
+                lines.append(f"• {label}: {cell_code}{net_part} - {t}")
+                total_active += 1
 
     if total_active > 0:
         _send_viber_report(lines)
