@@ -984,35 +984,7 @@ export default function VhktRan() {
 
                 {/* Desktop View: Preview text box + Grid of cards */}
                 <div className="hidden sm:block p-5 space-y-5">
-                  <div className="bg-slate-900 rounded-2xl p-4 text-slate-100 shadow-md">
-                    <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-800">
-                      <div className="flex items-center gap-2">
-                        <span className="text-base">📋</span>
-                        <span className="font-bold text-sm text-slate-200">Bản tin cảnh báo nhanh (Dạng tin nhắn)</span>
-                      </div>
-                      <button
-                        onClick={() => handleCopy('all')}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer active:scale-95"
-                      >
-                        {copiedSection === 'all' ? (
-                          <>
-                            <Check className="h-4 w-4 text-emerald-300" />
-                            <span className="text-emerald-300">Đã sao chép!</span>
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="h-4 w-4" />
-                            <span>Sao chép toàn bộ</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
-                    <pre className="font-mono text-xs sm:text-sm text-emerald-400 whitespace-pre-wrap leading-relaxed select-all bg-slate-950/70 p-3 rounded-xl border border-slate-800">
-                      {generateMessageText('all')}
-                    </pre>
-                  </div>
-
-                  {/* Active cards grid: chỉ hiển thị các mục có cảnh báo */}
+                  {/* Active cards grid: 4 cột trên desktop */}
                   {totalActiveCount === 0 ? (
                     <div className="bg-white rounded-2xl p-8 text-center text-slate-500 border border-slate-200 shadow-sm font-mono">
                       <span className="text-3xl mb-2 block">✅</span>
@@ -1020,11 +992,11 @@ export default function VhktRan() {
                       <p className="text-xs text-slate-400 mt-1">Hệ thống mạng đang vận hành ổn định</p>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {groupedMd.length > 0 && <MobileMessageCard title="MAC" icon="⚡" alarms={groupedMd} sectionKey="md" />}
-                      {groupedMpd.length > 0 && <MobileMessageCard title="GEN" icon="🔋" alarms={groupedMpd} sectionKey="mpd" />}
-                      {groupedMll.length > 0 && <MobileMessageCard title="MLL" icon="📵" alarms={groupedMll} sectionKey="mll" />}
-                      {groupedCell.length > 0 && <MobileMessageCard title="CELL OFF" icon="📡" alarms={groupedCell} sectionKey="mll_cell" />}
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                      <MobileMessageCard title="MAC" icon="⚡" alarms={groupedMd} sectionKey="md" />
+                      <MobileMessageCard title="GEN" icon="🔋" alarms={groupedMpd} sectionKey="mpd" />
+                      <MobileMessageCard title="MLL" icon="📵" alarms={groupedMll} sectionKey="mll" />
+                      <MobileMessageCard title="CELL OFF" icon="📡" alarms={groupedCell} sectionKey="mll_cell" />
                     </div>
                   )}
                 </div>
