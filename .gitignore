@@ -71,3 +71,7 @@ backup_tvt3_v2_before_refactor.zip
 
 
 
+
+# ── Backup JSON dumps ──
+backend/data/backup_*.json
+backup_*.json
