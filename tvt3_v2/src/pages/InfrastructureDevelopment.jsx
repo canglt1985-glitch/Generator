@@ -1085,7 +1085,7 @@ export default function InfrastructureDevelopment() {
 
       // Format old address and new address
       const addressOldText = `thửa đất số ${selectedProject.plot_number || '............'}, tờ bản đồ số ${selectedProject.map_sheet || '............'}${detailAddress ? `, ${detailAddress}` : ''}, xã ${xa_cu}, huyện ${huyen_cu}`;
-      const addressNewText = ` (${xa_moi}, Đồng Nai)`;
+      const addressNewText = [xa_moi, 'Đồng Nai'].filter(Boolean).join(', ');
       
       const fullAddress = selectedProject.address || `${selectedProject.ward || ''}, Huyện ${selectedProject.district || ''}, Tỉnh Đồng Nai`;
 
