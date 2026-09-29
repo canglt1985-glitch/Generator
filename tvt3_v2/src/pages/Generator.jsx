@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../supabaseClient';
 import { 
   Zap, Calendar, AlertTriangle, FileText, Search, Plus, Trash, 
-  Edit, Eye, Clock, CheckCircle2, CheckCircle, CheckCheck, AlertCircle, X, ExternalLink, Filter, RefreshCw
+  Edit, Eye, Clock, CheckCircle2, CheckCircle, CheckCheck, AlertCircle, X, ExternalLink, Filter, RefreshCw, Download
 } from 'lucide-react';
 
 // XLSX loaded dynamically on first export
@@ -17,6 +17,7 @@ import {
 } from '../utils/siteGroups';
 import { getFuelPriceForDate } from '../utils/fuelPrice';
 import { exportOfficialMFDReport, buildHDWorksheet, build02AWorksheet, exportSiteInvoiceMapReport } from '../utils/mfdStatementExporter';
+import { exportMobileEquipmentToExcel } from '../utils/excel';
 
 export default function Generator() {
   const [activeTab, setActiveTab] = useState('logs'); // logs, anomalies, invoices, transfer
@@ -1112,6 +1113,19 @@ export default function Generator() {
     XLSX.writeFile(workbook, `Bao_cao_bat_thuong_chay_may_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
+  const handleExportMobileEquipment = async () => {
+    try {
+      await exportMobileEquipmentToExcel({
+        mobileEquipments,
+        equipmentTransfers,
+        stations
+      });
+    } catch (err) {
+      console.error("Lỗi xuất Excel thiết bị lưu động:", err);
+      alert("Lỗi khi xuất file Excel: " + err.message);
+    }
+  };
+
   // Auto-populate transfer norms when source site or equipment index changes
   useEffect(() => {
     if (transSourceSiteId && transEquipType === 'mpd' && transEquipIndex !== '') {
@@ -1983,6 +1997,18 @@ export default function Generator() {
               className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg text-emerald-700 border border-emerald-200 bg-white hover:bg-emerald-50 shadow-sm transition-colors cursor-pointer"
             >
               <ExternalLink className="h-3.5 w-3.5 mr-1" /> Xuất Excel
+            </button>
+          </div>
+        )}
+
+        {activeTab === 'transfer' && (
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={handleExportMobileEquipment}
+              className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg text-emerald-700 border border-emerald-300 bg-white hover:bg-emerald-50 shadow-sm transition-colors cursor-pointer"
+              title="Xuất file Excel Quản lý & Điều chuyển thiết bị lưu động"
+            >
+              <Download className="h-3.5 w-3.5 mr-1" /> Xuất Excel Thiết Bị Lưu Động
             </button>
           </div>
         )}
@@ -3509,6 +3535,15 @@ export default function Generator() {
               >
                 <Plus size={14} />
                 <span>➕ Tạo Lệnh Điều Chuyển</span>
+              </button>
+
+              <button
+                onClick={handleExportMobileEquipment}
+                className="flex-1 sm:flex-none px-3.5 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+                title="Xuất trọn bộ file Excel Quản lý & Điều chuyển thiết bị lưu động"
+              >
+                <Download size={14} />
+                <span>Xuất Excel</span>
               </button>
             </div>
           </div>

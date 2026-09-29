@@ -3,11 +3,12 @@ import { supabase } from '../supabaseClient';
 import { 
   ClipboardList, Calendar, AlertTriangle, Search, Plus, Edit, Trash, 
   MapPin, User, Clock, CheckCircle2, AlertCircle, Eye, X, Filter, ExternalLink,
-  Zap
+  Zap, Download
 } from 'lucide-react';
 import DatasiteDetailFullscreen from '../components/datasites/DatasiteDetailFullscreen';
 import { useCurrentUser } from '../utils/useCurrentUser';
 import { exportB4RepairProposal, B4_REPAIR_CATEGORIES } from '../utils/b4RepairExporter';
+import { exportMobileEquipmentToExcel } from '../utils/excel';
 
 
 const getTodayDMY = () => {
@@ -648,6 +649,19 @@ export default function DailyWork() {
     XLSX.writeFile(workbook, `Quan_Ly_Ton_Tai_${dateStr}.xlsx`);
   }
 
+  const handleExportMobileEquipment = async () => {
+    try {
+      await exportMobileEquipmentToExcel({
+        mobileEquipments,
+        equipmentTransfers,
+        stations
+      });
+    } catch (err) {
+      console.error("Lỗi xuất Excel thiết bị lưu động:", err);
+      alert("Lỗi khi xuất file Excel: " + err.message);
+    }
+  };
+
   // Filtered list - Mobile Equipment
   const filteredEquip = useMemo(() => {
     if (!searchQuery.trim()) return mobileEquipments;
@@ -893,12 +907,21 @@ export default function DailyWork() {
                 </button>
               )}
               {activeTab === 'mobile' && (
-                <button 
-                  onClick={() => { resetEquipForm(); setShowAddEquipModal(true); }}
-                  className="inline-flex items-center justify-center px-4 py-2 text-[13px] font-bold rounded-lg text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors cursor-pointer h-[34px]"
-                >
-                  <Plus className="h-4 w-4 mr-1.5" /> Thêm thiết bị lưu động
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleExportMobileEquipment}
+                    className="inline-flex items-center justify-center px-3.5 py-2 text-[13px] font-bold rounded-lg text-emerald-700 border border-emerald-300 bg-white hover:bg-emerald-50 shadow-sm transition-colors cursor-pointer h-[34px]"
+                    title="Xuất trọn bộ file Excel Quản lý & Điều chuyển thiết bị lưu động"
+                  >
+                    <Download className="h-4 w-4 mr-1.5" /> Xuất Excel
+                  </button>
+                  <button 
+                    onClick={() => { resetEquipForm(); setShowAddEquipModal(true); }}
+                    className="inline-flex items-center justify-center px-4 py-2 text-[13px] font-bold rounded-lg text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors cursor-pointer h-[34px]"
+                  >
+                    <Plus className="h-4 w-4 mr-1.5" /> Thêm thiết bị lưu động
+                  </button>
+                </div>
               )}
             </div>
           )}

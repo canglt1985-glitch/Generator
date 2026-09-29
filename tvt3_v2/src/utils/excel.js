@@ -134,3 +134,254 @@ export const importContractsFromExcel = (file, onDataRead) => {
   
   reader.readAsArrayBuffer(file);
 };
+
+export const exportMobileEquipmentToExcel = async ({ mobileEquipments, equipmentTransfers, stations } = {}) => {
+  const XLSX = await import('xlsx');
+  
+  let equips = mobileEquipments;
+  let transfers = equipmentTransfers;
+  let sites = stations;
+
+  // Tự động tải từ Supabase nếu chưa được truyền vào
+  try {
+    if (!equips || equips.length === 0 || !transfers || !sites || sites.length === 0) {
+      const { supabase } = await import('../supabaseClient');
+      const promises = [];
+      if (!equips || equips.length === 0) {
+        promises.push(supabase.from('mobile_equipment').select('*').order('type', { ascending: true }).order('equipment_code', { ascending: true }));
+      } else {
+        promises.push(Promise.resolve({ data: equips }));
+      }
+      if (!transfers || transfers.length === 0) {
+        promises.push(supabase.from('equipment_transfers').select('*').order('transfer_date', { ascending: false }).limit(500));
+      } else {
+        promises.push(Promise.resolve({ data: transfers }));
+      }
+      if (!sites || sites.length === 0) {
+        promises.push(supabase.from('datasites').select('site_id, site_id_old, name, location_info, infrastructure_info').order('site_id', { ascending: true }));
+      } else {
+        promises.push(Promise.resolve({ data: sites }));
+      }
+
+      const [resEq, resTr, resSt] = await Promise.all(promises);
+      if (resEq.data) equips = resEq.data;
+      if (resTr.data) transfers = resTr.data;
+      if (resSt.data) sites = resSt.data;
+    }
+  } catch (fetchErr) {
+    console.warn("Lỗi đồng bộ thêm dữ liệu trạm/điều chuyển:", fetchErr);
+  }
+
+  if (!equips || equips.length === 0) {
+    alert("Không tìm thấy dữ liệu thiết bị lưu động để xuất Excel.");
+    return;
+  }
+
+  // Tạo map tra cứu trạm
+  const siteMap = {};
+  (sites || []).forEach(s => {
+    const sid = (s.site_id || '').trim().toUpperCase();
+    const sold = (s.site_id_old || '').trim().toUpperCase();
+    if (sid) siteMap[sid] = s;
+    if (sold) siteMap[sold] = s;
+  });
+
+  const getSiteInfo = (code) => {
+    if (!code) return { code: '—', oldCode: '—', name: '—', district: '—' };
+    const u = String(code).trim().toUpperCase();
+    if (u === 'KHO') {
+      return { code: 'KHO', oldCode: '—', name: 'Kho Đài TVT3', district: 'Đài TVT3' };
+    }
+    if (u.includes('NHÀ')) {
+      return { code: code, oldCode: '—', name: code, district: 'Cá nhân giữ' };
+    }
+    const st = siteMap[u];
+    if (st) {
+      const loc = st.location_info || {};
+      return {
+        code: st.site_id || code,
+        oldCode: st.site_id_old || '—',
+        name: st.name || '',
+        district: loc.huyen_cu || loc.huyen || ''
+      };
+    }
+    return { code: code, oldCode: '—', name: code, district: '—' };
+  };
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '—';
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return String(dateStr);
+      return d.toLocaleString('vi-VN', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      });
+    } catch {
+      return String(dateStr);
+    }
+  };
+
+  // 1. SHEET 1: Vị trí hiện tại của thiết bị lưu động
+  const sheet1Data = (equips || []).map((eq, idx) => {
+    const locInfo = getSiteInfo(eq.current_location);
+    return {
+      'STT': idx + 1,
+      'Mã Thiết Bị': eq.equipment_code || '',
+      'Phân Loại': eq.type || '',
+      'Thông Số Kỹ Thuật / Model': eq.specifications || '',
+      'Vị Trí Hiện Tại (Mã Trạm)': locInfo.code,
+      'Mã Trạm Cũ': locInfo.oldCode,
+      'Tên Trạm / Nơi Đặt': locInfo.name,
+      'Huyện / Khu Vực': locInfo.district,
+      'Tình Trạng': eq.status || 'Tốt',
+      'Tồn Nhiên Liệu (Lít)': eq.fuel_balance ?? 0,
+      'Ghi Chú Vận Hành': eq.notes || '',
+      'Cập Nhật Cuối': formatDate(eq.updated_at || eq.created_at)
+    };
+  });
+
+  // 2. SHEET 2: Lịch sử điều chuyển & bàn giao
+  const eqMap = {};
+  (equips || []).forEach(e => { eqMap[e.id] = e; });
+
+  const sheet2Data = (transfers || []).map((tr, idx) => {
+    const eq = eqMap[tr.equipment_id];
+    const fromInfo = getSiteInfo(tr.from_location);
+    const toInfo = getSiteInfo(tr.to_location);
+    return {
+      'STT': idx + 1,
+      'Thời Gian Điều Chuyển': formatDate(tr.transfer_date),
+      'Mã Thiết Bị': eq ? eq.equipment_code : 'Khác',
+      'Phân Loại': eq ? eq.type : '—',
+      'Từ Vị Trí (Nơi Đi)': fromInfo.code,
+      'Mã Trạm Cũ (Nơi Đi)': fromInfo.oldCode,
+      'Tên Trạm / Điểm Đi': fromInfo.name,
+      'Đến Vị Trí (Nơi Đến)': toInfo.code,
+      'Mã Trạm Cũ (Nơi Đến)': toInfo.oldCode,
+      'Tên Trạm / Điểm Đến': toInfo.name,
+      'Người Thực Hiện': tr.operator || '',
+      'Ghi Chú / Lý Do Điều Chuyển': tr.notes || ''
+    };
+  });
+
+  // 3. SHEET 3: Máy phát xăng lưu động theo dữ liệu CSHT (nếu có)
+  const sheet3Data = [];
+  let s3Idx = 1;
+  (sites || []).forEach(s => {
+    const infra = s.infrastructure_info || {};
+    const loc = s.location_info || {};
+    const mpds = (infra.may_phat_dien || {}).mpd || [];
+    mpds.forEach(m => {
+      const lld = String(m.loai_lap_dat || '').toLowerCase();
+      const ten = String(m.ten || '').toLowerCase();
+      const nh = String(m.nhan_hieu || '').toLowerCase();
+      const nl = String(m.nhien_lieu || '').toLowerCase();
+      if (lld.includes('lưu động') || lld.includes('di động') || lld.includes('luu dong') || ten.includes('lưu động') || nh.includes('lưu động') || nl.includes('xăng')) {
+        sheet3Data.push({
+          'STT': s3Idx++,
+          'Mã Trạm Mới': s.site_id || '',
+          'Mã Trạm Cũ': s.site_id_old || '',
+          'Tên Trạm': s.name || '',
+          'Huyện': loc.huyen_cu || loc.huyen || '',
+          'Xã / Phường': loc.xa_cu || loc.xa_moi || '',
+          'Nhãn Hiệu Máy': m.nhan_hieu || 'MLĐ Xăng',
+          'Công Suất': m.cong_suat ? `${m.cong_suat} kVA` : '—',
+          'Loại Nhiên Liệu': m.nhien_lieu || 'Xăng',
+          'Định Mức (L/h)': Number(m.dinh_muc || m.dinh_muc_quy_chuan || 0),
+          'Tình Trạng / Ghi Chú': m.ghi_chu || m.tinh_trang || 'Máy xăng lưu động tại trạm'
+        });
+      }
+    });
+  });
+
+  // 4. SHEET 4: Báo cáo tổng hợp phân bổ & thống kê
+  const mpdCount = (equips || []).filter(e => (e.type || '').toUpperCase().includes('MPĐ') || (e.equipment_code || '').includes('MPD')).length;
+  const pinCount = (equips || []).filter(e => (e.type || '').toUpperCase().includes('PIN') || (e.equipment_code || '').includes('PIN')).length;
+  const otherCount = (equips || []).length - mpdCount - pinCount;
+  const atSiteCount = (equips || []).filter(e => e.current_location && e.current_location !== 'KHO').length;
+  const atKhoCount = (equips || []).filter(e => e.current_location === 'KHO').length;
+  const badCount = (equips || []).filter(e => (e.status || '').toLowerCase().includes('hư') || (e.status || '').toLowerCase().includes('hỏng') || (e.status || '').toLowerCase().includes('sửa')).length;
+
+  const sheet4Data = [
+    { 'Chỉ Tiêu Thống Kê': 'Tổng số thiết bị lưu động quản lý', 'Số Lượng': equips.length, 'Đơn Vị': 'Thiết bị', 'Ghi Chú': 'Bao gồm MPĐ và Pin lưu động' },
+    { 'Chỉ Tiêu Thống Kê': '• Máy phát điện lưu động (MPĐ)', 'Số Lượng': mpdCount, 'Đơn Vị': 'Máy', 'Ghi Chú': 'MPD-01 đến MPD-10...' },
+    { 'Chỉ Tiêu Thống Kê': '• Pin Lithium lưu động (PIN)', 'Số Lượng': pinCount, 'Đơn Vị': 'Bộ', 'Ghi Chú': 'Pin dự phòng Postef 48V-100Ah...' },
+    { 'Chỉ Tiêu Thống Kê': '• Thiết bị lưu động khác', 'Số Lượng': otherCount, 'Đơn Vị': 'Thiết bị', 'Ghi Chú': '' },
+    { 'Chỉ Tiêu Thống Kê': 'Vị trí: Đang phục vụ tại trạm thực địa', 'Số Lượng': atSiteCount, 'Đơn Vị': 'Thiết bị', 'Ghi Chú': 'Phục vụ ứng cứu cúp điện / sự cố' },
+    { 'Chỉ Tiêu Thống Kê': 'Vị trí: Đang lưu kho đài TVT3', 'Số Lượng': atKhoCount, 'Đơn Vị': 'Thiết bị', 'Ghi Chú': 'Sẵn sàng điều động' },
+    { 'Chỉ Tiêu Thống Kê': 'Tình trạng: Cần sửa chữa / Hư hỏng', 'Số Lượng': badCount, 'Đơn Vị': 'Thiết bị', 'Ghi Chú': 'Cần theo dõi bảo dưỡng' },
+    { 'Chỉ Tiêu Thống Kê': 'Tổng số lượt điều chuyển đã ghi nhận', 'Số Lượng': (transfers || []).length, 'Đơn Vị': 'Lượt', 'Ghi Chú': 'Lịch sử nhật ký điều động' },
+  ];
+
+  const workbook = XLSX.utils.book_new();
+
+  // Add Sheet 1
+  const ws1 = XLSX.utils.json_to_sheet(sheet1Data);
+  ws1['!cols'] = [
+    { wch: 6 },  // STT
+    { wch: 14 }, // Mã Thiết Bị
+    { wch: 12 }, // Phân Loại
+    { wch: 26 }, // Thông Số Kỹ Thuật
+    { wch: 24 }, // Vị Trí Hiện Tại
+    { wch: 14 }, // Mã Trạm Cũ
+    { wch: 28 }, // Tên Trạm
+    { wch: 18 }, // Huyện
+    { wch: 14 }, // Tình Trạng
+    { wch: 20 }, // Tồn Nhiên Liệu
+    { wch: 30 }, // Ghi Chú
+    { wch: 18 }, // Cập Nhật Cuối
+  ];
+  XLSX.utils.book_append_sheet(workbook, ws1, "1. Vị Trí Thiết Bị");
+
+  // Add Sheet 2
+  const ws2 = XLSX.utils.json_to_sheet(sheet2Data);
+  ws2['!cols'] = [
+    { wch: 6 },  // STT
+    { wch: 18 }, // Thời Gian
+    { wch: 14 }, // Mã Thiết Bị
+    { wch: 12 }, // Phân Loại
+    { wch: 20 }, // Nơi Đi
+    { wch: 14 }, // Mã Cũ Nơi Đi
+    { wch: 25 }, // Tên Điểm Đi
+    { wch: 20 }, // Nơi Đến
+    { wch: 14 }, // Mã Cũ Nơi Đến
+    { wch: 25 }, // Tên Điểm Đến
+    { wch: 20 }, // Người Thực Hiện
+    { wch: 35 }, // Ghi Chú
+  ];
+  XLSX.utils.book_append_sheet(workbook, ws2, "2. Lịch Sử Điều Chuyển");
+
+  // Add Sheet 3 if there is data
+  if (sheet3Data.length > 0) {
+    const ws3 = XLSX.utils.json_to_sheet(sheet3Data);
+    ws3['!cols'] = [
+      { wch: 6 },  // STT
+      { wch: 14 }, // Mã Trạm
+      { wch: 14 }, // Mã Trạm Cũ
+      { wch: 28 }, // Tên Trạm
+      { wch: 18 }, // Huyện
+      { wch: 20 }, // Xã
+      { wch: 22 }, // Nhãn Hiệu
+      { wch: 16 }, // Công Suất
+      { wch: 14 }, // Loại Nhiên Liệu
+      { wch: 14 }, // Định Mức
+      { wch: 30 }, // Ghi Chú
+    ];
+    XLSX.utils.book_append_sheet(workbook, ws3, "3. MPĐ Xăng Tại Trạm");
+  }
+
+  // Add Sheet 4
+  const ws4 = XLSX.utils.json_to_sheet(sheet4Data);
+  ws4['!cols'] = [
+    { wch: 38 }, // Chỉ Tiêu
+    { wch: 12 }, // Số Lượng
+    { wch: 12 }, // Đơn Vị
+    { wch: 38 }, // Ghi Chú
+  ];
+  XLSX.utils.book_append_sheet(workbook, ws4, "4. Thống Kê Tổng Hợp");
+
+  const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const fileName = `Quan_Ly_Thiet_Bi_Luu_Dong_TVT3_${todayStr}.xlsx`;
+  XLSX.writeFile(workbook, fileName);
+};

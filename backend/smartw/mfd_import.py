@@ -50,9 +50,9 @@ def classify_event(start_dt: datetime, end_dt: datetime, duration_min: int) -> s
         if end_dt.date() > start_dt.date() or end_dt.time() < start_dt.time():
             is_overnight = True
             
-    # Qua đêm bắt đầu sớm trước giờ HC (<17h) -> chờ duyệt
+    # Qua đêm: nếu bắt đầu sớm trước giờ HC (<17h) hoặc chạy dài >= 6h -> chờ duyệt
     if is_overnight:
-        if start_dt and start_dt.hour < 17:
+        if (start_dt and start_dt.hour < 17) or duration_min >= 360:
             return 'pending'
             
     # 2. Chạy máy >12h (720 phút) không bắt đầu trong khung giờ 5h-9h -> chờ duyệt
@@ -619,19 +619,39 @@ def resolve_overlapping_logs(raw_data: list[dict] = None, target_dates: list[str
                         s_details["nhien_lieu_tieu_hao_thuc_te"] = round(merged_duration * dinh_muc_tt, 2)
                         s_details["thanh_tien"] = round(s_details["nhien_lieu_tieu_hao"] * don_gia)
 
-                        # Check overnight
-                        if merged_end.date() > merged_start.date():
-                            if "(Chạy qua đêm)" not in (s_details.get("ghi_chu") or ""):
-                                s_details["ghi_chu"] = f"(Chạy qua đêm) {s_details.get('ghi_chu') or ''}".strip()
+                        # Clean & build note without duplicates
+                        import re
+                        raw_note = f"{s_details.get('ghi_chu') or ''} | {a_details.get('ghi_chu') or ''}"
+                        raw_note = re.sub(r'\(Chạy qua đêm(?:\s+[\d\.]+h)?\)', '', raw_note)
+                        raw_note = re.sub(r'\(Nối liên tục [^)]+\)', '', raw_note)
+                        raw_note = re.sub(r'\(Nối SmartW [^)]+\)', '', raw_note)
+                        note_tokens = [tok.strip() for tok in raw_note.split('|') if tok.strip()]
+                        unique_tokens = []
+                        for tok in note_tokens:
+                            if tok not in unique_tokens:
+                                unique_tokens.append(tok)
 
-                        # Merge note
-                        cur_note = s_details.get("ghi_chu") or ""
-                        abs_note = a_details.get("ghi_chu") or ""
-                        if abs_note and abs_note not in cur_note:
-                            cur_note = f"{cur_note} | {abs_note}".strip(' |')
-                        if "(Nối liên tục)" not in cur_note:
-                            cur_note = f"{cur_note} (Nối liên tục {new_start_str}-{new_end_str})".strip()
-                        s_details["ghi_chu"] = cur_note
+                        is_overnight = (merged_end.date() > merged_start.date()) or ("(Chạy qua đêm" in (s_details.get('ghi_chu') or '')) or ("(Chạy qua đêm" in (a_details.get('ghi_chu') or ''))
+                        note_prefix = "(Chạy qua đêm)" if is_overnight else ""
+                        note_suffix = f"(Nối liên tục {new_start_str}-{new_end_str})"
+                        note_body = " | ".join(unique_tokens)
+
+                        final_notes = []
+                        if note_prefix:
+                            final_notes.append(note_prefix)
+                        if note_body:
+                            final_notes.append(note_body)
+                        final_notes.append(note_suffix)
+                        s_details["ghi_chu"] = " ".join(final_notes).strip()
+
+                        # Check overnight & anomaly duration
+                        if is_overnight:
+                            if merged_duration >= 6.0:
+                                s_details["status"] = "pending"
+                                s_details["review_reason"] = f"Chạy máy qua đêm kéo dài {merged_duration}h"
+                        elif merged_duration >= 8.0:
+                            s_details["status"] = "pending"
+                            s_details["review_reason"] = f"Chạy máy nối ca kéo dài {merged_duration}h"
 
                         logger.info(f"V2 Overlap/Contiguous Merge: {site_id} on {target_date} -> {new_start_str}-{new_end_str} ({merged_duration}h). Absorbed {a_log['gen_log_id']}")
 
@@ -644,12 +664,14 @@ def resolve_overlapping_logs(raw_data: list[dict] = None, target_dates: list[str
                         supabase.table("generator_logs").delete().eq("gen_log_id", a_log["gen_log_id"]).execute()
                         merged_count += 1
 
-                        # Update cur node in memory and continue chaining
-                        cur['start_dt'] = merged_start
-                        cur['end_dt'] = merged_end
-                        cur['duration'] = merged_duration
-                        cur['log']['run_details'] = s_details
-                        cur['status'] = s_details.get("status", "pending")
+                        # Update surviving node in memory and ensure station_logs[i] points to it!
+                        surviving['start_dt'] = merged_start
+                        surviving['end_dt'] = merged_end
+                        surviving['duration'] = merged_duration
+                        surviving['log']['run_details'] = s_details
+                        surviving['status'] = s_details.get("status", "pending")
+
+                        station_logs[i] = surviving
                         station_logs.pop(i + 1)
                     else:
                         i += 1
