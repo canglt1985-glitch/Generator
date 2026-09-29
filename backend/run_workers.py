@@ -269,10 +269,15 @@ def main():
                 last_run["smartw_pakh_summary_key"] = pakh_summary_key
                 run_job("smartw_pakh_summary", [python_exe, os.path.join(current_dir, "smartw_worker.py"), "--job", "pakh_summary"])
 
-            # Job F: EVN Outages Scraper (Once daily at 05:30 AM)
-            if now.hour == 5 and now.minute == 30 and last_run.get("evn_outages_key") != today_str:
+            # Job F: EVN Outages Scraper (Once daily at 06:30 AM)
+            if now.hour == 6 and now.minute == 30 and last_run.get("evn_outages_key") != today_str:
                 last_run["evn_outages_key"] = today_str
                 run_job("evn_outages", [python_exe, os.path.join(current_dir, "fetch_outages.py")])
+
+            # Job F.1: Mobile Equipment Report to Outages Channel (Once daily at 06:35 AM)
+            if now.hour == 6 and now.minute == 35 and last_run.get("mobile_equipment_report_key") != today_str:
+                last_run["mobile_equipment_report_key"] = today_str
+                run_job("mobile_equipment_report", [python_exe, os.path.join(current_dir, "mobile_equipment_report.py"), "--send"])
 
             # Job G: Fuel Price Scraper (Every 12 hours at minute :30 of hours 0 and 16)
             fuel_key = f"{today_str}_{now.hour}"
