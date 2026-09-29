@@ -2094,7 +2094,7 @@ export default function Generator() {
                 {/* Export Mobile Equipment Excel Shortcut */}
                 <button
                   onClick={handleExportMobileEquipment}
-                  className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg text-emerald-700 border border-emerald-300 bg-white hover:bg-emerald-50 shadow-sm transition-colors cursor-pointer"
+                  className="hidden md:inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg text-emerald-700 border border-emerald-300 bg-white hover:bg-emerald-50 shadow-sm transition-colors cursor-pointer"
                   title="Xuất trọn bộ file Excel Quản lý & Điều chuyển thiết bị lưu động"
                 >
                   <Download className="h-3.5 w-3.5 mr-1" /> Xuất Excel MPĐ Lưu Động
@@ -2156,7 +2156,7 @@ export default function Generator() {
         )}
 
         {activeTab === 'transfer' && (
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="hidden md:flex flex-wrap items-center gap-2">
             <button
               onClick={handleExportMobileEquipment}
               className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg text-emerald-700 border border-emerald-300 bg-white hover:bg-emerald-50 shadow-sm transition-colors cursor-pointer"
@@ -4101,7 +4101,7 @@ export default function Generator() {
 
               <button
                 onClick={handleExportMobileEquipment}
-                className="px-4 py-2 text-xs font-black rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white shadow-md hover:shadow-lg"
+                className="hidden md:flex px-4 py-2 text-xs font-black rounded-xl transition-all items-center justify-center gap-1.5 cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white shadow-md hover:shadow-lg"
                 title="Xuất trọn bộ file Excel Quản lý & Điều chuyển thiết bị lưu động"
               >
                 <Download size={14} />
@@ -4252,7 +4252,7 @@ export default function Generator() {
                     </button>
                     <button
                       onClick={handleExportMobileEquipment}
-                      className="px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+                      className="hidden md:flex px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all items-center gap-1.5 cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
                       title="Xuất trọn bộ file Excel Quản lý thiết bị lưu động"
                     >
                       <Download size={13} />
@@ -4261,7 +4261,8 @@ export default function Generator() {
                   </div>
                 </div>
 
-                <div className="overflow-x-auto">
+                {/* Desktop View Table */}
+                <div className="hidden lg:block overflow-x-auto">
                   <table className="w-full text-left text-xs text-slate-700">
                     <thead className="bg-slate-100/70 text-slate-500 font-bold uppercase text-[11px] border-b border-slate-200">
                       <tr>
@@ -4384,6 +4385,105 @@ export default function Generator() {
                         ))}
                     </tbody>
                   </table>
+                </div>
+
+                {/* Mobile View Card Grid - Tối ưu ngắn gọn trên mobile */}
+                <div className="lg:hidden p-3 grid grid-cols-1 md:grid-cols-2 gap-3 bg-slate-50/50">
+                  {mobileEquipments
+                    .filter(item => {
+                      if (transferFilterStatus === 'AT_SITES' && (!item.current_location || item.current_location === 'KHO' || item.status === 'Hư')) return false;
+                      if (transferFilterStatus === 'AT_KHO' && (item.current_location && item.current_location !== 'KHO')) return false;
+                      if (transferFilterStatus === 'DAMAGED' && item.status !== 'Hư') return false;
+                      if (transferFilterStatus === 'MPD' && item.type !== 'MPĐ') return false;
+                      if (transferFilterStatus === 'PIN' && item.type !== 'Pin') return false;
+
+                      if (!transferSearch) return true;
+                      const q = transferSearch.toLowerCase();
+                      return (
+                        (item.equipment_code || '').toLowerCase().includes(q) ||
+                        (item.brand || '').toLowerCase().includes(q) ||
+                        (item.model || '').toLowerCase().includes(q) ||
+                        (item.current_location || '').toLowerCase().includes(q) ||
+                        (item.specifications || '').toLowerCase().includes(q) ||
+                        (item.commissioning_date || '').toLowerCase().includes(q) ||
+                        (item.serial_number || '').toLowerCase().includes(q) ||
+                        (item.eam_oid || '').toLowerCase().includes(q) ||
+                        (item.notes || '').toLowerCase().includes(q)
+                      );
+                    })
+                    .map(item => {
+                      const isGood = item.status !== 'Hư';
+                      const atKho = !item.current_location || item.current_location === 'KHO';
+                      return (
+                        <div key={item.id} className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm flex flex-col justify-between">
+                          <div>
+                            {/* Header: Mã thiết bị, Vị trí & Trạng thái */}
+                            <div className="flex justify-between items-center mb-2">
+                              <div className="flex items-center gap-2">
+                                <span className="font-extrabold text-blue-700 text-[13px] font-mono bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                                  {item.equipment_code}
+                                </span>
+                                <span className={`font-bold px-2 py-0.5 rounded text-[11px] inline-flex items-center gap-1 ${
+                                  atKho ? 'bg-slate-100 text-slate-700 border border-slate-200' : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                                }`}>
+                                  <span>{atKho ? '🏢' : '📍'}</span>
+                                  <span>{getSiteLabel(item.current_location)}</span>
+                                </span>
+                              </div>
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isGood ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                                {item.status || 'Tốt'}
+                              </span>
+                            </div>
+
+                            {/* Thông số kỹ thuật ngắn gọn: Nhãn hiệu + Công suất */}
+                            <div className="space-y-1 text-xs">
+                              <div className="font-bold text-slate-800 flex items-center justify-between">
+                                <span>
+                                  {item.brand || item.specifications || '—'}
+                                  {item.type === 'Pin' ? (
+                                    <span className="text-slate-600 font-semibold text-xs ml-1">
+                                      - {item.power_kva ? `${item.power_kva} kWh` : '48V-100Ah'}
+                                    </span>
+                                  ) : item.power_kva ? (
+                                    <span className="text-slate-600 font-semibold text-xs ml-1">
+                                      - {item.power_kva} kVA {item.fuel_type ? `(${item.fuel_type})` : ''}
+                                    </span>
+                                  ) : null}
+                                </span>
+                                {item.commissioning_date && (
+                                  <span className="text-[11px] text-slate-400 font-normal">
+                                    SD: {item.commissioning_date}
+                                  </span>
+                                )}
+                              </div>
+
+                              {item.notes && (
+                                <div className="text-slate-500 text-[11px] italic bg-amber-50/70 p-1.5 rounded border border-amber-100">
+                                  "{item.notes}"
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedEquipDetail(item)}
+                              className="text-xs font-bold text-orange-700 hover:text-orange-800 flex items-center gap-1 cursor-pointer"
+                            >
+                              <Eye size={13} /> Hồ sơ tài sản
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => openEditLocationModal(item)}
+                              className="text-[11px] font-bold px-2.5 py-1 rounded-lg text-blue-600 border border-blue-200 bg-white hover:bg-slate-50 cursor-pointer shadow-sm transition-colors flex items-center gap-1"
+                            >
+                              <Edit2 size={11} /> Đổi vị trí
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
                 </div>
               </div>
 

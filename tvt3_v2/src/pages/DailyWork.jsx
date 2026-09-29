@@ -1028,7 +1028,7 @@ export default function DailyWork() {
                 <button
                   type="button"
                   onClick={handleExportMobileEquipment}
-                  className="inline-flex items-center justify-center px-3.5 py-1.5 text-[13px] font-bold rounded-lg text-emerald-800 bg-emerald-100/90 border border-emerald-300 hover:bg-emerald-200 shadow-sm transition-colors cursor-pointer h-[34px]"
+                  className="hidden md:inline-flex items-center justify-center px-3.5 py-1.5 text-[13px] font-bold rounded-lg text-emerald-800 bg-emerald-100/90 border border-emerald-300 hover:bg-emerald-200 shadow-sm transition-colors cursor-pointer h-[34px]"
                   title="Xuất trọn bộ file Excel Quản lý & Điều chuyển thiết bị lưu động"
                 >
                   <Download className="h-4 w-4 mr-1.5 text-emerald-700" />
@@ -1761,7 +1761,7 @@ export default function DailyWork() {
                       <button
                         type="button"
                         onClick={handleExportMobileEquipment}
-                        className="inline-flex items-center justify-center px-4 py-1.5 text-xs font-bold rounded-lg text-white bg-emerald-600 hover:bg-emerald-700 shadow-sm transition-all cursor-pointer h-[32px] gap-1.5"
+                        className="hidden md:inline-flex items-center justify-center px-4 py-1.5 text-xs font-bold rounded-lg text-white bg-emerald-600 hover:bg-emerald-700 shadow-sm transition-all cursor-pointer h-[32px] gap-1.5"
                         title="Xuất file Excel đầy đủ 2 Sheet: Danh mục thiết bị lưu động & Lịch sử điều chuyển"
                       >
                         <Download size={14} />
@@ -1914,59 +1914,63 @@ export default function DailyWork() {
                         </table>
                       </div>
 
-                      {/* Mobile View Card Grid */}
-                      <div className="lg:hidden grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                      {/* Mobile View Card Grid - Tối ưu ngắn gọn trên mobile */}
+                      <div className="lg:hidden grid grid-cols-1 md:grid-cols-2 gap-3">
                         {filteredEquip.map((eq) => {
                           const isGood = eq.status === 'Tốt';
                           const atKho = eq.current_location === 'KHO';
                           return (
-                            <div key={eq.id} className={`rounded-xl border p-4 shadow-sm flex flex-col justify-between transition-all hover:shadow-md bg-white ${isGood ? 'border-slate-200' : 'border-red-200 bg-red-50/10'}`}>
+                            <div key={eq.id} className={`rounded-xl border p-3.5 shadow-sm flex flex-col justify-between transition-all hover:shadow-md bg-white ${isGood ? 'border-slate-200' : 'border-red-200 bg-red-50/10'}`}>
                               <div>
-                                <div className="flex justify-between items-start mb-2">
+                                {/* Header: Mã thiết bị, Vị trí & Trạng thái */}
+                                <div className="flex justify-between items-center mb-2">
                                   <div className="flex items-center gap-2">
-                                    <span className="font-extrabold text-blue-700 text-sm font-mono bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                                    <span className="font-extrabold text-blue-700 text-[13px] font-mono bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
                                       {eq.equipment_code}
                                     </span>
-                                    <span className="text-xs text-slate-500 font-semibold">{eq.type}</span>
+                                    <span className={`font-bold px-2 py-0.5 rounded text-[11px] inline-flex items-center gap-1 ${
+                                      atKho ? 'bg-slate-100 text-slate-700 border border-slate-200' : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                                    }`}>
+                                      <span>{atKho ? '🏢' : '📍'}</span>
+                                      <span>{getEquipLocationLabel(eq.current_location)}</span>
+                                    </span>
                                   </div>
                                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isGood ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
                                     {eq.status}
                                   </span>
                                 </div>
 
-                                <div className="space-y-1.5 text-xs">
-                                  <div>
-                                    <span className="text-slate-400 font-semibold">Cấu hình:</span>{' '}
-                                    <span className="font-bold text-slate-800">
-                                      {eq.brand ? `${eq.brand} ${eq.model || ''}` : (eq.specifications || '—')}
+                                {/* Thông số kỹ thuật ngắn gọn: Nhãn hiệu + Công suất */}
+                                <div className="space-y-1 text-xs">
+                                  <div className="font-bold text-slate-800 flex items-center justify-between">
+                                    <span>
+                                      {eq.brand || eq.specifications || '—'}
+                                      {eq.type === 'Pin' ? (
+                                        <span className="text-slate-600 font-semibold text-xs ml-1">
+                                          - {eq.power_kva ? `${eq.power_kva} kWh` : '48V-100Ah'}
+                                        </span>
+                                      ) : eq.power_kva ? (
+                                        <span className="text-slate-600 font-semibold text-xs ml-1">
+                                          - {eq.power_kva} kVA {eq.fuel_type ? `(${eq.fuel_type})` : ''}
+                                        </span>
+                                      ) : null}
                                     </span>
+                                    {eq.commissioning_date && (
+                                      <span className="text-[11px] text-slate-400 font-normal">
+                                        SD: {eq.commissioning_date}
+                                      </span>
+                                    )}
                                   </div>
 
-                                  {(eq.eam_oid || eq.serial_number) && (
-                                    <div className="text-[11px] font-mono text-slate-600 bg-slate-50 p-1.5 rounded border border-slate-100 flex flex-wrap gap-x-3 gap-y-1">
-                                      {eq.eam_oid && <span className="text-blue-700 font-bold">OID: {eq.eam_oid}</span>}
-                                      {eq.serial_number && <span>S/N: {eq.serial_number}</span>}
+                                  {eq.notes && (
+                                    <div className="text-slate-500 text-[11px] italic bg-amber-50/70 p-1.5 rounded border border-amber-100">
+                                      "{eq.notes}"
                                     </div>
                                   )}
-
-                                  {eq.commissioning_date && (
-                                    <div className="text-[11px] text-slate-500">
-                                      <span className="font-semibold text-slate-400">Đưa vào SD:</span> {eq.commissioning_date}
-                                    </div>
-                                  )}
-
-                                  <div>
-                                    <span className="text-slate-400 font-semibold">Vị trí hiện tại:</span>{' '}
-                                    <span className={`font-bold px-2 py-0.5 rounded text-[11px] ${atKho ? 'bg-slate-100 text-slate-700 border border-slate-200' : 'bg-emerald-50 text-emerald-800 border border-emerald-200'}`}>
-                                      {atKho ? '🏢 KHO TVT3' : `📍 ${getEquipLocationLabel(eq.current_location)}`}
-                                    </span>
-                                  </div>
-
-                                  {eq.notes && <div className="text-slate-500 text-xs mt-1.5 italic bg-amber-50/50 p-1.5 rounded border border-amber-100">"{eq.notes}"</div>}
                                 </div>
                               </div>
 
-                              <div className="mt-3.5 pt-2.5 border-t border-slate-100 flex items-center justify-between">
+                              <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between">
                                 <button
                                   type="button"
                                   onClick={() => setSelectedEquipDetail(eq)}
@@ -2031,10 +2035,10 @@ export default function DailyWork() {
                                   <td className="px-4 py-3 whitespace-nowrap font-medium">{new Date(tr.transfer_date).toLocaleString('vi-VN')}</td>
                                   <td className="px-4 py-3 whitespace-nowrap font-bold text-blue-700">{eq ? eq.equipment_code : '—'}</td>
                                   <td className="px-4 py-3 whitespace-nowrap">
-                                    {tr.from_location === 'KHO' ? 'KHO' : `${getSiteIds(tr.from_location).oldId} (${getSiteIds(tr.from_location).newId})`}
+                                    {tr.from_location === 'KHO' ? 'KHO' : getEquipLocationLabel(tr.from_location)}
                                   </td>
                                   <td className="px-4 py-3 whitespace-nowrap font-bold text-slate-900">
-                                    {tr.to_location === 'KHO' ? 'KHO' : `${getSiteIds(tr.to_location).oldId} (${getSiteIds(tr.to_location).newId})`}
+                                    {tr.to_location === 'KHO' ? 'KHO' : getEquipLocationLabel(tr.to_location)}
                                   </td>
                                   <td className="px-4 py-3 whitespace-nowrap text-slate-600 font-semibold">{tr.operator || '—'}</td>
                                   <td className="px-4 py-3 text-slate-400">{tr.notes || '—'}</td>
