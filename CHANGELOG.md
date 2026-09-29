@@ -1,6 +1,32 @@
 # Changelog
 
-## [2026-09-24]
+## [2026-09-29]
+### Added
+- **Chuẩn Hóa Thể Thức Văn Bản Nghị Định 30/2020/NĐ-CP & MobiFone Đồng Nai**:
+  - Dòng 1 cơ quan ban hành: Cố định chuẩn `TCT VIỄN THÔNG MOBIFONE` (chữ in hoa, đứng, 12-13pt).
+  - Dòng 2: `MOBIFONE ĐỒNG NAI` (chữ in hoa, đứng, đậm, 12-13pt).
+  - Quốc hiệu & Tiêu ngữ: Sửa triệt để lỗi chính tả thành `CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM` (in hoa đậm) và `Độc lập - Tự do - Hạnh phúc`.
+  - Khối Nơi nhận đặc thù MobiFone Đồng Nai: `Nơi nhận:` (12pt nghiêng đậm), `- Như trên;`, `- BGĐ (để b/c);`, `- Lưu VT, P.VT.`.
+  - Thẩm quyền ký: Hợp đồng Bên B do `KT. GIÁM ĐỐC / PHÓ GIÁM ĐỐC` Nguyễn Thanh Lâm ký; Tờ trình do `TRƯỞNG PHÒNG VIỄN THÔNG` Nguyễn Đức Long ký.
+  - Chuẩn hóa font 100% Times New Roman trên toàn bộ styles, runs, bảng biểu, triệt tiêu mã font rác (`VNI-Times`, `Calibri`, `Segoe Print`). Căn lề chuẩn (trên 20mm, dưới 20mm, trái 25-30mm, phải 15mm), dãn dòng 1.2, after 4pt, thụt dòng 10mm.
+  - Áp dụng trên toàn bộ templates hệ thống (`HOP_DONG_MOI_MAT_BANG`, `HOP_DONG_MOI_CSHT`, `PHU_LUC_GIAM_GIA_...`, `THANH_LY_...`) và triển khai lên production Vercel.
+- **Xuất Hồ Sơ 8 Hợp Đồng Phát Triển CSHT TVT3 Ra Desktop**:
+  - 8 trạm TVT3: `26DNa165`, `26DNa167`, `26DNa163`, `26DNa158`, `26DNa255`, `26DNa185`, `26DNa181`, `26DNa129`.
+  - Đã chuyển đồng bộ sang hình thức **`MBF đầu tư`** trên Supabase `infrastructure_projects` (không dùng chung CSHT) theo phê duyệt tọa độ xây dựng mới của Sở KH&CN tỉnh Đồng Nai.
+  - Xử lý thông minh địa chỉ: Đối soát thể hiện song song địa chỉ pháp lý cũ trên sổ hồng/sổ đỏ và đơn vị hành chính xã/phường - tỉnh Đồng Nai hiện hành sau sáp nhập.
+  - Tự động điền đầy đủ thông số cột cao 42m dây co, giá thuê 3.000.000 VNĐ, định vị khảo sát và xuất sẵn 8 file Word tại Desktop.
+- **Vận Hành Máy Phát Điện & Lọc Bất Thường Ban Đêm**:
+  - Quy tắc máy xăng lưu động: Loại bỏ toàn bộ các log chạy máy xăng đêm khuya (như DNDQ70: 20:46-00:45, 01:10-01:36), giữ logic máy xăng chỉ xử lý ban ngày.
+  - Xuất bảng kê thanh toán MFD tháng 8 và tháng 9 đã lọc bất thường, sort theo ngày tháng và mã trạm trực quan.
+- **Quản Lý Thiết Bị Lưu Động (DailyWork & Generator)**:
+  - Bổ sung trường quản lý tài sản MFD lưu động, bình ắc quy, phương tiện điều chuyển (xe máy, xe tải).
+  - Tự động xuất báo cáo thiết bị lưu động lúc 06:35 AM gửi kênh Outages; dời lịch cào lịch cúp điện EVN sang 06:30 AM.
+  - Xuất file Excel quản lý thiết bị lưu động; tinh gọn thẻ trạm trên mobile.
+- **Tối Ưu Hiệu Năng Bundle Frontend**:
+  - Dynamic import các thư viện nặng (`exceljs`, `xlsx`, `docx`), tiết kiệm hơn 505 KB gzip tải ban đầu trên di động.
+  - Tối ưu layout trang chủ mobile: Gọn gàng banner chào hỏi, vừa vặn 10 module trên màn hình không cần cuộn trang.
+  - VHKT RAN: Lọc CELLOFF thông minh theo công nghệ, gom nhóm theo site+sector với tag [SRAN]/[4G], định dạng tin nhắn Viber <=28 ký tự chống tràn dòng.
+
 ### Added
 - **Telegram MLL Bot Overhaul (@LKH_VHKT_BOT)**:
   - Bóc tách độc lập sự cố **Downlink truyền dẫn (đứt link IP)** ra khỏi danh sách trạm MLL di động.
