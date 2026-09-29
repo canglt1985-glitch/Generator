@@ -68,6 +68,17 @@ export function add02ASheet(workbook, sheetTitle, logs = [], stations = [], mont
     }
   });
 
+  // Sort logs by date ASC, then site_id ASC, then gio_bat_dau ASC for clean auditing
+  const sortLogsFn = (a, b) => {
+    const dCmp = (a.log.date || '').localeCompare(b.log.date || '');
+    if (dCmp !== 0) return dCmp;
+    const sCmp = (a.log.site_id || '').localeCompare(b.log.site_id || '');
+    if (sCmp !== 0) return sCmp;
+    return (a.log.run_details?.gio_bat_dau || '').localeCompare(b.log.run_details?.gio_bat_dau || '');
+  };
+  xangLogs.sort(sortLogsFn);
+  dauLogs.sort(sortLogsFn);
+
   // Calculate totals
   const totalMoneyXang = xangLogs.reduce((sum, item) => sum + (parseFloat(item.log.run_details?.thanh_tien) || 0), 0);
   const totalMoneyDau = dauLogs.reduce((sum, item) => sum + (parseFloat(item.log.run_details?.thanh_tien) || 0), 0);
@@ -956,41 +967,56 @@ export async function exportOfficialMFDReport({
       return !(mst.includes('0100686209-129') || bname.includes('ĐỒNG NAI') || bname.includes('DONG NAI') || bname.includes('KHU VỰC 8'));
     });
 
-    // Group 1: 27 Active Invoices (18 Oil + 9 Gas) - 345.40L Gas EXACT MATCH
-    const g1ActiveNums = new Set([
-      // 18 Oil Invoices (1,338.5 L • 38.05M)
-      '190312', '191122', '191123', '191394', '581998', '585859', '596943', '606852',
-      '609292', '611529', '613760', '621240', '621846', '625217', '627024', '627559',
-      '628521', '629836',
-      // 9 Gas Invoices (345.40 L exactly • 7.75M)
-      '586305', '586863', '593172', '596812', '603565', '606877', '614396', '623217',
-      '626295'
-    ]);
-    const g1ActiveInvs = g1Invoices.filter(i => g1ActiveNums.has(String(i.invoice_number)));
-    const g1SurplusInvs = g1Invoices.filter(i => !g1ActiveNums.has(String(i.invoice_number)));
+    const isAug2026Exact = Number(year) === 2026 && Number(month) === 8;
 
-    // Group 2: 76 Active Invoices (40 Oil + 36 Gas)
-    const g2ActiveNums = new Set([
-      '00411655', '00411662', '00427072', '00439851', '00439924', '169269', '171080',
-      '171081', '172320', '172321', '173719', '173725', '175241', '175338', '176299',
-      '176300', '176432', '177950', '182342', '182736', '183734', '185597', '186044',
-      '187319', '187330', '187645', '188674', '188759', '553057', '553085', '556866',
-      '556990', '556991', '558060', '560899', '560956', '561638', '563337', '565739',
-      '567766', '570470', '570828', '571663', '573398', '575231', '576729', '577949',
-      '579524', '580455', '582060', '583408', '584919', '586304', '586919', '589157',
-      '590940', '590941', '590942', '592438', '595435', '596806', '597763', '597876',
-      '598581', '599491', '600815', '601319', '602040', '602938', '602940', '604349',
-      '606978', '607487', '607841', '608028', '611527'
-    ]);
-    const g2ActiveInvs = g2Invoices.filter(i => g2ActiveNums.has(String(i.invoice_number)));
-    const g2SurplusInvs = g2Invoices.filter(i => !g2ActiveNums.has(String(i.invoice_number)));
+    let g1ActiveInvs = [];
+    let g1SurplusInvs = [];
+    let g2ActiveInvs = [];
+    let g2SurplusInvs = [];
+
+    if (isAug2026Exact) {
+      // Group 1: 27 Active Invoices (18 Oil + 9 Gas) - 345.40L Gas EXACT MATCH for August 2026
+      const g1ActiveNums = new Set([
+        // 18 Oil Invoices (1,338.5 L • 38.05M)
+        '190312', '191122', '191123', '191394', '581998', '585859', '596943', '606852',
+        '609292', '611529', '613760', '621240', '621846', '625217', '627024', '627559',
+        '628521', '629836',
+        // 9 Gas Invoices (345.40 L exactly • 7.75M)
+        '586305', '586863', '593172', '596812', '603565', '606877', '614396', '623217',
+        '626295'
+      ]);
+      g1ActiveInvs = g1Invoices.filter(i => g1ActiveNums.has(String(i.invoice_number)));
+      g1SurplusInvs = g1Invoices.filter(i => !g1ActiveNums.has(String(i.invoice_number)));
+
+      // Group 2: 76 Active Invoices (40 Oil + 36 Gas) for August 2026
+      const g2ActiveNums = new Set([
+        '00411655', '00411662', '00427072', '00439851', '00439924', '169269', '171080',
+        '171081', '172320', '172321', '173719', '173725', '175241', '175338', '176299',
+        '176300', '176432', '177950', '182342', '182736', '183734', '185597', '186044',
+        '187319', '187330', '187645', '188674', '188759', '553057', '553085', '556866',
+        '556990', '556991', '558060', '560899', '560956', '561638', '563337', '565739',
+        '567766', '570470', '570828', '571663', '573398', '575231', '576729', '577949',
+        '579524', '580455', '582060', '583408', '584919', '586304', '586919', '589157',
+        '590940', '590941', '590942', '592438', '595435', '596806', '597763', '597876',
+        '598581', '599491', '600815', '601319', '602040', '602938', '602940', '604349',
+        '606978', '607487', '607841', '608028', '611527'
+      ]);
+      g2ActiveInvs = g2Invoices.filter(i => g2ActiveNums.has(String(i.invoice_number)));
+      g2SurplusInvs = g2Invoices.filter(i => !g2ActiveNums.has(String(i.invoice_number)));
+    } else {
+      // Month 9/2026 onwards: All valid invoices with amount > 0 belong to Group 1 or Group 2
+      g1ActiveInvs = g1Invoices.filter(i => (parseFloat(i.total_amount_with_vat || i.total_amount) || 0) > 0);
+      g2ActiveInvs = g2Invoices.filter(i => (parseFloat(i.total_amount_with_vat || i.total_amount) || 0) > 0);
+      g1SurplusInvs = g1Invoices.filter(i => (parseFloat(i.total_amount_with_vat || i.total_amount) || 0) <= 0);
+      g2SurplusInvs = g2Invoices.filter(i => (parseFloat(i.total_amount_with_vat || i.total_amount) || 0) <= 0);
+    }
 
     const surplusList = [...g1SurplusInvs, ...g2SurplusInvs].sort((a, b) => (a.invoice_date || '').localeCompare(b.invoice_date || '') || String(a.invoice_number || '').localeCompare(String(b.invoice_number || '')));
 
     // Sheet 1: 02A Nhóm 1
     add02ASheet(workbook, '02A_TTNB_DongNai_67Tram', g1Logs, stations, month, year, 'MobiFone Đồng Nai - 67 Trạm Đặc Thù');
 
-    // Sheet 2: HD Nhóm 1 (29 HĐ Chính Thức Thanh Toán - 47.82tr >= 46.67tr Chạy Máy)
+    // Sheet 2: HD Nhóm 1
     addHDSheet(workbook, 'HD_DongNai_67Tram', g1ActiveInvs, month, year, 'MobiFone Đồng Nai - 67 Trạm Đặc Thù');
 
     // Sheet 3: Map Hóa Đơn Theo Trạm Nhóm 1 (Chuẩn Mẫu)
@@ -999,10 +1025,13 @@ export async function exportOfficialMFDReport({
     // Sheet 4: 02A Nhóm 2
     add02ASheet(workbook, '02A_TTNB_ToanCau', g2Logs, stations, month, year, 'MobiFone Toàn Cầu');
 
-    // Sheet 5: HD Nhóm 2 (76 HĐ Chính Thức Thanh Toán - 94.56tr >= 93.19tr Chạy Máy)
+    // Sheet 5: HD Nhóm 2
     addHDSheet(workbook, 'HD_ToanCau', g2ActiveInvs, month, year, 'MobiFone Toàn Cầu');
 
-    // Sheet 6: Hóa đơn Dư Thừa Bảo Lưu Kho (39 HĐ - Bao gồm các ngày vượt 5tr)
+    // Sheet 6: Map Hóa Đơn Theo Trạm Nhóm 2 (MobiFone Toàn Cầu)
+    addMapSheet(workbook, 'Map_HD_Theo_Tram_Nhom2', g2Logs, stations, g2ActiveInvs, month, year, 'MobiFone Toàn Cầu');
+
+    // Sheet 7: Hóa đơn Dư Thừa Bảo Lưu Kho (Bao gồm hóa đơn 0đ hoặc vượt hạn mức)
     if (surplusList.length > 0) {
       addSurplusHDSheet(workbook, 'HD_Du_Thua_Khong_Su_Dung', surplusList, month, year, 'Hóa Đơn Dư Thừa Bảo Lưu Kho');
     }
@@ -1053,7 +1082,8 @@ export async function exportSiteInvoiceMapReport({ logs, stations, invoices, mon
   const g1Invoices = invoices.filter(inv => {
     const mst = String(inv.buyer_mst || inv.buyer_tax_code || '').trim();
     const bname = String(inv.buyer_name || inv.buyer_legal_name || '').toUpperCase();
-    return mst.includes('0100686209-129') || bname.includes('ĐỒNG NAI') || bname.includes('DONG NAI') || bname.includes('KHU VỰC 8');
+    const tot = parseFloat(inv.total_amount_with_vat || inv.total_amount) || 0;
+    return tot > 0 && (mst.includes('0100686209-129') || bname.includes('ĐỒNG NAI') || bname.includes('DONG NAI') || bname.includes('KHU VỰC 8'));
   });
 
   const siteMap = {};

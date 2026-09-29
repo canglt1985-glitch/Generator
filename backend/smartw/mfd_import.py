@@ -25,30 +25,84 @@ if not SUPABASE_URL or not SUPABASE_KEY:
     supabase = None
 else:
     supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+from datetime import datetime, timedelta, timezone
+
+VN_TZ = timezone(timedelta(hours=7))
 
 def parse_smartw_date(date_str: str) -> datetime | None:
     if not date_str:
         return None
+    raw = str(date_str).strip()
+    
+    # 1. Numeric epoch timestamp (seconds or milliseconds)
     try:
-        return datetime.strptime(date_str.strip(), '%b %d, %Y %I:%M:%S %p')
+        val = float(raw)
+        if val > 1e11: # milliseconds
+            val /= 1000.0
+        if val > 1e8: # seconds
+            return datetime.fromtimestamp(val, tz=VN_TZ).replace(tzinfo=None)
     except ValueError:
-        try:
-            return datetime.strptime(date_str.strip(), '%b %d, %Y %I:%M %p')
-        except ValueError:
-            logger.warning(f'MFĐ Import V2: Cannot parse date: {date_str}')
-            return None
+        pass
 
-def classify_event(start_dt: datetime, end_dt: datetime, duration_min: int) -> str:
+    # 2. ISO 8601 format with or without timezone (e.g. 2026-08-19T21:31:27Z or +00:00 or +07:00)
+    iso_candidate = raw.replace('Z', '+00:00')
+    if 'T' in iso_candidate or ('-' in iso_candidate[:10] and ('+' in iso_candidate or '-' in iso_candidate[10:])):
+        try:
+            dt = datetime.fromisoformat(iso_candidate)
+            if dt.tzinfo is not None:
+                # Convert from any timezone (UTC, etc.) to Vietnam local time (+07:00) and return naive local datetime
+                return dt.astimezone(VN_TZ).replace(tzinfo=None)
+            return dt
+        except Exception:
+            pass
+
+    # 3. Comprehensive standard SmartW and VN date string formats
+    formats = [
+        '%b %d, %Y %I:%M:%S %p',
+        '%b %d, %Y %I:%M %p',
+        '%b %d, %Y %H:%M:%S',
+        '%b %d, %Y %H:%M',
+        '%B %d, %Y %I:%M:%S %p',
+        '%B %d, %Y %I:%M %p',
+        '%d/%m/%Y %H:%M:%S',
+        '%d/%m/%Y %H:%M',
+        '%d-%m-%Y %H:%M:%S',
+        '%d-%m-%Y %H:%M',
+        '%Y-%m-%d %H:%M:%S',
+        '%Y-%m-%d %H:%M',
+        '%Y/%m/%d %H:%M:%S',
+        '%Y/%m/%d %H:%M',
+        '%Y-%m-%dT%H:%M:%S',
+        '%Y-%m-%dT%H:%M:%S.%f',
+    ]
+    for fmt in formats:
+        try:
+            return datetime.strptime(raw, fmt)
+        except ValueError:
+            continue
+            
+    logger.warning(f'MFĐ Import V2: Cannot parse date: {date_str}')
+    return None
+
+def classify_event(start_dt: datetime, end_dt: datetime, duration_min: int, fuel_type: str = 'Dầu') -> str:
     if duration_min < 10:
         if not end_dt:
             return 'pending'
         return 'skip'
+
+    is_petrol = 'xăng' in str(fuel_type or '').lower() or 'xang' in str(fuel_type or '').lower()
     
     # 1. Phát hiện chạy qua đêm
     is_overnight = False
     if start_dt and end_dt:
         if end_dt.date() > start_dt.date() or end_dt.time() < start_dt.time():
             is_overnight = True
+
+    # 1b. Máy xăng lưu động (MLĐ) đêm khuya (21h -> 06h sáng) hoặc qua đêm:
+    # Vì máy xăng lưu động khó khăn điều chuyển đêm khuya, logic xử lý chỉ thực hiện ban ngày
+    if is_petrol:
+        if is_overnight or (start_dt and (start_dt.hour >= 21 or start_dt.hour < 6)):
+            return 'pending'
             
     # Qua đêm: nếu bắt đầu sớm trước giờ HC (<17h) hoặc chạy dài >= 6h -> chờ duyệt
     if is_overnight:
@@ -207,35 +261,160 @@ def get_station_info(site_id: str, date_str: str = None) -> dict | None:
         logger.warning(f'get_station_info V2: Lookup failed for {site_id}: {e}')
     return None
 
-def build_alarm_id(record: dict) -> str:
-    site = record.get('siteid') or record.get('ne') or ''
-    sdate = record.get('sdate') or ''
-    return f'{site}__{sdate}'
+def canonical_alarm_id(site: str, date_val) -> str:
+    """Build standardized, canonical alarm ID: SITE__YYYY-MM-DD HH:MM:SS (VN Local Time).
+    Guarantees consistent deduplication regardless of raw date string formats.
+    """
+    clean_site = str(site or '').strip().upper()
+    if isinstance(date_val, datetime):
+        dt = date_val
+    else:
+        dt = parse_smartw_date(str(date_val or ''))
+    if dt:
+        return f"{clean_site}__{dt.strftime('%Y-%m-%d %H:%M:%S')}"
+    return f"{clean_site}__{str(date_val or '').strip()}"
 
-def is_duplicate(alarm_id: str, site_id: str = None, ngay: str = None, gio_bd: str = None) -> bool:
+def build_alarm_id(record: dict) -> str:
+    site = record.get('siteid') or record.get('ne') or record.get('site') or ''
+    sdate = record.get('sdate') or record.get('sdateStr') or record.get('sdate_str') or ''
+    return canonical_alarm_id(site, sdate)
+
+def is_duplicate(alarm_id: str, site_id: str = None, ngay: str = None, gio_bd: str = None, gio_kt: str = None) -> bool:
+    """Multi-tier defense against duplicate generator run events:
+    1. Canonical / exact smartw_alarm_id lookup.
+    2. Station multi-day window check [ngay - 1, ngay, ngay + 1]:
+       - Proximity check: same station, same date, start time within ±15 minutes.
+       - Overlap check: same station, both active simultaneously for >= 10 minutes.
+       - 7-Hour Timezone Shift check: same station, starts shifted by 7 hours (UTC vs +07:00).
+    """
     if not supabase:
         return False
         
     try:
-        # 1. Check by smartw_alarm_id in run_details
+        # Extract site and dt from alarm_id if available
+        parsed_dt = None
+        canonical_id = alarm_id
+        if alarm_id and "__" in alarm_id:
+            parts = alarm_id.split("__", 1)
+            raw_s = parts[0].strip().upper()
+            if not site_id:
+                site_id = raw_s
+            parsed_dt = parse_smartw_date(parts[1])
+            if parsed_dt:
+                canonical_id = f"{raw_s}__{parsed_dt.strftime('%Y-%m-%d %H:%M:%S')}"
+                if not ngay:
+                    ngay = parsed_dt.strftime("%Y-%m-%d")
+                if not gio_bd:
+                    gio_bd = parsed_dt.strftime("%H:%M")
+
+        # 1. Tier 1: Check by exact or canonical smartw_alarm_id in run_details
         if alarm_id:
             res = supabase.table("generator_logs")\
                 .select("gen_log_id")\
                 .eq("run_details->>smartw_alarm_id", alarm_id)\
+                .limit(1)\
                 .execute()
             if res.data:
+                logger.info(f"is_duplicate: Matched exact smartw_alarm_id: {alarm_id}")
                 return True
-                
-        # 2. Check by site_id + date + gio_bat_dau
-        if site_id and ngay and gio_bd:
-            res = supabase.table("generator_logs")\
-                .select("gen_log_id")\
-                .eq("site_id", site_id)\
-                .eq("date", ngay)\
-                .eq("run_details->>gio_bat_dau", gio_bd)\
-                .execute()
-            if res.data:
+            
+            if canonical_id and canonical_id != alarm_id:
+                res_canon = supabase.table("generator_logs")\
+                    .select("gen_log_id")\
+                    .eq("run_details->>smartw_alarm_id", canonical_id)\
+                    .limit(1)\
+                    .execute()
+                if res_canon.data:
+                    logger.info(f"is_duplicate: Matched canonical smartw_alarm_id: {canonical_id}")
+                    return True
+
+        if not site_id or not ngay or not gio_bd:
+            return False
+
+        # 2. Tier 2: Check multi-day window around ngay: [ngay-1, ngay, ngay+1]
+        try:
+            dt_ngay = datetime.strptime(ngay, "%Y-%m-%d")
+        except Exception:
+            return False
+
+        window_dates = [
+            (dt_ngay - timedelta(days=1)).strftime("%Y-%m-%d"),
+            ngay,
+            (dt_ngay + timedelta(days=1)).strftime("%Y-%m-%d")
+        ]
+
+        res_window = supabase.table("generator_logs")\
+            .select("gen_log_id, site_id, date, run_details")\
+            .eq("site_id", site_id)\
+            .in_("date", window_dates)\
+            .execute()
+            
+        existing_logs = res_window.data or []
+        if not existing_logs:
+            return False
+
+        # Parse new run start & end
+        try:
+            new_start = datetime.strptime(f"{ngay} {gio_bd}", "%Y-%m-%d %H:%M")
+        except Exception:
+            return False
+
+        new_end = None
+        if gio_kt:
+            try:
+                new_end = datetime.strptime(f"{ngay} {gio_kt}", "%Y-%m-%d %H:%M")
+                if new_end < new_start:
+                    new_end += timedelta(days=1)
+            except Exception:
+                new_end = None
+
+        for log in existing_logs:
+            ex_date = log.get("date")
+            ex_details = log.get("run_details") or {}
+            ex_bd = ex_details.get("gio_bat_dau")
+            ex_kt = ex_details.get("gio_ket_thuc")
+
+            if not ex_bd:
+                continue
+
+            try:
+                ex_start = datetime.strptime(f"{ex_date} {ex_bd}", "%Y-%m-%d %H:%M")
+            except Exception:
+                continue
+
+            ex_end = None
+            if ex_kt:
+                try:
+                    ex_end = datetime.strptime(f"{ex_date} {ex_kt}", "%Y-%m-%d %H:%M")
+                    if ex_end < ex_start:
+                        ex_end += timedelta(days=1)
+                except Exception:
+                    ex_end = None
+
+            # Check A: Same-day start time proximity (within ±15 minutes)
+            if ex_date == ngay:
+                start_diff_sec = abs((new_start - ex_start).total_seconds())
+                if start_diff_sec <= 15 * 60:
+                    logger.info(f"is_duplicate: Same-day proximity match for {site_id} on {ngay}: new={gio_bd} vs existing={ex_bd} (diff={start_diff_sec/60:.1f}m)")
+                    return True
+
+            # Check B: Time window overlap (>= 10 minutes overlap)
+            # A station only has 1 generator running; concurrent runs are duplicates/continuations
+            if new_end and ex_end:
+                overlap_start = max(new_start, ex_start)
+                overlap_end = min(new_end, ex_end)
+                overlap_sec = (overlap_end - overlap_start).total_seconds()
+                if overlap_sec >= 10 * 60:
+                    logger.info(f"is_duplicate: Time overlap match for {site_id}: {new_start.strftime('%d/%m %H:%M')}-{new_end.strftime('%H:%M')} overlaps {ex_start.strftime('%d/%m %H:%M')}-{ex_end.strftime('%H:%M')} by {overlap_sec/60:.1f}m")
+                    return True
+
+            # Check C: 7-Hour Timezone Shift duplicate (UTC vs +07:00 discrepancy)
+            # When an alarm is shifted by 7 hours due to UTC parsing, the time gap is ~7h and minutes are identical
+            time_gap = (new_start - ex_start).total_seconds()
+            if abs(abs(time_gap) - 7 * 3600) <= 10 * 60 and new_start.minute == ex_start.minute:
+                logger.warning(f"is_duplicate: 7-Hour Timezone duplicate detected for {site_id}: new={new_start} vs existing={ex_start} (gap={time_gap/3600:.2f}h, minute={new_start.minute})")
                 return True
+
     except Exception as e:
         logger.error(f"is_duplicate check failed: {e}")
     return False
@@ -259,9 +438,9 @@ def update_incomplete_records(raw_data: list[dict]) -> int:
             return 0
             
         for record in raw_data:
-            site = record.get('siteid') or record.get('ne') or ''
-            start_dt = parse_smartw_date(record.get('sdate'))
-            end_dt = parse_smartw_date(record.get('edate'))
+            site = (record.get('siteid') or record.get('ne') or record.get('site') or '').strip().upper()
+            start_dt = parse_smartw_date(record.get('sdate') or record.get('sdateStr'))
+            end_dt = parse_smartw_date(record.get('edate') or record.get('edateStr'))
             duration_min = record.get('minuteNumber') or 0
 
             if not start_dt or not end_dt:
@@ -275,14 +454,25 @@ def update_incomplete_records(raw_data: list[dict]) -> int:
             matched_log = None
             for log in incomplete_logs:
                 details = log.get("run_details") or {}
-                l_site = log.get("site_id")
+                l_site = str(log.get("site_id") or '').strip().upper()
                 l_date = log.get("date")
                 l_gio_bd = details.get("gio_bat_dau")
-                l_alarm_id = details.get("smartw_alarm_id")
+                l_alarm_id = details.get("smartw_alarm_id") or ""
                 
-                if (l_alarm_id == alarm_id) or (l_site == site and l_date == ngay and l_gio_bd == gio_bd):
+                # Check 1: Alarm ID match (exact or canonical)
+                if (l_alarm_id == alarm_id) or (canonical_alarm_id(l_site, l_alarm_id) == alarm_id):
                     matched_log = log
                     break
+                    
+                # Check 2: Same site, same date, start proximity within 15 mins
+                if l_site == site and l_date == ngay and l_gio_bd:
+                    try:
+                        l_start = datetime.strptime(f"{l_date} {l_gio_bd}", "%Y-%m-%d %H:%M")
+                        if abs((start_dt - l_start).total_seconds()) <= 15 * 60:
+                            matched_log = log
+                            break
+                    except Exception:
+                        pass
                     
             if not matched_log:
                 continue
@@ -291,7 +481,7 @@ def update_incomplete_records(raw_data: list[dict]) -> int:
                 duration_min = int((end_dt - start_dt).total_seconds() / 60)
 
             hours = round(duration_min / 60, 2)
-            run_details = matched_log.get("run_details") or {}
+            run_details = dict(matched_log.get("run_details") or {})
             
             dinh_muc = float(run_details.get("dinh_muc") or 0)
             nhien_lieu = round(hours * dinh_muc, 2)
@@ -302,6 +492,7 @@ def update_incomplete_records(raw_data: list[dict]) -> int:
             run_details["thoi_gian_hoat_dong"] = hours
             run_details["nhien_lieu_tieu_hao"] = nhien_lieu
             run_details["thanh_tien"] = thanh_tien
+            run_details["smartw_alarm_id"] = alarm_id # Ensure canonical ID
             
             try:
                 t1 = datetime.strptime(gio_bd, '%H:%M').time()
@@ -312,7 +503,7 @@ def update_incomplete_records(raw_data: list[dict]) -> int:
             except ValueError:
                 pass
 
-            status = classify_event(start_dt, end_dt, duration_min)
+            status = classify_event(start_dt, end_dt, duration_min, run_details.get("nhien_lieu_loai") or "Dầu")
             if status != 'skip':
                 run_details["status"] = status
 
@@ -382,7 +573,7 @@ def import_mfd_data(raw_data: list[dict]) -> dict:
         else:
             result['errors'].append(f'{site}: Not found in V2 Datasites')
 
-        if is_duplicate(alarm_id, site_id=site_id, ngay=ngay, gio_bd=gio_bd):
+        if is_duplicate(alarm_id, site_id=site_id, ngay=ngay, gio_bd=gio_bd, gio_kt=gio_kt):
             result['duplicates'] += 1
             continue
 
@@ -394,7 +585,7 @@ def import_mfd_data(raw_data: list[dict]) -> dict:
         if not duration_min and start_dt and end_dt:
             duration_min = int((end_dt - start_dt).total_seconds() / 60)
 
-        status = classify_event(start_dt, end_dt, duration_min)
+        status = classify_event(start_dt, end_dt, duration_min, loai_nhien_lieu)
         if status == 'skip':
             result['skipped'] += 1
             continue
@@ -576,12 +767,11 @@ def resolve_overlapping_logs(raw_data: list[dict] = None, target_dates: list[str
                     # Gap in minutes between end of cur and start of nxt
                     gap_min = (nxt['start_dt'] - cur['end_dt']).total_seconds() / 60.0
 
-                    # Condition to merge: overlap (gap < 0) or contiguous within 15 minutes (0 <= gap <= 15)
-                    # or identical alarm_id
-                    is_overlap = gap_min <= 15.0
-                    is_same_alarm = bool(cur['alarm_id'] and cur['alarm_id'] == nxt['alarm_id'])
+                    # Condition to merge: STRICTLY overlap (gap < 0) or contiguous within 1 minute (0 <= gap <= 1.0)
+                    # Discrete runs separated in time (gap > 1.0 min) are NEVER merged!
+                    is_overlap = gap_min <= 1.0
 
-                    if is_overlap or is_same_alarm:
+                    if is_overlap:
                         # 1. Enclosed case: one range completely covers the other
                         # 2. Partial overlap or adjacent: merge start to min, end to max
                         merged_start = min(cur['start_dt'], nxt['start_dt'])
@@ -623,26 +813,25 @@ def resolve_overlapping_logs(raw_data: list[dict] = None, target_dates: list[str
                         import re
                         raw_note = f"{s_details.get('ghi_chu') or ''} | {a_details.get('ghi_chu') or ''}"
                         raw_note = re.sub(r'\(Chạy qua đêm(?:\s+[\d\.]+h)?\)', '', raw_note)
+                        raw_note = re.sub(r'Chạy qua đêm', '', raw_note)
                         raw_note = re.sub(r'\(Nối liên tục [^)]+\)', '', raw_note)
+                        raw_note = re.sub(r'Nối ca\s*\([^)]+\)', '', raw_note)
                         raw_note = re.sub(r'\(Nối SmartW [^)]+\)', '', raw_note)
+                        raw_note = re.sub(r'Sự cố lưới', '', raw_note)
                         note_tokens = [tok.strip() for tok in raw_note.split('|') if tok.strip()]
                         unique_tokens = []
                         for tok in note_tokens:
-                            if tok not in unique_tokens:
+                            if tok not in unique_tokens and tok.lower() != 'none':
                                 unique_tokens.append(tok)
 
-                        is_overnight = (merged_end.date() > merged_start.date()) or ("(Chạy qua đêm" in (s_details.get('ghi_chu') or '')) or ("(Chạy qua đêm" in (a_details.get('ghi_chu') or ''))
-                        note_prefix = "(Chạy qua đêm)" if is_overnight else ""
-                        note_suffix = f"(Nối liên tục {new_start_str}-{new_end_str})"
-                        note_body = " | ".join(unique_tokens)
-
-                        final_notes = []
-                        if note_prefix:
-                            final_notes.append(note_prefix)
-                        if note_body:
-                            final_notes.append(note_body)
-                        final_notes.append(note_suffix)
-                        s_details["ghi_chu"] = " ".join(final_notes).strip()
+                        is_overnight = (merged_end.date() > merged_start.date()) or ("(Chạy qua đêm" in (s_details.get('ghi_chu') or '')) or ("Chạy qua đêm" in (s_details.get('ghi_chu') or ''))
+                        note_parts = []
+                        if is_overnight:
+                            note_parts.append("Chạy qua đêm")
+                        note_parts.append(f"Nối ca ({new_start_str}-{new_end_str})")
+                        if unique_tokens:
+                            note_parts.append(" • ".join(unique_tokens))
+                        s_details["ghi_chu"] = " • ".join(note_parts).strip()
 
                         # Check overnight & anomaly duration
                         if is_overnight:

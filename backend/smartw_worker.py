@@ -992,27 +992,16 @@ def sync_alarms_to_supabase(result: dict):
 
     all_rows = []
     active_ids_in_scrape = set()
-    
+    from datetime import datetime, timezone, timedelta
+    VN_TZ = timezone(timedelta(hours=7))
+
     def parse_to_iso(date_str):
         if not date_str:
             return None
-        cleaned = str(date_str).strip()
-        if 'T' in cleaned:
-            try:
-                dt = datetime.fromisoformat(cleaned.replace('Z', '+00:00'))
-                return dt.strftime('%Y-%m-%dT%H:%M:%S+07:00')
-            except Exception:
-                pass
-        for fmt in [
-            '%d/%m/%Y %H:%M:%S', '%d/%m/%Y %H:%M',
-            '%Y-%m-%d %H:%M:%S.%f', '%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M',
-            '%Y-%m-%dT%H:%M:%S.%f', '%Y-%m-%dT%H:%M:%S'
-        ]:
-            try:
-                dt = datetime.strptime(cleaned, fmt)
-                return dt.isoformat() + '+07:00'
-            except ValueError:
-                continue
+        from smartw.mfd_import import parse_smartw_date
+        dt = parse_smartw_date(date_str)
+        if dt:
+            return dt.replace(tzinfo=VN_TZ).isoformat()
         return None
 
     types = ['md', 'mpd', 'mll', 'mll_cell']
@@ -1043,11 +1032,12 @@ def sync_alarms_to_supabase(result: dict):
             if t == 'mll' and (ne_type == 'CELL' or bool(cellid)):
                 actual_t = 'mll_cell'
 
-            # Construct a unique, deterministic ID using UUIDv5
+            # Construct a unique, deterministic ID using UUIDv5 with canonical sdate
+            sdate_key = sdate_iso or sdate_str
             if actual_t == 'mll_cell':
-                val_str = f"{actual_t}_{site}_{cellid}_{alarm_name}_{sdate_str}"
+                val_str = f"{actual_t}_{site}_{cellid}_{alarm_name}_{sdate_key}"
             else:
-                val_str = f"{actual_t}_{site}_{alarm_name}_{sdate_str}"
+                val_str = f"{actual_t}_{site}_{alarm_name}_{sdate_key}"
                 
             rec_id = str(uuid.uuid5(uuid.NAMESPACE_OID, val_str))
             has_clear = bool(alarm.get('clear_time') or alarm.get('edate') or alarm.get('edateStr') or alarm.get('ket_thuc'))
@@ -2551,30 +2541,12 @@ def run_vhkt_poll(target_date: str = None):
 def _parse_alarm_date_str(sdate_raw):
     if not sdate_raw:
         return None
-    from datetime import timezone
-    tz_vn = timezone(timedelta(hours=7))
-    s_str = str(sdate_raw).strip()
-    if "T" in s_str or "-" in s_str[:10]:
-        try:
-            dt = datetime.fromisoformat(s_str.replace("Z", "+00:00"))
-            if dt.tzinfo:
-                dt = dt.astimezone(tz_vn)
-            return dt.strftime("%Y-%m-%d")
-        except:
-            pass
-    if "/" in s_str:
-        try:
-            parts = s_str.split(" ")[0].split("/")
-            if len(parts) == 3:
-                return f"{parts[2]}-{int(parts[1]):02d}-{int(parts[0]):02d}"
-        except:
-            pass
     try:
-        ts = float(s_str)
-        if ts > 1e11:
-            ts /= 1000.0
-        return datetime.fromtimestamp(ts, tz=tz_vn).strftime("%Y-%m-%d")
-    except:
+        from smartw.mfd_import import parse_smartw_date
+        dt = parse_smartw_date(sdate_raw)
+        if dt:
+            return dt.strftime("%Y-%m-%d")
+    except Exception:
         pass
     return None
 
@@ -2631,6 +2603,7 @@ def auto_sync_mpd_alarms_fallback() -> int:
                 site_map[s.get("site_id_old").upper()] = s
 
         synced = 0
+        from smartw.mfd_import import parse_smartw_date, is_duplicate, canonical_alarm_id, get_pretax_price
         for alarm in alarms:
             raw_site = (alarm.get("site") or "").strip().upper()
             station = site_map.get(raw_site)
@@ -2652,19 +2625,14 @@ def auto_sync_mpd_alarms_fallback() -> int:
 
             canonical_id = station.get("site_id") if station else base_cand
 
-            sdate_iso = str(alarm.get("sdate") or "")
-            edate_iso = str(alarm.get("edate") or "")
-            if not sdate_iso or not edate_iso:
+            sdate_raw = alarm.get("sdate") or alarm.get("sdateStr") or alarm.get("sdate_str")
+            edate_raw = alarm.get("edate") or alarm.get("edateStr") or alarm.get("edate_str") or alarm.get("clear_time")
+            if not sdate_raw or not edate_raw:
                 continue
 
-            try:
-                dt_start = datetime.fromisoformat(sdate_iso.replace('Z', '+00:00'))
-                if dt_start.tzinfo:
-                    dt_start = dt_start.astimezone(tz_vn)
-                dt_end = datetime.fromisoformat(edate_iso.replace('Z', '+00:00'))
-                if dt_end.tzinfo:
-                    dt_end = dt_end.astimezone(tz_vn)
-            except Exception:
+            dt_start = parse_smartw_date(sdate_raw)
+            dt_end = parse_smartw_date(edate_raw)
+            if not dt_start or not dt_end:
                 continue
 
             date_label = dt_start.strftime("%Y-%m-%d")
@@ -2676,9 +2644,10 @@ def auto_sync_mpd_alarms_fallback() -> int:
                 continue
 
             hours = round(duration_min / 60, 2)
-            res_exist = supabase.table("generator_logs").select("gen_log_id").eq("site_id", canonical_id).eq("date", date_label).eq("run_details->>gio_bat_dau", start_time).execute()
+            smartw_alarm_id = canonical_alarm_id(canonical_id, dt_start)
 
-            if res_exist.data:
+            # Bulletproof duplicate check: exact alarm ID, proximity ±15min, overlap, and 7h shift
+            if is_duplicate(smartw_alarm_id, site_id=canonical_id, ngay=date_label, gio_bd=start_time, gio_kt=end_time):
                 continue
 
             infra = (station.get("infrastructure_info") or {}) if station else {}
@@ -2697,13 +2666,11 @@ def auto_sync_mpd_alarms_fallback() -> int:
 
             nhien_lieu = round(hours * dinh_muc, 2)
             try:
-                from smartw.mfd_import import get_pretax_price
                 don_gia = get_pretax_price(loai_nhien_lieu, date_str=date_label) or 27540
             except Exception:
                 don_gia = 27540
             thanh_tien = round(nhien_lieu * don_gia)
 
-            smartw_alarm_id = f"{raw_site}__{alarm.get('sdate_str') or dt_start.strftime('%d/%m/%Y %H:%M:%S')}"
             run_details = {
                 "gio_bat_dau": start_time,
                 "gio_ket_thuc": end_time,
@@ -2711,7 +2678,7 @@ def auto_sync_mpd_alarms_fallback() -> int:
                 "nhien_lieu_tieu_hao": nhien_lieu,
                 "don_gia": don_gia,
                 "thanh_tien": thanh_tien,
-                "ghi_chu": "",
+                "ghi_chu": "(Chạy qua đêm)" if end_time < start_time else "",
                 "loai_may": loai_may,
                 "cong_suat_may": cong_suat_may,
                 "dinh_muc": dinh_muc,

@@ -134,6 +134,11 @@ def create_styled_workbook(month=8, year=2026, output_path=None):
             else:
                 dau_list.append((l, rd, st))
 
+        # Sort by date ASC, then site_id ASC, then gio_bat_dau ASC for easy auditing and spotting anomalies
+        sort_key = lambda item: (item[0].get('date') or '', item[0].get('site_id') or '', item[1].get('gio_bat_dau') or '')
+        xang_list.sort(key=sort_key)
+        dau_list.sort(key=sort_key)
+
         tot_m_x = sum(float(r[1].get('thanh_tien') or 0) for r in xang_list)
         tot_m_d = sum(float(r[1].get('thanh_tien') or 0) for r in dau_list)
         tot_m_all = tot_m_x + tot_m_d
@@ -741,53 +746,62 @@ def create_styled_workbook(month=8, year=2026, output_path=None):
         g1_invs = [i for i in invoices if '0100686209-129' in (i.get('buyer_mst') or i.get('buyer_tax_code') or '') or 'ĐỒNG NAI' in (i.get('buyer_name') or i.get('buyer_legal_name') or '').upper() or 'DONG NAI' in (i.get('buyer_name') or i.get('buyer_legal_name') or '').upper() or 'KHU VỰC 8' in (i.get('buyer_name') or i.get('buyer_legal_name') or '').upper()]
         g2_invs = [i for i in invoices if i not in g1_invs]
 
-        # Optimized Active Invoices for Group 1 (27 Invoices: 18 Oil + 9 Gas)
-        # Guarantees: Dau L >= 1338.1L (+0.4L), Xang L >= 345.4L (+0.00L - EXACT MATCH 100.00%), Day <= 5.0M
-        g1_active_nums = {
-            # 18 Oil Invoices (1,338.5 L • 38.05M)
-            '190312', '191122', '191123', '191394', '581998', '585859', '596943', '606852',
-            '609292', '611529', '613760', '621240', '621846', '625217', '627024', '627559',
-            '628521', '629836',
-            # 9 Gas Invoices (345.40 L exactly • 7.75M)
-            '586305', '586863', '593172', '596812', '603565', '606877', '614396', '623217',
-            '626295'
-        }
-        g1_active_invs = [i for i in g1_invs if str(i.get('invoice_number')) in g1_active_nums]
-        g1_surplus_invs = [i for i in g1_invs if str(i.get('invoice_number')) not in g1_active_nums]
+        if month == 8 and year == 2026:
+            # Optimized Active Invoices for Group 1 (27 Invoices: 18 Oil + 9 Gas)
+            # Guarantees: Dau L >= 1338.1L (+0.4L), Xang L >= 345.4L (+0.00L - EXACT MATCH 100.00%), Day <= 5.0M
+            g1_active_nums = {
+                # 18 Oil Invoices (1,338.5 L • 38.05M)
+                '190312', '191122', '191123', '191394', '581998', '585859', '596943', '606852',
+                '609292', '611529', '613760', '621240', '621846', '625217', '627024', '627559',
+                '628521', '629836',
+                # 9 Gas Invoices (345.40 L exactly • 7.75M)
+                '586305', '586863', '593172', '596812', '603565', '606877', '614396', '623217',
+                '626295'
+            }
+            g1_active_invs = [i for i in g1_invs if str(i.get('invoice_number')) in g1_active_nums]
+            g1_surplus_invs = [i for i in g1_invs if str(i.get('invoice_number')) not in g1_active_nums]
 
-        # Optimized Active Invoices for Group 2 (76 Invoices: 40 Oil + 36 Gas)
-        # Guarantees: Dau L >= 2135.6L (+4.9L), Dau M >= 59.25M (+1.27M), Xang L >= 1222.4L (+246.1L), Xang M >= 33.94M (+96k), Day <= 5.0M
-        g2_active_nums = {
-            '00411655', '00411662', '00427072', '00439851', '00439924', '169269', '171080',
-            '171081', '172320', '172321', '173719', '173725', '175241', '175338', '176299',
-            '176300', '176432', '177950', '182342', '182736', '183734', '185597', '186044',
-            '187319', '187330', '187645', '188674', '188759', '553057', '553085', '556866',
-            '556990', '556991', '558060', '560899', '560956', '561638', '563337', '565739',
-            '567766', '570470', '570828', '571663', '573398', '575231', '576729', '577949',
-            '579524', '580455', '582060', '583408', '584919', '586304', '586919', '589157',
-            '590940', '590941', '590942', '592438', '595435', '596806', '597763', '597876',
-            '598581', '599491', '600815', '601319', '602040', '602938', '602940', '604349',
-            '606978', '607487', '607841', '608028', '611527'
-        }
-        g2_active_invs = [i for i in g2_invs if str(i.get('invoice_number')) in g2_active_nums]
-        g2_surplus_invs = [i for i in g2_invs if str(i.get('invoice_number')) not in g2_active_nums]
+            # Optimized Active Invoices for Group 2 (76 Invoices: 40 Oil + 36 Gas)
+            g2_active_nums = {
+                '00411655', '00411662', '00427072', '00439851', '00439924', '169269', '171080',
+                '171081', '172320', '172321', '173719', '173725', '175241', '175338', '176299',
+                '176300', '176432', '177950', '182342', '182736', '183734', '185597', '186044',
+                '187319', '187330', '187645', '188674', '188759', '553057', '553085', '556866',
+                '556990', '556991', '558060', '560899', '560956', '561638', '563337', '565739',
+                '567766', '570470', '570828', '571663', '573398', '575231', '576729', '577949',
+                '579524', '580455', '582060', '583408', '584919', '586304', '586919', '589157',
+                '590940', '590941', '590942', '592438', '595435', '596806', '597763', '597876',
+                '598581', '599491', '600815', '601319', '602040', '602938', '602940', '604349',
+                '606978', '607487', '607841', '608028', '611527'
+            }
+            g2_active_invs = [i for i in g2_invs if str(i.get('invoice_number')) in g2_active_nums]
+            g2_surplus_invs = [i for i in g2_invs if str(i.get('invoice_number')) not in g2_active_nums]
+        else:
+            # Month 9/2026 onwards: All valid invoices with amount > 0 belong to their respective groups
+            g1_active_invs = [i for i in g1_invs if float(i.get('total_amount') or 0) > 0]
+            g2_active_invs = [i for i in g2_invs if float(i.get('total_amount') or 0) > 0]
+            g1_surplus_invs = [i for i in g1_invs if float(i.get('total_amount') or 0) <= 0]
+            g2_surplus_invs = [i for i in g2_invs if float(i.get('total_amount') or 0) <= 0]
 
-        # Combine all 39 surplus invoices (11 G1 + 28 G2)
+        # Combine all surplus invoices (0-amount or extra)
         surplus_invs = g1_surplus_invs + g2_surplus_invs
         surplus_invs.sort(key=lambda x: (x.get('invoice_date', ''), x.get('invoice_number', '')))
 
         # Sheet 1: 02A Nhóm 1
         add_02a_sheet('02A_TTNB_DongNai_67Tram', g1_logs, 'MobiFone Đồng Nai - 67 Trạm Đặc Thù')
-        # Sheet 2: HD Nhóm 1 (29 HĐ Chính Thức Thanh Toán - 47.82tr >= 46.67tr Chạy Máy)
+        # Sheet 2: HD Nhóm 1
         add_hd_sheet('HD_DongNai_67Tram', g1_active_invs, 'MobiFone Đồng Nai - 67 Trạm Đặc Thù')
         # Sheet 3: Map Hóa Đơn Theo Trạm Nhóm 1 (Chuẩn Mẫu)
         add_map_sheet('Map_HD_Theo_Tram_Nhom1', g1_logs, g1_active_invs, 'MobiFone Đồng Nai - 67 Trạm Đặc Thù')
         # Sheet 4: 02A Nhóm 2
         add_02a_sheet('02A_TTNB_ToanCau', g2_logs, 'MobiFone Toàn Cầu')
-        # Sheet 5: HD Nhóm 2 (76 HĐ Chính Thức Thanh Toán - 94.56tr >= 93.19tr Chạy Máy)
+        # Sheet 5: HD Nhóm 2
         add_hd_sheet('HD_ToanCau', g2_active_invs, 'MobiFone Toàn Cầu')
-        # Sheet 6: Hóa đơn Dư Thừa Bảo Lưu Kho (39 HĐ - Bao gồm các ngày vượt 5tr)
-        add_surplus_hd_sheet('HD_Du_Thua_Khong_Su_Dung', surplus_invs, 'Hóa Đơn Dư Thừa Bảo Lưu Kho')
+        # Sheet 6: Map Hóa Đơn Theo Trạm Nhóm 2 (Chuẩn Mẫu)
+        add_map_sheet('Map_HD_Theo_Tram_Nhom2', g2_logs, g2_active_invs, 'MobiFone Toàn Cầu')
+        # Sheet 7: Hóa đơn Dư Thừa Bảo Lưu Kho
+        if surplus_invs:
+            add_surplus_hd_sheet('HD_Du_Thua_Khong_Su_Dung', surplus_invs, 'Hóa Đơn Dư Thừa Bảo Lưu Kho')
     else:
         add_02a_sheet('02A-TTNB_NLMPD', logs, 'Toàn bộ trạm Đài Viễn thông Đồng Nai')
         add_hd_sheet('HD', invoices, 'Toàn bộ hóa đơn nhiên liệu')
