@@ -258,8 +258,8 @@ export default function DailyWork() {
   const getEquipLocationLabel = (loc) => {
     if (!loc || loc === 'KHO') return 'KHO TVT3';
     const info = getSiteIds(loc);
-    if (!info || !info.oldId || info.oldId === '—') return info?.newId || loc;
-    return `${info.oldId} (${info.newId || loc})`;
+    if (info && info.oldId && info.oldId !== '—') return info.oldId;
+    return loc;
   };
 
   // Helper mở chi tiết trạm với tab chỉ định
@@ -700,40 +700,41 @@ export default function DailyWork() {
     const pinAtKho = pins.filter(e => e.status !== 'Hư' && (!e.current_location || e.current_location === 'KHO'));
     const pinDamaged = pins.filter(e => e.status === 'Hư');
 
-    let text = `⚡ BÁO CÁO VỊ TRÍ THIẾT BỊ LƯU ĐỘNG TVT3\n`;
-    text += `📅 Thời gian: ${timeStr} ngày ${dateStr}\n`;
-    text += `📊 Tổng số: ${mpds.length} MPĐ | ${pins.length} PIN Lưu Động\n\n`;
-
-    text += `1️⃣ MPĐ ĐANG ỨNG TRỰC TẠI TRẠM (${mpdAtSites.length} máy):\n`;
+    let text = `1️⃣ MPĐ ĐANG ỨNG TRỰC TẠI TRẠM (${mpdAtSites.length} máy):\n`;
     if (mpdAtSites.length > 0) {
-      text += mpdAtSites.map(m => ` • ${m.equipment_code}: ${getEquipLocationLabel(m.current_location)} (${m.brand ? `${m.brand} ${m.model || ''}` : (m.specifications || '')})`).join('\n') + '\n\n';
+      const sortedMpdSites = [...mpdAtSites].sort((a, b) => {
+        const locA = getEquipLocationLabel(a.current_location);
+        const locB = getEquipLocationLabel(b.current_location);
+        return locA.localeCompare(locB);
+      });
+      text += sortedMpdSites.map(m => {
+        const siteId = getEquipLocationLabel(m.current_location);
+        const brand = m.brand || (m.specifications ? m.specifications.split('(')[0].trim() : 'MPĐ');
+        const power = m.power_kva ? `${m.power_kva} kVA` : '';
+        const fuel = m.fuel_type || 'Xăng';
+        const specStr = [brand, power].filter(Boolean).join(' - ');
+        return ` • ${siteId} (${specStr} • ${fuel})`;
+      }).join('\n') + '\n\n';
     } else {
       text += ` • Không có máy nào ở trạm\n\n`;
     }
 
     text += `2️⃣ MPĐ DỰ PHÒNG TẠI KHO TVT3 (${mpdAtKho.length} máy sẵn sàng):\n`;
     if (mpdAtKho.length > 0) {
-      text += ` • ` + mpdAtKho.map(m => m.equipment_code).join(', ') + '\n\n';
+      const sortedMpdKho = [...mpdAtKho].sort((a, b) => (a.equipment_code || '').localeCompare(b.equipment_code || ''));
+      text += ` • ` + sortedMpdKho.map(m => m.equipment_code).join(', ');
     } else {
-      text += ` • Đã điều động hết ra trạm\n\n`;
+      text += ` • Đã điều động hết ra trạm`;
     }
 
-    text += `3️⃣ MPĐ HỎNG / CHỜ SỬA CHỮA (${mpdDamaged.length} máy):\n`;
-    if (mpdDamaged.length > 0) {
-      text += mpdDamaged.map(m => ` • ${m.equipment_code}: ${m.brand ? `${m.brand} ${m.model || ''}` : (m.specifications || '')} [Tại Kho]`).join('\n') + '\n\n';
-    } else {
-      text += ` • Không có (Tất cả hoạt động tốt)\n\n`;
-    }
-
-    text += `4️⃣ PIN LƯU ĐỘNG (${pins.length} bộ):\n`;
-    if (pinAtSites.length > 0) {
-      text += ` • Tại Trạm (${pinAtSites.length} bộ): ` + pinAtSites.map(p => `${p.equipment_code} (${getEquipLocationLabel(p.current_location)})`).join(', ') + '\n';
-    }
-    if (pinAtKho.length > 0) {
-      text += ` • Tại Kho (${pinAtKho.length} bộ): ` + pinAtKho.map(p => p.equipment_code).join(', ') + '\n';
-    }
-    if (pinDamaged.length > 0) {
-      text += ` • Hư hỏng (${pinDamaged.length} bộ): ` + pinDamaged.map(p => p.equipment_code).join(', ') + '\n';
+    if (pins.length > 0) {
+      text += `\n\n3️⃣ PIN LƯU ĐỘNG (${pins.length} bộ):\n`;
+      if (pinAtSites.length > 0) {
+        text += ` • Tại Trạm (${pinAtSites.length} bộ): ` + pinAtSites.map(p => getEquipLocationLabel(p.current_location)).join(', ') + '\n';
+      }
+      if (pinAtKho.length > 0) {
+        text += ` • Tại Kho (${pinAtKho.length} bộ): ` + pinAtKho.map(p => p.equipment_code.replace('PIN LƯU ĐỘNG ', 'PIN-')).join(', ');
+      }
     }
 
     return text.trim();
@@ -1800,8 +1801,7 @@ export default function DailyWork() {
                             <tr>
                               <th scope="col" className="px-3.5 py-3">Mã Thiết Bị</th>
                               <th scope="col" className="px-3 py-3">Phân Loại</th>
-                              <th scope="col" className="px-3.5 py-3">Thông Số & Model</th>
-                              <th scope="col" className="px-3 py-3">Mã OID / Serial</th>
+                              <th scope="col" className="px-3.5 py-3">Thông Số Kỹ Thuật</th>
                               <th scope="col" className="px-3 py-3">Đưa Vào SD</th>
                               <th scope="col" className="px-3 py-3">Trạng Thái</th>
                               <th scope="col" className="px-3.5 py-3">Vị Trí Hiện Tại</th>
@@ -1827,32 +1827,20 @@ export default function DailyWork() {
                                     <span className="font-semibold text-slate-600 text-xs">{eq.type}</span>
                                   </td>
 
-                                  {/* Thông số & Model */}
-                                  <td className="px-3.5 py-2.5 max-w-[200px]">
-                                    <div className="font-bold text-slate-800 truncate" title={eq.specifications || eq.brand}>
-                                      {eq.brand ? `${eq.brand} ${eq.model || ''}` : (eq.specifications || '—')}
-                                    </div>
-                                    {eq.power_kva && (
-                                      <div className="text-[11px] text-slate-500 font-medium">
-                                        {eq.power_kva} kVA • {eq.fuel_type || 'Xăng'}
-                                      </div>
-                                    )}
-                                  </td>
-
-                                  {/* Mã OID / Serial */}
-                                  <td className="px-3 py-2.5 whitespace-nowrap text-[11px] font-mono">
-                                    {eq.eam_oid ? (
-                                      <div className="text-blue-700 font-bold" title={`Mã OID EAM: ${eq.eam_oid}`}>
-                                        OID: {eq.eam_oid}
-                                      </div>
+                                  {/* Thông số kỹ thuật */}
+                                  <td className="px-3.5 py-2.5 whitespace-nowrap">
+                                    <span className="font-bold text-slate-800">
+                                      {eq.brand || eq.specifications || '—'}
+                                    </span>
+                                    {eq.type === 'Pin' ? (
+                                      <span className="text-slate-600 font-semibold text-xs ml-1.5">
+                                        - {eq.power_kva ? `${eq.power_kva} kWh` : '48V-100Ah'}
+                                      </span>
+                                    ) : eq.power_kva ? (
+                                      <span className="text-slate-600 font-semibold text-xs ml-1.5">
+                                        - {eq.power_kva} kVA {eq.fuel_type ? `(${eq.fuel_type})` : ''}
+                                      </span>
                                     ) : null}
-                                    {eq.serial_number ? (
-                                      <div className="text-slate-500" title={`Số Serial: ${eq.serial_number}`}>
-                                        S/N: {eq.serial_number}
-                                      </div>
-                                    ) : (
-                                      !eq.eam_oid && <span className="text-slate-400 font-sans italic">—</span>
-                                    )}
                                   </td>
 
                                   {/* Ngày đưa vào SD */}

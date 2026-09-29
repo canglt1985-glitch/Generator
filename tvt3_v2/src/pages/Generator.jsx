@@ -1242,40 +1242,41 @@ export default function Generator() {
     const pinAtKho = pins.filter(e => e.status !== 'Hư' && (!e.current_location || e.current_location === 'KHO'));
     const pinDamaged = pins.filter(e => e.status === 'Hư');
 
-    let text = `⚡ BÁO CÁO VỊ TRÍ THIẾT BỊ LƯU ĐỘNG TVT3\n`;
-    text += `📅 Thời gian: ${timeStr} ngày ${dateStr}\n`;
-    text += `📊 Tổng số: ${mpds.length} MPĐ | ${pins.length} PIN Lưu Động\n\n`;
-
-    text += `1️⃣ MPĐ ĐANG ỨNG TRỰC TẠI TRẠM (${mpdAtSites.length} máy):\n`;
+    let text = `1️⃣ MPĐ ĐANG ỨNG TRỰC TẠI TRẠM (${mpdAtSites.length} máy):\n`;
     if (mpdAtSites.length > 0) {
-      text += mpdAtSites.map(m => ` • ${m.equipment_code}: ${getSiteLabel(m.current_location)} (${m.specifications || ''})`).join('\n') + '\n\n';
+      const sortedMpdSites = [...mpdAtSites].sort((a, b) => {
+        const locA = getSiteLabel(a.current_location);
+        const locB = getSiteLabel(b.current_location);
+        return locA.localeCompare(locB);
+      });
+      text += sortedMpdSites.map(m => {
+        const siteId = getSiteLabel(m.current_location);
+        const brand = m.brand || (m.specifications ? m.specifications.split('(')[0].trim() : 'MPĐ');
+        const power = m.power_kva ? `${m.power_kva} kVA` : '';
+        const fuel = m.fuel_type || 'Xăng';
+        const specStr = [brand, power].filter(Boolean).join(' - ');
+        return ` • ${siteId} (${specStr} • ${fuel})`;
+      }).join('\n') + '\n\n';
     } else {
       text += ` • Không có máy nào ở trạm\n\n`;
     }
 
     text += `2️⃣ MPĐ DỰ PHÒNG TẠI KHO TVT3 (${mpdAtKho.length} máy sẵn sàng):\n`;
     if (mpdAtKho.length > 0) {
-      text += ` • ` + mpdAtKho.map(m => m.equipment_code).join(', ') + '\n\n';
+      const sortedMpdKho = [...mpdAtKho].sort((a, b) => (a.equipment_code || '').localeCompare(b.equipment_code || ''));
+      text += ` • ` + sortedMpdKho.map(m => m.equipment_code).join(', ');
     } else {
-      text += ` • Đã điều động hết ra trạm\n\n`;
+      text += ` • Đã điều động hết ra trạm`;
     }
 
-    text += `3️⃣ MPĐ HỎNG / CHỜ SỬA CHỮA (${mpdDamaged.length} máy):\n`;
-    if (mpdDamaged.length > 0) {
-      text += mpdDamaged.map(m => ` • ${m.equipment_code}: ${m.specifications || ''} [Tại Kho]`).join('\n') + '\n\n';
-    } else {
-      text += ` • Không có (Tất cả hoạt động tốt)\n\n`;
-    }
-
-    text += `4️⃣ PIN LƯU ĐỘNG (${pins.length} bộ):\n`;
-    if (pinAtSites.length > 0) {
-      text += ` • Tại Trạm (${pinAtSites.length} bộ): ` + pinAtSites.map(p => `${p.equipment_code} (${getSiteLabel(p.current_location)})`).join(', ') + '\n';
-    }
-    if (pinAtKho.length > 0) {
-      text += ` • Tại Kho (${pinAtKho.length} bộ): ` + pinAtKho.map(p => p.equipment_code).join(', ') + '\n';
-    }
-    if (pinDamaged.length > 0) {
-      text += ` • Hư hỏng (${pinDamaged.length} bộ): ` + pinDamaged.map(p => p.equipment_code).join(', ') + '\n';
+    if (pins.length > 0) {
+      text += `\n\n3️⃣ PIN LƯU ĐỘNG (${pins.length} bộ):\n`;
+      if (pinAtSites.length > 0) {
+        text += ` • Tại Trạm (${pinAtSites.length} bộ): ` + pinAtSites.map(p => getSiteLabel(p.current_location)).join(', ') + '\n';
+      }
+      if (pinAtKho.length > 0) {
+        text += ` • Tại Kho (${pinAtKho.length} bộ): ` + pinAtKho.map(p => p.equipment_code.replace('PIN LƯU ĐỘNG ', 'PIN-')).join(', ');
+      }
     }
 
     return text.trim();
@@ -4266,8 +4267,7 @@ export default function Generator() {
                       <tr>
                         <th className="py-3 px-4">Mã Thiết Bị</th>
                         <th className="py-3 px-4">Phân Loại</th>
-                        <th className="py-3 px-4">Thông Số & Model</th>
-                        <th className="py-3 px-4">Mã OID / Serial</th>
+                        <th className="py-3 px-4">Thông Số Kỹ Thuật</th>
                         <th className="py-3 px-4 text-center">Đưa Vào SD</th>
                         <th className="py-3 px-4">Vị Trí Hiện Tại</th>
                         <th className="py-3 px-4 text-center">Tình Trạng</th>
@@ -4306,19 +4306,19 @@ export default function Generator() {
                               <span>{item.equipment_code}</span>
                             </td>
                             <td className="py-3 px-4 text-slate-600 font-semibold">{item.type}</td>
-                            <td className="py-3 px-4">
-                              <div className="font-bold text-slate-800">{item.brand || item.specifications}</div>
-                              <div className="text-[11px] text-slate-500 font-mono truncate max-w-[200px]" title={item.model || item.specifications}>
-                                {item.model || item.specifications || 'N/A'}
-                              </div>
-                            </td>
                             <td className="py-3 px-4 whitespace-nowrap">
-                              <div className="font-mono text-[11px] font-semibold text-slate-700">
-                                {item.serial_number ? `S/N: ${item.serial_number}` : <span className="text-slate-400 italic">Không có S/N</span>}
-                              </div>
-                              {item.eam_oid && (
-                                <div className="text-[10px] text-blue-600 font-semibold">OID: {item.eam_oid}</div>
-                              )}
+                              <span className="font-bold text-slate-800">
+                                {item.brand || item.specifications || '—'}
+                              </span>
+                              {item.type === 'Pin' ? (
+                                <span className="text-slate-600 font-semibold text-xs ml-1.5">
+                                  - {item.power_kva ? `${item.power_kva} kWh` : '48V-100Ah'}
+                                </span>
+                              ) : item.power_kva ? (
+                                <span className="text-slate-600 font-semibold text-xs ml-1.5">
+                                  - {item.power_kva} kVA {item.fuel_type ? `(${item.fuel_type})` : ''}
+                                </span>
+                              ) : null}
                             </td>
                             <td className="py-3 px-4 text-center whitespace-nowrap">
                               {item.commissioning_date ? (
