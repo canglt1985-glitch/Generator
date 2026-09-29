@@ -323,13 +323,26 @@ export default function VhktRan() {
       return `• ${alarm._label}: sector ${alarm._sector} [${alarm._techTag}] - ${dateStr}`;
     }
 
-    // Single cell: "• DNXL08 [3G] (DNIXPH01CM3GB) - 26/09 08:33"
+    // Single cell:
     const { newId, oldId } = getSiteDetails(alarm.site);
-    const siteCode = oldId || newId || alarm.site;
+    const hasOldId = Boolean(oldId && oldId.toUpperCase() !== (newId || '').toUpperCase() && !oldId.toUpperCase().startsWith('DNI'));
     const net = getAlarmNetwork(alarm);
     const netStr = net ? ` [${net}]` : '';
-    const cellStr = alarm.cellid ? ` (${alarm.cellid})` : '';
-    return `• ${siteCode}${netStr}${cellStr} - ${dateStr}`;
+
+    if (hasOldId) {
+      let cellCode = String(alarm.cellid || '').toUpperCase().trim();
+      for (const prefix of [alarm.site, newId, oldId]) {
+        if (prefix && prefix.length >= 4 && cellCode.startsWith(prefix.toUpperCase())) {
+          cellCode = cellCode.slice(prefix.length);
+          break;
+        }
+      }
+      cellCode = cellCode.replace(/^[_-]+/, '') || String(alarm.cellid || '');
+      return `• ${oldId}: ${cellCode}${netStr} - ${dateStr}`;
+    } else {
+      const fullCell = String(alarm.cellid || '').toUpperCase().trim() || newId;
+      return `• ${fullCell}${netStr} - ${dateStr}`;
+    }
   }
 
   // Group alarms by unique station (keep earliest start time)
@@ -676,23 +689,41 @@ export default function VhktRan() {
         );
       }
 
-      // Single cell: unchanged
+      // Single cell
+      const hasOldId = Boolean(oldId && oldId.toUpperCase() !== (newId || '').toUpperCase() && !oldId.toUpperCase().startsWith('DNI'));
+      let cellCode = String(a.cellid || '').toUpperCase().trim();
+      if (hasOldId) {
+        for (const prefix of [a.site, newId, oldId]) {
+          if (prefix && prefix.length >= 4 && cellCode.startsWith(prefix.toUpperCase())) {
+            cellCode = cellCode.slice(prefix.length);
+            break;
+          }
+        }
+        cellCode = cellCode.replace(/^[_-]+/, '') || String(a.cellid || '');
+      }
+
       return (
         <div
           key={idx}
           className="flex items-center justify-between gap-1 py-1 px-1 border-b border-slate-100 last:border-b-0 hover:bg-slate-50 transition-colors font-mono"
         >
-          {/* Left side: Bullet + Site Code + Net + Cell ID (Never wraps) */}
+          {/* Left side: Bullet + Site/Cell Code + Net */}
           <div className="flex items-center gap-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-xs sm:text-[13px]">
             <span className="text-slate-400 select-none shrink-0">•</span>
-            <span className="font-bold text-slate-900 shrink-0">{siteCode}</span>
+            {hasOldId ? (
+              <>
+                <span className="font-bold text-slate-900 shrink-0">{oldId}:</span>
+                <span className="font-semibold text-purple-600 truncate text-[11px] sm:text-xs">
+                  {cellCode}
+                </span>
+              </>
+            ) : (
+              <span className="font-bold text-slate-900 shrink-0">
+                {String(a.cellid || '').toUpperCase().trim() || newId}
+              </span>
+            )}
             {net && (
               <span className="font-bold text-emerald-600 shrink-0">[{net}]</span>
-            )}
-            {cellStr && (
-              <span className="font-semibold text-purple-600 truncate text-[11px] sm:text-xs">
-                {cellStr}
-              </span>
             )}
           </div>
 

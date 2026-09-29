@@ -3108,14 +3108,16 @@ def send_periodic_full_report():
             for cid, alarm in filtered_cells.items():
                 site = _site_key(alarm)
                 base_id, old_id, _ = _resolve_base_site_and_tech(site, '')
-                label = old_id if old_id else (base_id if base_id else site)
+                has_old_id = bool(old_id and old_id.upper() != (base_id or '').upper() and not old_id.upper().startswith('DNI'))
+                label = old_id if has_old_id else (base_id if base_id else site)
 
-                cell_code = str(alarm.get('cellid') or alarm.get('cell_id') or cid).strip().upper()
+                raw_cid = str(alarm.get('cellid') or alarm.get('cell_id') or cid).strip().upper()
+                cell_code = raw_cid
                 for prefix in (site, base_id, old_id):
                     if prefix and len(prefix) >= 4 and cell_code.startswith(prefix.upper()):
                         cell_code = cell_code[len(prefix):]
                         break
-                cell_code = cell_code.lstrip('_-') or cid
+                cell_code = cell_code.lstrip('_-') or raw_cid
 
                 # Extract sector from last char of cell code (e.g. CM3GC → sector C)
                 sector = cell_code[-1] if cell_code and cell_code[-1].isalpha() else '?'
@@ -3127,12 +3129,14 @@ def send_periodic_full_report():
                 if group_key not in site_sector_groups:
                     site_sector_groups[group_key] = {
                         'label': label, 'sector': sector, 'nets': [],
-                        'cells': [], 't': t, 'cell_codes': []
+                        'cells': [], 't': t, 'cell_codes': [], 'raw_cids': [],
+                        'has_old_id': has_old_id
                     }
                 if net and net not in site_sector_groups[group_key]['nets']:
                     site_sector_groups[group_key]['nets'].append(net)
                 site_sector_groups[group_key]['cells'].append(cid)
                 site_sector_groups[group_key]['cell_codes'].append(cell_code)
+                site_sector_groups[group_key]['raw_cids'].append(raw_cid)
                 # Keep earliest time
                 if t < site_sector_groups[group_key]['t']:
                     site_sector_groups[group_key]['t'] = t
@@ -3141,10 +3145,16 @@ def send_periodic_full_report():
             lines.append("")
             lines.append("📡 *CELLOFF* (" + str(total_cells) + " cell):")
             for gkey, grp in site_sector_groups.items():
+                net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
                 if len(grp['cells']) == 1:
-                    # Single cell: show cell code + tech directly
-                    net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
-                    lines.append(f"• {grp['label']}: {grp['cell_codes'][0]}{net_part} - {grp['t']}")
+                    # Single cell:
+                    # Nếu có mã trạm cũ: • DNTN07: CM5LB [5G] - 08:15
+                    # Nếu không có mã trạm cũ: • DNICMYAPDM3GC [3G] - 12/09 (giữ nguyên mã cell đầy đủ, không tách dấu hai chấm)
+                    if grp.get('has_old_id'):
+                        lines.append(f"• {grp['label']}: {grp['cell_codes'][0]}{net_part} - {grp['t']}")
+                    else:
+                        full_cell = grp['raw_cids'][0] if grp.get('raw_cids') else grp['cells'][0]
+                        lines.append(f"• {full_cell}{net_part} - {grp['t']}")
                 else:
                     # Multiple cells same sector → check if SRAN (multi-tech) or same tech
                     if len(grp['nets']) > 1:
