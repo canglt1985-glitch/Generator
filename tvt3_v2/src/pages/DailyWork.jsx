@@ -3,7 +3,7 @@ import { supabase } from '../supabaseClient';
 import { 
   ClipboardList, Calendar, AlertTriangle, Search, Plus, Edit, Trash, 
   MapPin, User, Clock, CheckCircle2, AlertCircle, Eye, X, Filter, ExternalLink,
-  Zap, Download
+  Zap, Download, Copy, Check, FileText
 } from 'lucide-react';
 import DatasiteDetailFullscreen from '../components/datasites/DatasiteDetailFullscreen';
 import { useCurrentUser } from '../utils/useCurrentUser';
@@ -74,12 +74,26 @@ export default function DailyWork() {
   const [selectedEquip, setSelectedEquip] = useState(null);
   const [editingEquip, setEditingEquip] = useState(null);
 
-  // Form states - Add Equipment
+  // Daily Report & Quick Filter & Detail States for Mobile Equipment
+  const [showDailyReportModal, setShowDailyReportModal] = useState(false);
+  const [copiedDailyReport, setCopiedDailyReport] = useState(false);
+  const [equipFilterStatus, setEquipFilterStatus] = useState('ALL'); // 'ALL' | 'AT_SITES' | 'AT_KHO' | 'DAMAGED' | 'MPD' | 'PIN'
+  const [selectedEquipDetail, setSelectedEquipDetail] = useState(null);
+
+  // Form states - Add / Edit Equipment (Full Asset & EAM fields)
   const [equipCode, setEquipCode] = useState('');
   const [equipType, setEquipType] = useState('MPĐ'); // MPĐ, Pin, Khác
   const [equipSpecs, setEquipSpecs] = useState('');
   const [equipStatus, setEquipStatus] = useState('Tốt'); // Tốt, Hư
   const [equipNotes, setEquipNotes] = useState('');
+  const [equipBrand, setEquipBrand] = useState('');
+  const [equipModel, setEquipModel] = useState('');
+  const [equipSerial, setEquipSerial] = useState('');
+  const [equipOid, setEquipOid] = useState('');
+  const [equipDate, setEquipDate] = useState('');
+  const [equipPower, setEquipPower] = useState('');
+  const [equipFuel, setEquipFuel] = useState('Xăng');
+  const [equipTank, setEquipTank] = useState('');
 
   // Form states - Transfer Equipment
   const [transToLocation, setTransToLocation] = useState('KHO'); // KHO, hoặc site_id
@@ -239,6 +253,13 @@ export default function DailyWork() {
       };
     }
     return { oldId: '—', newId: siteId };
+  };
+
+  const getEquipLocationLabel = (loc) => {
+    if (!loc || loc === 'KHO') return 'KHO TVT3';
+    const info = getSiteIds(loc);
+    if (!info || !info.oldId || info.oldId === '—') return info?.newId || loc;
+    return `${info.oldId} (${info.newId || loc})`;
   };
 
   // Helper mở chi tiết trạm với tab chỉ định
@@ -662,17 +683,96 @@ export default function DailyWork() {
     }
   };
 
+  // Tạo văn bản báo cáo vị trí hàng ngày chuẩn Zalo / Telegram
+  const generateDailyReportText = () => {
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const timeStr = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+
+    const mpds = mobileEquipments.filter(e => (e.type || '').toUpperCase().includes('MPĐ') || (e.equipment_code || '').includes('MPD'));
+    const pins = mobileEquipments.filter(e => (e.type || '').toUpperCase().includes('PIN') || (e.equipment_code || '').includes('PIN'));
+
+    const mpdAtSites = mpds.filter(e => e.status !== 'Hư' && e.current_location && e.current_location !== 'KHO');
+    const mpdAtKho = mpds.filter(e => e.status !== 'Hư' && (!e.current_location || e.current_location === 'KHO'));
+    const mpdDamaged = mpds.filter(e => e.status === 'Hư');
+
+    const pinAtSites = pins.filter(e => e.status !== 'Hư' && e.current_location && e.current_location !== 'KHO');
+    const pinAtKho = pins.filter(e => e.status !== 'Hư' && (!e.current_location || e.current_location === 'KHO'));
+    const pinDamaged = pins.filter(e => e.status === 'Hư');
+
+    let text = `⚡ BÁO CÁO VỊ TRÍ THIẾT BỊ LƯU ĐỘNG TVT3\n`;
+    text += `📅 Thời gian: ${timeStr} ngày ${dateStr}\n`;
+    text += `📊 Tổng số: ${mpds.length} MPĐ | ${pins.length} PIN Lưu Động\n\n`;
+
+    text += `1️⃣ MPĐ ĐANG ỨNG TRỰC TẠI TRẠM (${mpdAtSites.length} máy):\n`;
+    if (mpdAtSites.length > 0) {
+      text += mpdAtSites.map(m => ` • ${m.equipment_code}: ${getEquipLocationLabel(m.current_location)} (${m.brand ? `${m.brand} ${m.model || ''}` : (m.specifications || '')})`).join('\n') + '\n\n';
+    } else {
+      text += ` • Không có máy nào ở trạm\n\n`;
+    }
+
+    text += `2️⃣ MPĐ DỰ PHÒNG TẠI KHO TVT3 (${mpdAtKho.length} máy sẵn sàng):\n`;
+    if (mpdAtKho.length > 0) {
+      text += ` • ` + mpdAtKho.map(m => m.equipment_code).join(', ') + '\n\n';
+    } else {
+      text += ` • Đã điều động hết ra trạm\n\n`;
+    }
+
+    text += `3️⃣ MPĐ HỎNG / CHỜ SỬA CHỮA (${mpdDamaged.length} máy):\n`;
+    if (mpdDamaged.length > 0) {
+      text += mpdDamaged.map(m => ` • ${m.equipment_code}: ${m.brand ? `${m.brand} ${m.model || ''}` : (m.specifications || '')} [Tại Kho]`).join('\n') + '\n\n';
+    } else {
+      text += ` • Không có (Tất cả hoạt động tốt)\n\n`;
+    }
+
+    text += `4️⃣ PIN LƯU ĐỘNG (${pins.length} bộ):\n`;
+    if (pinAtSites.length > 0) {
+      text += ` • Tại Trạm (${pinAtSites.length} bộ): ` + pinAtSites.map(p => `${p.equipment_code} (${getEquipLocationLabel(p.current_location)})`).join(', ') + '\n';
+    }
+    if (pinAtKho.length > 0) {
+      text += ` • Tại Kho (${pinAtKho.length} bộ): ` + pinAtKho.map(p => p.equipment_code).join(', ') + '\n';
+    }
+    if (pinDamaged.length > 0) {
+      text += ` • Hư hỏng (${pinDamaged.length} bộ): ` + pinDamaged.map(p => p.equipment_code).join(', ') + '\n';
+    }
+
+    return text.trim();
+  };
+
+  const handleCopyDailyReport = () => {
+    const text = generateDailyReportText();
+    navigator.clipboard.writeText(text);
+    setCopiedDailyReport(true);
+    setTimeout(() => setCopiedDailyReport(false), 2500);
+  };
+
   // Filtered list - Mobile Equipment
   const filteredEquip = useMemo(() => {
-    if (!searchQuery.trim()) return mobileEquipments;
-    const q = searchQuery.toLowerCase();
-    return mobileEquipments.filter(e => 
-      (e.equipment_code || '').toLowerCase().includes(q) ||
-      (e.type || '').toLowerCase().includes(q) ||
-      (e.specifications || '').toLowerCase().includes(q) ||
-      (e.current_location || '').toLowerCase().includes(q)
-    );
-  }, [mobileEquipments, searchQuery]);
+    return mobileEquipments.filter(e => {
+      // Status filter
+      if (equipFilterStatus === 'AT_SITES' && e.current_location === 'KHO') return false;
+      if (equipFilterStatus === 'AT_KHO' && e.current_location !== 'KHO') return false;
+      if (equipFilterStatus === 'DAMAGED' && e.status !== 'Hư') return false;
+      if (equipFilterStatus === 'MPD' && e.type !== 'MPĐ') return false;
+      if (equipFilterStatus === 'PIN' && e.type !== 'Pin') return false;
+
+      // Text query
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase();
+      return (
+        (e.equipment_code || '').toLowerCase().includes(q) ||
+        (e.type || '').toLowerCase().includes(q) ||
+        (e.specifications || '').toLowerCase().includes(q) ||
+        (e.brand || '').toLowerCase().includes(q) ||
+        (e.model || '').toLowerCase().includes(q) ||
+        (e.serial_number || '').toLowerCase().includes(q) ||
+        (e.eam_oid || '').toLowerCase().includes(q) ||
+        (e.commissioning_date || '').toLowerCase().includes(q) ||
+        (e.current_location || '').toLowerCase().includes(q) ||
+        (e.notes || '').toLowerCase().includes(q)
+      );
+    });
+  }, [mobileEquipments, searchQuery, equipFilterStatus]);
 
   // Thêm / Sửa thiết bị lưu động
   async function handleSaveEquip(e) {
@@ -682,12 +782,28 @@ export default function DailyWork() {
       return;
     }
 
+    // Auto compose specifications if empty
+    let specsVal = equipSpecs.trim();
+    if (!specsVal && (equipBrand.trim() || equipModel.trim())) {
+      specsVal = `${equipBrand.trim()} ${equipModel.trim()}`.trim();
+      if (equipPower) specsVal += ` ${equipPower}kVA`;
+      if (equipFuel) specsVal += ` (${equipFuel})`;
+    }
+
     const payload = {
       equipment_code: equipCode.trim().toUpperCase(),
       type: equipType,
-      specifications: equipSpecs.trim() || null,
+      specifications: specsVal || null,
       status: equipStatus,
-      notes: equipNotes.trim() || null
+      notes: equipNotes.trim() || null,
+      brand: equipBrand.trim() || null,
+      model: equipModel.trim() || null,
+      serial_number: equipSerial.trim() || null,
+      eam_oid: equipOid.trim() || null,
+      commissioning_date: equipDate.trim() || null,
+      power_kva: equipPower ? Number(equipPower) : null,
+      fuel_type: equipFuel || 'Xăng',
+      fuel_tank_capacity: equipTank ? Number(equipTank) : null
     };
 
     try {
@@ -697,7 +813,7 @@ export default function DailyWork() {
           .update(payload)
           .eq('id', editingEquip.id);
         if (error) throw error;
-        alert("Cập nhật thiết bị lưu động thành công!");
+        alert("Cập nhật thông tin thiết bị và hồ sơ tài sản thành công!");
       } else {
         const { error } = await supabase.from('mobile_equipment').insert([{
           ...payload,
@@ -705,7 +821,7 @@ export default function DailyWork() {
           fuel_balance: 0
         }]);
         if (error) throw error;
-        alert("Thêm thiết bị lưu động thành công!");
+        alert("Thêm thiết bị lưu động mới thành công!");
       }
       setShowAddEquipModal(false);
       resetEquipForm();
@@ -722,6 +838,14 @@ export default function DailyWork() {
     setEquipSpecs(eq.specifications || '');
     setEquipStatus(eq.status || 'Tốt');
     setEquipNotes(eq.notes || '');
+    setEquipBrand(eq.brand || '');
+    setEquipModel(eq.model || '');
+    setEquipSerial(eq.serial_number || '');
+    setEquipOid(eq.eam_oid || '');
+    setEquipDate(eq.commissioning_date || '');
+    setEquipPower(eq.power_kva !== null && eq.power_kva !== undefined ? String(eq.power_kva) : '');
+    setEquipFuel(eq.fuel_type || 'Xăng');
+    setEquipTank(eq.fuel_tank_capacity !== null && eq.fuel_tank_capacity !== undefined ? String(eq.fuel_tank_capacity) : '');
     setShowAddEquipModal(true);
   }
 
@@ -790,6 +914,14 @@ export default function DailyWork() {
     setEquipSpecs('');
     setEquipStatus('Tốt');
     setEquipNotes('');
+    setEquipBrand('');
+    setEquipModel('');
+    setEquipSerial('');
+    setEquipOid('');
+    setEquipDate('');
+    setEquipPower('');
+    setEquipFuel('Xăng');
+    setEquipTank('');
   }
 
   const tabs = [
@@ -888,43 +1020,61 @@ export default function DailyWork() {
             </div>
           )}
 
-          {user && (
-            <div>
-              {activeTab === 'daily' && (
-                <button 
-                  onClick={() => { resetLogForm(); setShowAddLogModal(true); }}
-                  className="inline-flex items-center justify-center px-4 py-2 text-[13px] font-bold rounded-lg text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors cursor-pointer h-[34px]"
+          {/* Header Action Buttons */}
+          <div className="flex items-center gap-2">
+            {activeTab === 'mobile' && (
+              <>
+                <button
+                  type="button"
+                  onClick={handleExportMobileEquipment}
+                  className="inline-flex items-center justify-center px-3.5 py-1.5 text-[13px] font-bold rounded-lg text-emerald-800 bg-emerald-100/90 border border-emerald-300 hover:bg-emerald-200 shadow-sm transition-colors cursor-pointer h-[34px]"
+                  title="Xuất trọn bộ file Excel Quản lý & Điều chuyển thiết bị lưu động"
                 >
-                  <Plus className="h-4 w-4 mr-1.5" /> Ghi nhật ký
+                  <Download className="h-4 w-4 mr-1.5 text-emerald-700" />
+                  <span>Xuất Excel</span>
                 </button>
-              )}
-              {activeTab === 'issues' && (
-                <button 
-                  onClick={() => { resetIssueForm(); setShowAddIssueModal(true); }}
-                  className="inline-flex items-center justify-center px-4 py-2 text-[13px] font-bold rounded-lg text-white bg-red-600 hover:bg-red-700 shadow-sm transition-colors cursor-pointer h-[34px]"
+                <button
+                  type="button"
+                  onClick={() => setShowDailyReportModal(true)}
+                  className="inline-flex items-center justify-center px-3.5 py-1.5 text-[13px] font-bold rounded-lg text-indigo-700 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 shadow-sm transition-colors cursor-pointer h-[34px]"
+                  title="Tạo báo cáo nhanh vị trí MPĐ & Pin gửi nhóm Zalo / Telegram"
                 >
-                  <Plus className="h-4 w-4 mr-1.5" /> Cập nhật tồn tại
+                  <ClipboardList className="h-4 w-4 mr-1.5 text-indigo-600" />
+                  <span>Báo Cáo Zalo</span>
                 </button>
-              )}
-              {activeTab === 'mobile' && (
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={handleExportMobileEquipment}
-                    className="inline-flex items-center justify-center px-3.5 py-2 text-[13px] font-bold rounded-lg text-emerald-700 border border-emerald-300 bg-white hover:bg-emerald-50 shadow-sm transition-colors cursor-pointer h-[34px]"
-                    title="Xuất trọn bộ file Excel Quản lý & Điều chuyển thiết bị lưu động"
-                  >
-                    <Download className="h-4 w-4 mr-1.5" /> Xuất Excel
-                  </button>
+                {user && (
                   <button 
+                    type="button"
                     onClick={() => { resetEquipForm(); setShowAddEquipModal(true); }}
                     className="inline-flex items-center justify-center px-4 py-2 text-[13px] font-bold rounded-lg text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors cursor-pointer h-[34px]"
                   >
                     <Plus className="h-4 w-4 mr-1.5" /> Thêm thiết bị lưu động
                   </button>
-                </div>
-              )}
-            </div>
-          )}
+                )}
+              </>
+            )}
+
+            {user && (
+              <>
+                {activeTab === 'daily' && (
+                  <button 
+                    onClick={() => { resetLogForm(); setShowAddLogModal(true); }}
+                    className="inline-flex items-center justify-center px-4 py-2 text-[13px] font-bold rounded-lg text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors cursor-pointer h-[34px]"
+                  >
+                    <Plus className="h-4 w-4 mr-1.5" /> Ghi nhật ký
+                  </button>
+                )}
+                {activeTab === 'issues' && (
+                  <button 
+                    onClick={() => { resetIssueForm(); setShowAddIssueModal(true); }}
+                    className="inline-flex items-center justify-center px-4 py-2 text-[13px] font-bold rounded-lg text-white bg-red-600 hover:bg-red-700 shadow-sm transition-colors cursor-pointer h-[34px]"
+                  >
+                    <Plus className="h-4 w-4 mr-1.5" /> Cập nhật tồn tại
+                  </button>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1480,62 +1630,294 @@ export default function DailyWork() {
               {/* TAB 4: MOBILE EQUIPMENT */}
               {activeTab === 'mobile' && (
                 <div className="p-4 space-y-6">
+                  {/* Summary Stat Pills */}
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+                    <div className="p-3 bg-blue-50/70 rounded-xl border border-blue-100 flex items-center justify-between">
+                      <div>
+                        <div className="text-[10px] font-bold text-blue-600 uppercase">MPĐ Lưu Động</div>
+                        <div className="text-base font-black text-blue-900 mt-0.5">
+                          {mobileEquipments.filter(e => (e.type || '').toUpperCase().includes('MPĐ') || (e.equipment_code || '').includes('MPD')).length} máy
+                        </div>
+                      </div>
+                      <span className="text-xl">🚗</span>
+                    </div>
+
+                    <div className="p-3 bg-purple-50/70 rounded-xl border border-purple-100 flex items-center justify-between">
+                      <div>
+                        <div className="text-[10px] font-bold text-purple-600 uppercase">Pin Lưu Động</div>
+                        <div className="text-base font-black text-purple-900 mt-0.5">
+                          {mobileEquipments.filter(e => (e.type || '').toUpperCase().includes('PIN') || (e.equipment_code || '').includes('PIN')).length} bộ
+                        </div>
+                      </div>
+                      <span className="text-xl">🔋</span>
+                    </div>
+
+                    <div className="p-3 bg-emerald-50/70 rounded-xl border border-emerald-100 flex items-center justify-between">
+                      <div>
+                        <div className="text-[10px] font-bold text-emerald-600 uppercase">Đang Tại Trạm</div>
+                        <div className="text-base font-black text-emerald-900 mt-0.5">
+                          {mobileEquipments.filter(e => e.status !== 'Hư' && e.current_location && e.current_location !== 'KHO').length} máy
+                        </div>
+                      </div>
+                      <span className="text-xl">📍</span>
+                    </div>
+
+                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+                      <div>
+                        <div className="text-[10px] font-bold text-slate-500 uppercase">Dự Phòng Tại Kho</div>
+                        <div className="text-base font-black text-slate-800 mt-0.5">
+                          {mobileEquipments.filter(e => e.status !== 'Hư' && (!e.current_location || e.current_location === 'KHO')).length} máy
+                        </div>
+                      </div>
+                      <span className="text-xl">🏢</span>
+                    </div>
+
+                    <div className="p-3 bg-rose-50/70 rounded-xl border border-rose-100 flex items-center justify-between col-span-2 sm:col-span-1">
+                      <div>
+                        <div className="text-[10px] font-bold text-rose-600 uppercase">Hư Hỏng / Chờ Sửa</div>
+                        <div className="text-base font-black text-rose-900 mt-0.5">
+                          {mobileEquipments.filter(e => e.status === 'Hư').length} máy
+                        </div>
+                      </div>
+                      <span className="text-xl">⚠️</span>
+                    </div>
+                  </div>
+
+                  {/* Actions & Filters Toolbar */}
+                  <div className="bg-slate-50/80 p-3 rounded-xl border border-slate-200/80 flex flex-wrap items-center justify-between gap-3">
+                    {/* Filter Pills */}
+                    <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => setEquipFilterStatus('ALL')}
+                        className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                          equipFilterStatus === 'ALL'
+                            ? 'bg-blue-600 text-white shadow-sm'
+                            : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
+                        }`}
+                      >
+                        Tất cả ({mobileEquipments.length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEquipFilterStatus('AT_SITES')}
+                        className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                          equipFilterStatus === 'AT_SITES'
+                            ? 'bg-emerald-600 text-white shadow-sm'
+                            : 'bg-white text-emerald-700 hover:bg-emerald-50 border border-slate-200'
+                        }`}
+                      >
+                        📍 Tại Trạm ({mobileEquipments.filter(e => e.status !== 'Hư' && e.current_location && e.current_location !== 'KHO').length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEquipFilterStatus('AT_KHO')}
+                        className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                          equipFilterStatus === 'AT_KHO'
+                            ? 'bg-slate-700 text-white shadow-sm'
+                            : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
+                        }`}
+                      >
+                        🏢 Tại Kho ({mobileEquipments.filter(e => e.status !== 'Hư' && (!e.current_location || e.current_location === 'KHO')).length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEquipFilterStatus('DAMAGED')}
+                        className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                          equipFilterStatus === 'DAMAGED'
+                            ? 'bg-rose-600 text-white shadow-sm'
+                            : 'bg-white text-rose-700 hover:bg-rose-50 border border-slate-200'
+                        }`}
+                      >
+                        ⚠️ Máy Hỏng ({mobileEquipments.filter(e => e.status === 'Hư').length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEquipFilterStatus('MPD')}
+                        className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                          equipFilterStatus === 'MPD'
+                            ? 'bg-indigo-600 text-white shadow-sm'
+                            : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
+                        }`}
+                      >
+                        🚗 MPĐ ({mobileEquipments.filter(e => (e.type || '').toUpperCase().includes('MPĐ') || (e.equipment_code || '').includes('MPD')).length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEquipFilterStatus('PIN')}
+                        className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                          equipFilterStatus === 'PIN'
+                            ? 'bg-purple-600 text-white shadow-sm'
+                            : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
+                        }`}
+                      >
+                        🔋 Pin ({mobileEquipments.filter(e => (e.type || '').toUpperCase().includes('PIN') || (e.equipment_code || '').includes('PIN')).length})
+                      </button>
+                    </div>
+
+                    {/* Action Buttons Right on the tab */}
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleExportMobileEquipment}
+                        className="inline-flex items-center justify-center px-4 py-1.5 text-xs font-bold rounded-lg text-white bg-emerald-600 hover:bg-emerald-700 shadow-sm transition-all cursor-pointer h-[32px] gap-1.5"
+                        title="Xuất file Excel đầy đủ 2 Sheet: Danh mục thiết bị lưu động & Lịch sử điều chuyển"
+                      >
+                        <Download size={14} />
+                        <span>📥 Xuất File Excel</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowDailyReportModal(true)}
+                        className="inline-flex items-center justify-center px-3.5 py-1.5 text-xs font-bold rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition-all cursor-pointer h-[32px] gap-1.5"
+                        title="Xem văn bản báo cáo vị trí và copy 1-click gửi Zalo"
+                      >
+                        <ClipboardList size={14} />
+                        <span>📋 Báo Cáo Zalo</span>
+                      </button>
+                      {user && (
+                        <button
+                          type="button"
+                          onClick={() => { resetEquipForm(); setShowAddEquipModal(true); }}
+                          className="inline-flex items-center justify-center px-3.5 py-1.5 text-xs font-bold rounded-lg text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-all cursor-pointer h-[32px] gap-1"
+                        >
+                          <Plus size={14} />
+                          <span>Thêm Máy</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
                   {/* Grid/Table danh sách thiết bị di động */}
                   {filteredEquip.length === 0 ? (
-                    <div className="text-center py-10 text-slate-400">Không tìm thấy thiết bị lưu động nào.</div>
+                    <div className="text-center py-10 text-slate-400">Không tìm thấy thiết bị lưu động nào phù hợp.</div>
                   ) : (
                     <>
                       {/* Desktop View Table */}
-                      <div className="hidden lg:block w-full overflow-x-auto border border-slate-100 rounded-xl bg-white shadow-sm">
+                      <div className="hidden lg:block w-full overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-sm">
                         <table className="min-w-full divide-y divide-gray-200 text-left">
-                          <thead className="bg-slate-50 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                          <thead className="bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                             <tr>
-                              <th scope="col" className="px-4 py-3">Mã thiết bị</th>
-                              <th scope="col" className="px-4 py-3">Loại</th>
-                              <th scope="col" className="px-4 py-3">Thông số kỹ thuật</th>
-                              <th scope="col" className="px-4 py-3">Trạng thái</th>
-                              <th scope="col" className="px-4 py-3">Vị trí hiện tại</th>
-                              <th scope="col" className="px-4 py-3">Ghi chú</th>
-                              <th scope="col" className="px-4 py-3 text-right">Thao tác</th>
+                              <th scope="col" className="px-3.5 py-3">Mã Thiết Bị</th>
+                              <th scope="col" className="px-3 py-3">Phân Loại</th>
+                              <th scope="col" className="px-3.5 py-3">Thông Số & Model</th>
+                              <th scope="col" className="px-3 py-3">Mã OID / Serial</th>
+                              <th scope="col" className="px-3 py-3">Đưa Vào SD</th>
+                              <th scope="col" className="px-3 py-3">Trạng Thái</th>
+                              <th scope="col" className="px-3.5 py-3">Vị Trí Hiện Tại</th>
+                              <th scope="col" className="px-3.5 py-3">Ghi Chú Vận Hành</th>
+                              <th scope="col" className="px-3.5 py-3 text-right">Thao Tác</th>
                             </tr>
                           </thead>
-                          <tbody className="bg-white divide-y divide-gray-100 text-[13px] text-gray-700">
+                          <tbody className="bg-white divide-y divide-gray-100 text-[12px] text-gray-700">
                             {filteredEquip.map((eq) => {
                               const isGood = eq.status === 'Tốt';
                               const atKho = eq.current_location === 'KHO';
                               return (
-                                <tr key={eq.id} className={`hover:bg-slate-50/50 transition-colors ${!isGood ? 'bg-red-50/10' : ''}`}>
-                                  <td className="px-4 py-3 whitespace-nowrap font-extrabold text-slate-800">{eq.equipment_code}</td>
-                                  <td className="px-4 py-3 whitespace-nowrap font-medium text-slate-600">{eq.type}</td>
-                                  <td className="px-4 py-3 max-w-xs truncate text-slate-600" title={eq.specifications}>{eq.specifications || '—'}</td>
-                                  <td className="px-4 py-3 whitespace-nowrap">
-                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isGood ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
-                                      {eq.status}
+                                <tr key={eq.id} className={`hover:bg-slate-50/70 transition-colors ${!isGood ? 'bg-red-50/20' : ''}`}>
+                                  {/* Mã thiết bị */}
+                                  <td className="px-3.5 py-2.5 whitespace-nowrap">
+                                    <span className="font-extrabold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 font-mono text-[13px]">
+                                      {eq.equipment_code}
                                     </span>
                                   </td>
-                                  <td className="px-4 py-3 whitespace-nowrap">
-                                    <span className={`font-bold px-2 py-0.5 rounded text-[11px] ${atKho ? 'bg-blue-50 text-blue-700 border border-blue-100' : 'bg-orange-50 text-orange-700 border border-orange-100'}`}>
-                                      {eq.current_location === 'KHO' ? 'KHO' : `${getSiteIds(eq.current_location).oldId} (${getSiteIds(eq.current_location).newId})`}
-                                    </span>
+
+                                  {/* Loại */}
+                                  <td className="px-3 py-2.5 whitespace-nowrap">
+                                    <span className="font-semibold text-slate-600 text-xs">{eq.type}</span>
                                   </td>
-                                  <td className="px-4 py-3 max-w-xs truncate text-slate-500 italic" title={eq.notes}>{eq.notes || '—'}</td>
-                                  <td className="px-4 py-3 whitespace-nowrap text-right">
-                                    {user && (
-                                      <div className="flex justify-end items-center gap-2">
-                                        <button
-                                          onClick={() => handleEditEquip(eq)}
-                                          className="text-[12px] font-bold px-3 py-1 rounded-lg text-blue-600 border border-blue-200 bg-white hover:bg-slate-50 cursor-pointer shadow-sm transition-colors flex items-center gap-1"
-                                        >
-                                          <Edit size={12} /> Sửa
-                                        </button>
-                                        <button
-                                          onClick={() => handleStartTransfer(eq)}
-                                          className="text-[12px] font-bold px-3 py-1 rounded-lg text-white bg-blue-600 hover:bg-blue-700 cursor-pointer shadow-sm transition-colors"
-                                        >
-                                          Điều chuyển
-                                        </button>
+
+                                  {/* Thông số & Model */}
+                                  <td className="px-3.5 py-2.5 max-w-[200px]">
+                                    <div className="font-bold text-slate-800 truncate" title={eq.specifications || eq.brand}>
+                                      {eq.brand ? `${eq.brand} ${eq.model || ''}` : (eq.specifications || '—')}
+                                    </div>
+                                    {eq.power_kva && (
+                                      <div className="text-[11px] text-slate-500 font-medium">
+                                        {eq.power_kva} kVA • {eq.fuel_type || 'Xăng'}
                                       </div>
                                     )}
+                                  </td>
+
+                                  {/* Mã OID / Serial */}
+                                  <td className="px-3 py-2.5 whitespace-nowrap text-[11px] font-mono">
+                                    {eq.eam_oid ? (
+                                      <div className="text-blue-700 font-bold" title={`Mã OID EAM: ${eq.eam_oid}`}>
+                                        OID: {eq.eam_oid}
+                                      </div>
+                                    ) : null}
+                                    {eq.serial_number ? (
+                                      <div className="text-slate-500" title={`Số Serial: ${eq.serial_number}`}>
+                                        S/N: {eq.serial_number}
+                                      </div>
+                                    ) : (
+                                      !eq.eam_oid && <span className="text-slate-400 font-sans italic">—</span>
+                                    )}
+                                  </td>
+
+                                  {/* Ngày đưa vào SD */}
+                                  <td className="px-3 py-2.5 whitespace-nowrap font-medium text-slate-600 text-xs">
+                                    {eq.commissioning_date || '—'}
+                                  </td>
+
+                                  {/* Trạng thái */}
+                                  <td className="px-3 py-2.5 whitespace-nowrap">
+                                    <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                                      isGood ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800 border border-rose-200'
+                                    }`}>
+                                      {eq.status || 'Tốt'}
+                                    </span>
+                                  </td>
+
+                                  {/* Vị trí hiện tại */}
+                                  <td className="px-3.5 py-2.5 whitespace-nowrap">
+                                    <span className={`font-bold px-2 py-0.5 rounded text-[11px] inline-flex items-center gap-1 ${
+                                      atKho ? 'bg-slate-100 text-slate-700 border border-slate-200' : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                                    }`}>
+                                      <span>{atKho ? '🏢' : '📍'}</span>
+                                      <span>{getEquipLocationLabel(eq.current_location)}</span>
+                                    </span>
+                                  </td>
+
+                                  {/* Ghi chú */}
+                                  <td className="px-3.5 py-2.5 max-w-[180px] truncate text-slate-500 text-xs italic" title={eq.notes}>
+                                    {eq.notes || '—'}
+                                  </td>
+
+                                  {/* Thao tác */}
+                                  <td className="px-3.5 py-2.5 whitespace-nowrap text-right">
+                                    <div className="flex justify-end items-center gap-1.5">
+                                      {/* Xem hồ sơ EAM */}
+                                      <button
+                                        type="button"
+                                        onClick={() => setSelectedEquipDetail(eq)}
+                                        className="p-1 rounded-lg text-slate-500 hover:text-orange-600 hover:bg-orange-50 transition-colors cursor-pointer border border-transparent hover:border-orange-200"
+                                        title="Xem đầy đủ Hồ sơ tài sản & Thông số kỹ thuật EAM"
+                                      >
+                                        <Eye size={15} />
+                                      </button>
+
+                                      {user && (
+                                        <>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleEditEquip(eq)}
+                                            className="text-[11px] font-bold px-2.5 py-1 rounded-lg text-blue-600 border border-blue-200 bg-white hover:bg-blue-50 cursor-pointer shadow-sm transition-colors flex items-center gap-1"
+                                            title="Chỉnh sửa thông số thiết bị và tài sản"
+                                          >
+                                            <Edit size={11} /> Sửa
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleStartTransfer(eq)}
+                                            className="text-[11px] font-bold px-2.5 py-1 rounded-lg text-white bg-blue-600 hover:bg-blue-700 cursor-pointer shadow-sm transition-colors"
+                                            title="Thực hiện điều chuyển vị trí thiết bị"
+                                          >
+                                            Điều chuyển
+                                          </button>
+                                        </>
+                                      )}
+                                    </div>
                                   </td>
                                 </tr>
                               );
@@ -1545,47 +1927,85 @@ export default function DailyWork() {
                       </div>
 
                       {/* Mobile View Card Grid */}
-                      <div className="lg:hidden grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="lg:hidden grid grid-cols-1 md:grid-cols-2 gap-3.5">
                         {filteredEquip.map((eq) => {
                           const isGood = eq.status === 'Tốt';
                           const atKho = eq.current_location === 'KHO';
                           return (
-                            <div key={eq.id} className={`rounded-xl border p-4 shadow-sm flex flex-col justify-between transition-all hover:shadow-md bg-white ${isGood ? 'border-slate-200' : 'border-red-100 bg-red-50/10'}`}>
+                            <div key={eq.id} className={`rounded-xl border p-4 shadow-sm flex flex-col justify-between transition-all hover:shadow-md bg-white ${isGood ? 'border-slate-200' : 'border-red-200 bg-red-50/10'}`}>
                               <div>
                                 <div className="flex justify-between items-start mb-2">
-                                  <span className="font-extrabold text-slate-800 text-sm">{eq.equipment_code}</span>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-extrabold text-blue-700 text-sm font-mono bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                                      {eq.equipment_code}
+                                    </span>
+                                    <span className="text-xs text-slate-500 font-semibold">{eq.type}</span>
+                                  </div>
                                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isGood ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
                                     {eq.status}
                                   </span>
                                 </div>
-                                <div className="space-y-1 text-[13px]">
-                                  <div><span className="text-slate-400 font-semibold">Loại:</span> <span className="font-semibold">{eq.type}</span></div>
-                                  <div><span className="text-slate-400 font-semibold">Thông số:</span> <span>{eq.specifications || '—'}</span></div>
+
+                                <div className="space-y-1.5 text-xs">
                                   <div>
-                                    <span className="text-slate-400 font-semibold">Vị trí hiện tại:</span>{' '}
-                                    <span className={`font-bold px-2 py-0.5 rounded ${atKho ? 'bg-blue-50 text-blue-700 border border-blue-100' : 'bg-orange-50 text-orange-700 border border-orange-100'}`}>
-                                      {eq.current_location === 'KHO' ? 'KHO' : `${getSiteIds(eq.current_location).oldId} (${getSiteIds(eq.current_location).newId})`}
+                                    <span className="text-slate-400 font-semibold">Cấu hình:</span>{' '}
+                                    <span className="font-bold text-slate-800">
+                                      {eq.brand ? `${eq.brand} ${eq.model || ''}` : (eq.specifications || '—')}
                                     </span>
                                   </div>
-                                  {eq.notes && <div className="text-slate-400 text-xs mt-2 italic">"{eq.notes}"</div>}
+
+                                  {(eq.eam_oid || eq.serial_number) && (
+                                    <div className="text-[11px] font-mono text-slate-600 bg-slate-50 p-1.5 rounded border border-slate-100 flex flex-wrap gap-x-3 gap-y-1">
+                                      {eq.eam_oid && <span className="text-blue-700 font-bold">OID: {eq.eam_oid}</span>}
+                                      {eq.serial_number && <span>S/N: {eq.serial_number}</span>}
+                                    </div>
+                                  )}
+
+                                  {eq.commissioning_date && (
+                                    <div className="text-[11px] text-slate-500">
+                                      <span className="font-semibold text-slate-400">Đưa vào SD:</span> {eq.commissioning_date}
+                                    </div>
+                                  )}
+
+                                  <div>
+                                    <span className="text-slate-400 font-semibold">Vị trí hiện tại:</span>{' '}
+                                    <span className={`font-bold px-2 py-0.5 rounded text-[11px] ${atKho ? 'bg-slate-100 text-slate-700 border border-slate-200' : 'bg-emerald-50 text-emerald-800 border border-emerald-200'}`}>
+                                      {atKho ? '🏢 KHO TVT3' : `📍 ${getEquipLocationLabel(eq.current_location)}`}
+                                    </span>
+                                  </div>
+
+                                  {eq.notes && <div className="text-slate-500 text-xs mt-1.5 italic bg-amber-50/50 p-1.5 rounded border border-amber-100">"{eq.notes}"</div>}
                                 </div>
                               </div>
-                              {user && (
-                                <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end gap-2">
-                                  <button
-                                    onClick={() => handleEditEquip(eq)}
-                                    className="text-[12px] font-bold px-3 py-1.5 rounded-lg text-blue-600 border border-blue-200 bg-white hover:bg-slate-50 cursor-pointer shadow-sm transition-colors flex items-center gap-1"
-                                  >
-                                    <Edit size={12} /> Sửa
-                                  </button>
-                                  <button
-                                    onClick={() => handleStartTransfer(eq)}
-                                    className="text-[12px] font-bold px-3 py-1.5 rounded-lg text-white bg-blue-600 hover:bg-blue-700 cursor-pointer shadow-sm transition-colors animate-in"
-                                  >
-                                    Điều chuyển
-                                  </button>
-                                </div>
-                              )}
+
+                              <div className="mt-3.5 pt-2.5 border-t border-slate-100 flex items-center justify-between">
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedEquipDetail(eq)}
+                                  className="text-xs font-bold text-orange-700 hover:text-orange-800 flex items-center gap-1 cursor-pointer"
+                                >
+                                  <Eye size={13} /> Hồ sơ tài sản
+                                </button>
+
+                                {user && (
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleEditEquip(eq)}
+                                      className="text-[11px] font-bold px-2.5 py-1 rounded-lg text-blue-600 border border-blue-200 bg-white hover:bg-slate-50 cursor-pointer shadow-sm transition-colors flex items-center gap-1"
+                                    >
+                                      <Edit size={11} /> Sửa
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleStartTransfer(eq)}
+                                      className="text-[11px] font-bold px-2.5 py-1 rounded-lg text-white bg-blue-600 hover:bg-blue-700 cursor-pointer shadow-sm transition-colors"
+                                    >
+                                      Điều chuyển
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           );
                         })}
@@ -1971,12 +2391,20 @@ export default function DailyWork() {
       {/* MODAL 3: ADD / EDIT MOBILE EQUIPMENT */}
       {showAddEquipModal && (
         <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 flex items-center justify-between text-white">
-              <h2 className="font-bold text-lg flex items-center gap-2">
-                <Zap size={20} /> {editingEquip ? "Cập nhật thiết bị lưu động" : "Thêm thiết bị lưu động mới"}
-              </h2>
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 px-6 py-4 flex items-center justify-between text-white shrink-0">
+              <div className="flex items-center gap-2.5">
+                <span className="p-1.5 bg-white/20 rounded-lg">⚡</span>
+                <div>
+                  <h2 className="font-bold text-base leading-tight">
+                    {editingEquip ? `Cập nhật thiết bị: ${editingEquip.equipment_code}` : "Thêm mới thiết bị lưu động"}
+                  </h2>
+                  <p className="text-xs text-blue-100">Quản lý định danh tài sản EAM & Cấu hình kỹ thuật</p>
+                </div>
+              </div>
               <button 
+                type="button"
                 onClick={() => { resetEquipForm(); setShowAddEquipModal(false); }}
                 className="p-1 hover:bg-white/10 rounded-full transition-colors text-white/80 hover:text-white cursor-pointer"
               >
@@ -1984,82 +2412,195 @@ export default function DailyWork() {
               </button>
             </div>
 
-            <form onSubmit={handleSaveEquip} className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Mã thiết bị</label>
-                  <input 
-                    type="text" 
-                    placeholder="VD: MPD-05, PIN-03..."
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 uppercase"
-                    value={equipCode}
-                    onChange={(e) => setEquipCode(e.target.value)}
-                  />
+            {/* Modal Form - Scrollable */}
+            <form onSubmit={handleSaveEquip} className="p-6 space-y-4 overflow-y-auto flex-1 text-xs text-slate-700">
+              {/* Group 1: Định danh thiết bị */}
+              <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+                <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                  <span>1. Định danh thiết bị & Phân loại</span>
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Loại thiết bị</label>
-                  <select 
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                    value={equipType}
-                    onChange={(e) => setEquipType(e.target.value)}
-                  >
-                    <option value="MPĐ">Máy phát điện di động (MPĐ)</option>
-                    <option value="Pin">Tổ Pin di động (Pin)</option>
-                    <option value="Khác">Khác</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Thông số kỹ thuật</label>
-                  <input 
-                    type="text" 
-                    placeholder="VD: 5KVA, 48V/100Ah..."
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                    value={equipSpecs}
-                    onChange={(e) => setEquipSpecs(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
-                    {editingEquip ? "Tình trạng hiện tại" : "Tình trạng ban đầu"}
-                  </label>
-                  <select 
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                    value={equipStatus}
-                    onChange={(e) => setEquipStatus(e.target.value)}
-                  >
-                    <option value="Tốt">Hoạt động tốt</option>
-                    <option value="Hư">Đang hư hỏng</option>
-                  </select>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">Mã thiết bị *</label>
+                    <input 
+                      type="text" 
+                      placeholder="VD: MPD-01, PIN-01"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg font-bold uppercase focus:ring-1 focus:ring-blue-500 bg-white"
+                      value={equipCode}
+                      onChange={(e) => setEquipCode(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">Loại thiết bị *</label>
+                    <select 
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg font-bold focus:ring-1 focus:ring-blue-500 bg-white"
+                      value={equipType}
+                      onChange={(e) => setEquipType(e.target.value)}
+                    >
+                      <option value="MPĐ">Máy phát điện di động (MPĐ)</option>
+                      <option value="Pin">Tổ Pin di động (Pin)</option>
+                      <option value="Khác">Khác</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">Tình trạng máy</label>
+                    <select 
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg font-bold focus:ring-1 focus:ring-blue-500 bg-white"
+                      value={equipStatus}
+                      onChange={(e) => setEquipStatus(e.target.value)}
+                    >
+                      <option value="Tốt">Hoạt động tốt</option>
+                      <option value="Hư">Đang hư hỏng</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
+              {/* Group 2: Cấu hình kỹ thuật */}
+              <div className="p-3.5 bg-orange-50/40 rounded-xl border border-orange-100 space-y-3">
+                <div className="text-[11px] font-bold text-orange-800 uppercase tracking-wider flex items-center gap-1.5">
+                  <Zap size={13} className="text-orange-500" />
+                  <span>2. Cấu hình kỹ thuật & Thông số máy</span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">Nhãn hiệu / Hãng SX</label>
+                    <input 
+                      type="text" 
+                      placeholder="VD: KYO POWER, HUYNDAI..."
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-1 focus:ring-orange-500 bg-white uppercase"
+                      value={equipBrand}
+                      onChange={(e) => setEquipBrand(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">Model máy</label>
+                    <input 
+                      type="text" 
+                      placeholder="VD: 5.5kVA, HG7500..."
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-1 focus:ring-orange-500 bg-white"
+                      value={equipModel}
+                      onChange={(e) => setEquipModel(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">Công suất (kVA)</label>
+                    <input 
+                      type="number" 
+                      step="0.1"
+                      placeholder="VD: 5.5 hoặc 7"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-1 focus:ring-orange-500 bg-white"
+                      value={equipPower}
+                      onChange={(e) => setEquipPower(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">Nhiên liệu</label>
+                    <select 
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-1 focus:ring-orange-500 bg-white font-medium"
+                      value={equipFuel}
+                      onChange={(e) => setEquipFuel(e.target.value)}
+                    >
+                      <option value="Xăng">Xăng</option>
+                      <option value="Dầu Diesel">Dầu Diesel</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 pt-1">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">Dung tích bình (Lít)</label>
+                    <input 
+                      type="number" 
+                      step="0.5"
+                      placeholder="VD: 15, 25, 30..."
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-1 focus:ring-orange-500 bg-white"
+                      value={equipTank}
+                      onChange={(e) => setEquipTank(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">Thông số tóm tắt (Web)</label>
+                    <input 
+                      type="text" 
+                      placeholder="VD: KYO POWER 5.5kVA (Xăng)"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-1 focus:ring-orange-500 bg-white"
+                      value={equipSpecs}
+                      onChange={(e) => setEquipSpecs(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Group 3: Quản lý tài sản EAM */}
+              <div className="p-3.5 bg-blue-50/40 rounded-xl border border-blue-100 space-y-3">
+                <div className="text-[11px] font-bold text-blue-800 uppercase tracking-wider flex items-center gap-1.5">
+                  <FileText size={13} className="text-blue-500" />
+                  <span>3. Định danh tài sản EAM & Lô trang bị</span>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">Số Chế Tạo / Serial</label>
+                    <input 
+                      type="text" 
+                      placeholder="VD: 211029193"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg font-mono focus:ring-1 focus:ring-blue-500 bg-white"
+                      value={equipSerial}
+                      onChange={(e) => setEquipSerial(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">Mã OID EAM</label>
+                    <input 
+                      type="text" 
+                      placeholder="VD: 471501868"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg font-mono focus:ring-1 focus:ring-blue-500 bg-white text-blue-700 font-bold"
+                      value={equipOid}
+                      onChange={(e) => setEquipOid(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">Ngày đưa vào SD</label>
+                    <input 
+                      type="text" 
+                      placeholder="VD: 15/07/2021"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-1 focus:ring-blue-500 bg-white"
+                      value={equipDate}
+                      onChange={(e) => setEquipDate(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Group 4: Ghi chú */}
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Ghi chú</label>
+                <label className="block text-[11px] font-bold text-slate-600 mb-1">Ghi chú vận hành</label>
                 <input 
                   type="text" 
-                  placeholder="Ghi chú thêm..."
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Ghi chú thêm (VD: Máy hỏng - Chờ sửa chữa, đứt dây kéo giật...)"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-1 focus:ring-blue-500 bg-white"
                   value={equipNotes}
                   onChange={(e) => setEquipNotes(e.target.value)}
                 />
               </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+              {/* Form Footer */}
+              <div className="flex justify-end gap-2.5 pt-3 border-t border-slate-100">
                 <button 
                   type="button"
                   onClick={() => { resetEquipForm(); setShowAddEquipModal(false); }}
-                  className="px-4 py-2 border border-slate-200 text-sm font-semibold rounded-lg text-slate-600 hover:bg-slate-50 cursor-pointer"
+                  className="px-4 py-2 border border-slate-200 text-xs font-semibold rounded-lg text-slate-600 hover:bg-slate-50 cursor-pointer"
                 >
                   Hủy bỏ
                 </button>
                 <button 
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 shadow-sm transition-all cursor-pointer"
+                  className="px-5 py-2 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 shadow-sm transition-all cursor-pointer flex items-center gap-1.5"
                 >
-                  {editingEquip ? "Cập nhật" : "Thêm thiết bị"}
+                  <Check size={14} />
+                  <span>{editingEquip ? "Cập nhật hồ sơ" : "Thêm thiết bị"}</span>
                 </button>
               </div>
             </form>
@@ -2090,7 +2631,7 @@ export default function DailyWork() {
                   type="text" 
                   readOnly
                   className="w-full px-3 py-2 border border-slate-100 bg-slate-50 rounded-lg text-sm focus:outline-none text-slate-500 font-bold"
-                  value={getSiteLabel(selectedEquip.current_location)}
+                  value={getEquipLocationLabel(selectedEquip.current_location)}
                 />
               </div>
 
@@ -2148,6 +2689,245 @@ export default function DailyWork() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* MODAL 0B: BÁO CÁO NHANH VỊ TRÍ HÀNG NGÀY (GỬI ZALO / TELEGRAM) */}
+      {showDailyReportModal && (
+        <div className="fixed inset-0 z-[110] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-xl overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 flex items-center justify-between text-white">
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 bg-white/20 rounded-lg">📋</span>
+                <div>
+                  <h2 className="font-bold text-base leading-tight">
+                    Báo Cáo Nhanh Vị Trí MPĐ & Pin Lưu Động
+                  </h2>
+                  <p className="text-xs text-indigo-100">Văn bản định dạng sẵn 1-Click Copy gửi nhóm Zalo / Telegram</p>
+                </div>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setShowDailyReportModal(false)}
+                className="p-1 hover:bg-white/10 rounded-full transition-colors text-white/80 hover:text-white cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* Summary stat tags */}
+              <div className="flex flex-wrap gap-2 text-xs">
+                <span className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 font-bold border border-blue-200">
+                  🚗 28 MPĐ Lưu động
+                </span>
+                <span className="px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 font-bold border border-purple-200">
+                  🔋 8 Pin Lưu động
+                </span>
+                <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
+                  📍 {mobileEquipments.filter(e => e.status !== 'Hư' && e.current_location && e.current_location !== 'KHO').length} Tại trạm
+                </span>
+                <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 font-bold border border-slate-200">
+                  🏢 {mobileEquipments.filter(e => e.status !== 'Hư' && (!e.current_location || e.current_location === 'KHO')).length} Tại kho
+                </span>
+                <span className="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 font-bold border border-rose-200">
+                  ⚠️ {mobileEquipments.filter(e => e.status === 'Hư').length} Máy hỏng
+                </span>
+              </div>
+
+              {/* Text content preview */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                  <span>Nội dung tin nhắn báo cáo</span>
+                  <span className="text-[11px] text-slate-400 font-normal">Được format tự động theo thời gian thực</span>
+                </label>
+                <textarea
+                  readOnly
+                  rows={13}
+                  value={generateDailyReportText()}
+                  className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-800 leading-relaxed focus:outline-none select-all"
+                />
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                <span className="text-xs text-slate-500 italic">
+                  💡 Nhấn nút bên phải để copy nhanh và dán (Ctrl+V) vào nhóm Zalo
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowDailyReportModal(false)}
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    Đóng
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCopyDailyReport}
+                    className={`px-5 py-2 rounded-lg text-xs font-bold transition-all shadow-md flex items-center gap-1.5 cursor-pointer ${
+                      copiedDailyReport 
+                        ? 'bg-emerald-600 text-white' 
+                        : 'bg-blue-600 hover:bg-blue-700 text-white'
+                    }`}
+                  >
+                    {copiedDailyReport ? (
+                      <>
+                        <Check size={16} />
+                        <span>✅ Đã copy vào Clipboard!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy size={16} />
+                        <span>📋 Sao Chép Báo Cáo</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 0C: CHI TIẾT HỒ SƠ TÀI SẢN THIẾT BỊ LƯU ĐỘNG */}
+      {selectedEquipDetail && (
+        <div className="fixed inset-0 z-[115] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-xl overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="bg-gradient-to-r from-orange-600 to-amber-600 px-6 py-4 flex items-center justify-between text-white">
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 bg-white/20 rounded-lg">⚙️</span>
+                <div>
+                  <h2 className="font-bold text-base leading-tight">
+                    Hồ Sơ Tài Sản: {selectedEquipDetail.equipment_code}
+                  </h2>
+                  <p className="text-xs text-orange-100">Dữ liệu tài sản quản lý đồng bộ từ hệ thống EAM MobiFone</p>
+                </div>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setSelectedEquipDetail(null)}
+                className="p-1 hover:bg-white/10 rounded-full transition-colors text-white/80 hover:text-white cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 text-xs text-slate-700">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase">Mã Thiết Bị</div>
+                  <div className="text-sm font-black text-slate-900 mt-0.5">{selectedEquipDetail.equipment_code}</div>
+                </div>
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase">Phân Loại</div>
+                  <div className="text-sm font-bold text-slate-800 mt-0.5">{selectedEquipDetail.type}</div>
+                </div>
+              </div>
+
+              {/* Thông số kỹ thuật & Model */}
+              <div className="p-4 bg-orange-50/50 rounded-xl border border-orange-100 space-y-2">
+                <div className="text-xs font-bold text-orange-800 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                  <Zap size={14} className="text-orange-500" />
+                  <span>Thông Số Kỹ Thuật & Cấu Hình</span>
+                </div>
+                <div className="grid grid-cols-2 gap-y-2 gap-x-4">
+                  <div>
+                    <span className="text-slate-400">Nhãn hiệu:</span>{' '}
+                    <span className="font-bold text-slate-800">{selectedEquipDetail.brand || selectedEquipDetail.specifications}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Model máy:</span>{' '}
+                    <span className="font-bold text-slate-800">{selectedEquipDetail.model || selectedEquipDetail.specifications}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Công suất:</span>{' '}
+                    <span className="font-bold text-slate-800">{selectedEquipDetail.power_kva ? `${selectedEquipDetail.power_kva} kVA` : '5.5 - 7 kVA'}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Nhiên liệu:</span>{' '}
+                    <span className="font-bold text-slate-800">{selectedEquipDetail.fuel_type || 'Xăng'}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Dung tích bình:</span>{' '}
+                    <span className="font-bold text-slate-800">{selectedEquipDetail.fuel_tank_capacity ? `${selectedEquipDetail.fuel_tank_capacity} Lít` : '25 - 35 Lít'}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Số pha:</span>{' '}
+                    <span className="font-bold text-slate-800">1 Phase</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quản lý tài sản & EAM */}
+              <div className="p-4 bg-blue-50/50 rounded-xl border border-blue-100 space-y-2">
+                <div className="text-xs font-bold text-blue-800 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                  <FileText size={14} className="text-blue-500" />
+                  <span>Định Danh Tài Sản EAM & Lô Trang Bị</span>
+                </div>
+                <div className="grid grid-cols-2 gap-y-2 gap-x-4">
+                  <div>
+                    <span className="text-slate-400">Số Chế Tạo (Serial):</span>{' '}
+                    <span className="font-mono font-bold text-slate-900 bg-white px-2 py-0.5 rounded border border-blue-200 inline-block">
+                      {selectedEquipDetail.serial_number || 'Không có S/N gốc'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Mã Đối Tượng (OID):</span>{' '}
+                    <span className="font-mono font-bold text-blue-700 bg-white px-2 py-0.5 rounded border border-blue-200 inline-block">
+                      {selectedEquipDetail.eam_oid || 'Chưa cập nhật'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Ngày đưa vào SD:</span>{' '}
+                    <span className="font-bold text-slate-800">{selectedEquipDetail.commissioning_date || '—'}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Đơn vị chủ quản:</span>{' '}
+                    <span className="font-bold text-slate-800">Đài Viễn thông 3</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Hiện trạng & Vị trí */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase">Vị Trí Hiện Tại</div>
+                  <div className="text-xs font-black text-emerald-700 mt-1">
+                    📍 {getEquipLocationLabel(selectedEquipDetail.current_location)}
+                  </div>
+                </div>
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase">Tình Trạng Vận Hành</div>
+                  <div className="mt-1">
+                    <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                      selectedEquipDetail.status === 'Hư'
+                        ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                        : 'bg-emerald-100 text-emerald-800'
+                    }`}>
+                      {selectedEquipDetail.status || 'Tốt'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {selectedEquipDetail.notes && (
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-slate-600">
+                  <span className="font-bold text-slate-700">Ghi chú:</span> {selectedEquipDetail.notes}
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="pt-3 flex items-center justify-end gap-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setSelectedEquipDetail(null)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                >
+                  Đóng
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
