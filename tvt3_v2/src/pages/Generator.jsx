@@ -17,7 +17,8 @@ import {
   isSpecial67Site 
 } from '../utils/siteGroups';
 import { getFuelPriceForDate } from '../utils/fuelPrice';
-import { exportOfficialMFDReport, buildHDWorksheet, build02AWorksheet, exportSiteInvoiceMapReport } from '../utils/mfdStatementExporter';
+import { exportOfficialMFDReport, buildHDWorksheet, build02AWorksheet, exportSiteInvoiceMapReport, getExcelJS, addHDSheet } from '../utils/mfdStatementExporter';
+import { saveAs } from 'file-saver';
 import { exportMobileEquipmentToExcel } from '../utils/excel';
 
 export default function Generator() {
@@ -856,13 +857,14 @@ export default function Generator() {
   };
 
   const exportInvoicesToExcel = async () => {
-    const XLSX = await getXLSX();
-    const wb = XLSX.utils.book_new();
+    const ExcelJS = await getExcelJS();
+    const wb = new ExcelJS.Workbook();
     const monthStr = filterMonth ? `T${String(filterMonth).padStart(2, '0')}` : 'Ca_Nam';
-    const groupLabel = selectedGroupFilter === 'group1' ? 'MobiFone Đồng Nai' : selectedGroupFilter === 'group2' ? 'MobiFone Toàn Cầu' : '';
-    const ws = buildHDWorksheet(filteredInvoices, filterMonth, filterYear, groupLabel);
-    XLSX.utils.book_append_sheet(wb, ws, 'HD');
-    XLSX.writeFile(wb, `Bang_Ke_Hoa_Don_Mau_HD_${monthStr}_${filterYear}.xlsx`);
+    const groupLabel = selectedGroupFilter === 'group1' ? 'MobiFone Đồng Nai - 67 Trạm Đặc Thù' : selectedGroupFilter === 'group2' ? 'MobiFone Toàn Cầu' : 'Toàn Bộ Hóa Đơn';
+    addHDSheet(wb, 'HD', filteredInvoices, filterMonth, filterYear, groupLabel);
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    saveAs(blob, `Bang_Ke_Hoa_Don_Mau_HD_${monthStr}_${filterYear}.xlsx`);
   };
 
   const exportInvoicesZip = async (targetGroup = 'current') => {
@@ -1086,10 +1088,10 @@ export default function Generator() {
     zip.file('00_INDEX_DANH_SACH_HOA_DON.html', indexHtml);
 
     try {
-      const wb = XLSX.utils.book_new();
-      const ws = buildHDWorksheet(targetInvs, filterMonth, filterYear, groupTitle);
-      XLSX.utils.book_append_sheet(wb, ws, 'HD');
-      const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      const ExcelJS = await getExcelJS();
+      const wb = new ExcelJS.Workbook();
+      addHDSheet(wb, 'HD', targetInvs, filterMonth, filterYear, groupTitle);
+      const excelBuffer = await wb.xlsx.writeBuffer();
       zip.file(`Bang_Ke_Hoa_Don_${groupName}_${monthStr}_${filterYear}.xlsx`, excelBuffer);
     } catch(e) {
       console.warn('Could not attach Excel to ZIP:', e);
