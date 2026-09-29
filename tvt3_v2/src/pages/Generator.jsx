@@ -3579,7 +3579,7 @@ export default function Generator() {
               <div className="flex items-center gap-2">
                 <MessageSquare className="w-5 h-5 text-blue-200" />
                 <h2 className="font-bold text-base">
-                  Báo Cáo Nhanh Vị Trí Thiết Bị Lưu Động (Zalo / Telegram)
+                  Báo Cáo Nhanh Vị Trí Thiết Bị Lưu Động (Viber)
                 </h2>
               </div>
               <button 
@@ -3628,7 +3628,7 @@ export default function Generator() {
               {/* Action buttons */}
               <div className="flex items-center justify-between pt-3 border-t border-slate-100">
                 <span className="text-xs text-slate-500 italic">
-                  💡 Nhấn nút bên phải để copy nhanh và dán (Ctrl+V) vào nhóm Zalo/Telegram
+                  💡 Nhấn nút bên phải để copy nhanh và dán (Ctrl+V) vào nhóm Viber
                 </span>
                 <div className="flex items-center gap-2">
                   <button
@@ -4093,10 +4093,10 @@ export default function Generator() {
               <button
                 onClick={() => setShowDailyReportModal(true)}
                 className="px-3.5 py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
-                title="Tạo báo cáo nhanh gửi Zalo / Telegram hàng ngày"
+                title="Tạo báo cáo nhanh gửi Viber hàng ngày"
               >
                 <MessageSquare size={14} />
-                <span>📋 Báo Cáo Zalo</span>
+                <span>📋 Báo Cáo Viber</span>
               </button>
 
               <button
@@ -4245,10 +4245,10 @@ export default function Generator() {
                     <button
                       onClick={() => setShowDailyReportModal(true)}
                       className="px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200"
-                      title="Báo cáo nhanh Zalo"
+                      title="Báo cáo nhanh Viber"
                     >
                       <MessageSquare size={13} />
-                      <span>📋 Báo Cáo Zalo</span>
+                      <span>📋 Báo Cáo Viber</span>
                     </button>
                     <button
                       onClick={handleExportMobileEquipment}

@@ -1038,10 +1038,10 @@ export default function DailyWork() {
                   type="button"
                   onClick={() => setShowDailyReportModal(true)}
                   className="inline-flex items-center justify-center px-3.5 py-1.5 text-[13px] font-bold rounded-lg text-indigo-700 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 shadow-sm transition-colors cursor-pointer h-[34px]"
-                  title="Tạo báo cáo nhanh vị trí MPĐ & Pin gửi nhóm Zalo / Telegram"
+                  title="Tạo báo cáo nhanh vị trí MPĐ & Pin gửi nhóm Viber"
                 >
                   <ClipboardList className="h-4 w-4 mr-1.5 text-indigo-600" />
-                  <span>Báo Cáo Zalo</span>
+                  <span>Báo Cáo Viber</span>
                 </button>
                 {user && (
                   <button 
@@ -1771,10 +1771,10 @@ export default function DailyWork() {
                         type="button"
                         onClick={() => setShowDailyReportModal(true)}
                         className="inline-flex items-center justify-center px-3.5 py-1.5 text-xs font-bold rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition-all cursor-pointer h-[32px] gap-1.5"
-                        title="Xem văn bản báo cáo vị trí và copy 1-click gửi Zalo"
+                        title="Xem văn bản báo cáo vị trí và copy 1-click gửi Viber"
                       >
                         <ClipboardList size={14} />
-                        <span>📋 Báo Cáo Zalo</span>
+                        <span>📋 Báo Cáo Viber</span>
                       </button>
                       {user && (
                         <button
@@ -2680,7 +2680,7 @@ export default function DailyWork() {
           </div>
         </div>
       )}
-      {/* MODAL 0B: BÁO CÁO NHANH VỊ TRÍ HÀNG NGÀY (GỬI ZALO / TELEGRAM) */}
+      {/* MODAL 0B: BÁO CÁO NHANH VỊ TRÍ HÀNG NGÀY (GỬI VIBER) */}
       {showDailyReportModal && (
         <div className="fixed inset-0 z-[110] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-xl overflow-hidden animate-in fade-in zoom-in duration-200">
@@ -2691,7 +2691,7 @@ export default function DailyWork() {
                   <h2 className="font-bold text-base leading-tight">
                     Báo Cáo Nhanh Vị Trí MPĐ & Pin Lưu Động
                   </h2>
-                  <p className="text-xs text-indigo-100">Văn bản định dạng sẵn 1-Click Copy gửi nhóm Zalo / Telegram</p>
+                  <p className="text-xs text-indigo-100">Văn bản định dạng sẵn 1-Click Copy gửi nhóm Viber</p>
                 </div>
               </div>
               <button 
@@ -2740,7 +2740,7 @@ export default function DailyWork() {
               {/* Action buttons */}
               <div className="flex items-center justify-between pt-3 border-t border-slate-100">
                 <span className="text-xs text-slate-500 italic">
-                  💡 Nhấn nút bên phải để copy nhanh và dán (Ctrl+V) vào nhóm Zalo
+                  💡 Nhấn nút bên phải để copy nhanh và dán (Ctrl+V) vào nhóm Viber
                 </span>
                 <div className="flex items-center gap-2">
                   <button
