@@ -31,20 +31,32 @@ export default function Sran5gProject() {
   const [selectedSite, setSelectedSite] = useState(null);
   const [isImportOpen, setIsImportOpen] = useState(false);
 
-  // Tải danh sách trạm thuộc TVT3 từ Supabase
+  // Tải đầy đủ danh sách trạm thuộc TVT3 từ Supabase (vượt giới hạn 1000 dòng mặc định)
   const fetchSites = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const { data, error: sbError } = await supabase
-        .from('sran_5g_tracker')
-        .select('*')
-        .order('site_id', { ascending: true });
+      // Supabase mặc định giới hạn 1000 dòng/query, toàn tỉnh có 1191 dòng nên fetch song song 2 dải range
+      const [res1, res2] = await Promise.all([
+        supabase
+          .from('sran_5g_tracker')
+          .select('*')
+          .range(0, 999)
+          .order('site_id', { ascending: true }),
+        supabase
+          .from('sran_5g_tracker')
+          .select('*')
+          .range(1000, 1999)
+          .order('site_id', { ascending: true })
+      ]);
 
-      if (sbError) throw sbError;
+      if (res1.error) throw res1.error;
+      if (res2.error) throw res2.error;
 
-      // Khóa cứng 384 trạm của 6 huyện TVT3
-      const tvt3Sites = (data || []).filter(s => isTvt3District(s.district));
+      const allData = [...(res1.data || []), ...(res2.data || [])];
+
+      // Lọc đầy đủ toàn bộ trạm thuộc 6 huyện TVT3 (bao gồm cả các trạm Xuân Lộc ở đuôi bảng)
+      const tvt3Sites = allData.filter(s => isTvt3District(s.district) || isTvt3District(s.raw_data?.District));
       setSites(tvt3Sites);
     } catch (err) {
       console.error('Lỗi nạp dữ liệu SRAN TVT3:', err);

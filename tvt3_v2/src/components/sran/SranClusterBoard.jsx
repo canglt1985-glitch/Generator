@@ -25,8 +25,11 @@ export default function SranClusterBoard({ sites = [], onSelectSite }) {
       const raw = site.raw_data || {};
       const cName = raw.Cluster_Name || raw.Cluster_New || site.cluster;
       if (cName) {
-        if (!map[cName]) map[cName] = [];
-        map[cName].push(site);
+        const key = String(cName).trim();
+        if (!map[key]) map[key] = [];
+        map[key].push(site);
+        const upper = key.toUpperCase();
+        if (!map[upper]) map[upper] = map[key];
       }
     });
     return map;
@@ -44,10 +47,15 @@ export default function SranClusterBoard({ sites = [], onSelectSite }) {
   // Tính toán số liệu thực tế cho từng Cụm
   const clustersWithLiveStats = useMemo(() => {
     return filteredClusters.map(c => {
-      const cSites = sitesByCluster[c.cluster] || sitesByCluster[c.c_old] || [];
+      const cKey = String(c.cluster || '').trim();
+      const cOldKey = String(c.c_old || '').trim();
+      const cSites = sitesByCluster[cKey] || 
+                     sitesByCluster[cKey.toUpperCase()] || 
+                     sitesByCluster[cOldKey] || 
+                     sitesByCluster[cOldKey.toUpperCase()] || [];
       
       const total4g = cSites.length || c.total_4g;
-      const swap4g = cSites.filter(isSite4GOnair).length;
+      const swap4g = cSites.length > 0 ? cSites.filter(isSite4GOnair).length : (c.swap_4g || 0);
       
       const sites5g = cSites.filter(isSite5G);
       const oa5g = sites5g.filter(isSite5GOnair);
@@ -55,7 +63,7 @@ export default function SranClusterBoard({ sites = [], onSelectSite }) {
       const pending4g = cSites.filter(s => !isSite4GOnair(s));
 
       const total5g = sites5g.length || c.total_5g;
-      const oa5gCount = oa5g.length || (c.oa_5g || 0);
+      const oa5gCount = sites5g.length > 0 ? oa5g.length : (c.oa_5g || 0);
 
       const swapPct = total4g ? Math.round((swap4g / total4g) * 100) : 0;
       const oa5gPct = total5g ? Math.round((oa5gCount / total5g) * 100) : 0;
