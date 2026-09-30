@@ -1,5 +1,27 @@
 # Changelog
 
+## [2026-09-30]
+### Fixed
+- **VHKT RAN Realtime Alarms Sync**:
+  - Khắc phục lỗi hiển thị 0 cảnh báo ("Hiện tại không có cảnh báo nào") trên giao diện điện thoại.
+  - Sửa lỗi định danh UUIDv5 sử dụng `sdate_str` nguyên bản thay cho `sdate_iso`, ngăn chặn xung đột vi phạm ràng buộc duy nhất `unique_alarm_key` (`409 Conflict`) trên bảng `smartw_alarms`.
+  - Bổ sung cơ chế fallback row-by-row và chỉ cho phép dọn dẹp (clear stale alarms) khi quá trình nạp dữ liệu hoàn tất thành công.
+  - Phục hồi và kích hoạt đồng bộ realtime 15 cảnh báo ACTIVE lên Supabase.
+- **SmartW Scraper Garbage Prevention**:
+  - Cập nhật `scraper.py` tự động xóa các ảnh chụp màn hình tạm (`debug_pre_submit_*.png` và `debug_post_submit_*.png`) ngay khi đăng nhập thành công.
+  - Rút ngắn thời gian lưu ảnh debug từ 24h xuống 2h trong `smartw_worker.py`.
+  - Tiêu hủy toàn bộ 121 file debug png tồn đọng, giải phóng gần 20MB dung lượng trong `backend/data/smartw/`.
+
+### Added
+- **Quản Lý Bảng Kê MFD & Hóa Đơn T8 - T9**:
+  - Tháng 8: Chuyển trả toàn bộ về thanh toán nội bộ hoàn toàn (Group 1: 106 ca / 39.80M, Group 2: 208 ca / 79.43M); không xuất gửi bảng kê Seath.
+  - Tháng 9: Bổ sung logic trễ ngẫu nhiên cho máy xăng lưu động do vận hành thủ công; lọc 22 HĐ Xăng dư (~25.6M) vào sheet loại trừ; gối đầu 7 HĐ Dầu từ kho dự phòng T8 đảm bảo phủ kín 100% không thiếu trạm nào.
+  - Tách Seath Group T9 chuẩn: Group 1 (141 ca / 47.93M), Group 2 (115 ca / 36.93M), Seath (30 ca / 9.94M).
+- **Rà Soát Dự Án SRAN 5G Huyện Định Quán**:
+  - Rà soát 16 vị trí trạm 5G Định Quán; đề xuất phương án trạm thay thế lân cận hợp lý cho `DNDQ15` (thay bằng `DNDQ17`/`DNDQ19`) và `DNDQ33` (thay bằng `DNDQ11`/`DNDQ02`).
+- **Codebase & Garbage Cleansing**:
+  - Dọn dẹp sạch các file Excel nháp test, log mồ côi `bot_mll.log`, thư mục `tvt3_v2/dist/` (6.4MB) và toàn bộ `__pycache__`, giải phóng tổng cộng ~26MB disk.
+
 ## [2026-09-29]
 ### Added
 - **Chuẩn Hóa Thể Thức Văn Bản Nghị Định 30/2020/NĐ-CP & MobiFone Đồng Nai**:
