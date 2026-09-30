@@ -92,7 +92,8 @@ export default function SranImportModal({ isOpen, onClose, onSuccess }) {
 
       const records = [];
       let tvt3Count = 0;
-      let tvt3Onair = 0;
+      let tvt3Swap = 0;
+      let tvt3Onair5g = 0;
       let tvt3Install = 0;
       let tvt3Delivered = 0;
       let tvt3_5g = 0;
@@ -121,12 +122,19 @@ export default function SranImportModal({ isOpen, onClose, onSuccess }) {
         if (newRect && !['0', 'None', 'null'].includes(newRect)) psParts.push(`Thêm Rectifier (+${newRect})`);
         const powerSolutionStr = psParts.length > 0 ? psParts.join(' | ') : null;
 
-        const onairAct = formatDateVal(
+        // Phân định rõ ràng: Ngày Swap 4G SRAN vs Ngày Onair 5G
+        const swapDateVal = formatDateVal(getVal(row, 'Onair_SRAN_Actual_Date'));
+        const onair5gVal = formatDateVal(
           getVal(row, 'Onair_Actual_Date') || 
-          getVal(row, 'Onair_SRAN_Actual_Date') || 
-          getVal(row, 'Onair_NR38_Actual_Date') || 
-          getVal(row, 'Onair_NR26_Actual_Date')
+          getVal(row, 'Onair_NR26_Actual_Date') || 
+          getVal(row, 'Onair_NR38_Actual_Date')
         );
+
+        const rawScope5g = String(getVal(row, '5G_Scope') || '').trim();
+        const scope5gVal = (!rawScope5g || ['none', 'null', '-'].includes(rawScope5g.toLowerCase())) ? null : rawScope5g;
+
+        const rawCfg5g = String(getVal(row, '5G_Config') || '').trim();
+        const config5gVal = (!rawCfg5g || ['none', 'null', '-', '0'].includes(rawCfg5g.toLowerCase())) ? null : rawCfg5g;
 
         const deliveryAct = formatDateVal(getVal(row, 'Delivery_Actual_Date'));
         const installAct = formatDateVal(getVal(row, 'Installation_Actual_Date') || getVal(row, 'Installation_Completed_Date'));
@@ -138,18 +146,32 @@ export default function SranImportModal({ isOpen, onClose, onSuccess }) {
           Swap_Order: String(getVal(row, 'Swap_Order') || '').trim() || null,
           Partner_Name: String(getVal(row, 'Partner_Name') || getVal(row, 'Partner_Sub') || getVal(row, 'DVT') || '').trim() || 'HTKT',
           DVT: String(getVal(row, 'DVT') || '').trim() || null,
-          Onair_SRAN_Actual_Date: formatDateVal(getVal(row, 'Onair_SRAN_Actual_Date')),
+          Onair_SRAN_Actual_Date: swapDateVal,
+          Swap_3G4G: swapDateVal,
+          Onair_Actual_Date: onair5gVal,
           Onair_NR38_Actual_Date: formatDateVal(getVal(row, 'Onair_NR38_Actual_Date')),
           Onair_NR26_Actual_Date: formatDateVal(getVal(row, 'Onair_NR26_Actual_Date')),
+          '5G_Scope': scope5gVal,
+          '5G_Config': config5gVal,
           Site_Status: String(getVal(row, 'Site_Status') || '').trim() || null,
           Monthly_Target_IM: String(getVal(row, 'Monthly_Target_IM') || '').trim() || null
         };
 
-        const has5g = Boolean(getVal(row, '5G_Scope') || getVal(row, '5G_Config') || rawInfo.Onair_NR38_Actual_Date || rawInfo.Onair_NR26_Actual_Date);
+        const s5gUpper = (scope5gVal || '').toUpperCase();
+        const c5gUpper = (config5gVal || '').toUpperCase();
+        const has5g = Boolean(
+          s5gUpper.includes('ADD 5G') || 
+          s5gUpper.includes('SWAP 5G') || 
+          s5gUpper.includes('REUSE 5G') || 
+          s5gUpper.includes('5G_ONLY') ||
+          (c5gUpper && (c5gUpper.includes('NR') || c5gUpper.includes('5G'))) ||
+          onair5gVal
+        );
 
         if (isTvt3) {
           tvt3Count++;
-          if (onairAct) tvt3Onair++;
+          if (swapDateVal) tvt3Swap++;
+          if (onair5gVal) tvt3Onair5g++;
           if (installAct) tvt3Install++;
           if (deliveryAct) tvt3Delivered++;
           if (has5g) tvt3_5g++;
@@ -165,8 +187,8 @@ export default function SranImportModal({ isOpen, onClose, onSuccess }) {
           unique_id: String(getVal(row, 'Unique_ID') || '').trim() || null,
           scope_3g4g: String(getVal(row, '3G4G_Scope') || '').trim() || null,
           config_3g4g: String(getVal(row, '3G4G Config') || '').trim() || null,
-          scope_5g: String(getVal(row, '5G_Scope') || '').trim() || null,
-          config_5g: String(getVal(row, '5G_Config') || '').trim() || null,
+          scope_5g: scope5gVal,
+          config_5g: config5gVal,
           swap_solution: String(getVal(row, 'Swap_Solution') || getVal(row, 'Solution_Remark') || '').trim() || null,
           power_solution: powerSolutionStr,
           monthly_target_im: String(getVal(row, 'Monthly_Target_IM') || '').trim() || null,
@@ -180,7 +202,8 @@ export default function SranImportModal({ isOpen, onClose, onSuccess }) {
           delivery_date: deliveryAct,
           install_date: installAct,
           integration_date: formatDateVal(getVal(row, 'Integration_Actual_Date') || getVal(row, '3G4G_Integration_Actual_Date')),
-          onair_date: onairAct,
+          swap_date: swapDateVal,
+          onair_date: onair5gVal,
           issue_type: String(getVal(row, 'Issue_Type') || '').trim() || null,
           remarks: String(getVal(row, 'Remarks') || getVal(row, 'Scope_Remarks') || '').trim() || null,
           raw_data: rawInfo,
@@ -201,7 +224,8 @@ export default function SranImportModal({ isOpen, onClose, onSuccess }) {
         records: dedupedRecords,
         tvt3Records: dedupedRecords.filter(r => r.is_tvt3),
         tvt3Count,
-        tvt3Onair,
+        tvt3Swap,
+        tvt3Onair5g,
         tvt3Install,
         tvt3Delivered,
         tvt3_5g
@@ -376,19 +400,19 @@ export default function SranImportModal({ isOpen, onClose, onSuccess }) {
                   <span className="text-[10px] text-slate-400 block">/ {parsedData.totalInFile} toàn tỉnh</span>
                 </div>
                 <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
-                  <span className="text-slate-500 text-[10px] block">TVT3 On-Air:</span>
-                  <span className="text-emerald-700 font-bold text-sm">{parsedData.tvt3Onair} trạm</span>
-                  <span className="text-[10px] text-emerald-600 block">({Math.round((parsedData.tvt3Onair / parsedData.tvt3Count) * 100)}%)</span>
+                  <span className="text-slate-500 text-[10px] block">Swap 4G SRAN:</span>
+                  <span className="text-cyan-700 font-bold text-sm">{parsedData.tvt3Swap} trạm</span>
+                  <span className="text-[10px] text-cyan-600 block">({Math.round((parsedData.tvt3Swap / parsedData.tvt3Count) * 100)}%)</span>
                 </div>
                 <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
-                  <span className="text-slate-500 text-[10px] block">TVT3 Đã Lắp:</span>
-                  <span className="text-blue-700 font-bold text-sm">{parsedData.tvt3Install} trạm</span>
-                  <span className="text-[10px] text-blue-600 block">({Math.round((parsedData.tvt3Install / parsedData.tvt3Count) * 100)}%)</span>
+                  <span className="text-slate-500 text-[10px] block">On-air 5G:</span>
+                  <span className="text-emerald-700 font-bold text-sm">{parsedData.tvt3Onair5g} trạm</span>
+                  <span className="text-[10px] text-emerald-600 block">({Math.round((parsedData.tvt3Onair5g / (parsedData.tvt3_5g || 1)) * 100)}% của 5G)</span>
                 </div>
                 <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
-                  <span className="text-slate-500 text-[10px] block">Vị trí 5G TVT3:</span>
+                  <span className="text-slate-500 text-[10px] block">Quy hoạch 5G:</span>
                   <span className="text-purple-700 font-bold text-sm">{parsedData.tvt3_5g} trạm</span>
-                  <span className="text-[10px] text-purple-600 block">Tiến độ 5G</span>
+                  <span className="text-[10px] text-purple-600 block">TVT3 / 151 trạm</span>
                 </div>
               </div>
 

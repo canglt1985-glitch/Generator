@@ -106,6 +106,16 @@ def main():
         if new_rect and new_rect not in ['0', 'None']: ps_parts.append(f'Thêm Rectifier (+{new_rect})')
         power_solution_str = ' | '.join(ps_parts) if ps_parts else None
 
+        # Phân định rõ ràng: Ngày Swap 4G SRAN vs Ngày Onair 5G
+        swap_date_val = format_date_str(get_val('Onair_SRAN_Actual_Date'))
+        onair_5g_val = format_date_str(get_val('Onair_Actual_Date') or get_val('Onair_NR26_Actual_Date') or get_val('Onair_NR38_Actual_Date'))
+
+        raw_scope_5g = str(get_val('5G_Scope') or '').strip()
+        scope_5g_val = None if (not raw_scope_5g or raw_scope_5g.lower() in ['none', 'null', '-']) else raw_scope_5g
+
+        raw_cfg_5g = str(get_val('5G_Config') or '').strip()
+        config_5g_val = None if (not raw_cfg_5g or raw_cfg_5g.lower() in ['none', 'null', '-', '0']) else raw_cfg_5g
+
         # Trích xuất raw_data bổ trợ cho UI
         raw_info = {
             "Cluster_New": str(get_val('Cluster_New') or '').strip() or None,
@@ -114,15 +124,16 @@ def main():
             "Swap_Order": str(get_val('Swap_Order') or '').strip() or None,
             "Partner_Name": str(get_val('Partner_Name') or get_val('Partner_Sub') or get_val('DVT') or '').strip() or 'HTKT',
             "DVT": str(get_val('DVT') or '').strip() or None,
-            "Onair_SRAN_Actual_Date": format_date_str(get_val('Onair_SRAN_Actual_Date')),
+            "Onair_SRAN_Actual_Date": swap_date_val,
+            "Swap_3G4G": swap_date_val,
+            "Onair_Actual_Date": onair_5g_val,
             "Onair_NR38_Actual_Date": format_date_str(get_val('Onair_NR38_Actual_Date')),
             "Onair_NR26_Actual_Date": format_date_str(get_val('Onair_NR26_Actual_Date')),
+            "5G_Scope": scope_5g_val,
+            "5G_Config": config_5g_val,
             "Site_Status": str(get_val('Site_Status') or '').strip() or None,
             "Monthly_Target_IM": str(get_val('Monthly_Target_IM') or '').strip() or None,
         }
-
-        # Ngày onair tổng hợp
-        onair_act = format_date_str(get_val('Onair_Actual_Date') or get_val('Onair_SRAN_Actual_Date') or get_val('Onair_NR38_Actual_Date') or get_val('Onair_NR26_Actual_Date'))
 
         record = {
             "site_id": site_id,
@@ -134,8 +145,8 @@ def main():
             "unique_id": str(get_val('Unique_ID') or '').strip() or None,
             "scope_3g4g": str(get_val('3G4G_Scope') or '').strip() or None,
             "config_3g4g": str(get_val('3G4G Config') or '').strip() or None,
-            "scope_5g": str(get_val('5G_Scope') or '').strip() or None,
-            "config_5g": str(get_val('5G_Config') or '').strip() or None,
+            "scope_5g": scope_5g_val,
+            "config_5g": config_5g_val,
             "swap_solution": str(get_val('Swap_Solution') or get_val('Solution_Remark') or '').strip() or None,
             "power_solution": power_solution_str,
             "monthly_target_im": str(get_val('Monthly_Target_IM') or '').strip() or None,
@@ -149,7 +160,8 @@ def main():
             "delivery_date": format_date_str(get_val('Delivery_Actual_Date')),
             "install_date": format_date_str(get_val('Installation_Actual_Date') or get_val('Installation_Completed_Date')),
             "integration_date": format_date_str(get_val('Integration_Actual_Date') or get_val('3G4G_Integration_Actual_Date')),
-            "onair_date": onair_act,
+            "swap_date": swap_date_val,
+            "onair_date": onair_5g_val,
             "issue_type": str(get_val('Issue_Type') or '').strip() or None,
             "remarks": str(get_val('Remarks') or get_val('Scope_Remarks') or '').strip() or None,
             "raw_data": raw_info,

@@ -231,14 +231,26 @@ const getSiteSranCategory = (site, sranMap) => {
   const isDual5g = Boolean(
     sran.raw_data?.Is_5G_Dual_Layer === true ||
     sran.raw_data?.['5G_Layers'] === 2 ||
+    (config5gUpper.includes('38') && config5gUpper.includes('26')) ||
     (scope5gUpper.includes('38') && scope5gUpper.includes('26')) ||
-    scope5gUpper.includes('+')
+    (config5gUpper.includes('+') && (config5gUpper.includes('NR') || config5gUpper.includes('38')))
   );
 
-  const is5g = isDual5g ||
-               (scope5gUpper && !scope5gUpper.includes('NONE') && scope5gUpper !== '-' && (scope5gUpper.includes('NR') || scope5gUpper.includes('5G') || scope5gUpper.includes('26') || scope5gUpper.includes('38'))) ||
-               (config5gUpper && config5gUpper.includes('5G')) ||
-               (sran.unique_id && String(sran.unique_id).toUpperCase().includes('5G'));
+  const has5gScope = (
+    scope5gUpper.includes('ADD 5G') || 
+    scope5gUpper.includes('SWAP 5G') || 
+    scope5gUpper.includes('REUSE 5G') || 
+    scope5gUpper.includes('5G_ONLY') ||
+    (scope5gUpper.includes('5G') && !scope5gUpper.includes('SWAP SRAN'))
+  );
+
+  const has5gConfig = (
+    Boolean(config5gUpper) && 
+    !['NONE', '0', '-', 'NULL', ''].includes(config5gUpper) &&
+    (config5gUpper.includes('NR') || config5gUpper.includes('5G') || config5gUpper.includes('26') || config5gUpper.includes('38'))
+  );
+
+  const is5g = isDual5g || has5gScope || has5gConfig;
 
   const cname = String(sran.raw_data?.Cluster_Name || '').toUpperCase();
   const cnew = String(sran.raw_data?.Cluster_New || '').toUpperCase();
@@ -252,25 +264,48 @@ const getSiteSranCategory = (site, sranMap) => {
     return false;
   });
 
-  // Cột BC on-air: Trạm đã phát sóng 5G khi có ngày ở cột On-air / BC on-air / OnAir 5G MBF
-  const rawOnairDate = sran.onair_date || sran.raw_data?.['On-air'] || sran.raw_data?.['OnAir 5G MBF'] || sran.raw_data?.['BC on-air'] || sran.raw_data?.['BC On-air'] || null;
-  const onair5gDate = rawOnairDate ? String(rawOnairDate).substring(0, 10) : null;
-  const hasOnair5g = Boolean(rawOnairDate);
+  // Cột BC on-air: Trạm đã phát sóng 5G khi CÓ QUY HOẠCH 5G (is5g) và có ngày ở cột On-air / BC on-air / OnAir 5G MBF / Onair_Actual_Date
+  const rawOnairDate = sran.onair_date || 
+                       sran.raw_data?.Onair_Actual_Date || 
+                       sran.raw_data?.Onair_NR26_Actual_Date || 
+                       sran.raw_data?.Onair_NR38_Actual_Date || 
+                       sran.raw_data?.['On-air'] || 
+                       sran.raw_data?.['OnAir 5G MBF'] || 
+                       sran.raw_data?.['BC on-air'] || 
+                       sran.raw_data?.['BC On-air'] || 
+                       null;
+  const onair5gDate = (is5g && rawOnairDate && !['none', 'null', '-', 'nan', '0'].includes(String(rawOnairDate).toLowerCase()))
+    ? String(rawOnairDate).substring(0, 10) 
+    : null;
+  const hasOnair5g = Boolean(onair5gDate);
 
-  // Cột Swap 3G4G: Trạm đã hoàn tất Swap 3G/4G ERA khi có ngày ở cột Swap 3G4G
-  const rawSwapDate = sran.raw_data?.['Swap 3G4G'] || sran.raw_data?.['Swap_3G4G'] || sran.raw_data?.['Swap 3G/4G'] || sran.swap_date || null;
-  const swapDate = rawSwapDate ? String(rawSwapDate).substring(0, 10) : null;
-  const hasSwap3g4g = Boolean(rawSwapDate);
+  // Cột Swap 4G SRAN: Trạm đã hoàn tất Swap 3G/4G SRAN khi có ngày ở cột Onair_SRAN_Actual_Date / Swap 3G4G / swap_date
+  const rawSwapDate = sran.swap_date || 
+                      sran.raw_data?.Onair_SRAN_Actual_Date || 
+                      sran.raw_data?.['Swap 3G4G'] || 
+                      sran.raw_data?.['Swap_3G4G'] || 
+                      sran.raw_data?.['Swap 3G/4G'] || 
+                      null;
+  const swapDate = (rawSwapDate && !['none', 'null', '-', 'nan', '0'].includes(String(rawSwapDate).toLowerCase()))
+    ? String(rawSwapDate).substring(0, 10) 
+    : null;
+  const hasSwap3g4g = Boolean(swapDate);
 
   const rawCfg = String(sran.config_3g4g || sran.raw_data?.['3G4G Config'] || '').toUpperCase();
   const rawSol = String(sran.raw_data?.['Swap Solution'] || sran.raw_data?.['Swap_Solution'] || '').toUpperCase();
   const is4gOnly = rawCfg.includes('4G ONLY') || (rawSol.includes('SWAP:4G') && !rawSol.includes('3G'));
   const config4g = (rawCfg === '0' || rawCfg === '-') ? null : (is4gOnly ? '4G Only' : 'SRAN');
 
+  const cleanConfig5g = is5g 
+    ? ((config5gUpper && !['NONE', '0', '-', 'NULL', ''].includes(config5gUpper)) 
+        ? (sran.config_5g || sran.raw_data?.['5G_Config']) 
+        : (isDual5g ? 'NR26 64T + NR38 64T' : 'NR26 32T'))
+    : null;
+
   const sranInfo = {
     site_id: sran.site_id,
     pack_po: sran.pack_po || sran.raw_data?.PO,
-    config_5g: sran.config_5g || sran.raw_data?.['5G_Scope'] || (isDual5g ? 'NR26 64T + NR38 64T' : is5g ? 'NR26 32T' : null),
+    config_5g: cleanConfig5g,
     config_4g: config4g,
     config_3g4g: sran.config_3g4g || sran.raw_data?.['3G4G Config'],
     onair_date: onair5gDate,
@@ -281,7 +316,8 @@ const getSiteSranCategory = (site, sranMap) => {
     in_swapped_cluster: hasSwap3g4g,
     is_dual_5g: isDual5g,
     has_swap_3g4g: hasSwap3g4g,
-    has_onair_5g: hasOnair5g
+    has_onair_5g: hasOnair5g,
+    is_5g: is5g
   };
 
   // 1. Trạm phát sóng 5G: ĐÃ CÓ BÁO CÁO ON-AIR (cột BC on-air)
@@ -902,11 +938,11 @@ export default function NetworkMap() {
             .select('project_id, planning_id_new, planning_id_old, latitude_survey, longitude_survey, latitude_plan, longitude_plan, survey_status, overall_status, skhcn_status, notes, conflict_notes, district, ward, address, priority, sharing_partner, shared_site_id'),
           supabase
             .from('sran_5g_tracker')
-            .select('site_id, site_id_old, scope_3g4g, config_3g4g, scope_5g, config_5g, onair_date, integration_date, install_date, survey_date, pack_po, district, unique_id, raw_data')
+            .select('site_id, site_id_old, scope_3g4g, config_3g4g, scope_5g, config_5g, swap_date, onair_date, integration_date, install_date, survey_date, pack_po, district, unique_id, raw_data')
             .range(0, 999),
           supabase
             .from('sran_5g_tracker')
-            .select('site_id, site_id_old, scope_3g4g, config_3g4g, scope_5g, config_5g, onair_date, integration_date, install_date, survey_date, pack_po, district, unique_id, raw_data')
+            .select('site_id, site_id_old, scope_3g4g, config_3g4g, scope_5g, config_5g, swap_date, onair_date, integration_date, install_date, survey_date, pack_po, district, unique_id, raw_data')
             .range(1000, 1999)
         ]);
 
