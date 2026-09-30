@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   Radio, Cpu, Layers, RefreshCw, Upload, AlertTriangle, 
-  CheckCircle2, Clock, MapPin, Database, ChevronRight,
-  Sparkles, Calendar, Activity, Zap
+  MapPin, Database, ChevronRight, Zap
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { 
@@ -11,7 +10,7 @@ import {
   isTvt3District 
 } from '../config/sranTvt3Config';
 
-// Re-export để tương thích với NetworkMap.jsx
+// Re-export để tương thích 100% với NetworkMap.jsx
 export { SRAN_TVT3_CLUSTERS, SRAN_TVT3_CLUSTERS as SRAN_25_CLUSTERS } from '../config/sranTvt3Config';
 
 // Import các component con
@@ -41,7 +40,7 @@ export default function Sran5gProject() {
 
       if (sbError) throw sbError;
 
-      // Lọc nghiêm ngặt 384 trạm của 6 huyện TVT3
+      // Khóa cứng 384 trạm của 6 huyện TVT3
       const tvt3Sites = (data || []).filter(s => isTvt3District(s.district));
       setSites(tvt3Sites);
     } catch (err) {
@@ -58,7 +57,7 @@ export default function Sran5gProject() {
 
   // Tính toán KPI Tổng Thể TVT3
   const kpis = useMemo(() => {
-    const total = sites.length; // Thường là 384 trạm
+    const total = sites.length;
     let onairCount = 0;
     let installCount = 0;
     let deliveryCount = 0;
@@ -96,46 +95,39 @@ export default function Sran5gProject() {
       sites5gCount,
       onair5gCount,
       oa5gPct,
-      blockedCount: 2 // 2 trạm DNDQ15, DNDQ33
+      blockedCount: 2
     };
   }, [sites]);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 p-3 sm:p-6 lg:p-8 space-y-6">
-      {/* ── BANNER ĐIỀU HÀNH KPI (EXECUTIVE HEADER) ────────────────────────── */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-slate-900 to-indigo-950/80 border border-slate-800 p-5 sm:p-7 shadow-2xl">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
-        <div className="absolute bottom-0 left-1/3 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          {/* Tiêu đề & Thông tin */}
+    <div className="min-h-screen bg-slate-50 text-slate-800 p-3 sm:p-5 lg:p-6 space-y-4 font-sans">
+      {/* ── HEADER KPI COMPACT (LIGHT MODE) ────────────────────────────── */}
+      <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-sm space-y-4">
+        {/* Hàng Tiêu Đề & Action Buttons (Inline tinh gọn) */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
           <div>
-            <div className="flex flex-wrap items-center gap-2.5 mb-2">
-              <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 tracking-wider uppercase">
-                Tổ Viễn Thông 3 (TVT3)
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200 uppercase tracking-wide">
+                Tổ Viễn Thông 3
               </span>
-              <span className="text-xs text-slate-400">
-                Phạm vi 6 Huyện: Cẩm Mỹ, Thống Nhất, Xuân Lộc, Long Khánh, Định Quán, Tân Phú
-              </span>
+              <h1 className="text-base sm:text-lg font-black text-slate-900 tracking-tight flex items-center gap-2">
+                DỰ ÁN SRAN & 5G TVT3
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                  15 Cụm Thi Công
+                </span>
+              </h1>
             </div>
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tight text-white flex items-center gap-3">
-              TIẾN ĐỘ DỰ ÁN SRAN & 5G TVT3
-              <span className="text-xs px-2.5 py-0.5 rounded-lg bg-blue-500/20 text-blue-300 font-mono font-medium border border-blue-500/30">
-                15 Cụm Thi Công
-              </span>
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-2xl">
-              Trung tâm điều hành tiến độ bàn giao, lắp đặt, tích hợp và phát sóng SRAN 4G & Chiến dịch 5G độc lập thuộc địa bàn TVT3 Đồng Nai.
+            <p className="text-xs text-slate-500 mt-0.5">
+              Địa bàn 6 Huyện: Cẩm Mỹ, Thống Nhất, Xuân Lộc, Long Khánh, Định Quán, Tân Phú
             </p>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex items-center gap-2.5 shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={() => setIsImportOpen(true)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-semibold shadow-lg shadow-blue-900/40 transition-all hover:scale-[1.02]"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-sm transition-all active:scale-95"
             >
-              <Upload className="w-4 h-4" />
+              <Upload className="w-3.5 h-3.5" />
               <span>Cập Nhật Tiến Độ (Excel)</span>
             </button>
 
@@ -143,99 +135,99 @@ export default function Sran5gProject() {
               onClick={fetchSites}
               disabled={loading}
               title="Làm mới dữ liệu từ Supabase"
-              className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-colors disabled:opacity-50"
+              className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 border border-slate-200 transition-colors disabled:opacity-50"
             >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             </button>
           </div>
         </div>
 
-        {/* Lưới 4 Thẻ KPI */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mt-6">
+        {/* Lưới 4 Thẻ KPI Nhỏ Gọn (Compact Cards) */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
           {/* Card 1: Quy mô TVT3 */}
-          <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 backdrop-blur shadow-md">
-            <div className="flex items-center justify-between text-slate-400 mb-2">
-              <span className="text-xs font-semibold uppercase tracking-wider">Quy Mô TVT3</span>
-              <MapPin className="w-4 h-4 text-blue-400" />
+          <div className="p-3 rounded-xl bg-slate-50/80 border border-slate-200/80">
+            <div className="flex items-center justify-between text-slate-500 mb-1">
+              <span className="text-[11px] font-semibold uppercase tracking-wider">Quy Mô TVT3</span>
+              <MapPin className="w-3.5 h-3.5 text-blue-600" />
             </div>
-            <div className="text-2xl font-black text-white font-mono">
-              {kpis.total || 384} <span className="text-xs font-normal text-slate-400">Trạm</span>
+            <div className="text-xl font-black text-slate-900 font-mono">
+              {kpis.total || 384} <span className="text-xs font-normal text-slate-500">Trạm</span>
             </div>
-            <div className="text-xs text-slate-400 mt-1 flex items-center justify-between">
+            <div className="text-[11px] text-slate-500 mt-0.5 flex items-center justify-between">
               <span>15 Cụm thi công</span>
-              <span className="text-blue-400 font-medium">6 Huyện</span>
+              <span className="text-blue-600 font-medium">6 Huyện</span>
             </div>
           </div>
 
           {/* Card 2: Tiến độ Swap 4G */}
-          <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 backdrop-blur shadow-md">
-            <div className="flex items-center justify-between text-slate-400 mb-2">
-              <span className="text-xs font-semibold uppercase tracking-wider">Swap 4G On-Air</span>
-              <Radio className="w-4 h-4 text-emerald-400" />
+          <div className="p-3 rounded-xl bg-slate-50/80 border border-slate-200/80">
+            <div className="flex items-center justify-between text-slate-500 mb-1">
+              <span className="text-[11px] font-semibold uppercase tracking-wider">Swap 4G On-Air</span>
+              <Radio className="w-3.5 h-3.5 text-emerald-600" />
             </div>
-            <div className="flex items-baseline gap-2">
-              <div className="text-2xl font-black text-emerald-400 font-mono">
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-xl font-black text-emerald-600 font-mono">
                 {kpis.onairCount}
-              </div>
-              <span className="text-xs text-slate-400 font-mono">/ {kpis.total || 384}</span>
-              <span className="text-xs font-bold text-emerald-400 font-mono ml-auto">
+              </span>
+              <span className="text-xs text-slate-500 font-mono">/ {kpis.total || 384}</span>
+              <span className="text-xs font-bold text-emerald-700 font-mono ml-auto">
                 {kpis.swapPct}%
               </span>
             </div>
-            <div className="w-full h-1.5 bg-slate-800 rounded-full mt-2 overflow-hidden">
+            <div className="w-full h-1.5 bg-slate-200 rounded-full mt-1.5 overflow-hidden">
               <div 
-                className="h-full bg-emerald-500 rounded-full transition-all duration-700" 
+                className="h-full bg-emerald-500 rounded-full transition-all duration-500" 
                 style={{ width: `${kpis.swapPct}%` }}
               />
             </div>
-            <div className="text-[11px] text-slate-400 mt-1.5 flex justify-between">
-              <span>Lắp đặt: {kpis.installCount} ({kpis.insPct}%)</span>
+            <div className="text-[10px] text-slate-500 mt-1 flex justify-between">
+              <span>Lắp: {kpis.installCount} ({kpis.insPct}%)</span>
               <span>Giao: {kpis.deliveryCount}</span>
             </div>
           </div>
 
           {/* Card 3: Tiến độ 5G */}
-          <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 backdrop-blur shadow-md">
-            <div className="flex items-center justify-between text-slate-400 mb-2">
-              <span className="text-xs font-semibold uppercase tracking-wider">Chiến Dịch 5G</span>
-              <Cpu className="w-4 h-4 text-purple-400" />
+          <div className="p-3 rounded-xl bg-slate-50/80 border border-slate-200/80">
+            <div className="flex items-center justify-between text-slate-500 mb-1">
+              <span className="text-[11px] font-semibold uppercase tracking-wider">Chiến Dịch 5G</span>
+              <Cpu className="w-3.5 h-3.5 text-purple-600" />
             </div>
-            <div className="flex items-baseline gap-2">
-              <div className="text-2xl font-black text-purple-400 font-mono">
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-xl font-black text-purple-600 font-mono">
                 {kpis.onair5gCount}
-              </div>
-              <span className="text-xs text-slate-400 font-mono">/ {kpis.sites5gCount || 151}</span>
-              <span className="text-xs font-bold text-purple-400 font-mono ml-auto">
+              </span>
+              <span className="text-xs text-slate-500 font-mono">/ {kpis.sites5gCount || 151}</span>
+              <span className="text-xs font-bold text-purple-700 font-mono ml-auto">
                 {kpis.oa5gPct}%
               </span>
             </div>
-            <div className="w-full h-1.5 bg-slate-800 rounded-full mt-2 overflow-hidden">
+            <div className="w-full h-1.5 bg-slate-200 rounded-full mt-1.5 overflow-hidden">
               <div 
-                className="h-full bg-purple-500 rounded-full transition-all duration-700" 
+                className="h-full bg-purple-500 rounded-full transition-all duration-500" 
                 style={{ width: `${kpis.oa5gPct}%` }}
               />
             </div>
-            <div className="text-[11px] text-slate-400 mt-1.5 flex justify-between">
-              <span>Đơn lớp & 2 lớp</span>
-              <span className="text-purple-300 font-medium">119 On-air</span>
+            <div className="text-[10px] text-slate-500 mt-1 flex justify-between">
+              <span>Đơn & 2 lớp</span>
+              <span className="text-purple-600 font-medium">119 On-air</span>
             </div>
           </div>
 
           {/* Card 4: Cảnh báo vướng */}
           <div 
             onClick={() => setActiveTab('5g_rollout')}
-            className="p-4 rounded-2xl bg-amber-950/20 border border-amber-500/30 backdrop-blur shadow-md cursor-pointer hover:border-amber-500/60 transition-all"
+            className="p-3 rounded-xl bg-amber-50/60 border border-amber-200/80 cursor-pointer hover:bg-amber-50 hover:border-amber-300 transition-all"
           >
-            <div className="flex items-center justify-between text-amber-400 mb-2">
-              <span className="text-xs font-semibold uppercase tracking-wider">Cảnh Báo Vướng</span>
-              <AlertTriangle className="w-4 h-4 text-amber-400" />
+            <div className="flex items-center justify-between text-amber-700 mb-1">
+              <span className="text-[11px] font-semibold uppercase tracking-wider">Trạm Vướng 5G</span>
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
             </div>
-            <div className="text-2xl font-black text-amber-400 font-mono">
-              {kpis.blockedCount} <span className="text-xs font-normal text-slate-400">Trạm 5G</span>
+            <div className="text-xl font-black text-amber-700 font-mono">
+              {kpis.blockedCount} <span className="text-xs font-normal text-slate-500">Trạm Đ.Quán</span>
             </div>
-            <div className="text-xs text-amber-200/80 mt-1 flex items-center justify-between">
-              <span>DNDQ15 & DNDQ33</span>
-              <span className="text-amber-400 font-semibold flex items-center gap-0.5">
+            <div className="text-[10px] text-amber-800/80 mt-1 flex items-center justify-between">
+              <span>DNDQ15, DNDQ33</span>
+              <span className="text-amber-700 font-semibold flex items-center gap-0.5">
                 Xem xử lý <ChevronRight className="w-3 h-3" />
               </span>
             </div>
@@ -243,62 +235,68 @@ export default function Sran5gProject() {
         </div>
       </div>
 
-      {/* ── THANH CHUYỂN TAB (NAVIGATION TABS) ────────────────────────────── */}
-      <div className="flex items-center gap-2 border-b border-slate-800 pb-2 overflow-x-auto custom-scrollbar">
+      {/* ── THANH CHUYỂN TAB DẠNG LIGHT BUTTONS ────────────────────────────── */}
+      <div className="flex items-center gap-1.5 bg-white p-1 rounded-xl border border-slate-200/80 shadow-sm w-fit overflow-x-auto max-w-full">
         <button
           onClick={() => setActiveTab('clusters')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all whitespace-nowrap ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-xs transition-all whitespace-nowrap ${
             activeTab === 'clusters'
-              ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/40'
-              : 'text-slate-400 hover:text-white hover:bg-slate-900'
+              ? 'bg-blue-600 text-white shadow-sm'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
           }`}
         >
-          <Layers className="w-4 h-4" />
-          <span>15 Cụm Thi Công (Cluster Board)</span>
-          <span className="px-2 py-0.5 rounded-full text-[10px] bg-slate-900/60 font-mono">15</span>
+          <Layers className="w-3.5 h-3.5" />
+          <span>15 Cụm Thi Công</span>
+          <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+            activeTab === 'clusters' ? 'bg-blue-700 text-white' : 'bg-slate-100 text-slate-600'
+          }`}>15</span>
         </button>
 
         <button
           onClick={() => setActiveTab('5g_rollout')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all whitespace-nowrap ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-xs transition-all whitespace-nowrap ${
             activeTab === '5g_rollout'
-              ? 'bg-purple-600 text-white shadow-lg shadow-purple-950/40'
-              : 'text-slate-400 hover:text-white hover:bg-slate-900'
+              ? 'bg-purple-600 text-white shadow-sm'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
           }`}
         >
-          <Cpu className="w-4 h-4" />
-          <span>Chiến Dịch 5G TVT3 (5G Rollout)</span>
-          <span className="px-2 py-0.5 rounded-full text-[10px] bg-slate-900/60 font-mono">151</span>
+          <Cpu className="w-3.5 h-3.5" />
+          <span>Chiến Dịch 5G TVT3</span>
+          <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+            activeTab === '5g_rollout' ? 'bg-purple-700 text-white' : 'bg-slate-100 text-slate-600'
+          }`}>151</span>
         </button>
 
         <button
           onClick={() => setActiveTab('master_table')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all whitespace-nowrap ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-xs transition-all whitespace-nowrap ${
             activeTab === 'master_table'
-              ? 'bg-blue-600 text-white shadow-lg shadow-blue-950/40'
-              : 'text-slate-400 hover:text-white hover:bg-slate-900'
+              ? 'bg-emerald-600 text-white shadow-sm'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
           }`}
         >
-          <Database className="w-4 h-4" />
-          <span>Tra Cứu & Xuất Báo Cáo (Master Table)</span>
-          <span className="px-2 py-0.5 rounded-full text-[10px] bg-slate-900/60 font-mono">384</span>
+          <Database className="w-3.5 h-3.5" />
+          <span>Tra Cứu & Báo Cáo</span>
+          <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+            activeTab === 'master_table' ? 'bg-emerald-700 text-white' : 'bg-slate-100 text-slate-600'
+          }`}>384</span>
         </button>
       </div>
 
       {/* ── NỘI DUNG TỪNG TAB ────────────────────────────────────────────── */}
       {loading && sites.length === 0 ? (
-        <div className="py-24 text-center space-y-3">
-          <RefreshCw className="w-8 h-8 text-emerald-400 animate-spin mx-auto" />
-          <p className="text-sm text-slate-400">Đang tải dữ liệu tiến độ SRAN TVT3...</p>
+        <div className="py-20 text-center space-y-2 bg-white rounded-2xl border border-slate-200">
+          <RefreshCw className="w-6 h-6 text-blue-600 animate-spin mx-auto" />
+          <p className="text-xs text-slate-500">Đang tải dữ liệu tiến độ SRAN TVT3...</p>
         </div>
       ) : error ? (
-        <div className="p-6 rounded-2xl bg-red-950/20 border border-red-800/40 text-center space-y-3">
-          <AlertTriangle className="w-8 h-8 text-red-400 mx-auto" />
-          <h3 className="text-base font-bold text-white">Không Thể Tải Dữ Liệu</h3>
-          <p className="text-xs text-red-300 max-w-md mx-auto">{error}</p>
+        <div className="p-5 rounded-2xl bg-red-50 border border-red-200 text-center space-y-2">
+          <AlertTriangle className="w-6 h-6 text-red-500 mx-auto" />
+          <h3 className="text-sm font-bold text-red-900">Không Thể Tải Dữ Liệu</h3>
+          <p className="text-xs text-red-700 max-w-md mx-auto">{error}</p>
           <button
             onClick={fetchSites}
-            className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-semibold"
+            className="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold"
           >
             Thử Lại
           </button>

@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { 
   Search, Filter, Download, ChevronLeft, ChevronRight, 
-  MapPin, CheckCircle2, Clock, Zap, Radio, Cpu, ArrowUpRight
+  MapPin, Radio, ArrowUpRight
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { TVT3_DISTRICTS } from '../../config/sranTvt3Config';
@@ -87,7 +87,6 @@ export default function SranMasterTable({ sites = [], onSelectSite }) {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Tien_Do_SRAN_TVT3');
 
-    // Chỉnh độ rộng cột tự động
     const maxCols = Object.keys(dataToExport[0] || {}).length;
     worksheet['!cols'] = Array(maxCols).fill({ wch: 18 });
 
@@ -96,47 +95,47 @@ export default function SranMasterTable({ sites = [], onSelectSite }) {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Bộ Lọc & Tìm Kiếm */}
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 backdrop-blur shadow-lg space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-          {/* Ô tìm kiếm */}
-          <div className="relative flex-1 max-w-md">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+    <div className="space-y-4">
+      {/* ── BỘ LỌC & TÌM KIẾM DỒN 1 HÀNG TINH GỌN (LIGHT MODE) ─────────── */}
+      <div className="bg-white border border-slate-200/90 rounded-2xl p-3 sm:p-4 shadow-sm space-y-3">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5">
+          {/* Ô Tìm Kiếm */}
+          <div className="relative flex-1 max-w-sm">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Tìm theo mã mới, mã cũ, cụm, nguồn điện..."
+              placeholder="Tìm mã mới, mã cũ, cụm, nguồn điện..."
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full pl-9 pr-3 py-2 text-xs bg-slate-800/90 border border-slate-700 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500"
+              className="w-full pl-8 pr-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:bg-white"
             />
           </div>
 
           {/* Nút Xuất Excel */}
           <button
             onClick={handleExportExcel}
-            className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-lg shadow-emerald-900/30 transition-all shrink-0"
+            className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition-all shrink-0 active:scale-95"
           >
-            <Download className="w-4 h-4" />
-            <span>Xuất Excel TVT3 ({filteredSites.length} trạm)</span>
+            <Download className="w-3.5 h-3.5" />
+            <span>Xuất Excel ({filteredSites.length} trạm)</span>
           </button>
         </div>
 
         {/* Lọc Huyện & Trạng Thái */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-800/80">
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
           {/* Lọc Huyện */}
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1 mr-1">
-              <MapPin className="w-3.5 h-3.5 text-blue-400" />
+          <div className="flex flex-wrap items-center gap-1">
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1 mr-1">
+              <MapPin className="w-3 h-3 text-blue-600" />
               Huyện:
             </span>
             <button
               onClick={() => { setSelectedDistrict('all'); setCurrentPage(1); }}
-              className={`text-xs px-2.5 py-1 rounded-lg font-medium transition-all ${
-                selectedDistrict === 'all' ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-white'
+              className={`text-xs px-2 py-0.5 rounded-md font-medium transition-all ${
+                selectedDistrict === 'all' ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:text-slate-900'
               }`}
             >
               Tất cả 6 Huyện
@@ -145,8 +144,8 @@ export default function SranMasterTable({ sites = [], onSelectSite }) {
               <button
                 key={d}
                 onClick={() => { setSelectedDistrict(d); setCurrentPage(1); }}
-                className={`text-xs px-2.5 py-1 rounded-lg font-medium transition-all ${
-                  selectedDistrict === d ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-white'
+                className={`text-xs px-2 py-0.5 rounded-md font-medium transition-all ${
+                  selectedDistrict === d ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:text-slate-900'
                 }`}
               >
                 {d}
@@ -155,9 +154,9 @@ export default function SranMasterTable({ sites = [], onSelectSite }) {
           </div>
 
           {/* Lọc Trạng Thái */}
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1 mr-1">
-              <Filter className="w-3.5 h-3.5 text-emerald-400" />
+          <div className="flex flex-wrap items-center gap-1">
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1 mr-1">
+              <Filter className="w-3 h-3 text-emerald-600" />
               Trạng thái:
             </span>
             {[
@@ -171,8 +170,8 @@ export default function SranMasterTable({ sites = [], onSelectSite }) {
               <button
                 key={st.id}
                 onClick={() => { setStatusFilter(st.id); setCurrentPage(1); }}
-                className={`text-xs px-2.5 py-1 rounded-lg font-medium transition-all ${
-                  statusFilter === st.id ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-white'
+                className={`text-xs px-2 py-0.5 rounded-md font-medium transition-all ${
+                  statusFilter === st.id ? 'bg-emerald-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:text-slate-900'
                 }`}
               >
                 {st.label}
@@ -182,32 +181,32 @@ export default function SranMasterTable({ sites = [], onSelectSite }) {
         </div>
       </div>
 
-      {/* Bảng Dữ Liệu */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-        <div className="px-5 py-3 border-b border-slate-800 flex items-center justify-between text-xs text-slate-400">
-          <span>Tìm thấy <strong className="text-white">{filteredSites.length}</strong> trạm phù hợp</span>
+      {/* ── BẢNG MASTER TABLE COMPACT LIGHT MODE ───────────────────────── */}
+      <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm">
+        <div className="px-4 py-2 border-b border-slate-100 flex items-center justify-between text-xs text-slate-500 bg-slate-50/50">
+          <span>Tìm thấy <strong className="text-slate-900">{filteredSites.length}</strong> trạm phù hợp</span>
           <span>Trang {currentPage} / {totalPages}</span>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-800/60 text-slate-400 font-semibold uppercase tracking-wider border-b border-slate-800">
+            <thead className="bg-slate-50 text-slate-600 font-bold uppercase tracking-wider border-b border-slate-200 text-[10px]">
               <tr>
-                <th className="py-3 px-4">Mã Trạm</th>
-                <th className="py-3 px-4">Địa Bàn & Cụm</th>
-                <th className="py-3 px-4">Giao Hàng</th>
-                <th className="py-3 px-4">Lắp Đặt</th>
-                <th className="py-3 px-4">Tích Hợp</th>
-                <th className="py-3 px-4">On-air SRAN</th>
-                <th className="py-3 px-4">Hạ Tầng Nguồn</th>
-                <th className="py-3 px-4 text-center">Trạng Thái</th>
-                <th className="py-3 px-4 text-right">Xem</th>
+                <th className="py-2 px-3">Mã Trạm</th>
+                <th className="py-2 px-3">Địa Bàn & Cụm</th>
+                <th className="py-2 px-3">Giao Hàng</th>
+                <th className="py-2 px-3">Lắp Đặt</th>
+                <th className="py-2 px-3">Tích Hợp</th>
+                <th className="py-2 px-3">On-air SRAN</th>
+                <th className="py-2 px-3">Hạ Tầng Nguồn</th>
+                <th className="py-2 px-3 text-center">Trạng Thái</th>
+                <th className="py-2 px-3 text-right">Xem</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
+            <tbody className="divide-y divide-slate-100">
               {currentSites.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-10 text-center text-slate-400">
+                  <td colSpan={9} className="py-8 text-center text-slate-400">
                     Không có trạm nào khớp với tiêu chí tìm kiếm.
                   </td>
                 </tr>
@@ -221,14 +220,14 @@ export default function SranMasterTable({ sites = [], onSelectSite }) {
                     <tr 
                       key={s.site_id}
                       onClick={() => onSelectSite && onSelectSite(s)}
-                      className="hover:bg-slate-800/50 cursor-pointer transition-colors group"
+                      className="hover:bg-slate-50 cursor-pointer transition-colors group"
                     >
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-1.5 font-mono font-bold text-white group-hover:text-emerald-300">
-                          <Radio className="w-3.5 h-3.5 text-emerald-400" />
+                      <td className="py-2 px-3">
+                        <div className="flex items-center gap-1 font-mono font-bold text-slate-900 group-hover:text-blue-600">
+                          <Radio className="w-3 h-3 text-emerald-600" />
                           <span>{s.site_id}</span>
                           {is5g && (
-                            <span className="text-[10px] px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 font-sans border border-purple-500/30">
+                            <span className="text-[9px] px-1 py-0.2 rounded bg-purple-100 text-purple-700 font-sans font-semibold">
                               5G
                             </span>
                           )}
@@ -238,60 +237,60 @@ export default function SranMasterTable({ sites = [], onSelectSite }) {
                         )}
                       </td>
 
-                      <td className="py-3 px-4">
-                        <div className="text-slate-200 font-medium">{s.district}</div>
+                      <td className="py-2 px-3">
+                        <div className="text-slate-800 font-medium">{s.district}</div>
                         <div className="text-[10px] text-slate-400 font-mono">{raw.Cluster_New || raw.Cluster_Name || '-'}</div>
                       </td>
 
-                      <td className="py-3 px-4 font-mono text-slate-300">
+                      <td className="py-2 px-3 font-mono text-slate-600">
                         {s.delivery_date ? (
-                          <span className="text-blue-300">{s.delivery_date}</span>
+                          <span className="text-blue-700 font-medium">{s.delivery_date}</span>
                         ) : (
-                          <span className="text-slate-600">-</span>
+                          <span className="text-slate-300">-</span>
                         )}
                       </td>
 
-                      <td className="py-3 px-4 font-mono text-slate-300">
+                      <td className="py-2 px-3 font-mono text-slate-600">
                         {s.install_date ? (
-                          <span className="text-indigo-300">{s.install_date}</span>
+                          <span className="text-indigo-700 font-medium">{s.install_date}</span>
                         ) : (
-                          <span className="text-slate-600">-</span>
+                          <span className="text-slate-300">-</span>
                         )}
                       </td>
 
-                      <td className="py-3 px-4 font-mono text-slate-300">
+                      <td className="py-2 px-3 font-mono text-slate-600">
                         {s.integration_date ? (
-                          <span className="text-amber-300">{s.integration_date}</span>
+                          <span className="text-amber-700 font-medium">{s.integration_date}</span>
                         ) : (
-                          <span className="text-slate-600">-</span>
+                          <span className="text-slate-300">-</span>
                         )}
                       </td>
 
-                      <td className="py-3 px-4 font-mono">
+                      <td className="py-2 px-3 font-mono">
                         {s.onair_date ? (
-                          <span className="text-emerald-400 font-semibold">{s.onair_date}</span>
+                          <span className="text-emerald-700 font-bold">{s.onair_date}</span>
                         ) : (
-                          <span className="text-slate-600">-</span>
+                          <span className="text-slate-300">-</span>
                         )}
                       </td>
 
-                      <td className="py-3 px-4 max-w-[200px] truncate text-[11px] text-slate-400">
+                      <td className="py-2 px-3 max-w-[180px] truncate text-[10px] text-slate-500">
                         {s.power_solution || 'Tiêu chuẩn'}
                       </td>
 
-                      <td className="py-3 px-4 text-center">
-                        <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full border ${
+                      <td className="py-2 px-3 text-center">
+                        <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${
                           isOnair 
-                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' 
-                            : 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                            : 'bg-amber-50 text-amber-700 border-amber-200'
                         }`}>
                           {isOnair ? 'On-air' : 'Đang làm'}
                         </span>
                       </td>
 
-                      <td className="py-3 px-4 text-right">
-                        <button className="p-1 rounded text-slate-400 group-hover:text-white transition-colors">
-                          <ArrowUpRight className="w-4 h-4" />
+                      <td className="py-2 px-3 text-right">
+                        <button className="p-1 rounded text-slate-400 group-hover:text-blue-600 transition-colors">
+                          <ArrowUpRight className="w-3.5 h-3.5" />
                         </button>
                       </td>
                     </tr>
@@ -304,27 +303,27 @@ export default function SranMasterTable({ sites = [], onSelectSite }) {
 
         {/* Phân Trang */}
         {totalPages > 1 && (
-          <div className="px-5 py-3 border-t border-slate-800 bg-slate-900/90 flex items-center justify-between text-xs">
-            <span className="text-slate-400">
-              Hiển thị {(currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, filteredSites.length)} của {filteredSites.length} trạm
+          <div className="px-4 py-2 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between text-xs">
+            <span className="text-slate-500 text-[11px]">
+              {(currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, filteredSites.length)} của {filteredSites.length} trạm
             </span>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
               <button
                 disabled={currentPage === 1}
                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                className="p-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed"
+                className="p-1 rounded-md bg-white border border-slate-200 text-slate-600 hover:text-slate-900 disabled:opacity-40"
               >
-                <ChevronLeft className="w-4 h-4" />
+                <ChevronLeft className="w-3.5 h-3.5" />
               </button>
-              <span className="text-white font-semibold px-2">
+              <span className="text-slate-800 font-semibold px-2 text-xs">
                 {currentPage} / {totalPages}
               </span>
               <button
                 disabled={currentPage === totalPages}
                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                className="p-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed"
+                className="p-1 rounded-md bg-white border border-slate-200 text-slate-600 hover:text-slate-900 disabled:opacity-40"
               >
-                <ChevronRight className="w-4 h-4" />
+                <ChevronRight className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>

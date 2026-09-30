@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { 
   X, UploadCloud, FileSpreadsheet, CheckCircle2, AlertCircle, 
-  RefreshCw, Check, ArrowRight, Database, ShieldCheck, Sparkles
+  RefreshCw, Sparkles
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { supabase } from '../../supabaseClient';
@@ -30,7 +30,6 @@ export default function SranImportModal({ isOpen, onClose, onSuccess }) {
     const s = String(val).trim();
     if (!s || ['none', 'null', 'nan', '-', '#n/a'].includes(s.toLowerCase())) return null;
 
-    // Nếu là số serial của Excel (ví dụ 45564)
     if (/^\d{5}$/.test(s)) {
       const d = XLSX.SSF.parse_date_code(Number(s));
       if (d) {
@@ -40,15 +39,12 @@ export default function SranImportModal({ isOpen, onClose, onSuccess }) {
       }
     }
 
-    // Nếu là chuỗi có định dạng ngày
     if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
     const dParts = s.split(' ')[0].split(/[\/\-]/);
     if (dParts.length === 3) {
       if (dParts[0].length === 4) {
-        // YYYY/MM/DD
         return `${dParts[0]}-${dParts[1].padStart(2, '0')}-${dParts[2].padStart(2, '0')}`;
       } else if (dParts[2].length === 4) {
-        // DD/MM/YYYY
         return `${dParts[2]}-${dParts[1].padStart(2, '0')}-${dParts[0].padStart(2, '0')}`;
       }
     }
@@ -67,7 +63,6 @@ export default function SranImportModal({ isOpen, onClose, onSuccess }) {
       const data = await selectedFile.arrayBuffer();
       const workbook = XLSX.read(data, { type: 'array', cellDates: true });
 
-      // Tìm sheet Master_Tracker hoặc sheet đầu tiên
       const sheetName = workbook.SheetNames.find(n => n.toLowerCase().includes('master_tracker') || n.toLowerCase().includes('master')) || workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
 
@@ -75,13 +70,11 @@ export default function SranImportModal({ isOpen, onClose, onSuccess }) {
         throw new Error("Không tìm thấy sheet dữ liệu trong file Excel!");
       }
 
-      // Đọc bảng dạng 2D Array
       const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: null });
       if (rows.length < 3) {
         throw new Error("File Excel không có đủ dữ liệu (tối thiểu dòng header và dữ liệu)!");
       }
 
-      // Dòng 2 (index 1) là header
       const headers = rows[1];
       const colMap = {};
       headers.forEach((h, idx) => {
@@ -104,7 +97,6 @@ export default function SranImportModal({ isOpen, onClose, onSuccess }) {
       let tvt3Delivered = 0;
       let tvt3_5g = 0;
 
-      // Đọc dữ liệu từ dòng 3 (index 2)
       for (let r = 2; r < rows.length; r++) {
         const row = rows[r];
         if (!row || !row.some(cell => cell !== null)) continue;
@@ -119,7 +111,6 @@ export default function SranImportModal({ isOpen, onClose, onSuccess }) {
         const district = String(getVal(row, 'District_Old') || '').trim() || null;
         const isTvt3 = isTvt3District(district);
 
-        // Nguồn điện
         const psSol = String(getVal(row, 'Power_Solution') || getVal(row, '3G4G_Power_Solution') || getVal(row, '5G_Power_Solution') || '').trim();
         const newCab = String(getVal(row, 'New_Power_Cabinet') || getVal(row, 'MBF_Add_Power_Cabinet') || getVal(row, 'MBF_Swap_Power_Cabinet') || '').trim();
         const newRect = String(getVal(row, 'New_Rectifier') || getVal(row, 'MBF_Add_Rectifier') || '').trim();
@@ -130,7 +121,6 @@ export default function SranImportModal({ isOpen, onClose, onSuccess }) {
         if (newRect && !['0', 'None', 'null'].includes(newRect)) psParts.push(`Thêm Rectifier (+${newRect})`);
         const powerSolutionStr = psParts.length > 0 ? psParts.join(' | ') : null;
 
-        // Ngày On-air tổng hợp
         const onairAct = formatDateVal(
           getVal(row, 'Onair_Actual_Date') || 
           getVal(row, 'Onair_SRAN_Actual_Date') || 
@@ -199,7 +189,6 @@ export default function SranImportModal({ isOpen, onClose, onSuccess }) {
         });
       }
 
-      // Deduplicate by site_id
       const uniqueMap = {};
       records.forEach(r => {
         uniqueMap[r.site_id] = r;
@@ -225,7 +214,6 @@ export default function SranImportModal({ isOpen, onClose, onSuccess }) {
     }
   };
 
-  // Kéo thả file
   const handleDrop = (e) => {
     e.preventDefault();
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
@@ -233,7 +221,6 @@ export default function SranImportModal({ isOpen, onClose, onSuccess }) {
     }
   };
 
-  // Thực hiện Upsert lên Supabase
   const handleStartUpsert = async () => {
     if (!parsedData || !parsedData.records) return;
 
@@ -252,8 +239,6 @@ export default function SranImportModal({ isOpen, onClose, onSuccess }) {
     try {
       for (let i = 0; i < total; i += chunkSize) {
         const chunk = targetRecords.slice(i, i + chunkSize);
-        
-        // Bỏ field helper is_tvt3 trước khi ghi vào db
         const cleanChunk = chunk.map(({ is_tvt3, ...rest }) => rest);
 
         const { error } = await supabase
@@ -270,14 +255,14 @@ export default function SranImportModal({ isOpen, onClose, onSuccess }) {
           current: upsertedCount,
           total: total,
           percent: pct,
-          status: `Đang cập nhật lô ${Math.floor(i / chunkSize) + 1} (${upsertedCount}/${total} trạm)...`
+          status: `Đang lưu lô ${Math.floor(i / chunkSize) + 1} (${upsertedCount}/${total} trạm)...`
         });
       }
 
       setResult({
         success: true,
         count: upsertedCount,
-        message: `Đã cập nhật thành công ${upsertedCount} trạm vào hệ thống CSDL!`
+        message: `Đã cập nhật thành công ${upsertedCount} trạm vào hệ thống!`
       });
 
       if (onSuccess) onSuccess();
@@ -290,47 +275,47 @@ export default function SranImportModal({ isOpen, onClose, onSuccess }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-150">
       <div 
-        className="relative w-full max-w-2xl bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]"
+        className="relative w-full max-w-xl bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header Modal */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800 bg-slate-900/90 sticky top-0 z-10">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 border border-blue-500/30 flex items-center justify-center">
-              <FileSpreadsheet className="w-5 h-5" />
+        {/* Header Modal Light Mode */}
+        <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-100 bg-slate-50 sticky top-0 z-10">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 border border-blue-200 flex items-center justify-center">
+              <FileSpreadsheet className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+              <h3 className="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-1.5">
                 Cập Nhật Tiến Độ Daily Progress
-                <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-normal">
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 font-normal">
                   Realtime
                 </span>
               </h3>
-              <p className="text-xs text-slate-400">
-                Nạp file Excel MBF Dong Nai_S1S4_Daily_Progress_*.xlsx để tự động đồng bộ
+              <p className="text-[11px] text-slate-500">
+                Nạp file MBF Dong Nai_S1S4_Daily_Progress_*.xlsx
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
             disabled={uploading}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 disabled:opacity-40 transition-colors"
+            className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200 disabled:opacity-40 transition-colors"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Modal Body */}
-        <div className="p-5 overflow-y-auto custom-scrollbar space-y-5 text-xs">
+        <div className="p-4 overflow-y-auto custom-scrollbar space-y-4 text-xs">
           {/* Dropzone Kéo Thả File */}
           {!parsedData && (
             <div
               onDragOver={(e) => e.preventDefault()}
               onDrop={handleDrop}
               onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-slate-700 hover:border-blue-500 rounded-2xl p-8 text-center cursor-pointer transition-all bg-slate-800/30 hover:bg-slate-800/60 group"
+              className="border-2 border-dashed border-slate-300 hover:border-blue-500 rounded-2xl p-6 text-center cursor-pointer transition-all bg-slate-50 hover:bg-blue-50/30 group"
             >
               <input
                 ref={fileInputRef}
@@ -339,79 +324,79 @@ export default function SranImportModal({ isOpen, onClose, onSuccess }) {
                 className="hidden"
                 onChange={(e) => e.target.files && handleFileProcess(e.target.files[0])}
               />
-              <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-blue-500/10 text-blue-400 group-hover:scale-110 group-hover:bg-blue-500/20 flex items-center justify-center transition-all">
-                {parsing ? <RefreshCw className="w-6 h-6 animate-spin" /> : <UploadCloud className="w-7 h-7" />}
+              <div className="w-12 h-12 mx-auto mb-2 rounded-xl bg-blue-100 text-blue-600 group-hover:scale-105 flex items-center justify-center transition-all">
+                {parsing ? <RefreshCw className="w-5 h-5 animate-spin" /> : <UploadCloud className="w-6 h-6" />}
               </div>
-              <h4 className="text-sm font-semibold text-white mb-1">
+              <h4 className="text-xs font-bold text-slate-900 mb-0.5">
                 {parsing ? 'Đang đọc và phân tích cấu trúc file...' : 'Kéo thả file Excel báo cáo vào đây'}
               </h4>
-              <p className="text-slate-400 max-w-sm mx-auto">
-                Hỗ trợ định dạng chuẩn <code className="text-blue-300">MBF Dong Nai_S1S4_Daily_Progress_*.xlsx</code>
+              <p className="text-[11px] text-slate-500">
+                Chuẩn định dạng <code className="text-blue-600">MBF Dong Nai_S1S4_Daily_Progress_*.xlsx</code>
               </p>
             </div>
           )}
 
           {/* Lỗi nếu có */}
           {errorMsg && (
-            <div className="p-3.5 rounded-xl bg-red-950/30 border border-red-800/50 flex items-start gap-2.5 text-red-200">
-              <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <span className="font-semibold block mb-0.5">Lỗi xử lý:</span>
+            <div className="p-3 rounded-xl bg-red-50 border border-red-200 flex items-start gap-2 text-red-800">
+              <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+              <div className="flex-1 text-[11px]">
+                <span className="font-bold block">Lỗi xử lý:</span>
                 <span>{errorMsg}</span>
               </div>
             </div>
           )}
 
-          {/* Kết Quả Preview Khi Phân Tích Xong */}
+          {/* Kết Quả Preview */}
           {parsedData && !result && (
-            <div className="space-y-4">
-              {/* Thẻ Thông Tin File */}
-              <div className="p-3 rounded-xl bg-slate-800/50 border border-slate-700/80 flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <FileSpreadsheet className="w-5 h-5 text-emerald-400" />
+            <div className="space-y-3">
+              {/* Thẻ File Info */}
+              <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
                   <div>
-                    <div className="font-semibold text-white text-xs">{file?.name}</div>
-                    <div className="text-[11px] text-slate-400">Sheet: {parsedData.sheetName} • Dung lượng: {(file.size / 1024 / 1024).toFixed(2)} MB</div>
+                    <div className="font-bold text-slate-900 text-xs">{file?.name}</div>
+                    <div className="text-[10px] text-slate-500">Sheet: {parsedData.sheetName} • {(file.size / 1024 / 1024).toFixed(2)} MB</div>
                   </div>
                 </div>
                 <button
                   disabled={uploading}
                   onClick={() => { setParsedData(null); setFile(null); }}
-                  className="text-xs text-blue-400 hover:text-blue-300 underline"
+                  className="text-[11px] text-blue-600 hover:underline"
                 >
                   Chọn file khác
                 </button>
               </div>
 
-              {/* Thống kê trích xuất */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                <div className="p-3 rounded-xl bg-slate-800/40 border border-slate-800">
-                  <span className="text-slate-400 block text-[11px]">Trạm TVT3:</span>
-                  <span className="text-white font-bold text-sm">{parsedData.tvt3Count} trạm</span>
+              {/* Thống Kê Phân Tích */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+                  <span className="text-slate-500 text-[10px] block">Trạm TVT3:</span>
+                  <span className="text-slate-900 font-bold text-sm">{parsedData.tvt3Count} trạm</span>
                   <span className="text-[10px] text-slate-400 block">/ {parsedData.totalInFile} toàn tỉnh</span>
                 </div>
-                <div className="p-3 rounded-xl bg-slate-800/40 border border-slate-800">
-                  <span className="text-slate-400 block text-[11px]">TVT3 On-air:</span>
-                  <span className="text-emerald-400 font-bold text-sm">{parsedData.tvt3Onair} trạm</span>
-                  <span className="text-[10px] text-emerald-400 block">({Math.round((parsedData.tvt3Onair / parsedData.tvt3Count) * 100)}%)</span>
+                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+                  <span className="text-slate-500 text-[10px] block">TVT3 On-Air:</span>
+                  <span className="text-emerald-700 font-bold text-sm">{parsedData.tvt3Onair} trạm</span>
+                  <span className="text-[10px] text-emerald-600 block">({Math.round((parsedData.tvt3Onair / parsedData.tvt3Count) * 100)}%)</span>
                 </div>
-                <div className="p-3 rounded-xl bg-slate-800/40 border border-slate-800">
-                  <span className="text-slate-400 block text-[11px]">TVT3 Đã Lắp:</span>
-                  <span className="text-blue-400 font-bold text-sm">{parsedData.tvt3Install} trạm</span>
-                  <span className="text-[10px] text-blue-400 block">({Math.round((parsedData.tvt3Install / parsedData.tvt3Count) * 100)}%)</span>
+                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+                  <span className="text-slate-500 text-[10px] block">TVT3 Đã Lắp:</span>
+                  <span className="text-blue-700 font-bold text-sm">{parsedData.tvt3Install} trạm</span>
+                  <span className="text-[10px] text-blue-600 block">({Math.round((parsedData.tvt3Install / parsedData.tvt3Count) * 100)}%)</span>
                 </div>
-                <div className="p-3 rounded-xl bg-slate-800/40 border border-slate-800">
-                  <span className="text-slate-400 block text-[11px]">Vị trí 5G TVT3:</span>
-                  <span className="text-purple-400 font-bold text-sm">{parsedData.tvt3_5g} trạm</span>
-                  <span className="text-[10px] text-purple-400 block">Tiến độ 5G</span>
+                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+                  <span className="text-slate-500 text-[10px] block">Vị trí 5G TVT3:</span>
+                  <span className="text-purple-700 font-bold text-sm">{parsedData.tvt3_5g} trạm</span>
+                  <span className="text-[10px] text-purple-600 block">Tiến độ 5G</span>
                 </div>
               </div>
 
               {/* Tùy Chọn Phạm Vi Cập Nhật */}
-              <div className="p-3.5 rounded-xl bg-slate-800/60 border border-slate-700/80 space-y-2">
-                <span className="font-semibold text-slate-200 block">Phạm vi cập nhật dữ liệu:</span>
-                <div className="space-y-2">
-                  <label className="flex items-center gap-2.5 cursor-pointer">
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
+                <span className="font-bold text-slate-800 text-[11px] block">Phạm vi cập nhật:</span>
+                <div className="space-y-1.5 text-[11px]">
+                  <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="radio"
                       name="scope"
@@ -419,11 +404,11 @@ export default function SranImportModal({ isOpen, onClose, onSuccess }) {
                       onChange={() => setScopeOption('tvt3')}
                       className="text-blue-600 focus:ring-blue-500"
                     />
-                    <span className="text-slate-300">
-                      <strong>Chỉ cập nhật {parsedData.tvt3Count} trạm thuộc TVT3</strong> (Khuyên dùng • Cực nhanh)
+                    <span className="text-slate-800">
+                      <strong>Chỉ cập nhật {parsedData.tvt3Count} trạm thuộc TVT3</strong> (Khuyên dùng • Nhanh)
                     </span>
                   </label>
-                  <label className="flex items-center gap-2.5 cursor-pointer">
+                  <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="radio"
                       name="scope"
@@ -431,23 +416,23 @@ export default function SranImportModal({ isOpen, onClose, onSuccess }) {
                       onChange={() => setScopeOption('all')}
                       className="text-blue-600 focus:ring-blue-500"
                     />
-                    <span className="text-slate-400">
+                    <span className="text-slate-600">
                       Cập nhật toàn bộ {parsedData.totalInFile} trạm toàn tỉnh vào Supabase
                     </span>
                   </label>
                 </div>
               </div>
 
-              {/* Thanh Tiến Trình Nếu Đang Ghi DB */}
+              {/* Thanh Tiến Trình Nếu Đang Lưu */}
               {uploading && (
-                <div className="p-3.5 rounded-xl bg-slate-800/80 border border-blue-500/40 space-y-2">
-                  <div className="flex justify-between font-medium">
-                    <span className="text-blue-300">{progress.status}</span>
-                    <span className="text-white font-mono">{progress.percent}%</span>
+                <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 space-y-1.5">
+                  <div className="flex justify-between font-semibold text-[11px]">
+                    <span className="text-blue-800">{progress.status}</span>
+                    <span className="text-blue-900 font-mono">{progress.percent}%</span>
                   </div>
-                  <div className="w-full h-2.5 bg-slate-900 rounded-full overflow-hidden">
+                  <div className="w-full h-2 bg-blue-200 rounded-full overflow-hidden">
                     <div 
-                      className="h-full bg-blue-500 rounded-full transition-all duration-300"
+                      className="h-full bg-blue-600 rounded-full transition-all duration-300"
                       style={{ width: `${progress.percent}%` }}
                     />
                   </div>
@@ -458,13 +443,13 @@ export default function SranImportModal({ isOpen, onClose, onSuccess }) {
 
           {/* Màn Hình Hoàn Thành */}
           {result && (
-            <div className="p-6 rounded-2xl bg-emerald-950/20 border border-emerald-500/40 text-center space-y-3">
-              <div className="w-12 h-12 mx-auto rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center">
-                <CheckCircle2 className="w-6 h-6" />
+            <div className="p-5 rounded-2xl bg-emerald-50 border border-emerald-200 text-center space-y-2">
+              <div className="w-10 h-10 mx-auto rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                <CheckCircle2 className="w-5 h-5" />
               </div>
-              <h4 className="text-base font-bold text-white">Đồng Bộ Dữ Liệu Thành Công!</h4>
-              <p className="text-emerald-300">{result.message}</p>
-              <p className="text-slate-400 text-[11px]">
+              <h4 className="text-sm font-bold text-slate-900">Đồng Bộ Dữ Liệu Thành Công!</h4>
+              <p className="text-emerald-800 text-xs">{result.message}</p>
+              <p className="text-slate-500 text-[10px]">
                 Giao diện đã tự động nạp tiến độ mới nhất của {result.count} trạm.
               </p>
             </div>
@@ -472,11 +457,11 @@ export default function SranImportModal({ isOpen, onClose, onSuccess }) {
         </div>
 
         {/* Footer Modal */}
-        <div className="px-5 py-3 border-t border-slate-800 bg-slate-900/90 flex items-center justify-between">
+        <div className="px-4 py-2.5 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
           <button
             onClick={onClose}
             disabled={uploading}
-            className="px-4 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-medium text-xs transition-colors"
+            className="px-3 py-1 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold transition-colors"
           >
             {result ? 'Đóng' : 'Hủy bỏ'}
           </button>
@@ -485,16 +470,16 @@ export default function SranImportModal({ isOpen, onClose, onSuccess }) {
             <button
               onClick={handleStartUpsert}
               disabled={uploading}
-              className="flex items-center gap-2 px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 disabled:opacity-60 text-white font-semibold text-xs shadow-lg shadow-blue-900/30 transition-all"
+              className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-sm transition-all active:scale-95 disabled:opacity-50"
             >
               {uploading ? (
                 <>
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  <span>Đang lưu vào Supabase...</span>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  <span>Đang lưu...</span>
                 </>
               ) : (
                 <>
-                  <Sparkles className="w-4 h-4" />
+                  <Sparkles className="w-3.5 h-3.5" />
                   <span>Bắt đầu cập nhật ({scopeOption === 'tvt3' ? parsedData.tvt3Count : parsedData.totalInFile} trạm)</span>
                 </>
               )}
