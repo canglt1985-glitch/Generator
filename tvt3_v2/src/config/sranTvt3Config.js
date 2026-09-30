@@ -19,6 +19,31 @@ export const isTvt3District = (district) => {
   return TVT3_DISTRICTS.includes(d);
 };
 
+export const isSite5G = (site) => {
+  if (!site) return false;
+  const raw = site.raw_data || {};
+  const s5g = String(site.scope_5g || '').toLowerCase();
+  const c5g = String(site.config_5g || '').toLowerCase();
+  const has5gScope = s5g.includes('add 5g') || (s5g.includes('5g') && !s5g.includes('swap sran'));
+  const has5gConfig = c5g && !['', 'none', '0', '-', 'null'].includes(c5g);
+  const has5gOa = Boolean(raw.Onair_NR38_Actual_Date || raw.Onair_NR26_Actual_Date || raw.Onair_Actual_Date);
+  return Boolean(has5gScope || has5gConfig || has5gOa);
+};
+
+export const isSite5GOnair = (site) => {
+  if (!isSite5G(site)) return false;
+  const raw = site.raw_data || {};
+  const d = raw.Onair_Actual_Date || raw.Onair_NR26_Actual_Date || raw.Onair_NR38_Actual_Date;
+  return Boolean(d && !['', 'none', '0', '-', 'null'].includes(String(d).toLowerCase()));
+};
+
+export const isSite4GOnair = (site) => {
+  if (!site) return false;
+  const raw = site.raw_data || {};
+  const d = site.onair_date || raw.Onair_SRAN_Actual_Date;
+  return Boolean(d && !['', 'none', '0', '-', 'null'].includes(String(d).toLowerCase()));
+};
+
 export const SRAN_TVT3_CLUSTERS = [
   // ── ĐỢT 1: PILOT & KHỞI ĐỘNG (3 Cluster) ───────────────────────────
   {

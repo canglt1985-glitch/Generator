@@ -1,8 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   X, Radio, Zap, Calendar, MapPin, CheckCircle2, Clock, 
   AlertTriangle, Copy, Check, Layers, Cpu
 } from 'lucide-react';
+import { 
+  isSite5G,
+  isSite5GOnair,
+  isSite4GOnair
+} from '../../config/sranTvt3Config';
 
 export default function SranSiteModal({ site, onClose }) {
   const [copied, setCopied] = React.useState(false);
@@ -25,8 +30,10 @@ export default function SranSiteModal({ site, onClose }) {
   ];
 
   const raw = site.raw_data || {};
-  const is5g = Boolean(site.scope_5g || site.config_5g || raw.Onair_NR38_Actual_Date || raw.Onair_NR26_Actual_Date);
-  const isOnair = Boolean(site.onair_date);
+  const has5g = isSite5G(site);
+  const is5gOa = isSite5GOnair(site);
+  const is4gOa = isSite4GOnair(site);
+  const oa5gDate = raw.Onair_Actual_Date || raw.Onair_NR26_Actual_Date || raw.Onair_NR38_Actual_Date;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-150">
@@ -38,7 +45,7 @@ export default function SranSiteModal({ site, onClose }) {
         <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-100 bg-slate-50/80 sticky top-0 z-10">
           <div className="flex items-center gap-2.5">
             <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm ${
-              isOnair ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-amber-100 text-amber-700 border border-amber-200'
+              is4gOa ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-amber-100 text-amber-700 border border-amber-200'
             }`}>
               <Radio className="w-4 h-4" />
             </div>
@@ -61,24 +68,37 @@ export default function SranSiteModal({ site, onClose }) {
               <p className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.2">
                 <MapPin className="w-3 h-3 text-slate-400" />
                 <span>{site.district || 'Huyện chưa rõ'}</span>
-                {raw.Cluster_New && (
-                  <span className="text-blue-600 font-medium">({raw.Cluster_New})</span>
+                {raw.Cluster_Name && (
+                  <span className="text-blue-600 font-medium">({raw.Cluster_Name})</span>
                 )}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-1.5">
+            {/* Badge 4G */}
             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-              isOnair 
+              is4gOa 
                 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
-                : 'bg-amber-50 text-amber-700 border-amber-200'
+                : 'bg-slate-100 text-slate-600 border-slate-200'
             }`}>
-              {isOnair ? '✓ ĐÃ PHÁT SÓNG' : 'ĐANG TRIỂN KHAI'}
+              4G: {is4gOa ? 'ĐÃ SWAP' : 'CHƯA SWAP'}
             </span>
+
+            {/* Badge 5G */}
+            {has5g && (
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                is5gOa 
+                  ? 'bg-purple-50 text-purple-700 border-purple-200' 
+                  : 'bg-red-100 text-red-700 border-red-300 animate-pulse'
+              }`}>
+                5G: {is5gOa ? 'ĐÃ ON-AIR' : 'CHƯA ON-AIR'}
+              </span>
+            )}
+
             <button
               onClick={onClose}
-              className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200 transition-colors"
+              className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200 transition-colors ml-1"
             >
               <X className="w-4 h-4" />
             </button>

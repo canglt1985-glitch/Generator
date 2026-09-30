@@ -7,7 +7,10 @@ import { supabase } from '../supabaseClient';
 import { 
   SRAN_TVT3_CLUSTERS, 
   TVT3_DISTRICTS, 
-  isTvt3District 
+  isTvt3District,
+  isSite5G,
+  isSite5GOnair,
+  isSite4GOnair
 } from '../config/sranTvt3Config';
 
 // Re-export để tương thích 100% với NetworkMap.jsx
@@ -55,45 +58,46 @@ export default function Sran5gProject() {
     fetchSites();
   }, [fetchSites]);
 
-  // Tính toán KPI Tổng Thể TVT3
+  // Tính toán KPI Tổng Thể TVT3 dùng helper chuẩn hóa
   const kpis = useMemo(() => {
     const total = sites.length;
-    let onairCount = 0;
+    let onair4gCount = 0;
     let installCount = 0;
     let deliveryCount = 0;
     let sites5gCount = 0;
     let onair5gCount = 0;
 
     sites.forEach(s => {
-      const raw = s.raw_data || {};
-      const isOnair = Boolean(s.onair_date);
+      const is4gOa = isSite4GOnair(s);
       const isInstall = Boolean(s.install_date);
       const isDel = Boolean(s.delivery_date);
-      const is5g = Boolean(s.scope_5g || s.config_5g || raw.Onair_NR38_Actual_Date || raw.Onair_NR26_Actual_Date);
-      const is5gOa = Boolean(s.onair_date || raw.Onair_NR38_Actual_Date || raw.Onair_NR26_Actual_Date);
+      const has5g = isSite5G(s);
+      const is5gOa = isSite5GOnair(s);
 
-      if (isOnair) onairCount++;
+      if (is4gOa) onair4gCount++;
       if (isInstall) installCount++;
       if (isDel) deliveryCount++;
-      if (is5g) {
+      if (has5g) {
         sites5gCount++;
         if (is5gOa) onair5gCount++;
       }
     });
 
-    const swapPct = total ? Math.round((onairCount / total) * 100) : 0;
+    const swapPct = total ? Math.round((onair4gCount / total) * 100) : 0;
     const oa5gPct = sites5gCount ? Math.round((onair5gCount / sites5gCount) * 100) : 0;
     const insPct = total ? Math.round((installCount / total) * 100) : 0;
+    const pending5gCount = sites5gCount - onair5gCount;
 
     return {
       total,
-      onairCount,
+      onairCount: onair4gCount,
       swapPct,
       installCount,
       insPct,
       deliveryCount,
       sites5gCount,
       onair5gCount,
+      pending5gCount,
       oa5gPct,
       blockedCount: 2
     };
@@ -186,14 +190,17 @@ export default function Sran5gProject() {
             </div>
           </div>
 
-          {/* Card 3: Tiến độ 5G */}
-          <div className="p-3 rounded-xl bg-slate-50/80 border border-slate-200/80">
+          {/* Card 3: Tiến độ 5G (Có click xem trạm chưa xong) */}
+          <div 
+            onClick={() => setActiveTab('5g_rollout')}
+            className="p-3 rounded-xl bg-slate-50/80 border border-slate-200/80 cursor-pointer hover:bg-purple-50/30 hover:border-purple-300 transition-all"
+          >
             <div className="flex items-center justify-between text-slate-500 mb-1">
-              <span className="text-[11px] font-semibold uppercase tracking-wider">Chiến Dịch 5G</span>
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-purple-900">Chiến Dịch 5G</span>
               <Cpu className="w-3.5 h-3.5 text-purple-600" />
             </div>
             <div className="flex items-baseline gap-1.5">
-              <span className="text-xl font-black text-purple-600 font-mono">
+              <span className="text-xl font-black text-purple-700 font-mono">
                 {kpis.onair5gCount}
               </span>
               <span className="text-xs text-slate-500 font-mono">/ {kpis.sites5gCount || 151}</span>
@@ -207,9 +214,11 @@ export default function Sran5gProject() {
                 style={{ width: `${kpis.oa5gPct}%` }}
               />
             </div>
-            <div className="text-[10px] text-slate-500 mt-1 flex justify-between">
-              <span>Đơn & 2 lớp</span>
-              <span className="text-purple-600 font-medium">119 On-air</span>
+            <div className="text-[10px] text-slate-500 mt-1 flex justify-between items-center">
+              <span className="text-red-600 font-bold">🔴 Chưa On-Air: {kpis.pending5gCount} trạm</span>
+              <span className="text-purple-600 font-medium hover:underline flex items-center gap-0.5">
+                Xem ➔
+              </span>
             </div>
           </div>
 

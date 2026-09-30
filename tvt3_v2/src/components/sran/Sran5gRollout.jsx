@@ -1,53 +1,54 @@
 import React, { useState, useMemo } from 'react';
 import { 
   Cpu, CheckCircle2, Clock, AlertTriangle, 
-  MapPin, Search, ArrowUpRight
+  MapPin, Search, ArrowUpRight, Filter
 } from 'lucide-react';
-import { TVT3_DISTRICTS } from '../../config/sranTvt3Config';
+import { 
+  TVT3_DISTRICTS,
+  isSite5G,
+  isSite5GOnair
+} from '../../config/sranTvt3Config';
 
 export default function Sran5gRollout({ sites = [], onSelectSite }) {
-  const [filterStatus, setFilterStatus] = useState('all'); // all | onair | pending | dual
+  const [filterStatus, setFilterStatus] = useState('pending'); // Mặc định hiển thị trạm CHƯA ON-AIR theo nhu cầu người dùng
   const [selectedDistrict, setSelectedDistrict] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Lọc 151 trạm 5G của TVT3
+  // Lọc chuẩn xác 151 trạm 5G của TVT3
   const sites5g = useMemo(() => {
-    return sites.filter(s => {
-      const raw = s.raw_data || {};
-      return Boolean(s.scope_5g || s.config_5g || raw.Onair_NR38_Actual_Date || raw.Onair_NR26_Actual_Date);
-    });
+    return sites.filter(isSite5G);
   }, [sites]);
 
   // Phân tích trạng thái
-  const { onairCount, dualCount, singleCount } = useMemo(() => {
-    let onair = 0;
-    let dual = 0;
-    let single = 0;
+  const { onairList, pendingList, dualList } = useMemo(() => {
+    const onair = [];
+    const pending = [];
+    const dual = [];
 
     sites5g.forEach(s => {
       const raw = s.raw_data || {};
-      const isOa = Boolean(s.onair_date || raw.Onair_NR26_Actual_Date || raw.Onair_NR38_Actual_Date);
-      if (isOa) onair++;
+      const isOa = isSite5GOnair(s);
+      if (isOa) onair.push(s);
+      else pending.push(s);
 
       const isDual = (s.config_5g && s.config_5g.includes('3800')) || 
                      (raw.Onair_NR38_Actual_Date && raw.Onair_NR26_Actual_Date);
-      if (isDual) dual++;
-      else single++;
+      if (isDual) dual.push(s);
     });
 
-    return { onairCount: onair, dualCount: dual, singleCount: single };
+    return { onairList: onair, pendingList: pending, dualList: dual };
   }, [sites5g]);
 
   // Bộ lọc hiển thị
   const filteredSites = useMemo(() => {
     return sites5g.filter(s => {
       const raw = s.raw_data || {};
-      const isOnair = Boolean(s.onair_date || raw.Onair_NR26_Actual_Date || raw.Onair_NR38_Actual_Date);
+      const isOa = isSite5GOnair(s);
       const isDual = (s.config_5g && s.config_5g.includes('3800')) || 
                      (raw.Onair_NR38_Actual_Date && raw.Onair_NR26_Actual_Date);
 
-      if (filterStatus === 'onair' && !isOnair) return false;
-      if (filterStatus === 'pending' && isOnair) return false;
+      if (filterStatus === 'pending' && isOa) return false;
+      if (filterStatus === 'onair' && !isOa) return false;
       if (filterStatus === 'dual' && !isDual) return false;
 
       if (selectedDistrict !== 'all' && s.district !== selectedDistrict) return false;
@@ -56,7 +57,7 @@ export default function Sran5gRollout({ sites = [], onSelectSite }) {
         const q = searchQuery.toLowerCase().trim();
         const siteId = (s.site_id || '').toLowerCase();
         const siteOld = (s.site_id_old || '').toLowerCase();
-        const cluster = (raw.Cluster_New || raw.Cluster_Name || '').toLowerCase();
+        const cluster = (raw.Cluster_Name || raw.Cluster_New || '').toLowerCase();
         if (!siteId.includes(q) && !siteOld.includes(q) && !cluster.includes(q)) return false;
       }
 
@@ -120,42 +121,50 @@ export default function Sran5gRollout({ sites = [], onSelectSite }) {
         </div>
       </div>
 
-      {/* ── BỘ LỌC & TÌM KIẾM 5G COMPACT ─────────────────────────────── */}
+      {/* ── BỘ LỌC & TÌM KIẾM 5G (MẶC ĐỊNH LỌC TRẠM CHƯA PHÁT SÓNG) ─────── */}
       <div className="bg-white border border-slate-200/90 rounded-2xl p-3 sm:p-4 shadow-sm space-y-3">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5">
           {/* Lọc Trạng Thái 5G */}
           <div className="flex flex-wrap items-center gap-1.5">
             <button
-              onClick={() => setFilterStatus('all')}
-              className={`text-xs px-2.5 py-1 rounded-lg font-medium transition-all ${
-                filterStatus === 'all' ? 'bg-purple-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:text-slate-900'
+              onClick={() => setFilterStatus('pending')}
+              className={`text-xs px-2.5 py-1 rounded-lg font-bold transition-all ${
+                filterStatus === 'pending' 
+                  ? 'bg-red-600 text-white shadow-2xs' 
+                  : 'bg-red-50 text-red-700 border border-red-200 hover:bg-red-100'
               }`}
             >
-              Tất cả 151 trạm 5G
+              🔴 Chưa Phát Sóng ({pendingList.length} trạm)
             </button>
             <button
               onClick={() => setFilterStatus('onair')}
               className={`text-xs px-2.5 py-1 rounded-lg font-medium transition-all ${
-                filterStatus === 'onair' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:text-slate-900'
+                filterStatus === 'onair' 
+                  ? 'bg-emerald-600 text-white shadow-sm' 
+                  : 'bg-slate-100 text-slate-600 hover:text-slate-900'
               }`}
             >
-              Đã On-Air ({onairCount})
+              🟢 Đã Phát Sóng ({onairList.length} trạm)
             </button>
             <button
-              onClick={() => setFilterStatus('pending')}
+              onClick={() => setFilterStatus('all')}
               className={`text-xs px-2.5 py-1 rounded-lg font-medium transition-all ${
-                filterStatus === 'pending' ? 'bg-amber-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:text-slate-900'
+                filterStatus === 'all' 
+                  ? 'bg-blue-600 text-white shadow-sm' 
+                  : 'bg-slate-100 text-slate-600 hover:text-slate-900'
               }`}
             >
-              Chưa On-Air ({sites5g.length - onairCount})
+              Tất cả {sites5g.length} trạm 5G
             </button>
             <button
               onClick={() => setFilterStatus('dual')}
               className={`text-xs px-2.5 py-1 rounded-lg font-medium transition-all ${
-                filterStatus === 'dual' ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:text-slate-900'
+                filterStatus === 'dual' 
+                  ? 'bg-purple-600 text-white shadow-sm' 
+                  : 'bg-slate-100 text-slate-600 hover:text-slate-900'
               }`}
             >
-              5G Hai Lớp ({dualCount})
+              5G Hai Lớp ({dualList.length})
             </button>
           </div>
 
@@ -200,13 +209,13 @@ export default function Sran5gRollout({ sites = [], onSelectSite }) {
         </div>
       </div>
 
-      {/* ── BẢNG 151 TRẠM 5G COMPACT DENSITY ──────────────────────────── */}
+      {/* ── BẢNG DANH SÁCH 5G HIỂN THỊ RÕ TRẠM CHƯA PHÁT SÓNG ─────────────── */}
       <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm">
         <div className="px-4 py-2.5 border-b border-slate-100 flex items-center justify-between text-xs text-slate-500 bg-slate-50/50">
           <span className="font-semibold text-slate-800">
-            Hiển thị {filteredSites.length} vị trí 5G
+            {filterStatus === 'pending' ? '⚠️ Danh sách trạm 5G CHƯA PHÁT SÓNG' : 'Danh sách trạm 5G TVT3'}: <strong className="text-red-600 font-mono font-bold">{filteredSites.length}</strong> trạm
           </span>
-          <span>Click vào dòng để xem chi tiết</span>
+          <span>Click vào dòng để xem chi tiết tiến độ khảo sát, lắp đặt & vướng mắc</span>
         </div>
 
         <div className="overflow-x-auto">
@@ -215,9 +224,9 @@ export default function Sran5gRollout({ sites = [], onSelectSite }) {
               <tr>
                 <th className="py-2.5 px-3">Mã Trạm 5G</th>
                 <th className="py-2.5 px-3">Địa Bàn & Cụm</th>
-                <th className="py-2.5 px-3">Cấu Hình Băng Tần</th>
-                <th className="py-2.5 px-3">On-air NR 2600</th>
-                <th className="py-2.5 px-3">On-air NR 3800</th>
+                <th className="py-2.5 px-3">Cấu Hình 5G</th>
+                <th className="py-2.5 px-3">Tiến Độ Lắp Đặt</th>
+                <th className="py-2.5 px-3">Ngày Phát Sóng 5G</th>
                 <th className="py-2.5 px-3 text-center">Trạng Thái</th>
                 <th className="py-2.5 px-3 text-right">Xem</th>
               </tr>
@@ -232,55 +241,72 @@ export default function Sran5gRollout({ sites = [], onSelectSite }) {
               ) : (
                 filteredSites.map(s => {
                   const raw = s.raw_data || {};
-                  const isOnair = Boolean(s.onair_date || raw.Onair_NR26_Actual_Date || raw.Onair_NR38_Actual_Date);
+                  const isOa = isSite5GOnair(s);
                   const isDual = (s.config_5g && s.config_5g.includes('3800')) || 
                                  (raw.Onair_NR38_Actual_Date && raw.Onair_NR26_Actual_Date);
+                  const oaDate = raw.Onair_Actual_Date || raw.Onair_NR26_Actual_Date || raw.Onair_NR38_Actual_Date;
 
                   return (
                     <tr 
                       key={s.site_id}
                       onClick={() => onSelectSite && onSelectSite(s)}
-                      className="hover:bg-purple-50/40 cursor-pointer transition-colors group"
+                      className={`hover:bg-purple-50/40 cursor-pointer transition-colors group ${
+                        !isOa ? 'bg-amber-50/20' : ''
+                      }`}
                     >
-                      <td className="py-2 px-3 font-mono font-bold text-slate-900 group-hover:text-purple-700">
+                      <td className="py-2.5 px-3 font-mono font-bold text-slate-900 group-hover:text-purple-700">
                         <div className="flex items-center gap-1.5">
-                          <Cpu className="w-3.5 h-3.5 text-purple-600" />
-                          <span>{s.site_id}</span>
+                          <Cpu className={`w-3.5 h-3.5 ${isOa ? 'text-purple-600' : 'text-red-500'}`} />
+                          <span className={!isOa ? 'text-red-700 font-bold' : ''}>{s.site_id}</span>
                         </div>
                         {s.site_id_old && s.site_id_old !== s.site_id && (
                           <span className="text-[10px] text-slate-400 font-normal">Cũ: {s.site_id_old}</span>
                         )}
                       </td>
-                      <td className="py-2 px-3">
+
+                      <td className="py-2.5 px-3">
                         <div className="text-slate-800 font-medium">{s.district}</div>
-                        <div className="text-[10px] text-slate-400 font-mono">{raw.Cluster_New || raw.Cluster_Name || '-'}</div>
+                        <div className="text-[10px] text-blue-600 font-mono font-semibold">{raw.Cluster_Name || raw.Cluster_New || '-'}</div>
                       </td>
-                      <td className="py-2 px-3">
+
+                      <td className="py-2.5 px-3">
                         <span className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${
                           isDual 
                             ? 'bg-blue-50 text-blue-700 border-blue-200' 
                             : 'bg-purple-50 text-purple-700 border-purple-200'
                         }`}>
-                          {isDual ? '2 Lớp (2600 + 3800)' : 'Đơn Lớp (2600)'}
+                          {s.config_5g || (isDual ? '2 Lớp (2600+3800)' : 'NR26')}
                         </span>
                       </td>
-                      <td className="py-2 px-3 font-mono text-slate-600">
-                        {raw.Onair_NR26_Actual_Date || s.onair_date || '-'}
+
+                      <td className="py-2.5 px-3 font-mono text-slate-600">
+                        {s.install_date ? (
+                          <span className="text-blue-700 font-semibold">Đã lắp ({s.install_date})</span>
+                        ) : (
+                          <span className="text-amber-600 font-medium">Chưa lắp đặt</span>
+                        )}
                       </td>
-                      <td className="py-2 px-3 font-mono text-slate-600">
-                        {raw.Onair_NR38_Actual_Date || '-'}
+
+                      <td className="py-2.5 px-3 font-mono">
+                        {isOa ? (
+                          <span className="text-emerald-700 font-bold">{oaDate || s.onair_date}</span>
+                        ) : (
+                          <span className="text-red-600 font-semibold">Chưa phát sóng</span>
+                        )}
                       </td>
-                      <td className="py-2 px-3 text-center">
+
+                      <td className="py-2.5 px-3 text-center">
                         <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                          isOnair 
+                          isOa 
                             ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
-                            : 'bg-amber-50 text-amber-700 border-amber-200'
+                            : 'bg-red-100 text-red-700 border-red-300'
                         }`}>
-                          {isOnair ? <CheckCircle2 className="w-2.5 h-2.5" /> : <Clock className="w-2.5 h-2.5" />}
-                          {isOnair ? 'Đã On-air' : 'Chưa'}
+                          {isOa ? <CheckCircle2 className="w-2.5 h-2.5" /> : <Clock className="w-2.5 h-2.5" />}
+                          {isOa ? 'Đã On-Air' : 'Chưa On-Air'}
                         </span>
                       </td>
-                      <td className="py-2 px-3 text-right">
+
+                      <td className="py-2.5 px-3 text-right">
                         <button className="p-1 rounded text-slate-400 group-hover:text-purple-600 transition-colors">
                           <ArrowUpRight className="w-3.5 h-3.5" />
                         </button>
