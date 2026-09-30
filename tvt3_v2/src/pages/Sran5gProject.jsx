@@ -215,7 +215,7 @@ export default function Sran5gProject() {
               />
             </div>
             <div className="text-[10px] text-slate-500 mt-1 flex justify-between items-center">
-              <span className="text-red-600 font-bold">🔴 Chưa On-Air: {kpis.pending5gCount} trạm</span>
+              <span className="text-amber-700 font-bold">📡 Chờ On-Air: {kpis.pending5gCount} trạm</span>
               <span className="text-purple-600 font-medium hover:underline flex items-center gap-0.5">
                 Xem ➔
               </span>

@@ -130,11 +130,11 @@ export default function Sran5gRollout({ sites = [], onSelectSite }) {
               onClick={() => setFilterStatus('pending')}
               className={`text-xs px-2.5 py-1 rounded-lg font-bold transition-all ${
                 filterStatus === 'pending' 
-                  ? 'bg-red-600 text-white shadow-2xs' 
-                  : 'bg-red-50 text-red-700 border border-red-200 hover:bg-red-100'
+                  ? 'bg-amber-600 text-white shadow-2xs' 
+                  : 'bg-amber-50 text-amber-800 border border-amber-300 hover:bg-amber-100'
               }`}
             >
-              🔴 Chưa Phát Sóng ({pendingList.length} trạm)
+              📡 Quy Hoạch Chờ Phát ({pendingList.length} trạm)
             </button>
             <button
               onClick={() => setFilterStatus('onair')}
@@ -213,7 +213,7 @@ export default function Sran5gRollout({ sites = [], onSelectSite }) {
       <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm">
         <div className="px-4 py-2.5 border-b border-slate-100 flex items-center justify-between text-xs text-slate-500 bg-slate-50/50">
           <span className="font-semibold text-slate-800">
-            {filterStatus === 'pending' ? '⚠️ Danh sách trạm 5G CHƯA PHÁT SÓNG' : 'Danh sách trạm 5G TVT3'}: <strong className="text-red-600 font-mono font-bold">{filteredSites.length}</strong> trạm
+            {filterStatus === 'pending' ? '📡 Danh sách trạm Quy hoạch 5G (Chờ phát sóng)' : 'Danh sách trạm 5G TVT3'}: <strong className="text-purple-700 font-mono font-bold">{filteredSites.length}</strong> trạm
           </span>
           <span>Click vào dòng để xem chi tiết tiến độ khảo sát, lắp đặt & vướng mắc</span>
         </div>
@@ -256,8 +256,8 @@ export default function Sran5gRollout({ sites = [], onSelectSite }) {
                     >
                       <td className="py-2.5 px-3 font-mono font-bold text-slate-900 group-hover:text-purple-700">
                         <div className="flex items-center gap-1.5">
-                          <Cpu className={`w-3.5 h-3.5 ${isOa ? 'text-purple-600' : 'text-red-500'}`} />
-                          <span className={!isOa ? 'text-red-700 font-bold' : ''}>{s.site_id}</span>
+                          <Cpu className={`w-3.5 h-3.5 ${isOa ? 'text-purple-600' : 'text-amber-600'}`} />
+                          <span className={!isOa ? 'text-amber-900 font-bold' : ''}>{s.site_id}</span>
                         </div>
                         {s.site_id_old && s.site_id_old !== s.site_id && (
                           <span className="text-[10px] text-slate-400 font-normal">Cũ: {s.site_id_old}</span>
@@ -291,7 +291,7 @@ export default function Sran5gRollout({ sites = [], onSelectSite }) {
                         {isOa ? (
                           <span className="text-emerald-700 font-bold">{oaDate || s.onair_date}</span>
                         ) : (
-                          <span className="text-red-600 font-semibold">Chưa phát sóng</span>
+                          <span className="text-amber-700 font-semibold">⏳ Chờ phát sóng</span>
                         )}
                       </td>
 
@@ -299,10 +299,10 @@ export default function Sran5gRollout({ sites = [], onSelectSite }) {
                         <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${
                           isOa 
                             ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
-                            : 'bg-red-100 text-red-700 border-red-300'
+                            : 'bg-amber-50 text-amber-800 border-amber-300'
                         }`}>
                           {isOa ? <CheckCircle2 className="w-2.5 h-2.5" /> : <Clock className="w-2.5 h-2.5" />}
-                          {isOa ? 'Đã On-Air' : 'Chưa On-Air'}
+                          {isOa ? 'Đã On-Air' : 'Quy hoạch (Chờ phát)'}
                         </span>
                       </td>
 

@@ -35,6 +35,10 @@ export default function SranSiteModal({ site, onClose }) {
   const is4gOa = isSite4GOnair(site);
   const oa5gDate = raw.Onair_Actual_Date || raw.Onair_NR26_Actual_Date || raw.Onair_NR38_Actual_Date;
 
+  const rawSwapSol = String(site.swap_solution || raw.Swap_Solution || '').toUpperCase();
+  const isSranSwap = rawSwapSol.includes('3G');
+  const swapTypeLabel = isSranSwap ? 'Swap SRAN (3G/4G)' : 'Swap 4G';
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-150">
       <div 
@@ -76,23 +80,23 @@ export default function SranSiteModal({ site, onClose }) {
           </div>
 
           <div className="flex items-center gap-1.5">
-            {/* Badge 4G */}
+            {/* Badge Swap */}
             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
               is4gOa 
                 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
                 : 'bg-slate-100 text-slate-600 border-slate-200'
             }`}>
-              4G: {is4gOa ? 'ĐÃ SWAP' : 'CHƯA SWAP'}
+              {is4gOa ? `ĐÃ ${swapTypeLabel.toUpperCase()}` : 'CHƯA SWAP'}
             </span>
 
-            {/* Badge 5G */}
+            {/* Badge 5G (Chỉ hiển thị khi thực sự có quy hoạch 5G) */}
             {has5g && (
               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
                 is5gOa 
                   ? 'bg-purple-50 text-purple-700 border-purple-200' 
-                  : 'bg-red-100 text-red-700 border-red-300 animate-pulse'
+                  : 'bg-amber-50 text-amber-800 border-amber-300'
               }`}>
-                5G: {is5gOa ? 'ĐÃ ON-AIR' : 'CHƯA ON-AIR'}
+                5G: {is5gOa ? 'ĐÃ ON-AIR' : 'QUY HOẠCH (CHỜ PHÁT)'}
               </span>
             )}
 
@@ -164,7 +168,9 @@ export default function SranSiteModal({ site, onClose }) {
                 </div>
                 <div className="flex justify-between py-0.5 border-b border-slate-200/60">
                   <span className="text-slate-500">Giải pháp swap:</span>
-                  <span className="font-medium text-slate-800">{site.swap_solution || 'Tiêu chuẩn'}</span>
+                  <span className="font-semibold text-slate-800">
+                    {isSranSwap ? 'Swap SRAN (3G/4G)' : rawSwapSol.includes('4G') ? 'Swap 4G (4G Only)' : (site.swap_solution || 'Tiêu chuẩn')}
+                  </span>
                 </div>
                 <div className="flex justify-between py-0.5">
                   <span className="text-slate-500">Đơn vị thi công:</span>
@@ -181,11 +187,13 @@ export default function SranSiteModal({ site, onClose }) {
               <div className="space-y-1 text-[11px]">
                 <div className="flex justify-between py-0.5 border-b border-slate-200/60">
                   <span className="text-slate-500">Phạm vi 5G:</span>
-                  <span className="font-medium text-slate-800">{site.scope_5g || (is5g ? 'Có 5G' : 'Không')}</span>
+                  <span className="font-medium text-slate-800">
+                    {has5g ? (is5gOa ? 'Đang phát sóng 5G' : 'Quy hoạch 5G (Chờ phát sóng)') : 'Không có 5G'}
+                  </span>
                 </div>
                 <div className="flex justify-between py-0.5 border-b border-slate-200/60">
                   <span className="text-slate-500">Cấu hình 5G:</span>
-                  <span className="font-medium text-purple-700">{site.config_5g || (is5g ? '5G Massive MIMO' : '-')}</span>
+                  <span className="font-medium text-purple-700">{site.config_5g || (has5g ? '5G Massive MIMO' : '-')}</span>
                 </div>
                 <div className="flex justify-between py-0.5 border-b border-slate-200/60">
                   <span className="text-slate-500">On-air NR 2600:</span>

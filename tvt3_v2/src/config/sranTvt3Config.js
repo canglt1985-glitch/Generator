@@ -40,7 +40,7 @@ export const isSite5GOnair = (site) => {
 export const isSite4GOnair = (site) => {
   if (!site) return false;
   const raw = site.raw_data || {};
-  const d = site.swap_date || raw.Onair_SRAN_Actual_Date || raw.Swap_3G4G || raw['Swap 3G4G'];
+  const d = site.swap_date || raw.Swap_Date || raw.Onair_SRAN_Actual_Date || raw.Swap_3G4G || raw['Swap 3G4G'];
   return Boolean(d && !['', 'none', '0', '-', 'null'].includes(String(d).toLowerCase()));
 };
 

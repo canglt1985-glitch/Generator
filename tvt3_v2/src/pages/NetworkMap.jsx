@@ -292,9 +292,10 @@ const getSiteSranCategory = (site, sranMap) => {
   const hasSwap3g4g = Boolean(swapDate);
 
   const rawCfg = String(sran.config_3g4g || sran.raw_data?.['3G4G Config'] || '').toUpperCase();
-  const rawSol = String(sran.raw_data?.['Swap Solution'] || sran.raw_data?.['Swap_Solution'] || '').toUpperCase();
-  const is4gOnly = rawCfg.includes('4G ONLY') || (rawSol.includes('SWAP:4G') && !rawSol.includes('3G'));
-  const config4g = (rawCfg === '0' || rawCfg === '-') ? null : (is4gOnly ? '4G Only' : 'SRAN');
+  const rawSol = String(sran.swap_solution || sran.raw_data?.['Swap Solution'] || sran.raw_data?.['Swap_Solution'] || '').toUpperCase();
+  const isSranSwap = rawSol.includes('3G'); // Có 3G4G là Swap SRAN (3G/4G), còn lại là Swap 4G Only
+  const swapTypeLabel = isSranSwap ? 'Swap SRAN (3G/4G)' : 'Swap 4G';
+  const config4g = (rawCfg === '0' || rawCfg === '-') ? null : (isSranSwap ? 'SRAN 3G/4G' : '4G Only');
 
   const cleanConfig5g = is5g 
     ? ((config5gUpper && !['NONE', '0', '-', 'NULL', ''].includes(config5gUpper)) 
@@ -308,6 +309,9 @@ const getSiteSranCategory = (site, sranMap) => {
     config_5g: cleanConfig5g,
     config_4g: config4g,
     config_3g4g: sran.config_3g4g || sran.raw_data?.['3G4G Config'],
+    swap_solution: sran.swap_solution || sran.raw_data?.Swap_Solution,
+    swap_type_label: swapTypeLabel,
+    is_sran_swap: isSranSwap,
     onair_date: onair5gDate,
     swap_date: swapDate,
     integration_date: sran.integration_date,
@@ -320,7 +324,7 @@ const getSiteSranCategory = (site, sranMap) => {
     is_5g: is5g
   };
 
-  // 1. Trạm phát sóng 5G: ĐÃ CÓ BÁO CÁO ON-AIR (cột BC on-air)
+  // 1. Trạm phát sóng 5G: ĐÃ CÓ BÁO CÁO ON-AIR 5G THỰC TẾ
   if (hasOnair5g) {
     // 1a. Trạm 5G 2 Lớp (2600 + 3800 MHz): Màu tím đậm neon, viền dày phát sáng rực rỡ, icon tia sét
     if (isDual5g) {
@@ -357,13 +361,30 @@ const getSiteSranCategory = (site, sranMap) => {
     };
   }
 
-  // 2. Trạm đã swap sang 4G ERA: CÓ NGÀY Ở CỘT Swap 3G4G (và chưa On-air 5G)
+  // 2. Trạm CÓ QUY HOẠCH 5G nhưng CHƯA ON-AIR 5G (Chuẩn bị phát sóng)
+  if (is5g) {
+    return {
+      key: 'plan_5g_pending',
+      label: 'Quy hoạch 5G (Chờ phát)',
+      shortLabel: 'QH 5G',
+      icon: '📡',
+      color: '#f59e0b',
+      borderClass: 'border-2 border-amber-400 shadow-[0_0_9px_rgba(245,158,11,0.9)] ring-1 ring-amber-400/50 bg-slate-900/95 text-amber-100 font-bold',
+      badgeClass: 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40 font-bold',
+      textColor: 'text-amber-600 dark:text-amber-400',
+      sranInfo: {
+        ...sranInfo,
+        status_note: `${hasSwap3g4g ? `Đã ${swapTypeLabel} (${swapDate}) • ` : 'Chưa Swap • '}Quy hoạch 5G (${cleanConfig5g || 'NR26'}) Chờ On-air`
+      }
+    };
+  }
+
+  // 3. Trạm THUẦN 4G ĐÃ SWAP (CÓ NGÀY Ở CỘT Swap và KHÔNG CÓ 5G)
   if (hasSwap3g4g) {
-    const note5g = is5g ? (isDual5g ? ' • Chờ On-air 5G 2 Lớp' : ' • Chờ On-air 5G') : '';
     return {
       key: 'swapped_4g_era',
-      label: '4G ERA Đã Swap',
-      shortLabel: '4G ERA',
+      label: isSranSwap ? 'Swap SRAN (3G/4G)' : 'Swap 4G',
+      shortLabel: isSranSwap ? 'SRAN 3G/4G' : 'Swap 4G',
       icon: '🔄',
       color: '#06b6d4',
       borderClass: 'border-2 border-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.95)] ring-1 ring-cyan-400/50 bg-slate-900/95 text-cyan-100',
@@ -371,13 +392,12 @@ const getSiteSranCategory = (site, sranMap) => {
       textColor: 'text-cyan-600',
       sranInfo: {
         ...sranInfo,
-        status_note: `Đã hoàn tất Swap 3G/4G (${swapDate})${note5g}`
+        status_note: `Đã hoàn tất ${swapTypeLabel} (${swapDate})`
       }
     };
   }
 
-  // 3. Trạm 4G Hiện hữu (Chưa swap)
-  const notePlan5g = is5g ? (isDual5g ? ' (Chưa Swap • Quy hoạch 5G 2 Lớp)' : ' (Chưa Swap • Quy hoạch 5G)') : ' (Chưa Swap)';
+  // 4. Trạm 4G Hiện hữu (Chưa swap, thuần 4G)
   return {
     key: 'normal_4g',
     label: '4G Hiện hữu',
@@ -389,7 +409,7 @@ const getSiteSranCategory = (site, sranMap) => {
     textColor: 'text-blue-600',
     sranInfo: {
       ...sranInfo,
-      status_note: `4G Thiết bị hiện hữu${notePlan5g}`
+      status_note: `4G Thiết bị hiện hữu (${isSranSwap ? '3G/4G SRAN' : '4G Only'} - Chưa Swap)`
     }
   };
 };
@@ -446,7 +466,13 @@ const createSiteDivIcon = (id, type, infraCategory = null, sranCategory = null, 
 
   if (type === 'Hoạt động') {
     chipClass = sranCategory?.borderClass || 'border border-blue-400/60 bg-blue-600/90 text-white shadow-sm';
-    iconPrefix = sranCategory?.key === 'onair_5g_dual' ? '⚡ ' : sranCategory?.key === 'onair_5g' ? '📶 ' : '';
+    iconPrefix = sranCategory?.key === 'onair_5g_dual' 
+      ? '⚡ ' 
+      : sranCategory?.key === 'onair_5g' 
+        ? '📶 ' 
+        : sranCategory?.key === 'plan_5g_pending'
+          ? '📡 '
+          : '';
   } else if (infraCategory) {
     chipClass = `${infraCategory.bgGradient} text-white`;
     iconPrefix = `${infraCategory.icon} `;
@@ -458,10 +484,15 @@ const createSiteDivIcon = (id, type, infraCategory = null, sranCategory = null, 
   // Chế độ thu gọn khi zoom xa (< 13): Chấm tròn phát sáng màu công nghệ (kèm hit-box 38px chạm ngón tay)
   if (isCompact) {
     const isDual = sranCategory?.key === 'onair_5g_dual';
+    const isPlan5g = sranCategory?.key === 'plan_5g_pending';
     const dotColor = type === 'Hoạt động' ? (sranCategory?.color || '#3b82f6') : (infraCategory?.color || '#f59e0b');
-    const size = isDual ? '11px' : '8px';
-    const border = isDual ? '2px solid #f3e8ff' : '1.5px solid white';
-    const shadow = isDual ? '0 0 10px #7e22ce, 0 0 16px #a855f7' : `0 0 4px ${dotColor}`;
+    const size = isDual ? '11px' : isPlan5g ? '9px' : '8px';
+    const border = isDual ? '2px solid #f3e8ff' : isPlan5g ? '1.5px solid #fef3c7' : '1.5px solid white';
+    const shadow = isDual 
+      ? '0 0 10px #7e22ce, 0 0 16px #a855f7' 
+      : isPlan5g 
+        ? '0 0 7px #f59e0b' 
+        : `0 0 4px ${dotColor}`;
     return L.divIcon({
       html: `<div style="position: relative; width: 0; height: 0; display: flex; align-items: center; justify-content: center;">
                <div style="position: absolute; width: 38px; height: 38px; top: -19px; left: -19px; cursor: pointer; -webkit-tap-highlight-color: transparent;"></div>
@@ -561,6 +592,7 @@ export default function NetworkMap() {
   const [layerActiveSites, setLayerActiveSites] = useState(true); // Trạm hoạt động 3G/4G hiện hữu
   const [layer5gDual, setLayer5gDual] = useState(true); // Trạm 5G 2 Lớp (2600 + 3800 MHz)
   const [layer5gOnair, setLayer5gOnair] = useState(true); // Trạm 5G 1 Lớp (2600 MHz)
+  const [layer5gPending, setLayer5gPending] = useState(true); // Trạm Quy hoạch 5G (Chờ phát sóng)
   const [layer4gEra, setLayer4gEra] = useState(true); // Trạm 4G ERA Swap
   const [layerMoran, setLayerMoran] = useState(true); // Trạm MORAN 4G (VNPT Host)
   const [layerPlanningInfra, setLayerPlanningInfra] = useState(false); // Trạm CSHT Quy hoạch
@@ -616,6 +648,7 @@ export default function NetworkMap() {
     const counts = {
       onair_5g_dual: 0,
       onair_5g: 0,
+      plan_5g_pending: 0,
       swapped_4g_era: 0,
       moran_vnpt_host: 0,
       normal_4g: 0,
@@ -1183,9 +1216,10 @@ export default function NetworkMap() {
           hostName.includes(query) ||
           csht.includes(query) ||
           ((query.includes('moran') || query.includes('host') || query.includes('sharing')) && s.sranCategory?.key === 'moran_vnpt_host') ||
-          (query.includes('5g') && (s.sranCategory?.key === 'onair_5g' || s.sranCategory?.key === 'onair_5g_dual')) ||
+          (query.includes('5g') && (s.sranCategory?.key === 'onair_5g' || s.sranCategory?.key === 'onair_5g_dual' || s.sranCategory?.key === 'plan_5g_pending')) ||
           ((query.includes('2 lop') || query.includes('dual')) && s.sranCategory?.key === 'onair_5g_dual') ||
           (query.includes('1 lop') && s.sranCategory?.key === 'onair_5g') ||
+          ((query.includes('cho') || query.includes('quy hoach') || query.includes('pending')) && s.sranCategory?.key === 'plan_5g_pending') ||
           ((query.includes('era') || query.includes('swap')) && s.sranCategory?.key === 'swapped_4g_era')
         );
       })
@@ -1205,7 +1239,7 @@ export default function NetworkMap() {
           lat: parseFloat(s.location_info.vi_do),
           lng: parseFloat(s.location_info.kinh_do),
           type: s.sranCategory?.shortLabel || 'Hoạt động',
-          techType: s.sranCategory?.key === 'onair_5g_dual' ? '5G 2 Lớp' : s.sranCategory?.key === 'onair_5g' ? '5G 1 Lớp' : s.sranCategory?.key === 'swapped_4g_era' ? '4G ERA' : s.sranCategory?.key === 'moran_vnpt_host' ? 'MORAN 4G' : '4G',
+          techType: s.sranCategory?.key === 'onair_5g_dual' ? '5G 2 Lớp' : s.sranCategory?.key === 'onair_5g' ? '5G 1 Lớp' : s.sranCategory?.key === 'plan_5g_pending' ? 'Quy hoạch 5G' : s.sranCategory?.key === 'swapped_4g_era' ? '4G ERA' : s.sranCategory?.key === 'moran_vnpt_host' ? 'MORAN 4G' : '4G',
           badgeClass: s.sranCategory?.badgeClass || 'bg-blue-500/10 text-blue-400 border border-blue-500/20',
           rawSite: s,
           rawCat: s.sranCategory
@@ -1258,6 +1292,7 @@ export default function NetworkMap() {
     } else {
       if (item.techType === '5G 2 Lớp' && !layer5gDual) setLayer5gDual(true);
       else if (item.techType === '5G 1 Lớp' && !layer5gOnair) setLayer5gOnair(true);
+      else if (item.techType === 'Quy hoạch 5G' && !layer5gPending) setLayer5gPending(true);
       else if (item.techType === '5G' && (!layer5gOnair || !layer5gDual)) { setLayer5gOnair(true); setLayer5gDual(true); }
       else if (item.techType === '4G ERA' && !layer4gEra) setLayer4gEra(true);
       else if (item.techType === 'MORAN 4G' && !layerMoran) setLayerMoran(true);
@@ -1339,6 +1374,7 @@ export default function NetworkMap() {
       // Tự động bật phân lớp tương ứng nếu đang tắt
       if (matchedActive.sranCategory?.key === 'onair_5g_dual' && !layer5gDual) setLayer5gDual(true);
       else if (matchedActive.sranCategory?.key === 'onair_5g' && !layer5gOnair) setLayer5gOnair(true);
+      else if (matchedActive.sranCategory?.key === 'plan_5g_pending' && !layer5gPending) setLayer5gPending(true);
       else if (matchedActive.sranCategory?.key === 'swapped_4g_era' && !layer4gEra) setLayer4gEra(true);
       else if (matchedActive.sranCategory?.key === 'moran_vnpt_host' && !layerMoran) setLayerMoran(true);
       else if (!layerActiveSites) setLayerActiveSites(true);
@@ -2022,14 +2058,14 @@ export default function NetworkMap() {
               <span>{selectedTileLayer === 'google_satellite' ? '🛰️ Vệ tinh' : selectedTileLayer === 'google_hybrid' ? '🗺️ Hỗn hợp' : '🚗 OSM'}</span>
             </button>
 
-            {/* 5G Toggle */}
+            {/* 5G On-air Toggle */}
             <button
               type="button"
               onClick={() => {
                 const next = !(layer5gDual || layer5gOnair);
                 setLayer5gDual(next);
                 setLayer5gOnair(next);
-                showToast(next ? 'Đã bật phân lớp 5G' : 'Đã ẩn phân lớp 5G');
+                showToast(next ? 'Đã bật phân lớp 5G On-air' : 'Đã ẩn phân lớp 5G On-air');
               }}
               className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10.5px] font-bold backdrop-blur-md border active:scale-95 transition-all shadow-md shrink-0 cursor-pointer ${
                 layer5gDual || layer5gOnair 
@@ -2037,8 +2073,25 @@ export default function NetworkMap() {
                   : 'bg-slate-900/80 border-slate-700/60 text-slate-400 opacity-60'
               }`}
             >
-              <span>⚡ 5G</span>
+              <span>⚡ 5G On-air</span>
               <span className="text-[9px] px-1 rounded-full bg-purple-900/80 font-black">{activeSiteCounts.onair_5g_dual + activeSiteCounts.onair_5g}</span>
+            </button>
+
+            {/* Quy hoạch 5G Chờ phát Toggle */}
+            <button
+              type="button"
+              onClick={() => {
+                setLayer5gPending(!layer5gPending);
+                showToast(!layer5gPending ? 'Đã bật trạm Quy hoạch 5G (Chờ phát)' : 'Đã ẩn trạm Quy hoạch 5G');
+              }}
+              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10.5px] font-bold backdrop-blur-md border active:scale-95 transition-all shadow-md shrink-0 cursor-pointer ${
+                layer5gPending 
+                  ? 'bg-amber-950/90 border-amber-500/80 text-amber-200 ring-1 ring-amber-500/40' 
+                  : 'bg-slate-900/80 border-slate-700/60 text-slate-400 opacity-60'
+              }`}
+            >
+              <span>📡 QH 5G</span>
+              <span className="text-[9px] px-1 rounded-full bg-amber-900/80 font-black">{activeSiteCounts.plan_5g_pending}</span>
             </button>
 
             {/* 4G ERA Swap */}
@@ -2203,6 +2256,7 @@ export default function NetworkMap() {
                           setLayerActiveSites(true);
                           setLayer5gDual(true);
                           setLayer5gOnair(true);
+                          setLayer5gPending(true);
                           setLayer4gEra(true);
                           setLayerMoran(true);
                           setLayerPlanningInfra(true);
@@ -2220,6 +2274,7 @@ export default function NetworkMap() {
                           setLayerActiveSites(false);
                           setLayer5gDual(false);
                           setLayer5gOnair(false);
+                          setLayer5gPending(false);
                           setLayer4gEra(false);
                           setLayerMoran(false);
                           setLayerPlanningInfra(false);
@@ -2297,6 +2352,28 @@ export default function NetworkMap() {
                       </div>
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-pink-950 text-pink-300 border border-pink-700/50 shrink-0">
                         {activeSiteCounts.onair_5g}
+                      </span>
+                    </label>
+
+                    {/* Layer 2c: Quy hoạch 5G (Chờ phát sóng) */}
+                    <label className="flex items-center justify-between p-2 rounded-xl bg-amber-950/30 hover:bg-amber-950/60 border border-amber-600/50 cursor-pointer transition-colors">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <input
+                          type="checkbox"
+                          checked={layer5gPending}
+                          onChange={(e) => setLayer5gPending(e.target.checked)}
+                          className="rounded border-amber-500 text-amber-500 focus:ring-amber-500 h-4 w-4 bg-slate-900 cursor-pointer"
+                        />
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                            <span className="h-2 w-2 rounded-full bg-amber-400 shrink-0"></span>
+                            <span className="text-amber-300 font-bold flex items-center gap-1">📡 Quy hoạch 5G <span className="text-[10px] font-normal text-amber-400">(Chờ phát)</span></span>
+                          </div>
+                          <div className="text-[10px] text-slate-400 truncate">Có quy hoạch 5G, đang chờ phát sóng On-air</div>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-950 text-amber-300 border border-amber-700/50 shrink-0">
+                        {activeSiteCounts.plan_5g_pending}
                       </span>
                     </label>
 
@@ -2657,6 +2734,7 @@ export default function NetworkMap() {
                   const catKey = site.sranCategory?.key;
                   if (catKey === 'onair_5g_dual') return layer5gDual;
                   if (catKey === 'onair_5g') return layer5gOnair;
+                  if (catKey === 'plan_5g_pending') return layer5gPending;
                   if (catKey === 'swapped_4g_era') return layer4gEra;
                   if (catKey === 'moran_vnpt_host') return layerMoran;
                   return layerActiveSites;
@@ -2750,43 +2828,48 @@ export default function NetworkMap() {
                             )}
 
                             {/* Khối cấu hình 5G / 4G / Swap nếu có */}
-                            {(cat?.sranInfo?.config_5g || cat?.sranInfo?.config_4g || cat?.sranInfo?.swap_date) && (
-                              <div className="bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-[11px] space-y-1.5 shadow-sm">
-                                {/* Trạng thái Swap 3G/4G */}
+                            {(cat?.sranInfo?.is_5g || cat?.sranInfo?.has_swap_3g4g || cat?.sranInfo?.config_4g) && (
+                              <div className="bg-slate-50 border border-slate-200 rounded-lg p-2 text-[11px] space-y-1.5 shadow-sm">
+                                {/* Trạng thái 5G (CHỈ HIỂN THỊ KHI TRẠM THỰC SỰ CÓ QUY HOẠCH 5G) */}
+                                {cat.sranInfo?.is_5g && (
+                                  cat.sranInfo?.is_dual_5g && cat.sranInfo?.has_onair_5g ? (
+                                    <div className="text-purple-800 font-extrabold flex items-center justify-between bg-purple-100/90 px-2 py-0.5 rounded border border-purple-300">
+                                      <span className="flex items-center gap-1">⚡ 5G 2 Lớp (2600+3800):</span>
+                                      <span className="font-mono text-purple-900 font-black">
+                                        On-air {cat.sranInfo.onair_date}
+                                      </span>
+                                    </div>
+                                  ) : cat.sranInfo?.has_onair_5g ? (
+                                    <div className="text-pink-700 font-bold flex items-center justify-between bg-pink-50 px-2 py-0.5 rounded border border-pink-200">
+                                      <span className="flex items-center gap-1">📶 5G ({cat.sranInfo.config_5g || '2600'}):</span>
+                                      <span className="font-mono font-bold">
+                                        On-air {cat.sranInfo.onair_date}
+                                      </span>
+                                    </div>
+                                  ) : (
+                                    <div className="text-amber-800 font-semibold flex items-center justify-between bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                                      <span className="flex items-center gap-1">📡 5G ({cat.sranInfo.config_5g || 'Quy hoạch'}):</span>
+                                      <span className="font-mono text-amber-700 font-bold">⏳ Chờ phát sóng</span>
+                                    </div>
+                                  )
+                                )}
+
+                                {/* Trạng thái Swap 4G / SRAN (Tách bạch rõ SRAN 3G/4G vs 4G) */}
                                 {cat.sranInfo?.swap_date ? (
                                   <div className="text-emerald-800 font-bold flex items-center justify-between bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                                    <span className="flex items-center gap-1">🔄 Swap 3G/4G:</span>
+                                    <span className="flex items-center gap-1">🔄 {cat.sranInfo.swap_type_label || 'Swap'}:</span>
                                     <span className="font-mono text-emerald-900 font-extrabold">{cat.sranInfo.swap_date}</span>
                                   </div>
                                 ) : (
                                   <div className="text-slate-500 font-medium flex items-center justify-between px-1">
-                                    <span>🔄 Swap 3G/4G:</span>
+                                    <span>🔄 Swap {cat.sranInfo?.is_sran_swap ? 'SRAN (3G/4G)' : '4G'}:</span>
                                     <span className="text-slate-400 italic">Chưa swap</span>
                                   </div>
                                 )}
 
-                                {/* Trạng thái 5G */}
-                                {cat.sranInfo?.is_dual_5g ? (
-                                  <div className="text-purple-800 font-extrabold flex items-center justify-between bg-purple-100/90 px-2 py-1 rounded border border-purple-300">
-                                    <span className="flex items-center gap-1">⚡ 5G 2 Lớp (2600+3800):</span>
-                                    <span className="font-mono text-purple-900 font-black">
-                                      {cat.sranInfo?.onair_date ? `On-air ${cat.sranInfo.onair_date}` : 'Chưa On-air'}
-                                    </span>
-                                  </div>
-                                ) : cat.sranInfo?.config_5g ? (
-                                  <div className={`font-semibold flex items-center justify-between px-1 py-0.5 rounded ${
-                                    cat.sranInfo?.onair_date ? 'bg-pink-50 text-pink-700 border border-pink-200' : 'text-slate-600'
-                                  }`}>
-                                    <span>📶 5G ({cat.sranInfo.config_5g}):</span>
-                                    <span className="font-mono font-bold">
-                                      {cat.sranInfo?.onair_date ? `On-air ${cat.sranInfo.onair_date}` : 'Chưa On-air'}
-                                    </span>
-                                  </div>
-                                ) : null}
-
                                 {cat.sranInfo?.config_4g && (
                                   <div className="text-slate-700 font-medium flex items-center justify-between px-1">
-                                    <span>🔄 Cấu hình 4G:</span> 
+                                    <span>⚙️ Cấu hình 4G:</span> 
                                     <span className="font-bold text-slate-800 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">{cat.sranInfo.config_4g}</span>
                                   </div>
                                 )}
@@ -3281,45 +3364,54 @@ export default function NetworkMap() {
                   )}
 
                   {/* Cấu hình 5G / 4G / Swap */}
-                  {(cat?.sranInfo?.config_5g || cat?.sranInfo?.config_4g || cat?.sranInfo?.swap_date) && (
+                  {(cat?.sranInfo?.is_5g || cat?.sranInfo?.has_swap_3g4g || cat?.sranInfo?.config_4g) && (
                     <div className="space-y-1.5">
-                      {/* Trạng thái Swap 3G/4G */}
+                      {/* Trạng thái 5G (Chỉ hiển thị khi trạm có quy hoạch 5G) */}
+                      {cat.sranInfo?.is_5g && (
+                        cat.sranInfo?.is_dual_5g && cat.sranInfo?.has_onair_5g ? (
+                          <div className="bg-purple-950/60 border border-purple-500/50 rounded-xl p-2 text-xs flex items-center justify-between shadow-sm shadow-purple-950/50">
+                            <span className="text-purple-300 font-bold flex items-center gap-1">⚡ 5G 2 Lớp (2600+3800):</span>
+                            <span className="font-mono font-black text-purple-200 bg-purple-900/60 px-2 py-0.5 rounded border border-purple-400/40">
+                              On-air {cat.sranInfo.onair_date}
+                            </span>
+                          </div>
+                        ) : cat.sranInfo?.has_onair_5g ? (
+                          <div className="bg-pink-950/40 border border-pink-700/40 rounded-xl p-2 text-xs flex items-center justify-between">
+                            <span className="text-pink-300 font-bold flex items-center gap-1">
+                              📶 5G ({cat.sranInfo.config_5g || '2600'}):
+                            </span>
+                            <span className="font-mono font-bold text-pink-200">
+                              On-air {cat.sranInfo.onair_date}
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="bg-amber-950/40 border border-amber-600/40 rounded-xl p-2 text-xs flex items-center justify-between">
+                            <span className="text-amber-300 font-bold flex items-center gap-1">
+                              📡 5G ({cat.sranInfo.config_5g || 'Quy hoạch'}):
+                            </span>
+                            <span className="font-mono font-bold text-amber-200 bg-amber-900/60 px-2 py-0.5 rounded border border-amber-400/30">
+                              ⏳ Chờ phát sóng
+                            </span>
+                          </div>
+                        )
+                      )}
+
+                      {/* Trạng thái Swap 4G / SRAN (Tách bạch rõ SRAN 3G/4G vs 4G) */}
                       {cat.sranInfo?.swap_date ? (
                         <div className="bg-emerald-950/40 border border-emerald-600/40 rounded-xl p-2 text-xs flex items-center justify-between">
-                          <span className="text-emerald-300 font-bold flex items-center gap-1">🔄 Swap 3G/4G:</span>
+                          <span className="text-emerald-300 font-bold flex items-center gap-1">🔄 {cat.sranInfo.swap_type_label || 'Swap'}:</span>
                           <span className="font-mono font-extrabold text-emerald-200">{cat.sranInfo.swap_date}</span>
                         </div>
                       ) : (
                         <div className="bg-slate-800/40 border border-slate-700/50 rounded-xl p-2 text-xs flex items-center justify-between">
-                          <span className="text-slate-400">🔄 Swap 3G/4G:</span>
+                          <span className="text-slate-400">🔄 Swap {cat.sranInfo?.is_sran_swap ? 'SRAN (3G/4G)' : '4G'}:</span>
                           <span className="text-slate-400 italic">Chưa swap</span>
                         </div>
                       )}
 
-                      {/* Trạng thái 5G */}
-                      {cat.sranInfo?.is_dual_5g ? (
-                        <div className="bg-purple-950/60 border border-purple-500/50 rounded-xl p-2 text-xs flex items-center justify-between shadow-sm shadow-purple-950/50">
-                          <span className="text-purple-300 font-bold flex items-center gap-1">⚡ 5G 2 Lớp (2600+3800):</span>
-                          <span className="font-mono font-black text-purple-200 bg-purple-900/60 px-2 py-0.5 rounded border border-purple-400/40">
-                            {cat.sranInfo?.onair_date ? `On-air ${cat.sranInfo.onair_date}` : 'Chưa On-air'}
-                          </span>
-                        </div>
-                      ) : cat.sranInfo?.config_5g ? (
-                        <div className={`rounded-xl p-2 text-xs flex items-center justify-between ${
-                          cat.sranInfo?.onair_date ? 'bg-pink-950/40 border border-pink-700/40' : 'bg-slate-800/40 border border-slate-700/50'
-                        }`}>
-                          <span className={cat.sranInfo?.onair_date ? 'text-pink-300 font-bold' : 'text-slate-300'}>
-                            📶 5G ({cat.sranInfo.config_5g}):
-                          </span>
-                          <span className="font-mono font-bold text-pink-200">
-                            {cat.sranInfo?.onair_date ? `On-air ${cat.sranInfo.onair_date}` : 'Chưa On-air'}
-                          </span>
-                        </div>
-                      ) : null}
-
                       {cat.sranInfo?.config_4g && (
                         <div className="bg-slate-800/40 border border-slate-700/50 rounded-xl p-2 text-xs flex items-center justify-between">
-                          <span className="text-slate-400 font-medium">🔄 Cấu hình 4G:</span>
+                          <span className="text-slate-400 font-medium">⚙️ Cấu hình 4G:</span>
                           <span className="font-mono font-bold text-slate-200">{cat.sranInfo.config_4g}</span>
                         </div>
                       )}
@@ -3567,6 +3659,7 @@ export default function NetworkMap() {
                       setLayerActiveSites(true);
                       setLayer5gDual(true);
                       setLayer5gOnair(true);
+                      setLayer5gPending(true);
                       setLayer4gEra(true);
                       setLayerMoran(true);
                       setLayerPlanningInfra(true);
@@ -3584,6 +3677,7 @@ export default function NetworkMap() {
                       setLayerActiveSites(false);
                       setLayer5gDual(false);
                       setLayer5gOnair(false);
+                      setLayer5gPending(false);
                       setLayer4gEra(false);
                       setLayerMoran(false);
                       setLayerPlanningInfra(false);
@@ -3639,6 +3733,28 @@ export default function NetworkMap() {
                   </div>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-pink-950 text-pink-300 border border-pink-700/50 shrink-0">
                     {activeSiteCounts.onair_5g}
+                  </span>
+                </label>
+
+                {/* Quy hoạch 5G (Chờ phát sóng) */}
+                <label className="flex items-center justify-between p-2.5 rounded-xl bg-amber-950/30 border border-amber-600/50 cursor-pointer active:scale-[0.99] transition-all">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <input
+                      type="checkbox"
+                      checked={layer5gPending}
+                      onChange={(e) => setLayer5gPending(e.target.checked)}
+                      className="rounded border-amber-500 text-amber-500 focus:ring-amber-500 h-5 w-5 bg-slate-900 cursor-pointer"
+                    />
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-full bg-amber-400 shrink-0"></span>
+                        <span className="text-amber-300 font-bold flex items-center gap-1">📡 Quy hoạch 5G <span className="text-[10px] font-normal text-amber-400">(Chờ phát)</span></span>
+                      </div>
+                      <div className="text-[10px] text-slate-400 truncate">Có quy hoạch 5G, đang chờ phát sóng On-air</div>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-950 text-amber-300 border border-amber-700/50 shrink-0">
+                    {activeSiteCounts.plan_5g_pending}
                   </span>
                 </label>
 
