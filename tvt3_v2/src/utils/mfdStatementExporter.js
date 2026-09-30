@@ -948,14 +948,18 @@ export async function exportOfficialMFDReport({
 
   if (isAug2026OrLater && (selectedGroupFilter === 'all' || !selectedGroupFilter)) {
     // 1. Split logs into 2 groups
-    // Group 1 (65 special sites MobiFone Dong Nai): Always excludes Seath Group sites (DNTP11 / DNDQ12)
+    // In Month 8/2026: User requested: "tháng 8 ko gửi bảng kê seath nữa nha, vì đã chốt rồi, trả về thanh toán nội bộ"
+    // All Month 8 runs belong to internal payment:
+    // Group 1 (67 special sites MobiFone Dong Nai): includes original 67 sites (including DNTP11)
+    // Group 2 (MobiFone Toan Cau - MBG): keeps all remaining sites intact
+    // From Month 9/2026 onwards: exclude Seath Group normally
     const g1Logs = logs.filter(log => {
       const st = stations.find(s => s.site_id === log.site_id);
+      if (isAug2026Exact) {
+        return isOriginalSpecial67Site(log.site_id, st?.site_id_old || '', stations);
+      }
       return !isSeathGroupSite(log.site_id, st?.site_id_old || '', stations) && isSpecial67Site(log.site_id, st?.site_id_old || '', stations);
     });
-    // Group 2 (MobiFone Toan Cau - MBG):
-    // In Month 8/2026: MBG dossier was already finalized and submitted, so keep MBG logs intact (do not include DNTP11 which was removed from 67 sites, but keep DNITLA03 / DNIXBA07)
-    // From Month 9/2026 onwards: exclude Seath Group normally
     const g2Logs = logs.filter(log => {
       const st = stations.find(s => s.site_id === log.site_id);
       if (isAug2026Exact) {
@@ -1518,6 +1522,10 @@ export function addSeathGroupSheet(workbook, sheetTitle, logs = [], stations = [
  * Exports Seath Group Generator Statement to Excel
  */
 export async function exportSeathGroupReport({ logs = [], stations = [], month = 8, year = 2026 }) {
+  if (Number(year) === 2026 && Number(month) === 8) {
+    alert('Tháng 8/2026 đã chốt hồ sơ và trả về thanh toán nội bộ, không xuất Bảng kê Seath Group.');
+    return;
+  }
   const ExcelJS = await getExcelJS();
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'TVT3 Management System';

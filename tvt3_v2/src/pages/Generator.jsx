@@ -395,12 +395,12 @@ export default function Generator() {
         const isAug2026Exact = Number(filterYear) === 2026 && Number(filterMonth) === 8;
 
         if (isAug2026Exact) {
-          // Month 8/2026: MBG already finalized, so group2 keeps original non-G1 sites, group1 excludes Seath, group3 has excluded G1 Seath run (DNTP11)
+          // Month 8/2026: User requested: "tháng 8 ko gửi bảng kê seath nữa nha, vì đã chốt rồi, trả về thanh toán nội bộ"
+          // All August runs belong to internal payment: Group 1 = original 67 special sites (including DNTP11), Group 2 = MBG, Group 3 = None
           const isOrigG1 = isOriginalSpecial67Site(log.site_id, siteIdOld, stations);
-          const isExcludedG1Seath = isSeath && isOrigG1;
-          if (selectedGroupFilter === 'group1' && !isG1) return false;
+          if (selectedGroupFilter === 'group1' && !isOrigG1) return false;
           if (selectedGroupFilter === 'group2' && isOrigG1) return false;
-          if (selectedGroupFilter === 'group3' && !isExcludedG1Seath) return false;
+          if (selectedGroupFilter === 'group3') return false;
         } else {
           if (selectedGroupFilter === 'group1' && !isG1) return false;
           if (selectedGroupFilter === 'group2' && (isG1 || isSeath)) return false;
@@ -482,14 +482,7 @@ export default function Generator() {
       const isAug2026Exact = Number(filterYear) === 2026 && Number(filterMonth) === 8;
       if (isAug2026Exact) {
         const isOrigG1 = isOriginalSpecial67Site(log.site_id, siteIdOld, stations);
-        const isExcludedG1Seath = isSeath && isOrigG1;
-        if (isExcludedG1Seath) {
-          targetG = g3;
-        } else if (isG1) {
-          targetG = g1;
-        } else {
-          targetG = g2;
-        }
+        targetG = isOrigG1 ? g1 : g2;
       } else {
         targetG = isSeath ? g3 : (isG1 ? g1 : g2);
       }
@@ -2054,7 +2047,13 @@ export default function Generator() {
             {/* Month select */}
             <select
               value={filterMonth}
-              onChange={(e) => setFilterMonth(e.target.value === "" ? "" : Number(e.target.value))}
+              onChange={(e) => {
+                const val = e.target.value === "" ? "" : Number(e.target.value);
+                setFilterMonth(val);
+                if (val === 8 && filterYear === 2026 && selectedGroupFilter === 'group3') {
+                  setSelectedGroupFilter('all');
+                }
+              }}
               className="bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
             >
               <option value="">-- Cả năm --</option>
@@ -2065,7 +2064,13 @@ export default function Generator() {
             {/* Year select */}
             <select
               value={filterYear}
-              onChange={(e) => setFilterYear(Number(e.target.value))}
+              onChange={(e) => {
+                const y = Number(e.target.value);
+                setFilterYear(y);
+                if (y === 2026 && filterMonth === 8 && selectedGroupFilter === 'group3') {
+                  setSelectedGroupFilter('all');
+                }
+              }}
               className="bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
             >
               {[2024, 2025, 2026, 2027].map(y => (
@@ -2081,9 +2086,11 @@ export default function Generator() {
                 className="bg-amber-50 border border-amber-300 text-amber-900 rounded-lg px-2.5 py-1.5 text-xs font-bold focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer shadow-sm"
               >
                 <option value="all">📊 Tất cả nhóm (Tổng hợp)</option>
-                <option value="group1">📌 Nhóm 1: 65 Trạm Đặc Thù (MobiFone ĐN)</option>
+                <option value="group1">{Number(filterMonth) === 8 && Number(filterYear) === 2026 ? "📌 Nhóm 1: 67 Trạm Đặc Thù (MobiFone ĐN)" : "📌 Nhóm 1: 65 Trạm Đặc Thù (MobiFone ĐN)"}</option>
                 <option value="group2">🏢 Nhóm 2: Các Trạm Còn Lại (MBG)</option>
-                <option value="group3">🟣 Nhóm 3: Đối Tác Seath Group</option>
+                {!(Number(filterMonth) === 8 && Number(filterYear) === 2026) && (
+                  <option value="group3">🟣 Nhóm 3: Đối Tác Seath Group</option>
+                )}
               </select>
             )}
 

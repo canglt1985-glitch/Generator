@@ -754,15 +754,16 @@ def create_styled_workbook(month=8, year=2026, output_path=None):
 
     if month >= 8 and year >= 2026:
         # Split 2 Groups -> 6 Sheets Full Profile
-        # Group 1 (MobiFone Dong Nai - 67 special sites): Always excludes Seath Group sites (DNTP11 / DNDQ12)
-        g1_logs = [l for l in logs if is_group_1(l.get('site_id'), sites.get(l.get('site_id'), {}).get('site_id_old'))]
-        
-        # Group 2 (MobiFone Toan Cau - MBG):
-        # In Month 8/2026: MBG payment dossier was already finalized and submitted, so keep MBG logs intact (do not include DNTP11 which was removed from 67 sites, but keep DNITLA03 / DNIXBA07)
+        # In Month 8/2026: User requested: "tháng 8 ko gửi bảng kê seath nữa nha, vì đã chốt rồi, trả về thanh toán nội bộ"
+        # All Month 8 runs belong to internal payment:
+        # Group 1 (67 special sites MobiFone Dong Nai): includes original 67 sites (including DNTP11)
+        # Group 2 (MobiFone Toan Cau - MBG): keeps all remaining sites intact
         # From Month 9/2026 onwards: exclude Seath Group normally
         if month == 8 and year == 2026:
+            g1_logs = [l for l in logs if is_original_group_1(l.get('site_id'), sites.get(l.get('site_id'), {}).get('site_id_old'))]
             g2_logs = [l for l in logs if not is_original_group_1(l.get('site_id'), sites.get(l.get('site_id'), {}).get('site_id_old'))]
         else:
+            g1_logs = [l for l in logs if is_group_1(l.get('site_id'), sites.get(l.get('site_id'), {}).get('site_id_old'))]
             g2_logs = [l for l in logs if not is_group_1(l.get('site_id'), sites.get(l.get('site_id'), {}).get('site_id_old')) and not is_seath_group_site(l.get('site_id'), sites.get(l.get('site_id'), {}).get('site_id_old'))]
 
         g1_invs = [i for i in invoices if '0100686209-129' in (i.get('buyer_mst') or i.get('buyer_tax_code') or '') or 'ĐỒNG NAI' in (i.get('buyer_name') or i.get('buyer_legal_name') or '').upper() or 'DONG NAI' in (i.get('buyer_name') or i.get('buyer_legal_name') or '').upper() or 'KHU VỰC 8' in (i.get('buyer_name') or i.get('buyer_legal_name') or '').upper()]
@@ -943,16 +944,21 @@ def create_seath_group_statement(month=8, year=2026, output_path=None):
     sites = {s.get("site_id"): s for s in (sites_res.data or [])}
 
     if month == 8 and year == 2026:
-        # In Month 8/2026: MBG was already finalized, so only export the run excluded from Group 1 (67 sites - DNTP11 / DNITPU03)
-        # to avoid double counting with MBG finalized dossier
-        seath_logs = [
-            l for l in all_logs 
-            if is_seath_group_site(l.get('site_id'), sites.get(l.get('site_id'), {}).get('site_id_old'))
-            and is_original_group_1(l.get('site_id'), sites.get(l.get('site_id'), {}).get('site_id_old'))
-        ]
-    else:
-        seath_logs = [l for l in all_logs if is_seath_group_site(l.get('site_id'), sites.get(l.get('site_id'), {}).get('site_id_old'))]
-    
+        # User requested: "tháng 8 ko gửi bảng kê seath nữa nha, vì đã chốt rồi, trả về thanh toán nội bộ"
+        print("⚠️ Tháng 8/2026 đã chốt hồ sơ và trả về thanh toán nội bộ, không xuất Bảng kê Seath Group.")
+        for p in [
+            "/Users/cang_it/Desktop/Bang_Ke_Chay_May_Phat_Dien_Seath_Group_T08_2026.xlsx",
+            "/Users/cang_it/Desktop/Bang_Ke_Chay_May_Phat_Dien_Seath_Group_08_2026.xlsx"
+        ]:
+            if os.path.exists(p):
+                try:
+                    os.remove(p)
+                    print(f"🗑️ Đã xóa file cũ không sử dụng: {p}")
+                except Exception:
+                    pass
+        return None
+
+    seath_logs = [l for l in all_logs if is_seath_group_site(l.get('site_id'), sites.get(l.get('site_id'), {}).get('site_id_old'))]
     seath_logs.sort(key=lambda x: (x.get('date') or '', x.get('site_id') or ''))
 
     wb = openpyxl.Workbook()
