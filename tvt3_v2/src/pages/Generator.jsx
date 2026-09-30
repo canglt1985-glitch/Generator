@@ -14,10 +14,21 @@ import JSZip from 'jszip';
 import { 
   GROUP_1_BUYER_INFO, 
   GROUP_2_BUYER_INFO, 
-  isSpecial67Site 
+  SEATH_GROUP_BUYER_INFO,
+  isSpecial67Site,
+  isOriginalSpecial67Site,
+  isSeathGroupSite
 } from '../utils/siteGroups';
 import { getFuelPriceForDate } from '../utils/fuelPrice';
-import { exportOfficialMFDReport, buildHDWorksheet, build02AWorksheet, exportSiteInvoiceMapReport, getExcelJS, addHDSheet } from '../utils/mfdStatementExporter';
+import { 
+  exportOfficialMFDReport, 
+  buildHDWorksheet, 
+  build02AWorksheet, 
+  exportSiteInvoiceMapReport, 
+  getExcelJS, 
+  addHDSheet,
+  exportSeathGroupReport
+} from '../utils/mfdStatementExporter';
 import { saveAs } from 'file-saver';
 import { exportMobileEquipmentToExcel } from '../utils/excel';
 
@@ -379,9 +390,22 @@ export default function Generator() {
       
       // Group Filter (Effective >= Aug 2026)
       if (isFromAug2026 && selectedGroupFilter !== 'all') {
-        const isG1 = isSpecial67Site(log.site_id, siteIdOld, stations);
-        if (selectedGroupFilter === 'group1' && !isG1) return false;
-        if (selectedGroupFilter === 'group2' && isG1) return false;
+        const isSeath = isSeathGroupSite(log.site_id, siteIdOld, stations);
+        const isG1 = !isSeath && isSpecial67Site(log.site_id, siteIdOld, stations);
+        const isAug2026Exact = Number(filterYear) === 2026 && Number(filterMonth) === 8;
+
+        if (isAug2026Exact) {
+          // Month 8/2026: MBG already finalized, so group2 keeps original non-G1 sites, group1 excludes Seath, group3 has excluded G1 Seath run (DNTP11)
+          const isOrigG1 = isOriginalSpecial67Site(log.site_id, siteIdOld, stations);
+          const isExcludedG1Seath = isSeath && isOrigG1;
+          if (selectedGroupFilter === 'group1' && !isG1) return false;
+          if (selectedGroupFilter === 'group2' && isOrigG1) return false;
+          if (selectedGroupFilter === 'group3' && !isExcludedG1Seath) return false;
+        } else {
+          if (selectedGroupFilter === 'group1' && !isG1) return false;
+          if (selectedGroupFilter === 'group2' && (isG1 || isSeath)) return false;
+          if (selectedGroupFilter === 'group3' && !isSeath) return false;
+        }
       }
 
       // 1. Filter by Site (checks both Old and New Site IDs)
@@ -424,11 +448,13 @@ export default function Generator() {
 
     const g1 = { records: 0, hours: 0, fuelXang: 0, fuelDau: 0, totalThanhTien: 0, totalVat: 0, totalCong: 0 };
     const g2 = { records: 0, hours: 0, fuelXang: 0, fuelDau: 0, totalThanhTien: 0, totalVat: 0, totalCong: 0 };
+    const g3 = { records: 0, hours: 0, fuelXang: 0, fuelDau: 0, totalThanhTien: 0, totalVat: 0, totalCong: 0 };
 
     filteredLogs.forEach(log => {
       const stationObj = stations.find(s => s.site_id === log.site_id);
       const siteIdOld = stationObj?.site_id_old || '';
-      const isG1 = isSpecial67Site(log.site_id, siteIdOld, stations);
+      const isSeath = isSeathGroupSite(log.site_id, siteIdOld, stations);
+      const isG1 = !isSeath && isSpecial67Site(log.site_id, siteIdOld, stations);
 
       const runtime = parseFloat(log.run_details?.thoi_gian_hoat_dong) || 0;
       const fuel = parseFloat(log.run_details?.nhien_lieu_tieu_hao) || 0;
@@ -451,8 +477,22 @@ export default function Generator() {
         pendingCount++;
       }
 
-      // Group breakdown
-      const targetG = isG1 ? g1 : g2;
+      // Group breakdown (g1: Dong Nai, g2: Toan Cau, g3: Seath Group)
+      let targetG = g2;
+      const isAug2026Exact = Number(filterYear) === 2026 && Number(filterMonth) === 8;
+      if (isAug2026Exact) {
+        const isOrigG1 = isOriginalSpecial67Site(log.site_id, siteIdOld, stations);
+        const isExcludedG1Seath = isSeath && isOrigG1;
+        if (isExcludedG1Seath) {
+          targetG = g3;
+        } else if (isG1) {
+          targetG = g1;
+        } else {
+          targetG = g2;
+        }
+      } else {
+        targetG = isSeath ? g3 : (isG1 ? g1 : g2);
+      }
       targetG.records++;
       targetG.hours += runtime;
       if (isXang) targetG.fuelXang += fuel;
@@ -470,6 +510,10 @@ export default function Generator() {
     g2.fuelXang = parseFloat(g2.fuelXang.toFixed(1));
     g2.fuelDau = parseFloat(g2.fuelDau.toFixed(1));
 
+    g3.hours = parseFloat(g3.hours.toFixed(1));
+    g3.fuelXang = parseFloat(g3.fuelXang.toFixed(1));
+    g3.fuelDau = parseFloat(g3.fuelDau.toFixed(1));
+
     return {
       records: filteredLogs.length,
       hours: parseFloat(hours.toFixed(1)),
@@ -480,7 +524,8 @@ export default function Generator() {
       totalCong: totalThanhTien + totalVat,
       pendingCount,
       g1,
-      g2
+      g2,
+      g3
     };
   }, [filteredLogs, stations]);
 
@@ -2036,8 +2081,9 @@ export default function Generator() {
                 className="bg-amber-50 border border-amber-300 text-amber-900 rounded-lg px-2.5 py-1.5 text-xs font-bold focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer shadow-sm"
               >
                 <option value="all">📊 Tất cả nhóm (Tổng hợp)</option>
-                <option value="group1">📌 Nhóm 1: 67 Trạm Đặc Thù</option>
-                <option value="group2">🏢 Nhóm 2: Các Trạm Còn Lại</option>
+                <option value="group1">📌 Nhóm 1: 65 Trạm Đặc Thù (MobiFone ĐN)</option>
+                <option value="group2">🏢 Nhóm 2: Các Trạm Còn Lại (MBG)</option>
+                <option value="group3">🟣 Nhóm 3: Đối Tác Seath Group</option>
               </select>
             )}
 
@@ -2079,13 +2125,38 @@ export default function Generator() {
                   <Zap className="h-3.5 w-3.5 mr-1" /> Tính lại ĐM
                 </button>
                 {/* Export */}
-                <button
-                  onClick={exportToExcel}
-                  className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg text-blue-700 border border-blue-200 bg-white hover:bg-blue-50 shadow-sm transition-colors cursor-pointer"
-                  title="Xuất trọn bộ hồ sơ đối soát chạy máy & hóa đơn theo mẫu chuẩn 02A-TTNB"
-                >
-                  <ExternalLink className="h-3.5 w-3.5 mr-1" /> Xuất Hồ Sơ 02A ({filterMonth ? `T${filterMonth}/${filterYear}` : `${filterYear}`})
-                </button>
+                {selectedGroupFilter === 'group3' ? (
+                  <button
+                    onClick={exportToExcel}
+                    className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg text-white bg-purple-600 hover:bg-purple-700 shadow-sm transition-colors cursor-pointer"
+                    title="Xuất Bảng kê chạy máy phát điện đối tác Seath Group tiếp nhận xử lý"
+                  >
+                    <Download className="h-3.5 w-3.5 mr-1" /> Xuất Bảng Kê Seath Group ({filterMonth ? `T${filterMonth}/${filterYear}` : `${filterYear}`})
+                  </button>
+                ) : (
+                  <button
+                    onClick={exportToExcel}
+                    className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg text-blue-700 border border-blue-200 bg-white hover:bg-blue-50 shadow-sm transition-colors cursor-pointer"
+                    title="Xuất trọn bộ hồ sơ đối soát chạy máy & hóa đơn theo mẫu chuẩn 02A-TTNB"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5 mr-1" /> Xuất Hồ Sơ 02A ({filterMonth ? `T${filterMonth}/${filterYear}` : `${filterYear}`})
+                  </button>
+                )}
+                {/* Nút Xuất Bảng kê Seath Group nhanh nếu đang ở Tất cả nhóm */}
+                {selectedGroupFilter === 'all' && stats.g3 && stats.g3.records > 0 && (
+                  <button
+                    onClick={() => exportSeathGroupReport({
+                      logs: genLogs,
+                      stations,
+                      month: filterMonth,
+                      year: filterYear
+                    })}
+                    className="inline-flex items-center justify-center px-2.5 py-1.5 text-xs font-bold rounded-lg text-purple-700 border border-purple-300 bg-purple-50 hover:bg-purple-100 shadow-sm transition-colors cursor-pointer"
+                    title="Xuất riêng Bảng kê chạy máy phát điện cho Seath Group"
+                  >
+                    <Download className="h-3.5 w-3.5 mr-1" /> Bảng Kê Seath ({stats.g3.records})
+                  </button>
+                )}
                 {/* Add manual log */}
                 <button 
                   onClick={() => { resetLogForm(); setShowAddLogModal(true); }}
@@ -2563,7 +2634,44 @@ export default function Generator() {
                 </div>
               </div>
 
-              {/* Row 3: Grand Total Summary Row */}
+              {/* Row 3: Nhóm 3 - Đối Tác Seath Group */}
+              {stats.g3 && stats.g3.records > 0 && (
+                <div className="bg-purple-50/70 border border-purple-200/80 rounded-xl p-2 px-3 shadow-xs flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5 min-w-[200px]">
+                    <span className="bg-purple-600 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase shadow-2xs">
+                      🟣 Nhóm 3
+                    </span>
+                    <span className="text-xs font-bold text-purple-950 truncate" title="Đối Tác Seath Group (Xử lý riêng)">
+                      Đối Tác Seath Group (Xử lý riêng)
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                    <div className="bg-white border border-purple-200/80 px-2 py-1 rounded-lg">
+                      <span className="text-[10px] text-slate-500 font-semibold mr-1 uppercase">Records:</span>
+                      <span className="font-extrabold text-purple-700">{stats.g3.records}</span>
+                    </div>
+                    <div className="bg-white border border-purple-200/80 px-2 py-1 rounded-lg">
+                      <span className="text-[10px] text-slate-500 font-semibold mr-1 uppercase">⏱ Giờ chạy:</span>
+                      <span className="font-extrabold text-sky-700">{stats.g3.hours}h</span>
+                    </div>
+                    <div className="bg-white border border-purple-200/80 px-2 py-1 rounded-lg">
+                      <span className="text-[10px] text-slate-500 font-semibold mr-1 uppercase">🛢 Dầu:</span>
+                      <span className="font-extrabold text-slate-700">{stats.g3.fuelDau}L</span>
+                    </div>
+                    <div className="bg-white border border-purple-200/80 px-2 py-1 rounded-lg">
+                      <span className="text-[10px] text-slate-500 font-semibold mr-1 uppercase">💰 Thành tiền:</span>
+                      <span className="font-extrabold text-purple-800">{formatCurrency(stats.g3.totalThanhTien)}</span>
+                    </div>
+                    <div className="bg-purple-700 text-white px-2.5 py-1 rounded-lg font-bold">
+                      <span className="text-[10px] uppercase mr-1 opacity-90">🏢 Seath TT:</span>
+                      <span>{formatCurrency(stats.g3.totalCong)}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Row 4: Grand Total Summary Row */}
               <div className="bg-slate-100 border border-slate-300 rounded-xl p-2 px-3 shadow-2xs flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-1.5 min-w-[200px]">
                   <span className="bg-slate-800 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase shadow-2xs">

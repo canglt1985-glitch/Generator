@@ -26,8 +26,12 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
+try:
+    from seath_group_config import is_seath_group_site, SEATH_GROUP_SITES_SET
+except ImportError:
+    from backend.seath_group_config import is_seath_group_site, SEATH_GROUP_SITES_SET
 
-SPECIAL_67_SITES_SET = set([
+SPECIAL_67_SITES_SET = (set([
     'DNCM00', 'DNCM02', 'DNCM12', 'DNCM13', 'DNCM15', 'DNCM24', 'DNCM31', 'DNCM34', 'DNCM43', 'DNCM47',
     'DNDQ00', 'DNDQ01', 'DNDQ02', 'DNDQ03', 'DNDQ06', 'DNDQ10', 'DNDQ12', 'DNDQ15', 'DNDQ16', 'DNDQ22',
     'DNDQ30', 'DNDQ31', 'DNDQ33', 'DNDQ34', 'DNDQ35', 'DNDQ44', 'DNDQ47', 'DNIDQN1', 'DNITNT1', 'DNTNL1',
@@ -42,7 +46,7 @@ SPECIAL_67_SITES_SET = set([
     'DNIBLC21', 'DNIBLC29', 'DNIBLC32', 'DNIBLC35', 'DNIBVI00', 'DNIBVI03', 'DNIBVI07', 'DNITPU03', 'DNITPU05', 'DNITPU08',
     'DNITPU11', 'DNITPU17', 'DNITPU19', 'DNITPU20', 'DNITPU23', 'DNIPVI02', 'DNIXPH00', 'DNIXPH01', 'DNIXPH02', 'DNIXPH04',
     'DNIXPH06', 'DNIXPH11', 'DNIXPH21', 'DNIXPH23', 'DNIXPH24', 'DNIXPH25', 'DNIXPH30'
-])
+]) - SEATH_GROUP_SITES_SET)
 
 def get_site_id_mapping():
     """Build a mapping of new site_id to old site_id from datasites table."""
@@ -210,7 +214,8 @@ def generate_daily_report_data(target_date_str=None):
             dt_str = row.get("date")
             site_id = (row.get("site_id") or "").strip().upper()
             old_sid = site_map_local.get(site_id, "")
-            is_g1 = (site_id in g1_all_set or old_sid in g1_all_set)
+            is_seath = is_seath_group_site(site_id, old_sid)
+            is_g1 = not is_seath and (site_id in g1_all_set or old_sid in g1_all_set)
             
             details = row.get("run_details") or {}
             
@@ -241,7 +246,17 @@ def generate_daily_report_data(target_date_str=None):
             report_data['mtd']['run_hours'] += duration
             report_data['mtd']['run_revenue'] += revenue
             
-            if is_xang:
+            if is_seath:
+                # Track Seath Group separately, DO NOT accumulate into internal settlement mtd_groups
+                report_data.setdefault('seath_mtd', {'runs': 0, 'hours': 0.0, 'fuel_dau': 0.0, 'fuel_xang': 0.0, 'revenue': 0.0})
+                report_data['seath_mtd']['runs'] += 1
+                report_data['seath_mtd']['hours'] += duration
+                report_data['seath_mtd']['revenue'] += revenue
+                if is_xang:
+                    report_data['seath_mtd']['fuel_xang'] += fuel
+                else:
+                    report_data['seath_mtd']['fuel_dau'] += fuel
+            elif is_xang:
                 report_data['mtd']['consumed_xang_qty'] += fuel
                 if is_g1:
                     report_data['mtd_groups']['g1']['consumed_xang'] += fuel

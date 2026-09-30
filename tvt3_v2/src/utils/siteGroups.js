@@ -1,11 +1,14 @@
 /**
- * Helper module for managing 67 Special Sites Group vs Remaining Sites Group (Effective Aug 2026)
+ * Helper module for managing Payment Groups:
+ * - Group 1: 65 Special Sites (MobiFone Dong Nai) - Formerly 67 sites, 2 sites transferred to Seath Group
+ * - Group 2: Remaining Sites (MobiFone Toan Cau)
+ * - Group 3: Seath Group (11 XHH Partner Sites - Separately Settled)
  */
 
-// Information for Buyer / Invoice Unit Group 1 (67 Special Sites)
+// Information for Buyer / Invoice Unit Group 1 (65 Special Sites)
 export const GROUP_1_BUYER_INFO = {
   id: 'group1',
-  name: 'Nhóm 1: 67 Trạm Đặc Thù',
+  name: 'Nhóm 1: 65 Trạm Đặc Thù',
   companyName: 'MOBIFONE ĐỒNG NAI- CHI NHÁNH TỔNG CÔNG TY VIỄN THÔNG MOBIFONE',
   taxCode: '0100686209-129',
   address: 'Số 236A Phan Trung, Phường Tam Hiệp, Đồng Nai, Việt Nam.',
@@ -24,10 +27,68 @@ export const GROUP_2_BUYER_INFO = {
   badgeBg: 'bg-blue-100 border-blue-300 text-blue-900',
 };
 
-// List of 67 Special Site IDs (includes both raw site_id_old and canonical site_id)
+// Information for Group 3 (Seath Group Partner Sites)
+export const SEATH_GROUP_BUYER_INFO = {
+  id: 'group3',
+  name: 'Nhóm 3: Đối Tác Seath Group',
+  companyName: 'ĐỐI TÁC HẠ TẦNG SEATH GROUP',
+  shortName: 'Seath Group',
+  badgeBg: 'bg-purple-100 border-purple-300 text-purple-900',
+};
+
+// 11 Seath Group Partner Sites (Raw & Canonical)
+export const SEATH_GROUP_SITES_RAW = [
+  'DNCM05', 'DNDQ09', 'DNDQ12', 'DNDQ13', 'DNDQ14', 
+  'DNTN07', 'DNTP11', 'DNTP12', 'DNTP13', 'DNXL28', 'DNXL31'
+];
+
+export const SEATH_GROUP_CANONICAL_SITES = [
+  'DNIXDO02', 'DNIPHO01', 'DNILNA02', 'DNILNA03', 'DNILNA04',
+  'DNIDGI05', 'DNITPU03', 'DNITLA03', 'DNITPU04', 'DNIXHO08', 'DNIXBA07'
+];
+
+export const SEATH_GROUP_SITES_SET = new Set([
+  ...SEATH_GROUP_SITES_RAW.map(s => s.toUpperCase()),
+  ...SEATH_GROUP_CANONICAL_SITES.map(s => s.toUpperCase())
+]);
+
+/**
+ * Check if a given site belongs to Seath Group (11 Partner Sites)
+ * @param {string} siteId - Site ID (canonical or raw)
+ * @param {string} [siteIdOld] - Optional old site ID
+ * @param {Array} [stations] - Optional datasites list to lookup mapping
+ * @returns {boolean}
+ */
+export function isSeathGroupSite(siteId, siteIdOld, stations = []) {
+  if (!siteId && !siteIdOld) return false;
+
+  const id1 = typeof siteId === 'string' ? siteId.trim().toUpperCase() : '';
+  const id2 = typeof siteIdOld === 'string' ? siteIdOld.trim().toUpperCase() : '';
+
+  if (id1 && SEATH_GROUP_SITES_SET.has(id1)) return true;
+  if (id2 && SEATH_GROUP_SITES_SET.has(id2)) return true;
+
+  if (stations && stations.length > 0) {
+    const st = stations.find(s => 
+      (s.site_id && s.site_id.toUpperCase() === id1) || 
+      (s.site_id_old && s.site_id_old.toUpperCase() === id1) ||
+      (id2 && s.site_id && s.site_id.toUpperCase() === id2) ||
+      (id2 && s.site_id_old && s.site_id_old.toUpperCase() === id2)
+    );
+    if (st) {
+      const canonical = (st.site_id || '').toUpperCase();
+      const old = (st.site_id_old || '').toUpperCase();
+      if (SEATH_GROUP_SITES_SET.has(canonical) || SEATH_GROUP_SITES_SET.has(old)) return true;
+    }
+  }
+
+  return false;
+}
+
+// List of Special Site IDs (DNDQ12 and DNTP11/DNITPU03 are transferred to Seath Group)
 export const SPECIAL_67_SITES_RAW = [
   'DNCM00', 'DNCM02', 'DNCM12', 'DNCM13', 'DNCM15', 'DNCM24', 'DNCM31', 'DNCM34', 'DNCM43', 'DNCM47',
-  'DNDQ00', 'DNDQ01', 'DNDQ02', 'DNDQ03', 'DNDQ06', 'DNDQ10', 'DNDQ12', 'DNDQ15', 'DNDQ16', 'DNDQ22',
+  'DNDQ00', 'DNDQ01', 'DNDQ02', 'DNDQ03', 'DNDQ06', 'DNDQ10', 'DNDQ15', 'DNDQ16', 'DNDQ22',
   'DNDQ30', 'DNDQ31', 'DNDQ33', 'DNDQ34', 'DNDQ35', 'DNDQ44', 'DNDQ47', 'DNIDQN1', 'DNITNT1', 'DNTNL1',
   'DNLK00', 'DNLK09', 'DNLK15', 'DNLK17', 'DNLK25', 'DNLK46', 'DNLT22', 'DNTN00', 'DNTN05', 'DNTN06',
   'DNTN10', 'DNTN27', 'DNTN31', 'DNTN35', 'DNTP00', 'DNTP05', 'DNTP10', 'DNTP26', 'DNTP28', 'DNTP32',
@@ -40,19 +101,52 @@ export const SPECIAL_67_CANONICAL_SITES = [
   'DNIDQU00', 'DNIDQU01', 'DNIDQU02', 'DNIDQU03', 'DNIDQU05', 'DNIDQU08', 'DNIDQU10', 'DNIDQU11', 'DNIDQU12', 'DNIDQU17',
   'DNIDQU21', 'DNIDQU22', 'DNIDQU24', 'DNIDQU25', 'DNIDQU26', 'DNIDQU28', 'DNIDQU31', 'DNIDQN1', 'DNIDGI31',
   'DNILKH00', 'DNIBLC00', 'DNILKH04', 'DNILKH05', 'DNILKH06', 'DNIBLC10', 'DNIXTC06', 'DNIBLC16', 'DNIBLC18', 'DNIBLC19',
-  'DNIBLC21', 'DNIBLC29', 'DNIBLC32', 'DNIBLC35', 'DNIBVI00', 'DNIBVI03', 'DNIBVI07', 'DNITPU03', 'DNITPU05', 'DNITPU08',
+  'DNIBLC21', 'DNIBLC29', 'DNIBLC32', 'DNIBLC35', 'DNIBVI00', 'DNIBVI03', 'DNIBVI07', 'DNITPU05', 'DNITPU08',
   'DNITPU11', 'DNITPU17', 'DNITPU19', 'DNITPU20', 'DNITPU23', 'DNIPVI02', 'DNIXPH00', 'DNIXPH01', 'DNIXPH02', 'DNIXPH04',
   'DNIXPH06', 'DNIXPH11', 'DNIXPH21', 'DNIXPH23', 'DNIXPH24', 'DNIXPH25', 'DNIXPH30'
 ];
 
 // Set for fast lookup
-const SPECIAL_SITES_SET = new Set([
+export const SPECIAL_SITES_SET = new Set([
   ...SPECIAL_67_SITES_RAW.map(s => s.toUpperCase()),
   ...SPECIAL_67_CANONICAL_SITES.map(s => s.toUpperCase())
 ]);
 
+// Original 67 sites set (includes DNDQ12/DNILNA02 and DNTP11/DNITPU03 before Seath Group transfer)
+export const ORIGINAL_67_SITES_SET = new Set([
+  ...SPECIAL_SITES_SET,
+  'DNDQ12', 'DNILNA02',
+  'DNTP11', 'DNITPU03'
+]);
+
 /**
- * Check if a given site belongs to Group 1 (67 Special Sites)
+ * Check if a site originally belonged to 67 sites before Seath Group transfer
+ */
+export function isOriginalSpecial67Site(siteId, siteIdOld, stations = []) {
+  if (!siteId && !siteIdOld) return false;
+  const id1 = typeof siteId === 'string' ? siteId.trim().toUpperCase() : '';
+  const id2 = typeof siteIdOld === 'string' ? siteIdOld.trim().toUpperCase() : '';
+  if (id1 && ORIGINAL_67_SITES_SET.has(id1)) return true;
+  if (id2 && ORIGINAL_67_SITES_SET.has(id2)) return true;
+  if (stations && stations.length > 0) {
+    const st = stations.find(s => 
+      (s.site_id && s.site_id.toUpperCase() === id1) || 
+      (s.site_id_old && s.site_id_old.toUpperCase() === id1) ||
+      (id2 && s.site_id && s.site_id.toUpperCase() === id2) ||
+      (id2 && s.site_id_old && s.site_id_old.toUpperCase() === id2)
+    );
+    if (st) {
+      const canonical = (st.site_id || '').toUpperCase();
+      const old = (st.site_id_old || '').toUpperCase();
+      if (ORIGINAL_67_SITES_SET.has(canonical) || ORIGINAL_67_SITES_SET.has(old)) return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Check if a given site belongs to Group 1 (Special Sites MobiFone Dong Nai)
+ * Note: If site belongs to Seath Group, it is strictly excluded from Group 1.
  * @param {string} siteId - Site ID (canonical or raw)
  * @param {string} [siteIdOld] - Optional old site ID
  * @param {Array} [stations] - Optional datasites list to lookup mapping
@@ -60,6 +154,11 @@ const SPECIAL_SITES_SET = new Set([
  */
 export function isSpecial67Site(siteId, siteIdOld, stations = []) {
   if (!siteId && !siteIdOld) return false;
+
+  // Strict check: Seath Group sites never belong to Group 1
+  if (isSeathGroupSite(siteId, siteIdOld, stations)) {
+    return false;
+  }
   
   const id1 = typeof siteId === 'string' ? siteId.trim().toUpperCase() : '';
   const id2 = typeof siteIdOld === 'string' ? siteIdOld.trim().toUpperCase() : '';

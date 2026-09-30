@@ -2,6 +2,7 @@
 let _ExcelJS = null;
 export const getExcelJS = async () => { if (!_ExcelJS) { const m = await import('exceljs'); _ExcelJS = m.default || m; } return _ExcelJS; };
 import { saveAs } from 'file-saver';
+import { isSeathGroupSite, isSpecial67Site, isOriginalSpecial67Site } from './siteGroups';
 
 /**
  * Helper to determine fuel type from log or equipment
@@ -943,16 +944,24 @@ export async function exportOfficialMFDReport({
   const ExcelJS = await getExcelJS();
   const workbook = new ExcelJS.Workbook();
   const isAug2026OrLater = isFromAug2026 || Number(year) > 2026 || (Number(year) === 2026 && Number(month) >= 8);
+  const isAug2026Exact = Number(year) === 2026 && Number(month) === 8;
 
   if (isAug2026OrLater && (selectedGroupFilter === 'all' || !selectedGroupFilter)) {
     // 1. Split logs into 2 groups
+    // Group 1 (65 special sites MobiFone Dong Nai): Always excludes Seath Group sites (DNTP11 / DNDQ12)
     const g1Logs = logs.filter(log => {
       const st = stations.find(s => s.site_id === log.site_id);
-      return isSpecial67Site(log.site_id, st?.site_id_old || '', stations);
+      return !isSeathGroupSite(log.site_id, st?.site_id_old || '', stations) && isSpecial67Site(log.site_id, st?.site_id_old || '', stations);
     });
+    // Group 2 (MobiFone Toan Cau - MBG):
+    // In Month 8/2026: MBG dossier was already finalized and submitted, so keep MBG logs intact (do not include DNTP11 which was removed from 67 sites, but keep DNITLA03 / DNIXBA07)
+    // From Month 9/2026 onwards: exclude Seath Group normally
     const g2Logs = logs.filter(log => {
       const st = stations.find(s => s.site_id === log.site_id);
-      return !isSpecial67Site(log.site_id, st?.site_id_old || '', stations);
+      if (isAug2026Exact) {
+        return !isOriginalSpecial67Site(log.site_id, st?.site_id_old || '', stations);
+      }
+      return !isSeathGroupSite(log.site_id, st?.site_id_old || '', stations) && !isSpecial67Site(log.site_id, st?.site_id_old || '', stations);
     });
 
     // 2. Split invoices into 2 groups
@@ -1043,13 +1052,33 @@ export async function exportOfficialMFDReport({
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     saveAs(blob, fileName);
   } else {
+    // Check if user specifically requested Seath Group export
+    if (selectedGroupFilter === 'group3') {
+      return await exportSeathGroupReport({ logs, stations, month, year });
+    }
+
     // Single Group or < August 2026
     let groupLabel = '';
-    if (selectedGroupFilter === 'group1') groupLabel = 'MobiFone Đồng Nai - 67 Trạm Đặc Thù';
-    else if (selectedGroupFilter === 'group2') groupLabel = 'MobiFone Toàn Cầu';
+    let targetLogs = logs;
+    if (selectedGroupFilter === 'group1') {
+      groupLabel = 'MobiFone Đồng Nai - 65 Trạm Đặc Thù';
+      targetLogs = logs.filter(log => {
+        const st = stations.find(s => s.site_id === log.site_id);
+        return !isSeathGroupSite(log.site_id, st?.site_id_old || '', stations) && isSpecial67Site(log.site_id, st?.site_id_old || '', stations);
+      });
+    } else if (selectedGroupFilter === 'group2') {
+      groupLabel = 'MobiFone Toàn Cầu';
+      targetLogs = logs.filter(log => {
+        const st = stations.find(s => s.site_id === log.site_id);
+        if (Number(year) === 2026 && Number(month) === 8) {
+          return !isOriginalSpecial67Site(log.site_id, st?.site_id_old || '', stations);
+        }
+        return !isSeathGroupSite(log.site_id, st?.site_id_old || '', stations) && !isSpecial67Site(log.site_id, st?.site_id_old || '', stations);
+      });
+    }
 
     // Sheet 1: 02A-TTNB_NLMPD
-    add02ASheet(workbook, '02A-TTNB_NLMPD', logs, stations, month, year, groupLabel);
+    add02ASheet(workbook, '02A-TTNB_NLMPD', targetLogs, stations, month, year, groupLabel);
 
     // Sheet 2: HD
     addHDSheet(workbook, 'HD', invoices, month, year, groupLabel);
@@ -1271,6 +1300,235 @@ export async function exportSiteInvoiceMapReport({ logs, stations, invoices, mon
 
   const mStr = month ? String(month).padStart(2, '0') : '08';
   const fileName = `Bang_Ke_Chi_Phi_Va_Map_Hoa_Don_Nhom_1_${mStr}_${year}.xlsx`;
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  saveAs(blob, fileName);
+}
+
+/**
+ * Builds Sheet Bảng Kê Chạy Máy Phát Điện Seath Group using ExcelJS
+ * Thể thức chuẩn Nghị định 30/2020/NĐ-CP, font Times New Roman toàn bộ.
+ */
+export function addSeathGroupSheet(workbook, sheetTitle, logs = [], stations = [], month = 8, year = 2026) {
+  const ws = workbook.addWorksheet(sheetTitle || 'Seath_Group', {
+    pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 }
+  });
+
+  const monthStr = month ? String(month).padStart(2, '0') : '08';
+
+  const isAug2026Exact = Number(year) === 2026 && Number(month) === 8;
+
+  // Filter only Seath Group logs
+  // In August 2026: MBG already finalized, so only include the log excluded from Group 1 (67 sites - DNTP11 / DNITPU03)
+  // to avoid double counting with MBG finalized dossier
+  const seathLogs = logs.filter(log => {
+    const st = stations.find(s => s.site_id === log.site_id);
+    const isSeath = isSeathGroupSite(log.site_id, st?.site_id_old || '', stations);
+    if (!isSeath) return false;
+    if (isAug2026Exact) {
+      return isOriginalSpecial67Site(log.site_id, st?.site_id_old || '', stations);
+    }
+    return true;
+  }).sort((a, b) => (a.date || '').localeCompare(b.date || '') || (a.site_id || '').localeCompare(b.site_id || ''));
+
+  // Header Lines (Thể thức Nghị định 30/2020/NĐ-CP, Font Times New Roman)
+  ws.mergeCells('A1:E1');
+  ws.getCell('A1').value = 'TCT VIỄN THÔNG MOBIFONE';
+  ws.getCell('A1').font = { name: 'Times New Roman', size: 10, bold: true };
+  ws.getCell('A1').alignment = { horizontal: 'center', vertical: 'middle' };
+
+  ws.mergeCells('A2:E2');
+  ws.getCell('A2').value = 'CÔNG TY DỊCH VỤ MOBIFONE KHU VỰC 8';
+  ws.getCell('A2').font = { name: 'Times New Roman', size: 10, bold: true };
+  ws.getCell('A2').alignment = { horizontal: 'center', vertical: 'middle' };
+
+  ws.mergeCells('A3:E3');
+  ws.getCell('A3').value = 'TỔ VIỄN THÔNG 3 - ĐỒNG NAI';
+  ws.getCell('A3').font = { name: 'Times New Roman', size: 10 };
+  ws.getCell('A3').alignment = { horizontal: 'center', vertical: 'middle' };
+
+  ws.mergeCells('G1:L1');
+  ws.getCell('G1').value = 'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM';
+  ws.getCell('G1').font = { name: 'Times New Roman', size: 10, bold: true };
+  ws.getCell('G1').alignment = { horizontal: 'center', vertical: 'middle' };
+
+  ws.mergeCells('G2:L2');
+  ws.getCell('G2').value = 'Độc lập - Tự do - Hạnh phúc';
+  ws.getCell('G2').font = { name: 'Times New Roman', size: 10, bold: true };
+  ws.getCell('G2').alignment = { horizontal: 'center', vertical: 'middle' };
+
+  // Title
+  ws.mergeCells('A5:L5');
+  ws.getCell('A5').value = 'BẢNG KÊ CHẠY MÁY PHÁT ĐIỆN SEATH GROUP';
+  ws.getCell('A5').font = { name: 'Times New Roman', size: 15, bold: true, color: { argb: '1F497D' } };
+  ws.getCell('A5').alignment = { horizontal: 'center', vertical: 'middle' };
+
+  ws.mergeCells('A6:L6');
+  ws.getCell('A6').value = `(Tháng ${monthStr} năm ${year} - Đối tác Seath Group tiếp nhận xử lý thanh toán)`;
+  ws.getCell('A6').font = { name: 'Times New Roman', size: 11, italic: true };
+  ws.getCell('A6').alignment = { horizontal: 'center', vertical: 'middle' };
+
+  // Table Headers (Row 8)
+  const headers = [
+    'STT', 'Mã Trạm (Mới)', 'Mã Trạm (Cũ)', 'Tên Trạm / Địa Bàn',
+    'Ngày Chạy', 'Bắt Đầu', 'Kết Thúc', 'Thời Gian Chạy (h)',
+    'Định Mức (L/h)', 'Nhiên Liệu (Lít)', 'Lý Do Chạy Máy', 'Người Vận Hành / Ghi Chú'
+  ];
+
+  const colWidths = [6, 15, 13, 24, 13, 10, 10, 16, 14, 18, 25, 22];
+  colWidths.forEach((w, i) => {
+    ws.getColumn(i + 1).width = w;
+  });
+
+  const headerRow = ws.getRow(8);
+  headers.forEach((h, i) => {
+    const cell = headerRow.getCell(i + 1);
+    cell.value = h;
+    cell.font = { name: 'Times New Roman', size: 10, bold: true, color: { argb: 'FFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '1F497D' } };
+    cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+    cell.border = thinBorder;
+  });
+  headerRow.height = 28;
+
+  let curRow = 9;
+  let totalHours = 0;
+  let totalLiters = 0;
+
+  seathLogs.forEach((log, idx) => {
+    const stationObj = stations.find(s => s.site_id === log.site_id);
+    const details = log.run_details || {};
+    const duration = parseFloat(details.thoi_gian_hoat_dong || details.duration || 0) || 0;
+    const dinhMuc = parseFloat(details.dinh_muc || stationObj?.dinh_muc || 2.3) || 0;
+    const liters = parseFloat(details.nhien_lieu_tieu_hao || details.fuel_consumed || (duration * dinhMuc)) || 0;
+    
+    totalHours += duration;
+    totalLiters += liters;
+
+    const row = ws.getRow(curRow);
+    row.getCell(1).value = idx + 1;
+    row.getCell(2).value = log.site_id || '';
+    row.getCell(3).value = stationObj?.site_id_old || '';
+    row.getCell(4).value = stationObj?.site_name || stationObj?.name || log.site_id || '';
+    row.getCell(5).value = log.date ? log.date.split('-').reverse().join('/') : '';
+    row.getCell(6).value = details.bat_dau || details.start_time || '';
+    row.getCell(7).value = details.ket_thuc || details.end_time || '';
+    row.getCell(8).value = duration;
+    row.getCell(9).value = dinhMuc;
+    row.getCell(10).value = liters;
+    row.getCell(11).value = details.ly_do || details.reason || details.ghi_chu || '';
+    row.getCell(12).value = details.nguoi_chay || details.operator || details.nguon || '';
+
+    // Alignments & formats
+    row.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+    row.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' };
+    row.getCell(3).alignment = { horizontal: 'center', vertical: 'middle' };
+    row.getCell(4).alignment = { horizontal: 'left', vertical: 'middle' };
+    row.getCell(5).alignment = { horizontal: 'center', vertical: 'middle' };
+    row.getCell(6).alignment = { horizontal: 'center', vertical: 'middle' };
+    row.getCell(7).alignment = { horizontal: 'center', vertical: 'middle' };
+    row.getCell(8).alignment = { horizontal: 'right', vertical: 'middle' };
+    row.getCell(9).alignment = { horizontal: 'right', vertical: 'middle' };
+    row.getCell(10).alignment = { horizontal: 'right', vertical: 'middle' };
+    row.getCell(11).alignment = { horizontal: 'left', vertical: 'middle' };
+    row.getCell(12).alignment = { horizontal: 'left', vertical: 'middle' };
+
+    row.getCell(8).numFmt = '#,##0.00';
+    row.getCell(9).numFmt = '#,##0.00';
+    row.getCell(10).numFmt = '#,##0.00';
+
+    for (let c = 1; c <= 12; c++) {
+      const cell = row.getCell(c);
+      cell.font = { name: 'Times New Roman', size: 10, bold: c === 2 || c === 10 };
+      cell.border = thinBorder;
+    }
+    curRow++;
+  });
+
+  // Total row
+  const totRow = ws.getRow(curRow);
+  ws.mergeCells(`A${curRow}:G${curRow}`);
+  totRow.getCell(1).value = 'TỔNG CỘNG';
+  totRow.getCell(1).font = { name: 'Times New Roman', size: 10, bold: true };
+  totRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+
+  totRow.getCell(8).value = totalHours;
+  totRow.getCell(8).numFmt = '#,##0.00';
+  totRow.getCell(8).font = { name: 'Times New Roman', size: 10, bold: true };
+  totRow.getCell(8).alignment = { horizontal: 'right', vertical: 'middle' };
+
+  totRow.getCell(9).value = '';
+
+  totRow.getCell(10).value = totalLiters;
+  totRow.getCell(10).numFmt = '#,##0.00';
+  totRow.getCell(10).font = { name: 'Times New Roman', size: 10, bold: true, color: { argb: 'C65911' } };
+  totRow.getCell(10).alignment = { horizontal: 'right', vertical: 'middle' };
+
+  for (let c = 1; c <= 12; c++) {
+    const cell = totRow.getCell(c);
+    cell.border = thinBorder;
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'F2F2F2' } };
+  }
+  curRow += 2;
+
+  // Signatures
+  ws.mergeCells(`I${curRow}:L${curRow}`);
+  ws.getCell(`I${curRow}`).value = `Đồng Nai, ngày      tháng      năm ${year || 2026}`;
+  ws.getCell(`I${curRow}`).font = { name: 'Times New Roman', size: 10, italic: true };
+  ws.getCell(`I${curRow}`).alignment = { horizontal: 'center', vertical: 'middle' };
+  curRow++;
+
+  const sigRow = ws.getRow(curRow);
+  ws.mergeCells(`A${curRow}:D${curRow}`);
+  sigRow.getCell(1).value = 'NGƯỜI LẬP BẢNG KÊ';
+  sigRow.getCell(1).font = { name: 'Times New Roman', size: 10, bold: true };
+  sigRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+
+  ws.mergeCells(`E${curRow}:H${curRow}`);
+  sigRow.getCell(5).value = 'TỔ TRƯỞNG TỔ VIỄN THÔNG 3';
+  sigRow.getCell(5).font = { name: 'Times New Roman', size: 10, bold: true };
+  sigRow.getCell(5).alignment = { horizontal: 'center', vertical: 'middle' };
+
+  ws.mergeCells(`I${curRow}:L${curRow}`);
+  sigRow.getCell(9).value = 'ĐẠI DIỆN ĐỐI TÁC SEATH GROUP';
+  sigRow.getCell(9).font = { name: 'Times New Roman', size: 10, bold: true };
+  sigRow.getCell(9).alignment = { horizontal: 'center', vertical: 'middle' };
+
+  curRow++;
+  const noteSigRow = ws.getRow(curRow);
+  ws.mergeCells(`A${curRow}:D${curRow}`);
+  noteSigRow.getCell(1).value = '(Ký, ghi rõ họ tên)';
+  noteSigRow.getCell(1).font = { name: 'Times New Roman', size: 9, italic: true };
+  noteSigRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+
+  ws.mergeCells(`E${curRow}:H${curRow}`);
+  noteSigRow.getCell(5).value = '(Ký, ghi rõ họ tên)';
+  noteSigRow.getCell(5).font = { name: 'Times New Roman', size: 9, italic: true };
+  noteSigRow.getCell(5).alignment = { horizontal: 'center', vertical: 'middle' };
+
+  ws.mergeCells(`I${curRow}:L${curRow}`);
+  noteSigRow.getCell(9).value = '(Ký, ghi rõ họ tên)';
+  noteSigRow.getCell(9).font = { name: 'Times New Roman', size: 9, italic: true };
+  noteSigRow.getCell(9).alignment = { horizontal: 'center', vertical: 'middle' };
+
+  return ws;
+}
+
+/**
+ * Exports Seath Group Generator Statement to Excel
+ */
+export async function exportSeathGroupReport({ logs = [], stations = [], month = 8, year = 2026 }) {
+  const ExcelJS = await getExcelJS();
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'TVT3 Management System';
+  workbook.lastModifiedBy = 'TVT3';
+  workbook.created = new Date();
+
+  addSeathGroupSheet(workbook, 'Seath_Group', logs, stations, month, year);
+
+  const mStr = month ? String(month).padStart(2, '0') : '08';
+  const fileName = `Bang_Ke_Chay_May_Phat_Dien_Seath_Group_T${mStr}_${year}.xlsx`;
+
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   saveAs(blob, fileName);

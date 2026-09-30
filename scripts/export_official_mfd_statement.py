@@ -43,9 +43,23 @@ SPECIAL_67_CANONICAL_SITES = [
     'DNIXPH06', 'DNIXPH11', 'DNIXPH21', 'DNIXPH23', 'DNIXPH24', 'DNIXPH25', 'DNIXPH30'
 ]
 
-SPECIAL_67_SITES = set(s.upper() for s in SPECIAL_67_SITES_RAW + SPECIAL_67_CANONICAL_SITES)
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'backend'))
+try:
+    from seath_group_config import SEATH_GROUP_SITES_SET, is_seath_group_site
+except ImportError:
+    from backend.seath_group_config import SEATH_GROUP_SITES_SET, is_seath_group_site
+
+ORIGINAL_67_SITES_SET = set(s.upper() for s in SPECIAL_67_SITES_RAW + SPECIAL_67_CANONICAL_SITES)
+SPECIAL_67_SITES = ORIGINAL_67_SITES_SET - SEATH_GROUP_SITES_SET
+
+def is_original_group_1(site_id, site_id_old=""):
+    s1 = (site_id or "").upper().strip()
+    s2 = (site_id_old or "").upper().strip()
+    return s1 in ORIGINAL_67_SITES_SET or s2 in ORIGINAL_67_SITES_SET
 
 def is_group_1(site_id, site_id_old=""):
+    if is_seath_group_site(site_id, site_id_old):
+        return False
     s1 = (site_id or "").upper().strip()
     s2 = (site_id_old or "").upper().strip()
     return s1 in SPECIAL_67_SITES or s2 in SPECIAL_67_SITES
@@ -740,8 +754,16 @@ def create_styled_workbook(month=8, year=2026, output_path=None):
 
     if month >= 8 and year >= 2026:
         # Split 2 Groups -> 6 Sheets Full Profile
+        # Group 1 (MobiFone Dong Nai - 67 special sites): Always excludes Seath Group sites (DNTP11 / DNDQ12)
         g1_logs = [l for l in logs if is_group_1(l.get('site_id'), sites.get(l.get('site_id'), {}).get('site_id_old'))]
-        g2_logs = [l for l in logs if not is_group_1(l.get('site_id'), sites.get(l.get('site_id'), {}).get('site_id_old'))]
+        
+        # Group 2 (MobiFone Toan Cau - MBG):
+        # In Month 8/2026: MBG payment dossier was already finalized and submitted, so keep MBG logs intact (do not include DNTP11 which was removed from 67 sites, but keep DNITLA03 / DNIXBA07)
+        # From Month 9/2026 onwards: exclude Seath Group normally
+        if month == 8 and year == 2026:
+            g2_logs = [l for l in logs if not is_original_group_1(l.get('site_id'), sites.get(l.get('site_id'), {}).get('site_id_old'))]
+        else:
+            g2_logs = [l for l in logs if not is_group_1(l.get('site_id'), sites.get(l.get('site_id'), {}).get('site_id_old')) and not is_seath_group_site(l.get('site_id'), sites.get(l.get('site_id'), {}).get('site_id_old'))]
 
         g1_invs = [i for i in invoices if '0100686209-129' in (i.get('buyer_mst') or i.get('buyer_tax_code') or '') or 'ĐỒNG NAI' in (i.get('buyer_name') or i.get('buyer_legal_name') or '').upper() or 'DONG NAI' in (i.get('buyer_name') or i.get('buyer_legal_name') or '').upper() or 'KHU VỰC 8' in (i.get('buyer_name') or i.get('buyer_legal_name') or '').upper()]
         g2_invs = [i for i in invoices if i not in g1_invs]
@@ -813,12 +835,261 @@ def create_styled_workbook(month=8, year=2026, output_path=None):
     print(f"✅ Đã xuất thành công hồ sơ chuẩn mẫu ra: {output_path}")
     return output_path
 
+def create_seath_group_statement(month=8, year=2026, output_path=None):
+    """
+    Xuất Bảng kê chạy máy phát điện trạm thuê XHH cho Đối tác Seath Group tiếp nhận xử lý.
+    Tuân thủ thể thức Nghị định 30/2020/NĐ-CP, toàn bộ font chữ Times New Roman.
+    """
+    from supabase import create_client
+    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+    
+    start_date = f"{year}-{month:02d}-01"
+    if month == 12:
+        end_date = f"{year+1}-01-01"
+    else:
+        end_date = f"{year}-{month+1:02d}-01"
+        
+    print(f"Fetching Seath Group logs from {start_date} to {end_date}...")
+    logs_res = supabase.from_("generator_logs").select("*").gte("date", start_date).lt("date", end_date).execute()
+    all_logs = logs_res.data or []
+    
+    sites_res = supabase.from_("datasites").select("*").execute()
+    sites = {s.get("site_id"): s for s in (sites_res.data or [])}
+
+    if month == 8 and year == 2026:
+        # In Month 8/2026: MBG was already finalized, so only export the run excluded from Group 1 (67 sites - DNTP11 / DNITPU03)
+        # to avoid double counting with MBG finalized dossier
+        seath_logs = [
+            l for l in all_logs 
+            if is_seath_group_site(l.get('site_id'), sites.get(l.get('site_id'), {}).get('site_id_old'))
+            and is_original_group_1(l.get('site_id'), sites.get(l.get('site_id'), {}).get('site_id_old'))
+        ]
+    else:
+        seath_logs = [l for l in all_logs if is_seath_group_site(l.get('site_id'), sites.get(l.get('site_id'), {}).get('site_id_old'))]
+    
+    seath_logs.sort(key=lambda x: (x.get('date') or '', x.get('site_id') or ''))
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Seath_Group"
+    ws.views.sheetView[0].showGridLines = True
+
+    # Styling Tokens (Times New Roman Font)
+    font_header_agency = Font(name='Times New Roman', size=10, bold=True)
+    font_sub_agency = Font(name='Times New Roman', size=10)
+    font_title = Font(name='Times New Roman', size=15, bold=True, color='1E3A8A')
+    font_subtitle = Font(name='Times New Roman', size=11, italic=True)
+    font_th = Font(name='Times New Roman', size=10, bold=True, color='FFFFFF')
+    font_data = Font(name='Times New Roman', size=10)
+    font_data_bold = Font(name='Times New Roman', size=10, bold=True)
+    font_total = Font(name='Times New Roman', size=10, bold=True)
+    font_sig_title = Font(name='Times New Roman', size=10, bold=True)
+    font_sig_sub = Font(name='Times New Roman', size=9, italic=True)
+
+    header_fill = PatternFill(start_color='1F497D', end_color='1F497D', fill_type='solid')
+    total_fill = PatternFill(start_color='F2F2F2', end_color='F2F2F2', fill_type='solid')
+
+    border_thin = Border(
+        top=Side(style='thin', color='D0D7DE'),
+        left=Side(style='thin', color='D0D7DE'),
+        bottom=Side(style='thin', color='D0D7DE'),
+        right=Side(style='thin', color='D0D7DE')
+    )
+
+    # Agency Header
+    ws['A1'] = 'TCT VIỄN THÔNG MOBIFONE'
+    ws['A1'].font = font_header_agency
+    ws['A1'].alignment = Alignment(horizontal='center', vertical='center')
+    ws.merge_cells('A1:E1')
+
+    ws['A2'] = 'CÔNG TY DỊCH VỤ MOBIFONE KHU VỰC 8'
+    ws['A2'].font = font_header_agency
+    ws['A2'].alignment = Alignment(horizontal='center', vertical='center')
+    ws.merge_cells('A2:E2')
+
+    ws['A3'] = 'TỔ VIỄN THÔNG 3 - ĐỒNG NAI'
+    ws['A3'].font = font_sub_agency
+    ws['A3'].alignment = Alignment(horizontal='center', vertical='center')
+    ws.merge_cells('A3:E3')
+
+    ws['G1'] = 'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM'
+    ws['G1'].font = font_header_agency
+    ws['G1'].alignment = Alignment(horizontal='center', vertical='center')
+    ws.merge_cells('G1:L1')
+
+    ws['G2'] = 'Độc lập - Tự do - Hạnh phúc'
+    ws['G2'].font = font_header_agency
+    ws['G2'].alignment = Alignment(horizontal='center', vertical='center')
+    ws.merge_cells('G2:L2')
+
+    # Main Title
+    ws['A5'] = 'BẢNG KÊ CHẠY MÁY PHÁT ĐIỆN SEATH GROUP'
+    ws['A5'].font = font_title
+    ws['A5'].alignment = Alignment(horizontal='center', vertical='center')
+    ws.merge_cells('A5:L5')
+
+    ws['A6'] = f'(Tháng {month:02d} năm {year} - Đối tác Seath Group tiếp nhận xử lý thanh toán)'
+    ws['A6'].font = font_subtitle
+    ws['A6'].alignment = Alignment(horizontal='center', vertical='center')
+    ws.merge_cells('A6:L6')
+
+    # Table Headers
+    headers = [
+        ('STT', 6),
+        ('Mã Trạm (Mới)', 15),
+        ('Mã Trạm (Cũ)', 14),
+        ('Tên Trạm / Địa Bàn', 24),
+        ('Ngày Chạy', 13),
+        ('Bắt Đầu', 10),
+        ('Kết Thúc', 10),
+        ('Thời Gian Chạy (h)', 18),
+        ('Định Mức (L/h)', 14),
+        ('Nhiên Liệu (Lít)', 18),
+        ('Lý Do Chạy Máy', 26),
+        ('Người Vận Hành / Ghi Chú', 24)
+    ]
+
+    for col_idx, (h_title, col_width) in enumerate(headers, 1):
+        cell = ws.cell(row=8, column=col_idx, value=h_title)
+        cell.font = font_th
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+        cell.border = border_thin
+        col_letter = get_column_letter(col_idx)
+        ws.column_dimensions[col_letter].width = col_width
+
+    ws.row_dimensions[8].height = 28
+
+    cur_row = 9
+    tot_hours = 0.0
+    tot_liters = 0.0
+
+    for idx, log in enumerate(seath_logs, 1):
+        st = sites.get(log.get('site_id')) or {}
+        rd = log.get('run_details') or {}
+        duration = float(rd.get('thoi_gian_hoat_dong') or 0.0)
+        dinh_muc = float(rd.get('dinh_muc') or st.get('dinh_muc') or 2.3)
+        fuel = float(rd.get('nhien_lieu_tieu_hao') or (duration * dinh_muc))
+        
+        tot_hours += duration
+        tot_liters += fuel
+
+        dt_display = log.get('date', '')
+        if dt_display and '-' in dt_display:
+            dt_display = '/'.join(dt_display.split('-')[::-1])
+
+        row_vals = [
+            idx,
+            log.get('site_id', ''),
+            st.get('site_id_old', ''),
+            st.get('site_name') or st.get('name') or log.get('site_id', ''),
+            dt_display,
+            rd.get('gio_bat_dau') or rd.get('bat_dau') or '',
+            rd.get('gio_ket_thuc') or rd.get('ket_thuc') or '',
+            duration,
+            dinh_muc,
+            fuel,
+            rd.get('ly_do') or rd.get('ghi_chu') or 'Sự cố mất điện',
+            rd.get('nguoi_chay') or rd.get('operator') or ''
+        ]
+
+        for col_idx, val in enumerate(row_vals, 1):
+            cell = ws.cell(row=cur_row, column=col_idx, value=val)
+            cell.font = font_data_bold if col_idx in [2, 10] else font_data
+            cell.border = border_thin
+            
+            if col_idx in [1, 2, 3, 5, 6, 7]:
+                cell.alignment = Alignment(horizontal='center', vertical='center')
+            elif col_idx in [8, 9, 10]:
+                cell.alignment = Alignment(horizontal='right', vertical='center')
+                cell.number_format = '#,##0.00'
+            else:
+                cell.alignment = Alignment(horizontal='left', vertical='center')
+
+        cur_row += 1
+
+    # Total Row
+    ws.merge_cells(f'A{cur_row}:G{cur_row}')
+    tot_label = ws.cell(row=cur_row, column=1, value='TỔNG CỘNG')
+    tot_label.font = font_total
+    tot_label.alignment = Alignment(horizontal='center', vertical='center')
+
+    h_cell = ws.cell(row=cur_row, column=8, value=round(tot_hours, 2))
+    h_cell.font = font_total
+    h_cell.alignment = Alignment(horizontal='right', vertical='center')
+    h_cell.number_format = '#,##0.00'
+
+    ws.cell(row=cur_row, column=9, value='')
+
+    f_cell = ws.cell(row=cur_row, column=10, value=round(tot_liters, 2))
+    f_cell.font = Font(name='Times New Roman', size=10, bold=True, color='B45309')
+    f_cell.alignment = Alignment(horizontal='right', vertical='center')
+    f_cell.number_format = '#,##0.00'
+
+    for col_idx in range(1, 13):
+        c = ws.cell(row=cur_row, column=col_idx)
+        c.border = border_thin
+        c.fill = total_fill
+
+    cur_row += 2
+
+    # Date line
+    ws.merge_cells(f'I{cur_row}:L{cur_row}')
+    dt_cell = ws.cell(row=cur_row, column=9, value=f'Đồng Nai, ngày      tháng      năm {year}')
+    dt_cell.font = font_sig_sub
+    dt_cell.alignment = Alignment(horizontal='center', vertical='center')
+    cur_row += 1
+
+    # Signatures
+    sig_titles = [
+        (1, 4, 'NGƯỜI LẬP BẢNG KÊ'),
+        (5, 8, 'TỔ TRƯỞNG TỔ VIỄN THÔNG 3'),
+        (9, 12, 'ĐẠI DIỆN ĐỐI TÁC SEATH GROUP')
+    ]
+
+    for start_c, end_c, title in sig_titles:
+        ws.merge_cells(start_row=cur_row, start_column=start_c, end_row=cur_row, end_column=end_c)
+        c = ws.cell(row=cur_row, column=start_c, value=title)
+        c.font = font_sig_title
+        c.alignment = Alignment(horizontal='center', vertical='center')
+
+    cur_row += 1
+    for start_c, end_c, _ in sig_titles:
+        ws.merge_cells(start_row=cur_row, start_column=start_c, end_row=cur_row, end_column=end_c)
+        c = ws.cell(row=cur_row, column=start_c, value='(Ký, ghi rõ họ tên)')
+        c.font = font_sig_sub
+        c.alignment = Alignment(horizontal='center', vertical='center')
+
+    # Strict compliance: Enforce 100% Times New Roman font across EVERY cell in worksheet
+    for row in ws.iter_rows():
+        for cell in row:
+            old_f = cell.font
+            cell.font = Font(
+                name='Times New Roman',
+                size=old_f.size if old_f and old_f.size else 10,
+                bold=old_f.bold if old_f and old_f.bold else False,
+                italic=old_f.italic if old_f and old_f.italic else False,
+                color=old_f.color if old_f and old_f.color else None,
+                underline=old_f.underline if old_f and old_f.underline else None
+            )
+
+    if not output_path:
+        output_path = f"/Users/cang_it/Desktop/Bang_Ke_Chay_May_Phat_Dien_Seath_Group_T{month:02d}_{year}.xlsx"
+
+    wb.save(output_path)
+    print(f"✅ Đã xuất thành công Bảng kê Seath Group ra: {output_path}")
+    return output_path
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--month', type=int, default=8, help='Tháng đối soát (1-12)')
     parser.add_argument('--year', type=int, default=2026, help='Năm đối soát')
+    parser.add_argument('--group', type=str, default='all', choices=['all', 'group1', 'group2', 'seath'], help='Nhóm hồ sơ cần xuất')
     parser.add_argument('--out', type=str, default='', help='Đường dẫn file đầu ra')
     args = parser.parse_args()
 
     out_file = args.out if args.out else None
-    create_styled_workbook(month=args.month, year=args.year, output_path=out_file)
+    if args.group == 'seath':
+        create_seath_group_statement(month=args.month, year=args.year, output_path=out_file)
+    else:
+        create_styled_workbook(month=args.month, year=args.year, output_path=out_file)
