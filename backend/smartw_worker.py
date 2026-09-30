@@ -1032,8 +1032,9 @@ def sync_alarms_to_supabase(result: dict):
             if t == 'mll' and (ne_type == 'CELL' or bool(cellid)):
                 actual_t = 'mll_cell'
 
-            # Construct a unique, deterministic ID using UUIDv5 with canonical sdate
-            sdate_key = sdate_iso or sdate_str
+            # Construct a unique, deterministic ID using UUIDv5 with original sdate_str
+            # Note: sdate_str must be preserved because all existing database records use sdate_str
+            sdate_key = sdate_str or sdate_iso
             if actual_t == 'mll_cell':
                 val_str = f"{actual_t}_{site}_{cellid}_{alarm_name}_{sdate_key}"
             else:
@@ -1063,6 +1064,7 @@ def sync_alarms_to_supabase(result: dict):
                 "status": status_val
             })
 
+    upsert_success = False
     if all_rows:
         # Deduplicate all_rows by id to prevent Postgres Error 21000:
         # "ON CONFLICT DO UPDATE command cannot affect row a second time"
@@ -1078,43 +1080,55 @@ def sync_alarms_to_supabase(result: dict):
             for i in range(0, len(deduped_rows), chunk_size):
                 chunk = deduped_rows[i:i+chunk_size]
                 supabase.table("smartw_alarms").upsert(chunk).execute()
+            upsert_success = True
             logger.info(f"Supabase Sync: Upserted {len(deduped_rows)} active/cleared alarms.")
         except Exception as e:
-            logger.error(f"Supabase Sync Error: Failed to upsert alarms: {e}")
+            logger.warning(f"Supabase Sync: Batch upsert failed ({e}), falling back to row-by-row upsert...")
+            saved_cnt = 0
+            for row in deduped_rows:
+                try:
+                    supabase.table("smartw_alarms").upsert(row).execute()
+                    saved_cnt += 1
+                except Exception as row_err:
+                    logger.error(f"Row-by-row upsert failed for {row.get('site')} {row.get('alarm_name')}: {row_err}")
+            if saved_cnt > 0:
+                upsert_success = True
+            logger.info(f"Supabase Sync: Upserted {saved_cnt}/{len(deduped_rows)} alarms row-by-row.")
 
-    # 2. Automatically clear stale active alarms in Supabase.
+    # 2. Automatically clear stale active alarms in Supabase (only if upsert succeeded).
     # Any alarm in Supabase with status = 'ACTIVE' that is NOT in the scraped active list must be cleared.
-    try:
-        res_supabase_active = supabase.table("smartw_alarms")\
-            .select("id")\
-            .eq("status", "ACTIVE")\
-            .execute()
-        supabase_active = res_supabase_active.data or []
-        
-        stale_ids = []
-        for sa in supabase_active:
-            sa_id = sa.get("id")
-            if sa_id and sa_id not in active_ids_in_scrape:
-                stale_ids.append(sa_id)
-                
-        if stale_ids:
-            now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            now_iso = datetime.now().isoformat() + '+07:00'
+    if upsert_success:
+        try:
+            res_supabase_active = supabase.table("smartw_alarms")\
+                .select("id")\
+                .eq("status", "ACTIVE")\
+                .execute()
+            supabase_active = res_supabase_active.data or []
             
-            chunk_size = 50
-            for i in range(0, len(stale_ids), chunk_size):
-                batch = stale_ids[i:i+chunk_size]
-                supabase.table("smartw_alarms")\
-                    .update({
-                        "status": "CLEARED",
-                        "edate": now_iso,
-                        "edate_str": now_str
-                    })\
-                    .in_("id", batch)\
-                    .execute()
-            logger.info(f"Supabase Sync: Marked {len(stale_ids)} stale active alarms as CLEARED.")
-    except Exception as e:
-        logger.error(f"Supabase Sync Error: Failed to clear stale alarms: {e}")
+            stale_ids = []
+            for sa in supabase_active:
+                sa_id = sa.get("id")
+                if sa_id and sa_id not in active_ids_in_scrape:
+                    stale_ids.append(sa_id)
+                    
+            if stale_ids:
+                now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                now_iso = datetime.now().isoformat() + '+07:00'
+                
+                chunk_size = 50
+                for i in range(0, len(stale_ids), chunk_size):
+                    batch = stale_ids[i:i+chunk_size]
+                    supabase.table("smartw_alarms")\
+                        .update({
+                            "status": "CLEARED",
+                            "edate": now_iso,
+                            "edate_str": now_str
+                        })\
+                        .in_("id", batch)\
+                        .execute()
+                logger.info(f"Supabase Sync: Marked {len(stale_ids)} stale active alarms as CLEARED.")
+        except Exception as e:
+            logger.error(f"Supabase Sync Error: Failed to clear stale alarms: {e}")
 
 
 def upload_to_supabase_storage(local_path: str, destination_name: str):
