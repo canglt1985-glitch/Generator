@@ -191,6 +191,8 @@ class SmartWScraper:
                 logger.info(f'SmartW Login: After SSO navigate → {current_url}')
 
             # Step 3: Now on SSO page — fill credentials
+            debug_pre = None
+            debug_post = None
             current_url = page.url
             if 'auth-sso2fa' in current_url or 'openid-connect/auth' in current_url:
                 logger.info('SmartW Login: SSO page detected, filling credentials...')
@@ -345,6 +347,13 @@ class SmartWScraper:
                     and 'loginDefault' not in current_url):
                 self._logged_in = True
                 logger.info(f'SmartW Login: ✅ Success! URL: {current_url}')
+                # Clean up temporary pre/post debug screenshots on success
+                for temp_shot in [debug_pre, debug_post]:
+                    if temp_shot and os.path.exists(temp_shot):
+                        try:
+                            os.remove(temp_shot)
+                        except OSError:
+                            pass
                 return True
             else:
                 # Capture SSO error message for better diagnostics

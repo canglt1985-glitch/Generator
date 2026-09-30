@@ -660,7 +660,7 @@ _scraper_creds = None     # (username, password) tuple — detect credential cha
 
 # ── Debug Screenshot Cleanup ─────────────────────────────────────
 
-def cleanup_debug_screenshots(max_age_hours: int = 24):
+def cleanup_debug_screenshots(max_age_hours: int = 2):
     """Delete debug_*.png and debug_pre_submit_*.png files older than max_age_hours."""
     import glob
     cutoff = datetime.now() - timedelta(hours=max_age_hours)
