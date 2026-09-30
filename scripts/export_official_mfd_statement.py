@@ -798,8 +798,94 @@ def create_styled_workbook(month=8, year=2026, output_path=None):
             }
             g2_active_invs = [i for i in g2_invs if str(i.get('invoice_number')) in g2_active_nums]
             g2_surplus_invs = [i for i in g2_invs if str(i.get('invoice_number')) not in g2_active_nums]
+        elif month == 9 and year == 2026:
+            # Optimized Active Invoices for Month 9/2026:
+            # 1. Fetch late August rollover diesel invoices from warehouse reserve to guarantee "chủ yếu ko để thiếu":
+            #    - G1 Rollover: '630818', '629143', '626737' (215.07 L • 6.33M) -> covers G1 deficit of 202.46 L
+            #    - G2 Rollover: '629141', '191836', '625216', '624714' (270.34 L • 7.95M) -> covers G2 deficit of 233.27 L
+            g1_roll_nums = {'630818', '629143', '626737'}
+            g2_roll_nums = {'629141', '191836', '625216', '624714'}
+            all_roll_nums = list(g1_roll_nums | g2_roll_nums)
+            
+            roll_res = supabase.from_("parsed_invoices").select("*").in_("invoice_number", all_roll_nums).execute()
+            roll_invs = roll_res.data or []
+            
+            # Combine all candidate invoices (T9 + Rollover) and deduplicate
+            candidate_invs = []
+            seen_inv_keys = set()
+            for inv in invoices + roll_invs:
+                num = str(inv.get('invoice_number', ''))
+                dt = str(inv.get('invoice_date', ''))
+                tot = float(inv.get('total_amount') or 0)
+                key = (num, dt)
+                if key in seen_inv_keys and tot <= 0:
+                    continue
+                if key not in seen_inv_keys:
+                    seen_inv_keys.add(key)
+                    candidate_invs.append(inv)
+                    
+            cand_g1 = [i for i in candidate_invs if '0100686209-129' in (i.get('buyer_mst') or i.get('buyer_tax_code') or '') or 'ĐỒNG NAI' in (i.get('buyer_name') or i.get('buyer_legal_name') or '').upper() or 'DONG NAI' in (i.get('buyer_name') or i.get('buyer_legal_name') or '').upper() or 'KHU VỰC 8' in (i.get('buyer_name') or i.get('buyer_legal_name') or '').upper()]
+            cand_g2 = [i for i in candidate_invs if i not in cand_g1]
+
+            def is_xang_inv_fn(i):
+                items = i.get('items') or []
+                if isinstance(items, str):
+                    try: items = json.loads(items)
+                    except: items = []
+                return 'xăng' in str(items).lower() or 'ron' in str(items).lower()
+
+            def get_inv_lit(i):
+                items = i.get('items') or []
+                if isinstance(items, str):
+                    try: items = json.loads(items)
+                    except: items = []
+                return sum(float(it.get('sl', 0)) for it in items) if isinstance(items, list) else 0
+
+            # G1:
+            # Need: Oil 1,011.45 L (29,429,350 đ) | Gas 61.71 L (1,900,719 đ)
+            g1_oil_all = sorted([i for i in cand_g1 if not is_xang_inv_fn(i) and float(i.get('total_amount') or 0) > 0], key=lambda x: (x.get('invoice_date', ''), x.get('invoice_number', '')))
+            g1_gas_all = sorted([i for i in cand_g1 if is_xang_inv_fn(i) and float(i.get('total_amount') or 0) > 0], key=lambda x: (x.get('invoice_date', ''), x.get('invoice_number', '')))
+            
+            # G1 Gas selection: pick just enough (need 61.71 L / 1.9M), rest goes to surplus
+            g1_gas_sel = []
+            g1_gas_surplus = []
+            cur_l_g1 = 0.0; cur_m_g1 = 0.0
+            for i in g1_gas_all:
+                l_val = get_inv_lit(i)
+                m_val = float(i.get('total_amount') or 0)
+                if cur_l_g1 < 61.71 or cur_m_g1 < 1900719:
+                    g1_gas_sel.append(i)
+                    cur_l_g1 += l_val
+                    cur_m_g1 += m_val
+                else:
+                    g1_gas_surplus.append(i)
+            
+            g1_active_invs = g1_oil_all + g1_gas_sel
+            g1_surplus_invs = g1_gas_surplus + [i for i in cand_g1 if float(i.get('total_amount') or 0) <= 0]
+
+            # G2:
+            # Need: Oil 1,702.61 L (48,855,835 đ) | Gas 787.13 L (22,460,608 đ)
+            g2_oil_all = sorted([i for i in cand_g2 if not is_xang_inv_fn(i) and float(i.get('total_amount') or 0) > 0], key=lambda x: (x.get('invoice_date', ''), x.get('invoice_number', '')))
+            g2_gas_all = sorted([i for i in cand_g2 if is_xang_inv_fn(i) and float(i.get('total_amount') or 0) > 0], key=lambda x: (x.get('invoice_date', ''), x.get('invoice_number', '')))
+
+            # G2 Gas selection: pick just enough (need 787.13 L / 22.46M), rest goes to surplus
+            g2_gas_sel = []
+            g2_gas_surplus = []
+            cur_l_g2 = 0.0; cur_m_g2 = 0.0
+            for i in g2_gas_all:
+                l_val = get_inv_lit(i)
+                m_val = float(i.get('total_amount') or 0)
+                if cur_l_g2 < 787.13 or cur_m_g2 < 22460608:
+                    g2_gas_sel.append(i)
+                    cur_l_g2 += l_val
+                    cur_m_g2 += m_val
+                else:
+                    g2_gas_surplus.append(i)
+
+            g2_active_invs = g2_oil_all + g2_gas_sel
+            g2_surplus_invs = g2_gas_surplus + [i for i in cand_g2 if float(i.get('total_amount') or 0) <= 0]
         else:
-            # Month 9/2026 onwards: All valid invoices with amount > 0 belong to their respective groups
+            # Default for other months: All valid invoices with amount > 0 belong to their respective groups
             g1_active_invs = [i for i in g1_invs if float(i.get('total_amount') or 0) > 0]
             g2_active_invs = [i for i in g2_invs if float(i.get('total_amount') or 0) > 0]
             g1_surplus_invs = [i for i in g1_invs if float(i.get('total_amount') or 0) <= 0]
