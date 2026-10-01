@@ -442,8 +442,9 @@ export default function SranClusterBoard({ sites = [], onSelectSite }) {
                     const oa5gDate = raw.Onair_Actual_Date || raw.Onair_NR26_Actual_Date || raw.Onair_NR38_Actual_Date;
                     const rawSwapSol = String(s.swap_solution || raw.Swap_Solution || '').toUpperCase();
                     const rawScope5g = String(s.scope_5g || raw['5G_Scope'] || '').toUpperCase();
-                    const rawScope34 = String(s.scope_3g4g || raw['3G4G_Scope'] || '').toUpperCase();
-                    const isSranSwap = rawSwapSol.includes('3G') || rawSwapSol.includes('SRAN') || rawScope5g.includes('SWAP SRAN') || rawScope34.includes('3G') || rawScope34.includes('SRAN');
+                    // CHỈ trạm nào có swap_solution chứa 3G4G mới là SRAN (Dùng chung phần cứng BBU/RRU SRAN)
+                    // Còn lại (SWAP:4G, 4G Only...) là 4G độc lập với 3G
+                    const isSranSwap = rawSwapSol.includes('3G4G') || rawSwapSol.includes('3G/4G');
 
                     return (
                       <div

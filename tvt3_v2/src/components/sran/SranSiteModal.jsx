@@ -35,11 +35,10 @@ export default function SranSiteModal({ site, onClose }) {
   const is4gOa = isSite4GOnair(site);
   const oa5gDate = raw.Onair_Actual_Date || raw.Onair_NR26_Actual_Date || raw.Onair_NR38_Actual_Date;
 
-  const rawSwapSol = String(site.swap_solution || raw.Swap_Solution || '').toUpperCase();
-  const rawScope5g = String(site.scope_5g || raw['5G_Scope'] || '').toUpperCase();
-  const rawScope34 = String(site.scope_3g4g || raw['3G4G_Scope'] || '').toUpperCase();
-  const isSranSwap = rawSwapSol.includes('3G') || rawSwapSol.includes('SRAN') || rawScope5g.includes('SWAP SRAN') || rawScope34.includes('3G') || rawScope34.includes('SRAN');
-  const swapTypeLabel = isSranSwap ? 'Swap SRAN (3G/4G)' : 'Swap 4G';
+  // CHỈ trạm nào có swap_solution chứa 3G4G mới là SRAN (Dùng chung phần cứng BBU/RRU SRAN)
+  // Còn lại (SWAP:4G, 4G Only...) là 4G độc lập với 3G
+  const isSranSwap = rawSwapSol.includes('3G4G') || rawSwapSol.includes('3G/4G');
+  const swapTypeLabel = isSranSwap ? 'Swap SRAN (3G/4G)' : 'Swap 4G (Độc lập 3G)';
   const cleanConfig3g4g = site.config_3g4g ? String(site.config_3g4g).replace(/\s*\(Tháo dỡ 4G Only\)/gi, '').trim() : 'Chưa rõ';
 
   return (
@@ -172,7 +171,7 @@ export default function SranSiteModal({ site, onClose }) {
                 <div className="flex justify-between py-0.5 border-b border-slate-200/60">
                   <span className="text-slate-500">Giải pháp swap:</span>
                   <span className="font-semibold text-slate-800">
-                    {isSranSwap ? 'Swap SRAN (3G/4G)' : rawSwapSol.includes('4G') ? 'Swap 4G' : (site.swap_solution || 'Tiêu chuẩn')}
+                    {isSranSwap ? 'Swap SRAN (3G/4G)' : rawSwapSol.includes('4G') ? 'Swap 4G (Độc lập 3G)' : (site.swap_solution || 'Tiêu chuẩn')}
                   </span>
                 </div>
                 <div className="flex justify-between py-0.5">

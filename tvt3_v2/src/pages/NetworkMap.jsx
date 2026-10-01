@@ -179,15 +179,16 @@ const getSiteRadioInfo = (site) => {
   const is5gA = Boolean(rf?.is_dual_5g || (rf?.cells_5g_l2 > 0));
   const has3g = Boolean(rf?.cells_3g > 0);
   const has4g = Boolean(rf?.cells_4g > 0);
-  // Trạm nằm trong quy hoạch SRAN (có góc hướng thiết kế trong file ERA hoặc cờ is_sran_scope)
-  const isSranScope = Boolean(rf?.sectors?.some(s => s.azimuth != null) || rf?.is_sran_scope);
+  // CHỈ trạm nào có giải pháp swap là 3G4G mới là SRAN (Dùng chung phần cứng BBU/RRU SRAN)
+  // Còn lại (SWAP:4G, 4G Only...) là 4G độc lập với 3G
+  const isSranScope = Boolean(rf?.is_sran_swap);
 
   if (is5gA) {
     return {
       key: '5g_a',
       isSranScope,
-      tech: isSranScope ? 'SRAN / 5G-A' : '5G-A',
-      label: '5G-A (2.6G + 3.8G)',
+      tech: isSranScope ? 'SRAN / 5G-A' : '4G + 5G-A',
+      label: isSranScope ? 'SRAN / 5G-A (2.6G + 3.8G)' : '4G + 5G-A (2.6G + 3.8G)',
       color: '#a855f7', // Tím 5G-A
       textColor: 'text-purple-400',
       badgeClass: 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
@@ -197,8 +198,8 @@ const getSiteRadioInfo = (site) => {
     return {
       key: '5g_l1',
       isSranScope,
-      tech: isSranScope ? 'SRAN / 5G' : '3G/4G/5G',
-      label: isSranScope ? 'SRAN / 5G (2.6 GHz)' : '5G (2.6 GHz)',
+      tech: isSranScope ? 'SRAN / 5G' : '4G + 5G',
+      label: isSranScope ? 'SRAN / 5G (2.6 GHz)' : '4G + 5G (2.6 GHz)',
       color: '#ef4444', // Đỏ
       textColor: 'text-rose-400',
       badgeClass: 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
@@ -220,7 +221,7 @@ const getSiteRadioInfo = (site) => {
         key: 'legacy_3g4g',
         isSranScope: false,
         tech: '3G/4G',
-        label: '3G/4G Hiện hữu',
+        label: '3G + 4G Độc lập',
         color: '#3b82f6', // Xanh dương
         textColor: 'text-blue-400',
         badgeClass: 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
@@ -232,7 +233,7 @@ const getSiteRadioInfo = (site) => {
       key: '4g_only',
       isSranScope,
       tech: '4G',
-      label: '4G LTE',
+      label: isSranScope ? '4G LTE (SRAN)' : '4G LTE (Độc lập)',
       color: '#3b82f6', // Xanh dương
       textColor: 'text-blue-400',
       badgeClass: 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
