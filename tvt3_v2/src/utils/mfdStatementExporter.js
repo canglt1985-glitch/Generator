@@ -11,11 +11,11 @@ function getFuelTypeFromLog(log, stationObj) {
   const loaiNl = (log.run_details?.nhien_lieu_loai || log.run_details?.nhien_lieu || stationObj?.nhien_lieu || '').toLowerCase();
   const loaiMay = (log.run_details?.loai_may || stationObj?.loai_may || '').toLowerCase();
   
-  // Máy xăng chỉ bao gồm các bản ghi ghi rõ XĂNG hoặc máy xăng di động (Honda, Elemax)
-  if (loaiNl.includes('xăng') || loaiNl.includes('xang') || loaiMay.includes('honda') || loaiMay.includes('elemax')) {
+  // Máy xăng bao gồm các bản ghi ghi rõ XĂNG hoặc máy xăng di động / lưu động (Honda, Elemax, KYO POWER, MLĐ...)
+  if (loaiNl.includes('xăng') || loaiNl.includes('xang') || loaiMay.includes('honda') || loaiMay.includes('elemax') || loaiMay.includes('kyo') || loaiMay.includes('mlđ') || loaiMay.includes('mld')) {
     return 'Xăng';
   }
-  // Mặc định các dòng máy phát KIBII, SBM, VIETGEN, HỮU TOÀN, CAPO, FG WILSON, DENYO... đều là MÁY DẦU
+  // Mặc định các dòng máy phát cố định KIBII, SBM, VIETGEN, HỮU TOÀN, CAPO, FG WILSON, DENYO... đều là MÁY DẦU
   return 'Dầu';
 }
 
@@ -1065,7 +1065,7 @@ export async function exportOfficialMFDReport({
     let groupLabel = '';
     let targetLogs = logs;
     if (selectedGroupFilter === 'group1') {
-      groupLabel = 'MobiFone Đồng Nai - 65 Trạm Đặc Thù';
+      groupLabel = 'MobiFone Đồng Nai - 67 Trạm Đặc Thù';
       targetLogs = logs.filter(log => {
         const st = stations.find(s => s.site_id === log.site_id);
         return !isSeathGroupSite(log.site_id, st?.site_id_old || '', stations) && isSpecial67Site(log.site_id, st?.site_id_old || '', stations);

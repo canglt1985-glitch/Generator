@@ -3,7 +3,7 @@ import { supabase } from '../supabaseClient';
 import { 
   Zap, Calendar, AlertTriangle, FileText, Search, Plus, Trash, 
   Edit, Edit2, MapPin, Eye, Clock, CheckCircle2, CheckCircle, CheckCheck, AlertCircle, X, ExternalLink, Filter, RefreshCw, Download,
-  Copy, Check, MessageSquare
+  Copy, Check, MessageSquare, CreditCard
 } from 'lucide-react';
 
 // XLSX loaded dynamically on first export
@@ -654,8 +654,12 @@ export default function Generator() {
     });
 
     const warningDays = [];
+    const transferInvoiceNumbers = new Set();
     Object.values(amountByDate).forEach(item => {
       if (item.amount > 5000000) {
+        if (item.invoiceNumbers && Array.isArray(item.invoiceNumbers)) {
+          item.invoiceNumbers.forEach(no => transferInvoiceNumbers.add(no));
+        }
         const invList = item.invoicesList || [];
         let bestSum = 0;
         let bestKept = [];
@@ -705,7 +709,8 @@ export default function Generator() {
       subTotal,
       vatAmount,
       totalAmount,
-      warningDays
+      warningDays,
+      transferInvoiceNumbers
     };
   }, [filteredInvoices]);
 
@@ -2086,7 +2091,7 @@ export default function Generator() {
                 className="bg-amber-50 border border-amber-300 text-amber-900 rounded-lg px-2.5 py-1.5 text-xs font-bold focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer shadow-sm"
               >
                 <option value="all">📊 Tất cả nhóm (Tổng hợp)</option>
-                <option value="group1">{Number(filterMonth) === 8 && Number(filterYear) === 2026 ? "📌 Nhóm 1: 67 Trạm Đặc Thù (MobiFone ĐN)" : "📌 Nhóm 1: 65 Trạm Đặc Thù (MobiFone ĐN)"}</option>
+                <option value="group1">📌 Nhóm 1: 67 Trạm Đặc Thù (MobiFone ĐN)</option>
                 <option value="group2">🏢 Nhóm 2: Các Trạm Còn Lại (MBG)</option>
                 {!(Number(filterMonth) === 8 && Number(filterYear) === 2026) && (
                   <option value="group3">🟣 Nhóm 3: Đối Tác Seath Group</option>
@@ -2767,44 +2772,44 @@ export default function Generator() {
       {activeTab === 'invoices' && (
         <div className="space-y-3">
           {invoiceStats.warningDays.length > 0 && (
-            <div className="bg-red-600 border border-red-700 text-white rounded-xl p-4 shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="bg-slate-900 border border-indigo-500/50 text-white rounded-xl p-4 shadow-md animate-in fade-in slide-in-from-top-2 duration-300">
               <div className="flex items-start gap-3">
-                <AlertTriangle className="w-5 h-5 mt-0.5 text-white animate-pulse shrink-0" />
+                <CreditCard className="w-5 h-5 mt-0.5 text-indigo-400 shrink-0" />
                 <div className="flex-1">
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-red-500/50 pb-2 mb-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-700/80 pb-2 mb-2">
                     <div>
-                      <h4 className="font-extrabold text-sm uppercase tracking-wider text-white">
-                        CẢNH BÁO THANH TOÁN (CÙNG CÂY XĂNG & CÙNG PHÁP NHÂN VƯỢT 5 TRIỆU ĐỒNG/NGÀY)
+                      <h4 className="font-extrabold text-sm uppercase tracking-wider text-indigo-300 flex items-center gap-2">
+                        💳 BẢNG KÊ LỆNH CHUYỂN KHOẢN CÂY XĂNG (QUY TẮC PHƯƠNG ÁN B: CÙNG CÂY XĂNG & PHÁP NHÂN &gt; 5 TRIỆU/NGÀY)
                       </h4>
-                      <p className="text-xs text-red-100 mt-0.5">
-                        Theo quy định Thuế, điều kiện khấu trừ thuế áp dụng khi <strong>CÙNG 1 CÂY XĂNG</strong> xuất cho <strong>CÙNG 1 PHÁP NHÂN MUA</strong> &gt; 5,000,000đ/ngày. Dưới đây là phân loại chi tiết theo 2 nhóm:
+                      <p className="text-xs text-slate-300 mt-0.5">
+                        Theo quy định Thuế, khi <strong>CÙNG 1 CÂY XĂNG</strong> xuất cho <strong>CÙNG 1 PHÁP NHÂN MUA</strong> &gt; 5,000,000đ/ngày, các hóa đơn đưa vào bảng kê sử dụng sẽ lập lệnh <strong>Chuyển khoản (Ủy nhiệm chi)</strong>. Các ngày còn lại thanh toán 100% bằng <strong>Tiền mặt</strong>.
                       </p>
                     </div>
 
                     {/* Group Badges Summary */}
                     <div className="flex items-center gap-2 text-xs shrink-0">
                       <span className="bg-amber-950/80 text-amber-300 px-2.5 py-1 rounded-lg border border-amber-500/50 font-bold">
-                        📌 Nhóm 1 (Đồng Nai): {invoiceStats.warningDays.filter(w => w.buyerName.includes('Đồng Nai')).length} ngày vượt
+                        📌 Nhóm 1 (Đồng Nai): {invoiceStats.warningDays.filter(w => w.buyerName.includes('Đồng Nai')).length} ngày chuyển khoản
                       </span>
                       <span className="bg-cyan-950/80 text-cyan-200 px-2.5 py-1 rounded-lg border border-cyan-500/50 font-bold">
-                        🏢 Nhóm 2 (Toàn Cầu): {invoiceStats.warningDays.filter(w => !w.buyerName.includes('Đồng Nai')).length} ngày vượt
+                        🏢 Nhóm 2 (Toàn Cầu): {invoiceStats.warningDays.filter(w => !w.buyerName.includes('Đồng Nai')).length} ngày chuyển khoản
                       </span>
                     </div>
                   </div>
                   <div className="mt-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                     {invoiceStats.warningDays.map((wd, idx) => (
-                      <div key={idx} className="bg-red-800/90 border border-red-400/50 rounded-lg p-3 text-xs shadow-inner flex flex-col justify-between">
+                      <div key={idx} className="bg-slate-800/90 border border-slate-700 rounded-lg p-3 text-xs shadow-inner flex flex-col justify-between">
                         <div>
-                          <div className="flex items-center justify-between gap-1 border-b border-red-700/60 pb-1.5 mb-1.5">
-                            <span className="font-bold text-amber-300">📅 Ngày {wd.date}</span>
-                            <span className="font-black text-white text-xs bg-red-950 px-2 py-0.5 rounded border border-red-600">
-                              {formatCurrency(wd.amount)}
+                          <div className="flex items-center justify-between gap-1 border-b border-slate-700 pb-1.5 mb-1.5">
+                            <span className="font-bold text-indigo-300">📅 Ngày {wd.date}</span>
+                            <span className="font-black text-indigo-200 text-xs bg-indigo-950 px-2 py-0.5 rounded border border-indigo-700">
+                              Tổng xuất: {formatCurrency(wd.amount)}
                             </span>
                           </div>
-                          <div className="space-y-1 text-[11px] text-red-100">
+                          <div className="space-y-1 text-[11px] text-slate-300">
                             <div>⛽ <span className="font-semibold text-white">Cây xăng:</span> {wd.sellerName}</div>
                             <div>🏢 <span className="font-semibold text-white">Pháp nhân:</span> <span className={wd.buyerName.includes('Đồng Nai') ? 'text-amber-300 font-bold' : 'text-cyan-200 font-bold'}>{wd.buyerName}</span></div>
-                            <div className="flex flex-wrap gap-2 text-white/90 font-medium">
+                            <div className="flex flex-wrap gap-2 text-slate-200 font-medium">
                               <span>📦 <span className="font-semibold text-white">Nhiên liệu:</span></span>
                               {wd.fuelDau > 0 && (
                                 <span className="bg-orange-950/80 text-orange-300 px-1.5 py-0.2 rounded border border-orange-700/60 font-semibold">
@@ -2816,41 +2821,27 @@ export default function Generator() {
                                   ⛽ Xăng: {wd.fuelXang.toFixed(1)} L
                                 </span>
                               )}
-                              {wd.fuelDau === 0 && wd.fuelXang === 0 && (
-                                <span className="text-red-200 italic">Hóa đơn xăng dầu</span>
-                              )}
                             </div>
                             {wd.invoiceNumbers && wd.invoiceNumbers.length > 0 && (
-                              <div className="text-red-200">🗒 Tổng HĐ: {wd.invoiceNumbers.join(', ')}</div>
+                              <div className="text-slate-300 pt-1">
+                                <span className="font-semibold text-white">📋 Các HĐ phát hành:</span> {wd.invoiceNumbers.map(n => `#${n}`).join(', ')}
+                              </div>
                             )}
                           </div>
                         </div>
 
-                        {/* Smart Pruning Suggestion */}
-                        {wd.suggestion && (
-                          <div className="bg-black/30 border border-red-400/30 rounded-md p-2 text-[11px] space-y-1.5 mt-2">
-                            <div className="font-bold text-amber-200 border-b border-white/10 pb-1 flex items-center justify-between">
-                              <span>💡 Phương án xử lý tối ưu:</span>
-                            </div>
-                            {wd.suggestion.kept.length > 0 && (
-                              <div className="text-emerald-300">
-                                <span className="font-bold">🟢 Giữ lại (&le; 5tr):</span>{' '}
-                                <span className="font-bold font-mono">{formatCurrency(wd.suggestion.keptSum)}</span>{' '}
-                                ({wd.suggestion.kept.map(k => `#${k.invoice_number}`).join(', ')})
-                              </div>
-                            )}
-                            {wd.suggestion.toRemove.length > 0 && (
-                              <div className="text-rose-200">
-                                <span className="font-bold">✂️ Gợi ý bỏ/tách:</span>{' '}
-                                <span className="font-bold font-mono">{formatCurrency(wd.suggestion.removeSum)}</span>{' '}
-                                ({wd.suggestion.toRemove.map(k => `#${k.invoice_number}`).join(', ')})
-                              </div>
-                            )}
-                            <div className="text-[10px] text-amber-200/90 pt-1 border-t border-white/10 italic">
-                              ⚠️ Nếu không thể bỏ hóa đơn (để đảm bảo đủ nhiên liệu đối soát) &rarr; <span className="font-bold text-white uppercase underline">Bắt buộc chuyển khoản ngân hàng</span> toàn bộ {formatCurrency(wd.amount)}.
-                            </div>
+                        <div className="bg-indigo-950/50 border border-indigo-500/30 rounded-md p-2 text-[11px] space-y-1 mt-2.5">
+                          <div className="font-bold text-indigo-200 flex items-center gap-1.5">
+                            <CreditCard size={12} className="text-indigo-400" />
+                            <span>Hình thức thanh toán (Phương án B):</span>
                           </div>
-                        )}
+                          <div className="text-emerald-300 font-medium">
+                            &bull; Hóa đơn đưa vào hồ sơ: <span className="font-bold underline">Lập Ủy nhiệm chi (Chuyển khoản)</span>
+                          </div>
+                          <div className="text-slate-400 text-[10px]">
+                            &bull; Hóa đơn còn lại bảo lưu kho dự phòng kỳ sau
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -2892,9 +2883,9 @@ export default function Generator() {
             </div>
             {/* Cần CK */}
             {invoiceStats.warningDays.length > 0 && (
-              <div className="bg-red-50 border border-red-200 rounded-xl p-2 px-3 min-w-[85px] shadow-sm">
-                <div className="text-red-800 text-[10px] font-semibold uppercase">⚠️ Cần CK</div>
-                <div className="font-extrabold text-red-800 text-sm">{invoiceStats.warningDays.length} ngày</div>
+              <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-2 px-3 min-w-[95px] shadow-sm">
+                <div className="text-indigo-800 text-[10px] font-semibold uppercase">💳 Chuyển khoản</div>
+                <div className="font-extrabold text-indigo-700 text-sm">{invoiceStats.warningDays.length} ngày (P.Án B)</div>
               </div>
             )}
           </div>
@@ -3455,7 +3446,18 @@ export default function Generator() {
                               <td className="px-4 py-3 whitespace-nowrap text-slate-500 font-mono text-xs">{inv.seller_mst}</td>
                               <td className="px-4 py-3 whitespace-nowrap text-red-600 font-bold font-mono">{xang > 0 ? `${xang.toLocaleString()} L` : '-'}</td>
                               <td className="px-4 py-3 whitespace-nowrap text-orange-600 font-bold font-mono">{dau > 0 ? `${dau.toLocaleString()} L` : '-'}</td>
-                              <td className="px-4 py-3 whitespace-nowrap font-extrabold text-slate-950 font-mono">{formatCurrency(inv.total_amount)}</td>
+                              <td className="px-4 py-3 whitespace-nowrap">
+                                <div className="font-extrabold text-slate-950 font-mono">{formatCurrency(inv.total_amount)}</div>
+                                {invoiceStats.transferInvoiceNumbers?.has(inv.invoice_number) ? (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200 mt-0.5 shadow-2xs">
+                                    💳 Chuyển khoản
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 mt-0.5 shadow-2xs">
+                                    💵 Tiền mặt
+                                  </span>
+                                )}
+                              </td>
                               <td className="px-4 py-3 whitespace-nowrap">
                                 {isG1 ? (
                                   <div className="inline-flex flex-col">
