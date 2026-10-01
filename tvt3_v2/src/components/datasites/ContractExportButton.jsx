@@ -209,11 +209,14 @@ export default function ContractExportButton({ site, contract, overridePrice }) 
         const isToTrinhOnly = template?.id === 'to_trinh_duyet_gia' || (template?.id === 'tl_ky_lai' && opts.vuotKhung);
         const isTrongKhung = isToTrinhOnly ? 0 : 1;
 
+        const cleanOldAddr = (site?.location_info?.dia_chi_cu || '').replace(/,\s*(tỉnh|Tỉnh)\s*Đồng\s*Nai/gi, ', Đồng Nai');
+        const cleanContactAddr = (contract?.contractor_info?.dia_chi_lien_he || '').replace(/,\s*(tỉnh|Tỉnh)\s*Đồng\s*Nai/gi, ', Đồng Nai');
+
         return {
             SITE_NAME: site?.name || '',
             SITE_ID: hienThiMaTram,
-            ADDRESS: site?.location_info?.dia_chi_cu || '',
-            ADDRESS_OLD: site?.location_info?.dia_chi_cu || '',
+            ADDRESS: cleanOldAddr ? `${cleanOldAddr} (${addressNew})` : addressNew,
+            ADDRESS_OLD: cleanOldAddr,
             ADDRESS_NEW: addressNew,
             CONTRACT_NO: contract?.contract_number || '',
             CONTRACT_DATE: formatDate(contract?.dates?.ngay_ky_hd),
@@ -228,7 +231,7 @@ export default function ContractExportButton({ site, contract, overridePrice }) 
             ACCOUNT_NO: contract?.bank_info?.so_tai_khoan || '',
             BANK_NAME: contract?.bank_info?.ngan_hang || '',
             BRANCH: contract?.bank_info?.chi_nhanh || '',
-            CONTACT_ADDR: contract?.contractor_info?.dia_chi_lien_he || '',
+            CONTACT_ADDR: cleanContactAddr || addressNew,
             OLD_PRICE: formatCurrency(oldPrice),
             NEW_PRICE: formatCurrency(tong_chot),
             NEW_PRICE_TEXT: convertNumberToVietnameseWords(tong_chot),

@@ -499,7 +499,7 @@ export default function InfrastructureDevelopment() {
           location_info: {
             vi_do: project.latitude_survey || project.latitude_plan || 0,
             kinh_do: project.longitude_survey || project.longitude_plan || 0,
-            xa_moi: `Xã ${project.ward}`,
+            xa_moi: (project.ward || '').startsWith('Xã ') || (project.ward || '').startsWith('Phường ') ? project.ward : (project.ward ? `Xã ${project.ward}` : ''),
             huyen_cu: project.district,
             dia_chi_cu: project.address || `${project.ward}, ${project.district}, Đồng Nai`
           },
@@ -1083,11 +1083,30 @@ export default function InfrastructureDevelopment() {
           .trim();
       }
 
-      // Format old address and new address
-      const addressOldText = `thửa đất số ${selectedProject.plot_number || '............'}, tờ bản đồ số ${selectedProject.map_sheet || '............'}${detailAddress ? `, ${detailAddress}` : ''}, xã ${xa_cu}, huyện ${huyen_cu}`;
-      const addressNewText = [xa_moi, 'Đồng Nai'].filter(Boolean).join(', ');
-      
-      const fullAddress = selectedProject.address || `${selectedProject.ward || ''}, Huyện ${selectedProject.district || ''}, Tỉnh Đồng Nai`;
+      // Check if project papers already updated to new 2-tier unit (e.g. 26DNa158 Xã Cẩm Mỹ)
+      const isAlreadyUpdated = selectedProject.planning_id_new === '26DNa158' ||
+        (selectedProject.address && selectedProject.address.includes('Xã Cẩm Mỹ')) ||
+        (selectedProject.ward && selectedProject.ward.toLowerCase().includes(xa_moi.toLowerCase()) && !detailAddress.toLowerCase().includes('huyện'));
+
+      let fullAddress = '';
+      let addressOldText = '';
+      if (isAlreadyUpdated) {
+        addressOldText = `thửa đất số ${selectedProject.plot_number || '803'}, tờ bản đồ số ${selectedProject.map_sheet || '102'}, ${xa_moi}, Đồng Nai`;
+        fullAddress = addressOldText;
+      } else {
+        const rawOld = `thửa đất số ${selectedProject.plot_number || '............'}, tờ bản đồ số ${selectedProject.map_sheet || '............'}${detailAddress ? `, ${detailAddress}` : ''}, xã ${xa_cu}, huyện ${huyen_cu}`;
+        addressOldText = rawOld;
+        fullAddress = `${rawOld} (${addressNewText})`;
+      }
+
+      const contactAddress = (() => {
+        let addr = selectedProject.address || '';
+        if (addr) {
+          addr = addr.replace(/,\s*(tỉnh|Tỉnh)\s*Đồng\s*Nai/gi, ', Đồng Nai');
+          return addr;
+        }
+        return [detailAddress, addressNewText].filter(Boolean).join(', ');
+      })();
 
       // Parse contract start date & calculate end date dynamically based on lease term
       const start_date = selectedProject.contract_date 
@@ -1156,7 +1175,7 @@ export default function InfrastructureDevelopment() {
         LONGITUDE: selectedProject.longitude_survey || selectedProject.longitude_plan || '................',
         
         // Landlord Bank & Contacts
-        CONTACT_ADDR: selectedProject.address || '................',
+        CONTACT_ADDR: contactAddress || addressNewText || '................',
         ACCOUNT_OWNER: landlordNameText,
         ACCOUNT_NO: bankAccountText,
         BANK_NAME: selectedProject.bank_name || '................',

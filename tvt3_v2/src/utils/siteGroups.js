@@ -8,7 +8,7 @@
 // Information for Buyer / Invoice Unit Group 1 (65 Special Sites)
 export const GROUP_1_BUYER_INFO = {
   id: 'group1',
-  name: 'Nhóm 1: 65 Trạm Đặc Thù',
+  name: 'Nhóm 1: 67 Trạm Đặc Thù',
   companyName: 'MOBIFONE ĐỒNG NAI- CHI NHÁNH TỔNG CÔNG TY VIỄN THÔNG MOBIFONE',
   taxCode: '0100686209-129',
   address: 'Số 236A Phan Trung, Phường Tam Hiệp, Đồng Nai, Việt Nam.',

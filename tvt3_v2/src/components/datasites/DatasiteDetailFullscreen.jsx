@@ -2,11 +2,12 @@ import { useState, useMemo, useEffect } from 'react';
 import { 
   X, Edit, FileDown, Trash2, Info, Server, Radio, 
   FileText, Clock, MapPin, Building2, Navigation,
-  FileSignature, Building, Wallet, CreditCard, Calculator, ExternalLink, Zap
+  FileSignature, Building, Wallet, CreditCard, Calculator, ExternalLink, Zap, Compass
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import ContractExportButton from './ContractExportButton';
 import PaymentSchedulePanel from './PaymentSchedulePanel';
+import SiteRfDataPanel from './SiteRfDataPanel';
 import { useCurrentUser } from '../../utils/useCurrentUser';
 import { exportB4RepairProposal, B4_REPAIR_CATEGORIES } from '../../utils/b4RepairExporter';
 
@@ -249,6 +250,7 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, on
 
   const tabs = [
     { id: 'general', label: 'Thông tin chung', icon: Info },
+    { id: 'rf_data', label: 'Vô tuyến & Cánh sóng', icon: Compass },
     { id: 'transmission', label: 'Truyền dẫn trạm', icon: Radio },
     { id: 'infrastructure', label: 'Hạ tầng phụ trợ', icon: Server },
     { id: 'legal', label: 'Pháp lý & Hợp đồng', icon: FileText },
@@ -1151,6 +1153,8 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, on
             )}
           </div>
         );
+      case 'rf_data':
+        return <SiteRfDataPanel site={site} />;
       case 'history':
         return (
           <div className="space-y-6 animate-in fade-in duration-300 flex flex-col items-center justify-center py-12 text-center">

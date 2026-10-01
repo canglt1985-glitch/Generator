@@ -143,7 +143,7 @@ def create_styled_workbook(month=8, year=2026, output_path=None):
             st = sites.get(l.get('site_id')) or {}
             nl = (rd.get('nhien_lieu_loai') or rd.get('nhien_lieu') or st.get('nhien_lieu') or '').lower()
             lm = (rd.get('loai_may') or st.get('loai_may') or '').lower()
-            if 'xăng' in nl or 'xang' in nl or 'honda' in lm or 'elemax' in lm:
+            if 'xăng' in nl or 'xang' in nl or 'honda' in lm or 'elemax' in lm or 'kyo' in lm or 'mlđ' in lm or 'mld' in lm or ('kibii' in lm and ('mlđ' in lm or 'lưu động' in lm or 'xăng' in nl)):
                 xang_list.append((l, rd, st))
             else:
                 dau_list.append((l, rd, st))
@@ -842,49 +842,93 @@ def create_styled_workbook(month=8, year=2026, output_path=None):
                     except: items = []
                 return sum(float(it.get('sl', 0)) for it in items) if isinstance(items, list) else 0
 
-            # G1:
-            # Need: Oil 1,011.45 L (29,429,350 đ) | Gas 61.71 L (1,900,719 đ)
+            # Dynamic fuel demand calculation from actual logs:
+            def is_xang_log(log):
+                rd = log.get('run_details') or {}
+                st = sites.get(log.get('site_id'), {})
+                nl = (rd.get('nhien_lieu_loai') or rd.get('nhien_lieu') or st.get('nhien_lieu') or '').lower()
+                lm = (rd.get('loai_may') or st.get('loai_may') or '').lower()
+                return 'xăng' in nl or 'xang' in nl or 'honda' in lm or 'elemax' in lm or 'kyo' in lm or 'mlđ' in lm or 'mld' in lm or ('kibii' in lm and ('mlđ' in lm or 'lưu động' in lm or 'xăng' in nl))
+
+            # G1 demand:
+            g1_oil_need_l = sum(float((l.get('run_details') or {}).get('nhien_lieu_tieu_hao') or 0) for l in g1_logs if not is_xang_log(l))
+            g1_oil_need_m = sum(float((l.get('run_details') or {}).get('thanh_tien') or 0) for l in g1_logs if not is_xang_log(l))
+            g1_gas_need_l = sum(float((l.get('run_details') or {}).get('nhien_lieu_tieu_hao') or 0) for l in g1_logs if is_xang_log(l))
+            g1_gas_need_m = sum(float((l.get('run_details') or {}).get('thanh_tien') or 0) for l in g1_logs if is_xang_log(l))
+
             g1_oil_all = sorted([i for i in cand_g1 if not is_xang_inv_fn(i) and float(i.get('total_amount') or 0) > 0], key=lambda x: (x.get('invoice_date', ''), x.get('invoice_number', '')))
             g1_gas_all = sorted([i for i in cand_g1 if is_xang_inv_fn(i) and float(i.get('total_amount') or 0) > 0], key=lambda x: (x.get('invoice_date', ''), x.get('invoice_number', '')))
-            
-            # G1 Gas selection: pick just enough (need 61.71 L / 1.9M), rest goes to surplus
+
+            # G1 Oil selection: pick just enough to cover 100% need (1,014.58 L / 29,529,792 đ)
+            g1_oil_sel = []
+            g1_oil_surplus = []
+            cur_l_g1_oil = 0.0; cur_m_g1_oil = 0.0
+            for i in g1_oil_all:
+                l_val = get_inv_lit(i)
+                m_val = float(i.get('total_amount') or 0)
+                if cur_l_g1_oil < g1_oil_need_l or cur_m_g1_oil < g1_oil_need_m:
+                    g1_oil_sel.append(i)
+                    cur_l_g1_oil += l_val
+                    cur_m_g1_oil += m_val
+                else:
+                    g1_oil_surplus.append(i)
+
+            # G1 Gas selection: pick just enough to cover 100% need (61.71 L / 1,900,719 đ)
             g1_gas_sel = []
             g1_gas_surplus = []
-            cur_l_g1 = 0.0; cur_m_g1 = 0.0
+            cur_l_g1_gas = 0.0; cur_m_g1_gas = 0.0
             for i in g1_gas_all:
                 l_val = get_inv_lit(i)
                 m_val = float(i.get('total_amount') or 0)
-                if cur_l_g1 < 61.71 or cur_m_g1 < 1900719:
+                if cur_l_g1_gas < g1_gas_need_l or cur_m_g1_gas < g1_gas_need_m:
                     g1_gas_sel.append(i)
-                    cur_l_g1 += l_val
-                    cur_m_g1 += m_val
+                    cur_l_g1_gas += l_val
+                    cur_m_g1_gas += m_val
                 else:
                     g1_gas_surplus.append(i)
-            
-            g1_active_invs = g1_oil_all + g1_gas_sel
-            g1_surplus_invs = g1_gas_surplus + [i for i in cand_g1 if float(i.get('total_amount') or 0) <= 0]
 
-            # G2:
-            # Need: Oil 1,702.61 L (48,855,835 đ) | Gas 787.13 L (22,460,608 đ)
+            g1_active_invs = g1_oil_sel + g1_gas_sel
+            g1_surplus_invs = g1_oil_surplus + g1_gas_surplus + [i for i in cand_g1 if float(i.get('total_amount') or 0) <= 0]
+
+            # G2 demand:
+            g2_oil_need_l = sum(float((l.get('run_details') or {}).get('nhien_lieu_tieu_hao') or 0) for l in g2_logs if not is_xang_log(l))
+            g2_oil_need_m = sum(float((l.get('run_details') or {}).get('thanh_tien') or 0) for l in g2_logs if not is_xang_log(l))
+            g2_gas_need_l = sum(float((l.get('run_details') or {}).get('nhien_lieu_tieu_hao') or 0) for l in g2_logs if is_xang_log(l))
+            g2_gas_need_m = sum(float((l.get('run_details') or {}).get('thanh_tien') or 0) for l in g2_logs if is_xang_log(l))
+
             g2_oil_all = sorted([i for i in cand_g2 if not is_xang_inv_fn(i) and float(i.get('total_amount') or 0) > 0], key=lambda x: (x.get('invoice_date', ''), x.get('invoice_number', '')))
             g2_gas_all = sorted([i for i in cand_g2 if is_xang_inv_fn(i) and float(i.get('total_amount') or 0) > 0], key=lambda x: (x.get('invoice_date', ''), x.get('invoice_number', '')))
 
-            # G2 Gas selection: pick just enough (need 787.13 L / 22.46M), rest goes to surplus
+            # G2 Oil selection: pick just enough (need 1,788.70 L / 51,609,155 đ)
+            g2_oil_sel = []
+            g2_oil_surplus = []
+            cur_l_g2_oil = 0.0; cur_m_g2_oil = 0.0
+            for i in g2_oil_all:
+                l_val = get_inv_lit(i)
+                m_val = float(i.get('total_amount') or 0)
+                if cur_l_g2_oil < g2_oil_need_l or cur_m_g2_oil < g2_oil_need_m:
+                    g2_oil_sel.append(i)
+                    cur_l_g2_oil += l_val
+                    cur_m_g2_oil += m_val
+                else:
+                    g2_oil_surplus.append(i)
+
+            # G2 Gas selection: pick just enough (need 881.84 L / 25,302,473 đ)
             g2_gas_sel = []
             g2_gas_surplus = []
-            cur_l_g2 = 0.0; cur_m_g2 = 0.0
+            cur_l_g2_gas = 0.0; cur_m_g2_gas = 0.0
             for i in g2_gas_all:
                 l_val = get_inv_lit(i)
                 m_val = float(i.get('total_amount') or 0)
-                if cur_l_g2 < 787.13 or cur_m_g2 < 22460608:
+                if cur_l_g2_gas < g2_gas_need_l or cur_m_g2_gas < g2_gas_need_m:
                     g2_gas_sel.append(i)
-                    cur_l_g2 += l_val
-                    cur_m_g2 += m_val
+                    cur_l_g2_gas += l_val
+                    cur_m_g2_gas += m_val
                 else:
                     g2_gas_surplus.append(i)
 
-            g2_active_invs = g2_oil_all + g2_gas_sel
-            g2_surplus_invs = g2_gas_surplus + [i for i in cand_g2 if float(i.get('total_amount') or 0) <= 0]
+            g2_active_invs = g2_oil_sel + g2_gas_sel
+            g2_surplus_invs = g2_oil_surplus + g2_gas_surplus + [i for i in cand_g2 if float(i.get('total_amount') or 0) <= 0]
         else:
             # Default for other months: All valid invoices with amount > 0 belong to their respective groups
             g1_active_invs = [i for i in g1_invs if float(i.get('total_amount') or 0) > 0]
@@ -915,12 +959,50 @@ def create_styled_workbook(month=8, year=2026, output_path=None):
         add_02a_sheet('02A-TTNB_NLMPD', logs, 'Toàn bộ trạm Đài Viễn thông Đồng Nai')
         add_hd_sheet('HD', invoices, 'Toàn bộ hóa đơn nhiên liệu')
 
+    # Strict compliance: Enforce 100% Times New Roman across ALL sheets and cells (including merged ranges)
+    for sheet in wb.worksheets:
+        for r in range(1, sheet.max_row + 1):
+            for c in range(1, sheet.max_column + 1):
+                cell = sheet.cell(row=r, column=c)
+                old_f = cell.font
+                cell.font = Font(
+                    name='Times New Roman',
+                    size=old_f.size if old_f and old_f.size else 10,
+                    bold=old_f.bold if old_f and old_f.bold else False,
+                    italic=old_f.italic if old_f and old_f.italic else False,
+                    color=old_f.color if old_f and old_f.color else None,
+                    underline=old_f.underline if old_f and old_f.underline else None
+                )
+
     if not output_path:
         output_path = f"/Users/cang_it/Desktop/Ho_So_Thanh_Toan_Chuan_Mau_{month:02d}_{year}.xlsx"
 
     wb.save(output_path)
+    enforce_times_in_xlsx(output_path)
     print(f"✅ Đã xuất thành công hồ sơ chuẩn mẫu ra: {output_path}")
     return output_path
+
+def enforce_times_in_xlsx(file_path):
+    """Ensure 100% Times New Roman in styles.xml (purging default Calibri/Arial)"""
+    import zipfile, io
+    with open(file_path, "rb") as f:
+        in_buf = io.BytesIO(f.read())
+    
+    out_buf = io.BytesIO()
+    with zipfile.ZipFile(in_buf, "r") as zin:
+        with zipfile.ZipFile(out_buf, "w", zipfile.ZIP_DEFLATED) as zout:
+            for item in zin.infolist():
+                content = zin.read(item.filename)
+                if item.filename == "xl/styles.xml":
+                    text = content.decode("utf-8")
+                    text = text.replace('val="Calibri"', 'val="Times New Roman"')
+                    text = text.replace('val="Arial"', 'val="Times New Roman"')
+                    text = text.replace('val="Aptos"', 'val="Times New Roman"')
+                    content = text.encode("utf-8")
+                zout.writestr(item, content)
+    
+    with open(file_path, "wb") as f:
+        f.write(out_buf.getvalue())
 
 def create_seath_group_statement(month=8, year=2026, output_path=None):
     """
@@ -1169,6 +1251,7 @@ def create_seath_group_statement(month=8, year=2026, output_path=None):
         output_path = f"/Users/cang_it/Desktop/Bang_Ke_Chay_May_Phat_Dien_Seath_Group_T{month:02d}_{year}.xlsx"
 
     wb.save(output_path)
+    enforce_times_in_xlsx(output_path)
     print(f"✅ Đã xuất thành công Bảng kê Seath Group ra: {output_path}")
     return output_path
 

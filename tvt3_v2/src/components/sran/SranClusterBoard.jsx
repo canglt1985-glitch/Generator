@@ -440,6 +440,10 @@ export default function SranClusterBoard({ sites = [], onSelectSite }) {
                     const has5g = isSite5G(s);
                     const is5gOa = isSite5GOnair(s);
                     const oa5gDate = raw.Onair_Actual_Date || raw.Onair_NR26_Actual_Date || raw.Onair_NR38_Actual_Date;
+                    const rawSwapSol = String(s.swap_solution || raw.Swap_Solution || '').toUpperCase();
+                    const rawScope5g = String(s.scope_5g || raw['5G_Scope'] || '').toUpperCase();
+                    const rawScope34 = String(s.scope_3g4g || raw['3G4G_Scope'] || '').toUpperCase();
+                    const isSranSwap = rawSwapSol.includes('3G') || rawSwapSol.includes('SRAN') || rawScope5g.includes('SWAP SRAN') || rawScope34.includes('3G') || rawScope34.includes('SRAN');
 
                     return (
                       <div
@@ -460,7 +464,7 @@ export default function SranClusterBoard({ sites = [], onSelectSite }) {
                               )}
                             </div>
                             <p className="text-[10px] text-slate-500 mt-0.5">
-                              {s.district} • {s.config_5g || (has5g ? '5G' : '4G only')}
+                              {s.district} • {s.config_5g || (has5g ? '5G' : (isSranSwap ? 'SRAN (3G/4G)' : 'Swap 4G'))}
                             </p>
                           </div>
 
@@ -469,11 +473,11 @@ export default function SranClusterBoard({ sites = [], onSelectSite }) {
 
                         {/* Badges Trạng Thái 4G & 5G */}
                         <div className="flex items-center justify-between pt-1.5 border-t border-slate-200/60 text-[10px]">
-                          {/* Badge 4G */}
+                          {/* Badge 4G / SRAN */}
                           <span className={`px-1.5 py-0.2 rounded font-semibold border ${
                             is4gOa ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-600 border-slate-200'
                           }`}>
-                            4G: {is4gOa ? 'Đã Swap' : 'Chưa'}
+                            {isSranSwap ? 'SRAN' : '4G'}: {is4gOa ? 'Đã Swap' : 'Chưa'}
                           </span>
 
                           {/* Badge 5G */}

@@ -5,6 +5,7 @@ Uses a PERSISTENT scraper session to avoid re-login every poll cycle.
 """
 import os
 import re
+import time
 import json
 import shutil
 import asyncio
@@ -175,13 +176,108 @@ def _build_topology_cache():
     _topology_cache_built = True
 
 
+# ==============================================================================
+# LỊCH CÚP ĐIỆN EVN CACHE (POWER SCHEDULE)
+# ==============================================================================
+_power_schedule_cache = {}
+_power_schedule_date = ""
+_last_power_schedule_fetch = 0.0
+
+
+def _refresh_power_schedule_cache():
+    """Tự động làm mới cache lịch cúp điện trong ngày từ bảng power_schedule mỗi 15 phút."""
+    global _power_schedule_cache, _power_schedule_date, _last_power_schedule_fetch
+    now = time.time()
+    today_str = datetime.now().strftime("%Y-%m-%d")
+
+    # Chỉ refresh nếu quá 15 phút (900s) hoặc đã qua ngày mới
+    if (now - _last_power_schedule_fetch < 900) and (_power_schedule_date == today_str):
+        return
+
+    if not supabase:
+        return
+
+    try:
+        res = supabase.table("power_schedule") \
+            .select("id_tram, ngay_mat_dien, thoi_gian_cup_dien, thoi_gian_co_dien") \
+            .eq("ngay_mat_dien", today_str) \
+            .execute()
+
+        rows = res.data or []
+        cache_map = {}
+        for r in rows:
+            tid = str(r.get("id_tram") or "").strip().upper()
+            if not tid:
+                continue
+            start_t = str(r.get("thoi_gian_cup_dien") or "").strip()
+            end_t = str(r.get("thoi_gian_co_dien") or "").strip()
+            if start_t or end_t:
+                cache_map[tid] = {"start": start_t, "end": end_t}
+
+        _power_schedule_cache = cache_map
+        _power_schedule_date = today_str
+        _last_power_schedule_fetch = now
+        logger.info(f"SmartW Worker: Cached {len(cache_map)} power outages for date {today_str}.")
+    except Exception as e:
+        logger.warning(f"SmartW Worker: Failed to refresh power_schedule cache ({e}), keeping existing cache.")
+
+
+def _fmt_outage_hour(t_str: str) -> str:
+    """Chuyển đổi giờ: 08:00 -> 08h, 16:30 -> 16h30, 07:15 -> 07h15"""
+    if not t_str:
+        return ""
+    parts = t_str.strip().split(":")
+    try:
+        h = int(parts[0])
+        m = parts[1] if len(parts) > 1 else "00"
+        return f"{h:02d}h" if m == "00" else f"{h:02d}h{m}"
+    except Exception:
+        return t_str.strip()
+
+
+def _get_site_outage_tag(site_key: str) -> str:
+    """
+    Trả về tag lịch cúp điện ngắn gọn nếu trạm có lịch trong ngày:
+    Ví dụ: ' ⚡08h-16h30', ' ⚡07h30-11h30'
+    Nếu không có: trả về ''
+    """
+    _refresh_power_schedule_cache()
+    if not site_key or not _power_schedule_cache:
+        return ""
+
+    base_id, old_id, _ = _resolve_base_site_and_tech(site_key)
+    candidates = [
+        str(site_key).strip().upper(),
+        (base_id or "").strip().upper(),
+        (old_id or "").strip().upper()
+    ]
+
+    outage = None
+    for cand in candidates:
+        if cand and cand in _power_schedule_cache:
+            outage = _power_schedule_cache[cand]
+            break
+
+    if not outage:
+        return ""
+
+    start_f = _fmt_outage_hour(outage.get("start") or "")
+    end_f = _fmt_outage_hour(outage.get("end") or "")
+
+    if start_f and end_f:
+        return f" ⚡{start_f}-{end_f}"
+    elif start_f:
+        return f" ⚡{start_f}"
+    return ""
+
+
 def _get_mll_topology_tag(site_key: str) -> str:
     """
-    Tạo tag Topology cho bản tin MLL lẻ và báo cáo MLL định kỳ:
-    - Trạm CRAN: '  - [DNCM43 - PITC]' hoặc '  - [DNCM43]'
-    - Trạm Main: ' 👑[5 CRAN: DNTL10, DNTL13...]' hoặc ' 👑[CRAN: DNLK16]' (kèm '  - [CSG]' nếu là local CSG)
-    - Trạm thường có CSG Local: '  - [CSG]'
-    - Trạm thường có cáp đối tác ngoài: '  - [TPCOMS]'
+    Tạo tag Topology chuẩn hóa cho bản tin MLL:
+    - Trạm Main: '👑[CRAN: DNCM28 - CSG]' hoặc '👑[2 CRAN: DNCM28, DNCM30 - CSG]'
+    - Trạm CRAN con: '[MAIN: DNCM01 - CSG]' hoặc '[MAIN: DNCM01 - PITC]' hoặc '[MAIN: DNCM01]'
+    - Trạm thường có CSG Local / LSW: '[CSG]', '[LSW]'
+    - Trạm thường có đối tác cáp ngoài: '[TPCOMS]'
     - Trạm thuần không tag: ''
     """
     _build_topology_cache()
@@ -197,35 +293,61 @@ def _get_mll_topology_tag(site_key: str) -> str:
         cran_names = [_old_id(c) or c for c in crans]
         count = len(crans)
         all_crans = ', '.join(cran_names)
-        tag = f" 👑[CRAN: {all_crans}]" if count == 1 else f" 👑[{count} CRAN: {all_crans}]"
+        cran_prefix = f"CRAN: {all_crans}" if count == 1 else f"{count} CRAN: {all_crans}"
 
+        extra = ""
         if _site_is_local_csg.get(sid) == 'CSG':
-            tag += "  - [CSG]"
+            extra = " - CSG"
         elif _site_is_local_csg.get(sid) == 'LSW':
-            tag += "  - [LSW]"
+            extra = " - LSW"
         elif sid in _site_to_partner:
-            tag += f"  - [{_site_to_partner[sid]}]"
-        return tag
+            extra = f" - {_site_to_partner[sid]}"
 
-    # 2. Trạm CRAN
+        return f"👑[{cran_prefix}{extra}]"
+
+    # 2. Trạm CRAN con
     if sid in _site_to_main:
         main_lbl = _site_to_main[sid]
-        partner = _site_to_partner.get(sid, '')
-        if partner:
-            return f"  - [{main_lbl} - {partner}]"
-        return f"  - [{main_lbl}]"
+        extra = ""
+        if _site_is_local_csg.get(sid) == 'CSG':
+            extra = " - CSG"
+        elif _site_is_local_csg.get(sid) == 'LSW':
+            extra = " - LSW"
+        elif sid in _site_to_partner:
+            extra = f" - {_site_to_partner[sid]}"
+
+        return f"[MAIN: {main_lbl}{extra}]"
 
     # 3. Trạm thường có CSG Local
     if _site_is_local_csg.get(sid) == 'CSG':
-        return "  - [CSG]"
+        return "[CSG]"
     if _site_is_local_csg.get(sid) == 'LSW':
-        return "  - [LSW]"
+        return "[LSW]"
 
     # 4. Trạm thường có đối tác cáp ngoài (trừ Local)
     if sid in _site_to_partner:
-        return f"  - [{_site_to_partner[sid]}]"
+        return f"[{_site_to_partner[sid]}]"
 
     return ""
+
+
+def _format_mll_station_lines(site: str, grp: dict) -> list[str]:
+    """
+    Format thông tin một trạm MLL thành danh sách 2 dòng:
+    Dòng 1: • {label}[{nets}] ⚡{start}-{end}
+    Dòng 2:   ↳ {t} • {topology_tag}
+    """
+    net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp.get('nets') else ""
+    outage_tag = _get_site_outage_tag(site)
+    top_tag = _get_mll_topology_tag(site)
+
+    line1 = f"• {grp['label']}{net_part}{outage_tag}"
+    if top_tag:
+        clean_tag = top_tag.strip(" -")
+        line2 = f"  ↳ {grp['t']} • {clean_tag}"
+    else:
+        line2 = f"  ↳ {grp['t']}"
+    return [line1, line2]
 
 
 
@@ -2227,14 +2349,7 @@ def run_alarm_poll():
                         if mll_groups:
                             lines_active.append("*MLL:*")
                             for site, grp in mll_groups.items():
-                                net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
-                                top_tag = _get_mll_topology_tag(site)
-                                if top_tag:
-                                    clean_tag = top_tag.strip(" -")
-                                    lines_active.append(f"• {grp['label']}{net_part}")
-                                    lines_active.append(f"  ↳ {grp['t']} • {clean_tag}")
-                                else:
-                                    lines_active.append(f"• {grp['label']}{net_part} - {grp['t']}")
+                                lines_active.extend(_format_mll_station_lines(site, grp))
                                 active_sent_count += 1
                                 for ikey, techs in grp['inc_keys'].items():
                                     existing = sent_active_techs.setdefault(ikey, {'techs': [], 'ts': now_ts})['techs']
@@ -3042,17 +3157,9 @@ def send_periodic_full_report():
             if net and net not in mll_groups[site]['nets']:
                 mll_groups[site]['nets'].append(net)
         
-        lines.append("")
         lines.append("📵 *MLL:*")
         for site, grp in mll_groups.items():
-            net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
-            top_tag = _get_mll_topology_tag(site)
-            if top_tag:
-                clean_tag = top_tag.strip(" -")
-                lines.append(f"• {grp['label']}{net_part}")
-                lines.append(f"  ↳ {grp['t']} • {clean_tag}")
-            else:
-                lines.append(f"• {grp['label']}{net_part} - {grp['t']}")
+            lines.extend(_format_mll_station_lines(site, grp))
             total_active += 1
 
     # Collect MLL site (base_id, tech) pairs to exclude matching CELLOFF
@@ -3195,14 +3302,7 @@ def send_periodic_mll_report():
 
     lines = ["📵 *BÁO CÁO MLL*"]
     for site, grp in mll_groups.items():
-        net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
-        top_tag = _get_mll_topology_tag(site)
-        if top_tag:
-            clean_tag = top_tag.strip(" -")
-            lines.append(f"• {grp['label']}{net_part}")
-            lines.append(f"  ↳ {grp['t']} • {clean_tag}")
-        else:
-            lines.append(f"• {grp['label']}{net_part} - {grp['t']}")
+        lines.extend(_format_mll_station_lines(site, grp))
 
     _send_viber_report(lines)
     logger.info(f"SmartW Worker: ✅ Sent periodic MLL report to Viber for {len(mll_groups)} site(s).")
