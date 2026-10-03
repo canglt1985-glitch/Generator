@@ -112,7 +112,7 @@ export default function Header() {
             /* Tiêu đề thanh lịch cho khách */
             <div className="hidden lg:flex items-center text-xs font-bold text-slate-300 gap-2 ml-4 px-3 py-1.5 bg-slate-800/60 rounded-xl border border-slate-700/50">
               <Map className="h-4 w-4 text-cyan-400" />
-              <span>Bản Đồ Số Trạm BTS</span>
+              <span>Bản Đồ Trạm</span>
             </div>
           )}
 

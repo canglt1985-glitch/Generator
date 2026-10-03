@@ -29,7 +29,7 @@ export default function Home() {
   const modules = [
     {
       id: 'network-map',
-      title: 'Bản đồ số',
+      title: 'Bản đồ trạm',
       desc: 'Bản đồ & truyền dẫn',
       path: '/network-map',
       icon: Map,
@@ -175,7 +175,7 @@ export default function Home() {
               </span>
             </div>
             <p className="text-[10px] sm:text-xs text-blue-100/80 font-medium truncate">
-              Hệ thống quản lý VHKT & Bản đồ số Tổ 3
+              Hệ thống quản lý VHKT & Bản đồ trạm Tổ 3
             </p>
           </div>
         </div>

@@ -2467,7 +2467,7 @@ export default function NetworkMap() {
                                 className="w-full inline-flex items-center justify-center gap-1.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-lg text-[10.5px] font-semibold text-center cursor-pointer shadow-2xs active:scale-95 transition-all"
                               >
                                 <Copy className="h-3 w-3 text-cyan-600" />
-                                <span>📋 Sao chép tin nhắn Zalo</span>
+                                <span>📋 Sao chép thông tin</span>
                               </button>
                             </div>
                           </div>
@@ -2972,7 +2972,7 @@ export default function NetworkMap() {
               className="w-full flex items-center justify-center gap-1.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-semibold text-center cursor-pointer shadow-2xs active:scale-95 transition-all"
             >
               <Copy className="h-3.5 w-3.5 text-cyan-600" />
-              <span>📋 Sao chép tin nhắn Zalo</span>
+              <span>📋 Sao chép thông tin</span>
             </button>
           </div>
         </div>
@@ -3094,7 +3094,7 @@ export default function NetworkMap() {
                         className="w-full flex items-center justify-center gap-2 py-2.5 bg-white hover:bg-slate-50 active:scale-98 text-slate-700 border border-slate-300 shadow-2xs rounded-xl text-xs font-bold text-center cursor-pointer"
                       >
                         <Copy className="h-4 w-4 text-cyan-600" />
-                        <span>📋 Sao chép tin nhắn Zalo</span>
+                        <span>📋 Sao chép thông tin</span>
                       </button>
                     </div>
                   </div>
