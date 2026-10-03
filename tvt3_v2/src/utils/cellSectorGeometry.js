@@ -398,7 +398,8 @@ export function getSiteCoverageType(site) {
   const cells3g = Number(rf.cells_3g || 0);
   const cells4g = Number(rf.cells_4g || 0);
   const cells5g = Number(rf.cells_5g || 0);
-  const hasRadioCells = totalCells > 0 || cells3g > 0 || cells4g > 0 || hasSite5g || cells.length > 0;
+  const hasSite5g = Boolean(rf.has_5g || cells5g > 0);
+  const hasRadioCells = totalCells > 0 || cells3g > 0 || cells4g > 0 || cells5g > 0 || hasSite5g || cells.length > 0;
   const hasZeroRadioCells = !hasRadioCells;
 
   // Nhận diện hạ tầng truyền dẫn AGG
