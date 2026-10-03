@@ -4,7 +4,8 @@ import {
   createAnnularSectorPolygon, 
   getFallbackAzimuth,
   getZoomAdaptiveScale,
-  getSectorContiguousLayers
+  getSectorContiguousLayers,
+  getSectorTiltDisplay
 } from '../../utils/cellSectorGeometry';
 
 /**
@@ -50,7 +51,8 @@ export default function CellSectorWedges({
           ? getFallbackAzimuth(secName, secIdx, sectors.length)
           : Number(sec.azimuth);
 
-        const heightStr = sec.height ? `${sec.height}m` : 'Tiêu chuẩn';
+        const heightStr = sec.height ? `${sec.height}m` : null;
+        const tiltStr = getSectorTiltDisplay(sec, site);
 
         // Lấy danh sách các tầng cánh sóng LIỀN KỀ NHAU (Zero Gap, 4G 1 lớp duy nhất)
         const contiguousLayers = getSectorContiguousLayers(sec, isDual5g, has5g, isSranSwap, scale);
@@ -73,6 +75,7 @@ export default function CellSectorWedges({
                     color: layer.color,
                     fillOpacity: layer.fillOpacity,
                     weight: layer.weight,
+                    opacity: 0.85,
                     className: 'drop-shadow-sm'
                   }}
                   eventHandlers={{
@@ -80,12 +83,14 @@ export default function CellSectorWedges({
                       site, 
                       sector: secName, 
                       tech: layer.label, 
-                      azimuth 
+                      azimuth,
+                      tiltStr,
+                      heightStr 
                     })
                   }}
                 >
                   <Tooltip sticky direction="top" opacity={0.96}>
-                    <div className="font-sans text-[11px] p-1 space-y-0.5 min-w-[135px]">
+                    <div className="font-sans text-[11px] p-1.5 space-y-0.5 min-w-[145px]">
                       <div className="font-bold flex items-center justify-between border-b border-slate-200 pb-0.5">
                         <span className="text-slate-800">📡 {siteLabel} - Sec {secName}</span>
                         <span className={`px-1 rounded text-[9px] font-bold ${layer.badgeClass || 'bg-slate-100 text-slate-800'}`}>
@@ -100,7 +105,11 @@ export default function CellSectorWedges({
                         <span>Góc hướng:</span>
                         <b className="font-mono text-slate-800">{azimuth}° {isEstimated ? '(ước tính)' : ''}</b>
                       </div>
-                      {sec.height && (
+                      <div className="text-slate-600 flex justify-between">
+                        <span>Độ nghiêng (Tilt):</span>
+                        <b className="font-mono text-indigo-700">{tiltStr || 'Chưa cập nhật'}</b>
+                      </div>
+                      {heightStr && (
                         <div className="text-slate-600 flex justify-between">
                           <span>Độ cao:</span>
                           <span className="font-mono text-slate-700">{heightStr}</span>

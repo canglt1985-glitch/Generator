@@ -381,6 +381,9 @@ def main():
                     'sector': sec,
                     'azimuth': az,
                     'height': c.get('height'),
+                    'tilt_total': c.get('tilt_total'),
+                    'tilt_mech': c.get('tilt_mech'),
+                    'tilt_elec': c.get('tilt_elec'),
                     'has_3g': False,
                     'has_4g': False,
                     'has_5g_l1': False,
@@ -389,6 +392,10 @@ def main():
             if az is not None and sec_map[sec]['azimuth'] is None:
                 sec_map[sec]['azimuth'] = az
                 sec_map[sec]['height'] = c.get('height')
+            if c.get('tilt_total') is not None and sec_map[sec].get('tilt_total') is None:
+                sec_map[sec]['tilt_total'] = c.get('tilt_total')
+                sec_map[sec]['tilt_mech'] = c.get('tilt_mech')
+                sec_map[sec]['tilt_elec'] = c.get('tilt_elec')
 
             if c['ran'] == '3G': sec_map[sec]['has_3g'] = True
             elif c['ran'] == '4G': sec_map[sec]['has_4g'] = True

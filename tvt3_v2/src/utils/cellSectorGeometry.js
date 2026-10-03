@@ -125,7 +125,7 @@ export const SECTOR_LAYER_CONFIG = {
     techCategory: '3G',
     fillColor: '#22c55e',      // Xanh lá cây tươi
     color: '#ffffff',          // Viền trắng tinh khiết chống chìm nền vệ tinh
-    fillOpacity: 0.85,
+    fillOpacity: 0.48,         // Hạ opacity mờ mờ 1 chút theo yêu cầu
     weight: 1.5,
     zIndex: 10
   },
@@ -137,7 +137,7 @@ export const SECTOR_LAYER_CONFIG = {
     techCategory: '4G',
     fillColor: '#00f0ff',      // Xanh lơ Cyan huỳnh quang (Electric Aqua)
     color: '#ffffff',          // Viền trắng
-    fillOpacity: 0.85,
+    fillOpacity: 0.50,         // Hạ opacity mờ mờ 1 chút
     weight: 1.8,
     zIndex: 20
   },
@@ -149,7 +149,7 @@ export const SECTOR_LAYER_CONFIG = {
     techCategory: '4G',
     fillColor: '#00f0ff',
     color: '#ffffff',
-    fillOpacity: 0.85,
+    fillOpacity: 0.50,
     weight: 1.8,
     zIndex: 20
   },
@@ -161,7 +161,7 @@ export const SECTOR_LAYER_CONFIG = {
     techCategory: '5G',
     fillColor: '#e11d48',      // Đỏ hồng lựu / Crimson Rose
     color: '#ffffff',          // Viền trắng
-    fillOpacity: 0.88,
+    fillOpacity: 0.52,         // Hạ opacity mờ mờ 1 chút
     weight: 2.0,
     zIndex: 30
   },
@@ -171,7 +171,7 @@ export const SECTOR_LAYER_CONFIG = {
     techCategory: '5G',
     fillColor: '#e11d48',
     color: '#ffffff',
-    fillOpacity: 0.88,
+    fillOpacity: 0.52,
     weight: 2.0,
     zIndex: 30
   },
@@ -183,7 +183,7 @@ export const SECTOR_LAYER_CONFIG = {
     techCategory: '5G',
     fillColor: '#ff0033',      // Đỏ cờ tươi rực rỡ (Neon Scarlet)
     color: '#ffffff',          // Viền trắng
-    fillOpacity: 0.90,
+    fillOpacity: 0.55,         // Hạ opacity mờ mờ 1 chút
     weight: 2.0,
     zIndex: 40
   },
@@ -193,11 +193,60 @@ export const SECTOR_LAYER_CONFIG = {
     techCategory: '5G',
     fillColor: '#ff0033',
     color: '#ffffff',
-    fillOpacity: 0.90,
+    fillOpacity: 0.55,
     weight: 2.0,
     zIndex: 40
   }
 };
+
+/**
+ * Lấy chuỗi hiển thị Độ nghiêng (Tilt) của Sector:
+ * Ưu tiên:
+ * 1. tilt_total nếu có (kèm Mech / Elec nếu có)
+ * 2. Mech / Elec nếu không có tổng
+ * 3. Tìm trong technical_info.cells nếu sector chưa có thông số trực tiếp
+ */
+export function getSectorTiltDisplay(sec, site = null) {
+  if (!sec) return null;
+
+  let total = sec.tilt_total != null ? sec.tilt_total : sec.tilt;
+  let mech = sec.tilt_mech;
+  let elec = sec.tilt_elec;
+
+  // Nếu trong sec chưa có, thử tìm từ mảng cells của trạm
+  if (total == null && mech == null && elec == null && site?.technical_info?.cells) {
+    const secName = String(sec.sector || sec.name || '').trim().toUpperCase();
+    const cells = site.technical_info.cells;
+    const matchCell = cells.find(c => {
+      const cSec = String(c.sector || '').trim().toUpperCase();
+      return cSec === secName && (c.tilt_total != null || c.tilt != null || c.tilt_mech != null || c.tilt_elec != null);
+    });
+    if (matchCell) {
+      total = matchCell.tilt_total != null ? matchCell.tilt_total : matchCell.tilt;
+      mech = matchCell.tilt_mech;
+      elec = matchCell.tilt_elec;
+    }
+  }
+
+  if (total != null && total !== '') {
+    const numTotal = Number(total);
+    const totalStr = !isNaN(numTotal) ? `${numTotal}°` : `${total}`;
+    if (mech != null || elec != null) {
+      const mStr = mech != null ? `${mech}°` : '0°';
+      const eStr = elec != null ? `${elec}°` : '0°';
+      return `${totalStr} (M:${mStr}/E:${eStr})`;
+    }
+    return totalStr;
+  }
+
+  if (mech != null || elec != null) {
+    const mStr = mech != null ? `${mech}°` : '0°';
+    const eStr = elec != null ? `${elec}°` : '0°';
+    return `M:${mStr}/E:${eStr}`;
+  }
+
+  return null;
+}
 
 /**
  * Tính toán danh sách các tầng cánh sóng LIỀN KỀ NHAU (KHÔNG KHOẢNG TRỐNG):

@@ -9,7 +9,7 @@ import {
 import { MapContainer, TileLayer, Marker, Popup, Polyline, Circle, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import CellSectorWedges from '../components/map/CellSectorWedges';
-import { getFallbackAzimuth } from '../utils/cellSectorGeometry';
+import { getFallbackAzimuth, getSectorTiltDisplay } from '../utils/cellSectorGeometry';
 
 // Google Maps & OSM Tile Layer Definitions
 const TILE_LAYERS = {
@@ -2316,7 +2316,8 @@ export default function NetworkMap() {
                   isSelected={selectedMobileStation?.site?.site_id === site.site_id}
                   visible={layerCellSectors}
                   onSelectSector={(info) => {
-                    showToast(`📡 ${info.site.site_id_old || info.site.site_id} Sector ${info.sector}: ${info.tech} (${info.azimuth}°)`);
+                    const tiltPart = info.tiltStr ? ` | Tilt: ${info.tiltStr}` : '';
+                    showToast(`📡 ${info.site.site_id_old || info.site.site_id} Sector ${info.sector}: ${info.tech} (${info.azimuth}°${tiltPart})`);
                   }}
                 />
               ))}
@@ -2421,14 +2422,20 @@ export default function NetworkMap() {
                                       const azVal = hasDesignAz 
                                         ? sec.azimuth 
                                         : getFallbackAzimuth(secName, sIdx, sectors.length);
+                                      const secTilt = getSectorTiltDisplay(sec, site);
                                       const isSectorDual = sec.has_5g_l2 || (is5gA && (sec.has_5g_l1 || sec.has_5g));
 
                                       return (
                                         <div key={sIdx} className="flex items-center justify-between bg-white rounded px-1.5 py-0.5 border border-slate-200 text-[9.5px]">
-                                          <span className="font-mono font-bold text-slate-700 flex items-center gap-1">
-                                            <span>Az: {azVal}°</span>
+                                          <div className="font-mono text-slate-700 flex items-center gap-1.5 flex-wrap">
+                                            <span className="font-bold">Az: {azVal}°</span>
+                                            {secTilt && (
+                                              <span className="text-indigo-700 font-semibold bg-indigo-50 px-1 py-0.2 rounded border border-indigo-200 text-[8.5px]">
+                                                Tilt: {secTilt}
+                                              </span>
+                                            )}
                                             {!hasDesignAz && <span className="text-[8px] text-amber-600 font-sans font-normal">(ước tính)</span>}
-                                          </span>
+                                          </div>
                                           <div className="flex items-center gap-1">
                                             {sec.has_3g && (
                                               <span className="px-1 py-0.1 rounded text-[8px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
@@ -2797,19 +2804,19 @@ export default function NetworkMap() {
             onClick={() => setSelectedMobileStation(null)}
           />
 
-          {/* Drawer Card */}
-          <div className="relative bg-slate-900/98 backdrop-blur-2xl border-t border-slate-700/90 rounded-t-3xl p-4 shadow-[0_-8px_30px_rgba(0,0,0,0.7)] text-white max-h-[82vh] overflow-y-auto font-sans space-y-3 pb-[max(1.25rem,env(safe-area-inset-bottom,0px))] animate-in slide-in-from-bottom duration-300 z-10">
+          {/* Drawer Card - LIGHT MODE */}
+          <div className="relative bg-white/98 backdrop-blur-2xl border-t border-slate-200 rounded-t-3xl p-4 shadow-[0_-8px_30px_rgba(0,0,0,0.18)] text-slate-800 max-h-[82vh] overflow-y-auto font-sans space-y-3 pb-[max(1.25rem,env(safe-area-inset-bottom,0px))] animate-in slide-in-from-bottom duration-300 z-10">
             {/* Handle bar */}
-            <div className="w-12 h-1.5 rounded-full bg-slate-600/70 mx-auto -mt-1 mb-2" />
+            <div className="w-12 h-1.5 rounded-full bg-slate-300 mx-auto -mt-1 mb-2" />
 
             {/* Header */}
-            <div className="flex items-start justify-between gap-2 border-b border-slate-800 pb-2">
+            <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-2">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <h3 className={`text-sm font-extrabold truncate ${
                     selectedMobileStation.type === 'active' 
-                      ? (selectedMobileStation.radioInfo?.textColor || 'text-cyan-400')
-                      : (selectedMobileStation.cat?.textColor || 'text-amber-400')
+                      ? (selectedMobileStation.radioInfo?.textColor || 'text-cyan-800')
+                      : (selectedMobileStation.cat?.textColor || 'text-amber-800')
                   }`}>
                     {selectedMobileStation.displayName || selectedMobileStation.code || 'Chi tiết trạm'}
                   </h3>
@@ -2824,7 +2831,7 @@ export default function NetworkMap() {
                   ) : null}
                 </div>
                 {selectedMobileStation.site?.name && (
-                  <p className="text-[11px] text-slate-400 truncate mt-0.5">
+                  <p className="text-[11px] text-slate-500 font-medium truncate mt-0.5">
                     {selectedMobileStation.site.name}
                   </p>
                 )}
@@ -2832,7 +2839,7 @@ export default function NetworkMap() {
               <button
                 type="button"
                 onClick={() => setSelectedMobileStation(null)}
-                className="h-8 w-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center shrink-0 cursor-pointer"
+                className="h-8 w-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center shrink-0 cursor-pointer transition-colors"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -2860,7 +2867,7 @@ export default function NetworkMap() {
                         setSelectedMobileStation(null);
                         setBottomSheetState('half');
                       }}
-                      className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 active:scale-98 text-white rounded-xl text-xs font-black shadow-lg shadow-purple-900/40 cursor-pointer"
+                      className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 active:scale-98 text-white rounded-xl text-xs font-black shadow-md shadow-purple-600/20 cursor-pointer"
                     >
                       <span>🔌 Kéo cáp từ điểm khảo sát</span>
                       <span className="text-[10px] text-purple-200 font-bold">({formatDistance(haversineMeters(customerLocation.lat, customerLocation.lng, lat, lng))})</span>
@@ -2873,7 +2880,7 @@ export default function NetworkMap() {
                         setSelectedMobileStation(null);
                         showToast(`Đã lấy trạm ${name} làm mốc khảo sát`);
                       }}
-                      className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-gradient-to-r from-cyan-600 to-blue-600 active:scale-98 text-white rounded-xl text-xs font-black shadow-lg shadow-cyan-900/40 cursor-pointer"
+                      className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-gradient-to-r from-cyan-600 to-blue-600 active:scale-98 text-white rounded-xl text-xs font-black shadow-md shadow-cyan-600/20 cursor-pointer"
                     >
                       <MapPin className="h-4 w-4" />
                       <span>Khảo sát trạm lân cận từ trạm này</span>
@@ -2882,9 +2889,9 @@ export default function NetworkMap() {
 
                   {/* Vùng phủ & Trạm main */}
                   {vp && (
-                    <div className="flex items-center justify-between bg-slate-800/40 rounded-xl p-2 border border-slate-700/50">
-                      <span className="text-slate-400 font-medium">🌐 Vùng phủ:</span>
-                      <span className="font-bold text-slate-200">
+                    <div className="flex items-center justify-between bg-slate-50 rounded-xl p-2.5 border border-slate-200/80">
+                      <span className="text-slate-500 font-medium">🌐 Vùng phủ:</span>
+                      <span className="font-bold text-slate-800">
                         {vp} {isCran && tm ? `(Main: ${tm})` : ''}
                       </span>
                     </div>
@@ -2892,26 +2899,26 @@ export default function NetworkMap() {
 
                   {/* Người QLT & Số điện thoại */}
                   {s.management_info?.qlt && (
-                    <div className="flex items-center justify-between bg-slate-800/60 rounded-xl p-2 border border-slate-700/70">
-                      <div className="flex items-center gap-1.5 text-slate-300">
+                    <div className="flex items-center justify-between bg-slate-50 rounded-xl p-2.5 border border-slate-200/80">
+                      <div className="flex items-center gap-1.5 text-slate-600">
                         <span className="font-medium">👤 QLT:</span>
-                        <span className="font-bold text-white">{s.management_info.qlt}</span>
+                        <span className="font-bold text-slate-900">{s.management_info.qlt}</span>
                       </div>
                       {s.management_info.sdt_qlt ? (
                         <a
                           href={`tel:${s.management_info.sdt_qlt}`}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white rounded-xl font-bold text-xs shadow-md shadow-emerald-900/40"
+                          className="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-xl font-bold text-xs shadow-xs"
                         >
                           <Phone className="h-3.5 w-3.5" />
                           <span>Gọi {s.management_info.sdt_qlt}</span>
                         </a>
                       ) : (
-                        <span className="text-slate-500 text-[11px]">Chưa có SĐT</span>
+                        <span className="text-slate-400 text-[11px]">Chưa có SĐT</span>
                       )}
                     </div>
                   )}
 
-                  {/* Dữ liệu Vô tuyến (RF Summary & Danh sách Cell theo góc hướng) trên Mobile BottomSheet */}
+                  {/* Dữ liệu Vô tuyến (RF Summary & Danh sách Cell theo góc hướng + TILT) trên Mobile BottomSheet */}
                   {s?.technical_info?.rf_summary && (() => {
                     const rf = s.technical_info.rf_summary;
                     const cells3g = rf.cells_3g ?? rf.tech_counts?.['3G'] ?? 0;
@@ -2922,55 +2929,61 @@ export default function NetworkMap() {
                     const sectors = Array.isArray(rf.sectors) ? rf.sectors : [];
 
                     return (
-                      <div className="bg-slate-800/80 border border-slate-700/70 rounded-xl p-2 text-xs space-y-1 shadow-xs">
+                      <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-2.5 text-xs space-y-1.5 shadow-2xs">
                         {/* Hàng tóm tắt số cell */}
-                        <div className="flex items-center justify-between pb-1 border-b border-slate-700/60">
-                          <span className="font-bold text-slate-200 flex items-center gap-1 text-[11px]">
+                        <div className="flex items-center justify-between pb-1 border-b border-slate-200/70">
+                          <span className="font-bold text-slate-800 flex items-center gap-1 text-[11px]">
                             📡 Cấu hình ({rf.total_cells || 0} cell)
                           </span>
                           <div className="flex items-center gap-1 font-mono font-bold text-[9.5px]">
-                            {cells3g > 0 && <span className="px-1.5 py-0.2 bg-emerald-950/80 text-emerald-300 rounded border border-emerald-700/60">3G: {cells3g}</span>}
-                            {cells4g > 0 && <span className="px-1.5 py-0.2 bg-blue-950/80 text-blue-300 rounded border border-blue-700/60">4G: {cells4g}</span>}
+                            {cells3g > 0 && <span className="px-1.5 py-0.2 bg-emerald-100 text-emerald-800 rounded border border-emerald-200">3G: {cells3g}</span>}
+                            {cells4g > 0 && <span className="px-1.5 py-0.2 bg-blue-100 text-blue-800 rounded border border-blue-200">4G: {cells4g}</span>}
                             {has5g && (
-                              <span className="px-1.5 py-0.2 bg-purple-950/80 text-purple-200 rounded border border-purple-700/60 font-black">
+                              <span className="px-1.5 py-0.2 bg-purple-100 text-purple-900 rounded border border-purple-200 font-black">
                                 {is5gA ? '5G-A' : '5G'}: {cells5g}
                               </span>
                             )}
                           </div>
                         </div>
 
-                        {/* DANH SÁCH CELL theo góc hướng */}
+                        {/* DANH SÁCH CELL theo góc hướng và TILT */}
                         {sectors.length > 0 && (
-                          <div className="space-y-0.5 max-h-[110px] overflow-y-auto pr-0.5">
+                          <div className="space-y-1 max-h-[130px] overflow-y-auto pr-0.5">
                             {sectors.map((sec, sIdx) => {
                               const secName = sec.sector || String.fromCharCode(65 + sIdx);
                               const hasAz = sec.azimuth != null;
                               const azVal = hasAz ? sec.azimuth : getFallbackAzimuth(secName, sIdx, sectors.length);
                               const secLabel = `Az: ${azVal}°`;
+                              const secTilt = getSectorTiltDisplay(sec, s);
                               const isSectorDual = sec.has_5g_l2 || (is5gA && (sec.has_5g_l1 || sec.has_5g));
                               return (
-                                <div key={sIdx} className="flex items-center justify-between bg-slate-900/80 rounded px-2 py-0.5 border border-slate-800 text-[10px]">
-                                  <span className="font-mono font-bold text-slate-200 flex items-center gap-1">
-                                    <span>{secLabel}</span>
-                                    {!hasAz && <span className="text-[8.5px] text-amber-400 font-sans font-medium">(ước tính)</span>}
-                                  </span>
+                                <div key={sIdx} className="flex items-center justify-between bg-white rounded-lg px-2.5 py-1 border border-slate-200 text-[10px] shadow-2xs">
+                                  <div className="font-mono text-slate-800 flex items-center gap-1.5 flex-wrap">
+                                    <span className="font-bold">{secLabel}</span>
+                                    {secTilt && (
+                                      <span className="text-indigo-700 font-semibold bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200 text-[9px]">
+                                        Tilt: {secTilt}
+                                      </span>
+                                    )}
+                                    {!hasAz && <span className="text-[8.5px] text-amber-600 font-sans font-medium">(ước tính)</span>}
+                                  </div>
                                   <div className="flex items-center gap-1">
                                     {sec.has_3g && (
-                                      <span className="px-1.5 py-0.2 rounded text-[8px] font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-700/60">
+                                      <span className="px-1.5 py-0.2 rounded text-[8px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
                                         3G
                                       </span>
                                     )}
                                     {sec.has_4g && (
-                                      <span className="px-1.5 py-0.2 rounded text-[8px] font-bold bg-blue-950/80 text-blue-300 border border-blue-700/60">
+                                      <span className="px-1.5 py-0.2 rounded text-[8px] font-bold bg-cyan-100 text-cyan-900 border border-cyan-300">
                                         {(radio.isSranScope && sec.has_3g) ? '4G SRAN' : '4G'}
                                       </span>
                                     )}
                                     {isSectorDual ? (
-                                      <span className="px-1.5 py-0.2 rounded text-[8px] font-extrabold bg-purple-950/80 text-purple-200 border border-purple-700/60">
+                                      <span className="px-1.5 py-0.2 rounded text-[8px] font-extrabold bg-rose-100 text-rose-900 border border-rose-300">
                                         5G-A
                                       </span>
                                     ) : (sec.has_5g_l1 || sec.has_5g) ? (
-                                      <span className="px-1.5 py-0.2 rounded text-[8px] font-bold bg-rose-950/80 text-rose-300 border border-rose-700/60">
+                                      <span className="px-1.5 py-0.2 rounded text-[8px] font-bold bg-red-100 text-red-800 border border-red-300">
                                         5G
                                       </span>
                                     ) : null}
@@ -2985,12 +2998,12 @@ export default function NetworkMap() {
                   })()}
 
                   {/* Tọa độ */}
-                  <div className="flex items-center justify-between text-[11px] text-slate-400 pt-0.5">
-                    <span className="font-mono">{lat.toFixed(6)}, {lng.toFixed(6)}</span>
+                  <div className="flex items-center justify-between text-[11px] text-slate-500 pt-0.5">
+                    <span className="font-mono text-slate-700 font-medium">{lat.toFixed(6)}, {lng.toFixed(6)}</span>
                     <button
                       type="button"
                       onClick={() => handleCopyCoords(lat, lng, `tọa độ trạm ${name}`)}
-                      className="text-cyan-400 hover:underline flex items-center gap-1 font-semibold"
+                      className="text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1 font-semibold cursor-pointer"
                     >
                       <Copy className="h-3 w-3" /> Copy tọa độ
                     </button>
@@ -3002,7 +3015,7 @@ export default function NetworkMap() {
                       href={`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-1 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 active:scale-95 text-white rounded-xl text-xs font-bold shadow-md shadow-cyan-600/30 text-center cursor-pointer"
+                      className="flex items-center justify-center gap-1 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 active:scale-95 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-500/20 text-center cursor-pointer"
                     >
                       <Navigation className="h-3.5 w-3.5" />
                       <span>Dẫn đường</span>
@@ -3011,7 +3024,7 @@ export default function NetworkMap() {
                       href={`/datasites?search=${name}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-1 py-2 bg-slate-800 hover:bg-slate-700 active:scale-95 text-cyan-300 border border-slate-700 rounded-xl text-xs font-bold text-center cursor-pointer"
+                      className="flex items-center justify-center gap-1 py-2 bg-white hover:bg-slate-50 active:scale-95 text-blue-700 border border-slate-200 shadow-2xs rounded-xl text-xs font-bold text-center cursor-pointer"
                     >
                       <ExternalLink className="h-3.5 w-3.5" />
                       <span>Datasite</span>
@@ -3019,7 +3032,7 @@ export default function NetworkMap() {
                     <button
                       type="button"
                       onClick={() => handleCopyStationInfo(s, lat, lng, selectedMobileStation.displayName)}
-                      className="flex items-center justify-center gap-1 py-2 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 border border-slate-700 rounded-xl text-xs font-bold text-center cursor-pointer"
+                      className="flex items-center justify-center gap-1 py-2 bg-white hover:bg-slate-50 active:scale-95 text-slate-700 border border-slate-200 shadow-2xs rounded-xl text-xs font-bold text-center cursor-pointer"
                     >
                       <Copy className="h-3.5 w-3.5" />
                       <span>Sao chép</span>
@@ -3048,7 +3061,7 @@ export default function NetworkMap() {
                         setSelectedMobileStation(null);
                         setBottomSheetState('half');
                       }}
-                      className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 active:scale-98 text-white rounded-xl text-xs font-black shadow-lg shadow-purple-900/40 cursor-pointer"
+                      className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 active:scale-98 text-white rounded-xl text-xs font-black shadow-md shadow-purple-600/20 cursor-pointer"
                     >
                       <span>🔌 Kéo cáp từ điểm khảo sát</span>
                       <span className="text-[10px] text-purple-200 font-bold">({formatDistance(haversineMeters(customerLocation.lat, customerLocation.lng, lat, lng))})</span>
@@ -3061,7 +3074,7 @@ export default function NetworkMap() {
                         setSelectedMobileStation(null);
                         showToast(`Đã lấy vị trí ${code} làm mốc khảo sát`);
                       }}
-                      className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-gradient-to-r from-cyan-600 to-blue-600 active:scale-98 text-white rounded-xl text-xs font-black shadow-lg shadow-cyan-900/40 cursor-pointer"
+                      className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-gradient-to-r from-cyan-600 to-blue-600 active:scale-98 text-white rounded-xl text-xs font-black shadow-md shadow-cyan-600/20 cursor-pointer"
                     >
                       <MapPin className="h-4 w-4" />
                       <span>Khảo sát trạm lân cận từ vị trí này</span>
@@ -3069,25 +3082,25 @@ export default function NetworkMap() {
                   )}
 
                   {(p.ward || p.district) && (
-                    <div className="text-slate-300 text-xs font-medium">
-                      📍 Địa bàn: <b className="text-white">{p.ward ? `${p.ward}, ` : ''}{p.district || 'Đồng Nai'}</b>
+                    <div className="text-slate-600 text-xs font-medium">
+                      📍 Địa bàn: <b className="text-slate-900">{p.ward ? `${p.ward}, ` : ''}{p.district || 'Đồng Nai'}</b>
                     </div>
                   )}
-                  <div className={`p-2.5 rounded-xl text-[11px] space-y-1 ${cat?.popupBg || 'bg-slate-800/60'}`}>
-                    <div className="font-extrabold flex items-center justify-between">
+                  <div className={`p-2.5 rounded-xl text-[11px] space-y-1 ${cat?.popupBg || 'bg-slate-50 border border-slate-200'}`}>
+                    <div className="font-extrabold flex items-center justify-between text-slate-800">
                       <span>{cat?.icon} {cat?.label}</span>
                       {p.skhcn_status && <span className="opacity-80 text-[10px]">{p.skhcn_status}</span>}
                     </div>
-                    {p.notes && <div className="pt-1 border-t border-black/10">📝 <b>Ghi chú:</b> {p.notes}</div>}
+                    {p.notes && <div className="pt-1 border-t border-slate-200/60 text-slate-700">📝 <b>Ghi chú:</b> {p.notes}</div>}
                     {p.sharing_partner && <div className="text-purple-700 font-bold">🤝 <b>Dùng chung:</b> {p.sharing_partner}</div>}
                   </div>
 
-                  <div className="flex items-center justify-between text-[11px] text-slate-400">
-                    <span className="font-mono">{lat.toFixed(6)}, {lng.toFixed(6)}</span>
+                  <div className="flex items-center justify-between text-[11px] text-slate-500">
+                    <span className="font-mono text-slate-700 font-medium">{lat.toFixed(6)}, {lng.toFixed(6)}</span>
                     <button
                       type="button"
                       onClick={() => handleCopyCoords(lat, lng, `tọa độ quy hoạch ${code}`)}
-                      className="text-cyan-400 hover:underline flex items-center gap-1 font-semibold"
+                      className="text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1 font-semibold cursor-pointer"
                     >
                       <Copy className="h-3 w-3" /> Copy tọa độ
                     </button>
@@ -3098,7 +3111,7 @@ export default function NetworkMap() {
                       href={`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-1 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 active:scale-95 text-white rounded-xl text-xs font-bold shadow-md shadow-cyan-600/30 text-center cursor-pointer"
+                      className="flex items-center justify-center gap-1 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 active:scale-95 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-500/20 text-center cursor-pointer"
                     >
                       <Navigation className="h-3.5 w-3.5" />
                       <span>Dẫn đường Maps</span>
@@ -3106,7 +3119,7 @@ export default function NetworkMap() {
                     <button
                       type="button"
                       onClick={() => handleCopyProjectInfo(p, lat, lng, code)}
-                      className="flex items-center justify-center gap-1 py-2 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 border border-slate-700 rounded-xl text-xs font-bold text-center cursor-pointer"
+                      className="flex items-center justify-center gap-1 py-2 bg-white hover:bg-slate-50 active:scale-95 text-slate-700 border border-slate-200 shadow-2xs rounded-xl text-xs font-bold text-center cursor-pointer"
                     >
                       <Copy className="h-3.5 w-3.5" />
                       <span>Sao chép dự án</span>
@@ -3121,21 +3134,21 @@ export default function NetworkMap() {
               const line = selectedMobileStation.line;
               return (
                 <div className="space-y-2 text-xs">
-                  <div className="font-bold text-cyan-400 flex items-center gap-1.5">
+                  <div className="font-bold text-blue-700 flex items-center gap-1.5">
                     <Radio className="h-4 w-4 shrink-0" />
                     <span>Tuyến: {line.hubOldId || line.hubId} ➔ {line.siteOldId || line.siteId}</span>
                   </div>
-                  <div className="bg-slate-800/50 p-2 rounded-lg space-y-1 text-[11px] text-slate-300">
-                    <div>• Kiểu kết nối: <b className="text-white">{line.loai_ket_noi || 'Cáp quang'} {line.isBackup ? '(Ring)' : ''}</b></div>
-                    <div>• Chủ đầu tư: <b className="text-white">{line.chu_dau_tu_cap || 'Chưa rõ'}</b></div>
-                    <div>• Đơn vị vận hành: <b className="text-white">{line.don_vi_van_hanh_cap || 'Chưa rõ'}</b></div>
+                  <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-xl space-y-1 text-[11px] text-slate-600">
+                    <div>• Kiểu kết nối: <b className="text-slate-900">{line.loai_ket_noi || 'Cáp quang'} {line.isBackup ? '(Ring)' : ''}</b></div>
+                    <div>• Chủ đầu tư: <b className="text-slate-900">{line.chu_dau_tu_cap || 'Chưa rõ'}</b></div>
+                    <div>• Đơn vị vận hành: <b className="text-slate-900">{line.don_vi_van_hanh_cap || 'Chưa rõ'}</b></div>
                   </div>
                   <div className="grid grid-cols-2 gap-2 pt-1">
                     <a
                       href={`/datasites?search=${line.hubOldId || line.hubId}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-1 py-2 bg-slate-800 text-slate-200 rounded-xl text-xs font-bold border border-slate-700"
+                      className="flex items-center justify-center gap-1 py-2 bg-white hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold border border-slate-200 shadow-2xs"
                     >
                       Trạm MAIN ({line.hubOldId || line.hubId})
                     </a>
@@ -3143,7 +3156,7 @@ export default function NetworkMap() {
                       href={`/datasites?search=${line.siteOldId || line.siteId}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-1 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold"
+                      className="flex items-center justify-center gap-1 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold shadow-xs"
                     >
                       Trạm LASTMILE ({line.siteOldId || line.siteId})
                     </a>
