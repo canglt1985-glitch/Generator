@@ -97,6 +97,8 @@ export default function DailyWork() {
 
   // Form states - Transfer Equipment
   const [transToLocation, setTransToLocation] = useState('KHO'); // KHO, hoặc site_id
+  const [transSiteSearch, setTransSiteSearch] = useState('');
+  const [showTransSiteSuggestions, setShowTransSiteSuggestions] = useState(false);
   const [transOperator, setTransOperator] = useState('');
   const [transNotes, setTransNotes] = useState('');
 
@@ -344,6 +346,18 @@ export default function DailyWork() {
       st.name.toLowerCase().includes(q)
     ).slice(0, 8);
   }, [stations, issueSiteId]);
+
+  // Autocomplete site suggestions for Equipment Transfer form
+  const transSiteSuggestions = useMemo(() => {
+    const q = transSiteSearch.trim().toLowerCase();
+    if (!q) return stations.slice(0, 15);
+    return stations.filter(st => 
+      (st.site_id || '').toLowerCase().includes(q) || 
+      (st.site_id_old && st.site_id_old.toLowerCase().includes(q)) ||
+      (st.name && st.name.toLowerCase().includes(q)) ||
+      (st.district && st.district.toLowerCase().includes(q))
+    ).slice(0, 20);
+  }, [stations, transSiteSearch]);
 
 
   // Handle Log Save/Update
@@ -853,7 +867,15 @@ export default function DailyWork() {
   // Bắt đầu điều chuyển thiết bị
   function handleStartTransfer(equip) {
     setSelectedEquip(equip);
-    setTransToLocation(equip.current_location === 'KHO' ? '' : 'KHO');
+    const defaultTo = equip.current_location === 'KHO' ? '' : 'KHO';
+    setTransToLocation(defaultTo);
+    if (defaultTo && defaultTo !== 'KHO') {
+      const st = stations.find(s => s.site_id === defaultTo || s.site_id_old === defaultTo);
+      setTransSiteSearch(st ? `${st.site_id_old || st.site_id} - ${st.name}` : defaultTo);
+    } else {
+      setTransSiteSearch('');
+    }
+    setShowTransSiteSuggestions(false);
     setTransOperator('');
     setTransNotes('');
     setShowTransferModal(true);
@@ -2628,19 +2650,149 @@ export default function DailyWork() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Điều chuyển đến vị trí</label>
-                <select 
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white font-bold text-blue-700"
-                  value={transToLocation}
-                  onChange={(e) => setTransToLocation(e.target.value)}
-                >
-                  <option value="KHO">KHO CHUNG CỦA TỔ</option>
-                  {stations.map(st => (
-                    <option key={st.site_id} value={st.site_id}>
-                      {st.site_id} {st.site_id_old ? `(${st.site_id_old})` : ''} - {st.name}
-                    </option>
-                  ))}
-                </select>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Điều chuyển đến vị trí *
+                </label>
+                
+                {/* Nút chọn nhanh KHO */}
+                <div className="flex gap-2 mb-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTransToLocation('KHO');
+                      setTransSiteSearch('');
+                      setShowTransSiteSuggestions(false);
+                    }}
+                    className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold border transition-colors flex items-center justify-center gap-1 cursor-pointer ${
+                      transToLocation === 'KHO'
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    🏢 Về Kho TVT3 (KHO)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (transToLocation === 'KHO') setTransToLocation('');
+                      setShowTransSiteSuggestions(true);
+                    }}
+                    className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold border transition-colors flex items-center justify-center gap-1 cursor-pointer ${
+                      transToLocation !== 'KHO'
+                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    📡 Đặt tại trạm BTS
+                  </button>
+                </div>
+
+                {transToLocation !== 'KHO' && (
+                  <div className="space-y-1.5 relative">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder="🔍 Gõ tìm nhanh tên trạm hoặc mã trạm (VD: DNLK05, Long Khánh...)"
+                        value={transSiteSearch}
+                        onChange={(e) => {
+                          setTransSiteSearch(e.target.value);
+                          setShowTransSiteSuggestions(true);
+                          if (!e.target.value.trim()) {
+                            setTransToLocation('');
+                          }
+                        }}
+                        onFocus={() => setShowTransSiteSuggestions(true)}
+                        onBlur={() => setTimeout(() => setShowTransSiteSuggestions(false), 250)}
+                        className="w-full pl-9 pr-8 py-2 border border-slate-200 rounded-lg text-xs font-semibold focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white transition-all shadow-2xs"
+                      />
+                      {transSiteSearch && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setTransSiteSearch('');
+                            setTransToLocation('');
+                            setShowTransSiteSuggestions(true);
+                          }}
+                          className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer p-0.5"
+                        >
+                          <X size={14} />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Floating suggestions dropdown */}
+                    {showTransSiteSuggestions && (
+                      <div className="absolute left-0 right-0 z-50 mt-1 max-h-56 overflow-y-auto bg-white border border-blue-200 rounded-xl shadow-xl divide-y divide-slate-100">
+                        {transSiteSuggestions.length === 0 ? (
+                          <div className="p-3 text-xs text-slate-400 text-center italic">
+                            Không tìm thấy trạm nào khớp với "{transSiteSearch}"
+                          </div>
+                        ) : (
+                          transSiteSuggestions.map(st => {
+                            const codeOld = st.site_id_old || st.site_id;
+                            const isSelected = transToLocation === st.site_id || transToLocation === codeOld;
+                            return (
+                              <div
+                                key={st.site_id}
+                                onMouseDown={(e) => {
+                                  e.preventDefault();
+                                  setTransToLocation(st.site_id);
+                                  setTransSiteSearch(`${codeOld} - ${st.name}`);
+                                  setShowTransSiteSuggestions(false);
+                                }}
+                                className={`px-3 py-2 text-xs flex items-center justify-between cursor-pointer transition-colors ${
+                                  isSelected ? 'bg-blue-50 font-bold text-blue-900' : 'hover:bg-slate-50 text-slate-700'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <span className="font-mono font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100">
+                                    {codeOld}
+                                  </span>
+                                  <span className="font-medium text-slate-800">{st.name}</span>
+                                  {st.site_id && st.site_id !== codeOld && (
+                                    <span className="text-[10px] text-slate-400">[{st.site_id}]</span>
+                                  )}
+                                </div>
+                                {st.district && (
+                                  <span className="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+                                    {st.district}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    )}
+
+                    {/* Badge hiển thị trạm đã chọn */}
+                    {transToLocation && transToLocation !== 'KHO' && (
+                      <div className="mt-2 p-2 bg-blue-50/70 border border-blue-200 rounded-lg flex items-center justify-between">
+                        <div className="flex items-center gap-1.5 text-xs text-blue-900">
+                          <span className="font-bold">📍 Vị trí chọn:</span>
+                          <span className="font-mono font-black text-blue-700 bg-white px-2 py-0.5 rounded border border-blue-200">
+                            {transToLocation}
+                          </span>
+                          <span className="text-slate-600 text-[11px] truncate max-w-[200px]">
+                            {getEquipLocationLabel(transToLocation)}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setTransToLocation('');
+                            setTransSiteSearch('');
+                            setShowTransSiteSuggestions(true);
+                          }}
+                          className="text-xs text-rose-600 hover:text-rose-800 font-bold px-2 py-0.5 rounded hover:bg-rose-50 cursor-pointer"
+                        >
+                          Đổi trạm
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div>

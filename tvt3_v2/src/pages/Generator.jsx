@@ -56,6 +56,7 @@ export default function Generator() {
   const [editLocationOperator, setEditLocationOperator] = useState('Lê Tân Cảng');
   const [savingLocation, setSavingLocation] = useState(false);
   const [stationSearchFilter, setStationSearchFilter] = useState('');
+  const [showModalLocationSuggestions, setShowModalLocationSuggestions] = useState(false);
 
   // Daily Report & Quick Filter States
   const [showDailyReportModal, setShowDailyReportModal] = useState(false);
@@ -64,7 +65,13 @@ export default function Generator() {
   const [selectedEquipDetail, setSelectedEquipDetail] = useState(null);
 
   const [transSourceSiteId, setTransSourceSiteId] = useState('');
+  const [transSourceSearch, setTransSourceSearch] = useState('');
+  const [showSourceSuggestions, setShowSourceSuggestions] = useState(false);
+
   const [transDestSiteId, setTransDestSiteId] = useState('');
+  const [transDestSearch, setTransDestSearch] = useState('');
+  const [showDestSuggestions, setShowDestSuggestions] = useState(false);
+
   const [transEquipType, setTransEquipType] = useState('mpd'); // 'mpd', 'may_lanh', 'to_accu', 'tu_nguon'
   const [transEquipIndex, setTransEquipIndex] = useState('');
   const [transDate, setTransDate] = useState(new Date().toISOString().split('T')[0]);
@@ -1210,9 +1217,20 @@ export default function Generator() {
 
   const openEditLocationModal = (equip) => {
     setSelectedEquipForLocation(equip);
-    setNewLocationCode(equip.current_location || 'KHO');
+    const loc = equip.current_location || 'KHO';
+    setNewLocationCode(loc);
     setNewLocationNote(equip.notes || '');
-    setStationSearchFilter('');
+    if (loc && loc !== 'KHO') {
+      const st = stations.find(s => s.site_id === loc || s.site_id_old === loc);
+      if (st) {
+        setStationSearchFilter(`${st.site_id_old || st.site_id} - ${st.name}`);
+      } else {
+        setStationSearchFilter(loc);
+      }
+    } else {
+      setStationSearchFilter('');
+    }
+    setShowModalLocationSuggestions(false);
     setShowEditLocationModal(true);
   };
 
@@ -1421,7 +1439,9 @@ export default function Generator() {
       
       // Reset form
       setTransSourceSiteId('');
+      setTransSourceSearch('');
       setTransDestSiteId('');
+      setTransDestSearch('');
       setTransOperator('');
       setTransNotes('');
       
@@ -1976,7 +1996,66 @@ export default function Generator() {
   };
 
   const sourceStation = stations.find(s => s.site_id === transSourceSiteId);
-  
+  const destStation = stations.find(s => s.site_id === transDestSiteId);
+
+  // Filtered source stations for Transfer Form
+  const filteredTransSourceStations = useMemo(() => {
+    const eligible = stations.filter(s => {
+      const infra = s.infrastructure_info || {};
+      if (transEquipType === 'mpd') {
+        return (infra.may_phat_dien?.mpd || []).some(m => m.tinh_trang !== "ĐÃ ĐIỀU CHUYỂN");
+      } else if (transEquipType === 'may_lanh') {
+        return (infra.may_lanh || []).some(m => m.tinh_trang !== "ĐÃ ĐIỀU CHUYỂN");
+      } else if (transEquipType === 'tu_nguon') {
+        return (infra.nguon_dien?.tu_nguon || []).some(m => m.tinh_trang !== "ĐÃ ĐIỀU CHUYỂN");
+      } else if (transEquipType === 'to_accu') {
+        return (infra.nguon_dien?.tu_nguon || []).some(c => (c.to_accu || []).some(a => a.tinh_trang !== "ĐÃ ĐIỀU CHUYỂN"));
+      }
+      return true;
+    });
+
+    if (!transSourceSearch.trim()) {
+      return eligible.slice(0, 15);
+    }
+    const q = transSourceSearch.trim().toLowerCase();
+    return eligible.filter(st =>
+      (st.site_id_old || '').toLowerCase().includes(q) ||
+      (st.site_id || '').toLowerCase().includes(q) ||
+      (st.name || '').toLowerCase().includes(q) ||
+      (st.district || '').toLowerCase().includes(q)
+    ).slice(0, 25);
+  }, [stations, transEquipType, transSourceSearch]);
+
+  // Filtered destination stations for Transfer Form
+  const filteredTransDestStations = useMemo(() => {
+    const eligible = stations.filter(s => s.site_id !== transSourceSiteId);
+
+    if (!transDestSearch.trim()) {
+      return eligible.slice(0, 15);
+    }
+    const q = transDestSearch.trim().toLowerCase();
+    return eligible.filter(st =>
+      (st.site_id_old || '').toLowerCase().includes(q) ||
+      (st.site_id || '').toLowerCase().includes(q) ||
+      (st.name || '').toLowerCase().includes(q) ||
+      (st.district || '').toLowerCase().includes(q)
+    ).slice(0, 25);
+  }, [stations, transSourceSiteId, transDestSearch]);
+
+  // Filtered stations for Quick Edit Location Modal
+  const filteredModalStations = useMemo(() => {
+    if (!stationSearchFilter.trim()) {
+      return stations.slice(0, 15);
+    }
+    const q = stationSearchFilter.trim().toLowerCase();
+    return stations.filter(st =>
+      (st.site_id_old || '').toLowerCase().includes(q) ||
+      (st.site_id || '').toLowerCase().includes(q) ||
+      (st.name || '').toLowerCase().includes(q) ||
+      (st.district || '').toLowerCase().includes(q)
+    ).slice(0, 25);
+  }, [stations, stationSearchFilter]);
+
   const getSourceItems = () => {
     if (!transSourceSiteId || !transEquipType) return [];
     const src = stations.find(s => s.site_id === transSourceSiteId);
@@ -3594,40 +3673,83 @@ export default function Generator() {
                 </div>
 
                 {newLocationCode !== 'KHO' && (
-                  <div className="space-y-1.5">
-                    <input
-                      type="text"
-                      placeholder="🔍 Gõ tìm nhanh mã trạm cũ (VD: DNXL86, DNXL54, DNLK28, DNCM08...)"
-                      value={stationSearchFilter}
-                      onChange={(e) => setStationSearchFilter(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 bg-slate-50 focus:bg-white"
-                    />
-                    <select
-                      value={newLocationCode}
-                      onChange={(e) => setNewLocationCode(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 max-h-40"
-                      size={5}
-                    >
-                      {stations
-                        .filter(st => {
-                          if (!stationSearchFilter) return true;
-                          const q = stationSearchFilter.trim().toLowerCase();
-                          return (
-                            (st.site_id_old || '').toLowerCase().includes(q) ||
-                            (st.site_id || '').toLowerCase().includes(q) ||
-                            (st.name || '').toLowerCase().includes(q)
-                          );
-                        })
-                        .map(st => {
-                          const codeOld = st.site_id_old || st.site_id;
-                          return (
-                            <option key={st.site_id} value={codeOld} className="py-1">
-                              📍 {codeOld} — {st.name} {st.site_id && st.site_id !== codeOld ? `[${st.site_id}]` : ''}
-                            </option>
-                          );
-                        })
-                      }
-                    </select>
+                  <div className="space-y-1.5 relative">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder="🔍 Gõ tìm nhanh tên trạm hoặc mã trạm (VD: DNLK05, Long Khánh, DNXL86...)"
+                        value={stationSearchFilter}
+                        onChange={(e) => {
+                          setStationSearchFilter(e.target.value);
+                          setShowModalLocationSuggestions(true);
+                          if (!e.target.value.trim()) {
+                            setNewLocationCode('');
+                          }
+                        }}
+                        onFocus={() => setShowModalLocationSuggestions(true)}
+                        onBlur={() => setTimeout(() => setShowModalLocationSuggestions(false), 250)}
+                        className="w-full pl-9 pr-8 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-slate-50 focus:bg-white transition-all shadow-2xs"
+                      />
+                      {stationSearchFilter && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setStationSearchFilter('');
+                            setNewLocationCode('');
+                            setShowModalLocationSuggestions(true);
+                          }}
+                          className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer p-0.5"
+                        >
+                          <X size={14} />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Floating suggestions dropdown */}
+                    {showModalLocationSuggestions && (
+                      <div className="absolute left-0 right-0 z-50 mt-1 max-h-56 overflow-y-auto bg-white border border-indigo-200 rounded-xl shadow-xl divide-y divide-slate-100">
+                        {filteredModalStations.length === 0 ? (
+                          <div className="p-3 text-xs text-slate-400 text-center italic">
+                            Không tìm thấy trạm nào khớp với "{stationSearchFilter}"
+                          </div>
+                        ) : (
+                          filteredModalStations.map(st => {
+                            const codeOld = st.site_id_old || st.site_id;
+                            const isSelected = newLocationCode === codeOld || newLocationCode === st.site_id;
+                            return (
+                              <div
+                                key={st.site_id}
+                                onMouseDown={(e) => {
+                                  e.preventDefault();
+                                  setNewLocationCode(codeOld);
+                                  setStationSearchFilter(`${codeOld} - ${st.name}`);
+                                  setShowModalLocationSuggestions(false);
+                                }}
+                                className={`px-3 py-2 text-xs flex items-center justify-between cursor-pointer transition-colors ${
+                                  isSelected ? 'bg-indigo-50 font-bold text-indigo-900' : 'hover:bg-slate-50 text-slate-700'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <span className="font-mono font-bold text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100">
+                                    {codeOld}
+                                  </span>
+                                  <span className="font-medium text-slate-800">{st.name}</span>
+                                  {st.site_id && st.site_id !== codeOld && (
+                                    <span className="text-[10px] text-slate-400">[{st.site_id}]</span>
+                                  )}
+                                </div>
+                                {st.district && (
+                                  <span className="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+                                    {st.district}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -4743,38 +4865,122 @@ export default function Generator() {
                 <div className="md:col-span-5 bg-slate-50/50 rounded-xl p-5 border border-slate-200/60 space-y-4">
                   <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 mb-2">1. Trạm nguồn (Nơi chuyển đi)</h3>
                   
-                  <div className="space-y-1">
-                    <label className="font-bold text-slate-600 text-xs">Chọn trạm nguồn *</label>
-                    <select
-                      value={transSourceSiteId}
-                      onChange={(e) => {
-                        setTransSourceSiteId(e.target.value);
-                        setTransEquipIndex('');
-                      }}
-                      className="w-full border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-orange-500"
-                      required
-                    >
-                      <option value="">-- Chọn trạm nguồn có thiết bị --</option>
-                      {stations.map(s => {
-                        const infra = s.infrastructure_info || {};
-                        let hasAsset = false;
-                        if (transEquipType === 'mpd') {
-                          hasAsset = (infra.may_phat_dien?.mpd || []).some(m => m.tinh_trang !== "ĐÃ ĐIỀU CHUYỂN");
-                        } else if (transEquipType === 'may_lanh') {
-                          hasAsset = (infra.may_lanh || []).some(m => m.tinh_trang !== "ĐÃ ĐIỀU CHUYỂN");
-                        } else if (transEquipType === 'tu_nguon') {
-                          hasAsset = (infra.nguon_dien?.tu_nguon || []).some(m => m.tinh_trang !== "ĐÃ ĐIỀU CHUYỂN");
-                        } else if (transEquipType === 'to_accu') {
-                          hasAsset = (infra.nguon_dien?.tu_nguon || []).some(c => (c.to_accu || []).some(a => a.tinh_trang !== "ĐÃ ĐIỀU CHUYỂN"));
-                        }
-                        if (!hasAsset) return null;
-                        return (
-                          <option key={s.site_id} value={s.site_id}>
-                            {s.site_id} - {s.name}
-                          </option>
-                        );
-                      })}
-                    </select>
+                  <div className="space-y-1 relative">
+                    <label className="font-bold text-slate-600 text-xs flex items-center justify-between">
+                      <span>Chọn trạm nguồn *</span>
+                      {transSourceSiteId && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setTransSourceSiteId('');
+                            setTransSourceSearch('');
+                            setTransEquipIndex('');
+                          }}
+                          className="text-[11px] text-rose-600 hover:text-rose-800 font-bold cursor-pointer"
+                        >
+                          ✕ Đổi trạm
+                        </button>
+                      )}
+                    </label>
+
+                    {transSourceSiteId && sourceStation ? (
+                      <div className="p-2.5 bg-orange-50/80 border border-orange-200 rounded-lg flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono font-bold text-orange-700 bg-white px-2 py-0.5 rounded border border-orange-200 text-xs">
+                            {sourceStation.site_id_old || sourceStation.site_id}
+                          </span>
+                          <div className="text-xs">
+                            <span className="font-bold text-slate-800">{sourceStation.name}</span>
+                            {sourceStation.site_id_old && sourceStation.site_id !== sourceStation.site_id_old && (
+                              <span className="text-[10px] text-slate-400 ml-1">[{sourceStation.site_id}]</span>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setTransSourceSiteId('');
+                            setTransSourceSearch('');
+                            setTransEquipIndex('');
+                            setShowSourceSuggestions(true);
+                          }}
+                          className="text-[11px] text-slate-500 hover:text-orange-600 px-2 py-0.5 bg-white rounded border border-slate-200 hover:border-orange-300 font-semibold cursor-pointer shadow-2xs"
+                        >
+                          Thay đổi
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="relative">
+                        <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                        <input
+                          type="text"
+                          placeholder="🔍 Gõ tên hoặc mã trạm nguồn (VD: DNLK05, Long Khánh...)"
+                          value={transSourceSearch}
+                          onChange={(e) => {
+                            setTransSourceSearch(e.target.value);
+                            setShowSourceSuggestions(true);
+                          }}
+                          onFocus={() => setShowSourceSuggestions(true)}
+                          onBlur={() => setTimeout(() => setShowSourceSuggestions(false), 250)}
+                          className="w-full pl-9 pr-8 py-2 border border-slate-200 rounded-lg text-xs font-semibold focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white shadow-2xs"
+                          required={!transSourceSiteId}
+                        />
+                        {transSourceSearch && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setTransSourceSearch('');
+                              setShowSourceSuggestions(true);
+                            }}
+                            className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                          >
+                            <X size={14} />
+                          </button>
+                        )}
+
+                        {showSourceSuggestions && (
+                          <div className="absolute left-0 right-0 z-50 mt-1 max-h-56 overflow-y-auto bg-white border border-orange-200 rounded-xl shadow-xl divide-y divide-slate-100">
+                            {filteredTransSourceStations.length === 0 ? (
+                              <div className="p-3 text-xs text-slate-400 text-center italic">
+                                Không tìm thấy trạm nguồn nào có thiết bị khớp với "{transSourceSearch}"
+                              </div>
+                            ) : (
+                              filteredTransSourceStations.map(st => {
+                                const codeOld = st.site_id_old || st.site_id;
+                                return (
+                                  <div
+                                    key={st.site_id}
+                                    onMouseDown={(e) => {
+                                      e.preventDefault();
+                                      setTransSourceSiteId(st.site_id);
+                                      setTransSourceSearch(`${codeOld} - ${st.name}`);
+                                      setTransEquipIndex('');
+                                      setShowSourceSuggestions(false);
+                                    }}
+                                    className="px-3 py-2 text-xs flex items-center justify-between hover:bg-orange-50/80 cursor-pointer transition-colors"
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-mono font-bold text-orange-700 bg-orange-50 px-1.5 py-0.5 rounded border border-orange-200">
+                                        {codeOld}
+                                      </span>
+                                      <span className="font-medium text-slate-800">{st.name}</span>
+                                      {st.site_id && st.site_id !== codeOld && (
+                                        <span className="text-[10px] text-slate-400">[{st.site_id}]</span>
+                                      )}
+                                    </div>
+                                    {st.district && (
+                                      <span className="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+                                        {st.district}
+                                      </span>
+                                    )}
+                                  </div>
+                                );
+                              })
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {transSourceSiteId && (
@@ -4839,30 +5045,135 @@ export default function Generator() {
                 <div className="md:col-span-5 bg-slate-50/50 rounded-xl p-5 border border-slate-200/60 space-y-4">
                   <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 mb-2">2. Trạm nhận (Nơi chuyển đến)</h3>
                   
-                  <div className="space-y-1">
-                    <label className="font-bold text-slate-600 text-xs">Chọn trạm nhận *</label>
-                    <select
-                      value={transDestSiteId}
-                      onChange={(e) => setTransDestSiteId(e.target.value)}
-                      className="w-full border border-slate-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-orange-500"
-                      required
-                    >
-                      <option value="">-- Chọn trạm nhận --</option>
-                      {stations
-                        .filter(s => s.site_id !== transSourceSiteId)
-                        .map(s => {
-                          const infra = s.infrastructure_info || {};
-                          let hasAsset = false;
-                          if (transEquipType === 'mpd') {
-                            hasAsset = (infra.may_phat_dien?.mpd || []).some(m => m.tinh_trang !== "ĐÃ ĐIỀU CHUYỂN");
-                          }
-                          return (
-                            <option key={s.site_id} value={s.site_id}>
-                              {s.site_id} - {s.name} {hasAsset ? '(⚠️ Đã có MPĐ)' : '(Trống)'}
-                            </option>
-                          );
-                        })}
-                    </select>
+                  <div className="space-y-1 relative">
+                    <label className="font-bold text-slate-600 text-xs flex items-center justify-between">
+                      <span>Chọn trạm nhận *</span>
+                      {transDestSiteId && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setTransDestSiteId('');
+                            setTransDestSearch('');
+                          }}
+                          className="text-[11px] text-rose-600 hover:text-rose-800 font-bold cursor-pointer"
+                        >
+                          ✕ Đổi trạm
+                        </button>
+                      )}
+                    </label>
+
+                    {transDestSiteId && destStation ? (
+                      <div className="p-2.5 bg-blue-50/80 border border-blue-200 rounded-lg flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono font-bold text-blue-700 bg-white px-2 py-0.5 rounded border border-blue-200 text-xs">
+                            {destStation.site_id_old || destStation.site_id}
+                          </span>
+                          <div className="text-xs">
+                            <span className="font-bold text-slate-800">{destStation.name}</span>
+                            {destStation.site_id_old && destStation.site_id !== destStation.site_id_old && (
+                              <span className="text-[10px] text-slate-400 ml-1">[{destStation.site_id}]</span>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setTransDestSiteId('');
+                            setTransDestSearch('');
+                            setShowDestSuggestions(true);
+                          }}
+                          className="text-[11px] text-slate-500 hover:text-blue-600 px-2 py-0.5 bg-white rounded border border-slate-200 hover:border-blue-300 font-semibold cursor-pointer shadow-2xs"
+                        >
+                          Thay đổi
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="relative">
+                        <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                        <input
+                          type="text"
+                          placeholder="🔍 Gõ tên hoặc mã trạm nhận (VD: DNXL86, DNDQ49, Trảng Bom...)"
+                          value={transDestSearch}
+                          onChange={(e) => {
+                            setTransDestSearch(e.target.value);
+                            setShowDestSuggestions(true);
+                          }}
+                          onFocus={() => setShowDestSuggestions(true)}
+                          onBlur={() => setTimeout(() => setShowDestSuggestions(false), 250)}
+                          className="w-full pl-9 pr-8 py-2 border border-slate-200 rounded-lg text-xs font-semibold focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-2xs"
+                          required={!transDestSiteId}
+                        />
+                        {transDestSearch && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setTransDestSearch('');
+                              setShowDestSuggestions(true);
+                            }}
+                            className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                          >
+                            <X size={14} />
+                          </button>
+                        )}
+
+                        {showDestSuggestions && (
+                          <div className="absolute left-0 right-0 z-50 mt-1 max-h-56 overflow-y-auto bg-white border border-blue-200 rounded-xl shadow-xl divide-y divide-slate-100">
+                            {filteredTransDestStations.length === 0 ? (
+                              <div className="p-3 text-xs text-slate-400 text-center italic">
+                                Không tìm thấy trạm nhận nào khớp với "{transDestSearch}"
+                              </div>
+                            ) : (
+                              filteredTransDestStations.map(st => {
+                                const codeOld = st.site_id_old || st.site_id;
+                                const infra = st.infrastructure_info || {};
+                                let hasAsset = false;
+                                if (transEquipType === 'mpd') {
+                                  hasAsset = (infra.may_phat_dien?.mpd || []).some(m => m.tinh_trang !== "ĐÃ ĐIỀU CHUYỂN");
+                                }
+                                return (
+                                  <div
+                                    key={st.site_id}
+                                    onMouseDown={(e) => {
+                                      e.preventDefault();
+                                      setTransDestSiteId(st.site_id);
+                                      setTransDestSearch(`${codeOld} - ${st.name}`);
+                                      setShowDestSuggestions(false);
+                                    }}
+                                    className="px-3 py-2 text-xs flex items-center justify-between hover:bg-blue-50/80 cursor-pointer transition-colors"
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-mono font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">
+                                        {codeOld}
+                                      </span>
+                                      <span className="font-medium text-slate-800">{st.name}</span>
+                                      {st.site_id && st.site_id !== codeOld && (
+                                        <span className="text-[10px] text-slate-400">[{st.site_id}]</span>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                      {hasAsset ? (
+                                        <span className="text-[10px] text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 font-medium">
+                                          ⚠️ Đã có MPĐ
+                                        </span>
+                                      ) : (
+                                        <span className="text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 font-medium">
+                                          ✅ Trống
+                                        </span>
+                                      )}
+                                      {st.district && (
+                                        <span className="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+                                          {st.district}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {transEquipType === 'mpd' && selectedMpdToMove && (
@@ -4904,7 +5215,9 @@ export default function Generator() {
                     type="button"
                     onClick={() => {
                       setTransSourceSiteId('');
+                      setTransSourceSearch('');
                       setTransDestSiteId('');
+                      setTransDestSearch('');
                       setTransEquipIndex('');
                       setTransOperator('');
                       setTransNotes('');
