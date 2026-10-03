@@ -176,6 +176,34 @@ const getInfraProjectCategory = (proj) => {
 
 // Helper phân loại công nghệ phát sóng theo Quy hoạch Vô tuyến (Chuẩn 5G-A & SRAN)
 const getSiteRadioInfo = (site) => {
+  const mgmt = site?.management_info || {};
+  const tech = site?.technical_info || {};
+  const vungPhu = String(mgmt.vung_phu || tech.vung_phu || '').toUpperCase().trim();
+  const loaiTram = String(mgmt.loai_tram || tech.loai_tram || '').toUpperCase().trim();
+  const sid = String(site?.site_id || '').toUpperCase().trim();
+  const sold = String(site?.site_id_old || '').toUpperCase().trim();
+  const sname = String(site?.name || '').toUpperCase().trim();
+
+  // 1. Trạm AGG (Truyền dẫn): Không có phát sóng vô tuyến 3G/4G/5G -> Không có cánh sóng
+  const isAgg = vungPhu === 'AGG' || vungPhu.includes('AGG') ||
+                loaiTram === 'AGG' || loaiTram.includes('AGG') ||
+                sid.startsWith('AGG') || sold.startsWith('AGG') || sname.startsWith('AGG') ||
+                sid === 'DNIDQN1' || sid === 'DNIDGI32' || sid === 'ILA-DNIXLC' ||
+                sold === 'DNIDQN1' || sold === 'DNTNL2' || sold === 'ILA-DNIXLC';
+
+  if (isAgg) {
+    return {
+      key: 'agg',
+      isAgg: true,
+      isSranScope: false,
+      tech: 'AGG',
+      label: 'Trạm AGG (Truyền dẫn)',
+      color: '#64748b', // Xám Slate truyền dẫn
+      textColor: 'text-slate-700',
+      badgeClass: 'bg-slate-100 text-slate-800 border border-slate-300'
+    };
+  }
+
   const rf = site?.technical_info?.rf_summary;
   const has5g = Boolean(rf?.has_5g || rf?.cells_5g > 0);
   const is5gA = Boolean(rf?.is_dual_5g || (rf?.cells_5g_l2 > 0));

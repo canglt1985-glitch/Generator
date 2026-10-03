@@ -371,5 +371,135 @@ export function getSectorContiguousLayers(sec, isDual5g = false, hasSite5g = fal
   return layers;
 }
 
+/**
+ * Nhận diện loại trạm:
+ * - AGG: Trạm truyền dẫn (không có cell 3G/4G/5G, không có cánh sóng).
+ * - IBC: Cụ thể trạm DNLKI0 (DNIBLC14 - Bình Lộc 14) hoặc cấu hình IBC -> Omni 360 độ thu nhỏ.
+ * - Small Cell: Cụ thể trạm DNLKS1 (DNILKH15 - Long Khánh 15) hoặc cấu hình Small Cell -> Omni 360 độ thu nhỏ.
+ * - Macro: Trạm phát sóng vô tuyến thông thường (có cánh sóng định hướng).
+ */
+export function getSiteCoverageType(site) {
+  if (!site) return { isIbc: false, isSmallCell: false, isAgg: false, isOmni: false, typeLabel: 'MACRO' };
 
+  const mgmt = site.management_info || {};
+  const tech = site.technical_info || {};
 
+  const vungPhu = String(mgmt.vung_phu || tech.vung_phu || '').toUpperCase().trim();
+  const loaiTram = String(mgmt.loai_tram || tech.loai_tram || '').toUpperCase().trim();
+  const sid = String(site.site_id || '').toUpperCase().trim();
+  const sold = String(site.site_id_old || '').toUpperCase().trim();
+  const sname = String(site.name || '').toUpperCase().trim();
+
+  // 1. Kiểm tra trạm AGG (Truyền dẫn): Không có cell 3G/4G/5G -> Không vẽ cánh sóng!
+  const isAgg = vungPhu === 'AGG' || vungPhu.includes('AGG') ||
+                loaiTram === 'AGG' || loaiTram.includes('AGG') ||
+                sid.startsWith('AGG') || sold.startsWith('AGG') || sname.startsWith('AGG') ||
+                sid === 'DNIDQN1' || sid === 'DNIDGI32' || sid === 'ILA-DNIXLC' ||
+                sold === 'DNIDQN1' || sold === 'DNTNL2' || sold === 'ILA-DNIXLC';
+
+  if (isAgg) {
+    return { isIbc: false, isSmallCell: false, isAgg: true, isOmni: false, typeLabel: 'AGG' };
+  }
+
+  // 2. Nhận diện IBC: Trạm DNLKI0 (DNIBLC14) hoặc có cấu hình IBC
+  const isIbc = sid === 'DNIBLC14' || sold === 'DNLKI0' || 
+                vungPhu === 'IBC' || loaiTram.includes('IBC') || sname.includes('IBC');
+
+  // 3. Nhận diện Small Cell: Trạm DNLKS1 (DNILKH15) hoặc có cấu hình Small Cell
+  const isSmallCell = !isIbc && (
+    sid === 'DNILKH15' || sold === 'DNLKS1' ||
+    vungPhu === 'SMALL CELL' || loaiTram.includes('SMALL CELL') || loaiTram.includes('SMALLCELL')
+  );
+
+  const isCran = vungPhu.includes('CRAN');
+  const isOmni = isIbc || isSmallCell;
+  const typeLabel = isIbc ? 'IBC' : (isSmallCell ? 'Small Cell' : (isCran ? 'CRAN Outdoor' : 'Macro'));
+
+  return { isIbc, isSmallCell, isAgg: false, isOmni, typeLabel };
+}
+
+/**
+ * Tính toán các vòng tròn Omni 360 độ thu nhỏ cho trạm IBC và Small Cell
+ * Sắp xếp từ bán kính LỚN -> BÉ (Outer -> Inner) để SVG Leaflet render đồng tâm sắc nét
+ */
+export function getOmniContiguousLayers(site, scale = 1.0) {
+  const rf = site?.technical_info?.rf_summary;
+  const cells = site?.technical_info?.cells || [];
+  const sectors = rf?.sectors || [];
+  const loaiTram = String(site?.management_info?.loai_tram || site?.technical_info?.loai_tram || '').toUpperCase();
+
+  // Xác định các công nghệ hiện hữu
+  const has5g = Boolean(
+    rf?.has_5g || rf?.cells_5g > 0 || rf?.cells_5g_l1 > 0 || rf?.cells_5g_l2 > 0 ||
+    cells.some(c => String(c.tech || '').includes('5G')) ||
+    loaiTram.includes('5G')
+  );
+
+  const has4g = Boolean(
+    rf?.cells_4g > 0 || 
+    cells.some(c => String(c.tech || '').includes('4G')) ||
+    sectors.some(s => s.has_4g) ||
+    loaiTram.includes('4G') ||
+    (!has5g && !rf?.cells_3g) // Mặc định 4G nếu chưa có dữ liệu cụ thể
+  );
+
+  const has3g = Boolean(
+    rf?.cells_3g > 0 ||
+    cells.some(c => String(c.tech || '').includes('3G')) ||
+    sectors.some(s => s.has_3g) ||
+    loaiTram.includes('3G')
+  );
+
+  const layers = [];
+
+  // Bán kính thu nhỏ cho IBC / Small Cell (mét):
+  // 5G: ~34m | 4G: ~24m | 3G: ~15m
+  if (has5g) {
+    layers.push({
+      key: '5G',
+      tech: '5G',
+      label: '5G (2.6 / 3.8 GHz)',
+      badgeClass: 'bg-red-100 text-red-800 font-bold',
+      radius: 34 * scale,
+      fillColor: SECTOR_LAYER_CONFIG['5G_2600'].fillColor,
+      color: '#ffffff',
+      weight: 1.8,
+      fillOpacity: 0.48,
+      zIndex: 30
+    });
+  }
+
+  if (has4g) {
+    const r4g = has5g ? 24 : 26;
+    layers.push({
+      key: '4G',
+      tech: '4G LTE',
+      label: '4G LTE (1800 / 2100 MHz)',
+      badgeClass: 'bg-cyan-100 text-cyan-900 font-bold',
+      radius: r4g * scale,
+      fillColor: SECTOR_LAYER_CONFIG['4G'].fillColor,
+      color: '#ffffff',
+      weight: 1.8,
+      fillOpacity: 0.50,
+      zIndex: 20
+    });
+  }
+
+  if (has3g) {
+    const r3g = (has4g || has5g) ? 15 : 22;
+    layers.push({
+      key: '3G',
+      tech: '3G',
+      label: '3G (2100 / 900 MHz)',
+      badgeClass: 'bg-emerald-100 text-emerald-800 font-bold',
+      radius: r3g * scale,
+      fillColor: SECTOR_LAYER_CONFIG['3G'].fillColor,
+      color: '#ffffff',
+      weight: 1.6,
+      fillOpacity: 0.52,
+      zIndex: 10
+    });
+  }
+
+  return layers;
+}

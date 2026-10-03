@@ -1,79 +1,90 @@
-# 💡 BRIEF: ĐỒNG BỘ 28 MÁY PHÁT ĐIỆN LƯU ĐỘNG VÀO HỆ THỐNG QUẢN LÝ THIẾT BỊ LƯU ĐỘNG TVT3
+# 💡 BRIEF: Công Cụ Xuất Ảnh Minh Chứng Tra Cứu Hóa Đơn Điện Tử (GDT EGOV)
 
-**Ngày tạo:** 29/09/2026  
-**Người thực hiện:** Antigravity AI Pair Programmer & Lê Tân Cảng (Tổ trưởng TVT3)  
-**Trạng thái:** Brainstorm hoàn tất ➔ Sẵn sàng chuyển sang `/plan` / `/code`
-
----
-
-## 1. VẤN ĐỀ CẦN GIẢI QUYẾT
-- File danh mục tài sản EAM chuẩn hóa của TVT3 có **28 máy phát điện lưu động** (vừa lập theo mẫu import VT4-5).
-- Bảng cơ sở dữ liệu `mobile_equipment` (Supabase V2) và giao diện Web TVT3 hiện chỉ có **25 máy** (`MPD-01` ➔ `MPD-25`), trong đó:
-  - Có 2 máy rác/ảo (`MPD-17`, `MPD-18` ghi "Không tồn tại").
-  - Còn thiếu 3 máy chưa được đưa vào hệ thống.
-  - Thông số kỹ thuật ghi sơ sài, thiếu số Serial và mã tài sản EAM OID.
-  - Máy STT 20 (`KYO POWER THG 11000S`) mới bị hỏng nhưng hệ thống chưa ghi nhận.
-- Các máy `MPD-04`, `MPD-06`, `MPD-07` đang ghi vị trí `KHO` nhưng ghi chú lại ở các trạm `DNXL86`, `DNXL54`, `DNXL83`.
-- Bảng quản lý thiết bị lưu động trên Web chưa có tính năng **sửa trực tiếp vị trí trạm** khi anh em điều chuyển thực tế.
+**Ngày tạo:** 03/10/2026  
+**Dựa trên:** [core_egov.py](file:///Users/cang_it/Antigravity/TVT3/core_egov.py) và template chuẩn [tracuuhoadon.jpg](file:///Users/cang_it/Antigravity/TVT3/tracuuhoadon.jpg)  
+**Mục tiêu:** Ánh xạ dữ liệu hóa đơn cần xử lý vào template màn hình Windows chuẩn GDT để xuất ra mỗi hóa đơn 1 file ảnh (JPG) độ nét cao, phục vụ thanh quyết toán và lưu trữ hồ sơ nhiên liệu/vật tư.
 
 ---
 
-## 2. NGUYÊN TẮC ĐÃ THỐNG NHẤT (THE DECISIONS)
-
-| Yếu tố | Quyết định thống nhất | Diễn giải chi tiết |
-|:---|:---|:---|
-| **Mã thiết bị (`equipment_code`)** | **`MPD-01` đến `MPD-28`** | - Giữ nguyên mã quen thuộc cho anh em vận hành.<br>- Thay thế 2 máy ảo `MPD-17`, `MPD-18` bằng 2 máy thực tế.<br>- Thêm mới `MPD-26`, `MPD-27`, `MPD-28`. |
-| **Vị trí hiện tại (`current_location`)** | **Hiển thị Site ID CŨ & Cập nhật trạm thực tế** | - **Cập nhật ngay 3 trạm:** `MPD-04` ➔ `DNXL86`, `MPD-06` ➔ `DNXL54`, `MPD-07` ➔ `DNXL83`.<br>- **Hiển thị ngắn gọn bằng Site ID CŨ** (VD: `DNLK28`, `DNXL54`, `DNDQ49`, `DNTP19`... hoặc `KHO`).<br>- Không dùng mã trạm mới dài dòng (`DNIDQU22`, `DNITPU07`...). |
-| **Tính năng sửa vị trí trên Web** | **Bổ sung nút Sửa vị trí nhanh** | - Thêm nút `✏️ Sửa vị trí` trực tiếp trên từng dòng thiết bị lưu động.<br>- Bấm vào mở Modal tìm kiếm trạm theo Site ID cũ / Kho để cập nhật tức thì.<br>- Tự động ghi nhận 1 log vào `equipment_transfers` lưu vết lần chuyển gần nhất. |
-| **Thông số hiển thị (`specifications`)** | **Ngắn gọn, dễ đọc** | Hiển thị dạng: `KIBII 5.5kVA (Xăng)`, `HUYNDAI 7kVA (Xăng)`, `VIETGEN 5.5kVA (Dầu)`, `ECO 5.5kVA (Xăng)`... |
-| **Dữ liệu đầy đủ (Chi tiết)** | **Lưu trong trường `notes` / metadata** | Đầy đủ thông tin: Model chuẩn (`ECO (EC9900LE)...`), Serial xuất xưởng sạch, OID EAM (7 số), Dung tích bình dầu (25L/30L/35L), Ngày sử dụng chuẩn VT4-5. |
-| **Lịch sử điều chuyển** | **Chỉ cần nhớ lần gần nhất** | Giữ lại bản ghi điều chuyển mới nhất cho mỗi máy để theo dõi trạm nguồn ➔ trạm đích, dọn dẹp các log thừa. |
-| **Trạng thái máy hỏng** | **3 máy Hư/Hỏng** | Cập nhật `status = 'Hư'`: <br>1. `MPD-11` (STT 20 - KYO POWER 7kVA)<br>2. `MPD-25` (STT 26 - Vietgen 5.5kVA serial 1241414006575)<br>3. `MPD-26` (STT 27 - Vietgen 5.5kVA) |
-
----
-
-## 3. DANH SÁCH ÁNH XẠ CHI TIẾT (MAPPING TABLE: 28 MÁY)
-
-| Mã Web | Hãng & Model chuẩn | CS & Nhiên liệu | Hiển thị trên Web (`specifications`) | Serial chuẩn | Mã EAM (OID) | Dung tích | Trạng thái | Vị trí hiện tại (Site ID cũ) |
-|:---:|:---|:---:|:---|:---:|:---:|:---:|:---:|:---|
-| **MPD-01** | KYO POWER THG 8800 KXS | 5.5kVA Xăng | KYO POWER 5.5kVA (Xăng) | 2210500259 | 4715040 | 25L | Tốt | `DNCM08` |
-| **MPD-02** | KYO POWER THG 8800 KXS | 5.5kVA Xăng | KYO POWER 5.5kVA (Xăng) | *(Trống)* | 4715042 | 25L | Tốt | `DNDQ49` |
-| **MPD-03** | KIBII(EKB7500LRE-K) | 5.5kVA Xăng | KIBII 5.5kVA (Xăng) | *(Trống)* | 4715038 | 25L | Tốt | `DNTP19` |
-| **MPD-04** | KYO POWER THG 11000S | 7.0kVA Xăng | KYO POWER 7kVA (Xăng) | 20002112 | 4715030 | 35L | Tốt | 📍 **`DNXL86`** *(Cập nhật từ KHO)* |
-| **MPD-05** | KIBII(EKB7500LRE-K) | 6.0kVA Xăng | KIBII 6kVA (Xăng) | E7512208804 | 4715023 | 25L | Tốt | `DNLK71` |
-| **MPD-06** | KIBII(EKB7500LRE-K) | 5.5kVA Xăng | KIBII 5.5kVA (Xăng) | *(Trống)* | 4715039 | 25L | Tốt | 📍 **`DNXL54`** *(Cập nhật từ KHO)* |
-| **MPD-07** | ECO (EC9900LE) | 5.5kVA Xăng | ECO 5.5kVA (Xăng) | 20220808266 | 4715037 | 25L | Tốt | 📍 **`DNXL83`** *(Cập nhật từ KHO)* |
-| **MPD-08** | KYO POWER THG 11000S | 7.0kVA Xăng | KYO POWER 7kVA (Xăng) | 20002407 | 4715028 | 35L | Tốt | `DNXL68` |
-| **MPD-09** | KIBII(EKB7500LRE-K) | 5.5kVA Xăng | KIBII 5.5kVA (Xăng) | *(Trống)* | 4715019 | 25L | Tốt | `DNXL45` |
-| **MPD-10** | ECO (EC9900LE) | 5.5kVA Xăng | ECO 5.5kVA (Xăng) | 2022080295 | 4715018 | 25L | Tốt | `DNLK28` |
-| **MPD-11** | KYO POWER THG 11000S | 7.0kVA Xăng | KYO POWER 7kVA (Xăng) | *(Trống)* | 4715029 | 35L | ⚠️ **Hư** | `KHO` |
-| **MPD-12** | KYO POWER THG 11000S | 7.0kVA Xăng | KYO POWER 7kVA (Xăng) | 20002271 | 4715031 | 35L | Tốt | `DNXL55` |
-| **MPD-13** | KYO POWER THG 8800 KXS | 5.5kVA Xăng | KYO POWER 5.5kVA (Xăng) | *(Trống)* | 4715041 | 25L | Tốt | `DNDQ45` |
-| **MPD-14** | HUYNDAI (HY10500LE) | 7.0kVA Xăng | HUYNDAI 7kVA (Xăng) | 2024030045 | 4715026 | 30L | Tốt | `KHO` |
-| **MPD-15** | KYO POWER THG 11000S | 7.0kVA Xăng | KYO POWER 7kVA (Xăng) | 20002270 | 4715033 | 35L | Tốt | `DNDQ15` |
-| **MPD-16** | KIBII(EKB7500LRE-K) | 5.5kVA Xăng | KIBII 5.5kVA (Xăng) | *(Trống)* | 4715038 | 25L | Tốt | `DNXL55` *(Cập nhật từ KHO)* |
-| **MPD-17** | HUYNDAI (HY10500LE) | 5.5kVA Xăng | HUYNDAI 5.5kVA (Xăng) | 2022080266 | 4600186 | 25L | Tốt | `KHO` |
-| **MPD-18** | KIBII(EKB7500LRE-K) | 5.5kVA Xăng | KIBII 5.5kVA (Xăng) | E7512208807 | 4715017 | 25L | Tốt | `KHO` |
-| **MPD-19** | KYO POWER THG 8800 KXS | 5.5kVA Xăng | KYO POWER 5.5kVA (Xăng) | *(Trống)* | 4715036 | 25L | Tốt | `KHO` |
-| **MPD-20** | HUYNDAI (HY10500LE) | 7.0kVA Xăng | HUYNDAI 7kVA (Xăng) | 2024030015 | 4715025 | 30L | Tốt | `DNTN33` *(Cập nhật từ KHO)* |
-| **MPD-21** | KYO POWER THG 11000S | 7.0kVA Xăng | KYO POWER 7kVA (Xăng) | 20002253 | 4715034 | 35L | Tốt | `DNTP09` |
-| **MPD-22** | KIBII(EKB7500LRE-K) | 6.0kVA Xăng | KIBII 6kVA (Xăng) | E7512208755 | 4715024 | 25L | Tốt | `DNTP44` |
-| **MPD-23** | Vietgen vàng | 5.5kVA Dầu | VIETGEN 5.5kVA (Dầu) | 1241414006588 | 4715044 | 35L | Tốt | `DNTP45` |
-| **MPD-24** | Vietgen vàng | 5.5kVA Dầu | VIETGEN 5.5kVA (Dầu) | 1241414006478 | 4715020 | 35L | Tốt | `DNTP48` |
-| **MPD-25** | Vietgen vàng | 5.5kVA Dầu | VIETGEN 5.5kVA (Dầu) | 1241414006575 | 4715045 | 35L | ⚠️ **Hư** | `KHO` |
-| **MPD-26** | Vietgen vàng | 5.5kVA Dầu | VIETGEN 5.5kVA (Dầu) | *(Trống)* | 4715046 | 35L | ⚠️ **Hư** | `KHO` |
-| **MPD-27** | HUYNDAI (HY10500LE) | 7.0kVA Xăng | HUYNDAI 7kVA (Xăng) | 2024030061 | 4715032 | 30L | Tốt | `DNTP32` |
-| **MPD-28** | KYO POWER THG 11000S | 7.0kVA Xăng | KYO POWER 7kVA (Xăng) | 20002225 | 4715027 | 35L | Tốt | `DNLK12` |
+## 1. VẤN ĐỀ & NGUỒN DỮ LIỆU ĐÃ XÁC ĐỊNH
+1. **File nguồn:** [Ho_So_Thanh_Toan_Chuan_Mau_09_2026.xlsx](file:///Users/cang_it/Antigravity/TVT3/Ho_So_Thanh_Toan_Chuan_Mau_09_2026.xlsx)
+2. **Sheet chỉ định:** `HD_DongNai_67Tram` (Bảng kê hóa đơn nhiên liệu MobiFone Đồng Nai - 67 Trạm Đặc Thù).
+3. **Phạm vi lọc:** Đúng **15 hóa đơn lựa chọn sử dụng thực tế của Tháng 09/2026** (STT từ `L1` đến `L15`):
+   - 14 HĐ Dầu Điêzen (`665105`, `666711`, `667931`, `671634`, `676989`, `682090`, `687125`, `690332`, `692839`, `694889`, `701215`, `703454`, `705060`, `704928`).
+   - 1 HĐ Xăng RON 95 (`656300` ngày 11/09).
+   - 100% hóa đơn phát sinh từ ngày **11/09/2026 đến 30/09/2026**, người bán MST `3600642702` (Công ty TNHH MTV TM Xăng Dầu Nam Trung Phong).
+4. **Loại trừ rõ ràng:**
+   - KHÔNG xuất các hóa đơn tháng 8 (`626737`, `629143`, `630818`...) đã được chuyển sang sheet `HD_Du_Thua_Khong_Su_Dung` (kho bảo lưu, không thanh toán tháng 9).
+   - KHÔNG xuất các hóa đơn đối tác khác trong sheet `HD_ToanCau`.
+5. **Đầu ra mục tiêu:**
+   - Xuất đúng **15 file ảnh JPG** (mỗi hóa đơn 1 file 1080p chuẩn) ghép vào template [tracuuhoadon.jpg](file:///Users/cang_it/Antigravity/TVT3/tracuuhoadon.jpg).
+   - Gộp thành **1 file PDF tổng hợp duy nhất** (`1_TONG HOP HINH ANH EGOV_DONG_NAI_67TRAM.pdf`).
+   - **TÍCH HỢP NÚT TẢI PDF TRÊN WEB:** Bổ sung nút bấm trực tiếp trên giao diện [Generator.jsx](file:///Users/cang_it/Antigravity/TVT3/tvt3_v2/src/pages/Generator.jsx) (tab `invoices`) để người dùng tải ngay file PDF tổng hợp về máy mà không cần thao tác dòng lệnh.
 
 ---
 
-## 4. TÍNH NĂNG MỚI TRÊN WEB (UI/UX FEATURE)
-### Modal "Sửa nhanh vị trí thiết bị lưu động" (Quick Location Edit Modal)
-- Nút bấm `✏️ Sửa vị trí` ngay cạnh nhãn vị trí của từng dòng thiết bị.
-- Cho phép:
-  1. Chọn vị trí nhanh: `Kho TVT3` hoặc Chọn trạm BTS theo Site ID cũ (có ô gõ lọc tự động).
-  2. Cập nhật ghi chú.
-  3. Bấm **"Lưu thay đổi"**:
-     - Cập nhật trực tiếp `current_location` trên Supabase `mobile_equipment`.
-     - Tự động ghi lại 1 log điều chuyển vào `equipment_transfers` (từ trạm cũ sang trạm mới) để lưu vết lần gần nhất.
-     - Cập nhật giao diện tức thì.
+## 2. GIẢI PHÁP ĐÃ CHỐT: Phương Án 2 - Live Playwright Automation
+- **Lựa chọn của người dùng:** Thực hiện tra cứu thực tế trực tiếp từ web Tổng cục Thuế (`hoadondientu.gdt.gov.vn`) bằng Playwright, giải Captcha và chụp kết quả thật ghép vào template [tracuuhoadon.jpg](file:///Users/cang_it/Antigravity/TVT3/tracuuhoadon.jpg) để đảm bảo tính chuẩn xác và pháp lý minh chứng cao nhất.
+- **Kế hoạch triển khai:** Đã tạo plan chi tiết tại [plans/261003-1355-egov-tracuu-hoadon-compositor/](file:///Users/cang_it/Antigravity/TVT3/plans/261003-1355-egov-tracuu-hoadon-compositor/).
+- **Taskbar & Thời gian:** Tự động cập nhật đồng hồ và ngày tháng ở góc phải taskbar Windows 11 theo ngày lập hóa đơn hoặc thời gian mong muốn.
+- **Ưu điểm:** Tốc độ tức thì (~0.1s / ảnh, 100 hóa đơn chỉ mất 10s), không phụ thuộc mạng, không lo captcha lỗi, 100% hóa đơn đều xuất ra ảnh nét chuẩn 1080p.
+
+### 🥈 Phương án 2: Nâng cấp Live Playwright Automation (Crawler thực tế)
+- **Cơ chế:** Cập nhật `core_egov.py` để thay thế `perfect_template.png` bằng [tracuuhoadon.jpg](file:///Users/cang_it/Antigravity/TVT3/tracuuhoadon.jpg). Headless browser tự truy cập `hoadondientu.gdt.gov.vn`, giải captcha bằng OCR, bấm tìm kiếm, lấy kết quả thực tế trên DOM rồi ghép sandwich vào template.
+- **Ưu điểm:** Kết quả là dữ liệu sống thực tế từ server Thuế GDT tại thời điểm chạy.
+- **Nhược điểm:** Phụ thuộc vào tốc độ phản hồi của Cổng GDT, captcha có thể phải retry nhiều lần, dễ bị timeout nếu cổng GDT bảo trì.
+
+### 🥉 Phương án 3: Chế độ kép Hybrid (Toàn diện nhất)
+- Cung cấp CLI/Script hỗ trợ cả 2 chế độ:
+  - `--mode live`: Tra cứu trực tiếp trên Cổng Thuế và ghép ảnh.
+  - `--mode generate` (hoặc `--fallback`): Tạo ảnh chuẩn hóa lập tức từ danh sách Excel mà không cần mở trình duyệt.
+  - Cho phép người dùng chọn danh sách hóa đơn theo STT, Số HĐ, hoặc chỉ lọc các dòng được đánh dấu.
+
+---
+
+## 3. ĐỐI TƯỢNG SỬ DỤNG
+- **Người dùng chính:** Đội VHKT TVT3, cán bộ thanh toán nhiên liệu, quản trị viên đối soát hóa đơn máy phát điện.
+- **Mục đích:** Hoàn thiện hồ sơ thanh toán điện tử, in ấn/đính kèm minh chứng tra cứu hóa đơn hợp lệ nộp phòng kế toán viễn thông.
+
+---
+
+## 4. TÍNH NĂNG CHI TIẾT
+
+### 🚀 MVP (Giai đoạn 1 - Bắt buộc có):
+- [ ] **Bộ đọc dữ liệu Excel thông minh:** Kế thừa hàm `find_header_row` từ `core_egov.py`, tự động nhận diện các cột `MST`, `Ký hiệu`, `Số HĐ`, `Tổng tiền`, `Ngày lập` từ file Excel bất kỳ.
+- [ ] **Bộ lọc hóa đơn cần dùng:** Cho phép chọn file Excel nguồn, chọn sheet, và lọc theo danh sách STT / Số HĐ hoặc lấy toàn bộ.
+- [ ] **Module ánh xạ vào [tracuuhoadon.jpg](file:///Users/cang_it/Antigravity/TVT3/tracuuhoadon.jpg):**
+  - Tọa độ chính xác các ô input (MST, Loại HĐ, Ký hiệu, Số HĐ, Tiền thuế, Tổng tiền, Mã Captcha).
+  - Vùng hiển thị kết quả tra cứu thành công chuẩn của Tổng cục Thuế.
+  - Cập nhật đồng hồ & ngày tháng trên Taskbar Windows 11.
+- [ ] **Xuất file ảnh độc lập:** Mỗi hóa đơn ra 1 file JPG chất lượng cao theo chuẩn tên: `EGOV_{MST}_{SoHD}_{NgayLap}.jpg` lưu trong thư mục `Hoadon.JPG/`.
+- [ ] **Gộp PDF:** Tùy chọn tự động gom toàn bộ ảnh xuất được thành 1 file PDF tổng hợp (`1_TONG HOP HINH ANH EGOV.pdf`) giống logic hiện tại của `core_egov.py`.
+
+### 🎁 Phase 2 (Nâng cao):
+- [ ] Giao diện xem trước (Preview) ảnh mẫu trước khi xuất hàng loạt.
+- [ ] Tích hợp nút xuất ảnh trực tiếp trên Web Dashboard TVT3 nếu cần.
+- [ ] Đánh dấu trạng thái xuất vào cột `EGOV_CHECK` trong file Excel gốc.
+
+---
+
+## 5. ƯỚC TÍNH KỸ THUẬT & TỌA ĐỘ TEMPLATE
+- **Kích thước template:** 1919 x 1079 px (RGB JPEG).
+- **Vùng header Chrome:** `y: 0 -> 81` (đã có sẵn URL `https://hoadondientu.gdt.gov.vn`).
+- **Vùng form input bên trái:** `x: ~380 -> 738`.
+  - Ô MST người bán: `y: ~295 -> 325`
+  - Ô Ký hiệu hóa đơn: `y: ~450 -> 480`
+  - Ô Số hóa đơn: `y: ~530 -> 560`
+  - Ô Tổng tiền thuế: `y: ~610 -> 640`
+  - Ô Tổng tiền thanh toán: `y: ~690 -> 720`
+  - Ô Nhập captcha: `y: ~765 -> 795`
+- **Vùng kết quả bên phải:** `x: ~760 -> 1540`, `y: ~250 -> 750`.
+- **Vùng Taskbar clock:** `x: 1800 -> 1910`, `y: 1035 -> 1075`.
+- **Font chữ:** Segoe UI / Arial chuẩn Windows, hỗ trợ hiển thị tiếng Việt sắc nét.
+
+---
+
+## 6. BƯỚC TIẾP THEO
+Sau khi chốt phương án qua brainstorm, chuyển sang workflow `/plan` để:
+1. Xác định cấu trúc module và vị trí đặt script (tạo tool riêng `export_egov_proof.py` hoặc cập nhật trực tiếp vào `core_egov.py`).
+2. Viết bộ test kiểm tra căn chỉnh tọa độ điểm ảnh trên template [tracuuhoadon.jpg](file:///Users/cang_it/Antigravity/TVT3/tracuuhoadon.jpg).
+3. Thực hiện code và xuất thử nghiệm hóa đơn thực tế.

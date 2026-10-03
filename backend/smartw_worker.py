@@ -1410,6 +1410,70 @@ def _get_val(row: dict, keys: list) -> str:
     return ""
 
 
+def _match_site(site_raw: str):
+    """Find matching site dict from datasites list based on site_id or site_id_old prefix/substring."""
+    if not site_raw:
+        return None
+    try:
+        data = _get_datasites_list()
+        site_upper = str(site_raw).strip().upper()
+        # 1. Exact or prefix match (sorted by site_id length desc for maximum specificity)
+        for s in sorted(data, key=lambda x: len(x.get('site_id') or ''), reverse=True):
+            s_id = (s.get("site_id") or "").upper()
+            s_old = (s.get("site_id_old") or "").upper()
+            if s_id and site_upper.startswith(s_id):
+                return s
+            if s_old and site_upper.startswith(s_old):
+                return s
+        # 2. Substring match for site ID >= 6 characters
+        for s in sorted(data, key=lambda x: len(x.get('site_id') or ''), reverse=True):
+            s_id = (s.get("site_id") or "").upper()
+            s_old = (s.get("site_id_old") or "").upper()
+            if s_id and len(s_id) >= 6 and s_id in site_upper:
+                return s
+            if s_old and len(s_old) >= 6 and s_old in site_upper:
+                return s
+    except Exception as e:
+        logger.error(f'SmartW _match_site error: {e}')
+    return None
+
+
+def _get_site_and_qlt_info(site_raw: str):
+    """
+    Returns (tram_cell_display, qlt_display, qlt_name, qlt_phone).
+    tram_cell_display: e.g. 'DNIXDU00 (DNIXDU00 / DNCM14)' or original site_raw
+    qlt_display: e.g. 'Dương Minh Châu (0932618817)'
+    """
+    tram_cell = str(site_raw or '').strip()
+    tram_cell_display = tram_cell
+    qlt_display = ""
+    qlt_name = ""
+    qlt_phone = ""
+    if not tram_cell:
+        return tram_cell_display, qlt_display, qlt_name, qlt_phone
+
+    matched = _match_site(tram_cell)
+    if matched:
+        s_id = matched.get("site_id") or ""
+        s_old = matched.get("site_id_old") or ""
+        if s_old and s_id != s_old:
+            tram_cell_display = f"{tram_cell} ({s_id} / {s_old})"
+        elif s_id:
+            tram_cell_display = f"{tram_cell} ({s_id})"
+
+        mgmt = matched.get("management_info") or {}
+        qlt_name = (mgmt.get("qlt") or "").strip()
+        qlt_phone = str(mgmt.get("sdt_qlt") or "").strip()
+        if qlt_name and qlt_phone and qlt_phone != "None":
+            qlt_display = f"{qlt_name} ({qlt_phone})"
+        elif qlt_name:
+            qlt_display = qlt_name
+        elif qlt_phone and qlt_phone != "None":
+            qlt_display = qlt_phone
+
+    return tram_cell_display, qlt_display, qlt_name, qlt_phone
+
+
 def format_pakh_message(row: dict) -> str:
     so_thue_bao = row.get('soThueBao') or ''
 
@@ -1431,41 +1495,18 @@ def format_pakh_message(row: dict) -> str:
 
     noi_dung = row.get('noiDungPhanAnh') or ''
     
-    # Map Trạm/Cell to old/new ID using cache
     tram_cell = str(row.get('maTram') or '')
-    tram_cell_display = tram_cell
-    if tram_cell:
-        try:
-            data = _get_datasites_list()
-            matched_site = None
-            tram_upper = tram_cell.strip().upper()
-            # Sort by site_id length desc to match the most specific site first
-            for s in sorted(data, key=lambda x: len(x.get('site_id') or ''), reverse=True):
-                s_id = (s.get("site_id") or "").upper()
-                s_old = (s.get("site_id_old") or "").upper()
-                if s_id and tram_upper.startswith(s_id):
-                    matched_site = s
-                    break
-                if s_old and tram_upper.startswith(s_old):
-                    matched_site = s
-                    break
-            if matched_site:
-                s_id = matched_site.get("site_id") or ""
-                s_old = matched_site.get("site_id_old") or ""
-                if s_old and s_id != s_old:
-                    tram_cell_display = f"{tram_cell} ({s_id} / {s_old})"
-                elif s_id:
-                    tram_cell_display = f"{tram_cell} ({s_id})"
-        except Exception as e:
-            logger.error(f'SmartW format_pakh_message site mapping error: {e}')
+    tram_cell_display, qlt_display, _, _ = _get_site_and_qlt_info(tram_cell)
 
     han_con_lai = row.get('tgclTtml') or row.get('tgConLai') or ''
+    qlt_val = qlt_display if qlt_display else "Chưa gán"
 
     msg = f"""- PAKH: {so_thue_bao}
 - THỜI GIAN NHẬN: {tg_nhan}
 - ĐỊA BÀN: {dia_ban}
 - NỘI DUNG PHẢN ÁNH: {noi_dung}
 - TRẠM / CELL: {tram_cell_display}
+- QUẢN LÝ TRẠM: {qlt_val}
 - HẠN CÒN LẠI: {han_con_lai}"""
     return msg
 
@@ -1476,38 +1517,16 @@ def format_pakh_reminder_message(row: dict) -> str:
     xa = row.get('phuongXa') or ''
     dia_ban = f"{xa}, {tinh}".strip(', ')
     
-    # Map Trạm/Cell to old/new ID using cache
     tram_cell = str(row.get('maTram') or '')
-    tram_cell_display = tram_cell
-    if tram_cell:
-        try:
-            data = _get_datasites_list()
-            matched_site = None
-            tram_upper = tram_cell.strip().upper()
-            for s in sorted(data, key=lambda x: len(x.get('site_id') or ''), reverse=True):
-                s_id = (s.get("site_id") or "").upper()
-                s_old = (s.get("site_id_old") or "").upper()
-                if s_id and tram_upper.startswith(s_id):
-                    matched_site = s
-                    break
-                if s_old and tram_upper.startswith(s_old):
-                    matched_site = s
-                    break
-            if matched_site:
-                s_id = matched_site.get("site_id") or ""
-                s_old = matched_site.get("site_id_old") or ""
-                if s_old and s_id != s_old:
-                    tram_cell_display = f"{tram_cell} ({s_id} / {s_old})"
-                elif s_id:
-                    tram_cell_display = f"{tram_cell} ({s_id})"
-        except Exception as e:
-            logger.error(f'SmartW format_pakh_reminder_message site mapping error: {e}')
+    tram_cell_display, qlt_display, _, _ = _get_site_and_qlt_info(tram_cell)
 
     han_con_lai = row.get('tgclTtml') or row.get('tgConLai') or ''
+    qlt_val = qlt_display if qlt_display else "Chưa gán"
 
     msg = f"""- SĐT PHẢN ÁNH: {so_thue_bao}
 - ĐỊA BÀN: {dia_ban}
 - TRẠM / CELL: {tram_cell_display}
+- QUẢN LÝ TRẠM: {qlt_val}
 - HẠN CÒN LẠI: {han_con_lai}"""
     return msg
 
@@ -1519,36 +1538,15 @@ def format_pakh_closed_message(c_id: str, details: dict) -> str:
     dia_ban = f"{xa}, {tinh}".strip(', ')
     
     tram_cell = str(details.get("maTram") or "")
-    tram_cell_display = tram_cell
-    if tram_cell:
-        try:
-            data = _get_datasites_list()
-            matched_site = None
-            tram_upper = tram_cell.strip().upper()
-            for s in sorted(data, key=lambda x: len(x.get('site_id') or ''), reverse=True):
-                s_id = (s.get("site_id") or "").upper()
-                s_old = (s.get("site_id_old") or "").upper()
-                if s_id and tram_upper.startswith(s_id):
-                    matched_site = s
-                    break
-                if s_old and tram_upper.startswith(s_old):
-                    matched_site = s
-                    break
-            if matched_site:
-                s_id = matched_site.get("site_id") or ""
-                s_old = matched_site.get("site_id_old") or ""
-                if s_old and s_id != s_old:
-                    tram_cell_display = f"{tram_cell} ({s_id} / {s_old})"
-                elif s_id:
-                    tram_cell_display = f"{tram_cell} ({s_id})"
-        except Exception as e:
-            logger.error(f'SmartW format_pakh_closed_message site mapping error: {e}')
+    tram_cell_display, qlt_display, _, _ = _get_site_and_qlt_info(tram_cell)
+    qlt_val = qlt_display if qlt_display else "Chưa gán"
 
     msg = f"""✅ *PAKH ĐÃ ĐÓNG / XỬ LÝ XONG*
 
 - SĐT PHẢN ÁNH: {so_thue_bao}
 - ĐỊA BÀN: {dia_ban}
-- TRẠM / CELL: {tram_cell_display}"""
+- TRẠM / CELL: {tram_cell_display}
+- QUẢN LÝ TRẠM: {qlt_val}"""
     return msg
 
 
@@ -1644,32 +1642,9 @@ def process_pakh_alerts(pakh_list: list, job_type: str = 'pakh'):
     state["alerted_new"] = [str(x) for x in state["alerted_new"]]
     milestones_dict = state.setdefault("alerted_expiring_milestones", {})
 
-    # Helper function to format trạm mới / cũ
+    # Helper function to format trạm mới / cũ & QLT
     def get_site_display(ma_tram):
-        tram_cell_display = ma_tram
-        if ma_tram:
-            try:
-                data = _get_datasites_list()
-                matched_site = None
-                tram_upper = ma_tram.strip().upper()
-                for s in sorted(data, key=lambda x: len(x.get('site_id') or ''), reverse=True):
-                    s_id = (s.get("site_id") or "").upper()
-                    s_old = (s.get("site_id_old") or "").upper()
-                    if s_id and tram_upper.startswith(s_id):
-                        matched_site = s
-                        break
-                    if s_old and tram_upper.startswith(s_old):
-                        matched_site = s
-                        break
-                if matched_site:
-                    s_id = matched_site.get("site_id") or ""
-                    s_old = matched_site.get("site_id_old") or ""
-                    if s_old and s_id != s_old:
-                        tram_cell_display = f"{ma_tram} ({s_id} / {s_old})"
-                    elif s_id:
-                        tram_cell_display = f"{ma_tram} ({s_id})"
-            except Exception as e:
-                logger.error(f'SmartW site mapping error: {e}')
+        tram_cell_display, _, _, _ = _get_site_and_qlt_info(ma_tram)
         return tram_cell_display
 
     # Identify active and closed tickets from the current pakh_list
@@ -1756,8 +1731,9 @@ def process_pakh_alerts(pakh_list: list, job_type: str = 'pakh'):
                 else:
                     det = state["alerted_details"].get(n_id, {})
                     sdt = det.get("soThueBao") or "SĐT --"
-                    tram = get_site_display(det.get("maTram") or "")
-                    lines.append(f"  • SĐT: {sdt} - Trạm: {tram}")
+                    tram, qlt_disp, _, _ = _get_site_and_qlt_info(det.get("maTram") or "")
+                    qlt_suffix = f" | QLT: {qlt_disp}" if qlt_disp else ""
+                    lines.append(f"  • SĐT: {sdt} - Trạm: {tram}{qlt_suffix}")
                 lines.append("")
             has_content = True
 
@@ -1768,8 +1744,9 @@ def process_pakh_alerts(pakh_list: list, job_type: str = 'pakh'):
             for c_id in state["closed_since_last_hour"]:
                 det = state["alerted_details"].get(c_id, {})
                 sdt = det.get("soThueBao") or "SĐT --"
-                tram = get_site_display(det.get("maTram") or "")
-                lines.append(f"  • SĐT: {sdt} - Trạm: {tram}")
+                tram, qlt_disp, _, _ = _get_site_and_qlt_info(det.get("maTram") or "")
+                qlt_suffix = f" | QLT: {qlt_disp}" if qlt_disp else ""
+                lines.append(f"  • SĐT: {sdt} - Trạm: {tram}{qlt_suffix}")
             has_content = True
 
         if has_content:
@@ -1800,9 +1777,10 @@ def process_pakh_alerts(pakh_list: list, job_type: str = 'pakh'):
             for row in active_tickets:
                 sdt = row.get("soThueBao") or "SĐT --"
                 ma_tram = row.get("maTram") or ""
-                tram = get_site_display(ma_tram)
-                tg_con_lai = row.get("tgConLai") or "N/A"
-                lines1.append(f"• SĐT: {sdt} - Trạm: {tram}\n  ⏳ Hạn còn lại: {tg_con_lai}")
+                tram, qlt_disp, _, _ = _get_site_and_qlt_info(ma_tram)
+                tg_con_lai = row.get("tgclTtml") or row.get("tgConLai") or "N/A"
+                qlt_suffix = f" | QLT: {qlt_disp}" if qlt_disp else ""
+                lines1.append(f"• SĐT: {sdt} - Trạm: {tram}{qlt_suffix}\n  ⏳ Hạn còn lại: {tg_con_lai}")
             _send_viber_report(lines1, token=pakh_token, sender=pakh_sender)
             logger.info("Viber Alert: Sent PAKH summary (unresolved) report")
         else:
@@ -1850,6 +1828,15 @@ def save_pakh_to_storage(pakh_list: list):
         
     # Filter out closed/processed tickets so that only active ones are saved/uploaded
     active_pakh = [row for row in pakh_list if not _is_pakh_closed(row)]
+
+    # Enrich active PAKH rows with QLT info and display strings
+    for row in active_pakh:
+        ma_tram = row.get("maTram") or ""
+        tram_disp, qlt_disp, q_name, q_phone = _get_site_and_qlt_info(ma_tram)
+        row["qlt"] = q_name
+        row["sdt_qlt"] = q_phone
+        row["qlt_display"] = qlt_disp
+        row["tram_display"] = tram_disp
         
     local_path = os.path.join(DATA_DIR, 'pakh.json')
     try:

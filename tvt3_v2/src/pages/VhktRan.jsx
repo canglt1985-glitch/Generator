@@ -6,6 +6,7 @@ export default function VhktRan() {
   const [activeTab, setActiveTab] = useState('all');
   const [alarms, setAlarms] = useState([]);
   const [siteMap, setSiteMap] = useState({});
+  const [siteInfoMap, setSiteInfoMap] = useState({});
   const [loading, setLoading] = useState(true);
   const [pakhList, setPakhList] = useState([]);
   const [pakhScrapedAt, setPakhScrapedAt] = useState('');
@@ -14,21 +15,29 @@ export default function VhktRan() {
   const [lastFetchTime, setLastFetchTime] = useState('');
   const [copiedSection, setCopiedSection] = useState('');
 
-  // Fetch site id mapping dynamically
+  // Fetch site id mapping dynamically along with management_info (QLT, SĐT)
   async function fetchSiteMap() {
     try {
-      const { data } = await supabase.from('datasites').select('site_id, site_id_old');
+      const { data } = await supabase.from('datasites').select('site_id, site_id_old, management_info');
       if (data) {
         const mapping = {};
+        const infoMap = {};
         data.forEach(s => {
           const newId = String(s.site_id || '').trim().toUpperCase();
           const oldId = String(s.site_id_old || '').trim().toUpperCase();
+          const qlt = s.management_info?.qlt || '';
+          const sdtQlt = s.management_info?.sdt_qlt || '';
+          const info = { site_id: newId, site_id_old: oldId, qlt, sdt_qlt: sdtQlt };
+
           if (newId && oldId) {
             mapping[newId] = oldId;
             mapping[oldId] = newId;
           }
+          if (newId) infoMap[newId] = info;
+          if (oldId) infoMap[oldId] = info;
         });
         setSiteMap(mapping);
+        setSiteInfoMap(infoMap);
       }
     } catch (err) {
       console.error('Error fetching site map:', err);
@@ -230,46 +239,52 @@ export default function VhktRan() {
   }
 
   // Resolve site mapping specifically for PAKH station/cell strings
-  function resolvePakhSite(rawTram) {
+  function resolvePakhSite(rawTram, pItem) {
     const raw = String(rawTram || '').trim().toUpperCase();
-    if (!raw) return { newId: '', oldId: '' };
+    let newId = raw;
+    let oldId = '';
+    let qlt = pItem?.qlt || '';
+    let sdtQlt = pItem?.sdt_qlt || '';
+
+    if (!raw) return { newId: '', oldId: '', qlt, sdtQlt };
 
     // 1. Exact match in siteMap
     if (siteMap[raw]) {
       const mapped = siteMap[raw];
-      if (raw.length >= 7 && mapped.length <= 6) return { newId: raw, oldId: mapped };
-      if (raw.length <= 6 && mapped.length >= 7) return { newId: mapped, oldId: raw };
-      return { newId: raw, oldId: mapped };
-    }
-
-    // 2. Try 8-char prefix (e.g. DNIXTC00CM3GB -> DNIXTC00)
-    if (raw.length >= 8) {
-      const prefix8 = raw.slice(0, 8);
-      if (siteMap[prefix8]) {
-        return { newId: prefix8, oldId: siteMap[prefix8] };
+      if (raw.length >= 7 && mapped.length <= 6) { newId = raw; oldId = mapped; }
+      else if (raw.length <= 6 && mapped.length >= 7) { newId = mapped; oldId = raw; }
+      else { newId = raw; oldId = mapped; }
+    } else if (raw.length >= 8 && siteMap[raw.slice(0, 8)]) {
+      const p8 = raw.slice(0, 8);
+      newId = p8;
+      oldId = siteMap[p8];
+    } else if (raw.length >= 6 && siteMap[raw.slice(0, 6)]) {
+      const p6 = raw.slice(0, 6);
+      const mapped = siteMap[p6];
+      if (mapped.length >= 7) { newId = mapped; oldId = p6; }
+      else { newId = p6; oldId = mapped; }
+    } else {
+      // Substring search in siteMap keys
+      for (const k of Object.keys(siteMap)) {
+        if (k.length >= 6 && raw.includes(k)) {
+          const v = siteMap[k];
+          if (k.length >= 7) { newId = k; oldId = v; }
+          else { newId = v; oldId = k; }
+          break;
+        }
       }
     }
 
-    // 3. Try 6-char prefix (e.g. DNDQ41M4BB -> DNDQ41)
-    if (raw.length >= 6) {
-      const prefix6 = raw.slice(0, 6);
-      if (siteMap[prefix6]) {
-        const mapped = siteMap[prefix6];
-        if (mapped.length >= 7) return { newId: mapped, oldId: prefix6 };
-        return { newId: prefix6, oldId: mapped };
+    // Lookup QLT from siteInfoMap if not directly provided
+    if (!qlt && siteInfoMap) {
+      const info = siteInfoMap[newId] || siteInfoMap[oldId] || siteInfoMap[raw];
+      if (info) {
+        qlt = info.qlt || '';
+        sdtQlt = info.sdt_qlt || '';
       }
     }
 
-    // 4. Substring search in siteMap keys
-    for (const k of Object.keys(siteMap)) {
-      if (k.length >= 6 && raw.includes(k)) {
-        const v = siteMap[k];
-        if (k.length >= 7) return { newId: k, oldId: v };
-        return { newId: v, oldId: k };
-      }
-    }
-
-    return { newId: raw, oldId: '' };
+    return { newId, oldId, qlt, sdtQlt };
   }
 
   // Extract clean network label (4G, 3G, 5G, SRAN)
@@ -574,11 +589,12 @@ export default function VhktRan() {
         const sdt = p.so_thue_bao || p.soThueBao || '--';
         const tram = p.ma_tram || p.maTram || '--';
         const tg = p.tgclTtml || p.tg_con_lai || p.tgConLai || '--';
-        const { newId, oldId } = resolvePakhSite(tram);
+        const { newId, oldId, qlt, sdtQlt } = resolvePakhSite(tram, p);
         const sitePair = newId && oldId && newId !== oldId 
           ? `(${newId} / ${oldId})` 
           : (newId || oldId ? `(${newId || oldId})` : '');
-        lines.push(`• SĐT: ${sdt} - Trạm: ${tram} ${sitePair}`.trim());
+        const qltText = qlt ? ` | QLT: ${qlt}${sdtQlt ? ` (${sdtQlt})` : ''}` : '';
+        lines.push(`• SĐT: ${sdt} - Trạm: ${tram} ${sitePair}${qltText}`.trim());
         lines.push(`  ⏳ Hạn còn lại: ${tg}`);
       });
     }
@@ -1260,7 +1276,7 @@ export default function VhktRan() {
                           const sdt = p.so_thue_bao || p.soThueBao || '--';
                           const tram = p.ma_tram || p.maTram || '--';
                           const tg = p.tgclTtml || p.tg_con_lai || p.tgConLai || '--';
-                          const { newId, oldId } = resolvePakhSite(tram);
+                          const { newId, oldId, qlt, sdtQlt } = resolvePakhSite(tram, p);
                           const isUrgent = String(tg).includes('phút') || (String(tg).includes('giờ') && parseInt(tg) <= 12);
 
                           return (
@@ -1280,6 +1296,22 @@ export default function VhktRan() {
                                   <span className="font-semibold text-slate-600">({newId || oldId})</span>
                                 ) : null}
                               </div>
+                              {qlt && (
+                                <div className="pl-3.5 mt-0.5 flex items-center gap-1.5 text-[11px] sm:text-xs">
+                                  <span>👤</span>
+                                  <span className="text-slate-500 font-medium">QLT:</span>
+                                  <span className="font-bold text-slate-800">{qlt}</span>
+                                  {sdtQlt && (
+                                    <a 
+                                      href={`tel:${sdtQlt}`} 
+                                      className="text-blue-600 font-mono font-semibold hover:underline inline-flex items-center gap-0.5"
+                                      title={`Gọi cho ${qlt}`}
+                                    >
+                                      ({sdtQlt})
+                                    </a>
+                                  )}
+                                </div>
+                              )}
                               <div className="pl-3.5 mt-0.5 flex items-center gap-1.5 text-[11px] sm:text-xs">
                                 <span>⏳</span>
                                 <span className="text-slate-500 font-medium">Hạn còn lại:</span>
@@ -1312,6 +1344,7 @@ export default function VhktRan() {
                           <th className="py-3 px-2 sm:px-4 text-left">ĐỊA BÀN</th>
                           <th className="py-3 px-2 sm:px-4 text-left">NỘI DUNG PHẢN ÁNH</th>
                           <th className="py-3 px-2 sm:px-4 text-center">TRẠM / CELL</th>
+                          <th className="py-3 px-2 sm:px-4 text-center">QUẢN LÝ TRẠM</th>
                           <th className="py-3 px-2 sm:px-4 text-center">HẠN CÒN LẠI</th>
                         </tr>
                       </thead>
@@ -1325,6 +1358,9 @@ export default function VhktRan() {
                           const noiDungPhanAnh = p.noi_dung_phan_anh || p.noiDungPhanAnh || '--';
                           const maTram = p.ma_tram || p.maTram || '--';
                           const tgConLai = p.tgclTtml || p.tg_con_lai || p.tgConLai || '--';
+                          const { qlt, sdtQlt } = resolvePakhSite(maTram, p);
+                          const isUrgent = String(tgConLai).includes('phút') || (String(tgConLai).includes('giờ') && parseInt(tgConLai) <= 12);
+
                           return (
                             <tr key={i} className="hover:bg-gray-50 transition-colors">
                               <td className="py-3 px-2 sm:px-4 text-center font-bold text-blue-600 font-mono">
@@ -1351,8 +1387,26 @@ export default function VhktRan() {
                                 </div>
                               </td>
                               <td className="py-3 px-2 sm:px-4 text-center">
-                                <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold font-mono tracking-tight ${
-                                  String(tgConLai).includes('giờ') && parseInt(tgConLai) <= 12
+                                {qlt ? (
+                                  <div className="inline-flex flex-col items-center">
+                                    <span className="font-bold text-slate-800 text-xs">{qlt}</span>
+                                    {sdtQlt && (
+                                      <a 
+                                        href={`tel:${sdtQlt}`} 
+                                        className="text-blue-600 font-mono text-[11px] font-semibold hover:underline"
+                                        title={`Gọi cho ${qlt}`}
+                                      >
+                                        {sdtQlt}
+                                      </a>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="text-slate-400 text-xs italic">Chưa gán</span>
+                                )}
+                              </td>
+                              <td className="py-3 px-2 sm:px-4 text-center">
+                                <span className={`inline-block px-2 py-0.5 rounded text-[11px] font-bold font-mono tracking-tight ${
+                                  isUrgent
                                     ? 'bg-red-100 text-red-800 border border-red-200 animate-pulse'
                                     : 'bg-amber-100 text-amber-800 border border-amber-200'
                                 }`}>

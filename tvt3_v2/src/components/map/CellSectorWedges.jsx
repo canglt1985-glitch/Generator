@@ -1,19 +1,19 @@
 import React from 'react';
-import { Polygon, Tooltip } from 'react-leaflet';
+import { Polygon, Tooltip, Circle } from 'react-leaflet';
 import { 
   createAnnularSectorPolygon, 
   getFallbackAzimuth,
   getZoomAdaptiveScale,
   getSectorContiguousLayers,
-  getSectorTiltDisplay
+  getSectorTiltDisplay,
+  getSiteCoverageType,
+  getOmniContiguousLayers
 } from '../../utils/cellSectorGeometry';
 
 /**
  * Component hiển thị các cánh sóng đa tầng LIỀN KỀ NHAU (KHÔNG KHOẢNG TRỐNG):
- * 1. 3G: 1 lớp Xanh lá cây tươi (#22c55e), viền trắng 1.5px (trong cùng)
- * 2. 4G: 1 lớp Màu Ngọc Cyan huỳnh quang (#00f0ff), viền trắng 1.8px (ở giữa)
- * 3. 5G Lớp trong: Băng 3800 MHz (NR38 / 5G-A) - Đỏ hồng lựu (#e11d48), viền trắng 2.0px
- * 4. 5G Lớp ngoài: Băng 2600 MHz (NR26) - Đỏ cờ tươi rực rỡ (#ff0033), viền trắng 2.0px
+ * - Trạm Macro: Cánh sóng định hướng (Annular Sectors) 3G / 4G / 5G.
+ * - Trạm IBC & Small Cell: Phủ sóng tròn Omni 360 độ thu nhỏ, không cánh cell.
  */
 export default function CellSectorWedges({
   site,
@@ -30,6 +30,84 @@ export default function CellSectorWedges({
   const lng = parseFloat(site?.location_info?.kinh_do);
   if (isNaN(lat) || isNaN(lng)) return null;
 
+  // Hệ số co giãn bán kính theo mức Zoom để búp sóng không bị teo nhỏ ở Zoom 14-15
+  const scale = getZoomAdaptiveScale(zoom);
+  const siteLabel = site.site_id_old || site.site_id;
+
+  // 1. Kiểm tra trạm AGG (Truyền dẫn): Không có phát sóng 3G/4G/5G -> Tuyệt đối không hiển thị cánh sóng!
+  const coverage = getSiteCoverageType(site);
+  if (coverage.isAgg) {
+    return null;
+  }
+
+  // 2. Kiểm tra loại trạm: Đối với IBC (DNLKI0) và Small Cell (DNLKS1) -> Render Omni 360 độ thu nhỏ (Không cánh cell)
+  if (coverage.isOmni) {
+    const omniLayers = getOmniContiguousLayers(site, scale);
+    if (!omniLayers || omniLayers.length === 0) return null;
+
+    return (
+      <React.Fragment key={`omni-group-${site.site_id}`}>
+        {omniLayers.map(layer => (
+          <Circle
+            key={`omni-${site.site_id}-${layer.key}`}
+            center={[lat, lng]}
+            radius={layer.radius}
+            pathOptions={{
+              fillColor: layer.fillColor,
+              color: layer.color,
+              fillOpacity: layer.fillOpacity,
+              weight: layer.weight,
+              opacity: 0.9,
+              className: 'drop-shadow-sm cursor-pointer'
+            }}
+            eventHandlers={{
+              click: () => onSelectSector && onSelectSector({ 
+                site, 
+                sector: 'Omni 360°', 
+                tech: `${coverage.typeLabel} - ${layer.tech}`, 
+                azimuth: 'Omni (360°)',
+                tiltStr: 'Không áp dụng (Omni)',
+                heightStr: null 
+              })
+            }}
+          >
+            <Tooltip sticky direction="top" opacity={0.96}>
+              <div className="font-sans text-[11px] p-1.5 space-y-0.5 min-w-[150px]">
+                <div className="font-bold flex items-center justify-between border-b border-slate-200 pb-0.5">
+                  <span className="text-slate-800">📡 {siteLabel}</span>
+                  <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold ${
+                    coverage.isIbc 
+                      ? 'bg-amber-100 text-amber-900 border border-amber-300' 
+                      : 'bg-cyan-100 text-cyan-900 border border-cyan-300'
+                  }`}>
+                    {coverage.typeLabel}
+                  </span>
+                </div>
+                <div className="text-slate-600 flex justify-between">
+                  <span>Búp sóng:</span>
+                  <b className="font-mono text-indigo-700">Omni 360° (Tròn)</b>
+                </div>
+                <div className="text-slate-600 flex justify-between">
+                  <span>Công nghệ:</span>
+                  <b className="font-mono text-slate-800">{layer.tech}</b>
+                </div>
+                <div className="text-slate-600 flex justify-between">
+                  <span>Băng tần:</span>
+                  <b className="font-mono text-slate-800">{layer.label}</b>
+                </div>
+                <div className="text-slate-600 flex justify-between">
+                  <span>Bán kính vi mô:</span>
+                  <span className="font-mono text-emerald-700 font-bold">~{Math.round(layer.radius)}m</span>
+                </div>
+              </div>
+            </Tooltip>
+          </Circle>
+        ))}
+      </React.Fragment>
+    );
+  }
+
+  // 2. Đối với trạm Macro thông thường: Hiển thị các cánh sóng định hướng
   const rfSummary = site?.technical_info?.rf_summary;
   const sectors = rfSummary?.sectors;
   if (!Array.isArray(sectors) || sectors.length === 0) return null;
@@ -38,9 +116,6 @@ export default function CellSectorWedges({
   const has5g = Boolean(rfSummary?.has_5g || rfSummary?.cells_5g > 0);
   const isSranSwap = Boolean(rfSummary?.is_sran_swap);
 
-  // Hệ số co giãn bán kính theo mức Zoom để búp sóng không bị teo nhỏ ở Zoom 14-15
-  const scale = getZoomAdaptiveScale(zoom);
-  const siteLabel = site.site_id_old || site.site_id;
 
   return (
     <>

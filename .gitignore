@@ -11,6 +11,8 @@ instance/
 
 # ── Dependencies ──
 node_modules/
+dist/
+tvt3_v2/dist/
 
 # ── Virtual Environment ──
 .venv/
