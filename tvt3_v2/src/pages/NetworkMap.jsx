@@ -199,21 +199,27 @@ const getSiteRadioInfo = (site) => {
   const has4g = Boolean(cells4g > 0);
   const isSranScope = Boolean(rf?.is_sran_swap);
 
-  const hasZeroRadioCells = totalCells === 0 && !has3g && !has4g && !has5g && cells.length === 0;
+  const hasRadioCells = totalCells > 0 || has3g || has4g || has5g || cells.length > 0;
+  const hasZeroRadioCells = !hasRadioCells;
 
-  // 1. Trạm AGG (Truyền dẫn): Không có phát sóng vô tuyến 3G/4G/5G -> Không có cánh sóng
-  const isAgg = vungPhu === 'AGG' || vungPhu.includes('AGG') ||
-                loaiTram === 'AGG' || loaiTram.includes('AGG') ||
-                phaPtm.includes('AGG') ||
-                sid.startsWith('AGG') || sold.startsWith('AGG') || sname.startsWith('AGG') ||
-                sid === 'DNIDQN1' || sid === 'DNIDGI32' || sid === 'ILA-DNIXLC' || sid === 'DNILKH1' ||
-                sold === 'DNIDQN1' || sold === 'DNTNL2' || sold === 'ILA-DNIXLC' || sold === 'DNILKH1' ||
-                (hasZeroRadioCells && (loaiTram.includes('AGG') || phaPtm.includes('AGG') || sname.includes('AGG')));
+  // Nhận diện hạ tầng truyền dẫn AGG
+  const isAggInfrastructure = 
+    vungPhu === 'AGG' || vungPhu.includes('AGG') ||
+    loaiTram === 'AGG' || loaiTram.includes('AGG') ||
+    phaPtm.includes('AGG') ||
+    sid.startsWith('AGG') || sold.startsWith('AGG') || sname.startsWith('AGG') ||
+    sid === 'DNIDQN1' || sid === 'ILA-DNIXLC' || sid === 'DNILKH1' ||
+    sold === 'DNIDQN1' || sold === 'ILA-DNIXLC' || sold === 'DNILKH1';
 
-  if (isAgg) {
+  // 1. CHỈ trạm AGG thuần túy (Truyền dẫn thuần, KHÔNG có cell phát sóng - 0 cell) mới gán badge xám AGG và ẩn cánh sóng!
+  // Những trạm AGG có đặt BTS (loại trạm 3G/4G/5G/AGG...) thì hiển thị công nghệ phát sóng và cánh sóng bình thường.
+  const isPureAgg = isAggInfrastructure && hasZeroRadioCells;
+
+  if (isPureAgg) {
     return {
       key: 'agg',
       isAgg: true,
+      hasAggNode: true,
       isSranScope: false,
       tech: 'AGG',
       label: 'Trạm AGG (Truyền dẫn)',
@@ -2557,6 +2563,11 @@ export default function NetworkMap() {
                                   <span className={`px-1.5 py-0.2 rounded text-[8.5px] font-extrabold ${radio.badgeClass}`}>
                                     {radio.tech}
                                   </span>
+                                  {radio.hasAggNode && !radio.isAgg && (
+                                    <span className="px-1.5 py-0.2 rounded text-[8px] font-bold bg-slate-100 text-slate-700 border border-slate-300">
+                                      Node AGG
+                                    </span>
+                                  )}
                                 </div>
                                 {site.name && (
                                   <div className="text-[10px] text-slate-500 font-medium">{site.name}</div>
@@ -2730,6 +2741,11 @@ export default function NetworkMap() {
                                   <span className={`px-1.5 py-0.2 rounded text-[8.5px] font-extrabold ${radio.badgeClass}`}>
                                     {radio.tech}
                                   </span>
+                                  {radio.hasAggNode && !radio.isAgg && (
+                                    <span className="px-1.5 py-0.2 rounded text-[8px] font-bold bg-slate-100 text-slate-700 border border-slate-300">
+                                      Node AGG
+                                    </span>
+                                  )}
                                 </div>
                               </div>
                               <button 
