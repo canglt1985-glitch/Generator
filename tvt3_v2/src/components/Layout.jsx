@@ -1,6 +1,5 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import Header from './Header';
-import CookieConsent from './CookieConsent';
 import ErrorBoundary from './ErrorBoundary';
 
 export default function Layout() {
@@ -27,7 +26,6 @@ export default function Layout() {
           </div>
         </footer>
       )}
-      <CookieConsent />
     </div>
   );
 }

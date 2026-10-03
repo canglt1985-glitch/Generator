@@ -78,6 +78,16 @@ function ProtectedRoute({ children }) {
   return children;
 }
 
+// Component chuyển hướng trang chủ: Nếu là khách thì vào thẳng bản đồ số, nhân viên thì vào Home
+function HomeRoute() {
+  const { user, isLoading } = useCurrentUser();
+  if (isLoading) return null;
+  if (!user) {
+    return <Navigate to="/network-map" replace />;
+  }
+  return <Home />;
+}
+
 function App() {
   const { isLoading } = useCurrentUser();
 
@@ -99,13 +109,33 @@ function App() {
           
           {/* Các route trong Layout chính */}
           <Route path="/" element={<Layout />}>
-            <Route index element={<Home />} />
+            <Route index element={<HomeRoute />} />
             <Route path="network-map" element={<NetworkMap />} />
-            <Route path="datasites" element={<Datasites />} />
-            <Route path="contracts" element={<ContractDashboard />} />
-            <Route path="daily-work" element={<DailyWork />} />
-            <Route path="infrastructure" element={<InfrastructureDevelopment />} />
-            <Route path="sran-5g" element={<Sran5gProject />} />
+            <Route path="datasites" element={
+              <ProtectedRoute>
+                <Datasites />
+              </ProtectedRoute>
+            } />
+            <Route path="contracts" element={
+              <ProtectedRoute>
+                <ContractDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="daily-work" element={
+              <ProtectedRoute>
+                <DailyWork />
+              </ProtectedRoute>
+            } />
+            <Route path="infrastructure" element={
+              <ProtectedRoute>
+                <InfrastructureDevelopment />
+              </ProtectedRoute>
+            } />
+            <Route path="sran-5g" element={
+              <ProtectedRoute>
+                <Sran5gProject />
+              </ProtectedRoute>
+            } />
             {/* Chỉ Admin được phép truy cập module máy phát điện */}
             <Route path="generator" element={
               <AdminRoute>
@@ -122,7 +152,11 @@ function App() {
                 <Expenses />
               </ProtectedRoute>
             } />
-            <Route path="vhkt-ran" element={<VhktRan />} />
+            <Route path="vhkt-ran" element={
+              <ProtectedRoute>
+                <VhktRan />
+              </ProtectedRoute>
+            } />
             <Route path="privacy" element={<Privacy />} />
             <Route path="terms" element={<Terms />} />
             <Route path="*" element={

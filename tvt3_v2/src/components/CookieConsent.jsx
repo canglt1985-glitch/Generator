@@ -2,21 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
 export default function CookieConsent() {
-  const [showBanner, setShowBanner] = useState(false);
-
-  useEffect(() => {
-    const consent = localStorage.getItem('tvt3_cookie_consent');
-    if (!consent) {
-      setShowBanner(true);
-    }
-  }, []);
-
-  const acceptConsent = () => {
-    localStorage.setItem('tvt3_cookie_consent', 'accepted');
-    setShowBanner(false);
-  };
-
-  if (!showBanner) return null;
+  return null;
+}
 
   return (
     <div className="fixed bottom-4 right-4 max-w-md bg-white border border-gray-100 shadow-xl rounded-2xl p-5 z-50 animate-in fade-in slide-in-from-bottom-5 duration-300">
