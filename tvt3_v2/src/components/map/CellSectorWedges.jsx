@@ -103,7 +103,7 @@ export default function CellSectorWedges({
                       </div>
                       <div className="text-slate-600 flex justify-between">
                         <span>Góc hướng:</span>
-                        <b className="font-mono text-slate-800">{azimuth}° {isEstimated ? '(ước tính)' : ''}</b>
+                        <b className="font-mono text-slate-800">{azimuth} {isEstimated ? '(ước tính)' : ''}</b>
                       </div>
                       <div className="text-slate-600 flex justify-between">
                         <span>Độ nghiêng (Tilt):</span>

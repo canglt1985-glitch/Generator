@@ -238,25 +238,25 @@ export function getSectorTiltDisplay(sec, site = null) {
 
   if (total != null && total !== '') {
     const numTotal = Number(total);
-    const totalStr = !isNaN(numTotal) ? `${numTotal}°` : `${total}`;
+    const totalStr = !isNaN(numTotal) ? `${numTotal}` : `${total}`;
     
-    // Nếu tilt cơ khác 0 thì hiển thị chi tiết (M:cơ/E:điện)
+    // Nếu tilt cơ khác 0 thì hiển thị chi tiết (M:cơ/E:điện) bỏ dấu °
     if (hasNonZeroMech) {
       const numElec = elec != null && elec !== '' ? Number(elec) : (!isNaN(numTotal) ? numTotal - numMech : 0);
-      const eStr = !isNaN(numElec) ? `${numElec}°` : `${elec}`;
-      return `${totalStr} (M:${numMech}°/E:${eStr})`;
+      const eStr = !isNaN(numElec) ? `${numElec}` : `${elec}`;
+      return `${totalStr} (M:${numMech}/E:${eStr})`;
     }
-    // Nếu tilt cơ = 0 hoặc không có tilt cơ, chỉ ghi tilt tổng gọn gàng
+    // Nếu tilt cơ = 0 hoặc không có tilt cơ, chỉ ghi tilt tổng gọn gàng bỏ dấu °
     return totalStr;
   }
 
   if (mech != null || elec != null) {
     if (hasNonZeroMech) {
-      const eStr = elec != null && elec !== '' ? `${elec}°` : '0°';
-      return `M:${numMech}°/E:${eStr}`;
+      const eStr = elec != null && elec !== '' ? `${elec}` : '0';
+      return `M:${numMech}/E:${eStr}`;
     }
     if (elec != null && elec !== '') {
-      return `${elec}°`;
+      return `${elec}`;
     }
   }
 

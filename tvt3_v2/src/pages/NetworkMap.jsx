@@ -2317,7 +2317,7 @@ export default function NetworkMap() {
                   visible={layerCellSectors}
                   onSelectSector={(info) => {
                     const tiltPart = info.tiltStr ? ` | Tilt: ${info.tiltStr}` : '';
-                    showToast(`📡 ${info.site.site_id_old || info.site.site_id} Sector ${info.sector}: ${info.tech} (${info.azimuth}°${tiltPart})`);
+                    showToast(`📡 ${info.site.site_id_old || info.site.site_id} Sector ${info.sector}: ${info.tech} (Az: ${info.azimuth}${tiltPart})`);
                   }}
                 />
               ))}
@@ -2428,7 +2428,7 @@ export default function NetworkMap() {
                                       return (
                                         <div key={sIdx} className="flex items-center justify-between bg-white rounded px-1.5 py-0.5 border border-slate-200 text-[9.5px]">
                                           <div className="font-mono text-slate-700 flex items-center gap-1.5 flex-wrap">
-                                            <span className="font-bold">Az: {azVal}°</span>
+                                            <span className="font-bold">Az: {azVal}</span>
                                             {secTilt && (
                                               <span className="text-indigo-700 font-semibold bg-indigo-50 px-1 py-0.2 rounded border border-indigo-200 text-[8.5px]">
                                                 Tilt: {secTilt}
@@ -2953,7 +2953,7 @@ export default function NetworkMap() {
                               const secName = sec.sector || String.fromCharCode(65 + sIdx);
                               const hasAz = sec.azimuth != null;
                               const azVal = hasAz ? sec.azimuth : getFallbackAzimuth(secName, sIdx, sectors.length);
-                              const secLabel = `Az: ${azVal}°`;
+                              const secLabel = `Az: ${azVal}`;
                               const secTilt = getSectorTiltDisplay(sec, s);
                               const isSectorDual = sec.has_5g_l2 || (is5gA && (sec.has_5g_l1 || sec.has_5g));
                               return (
