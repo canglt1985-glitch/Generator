@@ -228,21 +228,36 @@ export function getSectorTiltDisplay(sec, site = null) {
     }
   }
 
+  // Nếu chưa có total nhưng có elec và mech = 0, gán total = elec
+  if (total == null && elec != null && elec !== '') {
+    total = elec;
+  }
+
+  const numMech = mech != null && mech !== '' ? Number(mech) : 0;
+  const hasNonZeroMech = !isNaN(numMech) && numMech !== 0;
+
   if (total != null && total !== '') {
     const numTotal = Number(total);
     const totalStr = !isNaN(numTotal) ? `${numTotal}°` : `${total}`;
-    if (mech != null || elec != null) {
-      const mStr = mech != null ? `${mech}°` : '0°';
-      const eStr = elec != null ? `${elec}°` : '0°';
-      return `${totalStr} (M:${mStr}/E:${eStr})`;
+    
+    // Nếu tilt cơ khác 0 thì hiển thị chi tiết (M:cơ/E:điện)
+    if (hasNonZeroMech) {
+      const numElec = elec != null && elec !== '' ? Number(elec) : (!isNaN(numTotal) ? numTotal - numMech : 0);
+      const eStr = !isNaN(numElec) ? `${numElec}°` : `${elec}`;
+      return `${totalStr} (M:${numMech}°/E:${eStr})`;
     }
+    // Nếu tilt cơ = 0 hoặc không có tilt cơ, chỉ ghi tilt tổng gọn gàng
     return totalStr;
   }
 
   if (mech != null || elec != null) {
-    const mStr = mech != null ? `${mech}°` : '0°';
-    const eStr = elec != null ? `${elec}°` : '0°';
-    return `M:${mStr}/E:${eStr}`;
+    if (hasNonZeroMech) {
+      const eStr = elec != null && elec !== '' ? `${elec}°` : '0°';
+      return `M:${numMech}°/E:${eStr}`;
+    }
+    if (elec != null && elec !== '') {
+      return `${elec}°`;
+    }
   }
 
   return null;
