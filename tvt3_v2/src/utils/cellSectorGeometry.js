@@ -383,19 +383,32 @@ export function getSiteCoverageType(site) {
 
   const mgmt = site.management_info || {};
   const tech = site.technical_info || {};
+  const classification = site.classification || {};
 
   const vungPhu = String(mgmt.vung_phu || tech.vung_phu || '').toUpperCase().trim();
-  const loaiTram = String(mgmt.loai_tram || tech.loai_tram || '').toUpperCase().trim();
+  const loaiTram = String(classification.loai_tram || mgmt.loai_tram || tech.loai_tram || '').toUpperCase().trim();
+  const phaPtm = String(mgmt.pha_ptm || tech.pha_ptm || '').toUpperCase().trim();
   const sid = String(site.site_id || '').toUpperCase().trim();
   const sold = String(site.site_id_old || '').toUpperCase().trim();
   const sname = String(site.name || '').toUpperCase().trim();
 
+  const rf = site.technical_info?.rf_summary || {};
+  const cells = site.technical_info?.cells || [];
+  const totalCells = Number(rf.total_cells || 0);
+  const cells3g = Number(rf.cells_3g || 0);
+  const cells4g = Number(rf.cells_4g || 0);
+  const cells5g = Number(rf.cells_5g || 0);
+  const hasSite5g = Boolean(rf.has_5g || cells5g > 0 || rf.cells_5g_l1 > 0 || rf.cells_5g_l2 > 0);
+  const hasZeroRadioCells = (totalCells === 0 && cells3g === 0 && cells4g === 0 && !hasSite5g && cells.length === 0);
+
   // 1. Kiểm tra trạm AGG (Truyền dẫn): Không có cell 3G/4G/5G -> Không vẽ cánh sóng!
   const isAgg = vungPhu === 'AGG' || vungPhu.includes('AGG') ||
                 loaiTram === 'AGG' || loaiTram.includes('AGG') ||
+                phaPtm.includes('AGG') ||
                 sid.startsWith('AGG') || sold.startsWith('AGG') || sname.startsWith('AGG') ||
-                sid === 'DNIDQN1' || sid === 'DNIDGI32' || sid === 'ILA-DNIXLC' ||
-                sold === 'DNIDQN1' || sold === 'DNTNL2' || sold === 'ILA-DNIXLC';
+                sid === 'DNIDQN1' || sid === 'DNIDGI32' || sid === 'ILA-DNIXLC' || sid === 'DNILKH1' ||
+                sold === 'DNIDQN1' || sold === 'DNTNL2' || sold === 'ILA-DNIXLC' || sold === 'DNILKH1' ||
+                (hasZeroRadioCells && (loaiTram.includes('AGG') || phaPtm.includes('AGG') || sname.includes('AGG')));
 
   if (isAgg) {
     return { isIbc: false, isSmallCell: false, isAgg: true, isOmni: false, typeLabel: 'AGG' };

@@ -4,7 +4,7 @@ import {
   Radio, Compass, Layers, Zap, CheckCircle2, 
   ArrowUpRight, RefreshCw, Filter, Info, ShieldCheck, Activity
 } from 'lucide-react';
-import { SECTOR_LAYER_CONFIG } from '../../utils/cellSectorGeometry';
+import { SECTOR_LAYER_CONFIG, getSiteCoverageType } from '../../utils/cellSectorGeometry';
 
 export default function SiteRfDataPanel({ site }) {
   const [cells, setCells] = useState([]);
@@ -15,6 +15,7 @@ export default function SiteRfDataPanel({ site }) {
   const siteId = site?.site_id;
   const siteIdOld = site?.site_id_old;
   const rfSummary = site?.technical_info?.rf_summary;
+  const coverage = getSiteCoverageType(site);
 
   useEffect(() => {
     if (!siteId) return;
@@ -123,6 +124,29 @@ export default function SiteRfDataPanel({ site }) {
 
     return `M ${p1.x} ${p1.y} A ${rOuter} ${rOuter} 0 0 1 ${p2.x} ${p2.y} L ${p3.x} ${p3.y} A ${rInner} ${rInner} 0 0 0 ${p4.x} ${p4.y} Z`;
   };
+
+  if (coverage.isAgg || (!loading && cells.length === 0 && (rfSummary?.total_cells || 0) === 0 && !rfSummary?.has_5g && (rfSummary?.cells_5g || 0) === 0 && (rfSummary?.cells_4g || 0) === 0 && (rfSummary?.cells_3g || 0) === 0)) {
+    return (
+      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-8 text-center space-y-4 my-2">
+        <div className="w-14 h-14 bg-slate-200 text-slate-600 rounded-2xl flex items-center justify-center mx-auto text-2xl font-bold shadow-xs">
+          📡
+        </div>
+        <div className="max-w-md mx-auto space-y-2">
+          <span className="inline-block px-3 py-0.5 rounded-full text-[11px] font-bold bg-slate-200 text-slate-700 border border-slate-300">
+            {coverage.isAgg ? 'TRẠM TRUYỀN DẪN AGG / CSG' : 'TRẠM CHƯA CÓ CELL VÔ TUYẾN'}
+          </span>
+          <h3 className="text-base font-bold text-slate-800">
+            {site?.site_id_old || site?.site_id} - {site?.name}
+          </h3>
+          <p className="text-xs text-slate-500 leading-relaxed">
+            {coverage.isAgg
+              ? 'Trạm đóng vai trò node truyền dẫn cáp quang (AGG Hub / CSG / BBU tập trung), không phát sóng cell vô tuyến di động trực tiếp (0 cell vô tuyến), do đó không có thông số búp sóng Cell Sector hoặc góc Azimuth.'
+              : 'Trạm hiện chưa có dữ liệu cell vô tuyến 3G/4G/5G on-air trên hệ thống.'}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">

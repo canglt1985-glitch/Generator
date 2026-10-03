@@ -178,18 +178,37 @@ const getInfraProjectCategory = (proj) => {
 const getSiteRadioInfo = (site) => {
   const mgmt = site?.management_info || {};
   const tech = site?.technical_info || {};
+  const classification = site?.classification || {};
+
   const vungPhu = String(mgmt.vung_phu || tech.vung_phu || '').toUpperCase().trim();
-  const loaiTram = String(mgmt.loai_tram || tech.loai_tram || '').toUpperCase().trim();
+  const loaiTram = String(classification.loai_tram || mgmt.loai_tram || tech.loai_tram || '').toUpperCase().trim();
+  const phaPtm = String(mgmt.pha_ptm || tech.pha_ptm || '').toUpperCase().trim();
   const sid = String(site?.site_id || '').toUpperCase().trim();
   const sold = String(site?.site_id_old || '').toUpperCase().trim();
   const sname = String(site?.name || '').toUpperCase().trim();
 
+  const rf = site?.technical_info?.rf_summary;
+  const cells = site?.technical_info?.cells || [];
+  const totalCells = Number(rf?.total_cells || 0);
+  const cells3g = Number(rf?.cells_3g || 0);
+  const cells4g = Number(rf?.cells_4g || 0);
+  const cells5g = Number(rf?.cells_5g || 0);
+  const has5g = Boolean(rf?.has_5g || cells5g > 0);
+  const is5gA = Boolean(rf?.is_dual_5g || (rf?.cells_5g_l2 > 0));
+  const has3g = Boolean(cells3g > 0);
+  const has4g = Boolean(cells4g > 0);
+  const isSranScope = Boolean(rf?.is_sran_swap);
+
+  const hasZeroRadioCells = totalCells === 0 && !has3g && !has4g && !has5g && cells.length === 0;
+
   // 1. Trạm AGG (Truyền dẫn): Không có phát sóng vô tuyến 3G/4G/5G -> Không có cánh sóng
   const isAgg = vungPhu === 'AGG' || vungPhu.includes('AGG') ||
                 loaiTram === 'AGG' || loaiTram.includes('AGG') ||
+                phaPtm.includes('AGG') ||
                 sid.startsWith('AGG') || sold.startsWith('AGG') || sname.startsWith('AGG') ||
-                sid === 'DNIDQN1' || sid === 'DNIDGI32' || sid === 'ILA-DNIXLC' ||
-                sold === 'DNIDQN1' || sold === 'DNTNL2' || sold === 'ILA-DNIXLC';
+                sid === 'DNIDQN1' || sid === 'DNIDGI32' || sid === 'ILA-DNIXLC' || sid === 'DNILKH1' ||
+                sold === 'DNIDQN1' || sold === 'DNTNL2' || sold === 'ILA-DNIXLC' || sold === 'DNILKH1' ||
+                (hasZeroRadioCells && (loaiTram.includes('AGG') || phaPtm.includes('AGG') || sname.includes('AGG')));
 
   if (isAgg) {
     return {
@@ -203,14 +222,6 @@ const getSiteRadioInfo = (site) => {
       badgeClass: 'bg-slate-100 text-slate-800 border border-slate-300'
     };
   }
-
-  const rf = site?.technical_info?.rf_summary;
-  const has5g = Boolean(rf?.has_5g || rf?.cells_5g > 0);
-  const is5gA = Boolean(rf?.is_dual_5g || (rf?.cells_5g_l2 > 0));
-  const has3g = Boolean(rf?.cells_3g > 0);
-  const has4g = Boolean(rf?.cells_4g > 0);
-  // CHỈ trạm nào có giải pháp swap là 3G4G mới là SRAN
-  const isSranScope = Boolean(rf?.is_sran_swap);
 
   if (is5gA) {
     if (isSranScope) {
@@ -347,6 +358,31 @@ const getSiteRadioInfo = (site) => {
       color: '#22c55e', // Xanh lá
       textColor: 'text-emerald-700',
       badgeClass: 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+    };
+  }
+
+  if (hasZeroRadioCells) {
+    if (loaiTram.includes('MORAN') || phaPtm.includes('VNPT')) {
+      return {
+        key: 'moran',
+        isAgg: false,
+        isSranScope: false,
+        tech: 'MORAN',
+        label: 'MORAN (Host VNPT)',
+        color: '#0284c7', // Sky blue
+        textColor: 'text-sky-700',
+        badgeClass: 'bg-sky-100 text-sky-800 border border-sky-300'
+      };
+    }
+    return {
+      key: 'no_cells',
+      isAgg: false,
+      isSranScope: false,
+      tech: 'Chưa có Cell',
+      label: 'Chưa có cell vô tuyến',
+      color: '#94a3b8',
+      textColor: 'text-slate-600',
+      badgeClass: 'bg-slate-100 text-slate-700 border border-slate-300'
     };
   }
 
@@ -2573,9 +2609,26 @@ export default function NetworkMap() {
                               const cells3g = rf.cells_3g ?? rf.tech_counts?.['3G'] ?? 0;
                               const cells4g = rf.cells_4g ?? rf.tech_counts?.['4G'] ?? 0;
                               const cells5g = rf.cells_5g ?? rf.tech_counts?.['5G'] ?? 0;
+                              const totalCells = rf.total_cells ?? (cells3g + cells4g + cells5g);
                               const has5g = cells5g > 0;
                               const is5gA = Boolean(rf.is_dual_5g || rf.cells_5g_l2 > 0);
                               const sectors = Array.isArray(rf.sectors) ? rf.sectors : [];
+
+                              if (radio.isAgg || (totalCells === 0 && cells3g === 0 && cells4g === 0 && !has5g)) {
+                                return (
+                                  <div className="bg-slate-50 border border-slate-200/80 rounded-lg p-2 text-[10px] space-y-1 text-slate-600">
+                                    <div className="font-bold text-slate-700 flex items-center justify-between">
+                                      <span className="flex items-center gap-1">📡 {radio.isAgg ? 'Trạm truyền dẫn AGG / CSG' : 'Trạm Hub / Chưa có Cell Vô tuyến'}</span>
+                                      <span className="px-1.5 py-0.2 rounded text-[8.5px] font-bold bg-slate-200 text-slate-700">0 Cell</span>
+                                    </div>
+                                    <p className="text-[9.5px] text-slate-500 leading-relaxed">
+                                      {radio.isAgg 
+                                        ? 'Trạm đóng vai trò node truyền dẫn cáp quang / BBU tập trung, không phát sóng cell vô tuyến di động.'
+                                        : 'Trạm hiện chưa có dữ liệu cell vô tuyến phát sóng di động trực tiếp.'}
+                                    </p>
+                                  </div>
+                                );
+                              }
 
                               return (
                                 <div className="bg-slate-50 border border-slate-200/80 rounded-lg p-1.5 text-[10px] space-y-1">
@@ -2694,9 +2747,26 @@ export default function NetworkMap() {
                               const cells3g = rf.cells_3g ?? rf.tech_counts?.['3G'] ?? 0;
                               const cells4g = rf.cells_4g ?? rf.tech_counts?.['4G'] ?? 0;
                               const cells5g = rf.cells_5g ?? rf.tech_counts?.['5G'] ?? 0;
+                              const totalCells = rf.total_cells ?? (cells3g + cells4g + cells5g);
                               const has5g = cells5g > 0;
                               const is5gA = Boolean(rf.is_dual_5g || rf.cells_5g_l2 > 0);
                               const sectors = Array.isArray(rf.sectors) ? rf.sectors : [];
+
+                              if (radio.isAgg || (totalCells === 0 && cells3g === 0 && cells4g === 0 && !has5g)) {
+                                return (
+                                  <div className="bg-slate-50 border border-slate-200/80 rounded-lg p-2 text-[10px] space-y-1 text-slate-600">
+                                    <div className="font-bold text-slate-700 flex items-center justify-between">
+                                      <span className="flex items-center gap-1">📡 {radio.isAgg ? 'Trạm truyền dẫn AGG / CSG' : 'Trạm Hub / Chưa có Cell Vô tuyến'}</span>
+                                      <span className="px-1.5 py-0.2 rounded text-[8.5px] font-bold bg-slate-200 text-slate-700">0 Cell</span>
+                                    </div>
+                                    <p className="text-[9.5px] text-slate-500 leading-relaxed">
+                                      {radio.isAgg 
+                                        ? 'Trạm đóng vai trò node truyền dẫn cáp quang / BBU tập trung, không phát sóng cell vô tuyến di động.'
+                                        : 'Trạm hiện chưa có dữ liệu cell vô tuyến phát sóng di động trực tiếp.'}
+                                    </p>
+                                  </div>
+                                );
+                              }
 
                               return (
                                 <div className="bg-slate-50 border border-slate-200/80 rounded-lg p-1.5 text-[10px] space-y-1">

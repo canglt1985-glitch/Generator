@@ -112,8 +112,17 @@ export default function CellSectorWedges({
   const sectors = rfSummary?.sectors;
   if (!Array.isArray(sectors) || sectors.length === 0) return null;
 
+  // Trạm không có cell vô tuyến nào (0 cell vô tuyến) tuyệt đối KHÔNG vẽ cánh sóng
+  const totalCells = Number(rfSummary?.total_cells || 0);
+  const cells3g = Number(rfSummary?.cells_3g || 0);
+  const cells4g = Number(rfSummary?.cells_4g || 0);
+  const cells5g = Number(rfSummary?.cells_5g || 0);
+  const has5g = Boolean(rfSummary?.has_5g || cells5g > 0);
+  if (totalCells === 0 && cells3g === 0 && cells4g === 0 && !has5g) {
+    return null;
+  }
+
   const isDual5g = Boolean(rfSummary?.is_dual_5g);
-  const has5g = Boolean(rfSummary?.has_5g || rfSummary?.cells_5g > 0);
   const isSranSwap = Boolean(rfSummary?.is_sran_swap);
 
 
