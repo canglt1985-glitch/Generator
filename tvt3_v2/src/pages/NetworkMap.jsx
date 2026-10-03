@@ -1783,20 +1783,20 @@ export default function NetworkMap() {
         {/* 2. Mobile Top Floating Search Pill & Quick Filter Chips */}
         <div className="absolute top-[max(0.625rem,env(safe-area-inset-top,0px))] left-2.5 right-2.5 z-[1000] flex lg:hidden flex-col gap-1.5 pointer-events-auto font-sans">
           <form onSubmit={handleUnifiedSearch} className="relative w-full">
-            <div className="bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-full pl-3 pr-1.5 py-1 shadow-xl flex items-center gap-1.5">
-              <Search className="h-4 w-4 text-cyan-400 shrink-0" />
+            <div className="bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-full pl-3 pr-1.5 py-1 shadow-lg flex items-center gap-1.5 text-slate-800">
+              <Search className="h-4 w-4 text-cyan-600 shrink-0" />
               <input
                 type="text"
                 value={coordinateInput}
                 onChange={(e) => handleUnifiedQueryChange(e.target.value)}
                 placeholder="Tìm mã trạm (VD: DNLK51) hoặc tọa độ..."
-                className="bg-transparent border-none outline-none text-white text-xs w-full placeholder-slate-500 font-sans min-w-0"
+                className="bg-transparent border-none outline-none text-slate-800 text-xs w-full placeholder-slate-400 font-sans min-w-0"
               />
               {coordinateInput && (
                 <button
                   type="button"
                   onClick={() => { setCoordinateInput(''); setSearchSuggestions([]); }}
-                  className="p-1 text-slate-400 hover:text-white shrink-0 cursor-pointer"
+                  className="p-1 text-slate-400 hover:text-slate-600 shrink-0 cursor-pointer"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
@@ -1805,7 +1805,7 @@ export default function NetworkMap() {
                 type="button"
                 onClick={() => setShowLayersPopup(!showLayersPopup)}
                 className={`p-1.5 rounded-full transition-all shrink-0 cursor-pointer ${
-                  showLayersPopup ? 'bg-cyan-500/30 text-cyan-400 ring-1 ring-cyan-400' : 'text-slate-400 hover:text-white'
+                  showLayersPopup ? 'bg-cyan-50 text-cyan-700 ring-1 ring-cyan-300' : 'text-slate-500 hover:text-slate-800'
                 }`}
                 title="Phân lớp bản đồ"
               >
@@ -1815,11 +1815,11 @@ export default function NetworkMap() {
                 type="button"
                 onClick={handleToggleGPS}
                 className={`p-1.5 rounded-full transition-all shrink-0 cursor-pointer ${
-                  useGPS ? 'bg-cyan-500/30 text-cyan-400 ring-1 ring-cyan-400 animate-pulse' : 'text-slate-400 hover:text-white'
+                  useGPS ? 'bg-cyan-50 text-cyan-700 ring-1 ring-cyan-300 animate-pulse' : 'text-slate-500 hover:text-slate-800'
                 }`}
                 title={useGPS ? "Đang theo dõi GPS (Bấm để tắt)" : "Định vị vị trí của tôi"}
               >
-                <Compass className={`h-4 w-4 ${useGPS ? 'animate-spin text-cyan-400' : ''}`} style={{ animationDuration: useGPS ? '6s' : '0s' }} />
+                <Compass className={`h-4 w-4 ${useGPS ? 'animate-spin text-cyan-600' : ''}`} style={{ animationDuration: useGPS ? '6s' : '0s' }} />
               </button>
               <button
                 type="submit"
@@ -1831,28 +1831,32 @@ export default function NetworkMap() {
 
             {/* Mobile Suggestions Dropdown */}
             {searchSuggestions.length > 0 && (
-              <div className="absolute left-0 right-0 top-full mt-1.5 z-[1100] bg-slate-900/95 backdrop-blur-xl border border-slate-700/90 rounded-2xl shadow-2xl divide-y divide-slate-800/80 max-h-56 overflow-y-auto font-sans">
+              <div className="absolute left-0 right-0 top-full mt-1.5 z-[1100] bg-white/98 backdrop-blur-xl border border-slate-200 rounded-2xl shadow-2xl divide-y divide-slate-100 max-h-56 overflow-y-auto font-sans text-slate-800">
                 {searchSuggestions.map((item) => (
                   <button
                     key={item.id}
                     type="button"
                     onClick={() => handleSelectSuggestion(item)}
-                    className="w-full text-left px-3.5 py-2 hover:bg-slate-800/90 active:bg-slate-800 transition-colors flex flex-col gap-0.5 cursor-pointer"
+                    className="w-full text-left px-3.5 py-2 hover:bg-slate-50 active:bg-slate-100 transition-colors flex flex-col gap-0.5 cursor-pointer"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-cyan-400 text-xs">{item.code}</span>
-                      <span className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded ${item.badgeClass || 'bg-blue-500/10 text-blue-400'}`}>
+                      <span className="font-bold text-cyan-700 text-xs">{item.code}</span>
+                      <span className={`text-[8.5px] font-extrabold px-1.5 py-0.2 rounded ${
+                        item.type === 'Hoạt động' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
+                        item.type === 'TVT3 Trình Ký' ? 'bg-purple-50 text-purple-700 border border-purple-200' :
+                        'bg-orange-50 text-orange-700 border border-orange-200'
+                      }`}>
                         {item.type}
                       </span>
                     </div>
-                    <span className="text-[10px] text-slate-400 truncate">{item.name}</span>
+                    <span className="text-[10px] text-slate-500 truncate">{item.name}</span>
                   </button>
                 ))}
               </div>
             )}
           </form>
 
-          {/* Quick Horizontal Layer Filter Chips (One-thumb ease) */}
+          {/* Quick Horizontal Layer Filter Chips (One-thumb ease) - LIGHT MODE */}
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 px-0.5 select-none -mx-0.5">
             {/* Base Map Cycle Button */}
             <button
@@ -1863,7 +1867,7 @@ export default function NetworkMap() {
                 setSelectedTileLayer(order[nextIdx]);
                 showToast(`Bản đồ: ${TILE_LAYERS[order[nextIdx]].name}`);
               }}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10.5px] font-bold bg-slate-900/90 backdrop-blur-md border border-slate-700/80 text-slate-200 active:scale-95 transition-all shadow-md shrink-0 cursor-pointer"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10.5px] font-bold bg-white/95 backdrop-blur-md border border-slate-200 text-slate-700 active:scale-95 transition-all shadow-sm shrink-0 cursor-pointer hover:bg-slate-50"
             >
               <span>{selectedTileLayer === 'google_satellite' ? '🛰️ Vệ tinh' : selectedTileLayer === 'google_hybrid' ? '🗺️ Hỗn hợp' : '🚗 OSM'}</span>
             </button>
@@ -1875,14 +1879,14 @@ export default function NetworkMap() {
                 setLayerActiveSites(!layerActiveSites);
                 showToast(!layerActiveSites ? 'Đã bật trạm MobiFone' : 'Đã ẩn trạm MobiFone');
               }}
-              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10.5px] font-bold backdrop-blur-md border active:scale-95 transition-all shadow-md shrink-0 cursor-pointer ${
+              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10.5px] font-bold backdrop-blur-md border active:scale-95 transition-all shadow-sm shrink-0 cursor-pointer ${
                 layerActiveSites 
-                  ? 'bg-blue-950/90 border-blue-500/80 text-blue-200 ring-1 ring-blue-500/40' 
-                  : 'bg-slate-900/80 border-slate-700/60 text-slate-400 opacity-60'
+                  ? 'bg-blue-50 border-blue-400 text-blue-800 ring-1 ring-blue-300' 
+                  : 'bg-white/80 border-slate-200 text-slate-400 opacity-70'
               }`}
             >
               <span>🔵 Trạm</span>
-              <span className="text-[9px] px-1 rounded-full bg-blue-900/80 font-black">{activeSites.length}</span>
+              <span className="text-[9px] px-1 rounded-full bg-blue-100 text-blue-800 font-black">{activeSites.length}</span>
             </button>
 
             {/* Cánh sóng Vô tuyến 3G/4G/5G (Chỉ hiển thị cho Cán bộ Tổ) */}
@@ -1893,10 +1897,10 @@ export default function NetworkMap() {
                   setLayerCellSectors(!layerCellSectors);
                   showToast(!layerCellSectors ? 'Đã bật cánh sóng vô tuyến' : 'Đã ẩn cánh sóng vô tuyến');
                 }}
-                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10.5px] font-bold backdrop-blur-md border active:scale-95 transition-all shadow-md shrink-0 cursor-pointer ${
+                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10.5px] font-bold backdrop-blur-md border active:scale-95 transition-all shadow-sm shrink-0 cursor-pointer ${
                   layerCellSectors 
-                    ? 'bg-rose-950/90 border-rose-500/80 text-rose-200 ring-1 ring-rose-500/40' 
-                    : 'bg-slate-900/80 border-slate-700/60 text-slate-400 opacity-60'
+                    ? 'bg-rose-50 border-rose-400 text-rose-800 ring-1 ring-rose-300' 
+                    : 'bg-white/80 border-slate-200 text-slate-400 opacity-70'
                 }`}
                 title="Búp sóng vô tuyến đa tầng: 3G (xanh lá), 4G (cyan), 4G SRAN, 5G L1 (đỏ), 5G-A (tím)"
               >
@@ -1911,14 +1915,14 @@ export default function NetworkMap() {
                 setLayerPlanningInfra(!layerPlanningInfra);
                 showToast(!layerPlanningInfra ? 'Đã bật trạm Quy hoạch CSHT' : 'Đã ẩn trạm Quy hoạch CSHT');
               }}
-              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10.5px] font-bold backdrop-blur-md border active:scale-95 transition-all shadow-md shrink-0 cursor-pointer ${
+              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10.5px] font-bold backdrop-blur-md border active:scale-95 transition-all shadow-sm shrink-0 cursor-pointer ${
                 layerPlanningInfra 
-                  ? 'bg-orange-950/90 border-orange-500/80 text-orange-200 ring-1 ring-orange-500/40' 
-                  : 'bg-slate-900/80 border-slate-700/60 text-slate-400 opacity-60'
+                  ? 'bg-amber-50 border-amber-400 text-amber-800 ring-1 ring-amber-300' 
+                  : 'bg-white/80 border-slate-200 text-slate-400 opacity-70'
               }`}
             >
               <span>📍 Quy hoạch</span>
-              <span className="text-[9px] px-1 rounded-full bg-orange-900/80 font-black">{infraProjects.length}</span>
+              <span className="text-[9px] px-1 rounded-full bg-amber-100 text-amber-800 font-black">{infraProjects.length}</span>
             </button>
 
             {/* Tuyến cáp Lastmile */}
@@ -1928,23 +1932,23 @@ export default function NetworkMap() {
                 setLayerLastmile(!layerLastmile);
                 showToast(!layerLastmile ? 'Đã bật tuyến Lastmile' : 'Đã ẩn tuyến Lastmile');
               }}
-              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10.5px] font-bold backdrop-blur-md border active:scale-95 transition-all shadow-md shrink-0 cursor-pointer ${
+              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10.5px] font-bold backdrop-blur-md border active:scale-95 transition-all shadow-sm shrink-0 cursor-pointer ${
                 layerLastmile 
-                  ? 'bg-cyan-950/90 border-cyan-500/80 text-cyan-200 ring-1 ring-cyan-500/40' 
-                  : 'bg-slate-900/80 border-slate-700/60 text-slate-400 opacity-60'
+                  ? 'bg-cyan-50 border-cyan-400 text-cyan-800 ring-1 ring-cyan-300' 
+                  : 'bg-white/80 border-slate-200 text-slate-400 opacity-70'
               }`}
             >
               <span>🔌 Cáp</span>
-              <span className="text-[9px] px-1 rounded-full bg-cyan-900/80 font-black">{transmissionLines.length}</span>
+              <span className="text-[9px] px-1 rounded-full bg-cyan-100 text-cyan-800 font-black">{transmissionLines.length}</span>
             </button>
 
             {/* Mở toàn bộ phân lớp */}
             <button
               type="button"
               onClick={() => setShowLayersPopup(true)}
-              className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10.5px] font-semibold bg-slate-800/90 border border-slate-700/80 text-slate-300 shrink-0 cursor-pointer"
+              className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10.5px] font-semibold bg-white/95 border border-slate-200 text-slate-600 hover:bg-slate-50 shrink-0 cursor-pointer shadow-sm"
             >
-              <Layers className="h-3 w-3" />
+              <Layers className="h-3 w-3 text-cyan-600" />
               <span>Bộ lọc</span>
             </button>
           </div>
@@ -1964,8 +1968,8 @@ export default function NetworkMap() {
             <button
               type="button"
               onClick={() => setShowLayersPopup(!showLayersPopup)}
-              className={`h-10 w-10 bg-slate-900/90 hover:bg-slate-800 text-white rounded-xl border shadow-xl flex items-center justify-center transition-all cursor-pointer ${
-                showLayersPopup ? 'border-cyan-500 text-cyan-400 ring-2 ring-cyan-500/30' : 'border-slate-700/80'
+              className={`h-10 w-10 bg-white/95 hover:bg-slate-100 text-slate-700 rounded-xl border shadow-xl flex items-center justify-center transition-all cursor-pointer ${
+                showLayersPopup ? 'border-cyan-500 text-cyan-700 ring-2 ring-cyan-500/30' : 'border-slate-200'
               }`}
               title="Phân lớp bản đồ (Nền vệ tinh & Phân lớp dữ liệu trạm)"
             >
@@ -1973,16 +1977,16 @@ export default function NetworkMap() {
             </button>
 
             {showLayersPopup && !isMobile && (
-              <div className="absolute right-12 bottom-0 w-80 bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-2xl p-3 shadow-2xl space-y-3 text-xs text-white z-[1100] max-h-[85vh] overflow-y-auto font-sans">
-                <div className="flex items-center justify-between pb-1.5 border-b border-slate-800">
-                  <div className="flex items-center gap-1.5 text-cyan-400 font-bold text-xs">
+              <div className="absolute right-12 bottom-0 w-80 bg-white/98 backdrop-blur-md border border-slate-200 rounded-2xl p-3 shadow-2xl space-y-3 text-xs text-slate-800 z-[1100] max-h-[85vh] overflow-y-auto font-sans">
+                <div className="flex items-center justify-between pb-1.5 border-b border-slate-200">
+                  <div className="flex items-center gap-1.5 text-cyan-700 font-bold text-xs">
                     <Layers className="h-4 w-4" />
                     <span>PHÂN LỚP BẢN ĐỒ</span>
                   </div>
                   <button 
                     type="button"
                     onClick={() => setShowLayersPopup(false)}
-                    className="h-5 w-5 rounded-md hover:bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                    className="h-5 w-5 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-800 flex items-center justify-center transition-colors cursor-pointer"
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>
@@ -1990,7 +1994,7 @@ export default function NetworkMap() {
 
                 {/* 1. Lớp Bản Đồ Nền (Base Maps - Chọn 1 trong 3) */}
                 <div className="space-y-1.5">
-                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                     Bản đồ nền (Mặc định: Vệ tinh thuần):
                   </div>
                   <div className="grid grid-cols-3 gap-1.5">
@@ -2006,13 +2010,13 @@ export default function NetworkMap() {
                           }}
                           className={`p-2 rounded-xl text-center transition-all cursor-pointer flex flex-col items-center gap-1 border ${
                             isSelected
-                              ? 'bg-cyan-600/25 border-cyan-500 text-cyan-300 font-bold ring-1 ring-cyan-500/40 shadow-sm shadow-cyan-500/20'
-                              : 'bg-slate-800/60 border-slate-700/60 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                              ? 'bg-cyan-50 border-cyan-500 text-cyan-800 font-bold ring-1 ring-cyan-500/40 shadow-xs'
+                              : 'bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-800 hover:bg-slate-100'
                           }`}
                         >
                           <span className="text-base">{layer.id === 'google_satellite' ? '🛰️' : layer.id === 'google_hybrid' ? '🗺️' : '🚗'}</span>
                           <span className="text-[10.5px] leading-tight font-semibold">{layer.name}</span>
-                          {isSelected && <span className="h-1.5 w-1.5 rounded-full bg-cyan-400"></span>}
+                          {isSelected && <span className="h-1.5 w-1.5 rounded-full bg-cyan-600"></span>}
                         </button>
                       );
                     })}
@@ -2020,9 +2024,9 @@ export default function NetworkMap() {
                 </div>
 
                 {/* 2. Phân Lớp Dữ Liệu (Overlays - Bật / Tắt 1 hoặc nhiều lớp) */}
-                <div className="space-y-1.5 pt-2 border-t border-slate-800">
+                <div className="space-y-1.5 pt-2 border-t border-slate-200">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                       Phân lớp dữ liệu (chọn nhiều):
                     </span>
                     <div className="flex items-center gap-1.5 text-[10px]">
@@ -2036,11 +2040,11 @@ export default function NetworkMap() {
                           setShowCoverageCircle(true);
                           showToast('Đã bật tất cả phân lớp');
                         }}
-                        className="text-cyan-400 hover:underline cursor-pointer font-semibold"
+                        className="text-cyan-700 hover:underline cursor-pointer font-semibold"
                       >
                         Bật hết
                       </button>
-                      <span className="text-slate-600">•</span>
+                      <span className="text-slate-300">•</span>
                       <button
                         type="button"
                         onClick={() => {
@@ -2051,7 +2055,7 @@ export default function NetworkMap() {
                           setShowCoverageCircle(false);
                           showToast('Đã tắt tất cả phân lớp');
                         }}
-                        className="text-slate-400 hover:text-slate-200 hover:underline cursor-pointer"
+                        className="text-slate-500 hover:text-slate-800 hover:underline cursor-pointer"
                       >
                         Tắt hết
                       </button>
@@ -2060,113 +2064,113 @@ export default function NetworkMap() {
 
                   <div className="space-y-1">
                     {/* Layer 1: Trạm hoạt động MobiFone */}
-                    <label className="flex items-center justify-between p-2 rounded-xl bg-slate-800/50 hover:bg-slate-800/90 border border-slate-700/60 cursor-pointer transition-colors">
+                    <label className="flex items-center justify-between p-2 rounded-xl bg-slate-50/80 hover:bg-slate-100/80 border border-slate-200/80 cursor-pointer transition-colors">
                       <div className="flex items-center gap-2.5 min-w-0">
                         <input
                           type="checkbox"
                           checked={layerActiveSites}
                           onChange={(e) => setLayerActiveSites(e.target.checked)}
-                          className="rounded border-slate-600 text-blue-600 focus:ring-blue-500 h-4 w-4 bg-slate-900 cursor-pointer"
+                          className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-4 w-4 bg-white cursor-pointer"
                         />
                         <div className="min-w-0">
-                          <div className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                          <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                             <span className="h-2 w-2 rounded-full bg-blue-500 shrink-0"></span>
                             <span>Trạm MobiFone (Hiện hữu)</span>
                           </div>
-                          <div className="text-[10px] text-slate-400 truncate">Hiển thị chấm tròn và text ID trạm</div>
+                          <div className="text-[10px] text-slate-500 truncate">Hiển thị chấm tròn và text ID trạm</div>
                         </div>
                       </div>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-950 text-blue-300 border border-blue-700/50 shrink-0">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 shrink-0">
                         {activeSites.length}
                       </span>
                     </label>
 
                     {/* Layer 2: Cánh sóng Vô tuyến 3G/4G/5G (Chỉ cho nội bộ) */}
                     {!isGuest && (
-                      <label className="flex items-center justify-between p-2 rounded-xl bg-slate-800/50 hover:bg-slate-800/90 border border-slate-700/60 cursor-pointer transition-colors">
+                      <label className="flex items-center justify-between p-2 rounded-xl bg-slate-50/80 hover:bg-slate-100/80 border border-slate-200/80 cursor-pointer transition-colors">
                         <div className="flex items-center gap-2.5 min-w-0">
                           <input
                             type="checkbox"
                             checked={layerCellSectors}
                             onChange={(e) => setLayerCellSectors(e.target.checked)}
-                            className="rounded border-slate-600 text-rose-500 focus:ring-rose-500 h-4 w-4 bg-slate-900 cursor-pointer"
+                            className="rounded border-slate-300 text-rose-500 focus:ring-rose-500 h-4 w-4 bg-white cursor-pointer"
                           />
                           <div className="min-w-0">
-                            <div className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                            <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                               <span className="h-2 w-2 rounded-full bg-rose-500 shrink-0"></span>
                               <span>Cánh sóng Vô tuyến (3G/4G/5G)</span>
                             </div>
-                            <div className="text-[10px] text-slate-400 truncate">Búp sóng 4 tầng: 3G (xanh), 4G (cyan), 4G SRAN, 5G L1 (đỏ), 5G-A (tím)</div>
+                            <div className="text-[10px] text-slate-500 truncate">Búp sóng 4 tầng: 3G (xanh), 4G (cyan), 4G SRAN, 5G L1 (đỏ), 5G-A (tím)</div>
                           </div>
                         </div>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-950 text-rose-300 border border-rose-700/50 shrink-0">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 shrink-0">
                           360°
                         </span>
                       </label>
                     )}
 
                     {/* Layer 3: Trạm quy hoạch CSHT */}
-                    <label className="flex items-center justify-between p-2 rounded-xl bg-slate-800/50 hover:bg-slate-800/90 border border-slate-700/60 cursor-pointer transition-colors">
+                    <label className="flex items-center justify-between p-2 rounded-xl bg-slate-50/80 hover:bg-slate-100/80 border border-slate-200/80 cursor-pointer transition-colors">
                       <div className="flex items-center gap-2.5 min-w-0">
                         <input
                           type="checkbox"
                           checked={layerPlanningInfra}
                           onChange={(e) => setLayerPlanningInfra(e.target.checked)}
-                          className="rounded border-slate-600 text-amber-500 focus:ring-amber-500 h-4 w-4 bg-slate-900 cursor-pointer"
+                          className="rounded border-slate-300 text-amber-500 focus:ring-amber-500 h-4 w-4 bg-white cursor-pointer"
                         />
                         <div className="min-w-0">
-                          <div className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                            <span className="h-2 w-2 rounded-full bg-amber-400 shrink-0"></span>
+                          <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                            <span className="h-2 w-2 rounded-full bg-amber-500 shrink-0"></span>
                             <span>Trạm quy hoạch CSHT</span>
                           </div>
-                          <div className="text-[10px] text-slate-400 truncate">Vị trí CSHT quy hoạch phát triển (Sở KHCN)</div>
+                          <div className="text-[10px] text-slate-500 truncate">Vị trí CSHT quy hoạch phát triển (Sở KHCN)</div>
                         </div>
                       </div>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-950 text-amber-300 border border-amber-700/50 shrink-0">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 shrink-0">
                         {infraProjects.length}
                       </span>
                     </label>
 
                     {/* Layer 4: Tuyến truyền dẫn Lastmile */}
-                    <label className="flex items-center justify-between p-2 rounded-xl bg-slate-800/50 hover:bg-slate-800/90 border border-slate-700/60 cursor-pointer transition-colors">
+                    <label className="flex items-center justify-between p-2 rounded-xl bg-slate-50/80 hover:bg-slate-100/80 border border-slate-200/80 cursor-pointer transition-colors">
                       <div className="flex items-center gap-2.5 min-w-0">
                         <input
                           type="checkbox"
                           checked={layerLastmile}
                           onChange={(e) => setLayerLastmile(e.target.checked)}
-                          className="rounded border-slate-600 text-emerald-500 focus:ring-emerald-500 h-4 w-4 bg-slate-900 cursor-pointer"
+                          className="rounded border-slate-300 text-emerald-500 focus:ring-emerald-500 h-4 w-4 bg-white cursor-pointer"
                         />
                         <div className="min-w-0">
-                          <div className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                            <span className="h-2 w-2 rounded-full bg-emerald-400 shrink-0"></span>
+                          <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                            <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0"></span>
                             <span>Tuyến cáp Lastmile</span>
                           </div>
-                          <div className="text-[10px] text-slate-400 truncate">Tuyến truyền dẫn & trạm phụ thuộc</div>
+                          <div className="text-[10px] text-slate-500 truncate">Tuyến truyền dẫn & trạm phụ thuộc</div>
                         </div>
                       </div>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-700/50 shrink-0">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
                         {transmissionLines.length}
                       </span>
                     </label>
 
                     {/* Layer 5: Bán kính phủ sóng 500m */}
-                    <label className="flex items-center justify-between p-2 rounded-xl bg-slate-800/50 hover:bg-slate-800/90 border border-slate-700/60 cursor-pointer transition-colors">
+                    <label className="flex items-center justify-between p-2 rounded-xl bg-slate-50/80 hover:bg-slate-100/80 border border-slate-200/80 cursor-pointer transition-colors">
                       <div className="flex items-center gap-2.5 min-w-0">
                         <input
                           type="checkbox"
                           checked={showCoverageCircle}
                           onChange={(e) => setShowCoverageCircle(e.target.checked)}
-                          className="rounded border-slate-600 text-indigo-500 focus:ring-indigo-500 h-4 w-4 bg-slate-900 cursor-pointer"
+                          className="rounded border-slate-300 text-indigo-500 focus:ring-indigo-500 h-4 w-4 bg-white cursor-pointer"
                         />
                         <div className="min-w-0">
-                          <div className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                            <span className="h-2 w-2 rounded-full bg-indigo-400 shrink-0"></span>
+                          <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                            <span className="h-2 w-2 rounded-full bg-indigo-500 shrink-0"></span>
                             <span>Bán kính 500m</span>
                           </div>
-                          <div className="text-[10px] text-slate-400 truncate">Vòng tròn bán kính phủ quanh trạm</div>
+                          <div className="text-[10px] text-slate-500 truncate">Vòng tròn bán kính phủ quanh trạm</div>
                         </div>
                       </div>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-700/50 shrink-0">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 shrink-0">
                         500m
                       </span>
                     </label>
@@ -2180,22 +2184,22 @@ export default function NetworkMap() {
           <button
             type="button"
             onClick={handleToggleGPS}
-            className={`h-10 w-10 bg-slate-900/90 hover:bg-slate-800 text-white rounded-xl border shadow-xl flex items-center justify-center transition-all cursor-pointer ${
+            className={`h-10 w-10 bg-white/95 hover:bg-slate-100 text-slate-700 rounded-xl border shadow-xl flex items-center justify-center transition-all cursor-pointer ${
               useGPS 
-                ? 'border-cyan-500 text-cyan-400 ring-2 ring-cyan-500/40 animate-pulse' 
-                : 'border-slate-700/80 text-slate-300'
+                ? 'border-cyan-500 text-cyan-600 ring-2 ring-cyan-500/40 animate-pulse' 
+                : 'border-slate-200 text-slate-600'
             }`}
             title={useGPS ? "Đang bám theo GPS thực địa (Bấm để tắt)" : "Bật định vị GPS thực địa"}
           >
-            <Compass className={`h-5 w-5 ${useGPS ? 'animate-spin text-cyan-400' : ''}`} style={{ animationDuration: useGPS ? '8s' : '0s' }} />
+            <Compass className={`h-5 w-5 ${useGPS ? 'animate-spin text-cyan-600' : ''}`} style={{ animationDuration: useGPS ? '8s' : '0s' }} />
           </button>
 
           {/* Zoom In/Out Controls */}
-          <div className="flex flex-col bg-slate-900/90 border border-slate-700/80 rounded-xl overflow-hidden shadow-xl">
+          <div className="flex flex-col bg-white/95 border border-slate-200 rounded-xl overflow-hidden shadow-xl">
             <button
               type="button"
               onClick={() => setZoomLevel(prev => Math.min(prev + 1, 18))}
-              className="h-8 w-10 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 transition-colors border-b border-slate-700/60 font-bold text-sm cursor-pointer"
+              className="h-8 w-10 flex items-center justify-center text-slate-700 hover:text-slate-900 hover:bg-slate-100 transition-colors border-b border-slate-200 font-bold text-sm cursor-pointer"
               title="Phóng to (+)"
             >
               +
@@ -2203,7 +2207,7 @@ export default function NetworkMap() {
             <button
               type="button"
               onClick={() => setZoomLevel(prev => Math.max(prev - 1, 6))}
-              className="h-8 w-10 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 transition-colors font-bold text-sm cursor-pointer"
+              className="h-8 w-10 flex items-center justify-center text-slate-700 hover:text-slate-900 hover:bg-slate-100 transition-colors font-bold text-sm cursor-pointer"
               title="Thu nhỏ (-)"
             >
               −
@@ -2214,10 +2218,10 @@ export default function NetworkMap() {
           <button
             type="button"
             onClick={() => setIsFullscreen(!isFullscreen)}
-            className="h-10 w-10 bg-slate-900/90 hover:bg-slate-800 text-white rounded-xl border border-slate-700/80 shadow-xl flex items-center justify-center transition-all cursor-pointer hover:border-cyan-500"
+            className="h-10 w-10 bg-white/95 hover:bg-slate-100 text-slate-700 rounded-xl border border-slate-200 shadow-xl flex items-center justify-center transition-all cursor-pointer hover:border-cyan-500"
             title={isFullscreen ? "Thu nhỏ bản đồ (Esc)" : "Toàn màn hình"}
           >
-            {isFullscreen ? <Minimize2 className="h-5 w-5 text-cyan-400" /> : <Maximize2 className="h-5 w-5 text-cyan-400" />}
+            {isFullscreen ? <Minimize2 className="h-5 w-5 text-cyan-600" /> : <Maximize2 className="h-5 w-5 text-cyan-600" />}
           </button>
         </div>
 
@@ -2447,7 +2451,7 @@ export default function NetworkMap() {
                       position={[lat, lng]} 
                       icon={createSiteDivIcon(name, markerColor, currentZoom >= 12, isSelected)}
                       ref={(ref) => {
-                        if (ref && isSelected && !isMobile) {
+                        if (ref && isSelected) {
                           if (!ref.isPopupOpen()) {
                             ref.openPopup();
                           }
@@ -2464,17 +2468,6 @@ export default function NetworkMap() {
                             name,
                             radioInfo: radio
                           });
-                          if (isMobile) {
-                            setTimeout(() => {
-                              e.target?.closePopup?.();
-                            }, 50);
-                            const map = e.target._map;
-                            if (map) {
-                              const targetPoint = map.project([lat, lng], map.getZoom()).subtract([0, 130]);
-                              const targetLatLng = map.unproject(targetPoint, map.getZoom());
-                              map.panTo(targetLatLng, { animate: true });
-                            }
-                          }
                         }
                       }}
                     >
@@ -2494,8 +2487,12 @@ export default function NetworkMap() {
                             {/* Header trạm dành cho khách */}
                             <div className="flex items-center justify-between border-b border-slate-200/80 pb-1.5">
                               <div>
-                                <div className="text-[13px] font-bold text-slate-800">
-                                  Trạm: <span className="text-cyan-700">{displayName}</span>
+                                <div className="text-[13px] font-bold text-slate-800 flex items-center gap-1.5">
+                                  <span>Trạm:</span>
+                                  <span className="text-cyan-700">{displayName}</span>
+                                  <span className={`px-1.5 py-0.2 rounded text-[8.5px] font-extrabold ${radio.badgeClass}`}>
+                                    {radio.tech}
+                                  </span>
                                 </div>
                                 {site.name && (
                                   <div className="text-[10px] text-slate-500 font-medium">{site.name}</div>
@@ -2504,7 +2501,7 @@ export default function NetworkMap() {
                               <button 
                                 onClick={() => handleCopyStationInfo(site, lat, lng, displayName)}
                                 className="px-2 py-0.5 rounded text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold border border-slate-200 flex items-center gap-1 cursor-pointer shrink-0 transition-all"
-                                title="Sao chép 4 thông tin gửi Zalo"
+                                title="Sao chép thông tin trạm"
                               >
                                 <Copy className="h-2.5 w-2.5 text-cyan-600" /> Copy
                               </button>
@@ -2541,6 +2538,84 @@ export default function NetworkMap() {
                                 </span>
                               </div>
                             </div>
+
+                            {/* Thông số Vô tuyến (Tilt / Azimuth) cho trạm */}
+                            {site.technical_info?.rf_summary && (() => {
+                              const rf = site.technical_info.rf_summary;
+                              const cells3g = rf.cells_3g ?? rf.tech_counts?.['3G'] ?? 0;
+                              const cells4g = rf.cells_4g ?? rf.tech_counts?.['4G'] ?? 0;
+                              const cells5g = rf.cells_5g ?? rf.tech_counts?.['5G'] ?? 0;
+                              const has5g = cells5g > 0;
+                              const is5gA = Boolean(rf.is_dual_5g || rf.cells_5g_l2 > 0);
+                              const sectors = Array.isArray(rf.sectors) ? rf.sectors : [];
+
+                              return (
+                                <div className="bg-slate-50 border border-slate-200/80 rounded-lg p-1.5 text-[10px] space-y-1">
+                                  <div className="flex items-center justify-between pb-1 border-b border-slate-200/60">
+                                    <span className="font-bold text-slate-700 flex items-center gap-1">
+                                      📡 Cấu hình ({rf.total_cells || 0} cell)
+                                    </span>
+                                    <div className="flex items-center gap-1 font-mono font-bold text-[9px]">
+                                      {cells3g > 0 && <span className="px-1 py-0.2 bg-emerald-100 text-emerald-800 rounded border border-emerald-200">3G: {cells3g}</span>}
+                                      {cells4g > 0 && <span className="px-1 py-0.2 bg-blue-100 text-blue-800 rounded border border-blue-200">4G: {cells4g}</span>}
+                                      {has5g && (
+                                        <span className="px-1 py-0.2 bg-purple-100 text-purple-900 rounded border border-purple-200 font-black">
+                                          {is5gA ? '5G-A' : '5G'}: {cells5g}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {sectors.length > 0 && (
+                                    <div className="space-y-0.5 max-h-[110px] overflow-y-auto pr-0.5">
+                                      {sectors.map((sec, sIdx) => {
+                                        const secName = sec.sector || String.fromCharCode(65 + sIdx);
+                                        const hasDesignAz = sec.azimuth != null;
+                                        const azVal = hasDesignAz 
+                                          ? sec.azimuth 
+                                          : getFallbackAzimuth(secName, sIdx, sectors.length);
+                                        const secTilt = getSectorTiltDisplay(sec, site);
+                                        const isSectorDual = sec.has_5g_l2 || (is5gA && (sec.has_5g_l1 || sec.has_5g));
+
+                                        return (
+                                          <div key={sIdx} className="flex items-center justify-between bg-white rounded px-1.5 py-0.5 border border-slate-200 text-[9.5px]">
+                                            <div className="font-mono text-slate-700 flex items-center gap-1.5 flex-wrap">
+                                              <span className="font-bold">Az: {azVal}</span>
+                                              {secTilt && (
+                                                <span className="text-indigo-700 font-semibold bg-indigo-50 px-1 py-0.2 rounded border border-indigo-200 text-[8.5px]">
+                                                  Tilt: {secTilt}
+                                                </span>
+                                              )}
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                              {sec.has_3g && (
+                                                <span className="px-1 py-0.1 rounded text-[8px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                                  3G
+                                                </span>
+                                              )}
+                                              {sec.has_4g && (
+                                                <span className="px-1 py-0.1 rounded text-[8px] font-bold bg-blue-100 text-blue-800 border border-blue-300">
+                                                  4G
+                                                </span>
+                                              )}
+                                              {isSectorDual ? (
+                                                <span className="px-1 py-0.1 rounded text-[8px] font-extrabold bg-purple-100 text-purple-900 border border-purple-300">
+                                                  5G-A
+                                                </span>
+                                              ) : (sec.has_5g_l1 || sec.has_5g) ? (
+                                                <span className="px-1 py-0.1 rounded text-[8px] font-bold bg-rose-100 text-rose-800 border border-rose-300">
+                                                  5G
+                                                </span>
+                                              ) : null}
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()}
 
                             {/* Nút Dẫn đường Google Maps & Sao chép tin nhắn Zalo */}
                             <div className="flex flex-col gap-1.5 pt-0.5">
@@ -2840,6 +2915,13 @@ export default function NetworkMap() {
                       <Marker 
                         position={[lat, lng]} 
                         icon={createSiteDivIcon(code, cat.color, currentZoom >= 12, selectedMobileStation?.proj?.planning_id_new === proj.planning_id_new)}
+                        ref={(ref) => {
+                          if (ref && selectedMobileStation?.proj?.planning_id_new === proj.planning_id_new) {
+                            if (!ref.isPopupOpen()) {
+                              ref.openPopup();
+                            }
+                          }
+                        }}
                         eventHandlers={{
                           click: (e) => {
                             setSelectedMobileStation({
@@ -2850,17 +2932,6 @@ export default function NetworkMap() {
                               lat,
                               lng
                             });
-                            if (isMobile) {
-                              setTimeout(() => {
-                                e.target?.closePopup?.();
-                              }, 50);
-                              const map = e.target._map;
-                              if (map) {
-                                const targetPoint = map.project([lat, lng], map.getZoom()).subtract([0, 130]);
-                                const targetLatLng = map.unproject(targetPoint, map.getZoom());
-                                map.panTo(targetLatLng, { animate: true });
-                              }
-                            }
                           }
                         }}
                       >
@@ -2997,466 +3068,27 @@ export default function NetworkMap() {
         </MapContainer>
       </div>
 
-      {/* 8. Mobile Station Details Bottom Sheet (Modern Floating Sheet Card with Backdrop) */}
-      {selectedMobileStation && isMobile && (
-        <div className="fixed inset-0 z-[2500] pointer-events-auto flex flex-col justify-end font-sans">
-          {/* Backdrop Overlay */}
-          <div 
-            className="fixed inset-0 bg-black/60 backdrop-blur-xs cursor-pointer animate-in fade-in duration-200"
-            onClick={() => setSelectedMobileStation(null)}
-          />
-
-          {/* Drawer Card - LIGHT MODE */}
-          <div className="relative bg-white/98 backdrop-blur-2xl border-t border-slate-200 rounded-t-3xl p-4 shadow-[0_-8px_30px_rgba(0,0,0,0.18)] text-slate-800 max-h-[82vh] overflow-y-auto font-sans space-y-3 pb-[max(1.25rem,env(safe-area-inset-bottom,0px))] animate-in slide-in-from-bottom duration-300 z-10">
-            {/* Handle bar */}
-            <div className="w-12 h-1.5 rounded-full bg-slate-300 mx-auto -mt-1 mb-2" />
-
-            {/* Header */}
-            <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-2">
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <h3 className={`text-sm font-extrabold truncate ${
-                    selectedMobileStation.type === 'active' 
-                      ? (isGuest ? 'text-cyan-800' : (selectedMobileStation.radioInfo?.textColor || 'text-cyan-800'))
-                      : (selectedMobileStation.cat?.textColor || 'text-amber-800')
-                  }`}>
-                    {selectedMobileStation.displayName || selectedMobileStation.code || 'Chi tiết trạm'}
-                  </h3>
-                  {!isGuest && (selectedMobileStation.radioInfo ? (
-                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold ${selectedMobileStation.radioInfo.badgeClass}`}>
-                      {selectedMobileStation.radioInfo.tech}
-                    </span>
-                  ) : selectedMobileStation.cat ? (
-                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold ${selectedMobileStation.cat.badgeClass}`}>
-                      {selectedMobileStation.cat.icon} {selectedMobileStation.cat.shortLabel || selectedMobileStation.cat.label}
-                    </span>
-                  ) : null)}
-                </div>
-                {selectedMobileStation.site?.name && (
-                  <p className="text-[11px] text-slate-500 font-medium truncate mt-0.5">
-                    {selectedMobileStation.site.name}
-                  </p>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedMobileStation(null)}
-                className="h-8 w-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center shrink-0 cursor-pointer transition-colors"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            {/* Nội dung chi tiết */}
-            {selectedMobileStation.type === 'active' && (() => {
-              const s = selectedMobileStation.site;
-              const radio = selectedMobileStation.radioInfo || getSiteRadioInfo(s);
-              const lat = selectedMobileStation.lat;
-              const lng = selectedMobileStation.lng;
-              const name = selectedMobileStation.name;
-
-              // Đối với khách xem bản đồ số: Hiển thị đúng 4 thông tin dẫn đường & Người QLT hỗ trợ
-              if (isGuest) {
-                return (
-                  <div className="space-y-3 text-xs">
-                    {/* Người QLT & Số điện thoại */}
-                    <div className="bg-slate-50 rounded-xl p-3 border border-slate-200/80 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-500 font-medium">👤 Người QLT:</span>
-                        <span className="font-bold text-slate-900 text-sm">{s.management_info?.qlt || 'Chưa cập nhật'}</span>
-                      </div>
-                      {s.management_info?.sdt_qlt && (
-                        <div className="flex items-center justify-between pt-2 border-t border-slate-200/70">
-                          <span className="text-slate-500 font-medium">📞 Liên hệ:</span>
-                          <a
-                            href={`tel:${s.management_info.sdt_qlt}`}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-xl font-bold text-xs shadow-xs"
-                          >
-                            <Phone className="h-3.5 w-3.5" />
-                            <span>Gọi {s.management_info.sdt_qlt}</span>
-                          </a>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Tọa độ trạm */}
-                    <div 
-                      onClick={() => handleCopyCoords(lat, lng, `tọa độ trạm ${name}`)}
-                      className="flex items-center justify-between bg-slate-50 rounded-xl p-2.5 border border-slate-200/80 cursor-pointer active:bg-slate-100 transition-colors"
-                      title="Nhấp để copy tọa độ"
-                    >
-                      <div className="flex items-center gap-1.5 text-slate-500">
-                        <MapPin className="h-3.5 w-3.5 text-cyan-600" />
-                        <span className="font-medium">Tọa độ:</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-mono text-slate-800 font-bold">{lat.toFixed(6)}, {lng.toFixed(6)}</span>
-                        <Copy className="h-3 w-3 text-slate-400" />
-                      </div>
-                    </div>
-
-                    {/* 2 Nút hành động chính: Dẫn đường & Sao chép gửi Zalo */}
-                    <div className="space-y-2 pt-1">
-                      <a
-                        href={`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 active:scale-98 text-white rounded-xl text-sm font-bold shadow-md shadow-blue-500/20 text-center cursor-pointer"
-                      >
-                        <Navigation className="h-4 w-4" />
-                        <span>🚗 Mở Google Maps chỉ đường</span>
-                      </a>
-
-                      <button
-                        type="button"
-                        onClick={() => handleCopyStationInfo(s, lat, lng, selectedMobileStation.displayName)}
-                        className="w-full flex items-center justify-center gap-2 py-2.5 bg-white hover:bg-slate-50 active:scale-98 text-slate-700 border border-slate-300 shadow-2xs rounded-xl text-xs font-bold text-center cursor-pointer"
-                      >
-                        <Copy className="h-4 w-4 text-cyan-600" />
-                        <span>📋 Sao chép thông tin</span>
-                      </button>
-                    </div>
-                  </div>
-                );
-              }
-
-              const vp = s.management_info?.vung_phu;
-              const tm = s.management_info?.tram_main && s.management_info.tram_main !== 'KHÔNG' ? s.management_info.tram_main : null;
-              const isCran = vp && String(vp).toUpperCase().includes('CRAN');
-
-              return (
-                <div className="space-y-2.5 text-xs">
-                  {/* Field Survey Primary Action Button */}
-                  {customerLocation ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        handleManualCableRoute({ code: name, name: s.name, lat, lng });
-                        setSelectedMobileStation(null);
-                        setBottomSheetState('half');
-                      }}
-                      className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 active:scale-98 text-white rounded-xl text-xs font-black shadow-md shadow-purple-600/20 cursor-pointer"
-                    >
-                      <span>🔌 Kéo cáp từ điểm khảo sát</span>
-                      <span className="text-[10px] text-purple-200 font-bold">({formatDistance(haversineMeters(customerLocation.lat, customerLocation.lng, lat, lng))})</span>
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        executeScan(lat, lng);
-                        setSelectedMobileStation(null);
-                        showToast(`Đã lấy trạm ${name} làm mốc khảo sát`);
-                      }}
-                      className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-gradient-to-r from-cyan-600 to-blue-600 active:scale-98 text-white rounded-xl text-xs font-black shadow-md shadow-cyan-600/20 cursor-pointer"
-                    >
-                      <MapPin className="h-4 w-4" />
-                      <span>Khảo sát trạm lân cận từ trạm này</span>
-                    </button>
-                  )}
-
-                  {/* Vùng phủ & Trạm main */}
-                  {vp && (
-                    <div className="flex items-center justify-between bg-slate-50 rounded-xl p-2.5 border border-slate-200/80">
-                      <span className="text-slate-500 font-medium">🌐 Vùng phủ:</span>
-                      <span className="font-bold text-slate-800">
-                        {vp} {isCran && tm ? `(Main: ${tm})` : ''}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Người QLT & Số điện thoại */}
-                  {s.management_info?.qlt && (
-                    <div className="flex items-center justify-between bg-slate-50 rounded-xl p-2.5 border border-slate-200/80">
-                      <div className="flex items-center gap-1.5 text-slate-600">
-                        <span className="font-medium">👤 QLT:</span>
-                        <span className="font-bold text-slate-900">{s.management_info.qlt}</span>
-                      </div>
-                      {s.management_info.sdt_qlt ? (
-                        <a
-                          href={`tel:${s.management_info.sdt_qlt}`}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-xl font-bold text-xs shadow-xs"
-                        >
-                          <Phone className="h-3.5 w-3.5" />
-                          <span>Gọi {s.management_info.sdt_qlt}</span>
-                        </a>
-                      ) : (
-                        <span className="text-slate-400 text-[11px]">Chưa có SĐT</span>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Dữ liệu Vô tuyến (RF Summary & Danh sách Cell theo góc hướng + TILT) trên Mobile BottomSheet */}
-                  {s?.technical_info?.rf_summary && (() => {
-                    const rf = s.technical_info.rf_summary;
-                    const cells3g = rf.cells_3g ?? rf.tech_counts?.['3G'] ?? 0;
-                    const cells4g = rf.cells_4g ?? rf.tech_counts?.['4G'] ?? 0;
-                    const cells5g = rf.cells_5g ?? rf.tech_counts?.['5G'] ?? 0;
-                    const has5g = cells5g > 0;
-                    const is5gA = Boolean(rf.is_dual_5g || rf.cells_5g_l2 > 0);
-                    const sectors = Array.isArray(rf.sectors) ? rf.sectors : [];
-
-                    return (
-                      <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-2.5 text-xs space-y-1.5 shadow-2xs">
-                        {/* Hàng tóm tắt số cell */}
-                        <div className="flex items-center justify-between pb-1 border-b border-slate-200/70">
-                          <span className="font-bold text-slate-800 flex items-center gap-1 text-[11px]">
-                            📡 Cấu hình ({rf.total_cells || 0} cell)
-                          </span>
-                          <div className="flex items-center gap-1 font-mono font-bold text-[9.5px]">
-                            {cells3g > 0 && <span className="px-1.5 py-0.2 bg-emerald-100 text-emerald-800 rounded border border-emerald-200">3G: {cells3g}</span>}
-                            {cells4g > 0 && <span className="px-1.5 py-0.2 bg-blue-100 text-blue-800 rounded border border-blue-200">4G: {cells4g}</span>}
-                            {has5g && (
-                              <span className="px-1.5 py-0.2 bg-purple-100 text-purple-900 rounded border border-purple-200 font-black">
-                                {is5gA ? '5G-A' : '5G'}: {cells5g}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* DANH SÁCH CELL theo góc hướng và TILT */}
-                        {sectors.length > 0 && (
-                          <div className="space-y-1 max-h-[130px] overflow-y-auto pr-0.5">
-                            {sectors.map((sec, sIdx) => {
-                              const secName = sec.sector || String.fromCharCode(65 + sIdx);
-                              const hasAz = sec.azimuth != null;
-                              const azVal = hasAz ? sec.azimuth : getFallbackAzimuth(secName, sIdx, sectors.length);
-                              const secLabel = `Az: ${azVal}`;
-                              const secTilt = getSectorTiltDisplay(sec, s);
-                              const isSectorDual = sec.has_5g_l2 || (is5gA && (sec.has_5g_l1 || sec.has_5g));
-                              return (
-                                <div key={sIdx} className="flex items-center justify-between bg-white rounded-lg px-2.5 py-1 border border-slate-200 text-[10px] shadow-2xs">
-                                  <div className="font-mono text-slate-800 flex items-center gap-1.5 flex-wrap">
-                                    <span className="font-bold">{secLabel}</span>
-                                    {secTilt && (
-                                      <span className="text-indigo-700 font-semibold bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200 text-[9px]">
-                                        Tilt: {secTilt}
-                                      </span>
-                                    )}
-                                    {!hasAz && <span className="text-[8.5px] text-amber-600 font-sans font-medium">(ước tính)</span>}
-                                  </div>
-                                  <div className="flex items-center gap-1">
-                                    {sec.has_3g && (
-                                      <span className="px-1.5 py-0.2 rounded text-[8px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                                        3G
-                                      </span>
-                                    )}
-                                    {sec.has_4g && (
-                                      <span className="px-1.5 py-0.2 rounded text-[8px] font-bold bg-cyan-100 text-cyan-900 border border-cyan-300">
-                                        {(radio.isSranScope && sec.has_3g) ? '4G SRAN' : '4G'}
-                                      </span>
-                                    )}
-                                    {isSectorDual ? (
-                                      <span className="px-1.5 py-0.2 rounded text-[8px] font-extrabold bg-rose-100 text-rose-900 border border-rose-300">
-                                        5G-A
-                                      </span>
-                                    ) : (sec.has_5g_l1 || sec.has_5g) ? (
-                                      <span className="px-1.5 py-0.2 rounded text-[8px] font-bold bg-red-100 text-red-800 border border-red-300">
-                                        5G
-                                      </span>
-                                    ) : null}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
-
-                  {/* Tọa độ */}
-                  <div className="flex items-center justify-between text-[11px] text-slate-500 pt-0.5">
-                    <span className="font-mono text-slate-700 font-medium">{lat.toFixed(6)}, {lng.toFixed(6)}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleCopyCoords(lat, lng, `tọa độ trạm ${name}`)}
-                      className="text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1 font-semibold cursor-pointer"
-                    >
-                      <Copy className="h-3 w-3" /> Copy tọa độ
-                    </button>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="grid grid-cols-3 gap-1.5 pt-1">
-                    <a
-                      href={`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-1 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 active:scale-95 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-500/20 text-center cursor-pointer"
-                    >
-                      <Navigation className="h-3.5 w-3.5" />
-                      <span>Dẫn đường</span>
-                    </a>
-                    <a
-                      href={`/datasites?search=${name}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-1 py-2 bg-white hover:bg-slate-50 active:scale-95 text-blue-700 border border-slate-200 shadow-2xs rounded-xl text-xs font-bold text-center cursor-pointer"
-                    >
-                      <ExternalLink className="h-3.5 w-3.5" />
-                      <span>Datasite</span>
-                    </a>
-                    <button
-                      type="button"
-                      onClick={() => handleCopyStationInfo(s, lat, lng, selectedMobileStation.displayName)}
-                      className="flex items-center justify-center gap-1 py-2 bg-white hover:bg-slate-50 active:scale-95 text-slate-700 border border-slate-200 shadow-2xs rounded-xl text-xs font-bold text-center cursor-pointer"
-                    >
-                      <Copy className="h-3.5 w-3.5" />
-                      <span>Sao chép</span>
-                    </button>
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* Nếu là trạm Quy hoạch */}
-            {selectedMobileStation.type === 'planning' && (() => {
-              const p = selectedMobileStation.proj;
-              const cat = selectedMobileStation.cat;
-              const lat = selectedMobileStation.lat;
-              const lng = selectedMobileStation.lng;
-              const code = selectedMobileStation.code;
-
-              return (
-                <div className="space-y-2.5 text-xs">
-                  {/* Field Survey Primary Action Button */}
-                  {customerLocation ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        handleManualCableRoute({ code, name: p.notes || 'Dự án CSHT', lat, lng });
-                        setSelectedMobileStation(null);
-                        setBottomSheetState('half');
-                      }}
-                      className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 active:scale-98 text-white rounded-xl text-xs font-black shadow-md shadow-purple-600/20 cursor-pointer"
-                    >
-                      <span>🔌 Kéo cáp từ điểm khảo sát</span>
-                      <span className="text-[10px] text-purple-200 font-bold">({formatDistance(haversineMeters(customerLocation.lat, customerLocation.lng, lat, lng))})</span>
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        executeScan(lat, lng);
-                        setSelectedMobileStation(null);
-                        showToast(`Đã lấy vị trí ${code} làm mốc khảo sát`);
-                      }}
-                      className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-gradient-to-r from-cyan-600 to-blue-600 active:scale-98 text-white rounded-xl text-xs font-black shadow-md shadow-cyan-600/20 cursor-pointer"
-                    >
-                      <MapPin className="h-4 w-4" />
-                      <span>Khảo sát trạm lân cận từ vị trí này</span>
-                    </button>
-                  )}
-
-                  {(p.ward || p.district) && (
-                    <div className="text-slate-600 text-xs font-medium">
-                      📍 Địa bàn: <b className="text-slate-900">{p.ward ? `${p.ward}, ` : ''}{p.district || 'Đồng Nai'}</b>
-                    </div>
-                  )}
-                  <div className={`p-2.5 rounded-xl text-[11px] space-y-1 ${cat?.popupBg || 'bg-slate-50 border border-slate-200'}`}>
-                    <div className="font-extrabold flex items-center justify-between text-slate-800">
-                      <span>{cat?.icon} {cat?.label}</span>
-                      {p.skhcn_status && <span className="opacity-80 text-[10px]">{p.skhcn_status}</span>}
-                    </div>
-                    {p.notes && <div className="pt-1 border-t border-slate-200/60 text-slate-700">📝 <b>Ghi chú:</b> {p.notes}</div>}
-                    {p.sharing_partner && <div className="text-purple-700 font-bold">🤝 <b>Dùng chung:</b> {p.sharing_partner}</div>}
-                  </div>
-
-                  <div className="flex items-center justify-between text-[11px] text-slate-500">
-                    <span className="font-mono text-slate-700 font-medium">{lat.toFixed(6)}, {lng.toFixed(6)}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleCopyCoords(lat, lng, `tọa độ quy hoạch ${code}`)}
-                      className="text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1 font-semibold cursor-pointer"
-                    >
-                      <Copy className="h-3 w-3" /> Copy tọa độ
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 pt-1">
-                    <a
-                      href={`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-1 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 active:scale-95 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-500/20 text-center cursor-pointer"
-                    >
-                      <Navigation className="h-3.5 w-3.5" />
-                      <span>Dẫn đường Maps</span>
-                    </a>
-                    <button
-                      type="button"
-                      onClick={() => handleCopyProjectInfo(p, lat, lng, code)}
-                      className="flex items-center justify-center gap-1 py-2 bg-white hover:bg-slate-50 active:scale-95 text-slate-700 border border-slate-200 shadow-2xs rounded-xl text-xs font-bold text-center cursor-pointer"
-                    >
-                      <Copy className="h-3.5 w-3.5" />
-                      <span>Sao chép dự án</span>
-                    </button>
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* Nếu là Lastmile */}
-            {selectedMobileStation.type === 'lastmile' && (() => {
-              const line = selectedMobileStation.line;
-              return (
-                <div className="space-y-2 text-xs">
-                  <div className="font-bold text-blue-700 flex items-center gap-1.5">
-                    <Radio className="h-4 w-4 shrink-0" />
-                    <span>Tuyến: {line.hubOldId || line.hubId} ➔ {line.siteOldId || line.siteId}</span>
-                  </div>
-                  <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-xl space-y-1 text-[11px] text-slate-600">
-                    <div>• Kiểu kết nối: <b className="text-slate-900">{line.loai_ket_noi || 'Cáp quang'} {line.isBackup ? '(Ring)' : ''}</b></div>
-                    <div>• Chủ đầu tư: <b className="text-slate-900">{line.chu_dau_tu_cap || 'Chưa rõ'}</b></div>
-                    <div>• Đơn vị vận hành: <b className="text-slate-900">{line.don_vi_van_hanh_cap || 'Chưa rõ'}</b></div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 pt-1">
-                    <a
-                      href={`/datasites?search=${line.hubOldId || line.hubId}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-1 py-2 bg-white hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold border border-slate-200 shadow-2xs"
-                    >
-                      Trạm MAIN ({line.hubOldId || line.hubId})
-                    </a>
-                    <a
-                      href={`/datasites?search=${line.siteOldId || line.siteId}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-1 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold shadow-xs"
-                    >
-                      Trạm LASTMILE ({line.siteOldId || line.siteId})
-                    </a>
-                  </div>
-                </div>
-              );
-            })()}
-          </div>
-        </div>
-      )}
-
-      {/* 9. Mobile Dedicated Layers Bottom Drawer */}
+      {/* 8. Mobile Dedicated Layers Bottom Drawer - LIGHT MODE */}
       {showLayersPopup && isMobile && (
         <div className="fixed inset-0 z-[2600] pointer-events-auto flex flex-col justify-end font-sans">
-          {/* Backdrop */}
+          {/* Light Translucent Backdrop */}
           <div 
-            className="fixed inset-0 bg-black/60 backdrop-blur-xs cursor-pointer animate-in fade-in duration-200"
+            className="fixed inset-0 bg-slate-900/30 backdrop-blur-xs cursor-pointer animate-in fade-in duration-200"
             onClick={() => setShowLayersPopup(false)}
           />
-          {/* Slide-up Drawer */}
-          <div className="relative bg-slate-900/98 backdrop-blur-2xl border-t border-slate-700/90 rounded-t-3xl p-4 shadow-2xl text-white max-h-[85vh] overflow-y-auto z-10 space-y-3.5 pb-[max(1.5rem,env(safe-area-inset-bottom,0px))] animate-in slide-in-from-bottom duration-300">
-            <div className="w-12 h-1.5 bg-slate-600 rounded-full mx-auto -mt-1 mb-2" />
+          {/* Slide-up Drawer - Light Mode */}
+          <div className="relative bg-white/98 backdrop-blur-2xl border-t border-slate-200 rounded-t-3xl p-4 shadow-2xl text-slate-800 max-h-[85vh] overflow-y-auto z-10 space-y-3.5 pb-[max(1.5rem,env(safe-area-inset-bottom,0px))] animate-in slide-in-from-bottom duration-300">
+            <div className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto -mt-1 mb-2" />
             
-            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-              <div className="flex items-center gap-2 text-cyan-400 font-bold text-sm">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+              <div className="flex items-center gap-2 text-cyan-700 font-bold text-sm">
                 <Layers className="h-5 w-5" />
                 <span>PHÂN LỚP BẢN ĐỒ</span>
               </div>
               <button
                 type="button"
                 onClick={() => setShowLayersPopup(false)}
-                className="h-8 w-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer"
+                className="h-8 w-8 rounded-full bg-slate-100 text-slate-500 hover:text-slate-800 flex items-center justify-center cursor-pointer"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -3464,7 +3096,7 @@ export default function NetworkMap() {
 
             {/* 1. Lớp Bản Đồ Nền */}
             <div className="space-y-1.5">
-              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                 Bản đồ nền (Chọn 1):
               </div>
               <div className="grid grid-cols-3 gap-2">
@@ -3480,13 +3112,13 @@ export default function NetworkMap() {
                       }}
                       className={`p-2.5 rounded-2xl text-center transition-all cursor-pointer flex flex-col items-center gap-1 border ${
                         isSelected
-                          ? 'bg-cyan-600/30 border-cyan-400 text-cyan-200 font-extrabold ring-2 ring-cyan-500/50 shadow-md shadow-cyan-900/40'
-                          : 'bg-slate-800/70 border-slate-700/70 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                          ? 'bg-cyan-50 border-cyan-500 text-cyan-800 font-extrabold ring-2 ring-cyan-500/40 shadow-xs'
+                          : 'bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-800 hover:bg-slate-100'
                       }`}
                     >
                       <span className="text-xl">{layer.id === 'google_satellite' ? '🛰️' : layer.id === 'google_hybrid' ? '🗺️' : '🚗'}</span>
                       <span className="text-[11px] leading-tight font-bold">{layer.name}</span>
-                      {isSelected && <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 mt-0.5"></span>}
+                      {isSelected && <span className="h-1.5 w-1.5 rounded-full bg-cyan-600 mt-0.5"></span>}
                     </button>
                   );
                 })}
@@ -3494,9 +3126,9 @@ export default function NetworkMap() {
             </div>
 
             {/* 2. Phân lớp dữ liệu */}
-            <div className="space-y-2 pt-2 border-t border-slate-800">
+            <div className="space-y-2 pt-2 border-t border-slate-200">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                   Phân lớp dữ liệu trạm:
                 </span>
                 <div className="flex items-center gap-2 text-xs">
@@ -3510,11 +3142,11 @@ export default function NetworkMap() {
                       setShowCoverageCircle(true);
                       showToast('Đã bật tất cả phân lớp');
                     }}
-                    className="text-cyan-400 font-bold hover:underline cursor-pointer"
+                    className="text-cyan-700 font-bold hover:underline cursor-pointer"
                   >
                     Bật hết
                   </button>
-                  <span className="text-slate-600">•</span>
+                  <span className="text-slate-300">•</span>
                   <button
                     type="button"
                     onClick={() => {
@@ -3525,7 +3157,7 @@ export default function NetworkMap() {
                       setShowCoverageCircle(false);
                       showToast('Đã tắt tất cả phân lớp');
                     }}
-                    className="text-slate-400 hover:text-white hover:underline cursor-pointer"
+                    className="text-slate-500 hover:text-slate-800 hover:underline cursor-pointer"
                   >
                     Tắt hết
                   </button>
@@ -3534,113 +3166,113 @@ export default function NetworkMap() {
 
               <div className="space-y-1.5">
                 {/* Trạm hoạt động MobiFone */}
-                <label className="flex items-center justify-between p-2.5 rounded-xl bg-slate-800/60 border border-slate-700/60 cursor-pointer active:scale-[0.99] transition-all">
+                <label className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50/80 hover:bg-slate-100/80 border border-slate-200/80 cursor-pointer active:scale-[0.99] transition-all">
                   <div className="flex items-center gap-2.5 min-w-0">
                     <input
                       type="checkbox"
                       checked={layerActiveSites}
                       onChange={(e) => setLayerActiveSites(e.target.checked)}
-                      className="rounded border-slate-600 text-blue-600 focus:ring-blue-500 h-5 w-5 bg-slate-900 cursor-pointer"
+                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-5 w-5 bg-white cursor-pointer"
                     />
                     <div className="min-w-0">
-                      <div className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                      <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                         <span className="h-2 w-2 rounded-full bg-blue-500 shrink-0"></span>
                         <span>Trạm MobiFone (Hiện hữu)</span>
                       </div>
-                      <div className="text-[10px] text-slate-400 truncate">Hiển thị chấm tròn và text ID trạm</div>
+                      <div className="text-[10px] text-slate-500 truncate">Hiển thị chấm tròn và text ID trạm</div>
                     </div>
                   </div>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-950 text-blue-300 border border-blue-700/50 shrink-0">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 shrink-0">
                     {activeSites.length}
                   </span>
                 </label>
 
                 {/* Cánh sóng Vô tuyến 3G/4G/5G (Chỉ cho nội bộ) */}
                 {!isGuest && (
-                  <label className="flex items-center justify-between p-2.5 rounded-xl bg-slate-800/60 border border-slate-700/60 cursor-pointer active:scale-[0.99] transition-all">
+                  <label className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50/80 hover:bg-slate-100/80 border border-slate-200/80 cursor-pointer active:scale-[0.99] transition-all">
                     <div className="flex items-center gap-2.5 min-w-0">
                       <input
                         type="checkbox"
                         checked={layerCellSectors}
                         onChange={(e) => setLayerCellSectors(e.target.checked)}
-                        className="rounded border-slate-600 text-rose-500 focus:ring-rose-500 h-5 w-5 bg-slate-900 cursor-pointer"
+                        className="rounded border-slate-300 text-rose-500 focus:ring-rose-500 h-5 w-5 bg-white cursor-pointer"
                       />
                       <div className="min-w-0">
-                        <div className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                        <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                           <span className="h-2 w-2 rounded-full bg-rose-500 shrink-0"></span>
                           <span>Cánh sóng Vô tuyến (3G/4G/5G)</span>
                         </div>
-                        <div className="text-[10px] text-slate-400 truncate">Búp sóng 4 tầng: 3G, 4G, 4G SRAN, 5G L1, 5G-A (tím)</div>
+                        <div className="text-[10px] text-slate-500 truncate">Búp sóng 4 tầng: 3G, 4G, 4G SRAN, 5G L1, 5G-A (tím)</div>
                       </div>
                     </div>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-950 text-rose-300 border border-rose-700/50 shrink-0">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 shrink-0">
                       360°
                     </span>
                   </label>
                 )}
 
                 {/* Trạm CSHT Quy hoạch */}
-                <label className="flex items-center justify-between p-2.5 rounded-xl bg-slate-800/60 border border-slate-700/60 cursor-pointer active:scale-[0.99] transition-all">
+                <label className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50/80 hover:bg-slate-100/80 border border-slate-200/80 cursor-pointer active:scale-[0.99] transition-all">
                   <div className="flex items-center gap-2.5 min-w-0">
                     <input
                       type="checkbox"
                       checked={layerPlanningInfra}
                       onChange={(e) => setLayerPlanningInfra(e.target.checked)}
-                      className="rounded border-slate-600 text-amber-500 focus:ring-amber-500 h-5 w-5 bg-slate-900 cursor-pointer"
+                      className="rounded border-slate-300 text-amber-500 focus:ring-amber-500 h-5 w-5 bg-white cursor-pointer"
                     />
                     <div className="min-w-0">
-                      <div className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                        <span className="h-2 w-2 rounded-full bg-amber-400 shrink-0"></span>
+                      <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-full bg-amber-500 shrink-0"></span>
                         <span>Trạm quy hoạch CSHT</span>
                       </div>
-                      <div className="text-[10px] text-slate-400 truncate">Vị trí CSHT quy hoạch Sở KHCN</div>
+                      <div className="text-[10px] text-slate-500 truncate">Vị trí CSHT quy hoạch Sở KHCN</div>
                     </div>
                   </div>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-950 text-amber-300 border border-amber-700/50 shrink-0">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 shrink-0">
                     {infraProjects.length}
                   </span>
                 </label>
 
                 {/* Lastmile */}
-                <label className="flex items-center justify-between p-2.5 rounded-xl bg-slate-800/60 border border-slate-700/60 cursor-pointer active:scale-[0.99] transition-all">
+                <label className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50/80 hover:bg-slate-100/80 border border-slate-200/80 cursor-pointer active:scale-[0.99] transition-all">
                   <div className="flex items-center gap-2.5 min-w-0">
                     <input
                       type="checkbox"
                       checked={layerLastmile}
                       onChange={(e) => setLayerLastmile(e.target.checked)}
-                      className="rounded border-slate-600 text-emerald-500 focus:ring-emerald-500 h-5 w-5 bg-slate-900 cursor-pointer"
+                      className="rounded border-slate-300 text-emerald-500 focus:ring-emerald-500 h-5 w-5 bg-white cursor-pointer"
                     />
                     <div className="min-w-0">
-                      <div className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                        <span className="h-2 w-2 rounded-full bg-emerald-400 shrink-0"></span>
+                      <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0"></span>
                         <span>Tuyến cáp Lastmile</span>
                       </div>
-                      <div className="text-[10px] text-slate-400 truncate">Tuyến truyền dẫn & trạm phụ thuộc</div>
+                      <div className="text-[10px] text-slate-500 truncate">Tuyến truyền dẫn & trạm phụ thuộc</div>
                     </div>
                   </div>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-700/50 shrink-0">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
                     {transmissionLines.length}
                   </span>
                 </label>
 
                 {/* Bán kính phủ sóng 500m */}
-                <label className="flex items-center justify-between p-2.5 rounded-xl bg-slate-800/60 border border-slate-700/60 cursor-pointer active:scale-[0.99] transition-all">
+                <label className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50/80 hover:bg-slate-100/80 border border-slate-200/80 cursor-pointer active:scale-[0.99] transition-all">
                   <div className="flex items-center gap-2.5 min-w-0">
                     <input
                       type="checkbox"
                       checked={showCoverageCircle}
                       onChange={(e) => setShowCoverageCircle(e.target.checked)}
-                      className="rounded border-slate-600 text-indigo-500 focus:ring-indigo-500 h-5 w-5 bg-slate-900 cursor-pointer"
+                      className="rounded border-slate-300 text-indigo-500 focus:ring-indigo-500 h-5 w-5 bg-white cursor-pointer"
                     />
                     <div className="min-w-0">
-                      <div className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                        <span className="h-2 w-2 rounded-full bg-indigo-400 shrink-0"></span>
+                      <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-full bg-indigo-500 shrink-0"></span>
                         <span>Bán kính 500m</span>
                       </div>
-                      <div className="text-[10px] text-slate-400 truncate">Vòng tròn bán kính phủ quanh trạm</div>
+                      <div className="text-[10px] text-slate-500 truncate">Vòng tròn bán kính phủ quanh trạm</div>
                     </div>
                   </div>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-700/50 shrink-0">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 shrink-0">
                     500m
                   </span>
                 </label>
@@ -3650,7 +3282,7 @@ export default function NetworkMap() {
             <button
               type="button"
               onClick={() => setShowLayersPopup(false)}
-              className="w-full py-2.5 bg-gradient-to-r from-cyan-600 to-blue-600 active:scale-95 text-white font-bold text-xs rounded-xl text-center shadow-lg shadow-cyan-900/40 cursor-pointer"
+              className="w-full py-2.5 bg-gradient-to-r from-cyan-600 to-blue-600 active:scale-95 text-white font-bold text-xs rounded-xl text-center shadow-md shadow-cyan-600/30 cursor-pointer"
             >
               Áp dụng & Đóng
             </button>

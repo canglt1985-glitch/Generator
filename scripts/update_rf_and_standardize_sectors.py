@@ -229,7 +229,7 @@ def main():
         for i in range(0, len(cells_to_update), b_size):
             chunk = cells_to_update[i:i + b_size]
             try:
-                sb.table('datacells').upsert(chunk).execute()
+                sb.table('datacells').upsert(chunk, on_conflict='cell_id').execute()
                 print(f"  → Đã lưu {min(i + b_size, len(cells_to_update))}/{len(cells_to_update)} cell...")
             except Exception as e:
                 print(f"  ⚠️ Lỗi batch {i}: {e}")
