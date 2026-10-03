@@ -190,8 +190,8 @@ const getSiteRadioInfo = (site) => {
       tech: isSranScope ? 'SRAN / 5G-A' : '4G + 5G-A',
       label: isSranScope ? 'SRAN / 5G-A (2.6G + 3.8G)' : '4G + 5G-A (2.6G + 3.8G)',
       color: '#a855f7', // Tím 5G-A
-      textColor: 'text-purple-400',
-      badgeClass: 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+      textColor: 'text-purple-700',
+      badgeClass: 'bg-purple-100 text-purple-800 border border-purple-200'
     };
   }
   if (has5g) {
@@ -201,8 +201,8 @@ const getSiteRadioInfo = (site) => {
       tech: isSranScope ? 'SRAN / 5G' : '4G + 5G',
       label: isSranScope ? 'SRAN / 5G (2.6 GHz)' : '4G + 5G (2.6 GHz)',
       color: '#ef4444', // Đỏ
-      textColor: 'text-rose-400',
-      badgeClass: 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+      textColor: 'text-rose-700',
+      badgeClass: 'bg-rose-100 text-rose-800 border border-rose-200'
     };
   }
   if (has3g && has4g) {
@@ -213,8 +213,8 @@ const getSiteRadioInfo = (site) => {
         tech: 'SRAN',
         label: 'Swap SRAN (3G/4G)',
         color: '#06b6d4', // Cyan
-        textColor: 'text-cyan-400',
-        badgeClass: 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+        textColor: 'text-cyan-800',
+        badgeClass: 'bg-cyan-100 text-cyan-900 border border-cyan-200'
       };
     } else {
       return {
@@ -223,8 +223,8 @@ const getSiteRadioInfo = (site) => {
         tech: '3G/4G',
         label: '3G + 4G Độc lập',
         color: '#3b82f6', // Xanh dương
-        textColor: 'text-blue-400',
-        badgeClass: 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+        textColor: 'text-blue-700',
+        badgeClass: 'bg-blue-100 text-blue-800 border border-blue-200'
       };
     }
   }
@@ -235,8 +235,8 @@ const getSiteRadioInfo = (site) => {
       tech: '4G',
       label: isSranScope ? '4G LTE (SRAN)' : '4G LTE (Độc lập)',
       color: '#3b82f6', // Xanh dương
-      textColor: 'text-blue-400',
-      badgeClass: 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+      textColor: 'text-blue-700',
+      badgeClass: 'bg-blue-100 text-blue-800 border border-blue-200'
     };
   }
   if (has3g && !has4g) {
@@ -246,8 +246,8 @@ const getSiteRadioInfo = (site) => {
       tech: '3G',
       label: '3G Only',
       color: '#22c55e', // Xanh lá
-      textColor: 'text-emerald-400',
-      badgeClass: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+      textColor: 'text-emerald-700',
+      badgeClass: 'bg-emerald-100 text-emerald-800 border border-emerald-200'
     };
   }
   return {
@@ -256,8 +256,8 @@ const getSiteRadioInfo = (site) => {
     tech: '4G',
     label: '4G LTE',
     color: '#3b82f6',
-    textColor: 'text-blue-400',
-    badgeClass: 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+    textColor: 'text-blue-700',
+    badgeClass: 'bg-blue-100 text-blue-800 border border-blue-200'
   };
 };
 
