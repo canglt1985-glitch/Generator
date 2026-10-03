@@ -1,5 +1,25 @@
 # Changelog
 
+## [2026-10-03]
+### Fixed
+- **Bản Đồ Số - Khắc Phục Lỗi Runtime Crash**:
+  - Sửa lỗi `ReferenceError: hasSite5g is not defined` trong hàm `getSiteCoverageType(site)` tại `tvt3_v2/src/utils/cellSectorGeometry.js`.
+  - Định nghĩa chuẩn xác `hasSite5g = Boolean(rf.has_5g || cells5g > 0)` trước khi tính toán `hasRadioCells`, ngăn chặn crash toàn trang Bản đồ số.
+  - Biên dịch và deploy production trực tiếp lên Vercel (`https://tvt3.vercel.app`).
+- **Phân Loại Trạm Thiếu Thiết Kế RF**:
+  - Sửa sai lệch đánh giá: Xác minh và chứng minh các trạm CRAN Outdoor như `DNTP08` (Phú Hòa 5), `DNXL04` (Xuân Định 2), `DNXL49` (Xuân Hòa 13) có đầy đủ thiết kế chi tiết (Azimuth, Height, Tilt 4G/5G) trong file `ERA_RF_ALL_2026.xlsx`.
+  - Loại trừ giả định sai lầm về bộ 3 góc dummy `[0, 120, 240]` trên các trạm ngoài ERA (như `DNLK05`, `DNLK09`, `DNXL07`, `DNDQ22`), đưa chính xác vào danh sách 18 trạm thực sự thiếu thiết kế RF cần bổ sung.
+
+### Added
+- **Đồng Bộ Toàn Diện Dữ Liệu Thiết Kế RF Từ File ERA**:
+  - Đối soát và đồng bộ 100% toàn bộ 1,294 dòng cell thuộc 301 trạm TVT3 từ `ERA_RF_ALL_2026.xlsx` vào `datacells` và `datasites` với sai lệch số học = 0.
+  - Hỗ trợ đầy đủ các trạm 4 sector đặc thù: `DNXL06` (50°/150°/240°/320°), `DNCM48` (40°/120°/250°/330°), `DNDQ41` (90°/150°/220°/330°), `DNCM06` (80°/210°/280°/340°).
+  - Lập báo cáo chính thức tại `docs/reports/audit_rf_thiet_ke_tvt3_20261003.md` phân loại chuẩn xác 412 trạm TVT3 và soạn sẵn mẫu tin nhắn gửi Team Quy hoạch / Tối ưu Vô tuyến.
+- **Phân Tích Cơ Chế Realtime Cảnh Báo VHKT RAN**:
+  - Làm rõ cơ chế tự động khôi phục (cleared) cảnh báo CellOff của `DNCM33` (Xuân Quế 4) lúc 15:45-16:00.
+  - Thuật toán gộp thông minh đa tầng tần số: `DNTN49` khi rớt cả 3G và 4G trên sector C được tự động gộp thành 1 dòng duy nhất `• DNTN49: sector C [SRAN]` trên Web Dashboard.
+  - Nhận diện biến động realtime trạm mới phát sinh MLL `DNTN52` lúc 15:36 và cell chập chờn 5G của `DNTN07` lúc 16:00.
+
 ## [2026-09-30]
 ### Fixed
 - **VHKT RAN Realtime Alarms Sync**:
