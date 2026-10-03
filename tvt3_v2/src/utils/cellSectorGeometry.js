@@ -311,7 +311,7 @@ export function getSectorContiguousLayers(sec, isDual5g = false, hasSite5g = fal
     // Độ dày: 50m nếu có 5G phía ngoài, 70m nếu trạm chỉ có 4G
     const width = (has5g3800 || has5g2600) ? 50 : 70;
     const rOuter = currentR + width;
-    const techName = isSranSwap ? '4G SRAN' : '4G Độc lập';
+    const techName = isSranSwap ? '4G SRAN' : '4G';
     layers.push({
       key: '4G',
       tech: techName,

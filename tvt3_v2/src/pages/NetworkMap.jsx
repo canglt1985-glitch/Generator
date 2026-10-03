@@ -181,39 +181,106 @@ const getSiteRadioInfo = (site) => {
   const is5gA = Boolean(rf?.is_dual_5g || (rf?.cells_5g_l2 > 0));
   const has3g = Boolean(rf?.cells_3g > 0);
   const has4g = Boolean(rf?.cells_4g > 0);
-  // CHỈ trạm nào có giải pháp swap là 3G4G mới là SRAN (Dùng chung phần cứng BBU/RRU SRAN)
-  // Còn lại (SWAP:4G, 4G Only...) là 4G độc lập với 3G
+  // CHỈ trạm nào có giải pháp swap là 3G4G mới là SRAN
   const isSranScope = Boolean(rf?.is_sran_swap);
 
   if (is5gA) {
+    if (isSranScope) {
+      return {
+        key: '5g_a',
+        isSranScope: true,
+        tech: 'SRAN/5G-A',
+        label: 'SRAN/5G-A (2.6G + 3.8G)',
+        color: '#a855f7', // Tím 5G-A
+        textColor: 'text-purple-700',
+        badgeClass: 'bg-purple-100 text-purple-800 border border-purple-200'
+      };
+    }
+    if (has3g && has4g) {
+      return {
+        key: '5g_a',
+        isSranScope: false,
+        tech: '3G/4G/5G-A',
+        label: '3G/4G/5G-A (2.6G + 3.8G)',
+        color: '#a855f7',
+        textColor: 'text-purple-700',
+        badgeClass: 'bg-purple-100 text-purple-800 border border-purple-200'
+      };
+    }
+    if (has4g && !has3g) {
+      return {
+        key: '5g_a',
+        isSranScope: false,
+        tech: '4G/5G-A',
+        label: '4G/5G-A (2.6G + 3.8G)',
+        color: '#a855f7',
+        textColor: 'text-purple-700',
+        badgeClass: 'bg-purple-100 text-purple-800 border border-purple-200'
+      };
+    }
     return {
       key: '5g_a',
-      isSranScope,
-      tech: isSranScope ? 'SRAN / 5G-A' : '4G + 5G-A',
-      label: isSranScope ? 'SRAN / 5G-A (2.6G + 3.8G)' : '4G + 5G-A (2.6G + 3.8G)',
-      color: '#a855f7', // Tím 5G-A
+      isSranScope: false,
+      tech: '5G-A',
+      label: '5G-A (2.6G + 3.8G)',
+      color: '#a855f7',
       textColor: 'text-purple-700',
       badgeClass: 'bg-purple-100 text-purple-800 border border-purple-200'
     };
   }
+
   if (has5g) {
+    if (isSranScope) {
+      return {
+        key: '5g_l1',
+        isSranScope: true,
+        tech: 'SRAN/5G',
+        label: 'SRAN/5G (2.6 GHz)',
+        color: '#ef4444', // Đỏ
+        textColor: 'text-rose-700',
+        badgeClass: 'bg-rose-100 text-rose-800 border border-rose-200'
+      };
+    }
+    if (has3g && has4g) {
+      return {
+        key: '5g_l1',
+        isSranScope: false,
+        tech: '3G/4G/5G',
+        label: '3G/4G/5G (2.6 GHz)',
+        color: '#ef4444',
+        textColor: 'text-rose-700',
+        badgeClass: 'bg-rose-100 text-rose-800 border border-rose-200'
+      };
+    }
+    if (has4g && !has3g) {
+      return {
+        key: '5g_l1',
+        isSranScope: false,
+        tech: '4G/5G',
+        label: '4G/5G (2.6 GHz)',
+        color: '#ef4444',
+        textColor: 'text-rose-700',
+        badgeClass: 'bg-rose-100 text-rose-800 border border-rose-200'
+      };
+    }
     return {
       key: '5g_l1',
-      isSranScope,
-      tech: isSranScope ? 'SRAN / 5G' : '4G + 5G',
-      label: isSranScope ? 'SRAN / 5G (2.6 GHz)' : '4G + 5G (2.6 GHz)',
-      color: '#ef4444', // Đỏ
+      isSranScope: false,
+      tech: '5G',
+      label: '5G (2.6 GHz)',
+      color: '#ef4444',
       textColor: 'text-rose-700',
       badgeClass: 'bg-rose-100 text-rose-800 border border-rose-200'
     };
   }
+
   if (has3g && has4g) {
     if (isSranScope) {
       return {
         key: 'sran_3g4g',
         isSranScope: true,
         tech: 'SRAN',
-        label: 'Swap SRAN (3G/4G)',
+        label: 'SRAN',
         color: '#06b6d4', // Cyan
         textColor: 'text-cyan-800',
         badgeClass: 'bg-cyan-100 text-cyan-900 border border-cyan-200'
@@ -223,40 +290,43 @@ const getSiteRadioInfo = (site) => {
         key: 'legacy_3g4g',
         isSranScope: false,
         tech: '3G/4G',
-        label: '3G + 4G Độc lập',
+        label: '3G/4G',
         color: '#3b82f6', // Xanh dương
         textColor: 'text-blue-700',
         badgeClass: 'bg-blue-100 text-blue-800 border border-blue-200'
       };
     }
   }
+
   if (has4g && !has3g) {
     return {
       key: '4g_only',
       isSranScope,
       tech: '4G',
-      label: isSranScope ? '4G LTE (SRAN)' : '4G LTE (Độc lập)',
+      label: '4G',
       color: '#3b82f6', // Xanh dương
       textColor: 'text-blue-700',
       badgeClass: 'bg-blue-100 text-blue-800 border border-blue-200'
     };
   }
+
   if (has3g && !has4g) {
     return {
       key: '3g_only',
       isSranScope,
       tech: '3G',
-      label: '3G Only',
+      label: '3G',
       color: '#22c55e', // Xanh lá
       textColor: 'text-emerald-700',
       badgeClass: 'bg-emerald-100 text-emerald-800 border border-emerald-200'
     };
   }
+
   return {
     key: '4g_only',
     isSranScope: false,
     tech: '4G',
-    label: '4G LTE',
+    label: '4G',
     color: '#3b82f6',
     textColor: 'text-blue-700',
     badgeClass: 'bg-blue-100 text-blue-800 border border-blue-200'
