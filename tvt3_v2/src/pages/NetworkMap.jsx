@@ -2371,6 +2371,13 @@ export default function NetworkMap() {
                     <Marker 
                       position={[lat, lng]} 
                       icon={createSiteDivIcon(name, radio.color, currentZoom >= 12, isSelected)}
+                      ref={(ref) => {
+                        if (ref && isSelected && !isMobile) {
+                          if (!ref.isPopupOpen()) {
+                            ref.openPopup();
+                          }
+                        }
+                      }}
                       eventHandlers={{
                         click: (e) => {
                           setSelectedMobileStation({
@@ -2396,7 +2403,17 @@ export default function NetworkMap() {
                         }
                       }}
                     >
-                      <Popup autoPan={true} autoPanPadding={[20, 80]} maxWidth={290} keepInView={true}>
+                      <Popup 
+                        autoPan={true} 
+                        autoPanPadding={[20, 80]} 
+                        maxWidth={290} 
+                        keepInView={true}
+                        eventHandlers={{
+                          remove: () => {
+                            if (isSelected) setSelectedMobileStation(null);
+                          }
+                        }}
+                      >
                         {isGuest ? (
                           <div className="font-sans text-[11px] flex flex-col gap-2 p-1 min-w-[245px] max-w-[275px]">
                             {/* Header trạm dành cho khách */}
@@ -2904,79 +2921,6 @@ export default function NetworkMap() {
               )}
         </MapContainer>
       </div>
-
-      {/* Desktop Floating Card for Guests (Hiển thị thẻ dẫn đường tinh gọn trên máy tính) */}
-      {selectedMobileStation && !isMobile && isGuest && selectedMobileStation.type === 'active' && (
-        <div className="fixed bottom-6 right-6 w-84 z-[2500] pointer-events-auto bg-white/98 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-200 p-4 font-sans space-y-3 animate-in slide-in-from-bottom-3 duration-300">
-          <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-2">
-            <div>
-              <div className="text-sm font-extrabold text-slate-800">
-                Trạm: <span className="text-cyan-700">{selectedMobileStation.displayName}</span>
-              </div>
-              {selectedMobileStation.site?.name && (
-                <div className="text-[11px] text-slate-500 font-medium">{selectedMobileStation.site.name}</div>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={() => setSelectedMobileStation(null)}
-              className="h-7 w-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center shrink-0 cursor-pointer transition-colors"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-
-          <div className="bg-slate-50 rounded-xl p-3 border border-slate-200/80 space-y-2 text-xs">
-            <div className="flex items-center justify-between">
-              <span className="text-slate-500 font-medium">👤 Người QLT:</span>
-              <span className="font-bold text-slate-900">{selectedMobileStation.site?.management_info?.qlt || 'Chưa cập nhật'}</span>
-            </div>
-            {selectedMobileStation.site?.management_info?.sdt_qlt && (
-              <div className="flex items-center justify-between pt-1.5 border-t border-slate-200/60">
-                <span className="text-slate-500 font-medium">📞 Liên hệ:</span>
-                <a
-                  href={`tel:${selectedMobileStation.site.management_info.sdt_qlt}`}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs"
-                >
-                  <Phone className="h-3.5 w-3.5" />
-                  <span>Gọi {selectedMobileStation.site.management_info.sdt_qlt}</span>
-                </a>
-              </div>
-            )}
-            <div 
-              onClick={() => handleCopyCoords(selectedMobileStation.lat, selectedMobileStation.lng, `tọa độ trạm ${selectedMobileStation.name}`)}
-              className="flex items-center justify-between pt-1.5 border-t border-slate-200/60 cursor-pointer hover:text-slate-900"
-              title="Nhấp để copy tọa độ"
-            >
-              <span className="text-slate-500 font-medium">📍 Tọa độ:</span>
-              <span className="font-mono text-cyan-800 font-bold flex items-center gap-1">
-                {selectedMobileStation.lat.toFixed(6)}, {selectedMobileStation.lng.toFixed(6)}
-                <Copy className="h-3 w-3 text-slate-400" />
-              </span>
-            </div>
-          </div>
-
-          <div className="space-y-1.5 pt-1">
-            <a
-              href={`https://www.google.com/maps/dir/?api=1&destination=${selectedMobileStation.lat},${selectedMobileStation.lng}&travelmode=driving`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-500/20 text-center cursor-pointer active:scale-95 transition-all"
-            >
-              <Navigation className="h-3.5 w-3.5" />
-              <span>🚗 Dẫn đường Google Maps</span>
-            </a>
-            <button
-              type="button"
-              onClick={() => handleCopyStationInfo(selectedMobileStation.site, selectedMobileStation.lat, selectedMobileStation.lng, selectedMobileStation.displayName)}
-              className="w-full flex items-center justify-center gap-1.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-semibold text-center cursor-pointer shadow-2xs active:scale-95 transition-all"
-            >
-              <Copy className="h-3.5 w-3.5 text-cyan-600" />
-              <span>📋 Sao chép thông tin</span>
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* 8. Mobile Station Details Bottom Sheet (Modern Floating Sheet Card with Backdrop) */}
       {selectedMobileStation && isMobile && (
