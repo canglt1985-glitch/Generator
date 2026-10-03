@@ -987,13 +987,13 @@ export default function NetworkMap() {
           code: displayCode,
           oldCode: oldId,
           newCode: newId,
-          name: `${radio.tech} • ${s.name || oldId}`,
+          name: isGuest ? (s.name || oldId) : `${radio.tech} • ${s.name || oldId}`,
           lat: parseFloat(s.location_info.vi_do),
           lng: parseFloat(s.location_info.kinh_do),
           type: 'Hoạt động',
-          techType: radio.tech,
-          radioInfo: radio,
-          badgeClass: radio.badgeClass,
+          techType: isGuest ? '' : radio.tech,
+          radioInfo: isGuest ? null : radio,
+          badgeClass: isGuest ? '' : radio.badgeClass,
           rawSite: s
         };
       });
@@ -1815,22 +1815,24 @@ export default function NetworkMap() {
               <span className="text-[9px] px-1 rounded-full bg-blue-900/80 font-black">{activeSites.length}</span>
             </button>
 
-            {/* Cánh sóng Vô tuyến 3G/4G/5G */}
-            <button
-              type="button"
-              onClick={() => {
-                setLayerCellSectors(!layerCellSectors);
-                showToast(!layerCellSectors ? 'Đã bật cánh sóng vô tuyến' : 'Đã ẩn cánh sóng vô tuyến');
-              }}
-              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10.5px] font-bold backdrop-blur-md border active:scale-95 transition-all shadow-md shrink-0 cursor-pointer ${
-                layerCellSectors 
-                  ? 'bg-rose-950/90 border-rose-500/80 text-rose-200 ring-1 ring-rose-500/40' 
-                  : 'bg-slate-900/80 border-slate-700/60 text-slate-400 opacity-60'
-              }`}
-              title="Búp sóng vô tuyến đa tầng: 3G (xanh lá), 4G (cyan), 4G SRAN, 5G L1 (đỏ), 5G-A (tím)"
-            >
-              <span>📡 Cánh sóng</span>
-            </button>
+            {/* Cánh sóng Vô tuyến 3G/4G/5G (Chỉ hiển thị cho Cán bộ Tổ) */}
+            {!isGuest && (
+              <button
+                type="button"
+                onClick={() => {
+                  setLayerCellSectors(!layerCellSectors);
+                  showToast(!layerCellSectors ? 'Đã bật cánh sóng vô tuyến' : 'Đã ẩn cánh sóng vô tuyến');
+                }}
+                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10.5px] font-bold backdrop-blur-md border active:scale-95 transition-all shadow-md shrink-0 cursor-pointer ${
+                  layerCellSectors 
+                    ? 'bg-rose-950/90 border-rose-500/80 text-rose-200 ring-1 ring-rose-500/40' 
+                    : 'bg-slate-900/80 border-slate-700/60 text-slate-400 opacity-60'
+                }`}
+                title="Búp sóng vô tuyến đa tầng: 3G (xanh lá), 4G (cyan), 4G SRAN, 5G L1 (đỏ), 5G-A (tím)"
+              >
+                <span>📡 Cánh sóng</span>
+              </button>
+            )}
 
             {/* CSHT Quy hoạch */}
             <button
@@ -2009,27 +2011,29 @@ export default function NetworkMap() {
                       </span>
                     </label>
 
-                    {/* Layer 2: Cánh sóng Vô tuyến 3G/4G/5G */}
-                    <label className="flex items-center justify-between p-2 rounded-xl bg-slate-800/50 hover:bg-slate-800/90 border border-slate-700/60 cursor-pointer transition-colors">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <input
-                          type="checkbox"
-                          checked={layerCellSectors}
-                          onChange={(e) => setLayerCellSectors(e.target.checked)}
-                          className="rounded border-slate-600 text-rose-500 focus:ring-rose-500 h-4 w-4 bg-slate-900 cursor-pointer"
-                        />
-                        <div className="min-w-0">
-                          <div className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                            <span className="h-2 w-2 rounded-full bg-rose-500 shrink-0"></span>
-                            <span>Cánh sóng Vô tuyến (3G/4G/5G)</span>
+                    {/* Layer 2: Cánh sóng Vô tuyến 3G/4G/5G (Chỉ cho nội bộ) */}
+                    {!isGuest && (
+                      <label className="flex items-center justify-between p-2 rounded-xl bg-slate-800/50 hover:bg-slate-800/90 border border-slate-700/60 cursor-pointer transition-colors">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <input
+                            type="checkbox"
+                            checked={layerCellSectors}
+                            onChange={(e) => setLayerCellSectors(e.target.checked)}
+                            className="rounded border-slate-600 text-rose-500 focus:ring-rose-500 h-4 w-4 bg-slate-900 cursor-pointer"
+                          />
+                          <div className="min-w-0">
+                            <div className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                              <span className="h-2 w-2 rounded-full bg-rose-500 shrink-0"></span>
+                              <span>Cánh sóng Vô tuyến (3G/4G/5G)</span>
+                            </div>
+                            <div className="text-[10px] text-slate-400 truncate">Búp sóng 4 tầng: 3G (xanh), 4G (cyan), 4G SRAN, 5G L1 (đỏ), 5G-A (tím)</div>
                           </div>
-                          <div className="text-[10px] text-slate-400 truncate">Búp sóng 4 tầng: 3G (xanh), 4G (cyan), 4G SRAN, 5G L1 (đỏ), 5G-A (tím)</div>
                         </div>
-                      </div>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-950 text-rose-300 border border-rose-700/50 shrink-0">
-                        360°
-                      </span>
-                    </label>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-950 text-rose-300 border border-rose-700/50 shrink-0">
+                          360°
+                        </span>
+                      </label>
+                    )}
 
                     {/* Layer 3: Trạm quy hoạch CSHT */}
                     <label className="flex items-center justify-between p-2 rounded-xl bg-slate-800/50 hover:bg-slate-800/90 border border-slate-700/60 cursor-pointer transition-colors">
@@ -2340,8 +2344,8 @@ export default function NetworkMap() {
                 </>
               )}
 
-              {/* Render Cánh sóng vô tuyến đa tầng (3G / 4G / 4G SRAN / 5G-A) */}
-              {layerCellSectors && activeSites.map(site => (
+              {/* Render Cánh sóng vô tuyến đa tầng (3G / 4G / 4G SRAN / 5G-A) - Chỉ hiển thị cho Cán bộ Tổ */}
+              {!isGuest && layerCellSectors && activeSites.map(site => (
                 <CellSectorWedges 
                   key={`sec-${site.site_id}`}
                   site={site}
@@ -2365,12 +2369,13 @@ export default function NetworkMap() {
                 const name = oldId;
                 const radio = getSiteRadioInfo(site);
                 const isSelected = selectedMobileStation?.site?.site_id === site.site_id;
+                const markerColor = isGuest ? '#0284c7' : radio.color;
 
                 return (
                   <React.Fragment key={site.site_id}>
                     <Marker 
                       position={[lat, lng]} 
-                      icon={createSiteDivIcon(name, radio.color, currentZoom >= 12, isSelected)}
+                      icon={createSiteDivIcon(name, markerColor, currentZoom >= 12, isSelected)}
                       ref={(ref) => {
                         if (ref && isSelected && !isMobile) {
                           if (!ref.isPopupOpen()) {
@@ -2942,12 +2947,12 @@ export default function NetworkMap() {
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <h3 className={`text-sm font-extrabold truncate ${
                     selectedMobileStation.type === 'active' 
-                      ? (selectedMobileStation.radioInfo?.textColor || 'text-cyan-800')
+                      ? (isGuest ? 'text-cyan-800' : (selectedMobileStation.radioInfo?.textColor || 'text-cyan-800'))
                       : (selectedMobileStation.cat?.textColor || 'text-amber-800')
                   }`}>
                     {selectedMobileStation.displayName || selectedMobileStation.code || 'Chi tiết trạm'}
                   </h3>
-                  {selectedMobileStation.radioInfo ? (
+                  {!isGuest && (selectedMobileStation.radioInfo ? (
                     <span className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold ${selectedMobileStation.radioInfo.badgeClass}`}>
                       {selectedMobileStation.radioInfo.tech}
                     </span>
@@ -2955,7 +2960,7 @@ export default function NetworkMap() {
                     <span className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold ${selectedMobileStation.cat.badgeClass}`}>
                       {selectedMobileStation.cat.icon} {selectedMobileStation.cat.shortLabel || selectedMobileStation.cat.label}
                     </span>
-                  ) : null}
+                  ) : null)}
                 </div>
                 {selectedMobileStation.site?.name && (
                   <p className="text-[11px] text-slate-500 font-medium truncate mt-0.5">
@@ -3480,27 +3485,29 @@ export default function NetworkMap() {
                   </span>
                 </label>
 
-                {/* Cánh sóng Vô tuyến 3G/4G/5G */}
-                <label className="flex items-center justify-between p-2.5 rounded-xl bg-slate-800/60 border border-slate-700/60 cursor-pointer active:scale-[0.99] transition-all">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <input
-                      type="checkbox"
-                      checked={layerCellSectors}
-                      onChange={(e) => setLayerCellSectors(e.target.checked)}
-                      className="rounded border-slate-600 text-rose-500 focus:ring-rose-500 h-5 w-5 bg-slate-900 cursor-pointer"
-                    />
-                    <div className="min-w-0">
-                      <div className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                        <span className="h-2 w-2 rounded-full bg-rose-500 shrink-0"></span>
-                        <span>Cánh sóng Vô tuyến (3G/4G/5G)</span>
+                {/* Cánh sóng Vô tuyến 3G/4G/5G (Chỉ cho nội bộ) */}
+                {!isGuest && (
+                  <label className="flex items-center justify-between p-2.5 rounded-xl bg-slate-800/60 border border-slate-700/60 cursor-pointer active:scale-[0.99] transition-all">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <input
+                        type="checkbox"
+                        checked={layerCellSectors}
+                        onChange={(e) => setLayerCellSectors(e.target.checked)}
+                        className="rounded border-slate-600 text-rose-500 focus:ring-rose-500 h-5 w-5 bg-slate-900 cursor-pointer"
+                      />
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                          <span className="h-2 w-2 rounded-full bg-rose-500 shrink-0"></span>
+                          <span>Cánh sóng Vô tuyến (3G/4G/5G)</span>
+                        </div>
+                        <div className="text-[10px] text-slate-400 truncate">Búp sóng 4 tầng: 3G, 4G, 4G SRAN, 5G L1, 5G-A (tím)</div>
                       </div>
-                      <div className="text-[10px] text-slate-400 truncate">Búp sóng 4 tầng: 3G, 4G, 4G SRAN, 5G L1, 5G-A (tím)</div>
                     </div>
-                  </div>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-950 text-rose-300 border border-rose-700/50 shrink-0">
-                    360°
-                  </span>
-                </label>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-950 text-rose-300 border border-rose-700/50 shrink-0">
+                      360°
+                    </span>
+                  </label>
+                )}
 
                 {/* Trạm CSHT Quy hoạch */}
                 <label className="flex items-center justify-between p-2.5 rounded-xl bg-slate-800/60 border border-slate-700/60 cursor-pointer active:scale-[0.99] transition-all">
