@@ -321,8 +321,15 @@ def main():
             elif ran == '5G':
                 if layer_5g == 2 or '3800' in band:
                     sector_map[sec_name]['has_5g_l2'] = True
-                else:
+                if layer_5g == 1 or '2600' in band or not ('3800' in band):
                     sector_map[sec_name]['has_5g_l1'] = True
+
+        # Bảo toàn cấu hình 5 sector đặc thù của DNLK05 (DNILKH00)
+        if sid in ('DNLK05', 'DNILKH00') or sold in ('DNLK05', 'DNILKH00'):
+            # Nếu đã có 5 sector trong DB thì giữ nguyên cấu hình chi tiết 5 sector
+            existing_secs = (s.get('technical_info') or {}).get('rf_summary', {}).get('sectors', [])
+            if len(existing_secs) == 5:
+                sector_map = {sec['sector']: sec for sec in existing_secs}
 
         sectors_list = sorted(list(sector_map.values()), key=lambda x: x['sector'])
 
