@@ -16,6 +16,8 @@ tvt3_v2/dist/
 
 # ── Virtual Environment ──
 .venv/
+.venv_egov/
+test_env/
 venv/
 env/
 

@@ -1156,6 +1156,18 @@ export default function Generator() {
     document.body.removeChild(link);
   };
 
+  // Download PDF Tổng hợp Tra Cứu GDT (Nhóm 1 - ĐN)
+  const handleDownloadEgovPdf = () => {
+    const pdfUrl = '/reports/1_TONG HOP HINH ANH EGOV_DONG_NAI_67TRAM.pdf';
+    const link = document.createElement('a');
+    link.href = pdfUrl;
+    link.download = '1_TONG_HOP_HINH_ANH_EGOV_DONG_NAI_67TRAM.pdf';
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // Export Anomalies to Excel
   const exportAnomaliesToExcel = async () => {
     const XLSX = await getXLSX();
@@ -2288,6 +2300,13 @@ export default function Generator() {
                   title="Tải trọn bộ file ZIP toàn bộ hóa đơn Nhóm 1 (MobiFone Đồng Nai - 67 trạm)"
                 >
                   📦 Tải ZIP Nhóm 1 ({groupComparisonStats?.g1?.invCount || 28} HĐ)
+                </button>
+                <button
+                  onClick={handleDownloadEgovPdf}
+                  className="inline-flex items-center justify-center px-2.5 py-1.5 text-xs font-bold rounded-lg text-rose-800 border border-rose-300 bg-rose-50 hover:bg-rose-100 shadow-sm transition-colors cursor-pointer"
+                  title="Tải file PDF tổng hợp minh chứng tra cứu Hóa đơn điện tử GDT (Tổng cục Thuế) của 15 hóa đơn Nhóm 1 ĐN"
+                >
+                  <FileText className="h-3.5 w-3.5 mr-1 text-rose-600" /> 📄 Tải PDF Tra Cứu GDT (Nhóm 1 - ĐN)
                 </button>
                 <button
                   onClick={() => exportInvoicesZip('current')}
