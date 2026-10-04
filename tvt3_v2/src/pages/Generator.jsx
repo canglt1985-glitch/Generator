@@ -2122,281 +2122,224 @@ export default function Generator() {
   const selectedMpdToMove = transEquipType === 'mpd' && transEquipIndex !== '' ? availableSourceItems.find(item => item.value === transEquipIndex)?.raw : null;
 
   return (
-    <div className="space-y-5 animate-in fade-in duration-500 relative">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
-        <div>
-          <h1 className="text-lg md:text-xl font-bold text-slate-800">
-            {activeTab === 'logs' ? 'Dữ liệu chạy máy phát' : 
-             activeTab === 'anomalies' ? 'Báo cáo chạy máy bất thường' : 
-             'Quản lý hóa đơn'}
-          </h1>
-          <p className="text-[13px] text-slate-500">
-            {activeTab === 'logs' && `Hiển thị ${filteredLogs.length} dòng nhật ký`}
-            {activeTab === 'anomalies' && `Phát hiện ${anomaliesList.length} bất thường cần lưu ý`}
-            {activeTab === 'invoices' && `Quản lý danh sách ${filteredInvoices.length} hóa đơn điện tử`}
-          </p>
+    <div className="space-y-3.5 animate-in fade-in duration-300 relative">
+      {/* Header Hợp Nhất 1 Dòng (Compact Unified Action Bar) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3 px-4 rounded-xl border border-slate-200/90 shadow-2xs">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex items-center gap-2">
+            <span className="p-1.5 bg-blue-50 text-blue-600 rounded-lg text-sm leading-none font-bold">⚡</span>
+            <h1 className="text-base sm:text-lg font-extrabold text-slate-800 tracking-tight">
+              {activeTab === 'logs' ? 'Dữ liệu máy phát điện' : 
+               activeTab === 'anomalies' ? 'Báo cáo bất thường' : 
+               activeTab === 'transfer' ? 'MPĐ & Thiết bị lưu động' :
+               'Quản lý hóa đơn'}
+            </h1>
+          </div>
+
+          {/* Quick Date Picker Pills */}
+          {(activeTab === 'logs' || activeTab === 'invoices') && (
+            <div className="inline-flex items-center bg-slate-100/90 border border-slate-200/80 rounded-lg p-0.5 text-xs font-bold shadow-2xs">
+              <span className="pl-2 pr-1 text-slate-400 text-[11px]">📅</span>
+              <select
+                value={filterMonth}
+                onChange={(e) => {
+                  const val = e.target.value === "" ? "" : Number(e.target.value);
+                  setFilterMonth(val);
+                  if (val === 8 && filterYear === 2026 && selectedGroupFilter === 'group3') {
+                    setSelectedGroupFilter('all');
+                  }
+                }}
+                className="bg-transparent py-1 px-1.5 text-slate-700 font-extrabold hover:text-blue-600 cursor-pointer focus:outline-none"
+              >
+                <option value="">Cả năm</option>
+                {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                  <option key={m} value={m}>Tháng {m}</option>
+                ))}
+              </select>
+              <span className="text-slate-300 font-normal">/</span>
+              <select
+                value={filterYear}
+                onChange={(e) => {
+                  const y = Number(e.target.value);
+                  setFilterYear(y);
+                  if (y === 2026 && filterMonth === 8 && selectedGroupFilter === 'group3') {
+                    setSelectedGroupFilter('all');
+                  }
+                }}
+                className="bg-transparent py-1 px-1.5 text-slate-700 font-extrabold hover:text-blue-600 cursor-pointer focus:outline-none"
+              >
+                {[2024, 2025, 2026, 2027].map(y => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Quick Counter Chip */}
+          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200/80">
+            {activeTab === 'logs' && `${filteredLogs.length} ca chạy`}
+            {activeTab === 'anomalies' && `${anomaliesList.length} bất thường`}
+            {activeTab === 'invoices' && `${filteredInvoices.length} HĐ`}
+          </span>
         </div>
 
-        {(activeTab === 'logs' || activeTab === 'invoices') && (
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Month select */}
-            <select
-              value={filterMonth}
-              onChange={(e) => {
-                const val = e.target.value === "" ? "" : Number(e.target.value);
-                setFilterMonth(val);
-                if (val === 8 && filterYear === 2026 && selectedGroupFilter === 'group3') {
-                  setSelectedGroupFilter('all');
-                }
-              }}
-              className="bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
-            >
-              <option value="">-- Cả năm --</option>
-              {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
-                <option key={m} value={m}>Tháng {m}</option>
-              ))}
-            </select>
-            {/* Year select */}
-            <select
-              value={filterYear}
-              onChange={(e) => {
-                const y = Number(e.target.value);
-                setFilterYear(y);
-                if (y === 2026 && filterMonth === 8 && selectedGroupFilter === 'group3') {
-                  setSelectedGroupFilter('all');
-                }
-              }}
-              className="bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
-            >
-              {[2024, 2025, 2026, 2027].map(y => (
-                <option key={y} value={y}>{y}</option>
-              ))}
-            </select>
-
-            {/* Group Filter Select for >= August 2026 */}
-            {isFromAug2026 && (
-              <select
-                value={selectedGroupFilter}
-                onChange={(e) => setSelectedGroupFilter(e.target.value)}
-                className="bg-amber-50 border border-amber-300 text-amber-900 rounded-lg px-2.5 py-1.5 text-xs font-bold focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer shadow-sm"
+        {/* Action Button Group */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          {activeTab === 'logs' && (
+            <>
+              <button 
+                onClick={() => { resetLogForm(); setShowAddLogModal(true); }}
+                className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg text-white bg-blue-600 hover:bg-blue-700 shadow-xs transition-all cursor-pointer gap-1"
               >
-                <option value="all">📊 Tất cả nhóm (Tổng hợp)</option>
-                <option value="group1">📌 Nhóm 1: 67 Trạm Đặc Thù (MobiFone ĐN)</option>
-                <option value="group2">🏢 Nhóm 2: Các Trạm Còn Lại (MBG)</option>
-                {!(Number(filterMonth) === 8 && Number(filterYear) === 2026) && (
-                  <option value="group3">🟣 Nhóm 3: Đối Tác Seath Group</option>
-                )}
-              </select>
-            )}
+                <Plus className="h-3.5 w-3.5" /> Thêm ca
+              </button>
 
-            {activeTab === 'logs' && (
-              <select
-                value={searchStatus}
-                onChange={(e) => setSearchStatus(e.target.value)}
-                className={`bg-white border rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:ring-1 cursor-pointer transition-colors ${
-                  searchStatus === 'pending'
-                    ? 'border-amber-300 text-amber-700 focus:ring-amber-500'
-                    : searchStatus === 'approved'
-                    ? 'border-emerald-300 text-emerald-700 focus:ring-emerald-500'
-                    : searchStatus === 'rejected'
-                    ? 'border-red-300 text-red-700 focus:ring-red-500'
-                    : 'border-slate-200 text-slate-700 focus:ring-blue-500'
-                }`}
+              <button
+                onClick={handleRecalculate}
+                className="inline-flex items-center justify-center px-2.5 py-1.5 text-xs font-bold rounded-lg text-amber-900 border border-amber-300/80 bg-amber-50 hover:bg-amber-100 shadow-2xs transition-colors cursor-pointer gap-1"
+                title="Tính lại định mức nhiên liệu theo trạm và loại máy"
               >
-                <option value="" className="text-slate-700">-- Tất cả trạng thái --</option>
-                <option value="pending" className="text-amber-700">Chờ duyệt</option>
-                <option value="approved" className="text-emerald-700">Đã duyệt</option>
-                <option value="rejected" className="text-red-700">Từ chối</option>
-              </select>
-            )}
+                <Zap className="h-3.5 w-3.5 text-amber-600" /> Tính lại ĐM
+              </button>
 
-            {activeTab === 'logs' && (
-              <>
-                {/* Import Excel */}
+              {selectedGroupFilter === 'group3' ? (
                 <button
-                  onClick={() => alert("Chức năng import đang được phát triển. Vui lòng quét SmartW hoặc nhập thủ công.")}
-                  className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg text-white bg-emerald-600 hover:bg-emerald-700 shadow-sm transition-colors cursor-pointer"
+                  onClick={exportToExcel}
+                  className="inline-flex items-center justify-center px-2.5 py-1.5 text-xs font-bold rounded-lg text-white bg-purple-600 hover:bg-purple-700 shadow-xs transition-colors cursor-pointer gap-1"
+                  title="Xuất Bảng kê chạy máy phát điện đối tác Seath Group"
                 >
-                  <FileText className="h-3.5 w-3.5 mr-1" /> Import
+                  <Download className="h-3.5 w-3.5" /> Xuất Bảng Kê Seath
                 </button>
-                {/* Recalculate */}
+              ) : (
                 <button
-                  onClick={handleRecalculate}
-                  className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg text-white bg-amber-500 hover:bg-amber-600 shadow-sm transition-colors cursor-pointer"
+                  onClick={exportToExcel}
+                  className="inline-flex items-center justify-center px-2.5 py-1.5 text-xs font-bold rounded-lg text-blue-700 border border-blue-200 bg-blue-50/70 hover:bg-blue-100 shadow-2xs transition-colors cursor-pointer gap-1"
+                  title="Xuất trọn bộ hồ sơ đối soát chạy máy & hóa đơn theo mẫu chuẩn 02A-TTNB"
                 >
-                  <Zap className="h-3.5 w-3.5 mr-1" /> Tính lại ĐM
+                  <ExternalLink className="h-3.5 w-3.5" /> Hồ Sơ 02A ({filterMonth ? `T${filterMonth}` : `${filterYear}`})
                 </button>
-                {/* Export */}
-                {selectedGroupFilter === 'group3' ? (
-                  <button
-                    onClick={exportToExcel}
-                    className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg text-white bg-purple-600 hover:bg-purple-700 shadow-sm transition-colors cursor-pointer"
-                    title="Xuất Bảng kê chạy máy phát điện đối tác Seath Group tiếp nhận xử lý"
-                  >
-                    <Download className="h-3.5 w-3.5 mr-1" /> Xuất Bảng Kê Seath Group ({filterMonth ? `T${filterMonth}/${filterYear}` : `${filterYear}`})
-                  </button>
-                ) : (
-                  <button
-                    onClick={exportToExcel}
-                    className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg text-blue-700 border border-blue-200 bg-white hover:bg-blue-50 shadow-sm transition-colors cursor-pointer"
-                    title="Xuất trọn bộ hồ sơ đối soát chạy máy & hóa đơn theo mẫu chuẩn 02A-TTNB"
-                  >
-                    <ExternalLink className="h-3.5 w-3.5 mr-1" /> Xuất Hồ Sơ 02A ({filterMonth ? `T${filterMonth}/${filterYear}` : `${filterYear}`})
-                  </button>
-                )}
-                {/* Nút Xuất Bảng kê Seath Group nhanh nếu đang ở Tất cả nhóm */}
-                {selectedGroupFilter === 'all' && stats.g3 && stats.g3.records > 0 && (
-                  <button
-                    onClick={() => exportSeathGroupReport({
-                      logs: genLogs,
-                      stations,
-                      month: filterMonth,
-                      year: filterYear
-                    })}
-                    className="inline-flex items-center justify-center px-2.5 py-1.5 text-xs font-bold rounded-lg text-purple-700 border border-purple-300 bg-purple-50 hover:bg-purple-100 shadow-sm transition-colors cursor-pointer"
-                    title="Xuất riêng Bảng kê chạy máy phát điện cho Seath Group"
-                  >
-                    <Download className="h-3.5 w-3.5 mr-1" /> Bảng Kê Seath ({stats.g3.records})
-                  </button>
-                )}
-                {/* Add manual log */}
-                <button 
-                  onClick={() => { resetLogForm(); setShowAddLogModal(true); }}
-                  className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors cursor-pointer"
-                >
-                  <Plus className="h-3.5 w-3.5 mr-1" /> Thêm
-                </button>
-                {/* Export Mobile Equipment Excel Shortcut */}
-                <button
-                  onClick={handleExportMobileEquipment}
-                  className="hidden md:inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg text-emerald-700 border border-emerald-300 bg-white hover:bg-emerald-50 shadow-sm transition-colors cursor-pointer"
-                  title="Xuất trọn bộ file Excel Quản lý & Điều chuyển thiết bị lưu động"
-                >
-                  <Download className="h-3.5 w-3.5 mr-1" /> Xuất Excel MPĐ Lưu Động
-                </button>
-              </>
-            )}
+              )}
 
-            {activeTab === 'invoices' && (
-              <div className="flex items-center gap-2">
+              {selectedGroupFilter === 'all' && stats.g3 && stats.g3.records > 0 && (
                 <button
-                  onClick={() => exportSiteInvoiceMapReport({
+                  onClick={() => exportSeathGroupReport({
                     logs: genLogs,
                     stations,
-                    invoices,
-                    month: filterMonth ? parseInt(filterMonth) : 8,
-                    year: filterYear ? parseInt(filterYear) : 2026,
-                    isSpecial67Site
+                    month: filterMonth,
+                    year: filterYear
                   })}
-                  className="inline-flex items-center justify-center px-2.5 py-1.5 text-xs font-bold rounded-lg text-indigo-800 border border-indigo-300 bg-indigo-50 hover:bg-indigo-100 shadow-sm transition-colors cursor-pointer"
-                  title="Xuất bảng kê phân bổ & Map hóa đơn theo từng trạm Nhóm 1 (Chuẩn theo mẫu Excel)"
+                  className="inline-flex items-center justify-center px-2.5 py-1.5 text-xs font-bold rounded-lg text-purple-700 border border-purple-300 bg-purple-50 hover:bg-purple-100 shadow-2xs transition-colors cursor-pointer gap-1"
+                  title="Xuất riêng Bảng kê chạy máy phát điện cho Seath Group"
                 >
-                  <ExternalLink className="h-3.5 w-3.5 mr-1" /> 🔗 Map HĐ Theo Trạm (Nhóm 1)
+                  <Download className="h-3.5 w-3.5" /> Seath ({stats.g3.records})
                 </button>
-                <button
-                  onClick={() => exportInvoicesZip('group1')}
-                  className="inline-flex items-center justify-center px-2.5 py-1.5 text-xs font-bold rounded-lg text-amber-900 border border-amber-300 bg-amber-50 hover:bg-amber-100 shadow-sm transition-colors cursor-pointer"
-                  title="Tải trọn bộ file ZIP toàn bộ hóa đơn Nhóm 1 (MobiFone Đồng Nai - 67 trạm)"
-                >
-                  📦 Tải ZIP Nhóm 1 ({groupComparisonStats?.g1?.invCount || 28} HĐ)
-                </button>
-                <button
-                  onClick={handleDownloadEgovPdf}
-                  className="inline-flex items-center justify-center px-2.5 py-1.5 text-xs font-bold rounded-lg text-rose-800 border border-rose-300 bg-rose-50 hover:bg-rose-100 shadow-sm transition-colors cursor-pointer"
-                  title="Tải file PDF tổng hợp minh chứng tra cứu Hóa đơn điện tử GDT (Tổng cục Thuế) của 15 hóa đơn Nhóm 1 ĐN"
-                >
-                  <FileText className="h-3.5 w-3.5 mr-1 text-rose-600" /> 📄 Tải PDF Tra Cứu GDT (Nhóm 1 - ĐN)
-                </button>
-                <button
-                  onClick={() => exportInvoicesZip('current')}
-                  className="inline-flex items-center justify-center px-2.5 py-1.5 text-xs font-bold rounded-lg text-blue-700 border border-blue-200 bg-white hover:bg-blue-50 shadow-sm transition-colors cursor-pointer"
-                  title="Tải trọn bộ file ZIP theo bộ lọc hiện tại"
-                >
-                  📦 Tải ZIP Hóa Đơn
-                </button>
-                <button
-                  onClick={exportInvoicesToExcel}
-                  className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg text-emerald-700 border border-emerald-200 bg-white hover:bg-emerald-50 shadow-sm transition-colors cursor-pointer"
-                  title="Xuất bảng kê hóa đơn điện tử theo mẫu chuẩn HD"
-                >
-                  <ExternalLink className="h-3.5 w-3.5 mr-1" /> Xuất Bảng Kê HD ({filterMonth ? `T${filterMonth}/${filterYear}` : `${filterYear}`})
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+              )}
 
-        {activeTab === 'anomalies' && (
-          <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={handleExportMobileEquipment}
+                className="hidden lg:inline-flex items-center justify-center px-2.5 py-1.5 text-xs font-bold rounded-lg text-emerald-700 border border-emerald-300 bg-emerald-50/60 hover:bg-emerald-100 shadow-2xs transition-colors cursor-pointer gap-1"
+                title="Xuất trọn bộ file Excel Quản lý & Điều chuyển thiết bị lưu động"
+              >
+                <Download className="h-3.5 w-3.5" /> MPĐ Lưu Động
+              </button>
+            </>
+          )}
+
+          {activeTab === 'invoices' && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <button
+                onClick={handleDownloadEgovPdf}
+                className="inline-flex items-center justify-center px-2.5 py-1.5 text-xs font-bold rounded-lg text-rose-800 border border-rose-300 bg-rose-50 hover:bg-rose-100 shadow-2xs transition-colors cursor-pointer gap-1"
+                title="Tải file PDF tổng hợp minh chứng tra cứu Hóa đơn điện tử GDT (Tổng cục Thuế) của 15 hóa đơn Nhóm 1 ĐN"
+              >
+                <FileText className="h-3.5 w-3.5 text-rose-600" /> PDF GDT (Nhóm 1)
+              </button>
+              <button
+                onClick={() => exportInvoicesZip('group1')}
+                className="inline-flex items-center justify-center px-2.5 py-1.5 text-xs font-bold rounded-lg text-amber-900 border border-amber-300 bg-amber-50 hover:bg-amber-100 shadow-2xs transition-colors cursor-pointer gap-1"
+                title="Tải trọn bộ file ZIP toàn bộ hóa đơn Nhóm 1 (MobiFone Đồng Nai - 67 trạm)"
+              >
+                📦 ZIP Nhóm 1 ({groupComparisonStats?.g1?.invCount || 28})
+              </button>
+              <button
+                onClick={() => exportSiteInvoiceMapReport({
+                  logs: genLogs,
+                  stations,
+                  invoices,
+                  month: filterMonth ? parseInt(filterMonth) : 8,
+                  year: filterYear ? parseInt(filterYear) : 2026,
+                  isSpecial67Site
+                })}
+                className="inline-flex items-center justify-center px-2.5 py-1.5 text-xs font-bold rounded-lg text-indigo-800 border border-indigo-300 bg-indigo-50 hover:bg-indigo-100 shadow-2xs transition-colors cursor-pointer gap-1"
+                title="Xuất bảng kê phân bổ & Map hóa đơn theo từng trạm Nhóm 1"
+              >
+                <ExternalLink className="h-3.5 w-3.5" /> Map HĐ Trạm
+              </button>
+              <button
+                onClick={() => exportInvoicesZip('current')}
+                className="inline-flex items-center justify-center px-2 py-1.5 text-xs font-bold rounded-lg text-blue-700 border border-blue-200 bg-white hover:bg-blue-50 shadow-2xs transition-colors cursor-pointer gap-1"
+              >
+                📦 ZIP Tất Cả
+              </button>
+              <button
+                onClick={exportInvoicesToExcel}
+                className="inline-flex items-center justify-center px-2.5 py-1.5 text-xs font-bold rounded-lg text-emerald-700 border border-emerald-200 bg-white hover:bg-emerald-50 shadow-2xs transition-colors cursor-pointer gap-1"
+              >
+                <ExternalLink className="h-3.5 w-3.5" /> Bảng Kê ({filterMonth ? `T${filterMonth}` : `${filterYear}`})
+              </button>
+            </div>
+          )}
+
+          {activeTab === 'anomalies' && (
             <button
               onClick={exportAnomaliesToExcel}
-              className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg text-emerald-700 border border-emerald-200 bg-white hover:bg-emerald-50 shadow-sm transition-colors cursor-pointer"
+              className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg text-emerald-700 border border-emerald-200 bg-white hover:bg-emerald-50 shadow-2xs transition-colors cursor-pointer gap-1"
             >
-              <ExternalLink className="h-3.5 w-3.5 mr-1" /> Xuất Excel
+              <ExternalLink className="h-3.5 w-3.5" /> Xuất Excel
             </button>
-          </div>
-        )}
+          )}
 
-        {activeTab === 'transfer' && (
-          <div className="hidden md:flex flex-wrap items-center gap-2">
+          {activeTab === 'transfer' && (
             <button
               onClick={handleExportMobileEquipment}
-              className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg text-emerald-700 border border-emerald-300 bg-white hover:bg-emerald-50 shadow-sm transition-colors cursor-pointer"
-              title="Xuất file Excel Quản lý & Điều chuyển thiết bị lưu động"
+              className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg text-emerald-700 border border-emerald-300 bg-white hover:bg-emerald-50 shadow-2xs transition-colors cursor-pointer gap-1"
             >
-              <Download className="h-3.5 w-3.5 mr-1" /> Xuất Excel Thiết Bị Lưu Động
+              <Download className="h-3.5 w-3.5" /> Xuất Excel Thiết Bị Lưu Động
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
-      {/* Navigation Cards as Tabs (Moved UP above Group Cards) */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 mb-4">
+      {/* Segmented Control Navigation Tabs (Phong cách macOS / iOS hiện đại & mỏng gọn) */}
+      <div className="bg-slate-100/90 p-1 rounded-xl inline-flex border border-slate-200/80 gap-1 w-full sm:w-auto overflow-x-auto shadow-2xs">
         {[
-          { id: 'logs', label: 'Nhật ký chạy máy', color: 'blue', icon: '⏱' },
-          { id: 'anomalies', label: 'Báo cáo bất thường', color: 'red', icon: '⚠️' },
-          { id: 'invoices', label: 'Hóa đơn điện tử', color: 'emerald', icon: '💳' },
-          { id: 'transfer', label: 'MPĐ & Thiết bị lưu động', color: 'orange', icon: '⚡' },
-        ].map(card => {
-          const isActive = activeTab === card.id;
-          
-          const borderColors = {
-            blue: 'border-l-blue-500',
-            red: 'border-l-red-500',
-            emerald: 'border-l-emerald-500',
-            orange: 'border-l-orange-500',
-          };
-          
-          const textColors = {
-            blue: 'text-blue-700',
-            red: 'text-red-700',
-            emerald: 'text-emerald-700',
-            orange: 'text-orange-700',
-          };
-
-          const ringColors = {
-            blue: 'ring-blue-400',
-            red: 'ring-red-400',
-            emerald: 'ring-emerald-400',
-            orange: 'ring-orange-400',
-          };
-
+          { id: 'logs', label: 'Nhật ký chạy máy', count: filteredLogs.length, icon: '⏱' },
+          { id: 'anomalies', label: 'Báo cáo bất thường', count: anomaliesList.length, icon: '⚠️', alert: anomaliesList.length > 0 },
+          { id: 'invoices', label: 'Hóa đơn điện tử', count: filteredInvoices.length, icon: '💳' },
+          { id: 'transfer', label: 'MPĐ & Thiết bị lưu động', count: null, icon: '⚡' },
+        ].map(tab => {
+          const isActive = activeTab === tab.id;
           return (
             <button
-              key={card.id}
-              onClick={() => { setActiveTab(card.id); setSearchQuery(''); }}
-              className={`
-                bg-white rounded-xl p-2 sm:p-3.5 text-left transition-all border-l-4 border-y border-r border-y-slate-200 border-r-slate-200
-                hover:shadow-md cursor-pointer flex items-center gap-1 sm:gap-2.5
-                ${borderColors[card.color]}
-                ${isActive ? `ring-2 ${ringColors[card.color]} ring-offset-1` : ''}
-              `}
+              key={tab.id}
+              onClick={() => { setActiveTab(tab.id); setSearchQuery(''); }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+                isActive
+                  ? 'bg-white text-blue-700 shadow-xs border border-slate-200/60 font-extrabold'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+              }`}
             >
-              <span className="text-sm sm:text-base shrink-0">{card.icon}</span>
-              <span className={`text-[9px] sm:text-xs font-bold uppercase tracking-wider truncate ${isActive ? 'text-slate-800 font-extrabold' : 'text-slate-500 font-semibold'}`} title={card.label}>
-                {card.label}
-              </span>
+              <span className="text-sm leading-none">{tab.icon}</span>
+              <span>{tab.label}</span>
+              {tab.count !== null && (
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold leading-none ${
+                  isActive
+                    ? 'bg-blue-50 text-blue-700 border border-blue-200/80'
+                    : tab.alert ? 'bg-red-100 text-red-700' : 'bg-slate-200/80 text-slate-600'
+                }`}>
+                  {tab.count}
+                </span>
+              )}
             </button>
           );
         })}
@@ -2653,214 +2596,204 @@ export default function Generator() {
         </div>
       )}
 
-      {/* Statistics Row for Logs tab */}
+      {/* Statistics Row for Logs tab - Interactive 3-Card Grid */}
       {activeTab === 'logs' && (
-        <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
-          {isFromAug2026 && selectedGroupFilter === 'all' ? (
-            <>
-              {/* Row 1: Nhóm 1 - MobiFone Đồng Nai (67 Trạm) */}
-              <div className="bg-amber-50/70 border border-amber-200/80 rounded-xl p-2 px-3 shadow-xs flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-1.5 min-w-[200px]">
-                  <span className="bg-amber-600 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase shadow-2xs">
-                    📌 Nhóm 1
-                  </span>
-                  <span className="text-xs font-bold text-amber-950 truncate" title="MobiFone Đồng Nai (67 Trạm Đặc Thù)">
-                    MobiFone Đồng Nai (67 Trạm)
-                  </span>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-1.5 text-xs">
-                  <div className="bg-white border border-amber-200/80 px-2 py-1 rounded-lg">
-                    <span className="text-[10px] text-slate-500 font-semibold mr-1 uppercase">Records:</span>
-                    <span className="font-extrabold text-blue-700">{stats.g1.records}</span>
+        <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+          {isFromAug2026 ? (
+            <div className={`grid grid-cols-1 ${stats.g3 && stats.g3.records > 0 ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-2.5`}>
+              {/* CARD 1: NHÓM 1 - ĐỒNG NAI (67 TRẠM) */}
+              <div 
+                onClick={() => setSelectedGroupFilter(selectedGroupFilter === 'group1' ? 'all' : 'group1')}
+                className={`p-2 px-3 rounded-xl border transition-all cursor-pointer shadow-xs flex flex-col justify-between ${
+                  selectedGroupFilter === 'group1'
+                    ? 'bg-amber-100/90 border-amber-500 ring-2 ring-amber-400 shadow-sm'
+                    : 'bg-amber-50/60 border-amber-200/80 hover:bg-amber-100/60 hover:border-amber-400'
+                }`}
+                title="Bấm để lọc riêng ca chạy Nhóm 1 (Đồng Nai 67 trạm)"
+              >
+                <div className="flex items-center justify-between gap-1 mb-1">
+                  <div className="flex items-center gap-1.5 truncate">
+                    <span className="bg-amber-600 text-white text-[10px] font-bold px-1.5 py-0.2 rounded uppercase shrink-0">
+                      Nhóm 1
+                    </span>
+                    <span className="text-xs font-bold text-amber-950 truncate" title="MobiFone Đồng Nai (67 Trạm Đặc Thù)">
+                      Đồng Nai (67 trạm)
+                    </span>
                   </div>
-                  <div className="bg-white border border-amber-200/80 px-2 py-1 rounded-lg">
-                    <span className="text-[10px] text-slate-500 font-semibold mr-1 uppercase">⏱ Giờ chạy:</span>
-                    <span className="font-extrabold text-sky-700">{stats.g1.hours}h</span>
-                  </div>
-                  <div className="bg-white border border-amber-200/80 px-2 py-1 rounded-lg">
-                    <span className="text-[10px] text-slate-500 font-semibold mr-1 uppercase">⛽ Xăng:</span>
-                    <span className="font-extrabold text-red-600">{stats.g1.fuelXang}L</span>
-                  </div>
-                  <div className="bg-white border border-amber-200/80 px-2 py-1 rounded-lg">
-                    <span className="text-[10px] text-slate-500 font-semibold mr-1 uppercase">🛢 Dầu:</span>
-                    <span className="font-extrabold text-slate-700">{stats.g1.fuelDau}L</span>
-                  </div>
-                  <div className="bg-white border border-amber-200/80 px-2 py-1 rounded-lg">
-                    <span className="text-[10px] text-slate-500 font-semibold mr-1 uppercase">💰 Thành tiền:</span>
-                    <span className="font-extrabold text-amber-800">{formatCurrency(stats.g1.totalThanhTien)}</span>
-                  </div>
-                  <div className="bg-white border border-amber-200/80 px-2 py-1 rounded-lg">
-                    <span className="text-[10px] text-slate-500 font-semibold mr-1 uppercase">VAT:</span>
-                    <span className="font-extrabold text-orange-600">{formatCurrency(stats.g1.totalVat)}</span>
-                  </div>
-                  <div className="bg-amber-600 text-white px-2.5 py-1 rounded-lg font-bold">
-                    <span className="text-[10px] uppercase mr-1 opacity-90">🏆 Tổng:</span>
-                    <span>{formatCurrency(stats.g1.totalCong)}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Row 2: Nhóm 2 - MobiFone Toàn Cầu (Các trạm còn lại) */}
-              <div className="bg-blue-50/70 border border-blue-200/80 rounded-xl p-2 px-3 shadow-xs flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-1.5 min-w-[200px]">
-                  <span className="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase shadow-2xs">
-                    🏢 Nhóm 2
-                  </span>
-                  <span className="text-xs font-bold text-blue-950 truncate" title="MobiFone Toàn Cầu (Các Trạm Còn Lại)">
-                    MobiFone Toàn Cầu (Trạm còn lại)
+                  <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded transition-colors ${
+                    selectedGroupFilter === 'group1' ? 'bg-amber-600 text-white' : 'text-amber-800 bg-amber-200/70'
+                  }`}>
+                    {selectedGroupFilter === 'group1' ? '✓ Đang lọc' : `${stats.g1.records} ca`}
                   </span>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-1.5 text-xs">
-                  <div className="bg-white border border-blue-200/80 px-2 py-1 rounded-lg">
-                    <span className="text-[10px] text-slate-500 font-semibold mr-1 uppercase">Records:</span>
-                    <span className="font-extrabold text-blue-700">{stats.g2.records}</span>
+                <div className="flex items-baseline justify-between gap-2 text-xs">
+                  <div className="flex items-center gap-2 text-[11px] text-slate-600">
+                    <span className="font-semibold text-sky-800">⏱ {stats.g1.hours}h</span>
+                    <span>•</span>
+                    <span className="font-medium text-slate-700">
+                      {stats.g1.fuelDau > 0 && `🛢 ${stats.g1.fuelDau}L`}
+                      {stats.g1.fuelXang > 0 && ` ⛽ ${stats.g1.fuelXang}L`}
+                      {stats.g1.fuelDau === 0 && stats.g1.fuelXang === 0 && '0L'}
+                    </span>
                   </div>
-                  <div className="bg-white border border-blue-200/80 px-2 py-1 rounded-lg">
-                    <span className="text-[10px] text-slate-500 font-semibold mr-1 uppercase">⏱ Giờ chạy:</span>
-                    <span className="font-extrabold text-sky-700">{stats.g2.hours}h</span>
-                  </div>
-                  <div className="bg-white border border-blue-200/80 px-2 py-1 rounded-lg">
-                    <span className="text-[10px] text-slate-500 font-semibold mr-1 uppercase">⛽ Xăng:</span>
-                    <span className="font-extrabold text-red-600">{stats.g2.fuelXang}L</span>
-                  </div>
-                  <div className="bg-white border border-blue-200/80 px-2 py-1 rounded-lg">
-                    <span className="text-[10px] text-slate-500 font-semibold mr-1 uppercase">🛢 Dầu:</span>
-                    <span className="font-extrabold text-slate-700">{stats.g2.fuelDau}L</span>
-                  </div>
-                  <div className="bg-white border border-blue-200/80 px-2 py-1 rounded-lg">
-                    <span className="text-[10px] text-slate-500 font-semibold mr-1 uppercase">💰 Thành tiền:</span>
-                    <span className="font-extrabold text-blue-800">{formatCurrency(stats.g2.totalThanhTien)}</span>
-                  </div>
-                  <div className="bg-white border border-blue-200/80 px-2 py-1 rounded-lg">
-                    <span className="text-[10px] text-slate-500 font-semibold mr-1 uppercase">VAT:</span>
-                    <span className="font-extrabold text-orange-600">{formatCurrency(stats.g2.totalVat)}</span>
-                  </div>
-                  <div className="bg-blue-600 text-white px-2.5 py-1 rounded-lg font-bold">
-                    <span className="text-[10px] uppercase mr-1 opacity-90">🏆 Tổng:</span>
-                    <span>{formatCurrency(stats.g2.totalCong)}</span>
+                  <div className="text-right">
+                    <span className="font-extrabold text-amber-900 text-xs sm:text-sm">
+                      {formatCurrency(stats.g1.totalCong)}
+                    </span>
                   </div>
                 </div>
               </div>
 
-              {/* Row 3: Nhóm 3 - Đối Tác Seath Group */}
+              {/* CARD 2: NHÓM 2 - TOÀN CẦU (MBG) */}
+              <div 
+                onClick={() => setSelectedGroupFilter(selectedGroupFilter === 'group2' ? 'all' : 'group2')}
+                className={`p-2 px-3 rounded-xl border transition-all cursor-pointer shadow-xs flex flex-col justify-between ${
+                  selectedGroupFilter === 'group2'
+                    ? 'bg-blue-100/90 border-blue-500 ring-2 ring-blue-400 shadow-sm'
+                    : 'bg-blue-50/60 border-blue-200/80 hover:bg-blue-100/60 hover:border-blue-400'
+                }`}
+                title="Bấm để lọc riêng ca chạy Nhóm 2 (MobiFone Toàn Cầu)"
+              >
+                <div className="flex items-center justify-between gap-1 mb-1">
+                  <div className="flex items-center gap-1.5 truncate">
+                    <span className="bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.2 rounded uppercase shrink-0">
+                      Nhóm 2
+                    </span>
+                    <span className="text-xs font-bold text-blue-950 truncate" title="MobiFone Toàn Cầu (Các trạm còn lại)">
+                      Toàn Cầu (Trạm còn lại)
+                    </span>
+                  </div>
+                  <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded transition-colors ${
+                    selectedGroupFilter === 'group2' ? 'bg-blue-600 text-white' : 'text-blue-800 bg-blue-200/70'
+                  }`}>
+                    {selectedGroupFilter === 'group2' ? '✓ Đang lọc' : `${stats.g2.records} ca`}
+                  </span>
+                </div>
+
+                <div className="flex items-baseline justify-between gap-2 text-xs">
+                  <div className="flex items-center gap-2 text-[11px] text-slate-600">
+                    <span className="font-semibold text-sky-800">⏱ {stats.g2.hours}h</span>
+                    <span>•</span>
+                    <span className="font-medium text-slate-700">
+                      {stats.g2.fuelDau > 0 && `🛢 ${stats.g2.fuelDau}L`}
+                      {stats.g2.fuelXang > 0 && ` ⛽ ${stats.g2.fuelXang}L`}
+                      {stats.g2.fuelDau === 0 && stats.g2.fuelXang === 0 && '0L'}
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-extrabold text-blue-900 text-xs sm:text-sm">
+                      {formatCurrency(stats.g2.totalCong)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* CARD 3: NHÓM 3 - SEATH GROUP (NẾU CÓ DỮ LIỆU) */}
               {stats.g3 && stats.g3.records > 0 && (
-                <div className="bg-purple-50/70 border border-purple-200/80 rounded-xl p-2 px-3 shadow-xs flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-1.5 min-w-[200px]">
-                    <span className="bg-purple-600 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase shadow-2xs">
-                      🟣 Nhóm 3
-                    </span>
-                    <span className="text-xs font-bold text-purple-950 truncate" title="Đối Tác Seath Group (Xử lý riêng)">
-                      Đối Tác Seath Group (Xử lý riêng)
+                <div 
+                  onClick={() => setSelectedGroupFilter(selectedGroupFilter === 'group3' ? 'all' : 'group3')}
+                  className={`p-2 px-3 rounded-xl border transition-all cursor-pointer shadow-xs flex flex-col justify-between ${
+                    selectedGroupFilter === 'group3'
+                      ? 'bg-purple-100/90 border-purple-500 ring-2 ring-purple-400 shadow-sm'
+                      : 'bg-purple-50/60 border-purple-200/80 hover:bg-purple-100/60 hover:border-purple-400'
+                  }`}
+                  title="Bấm để lọc riêng ca chạy Nhóm 3 (Seath Group)"
+                >
+                  <div className="flex items-center justify-between gap-1 mb-1">
+                    <div className="flex items-center gap-1.5 truncate">
+                      <span className="bg-purple-600 text-white text-[10px] font-bold px-1.5 py-0.2 rounded uppercase shrink-0">
+                        Nhóm 3
+                      </span>
+                      <span className="text-xs font-bold text-purple-950 truncate" title="Đối Tác Seath Group">
+                        Seath Group
+                      </span>
+                    </div>
+                    <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded transition-colors ${
+                      selectedGroupFilter === 'group3' ? 'bg-purple-600 text-white' : 'text-purple-800 bg-purple-200/70'
+                    }`}>
+                      {selectedGroupFilter === 'group3' ? '✓ Đang lọc' : `${stats.g3.records} ca`}
                     </span>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-1.5 text-xs">
-                    <div className="bg-white border border-purple-200/80 px-2 py-1 rounded-lg">
-                      <span className="text-[10px] text-slate-500 font-semibold mr-1 uppercase">Records:</span>
-                      <span className="font-extrabold text-purple-700">{stats.g3.records}</span>
+                  <div className="flex items-baseline justify-between gap-2 text-xs">
+                    <div className="flex items-center gap-2 text-[11px] text-slate-600">
+                      <span className="font-semibold text-sky-800">⏱ {stats.g3.hours}h</span>
+                      <span>•</span>
+                      <span className="font-medium text-slate-700">🛢 {stats.g3.fuelDau}L</span>
                     </div>
-                    <div className="bg-white border border-purple-200/80 px-2 py-1 rounded-lg">
-                      <span className="text-[10px] text-slate-500 font-semibold mr-1 uppercase">⏱ Giờ chạy:</span>
-                      <span className="font-extrabold text-sky-700">{stats.g3.hours}h</span>
-                    </div>
-                    <div className="bg-white border border-purple-200/80 px-2 py-1 rounded-lg">
-                      <span className="text-[10px] text-slate-500 font-semibold mr-1 uppercase">🛢 Dầu:</span>
-                      <span className="font-extrabold text-slate-700">{stats.g3.fuelDau}L</span>
-                    </div>
-                    <div className="bg-white border border-purple-200/80 px-2 py-1 rounded-lg">
-                      <span className="text-[10px] text-slate-500 font-semibold mr-1 uppercase">💰 Thành tiền:</span>
-                      <span className="font-extrabold text-purple-800">{formatCurrency(stats.g3.totalThanhTien)}</span>
-                    </div>
-                    <div className="bg-purple-700 text-white px-2.5 py-1 rounded-lg font-bold">
-                      <span className="text-[10px] uppercase mr-1 opacity-90">🏢 Seath TT:</span>
-                      <span>{formatCurrency(stats.g3.totalCong)}</span>
+                    <div className="text-right">
+                      <span className="font-extrabold text-purple-900 text-xs sm:text-sm">
+                        {formatCurrency(stats.g3.totalCong)}
+                      </span>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Row 4: Grand Total Summary Row */}
-              <div className="bg-slate-100 border border-slate-300 rounded-xl p-2 px-3 shadow-2xs flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-1.5 min-w-[200px]">
-                  <span className="bg-slate-800 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase shadow-2xs">
-                    📊 TỔNG CỘNG
-                  </span>
-                  <span className="text-xs font-bold text-slate-800 truncate">
-                    Tất cả 2 Nhóm (Tổng hợp)
+              {/* CARD TỔNG HỢP CẢ 2 NHÓM */}
+              <div 
+                onClick={() => setSelectedGroupFilter('all')}
+                className={`p-2 px-3 rounded-xl border transition-all cursor-pointer shadow-xs flex flex-col justify-between ${
+                  selectedGroupFilter === 'all'
+                    ? 'bg-slate-900 text-white border-slate-900 ring-2 ring-slate-800 shadow-sm'
+                    : 'bg-slate-100/80 border-slate-300/80 hover:bg-slate-200/70 hover:border-slate-400'
+                }`}
+                title="Bấm để hiển thị toàn bộ ca chạy máy cả 2 nhóm"
+              >
+                <div className="flex items-center justify-between gap-1 mb-1">
+                  <div className="flex items-center gap-1.5 truncate">
+                    <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded uppercase shrink-0 ${
+                      selectedGroupFilter === 'all' ? 'bg-slate-700 text-slate-200' : 'bg-slate-800 text-white'
+                    }`}>
+                      Tổng hợp
+                    </span>
+                    <span className={`text-xs font-bold truncate ${selectedGroupFilter === 'all' ? 'text-white' : 'text-slate-800'}`}>
+                      Hợp nhất tất cả
+                    </span>
+                  </div>
+                  <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
+                    selectedGroupFilter === 'all' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-slate-200 text-slate-700'
+                  }`}>
+                    {selectedGroupFilter === 'all' ? '✓ Đang xem' : '👉 Xem hết'}
                   </span>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-1.5 text-xs">
-                  <div className="bg-white border border-slate-200 px-2 py-1 rounded-lg">
-                    <span className="text-[10px] text-slate-500 font-semibold mr-1 uppercase">RECORDS:</span>
-                    <span className="font-extrabold text-blue-700">{stats.records}</span>
+                <div className="flex items-baseline justify-between gap-2 text-xs">
+                  <div className={`flex items-center gap-2 text-[11px] ${selectedGroupFilter === 'all' ? 'text-slate-300' : 'text-slate-600'}`}>
+                    <span className={`font-semibold ${selectedGroupFilter === 'all' ? 'text-sky-300' : 'text-sky-800'}`}>
+                      {stats.records} ca • {stats.hours}h
+                    </span>
+                    <span>•</span>
+                    <span className="font-medium">
+                      {stats.fuelDau > 0 && `🛢 ${stats.fuelDau}L`}
+                      {stats.fuelXang > 0 && ` ⛽ ${stats.fuelXang}L`}
+                    </span>
                   </div>
-                  <div className="bg-white border border-slate-200 px-2 py-1 rounded-lg">
-                    <span className="text-[10px] text-slate-500 font-semibold mr-1 uppercase">⏱ GIỜ CHẠY:</span>
-                    <span className="font-extrabold text-sky-700">{stats.hours}h</span>
-                  </div>
-                  <div className="bg-white border border-slate-200 px-2 py-1 rounded-lg">
-                    <span className="text-[10px] text-slate-500 font-semibold mr-1 uppercase">⛽ XĂNG:</span>
-                    <span className="font-extrabold text-red-600">{stats.fuelXang}L</span>
-                  </div>
-                  <div className="bg-white border border-slate-200 px-2 py-1 rounded-lg">
-                    <span className="text-[10px] text-slate-500 font-semibold mr-1 uppercase">🛢 DẦU:</span>
-                    <span className="font-extrabold text-slate-700">{stats.fuelDau}L</span>
-                  </div>
-                  <div className="bg-white border border-slate-200 px-2 py-1 rounded-lg">
-                    <span className="text-[10px] text-slate-500 font-semibold mr-1 uppercase">💰 THÀNH TIỀN:</span>
-                    <span className="font-extrabold text-amber-800">{formatCurrency(stats.totalThanhTien)}</span>
-                  </div>
-                  <div className="bg-white border border-slate-200 px-2 py-1 rounded-lg">
-                    <span className="text-[10px] text-slate-500 font-semibold mr-1 uppercase">VAT:</span>
-                    <span className="font-extrabold text-orange-600">{formatCurrency(stats.totalVat)}</span>
-                  </div>
-                  <div className="bg-emerald-600 text-white px-2.5 py-1 rounded-lg font-bold">
-                    <span className="text-[10px] uppercase mr-1 opacity-90">🏆 TỔNG CỘNG:</span>
-                    <span>{formatCurrency(stats.totalCong)}</span>
+                  <div className="text-right">
+                    <span className={`font-extrabold text-xs sm:text-sm ${selectedGroupFilter === 'all' ? 'text-emerald-400' : 'text-emerald-700'}`}>
+                      {formatCurrency(stats.totalCong)}
+                    </span>
                   </div>
                 </div>
               </div>
-            </>
+            </div>
           ) : (
-            /* Single Row for specific group or < Aug 2026 */
-            <div className="flex flex-wrap gap-2">
-              <div className="bg-blue-50 border border-blue-100 rounded-xl p-2 px-3 min-w-[70px] shadow-sm">
-                <div className="text-slate-500 text-[10px] font-semibold uppercase">Records</div>
-                <div className="font-extrabold text-blue-700 text-sm">{stats.records}</div>
+            /* Period < Aug 2026 */
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 px-3 flex flex-wrap items-center justify-between gap-2 shadow-2xs">
+              <div className="flex items-center gap-2 text-xs">
+                <span className="font-bold text-slate-800">📊 TỔNG CỘNG:</span>
+                <span className="bg-white border border-slate-200 px-2 py-0.5 rounded font-bold text-blue-700">{stats.records} ca</span>
+                <span className="bg-white border border-slate-200 px-2 py-0.5 rounded font-bold text-sky-700">⏱ {stats.hours}h</span>
+                <span className="bg-white border border-slate-200 px-2 py-0.5 rounded font-bold text-slate-700">🛢 {stats.fuelDau}L Dầu</span>
+                {stats.fuelXang > 0 && (
+                  <span className="bg-white border border-slate-200 px-2 py-0.5 rounded font-bold text-red-600">⛽ {stats.fuelXang}L Xăng</span>
+                )}
               </div>
-              <div className="bg-sky-50 border border-sky-100 rounded-xl p-2 px-3 min-w-[90px] shadow-sm">
-                <div className="text-slate-500 text-[10px] font-semibold uppercase">⏱ Giờ chạy</div>
-                <div className="font-extrabold text-sky-700 text-sm">{stats.hours}h</div>
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-slate-500 font-semibold">Thành tiền:</span>
+                <span className="font-extrabold text-emerald-700 text-sm">{formatCurrency(stats.totalCong)}</span>
               </div>
-              <div className="bg-red-50 border border-red-100 rounded-xl p-2 px-3 min-w-[80px] shadow-sm">
-                <div className="text-slate-500 text-[10px] font-semibold uppercase">⛽ Xăng</div>
-                <div className="font-extrabold text-red-600 text-sm">{stats.fuelXang}L</div>
-              </div>
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-2 px-3 min-w-[80px] shadow-sm">
-                <div className="text-slate-500 text-[10px] font-semibold uppercase">🛢 Dầu</div>
-                <div className="font-extrabold text-slate-700 text-sm">{stats.fuelDau}L</div>
-              </div>
-              <div className="bg-amber-50/50 border border-amber-100 rounded-xl p-2 px-3 min-w-[110px] shadow-sm">
-                <div className="text-slate-500 text-[10px] font-semibold uppercase">💰 Thành tiền</div>
-                <div className="font-extrabold text-amber-700 text-sm">{formatCurrency(stats.totalThanhTien)}</div>
-              </div>
-              <div className="bg-orange-50 border border-orange-100 rounded-xl p-2 px-3 min-w-[95px] shadow-sm">
-                <div className="text-slate-500 text-[10px] font-semibold uppercase">VAT</div>
-                <div className="font-extrabold text-orange-600 text-sm">{formatCurrency(stats.totalVat)}</div>
-              </div>
-              <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-2 px-4 min-w-[120px] shadow-sm">
-                <div className="text-slate-500 text-[10px] font-semibold uppercase">🏆 Tổng cộng</div>
-                <div className="font-extrabold text-emerald-700 text-sm">{formatCurrency(stats.totalCong)}</div>
-              </div>
-              {stats.pendingCount > 0 && (
-                <div className="bg-yellow-50 border border-yellow-300 rounded-xl p-2 px-3 min-w-[85px] shadow-sm">
-                  <div className="text-amber-800 text-[10px] font-semibold uppercase">⏳ Chờ duyệt</div>
-                  <div className="font-extrabold text-amber-800 text-sm">{stats.pendingCount}</div>
-                </div>
-              )}
             </div>
           )}
         </div>
@@ -2991,8 +2924,8 @@ export default function Generator() {
       )}
 
       {/* Main Table Card */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col h-[calc(100vh-270px)] w-full relative">
-        <div className="overflow-auto flex-1 w-full relative p-1">
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col h-[calc(100vh-215px)] min-h-[500px] w-full relative">
+        <div className="overflow-auto flex-1 w-full relative">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 text-slate-400">
               <Clock className="w-10 h-10 animate-spin text-blue-500 mb-2" />
@@ -3005,10 +2938,10 @@ export default function Generator() {
                 <div className="min-w-full divide-y divide-gray-200">
                   {/* Floating / Sticky Batch Action Bar */}
                   {selectedLogIds.length > 0 && (
-                    <div className="sticky top-0 z-20 flex items-center justify-between bg-blue-50/95 backdrop-blur border-b border-blue-200 px-4 py-2 text-xs">
+                    <div className="sticky top-0 z-20 flex items-center justify-between bg-blue-50/95 backdrop-blur border-b border-blue-200 px-3.5 py-1.5 text-xs">
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-blue-900">
-                          Đã chọn <span className="bg-blue-600 text-white px-2 py-0.5 rounded-full font-mono">{selectedLogIds.length}</span> ca chạy máy
+                          Đã chọn <span className="bg-blue-600 text-white px-2 py-0.5 rounded-full font-mono text-[11px]">{selectedLogIds.length}</span> ca chạy máy
                         </span>
                         <button
                           onClick={() => setSelectedLogIds([])}
@@ -3020,17 +2953,17 @@ export default function Generator() {
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleBatchApproveLogs('approved')}
-                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg shadow-sm transition-all flex items-center gap-1 cursor-pointer"
+                          className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg shadow-2xs transition-all flex items-center gap-1 cursor-pointer text-xs"
                           title="Duyệt tất cả các ca đã tick chọn"
                         >
-                          <CheckCircle size={14} /> Duyệt đã chọn ({selectedLogIds.length})
+                          <CheckCircle size={13} /> Duyệt đã chọn ({selectedLogIds.length})
                         </button>
                         <button
                           onClick={() => handleBatchApproveLogs('rejected')}
-                          className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg shadow-sm transition-all flex items-center gap-1 cursor-pointer"
+                          className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg shadow-2xs transition-all flex items-center gap-1 cursor-pointer text-xs"
                           title="Từ chối tất cả các ca đã tick chọn"
                         >
-                          <X size={14} /> Từ chối đã chọn ({selectedLogIds.length})
+                          <X size={13} /> Từ chối đã chọn ({selectedLogIds.length})
                         </button>
                       </div>
                     </div>
@@ -3038,9 +2971,9 @@ export default function Generator() {
 
                   {/* Pending Review Notification Bar */}
                   {stats.pendingCount > 0 && selectedLogIds.length === 0 && (
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-amber-50/90 border border-amber-200 p-2.5 px-3 rounded-lg text-xs m-2 text-amber-900 gap-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-amber-50 border-b border-amber-200 p-2 px-3 text-xs text-amber-900 gap-2">
                       <div className="flex items-center gap-2">
-                        <AlertTriangle size={16} className="text-amber-600 shrink-0" />
+                        <AlertTriangle size={15} className="text-amber-600 shrink-0" />
                         <span>
                           Phát hiện <strong>{stats.pendingCount}</strong> ca chạy máy bất thường đang <strong>chờ duyệt</strong> (qua đêm sớm, chạy &gt;12h...).
                         </span>
@@ -3049,28 +2982,106 @@ export default function Generator() {
                         {searchStatus !== 'pending' && (
                           <button
                             onClick={() => setSearchStatus('pending')}
-                            className="px-2.5 py-1 bg-white border border-amber-300 text-amber-800 hover:bg-amber-100 rounded text-xs font-semibold cursor-pointer transition-colors"
+                            className="px-2 py-0.5 bg-white border border-amber-300 text-amber-800 hover:bg-amber-100 rounded text-xs font-semibold cursor-pointer transition-colors"
                           >
                             Lọc ca chờ duyệt
                           </button>
                         )}
                         <button
                           onClick={() => selectPendingLogs(filteredLogs)}
-                          className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded text-xs cursor-pointer transition-colors shadow-sm flex items-center gap-1"
+                          className="px-2.5 py-0.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded text-xs cursor-pointer transition-colors shadow-2xs flex items-center gap-1"
                         >
-                          <CheckCircle2 size={13} /> Tick chọn ({stats.pendingCount}) ca chờ duyệt
+                          <CheckCircle2 size={12} /> Tick chọn ({stats.pendingCount}) ca chờ duyệt
                         </button>
                       </div>
                     </div>
                   )}
 
+                  {/* Unified Search & Filter Toolbar */}
+                  <div className="p-2 px-3 bg-slate-50/80 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[280px]">
+                      {/* Search Site ID */}
+                      <div className="relative min-w-[180px] max-w-xs flex-1">
+                        <Search className="absolute left-2.5 top-2 h-3.5 w-3.5 text-slate-400" />
+                        <input
+                          type="text"
+                          placeholder="Tìm mã trạm (cũ/mới)..."
+                          className="w-full pl-8 pr-7 py-1 border border-slate-200 rounded-lg text-xs bg-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500 placeholder-slate-400"
+                          value={searchSite}
+                          onChange={(e) => setSearchSite(e.target.value)}
+                        />
+                        {searchSite && (
+                          <button
+                            onClick={() => setSearchSite('')}
+                            className="absolute right-2 top-1.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                            title="Xóa tìm kiếm"
+                          >
+                            <X size={12} />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Date Picker */}
+                      <div className="relative flex items-center">
+                        <input
+                          type="date"
+                          className="px-2 py-1 border border-slate-200 rounded-lg text-xs text-slate-700 bg-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
+                          value={searchDate}
+                          onChange={(e) => setSearchDate(e.target.value)}
+                          title="Lọc theo ngày vận hành"
+                        />
+                        {searchDate && (
+                          <button
+                            onClick={() => setSearchDate('')}
+                            className="ml-1 text-[11px] text-slate-400 hover:text-red-500 font-bold px-1"
+                            title="Xóa lọc ngày"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Status Filter */}
+                      <select
+                        className="px-2.5 py-1 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 bg-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
+                        value={searchStatus}
+                        onChange={(e) => setSearchStatus(e.target.value)}
+                      >
+                        <option value="">Trạng thái: Tất cả</option>
+                        <option value="pending">⏳ Chờ duyệt ({stats.pendingCount})</option>
+                        <option value="approved">✓ Đã duyệt</option>
+                        <option value="rejected">✕ Từ chối</option>
+                      </select>
+
+                      {/* Reset Filters */}
+                      {(searchSite || searchDate || searchStatus || selectedGroupFilter !== 'all') && (
+                        <button
+                          onClick={() => {
+                            setSearchSite('');
+                            setSearchDate('');
+                            setSearchStatus('');
+                            setSelectedGroupFilter('all');
+                          }}
+                          className="text-[11px] text-slate-500 hover:text-blue-600 underline cursor-pointer shrink-0 ml-1"
+                        >
+                          Đặt lại lọc
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Count indicator */}
+                    <div className="text-[11px] text-slate-500 font-medium shrink-0">
+                      Hiển thị <span className="font-bold text-slate-800">{filteredLogs.length}</span> ca chạy máy
+                    </div>
+                  </div>
+
                   {filteredLogs.length === 0 ? (
                     <div className="text-center py-20 text-slate-400">Không tìm thấy nhật ký chạy máy nào.</div>
                   ) : (
                     <table className="min-w-full divide-y divide-gray-200 text-left">
-                      <thead className="bg-gray-50 sticky top-0 z-10 text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-slate-200">
-                        <tr className="border-b border-slate-100">
-                          <th scope="col" className="px-2 py-2.5 w-8 text-center">
+                      <thead className="bg-slate-50/95 sticky top-0 z-10 text-[11px] font-bold text-slate-600 uppercase tracking-wider border-b border-slate-200 shadow-2xs">
+                        <tr>
+                          <th scope="col" className="px-2 py-2 w-8 text-center">
                             <input 
                               type="checkbox" 
                               className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
@@ -3079,79 +3090,23 @@ export default function Generator() {
                               title="Tick chọn tất cả"
                             />
                           </th>
-                          <th scope="col" className="px-3 py-2.5">Site ID cũ</th>
-                          <th scope="col" className="px-3 py-2.5">Site ID mới</th>
-                          <th scope="col" className="px-3 py-2.5">Nguồn</th>
-                          <th scope="col" className="px-3 py-2.5">Ngày VH</th>
-                          <th scope="col" className="px-3 py-2.5">CS Máy</th>
-                          <th scope="col" className="px-3 py-2.5">Giờ BĐ</th>
-                          <th scope="col" className="px-3 py-2.5">Giờ KT</th>
-                          <th scope="col" className="px-3 py-2.5">TG (h)</th>
-                          <th scope="col" className="px-3 py-2.5 text-right">NL Hao</th>
-                          <th scope="col" className="px-3 py-2.5 text-right">Đơn giá</th>
-                          <th scope="col" className="px-3 py-2.5 text-right">Thành tiền</th>
-                          <th scope="col" className="px-3 py-2.5">Ghi chú</th>
-                          <th scope="col" className="px-3 py-2.5">Status</th>
-                          <th scope="col" className="px-3 py-2.5 text-right">Thao tác</th>
-                        </tr>
-                        <tr className="bg-slate-50/50">
-                          <th className="px-2 py-1.5 text-center">
-                            {stats.pendingCount > 0 && (
-                              <button
-                                onClick={() => selectPendingLogs(filteredLogs)}
-                                className="text-[10px] text-amber-700 hover:underline font-bold"
-                                title="Chọn nhanh các ca chờ duyệt"
-                              >
-                                Chờ
-                              </button>
-                            )}
-                          </th>
-                          <th className="px-2 py-1.5">
-                            <div className="relative">
-                              <Search className="absolute left-1.5 top-2.5 h-3 w-3 text-slate-400" />
-                              <input 
-                                type="text" 
-                                placeholder="Trạm" 
-                                className="w-full pl-5.5 pr-1 py-0.5 border border-slate-200 rounded text-[11px] font-normal focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                                value={searchSite}
-                                onChange={(e) => setSearchSite(e.target.value)}
-                              />
-                            </div>
-                          </th>
-                          <th className="px-2 py-1.5"></th>
-                          <th className="px-2 py-1.5"></th>
-                          <th className="px-2 py-1.5">
-                            <input 
-                              type="date" 
-                              className="w-full px-1 py-0.5 border border-slate-200 rounded text-[11px] font-normal focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                              value={searchDate}
-                              onChange={(e) => setSearchDate(e.target.value)}
-                            />
-                          </th>
-                          <th className="px-2 py-1.5"></th>
-                          <th className="px-2 py-1.5"></th>
-                          <th className="px-2 py-1.5"></th>
-                          <th className="px-2 py-1.5"></th>
-                          <th className="px-2 py-1.5"></th>
-                          <th className="px-2 py-1.5"></th>
-                          <th className="px-2 py-1.5"></th>
-                          <th className="px-2 py-1.5"></th>
-                          <th className="px-2 py-1.5">
-                            <select
-                              className="w-full px-1 py-0.5 border border-slate-200 rounded text-[11px] font-normal focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                              value={searchStatus}
-                              onChange={(e) => setSearchStatus(e.target.value)}
-                            >
-                              <option value="">Tất cả</option>
-                              <option value="pending">Chờ duyệt</option>
-                              <option value="approved">Đã duyệt</option>
-                              <option value="rejected">Từ chối</option>
-                            </select>
-                          </th>
-                          <th className="px-2 py-1.5"></th>
+                          <th scope="col" className="px-3 py-2">Site cũ</th>
+                          <th scope="col" className="px-3 py-2">Site mới</th>
+                          <th scope="col" className="px-3 py-2">Nguồn</th>
+                          <th scope="col" className="px-3 py-2">Ngày VH</th>
+                          <th scope="col" className="px-3 py-2">CS Máy</th>
+                          <th scope="col" className="px-3 py-2 font-mono">Giờ BĐ</th>
+                          <th scope="col" className="px-3 py-2 font-mono">Giờ KT</th>
+                          <th scope="col" className="px-3 py-2 font-bold">TG (h)</th>
+                          <th scope="col" className="px-3 py-2 text-right">NL Hao</th>
+                          <th scope="col" className="px-3 py-2 text-right">Đơn giá</th>
+                          <th scope="col" className="px-3 py-2 text-right">Thành tiền</th>
+                          <th scope="col" className="px-3 py-2">Ghi chú</th>
+                          <th scope="col" className="px-3 py-2 text-center">Status</th>
+                          <th scope="col" className="px-3 py-2 text-right">Thao tác</th>
                         </tr>
                       </thead>
-                      <tbody className="bg-white divide-y divide-gray-100 text-[13px] text-gray-700">
+                      <tbody className="bg-white divide-y divide-gray-100 text-xs text-gray-700">
                         {filteredLogs.map((log) => {
                           const runtime = parseFloat(log.run_details?.thoi_gian_hoat_dong) || 0;
                           const fuel = parseFloat(log.run_details?.nhien_lieu_tieu_hao) || 0;
@@ -3173,15 +3128,15 @@ export default function Generator() {
                           return (
                             <tr 
                               key={log.gen_log_id} 
-                              className={`hover:bg-slate-50/50 transition-colors ${
+                              className={`hover:bg-blue-50/40 transition-colors ${
                                 selectedLogIds.includes(log.gen_log_id)
-                                  ? 'bg-blue-50/40'
+                                  ? 'bg-blue-50/50'
                                   : status === 'pending'
-                                  ? 'bg-amber-50/30 font-semibold text-amber-900'
+                                  ? 'bg-amber-50/40 font-medium text-amber-950'
                                   : ''
                               }`}
                             >
-                              <td className="px-2 py-2.5 text-center">
+                              <td className="px-2 py-1.5 text-center">
                                 <input 
                                   type="checkbox" 
                                   className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
@@ -3189,56 +3144,56 @@ export default function Generator() {
                                   onChange={() => toggleSelectLog(log.gen_log_id)}
                                 />
                               </td>
-                              <td className="px-3 py-2.5 whitespace-nowrap font-bold text-slate-900">{siteIdOld}</td>
-                              <td className="px-3 py-2.5 whitespace-nowrap font-bold text-blue-700">{siteIdNew}</td>
-                              <td className="px-3 py-2.5 whitespace-nowrap">
+                              <td className="px-3 py-1.5 whitespace-nowrap font-bold text-slate-900">{siteIdOld}</td>
+                              <td className="px-3 py-1.5 whitespace-nowrap font-bold text-blue-700">{siteIdNew}</td>
+                              <td className="px-3 py-1.5 whitespace-nowrap">
                                 {source === 'smartw' ? (
-                                  <span className="bg-cyan-50 text-cyan-700 border border-cyan-100 text-[10px] font-bold px-1.5 py-0.5 rounded">SmartW</span>
+                                  <span className="bg-cyan-50 text-cyan-700 border border-cyan-100 text-[10px] font-bold px-1.5 py-0.2 rounded">SmartW</span>
                                 ) : (
-                                  <span className="bg-slate-50 text-slate-600 border border-slate-200 text-[10px] font-bold px-1.5 py-0.5 rounded">Nhập tay</span>
+                                  <span className="bg-slate-50 text-slate-600 border border-slate-200 text-[10px] font-bold px-1.5 py-0.2 rounded">Nhập tay</span>
                                 )}
                               </td>
-                              <td className="px-3 py-2.5 whitespace-nowrap text-slate-600 font-medium">{displayDate}</td>
-                              <td className="px-3 py-2.5 whitespace-nowrap text-slate-600">{congSuat}</td>
-                              <td className="px-3 py-2.5 whitespace-nowrap font-mono text-slate-600">{log.run_details?.gio_bat_dau || '—'}</td>
-                              <td className="px-3 py-2.5 whitespace-nowrap font-mono text-slate-600">{log.run_details?.gio_ket_thuc || '—'}</td>
-                              <td className="px-3 py-2.5 whitespace-nowrap font-bold text-slate-800">{runtime}h</td>
-                              <td className="px-3 py-2.5 whitespace-nowrap font-bold text-blue-600 text-right">{fuel}L</td>
-                              <td className="px-3 py-2.5 whitespace-nowrap font-mono text-slate-600 text-right">{donGia ? formatCurrency(donGia).replace(' ₫', '') : '—'}</td>
-                              <td className="px-3 py-2.5 whitespace-nowrap font-bold text-slate-900 text-right">{thanhTien ? formatCurrency(thanhTien).replace(' ₫', '') + 'đ' : '—'}</td>
-                              <td className="px-3 py-2.5 max-w-xs text-slate-500" title={reviewReason ? `[Lý do chờ duyệt: ${reviewReason}]\n${ghiChu}` : ghiChu}>
+                              <td className="px-3 py-1.5 whitespace-nowrap text-slate-600 font-medium">{displayDate}</td>
+                              <td className="px-3 py-1.5 whitespace-nowrap text-slate-600">{congSuat}</td>
+                              <td className="px-3 py-1.5 whitespace-nowrap font-mono text-slate-600">{log.run_details?.gio_bat_dau || '—'}</td>
+                              <td className="px-3 py-1.5 whitespace-nowrap font-mono text-slate-600">{log.run_details?.gio_ket_thuc || '—'}</td>
+                              <td className="px-3 py-1.5 whitespace-nowrap font-bold text-slate-800">{runtime}h</td>
+                              <td className="px-3 py-1.5 whitespace-nowrap font-bold text-blue-600 text-right">{fuel}L</td>
+                              <td className="px-3 py-1.5 whitespace-nowrap font-mono text-slate-600 text-right">{donGia ? formatCurrency(donGia).replace(' ₫', '') : '—'}</td>
+                              <td className="px-3 py-1.5 whitespace-nowrap font-bold text-slate-900 text-right">{thanhTien ? formatCurrency(thanhTien).replace(' ₫', '') + 'đ' : '—'}</td>
+                              <td className="px-3 py-1.5 max-w-xs text-slate-500" title={reviewReason ? `[Lý do chờ duyệt: ${reviewReason}]\n${ghiChu}` : ghiChu}>
                                 {operator ? `[${operator}] ` : ''}{ghiChu || '—'}
                                 {reviewReason && status === 'pending' && (
-                                  <div className="text-[10px] text-amber-800 bg-amber-100/90 border border-amber-300 px-1.5 py-0.5 rounded mt-0.5 truncate font-medium flex items-center gap-1">
+                                  <div className="text-[10px] text-amber-800 bg-amber-100/90 border border-amber-300 px-1.5 py-0.2 rounded mt-0.5 truncate font-medium flex items-center gap-1">
                                     <AlertTriangle size={10} className="shrink-0 text-amber-600" />
                                     <span className="truncate">{reviewReason}</span>
                                   </div>
                                 )}
                               </td>
-                              <td className="px-3 py-2.5 whitespace-nowrap">
+                              <td className="px-3 py-1.5 whitespace-nowrap">
                                 {status === 'approved' ? (
-                                  <span className="bg-emerald-50 text-emerald-700 border border-emerald-100 text-[10px] font-bold px-1.5 py-0.5 rounded">Đã duyệt</span>
+                                  <span className="bg-emerald-50 text-emerald-700 border border-emerald-100 text-[10px] font-bold px-1.5 py-0.2 rounded">Đã duyệt</span>
                                 ) : status === 'rejected' ? (
-                                  <span className="bg-red-50 text-red-700 border border-red-100 text-[10px] font-bold px-1.5 py-0.5 rounded">Từ chối</span>
+                                  <span className="bg-red-50 text-red-700 border border-red-100 text-[10px] font-bold px-1.5 py-0.2 rounded">Từ chối</span>
                                 ) : (
-                                  <span className="bg-amber-50 text-amber-700 border border-amber-300 text-[10px] font-bold px-1.5 py-0.5 rounded inline-flex items-center gap-1" title={reviewReason}>
+                                  <span className="bg-amber-50 text-amber-700 border border-amber-300 text-[10px] font-bold px-1.5 py-0.2 rounded inline-flex items-center gap-1" title={reviewReason}>
                                     <Clock size={10} /> Chờ duyệt
                                   </span>
                                 )}
                               </td>
-                              <td className="px-3 py-2.5 whitespace-nowrap text-right text-xs space-x-1">
+                              <td className="px-3 py-1.5 whitespace-nowrap text-right text-xs space-x-1">
                                 {status === 'pending' && (
                                   <>
                                     <button 
                                       onClick={() => handleApproveLog(log.gen_log_id, 'approved')}
-                                      className="text-emerald-600 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 p-1.5 rounded transition-colors inline-flex items-center cursor-pointer"
+                                      className="text-emerald-600 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 p-1 rounded transition-colors inline-flex items-center cursor-pointer"
                                       title="Duyệt"
                                     >
                                       <CheckCircle2 size={13} />
                                     </button>
                                     <button 
                                       onClick={() => handleApproveLog(log.gen_log_id, 'rejected')}
-                                      className="text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 p-1.5 rounded transition-colors inline-flex items-center cursor-pointer"
+                                      className="text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 p-1 rounded transition-colors inline-flex items-center cursor-pointer"
                                       title="Từ chối"
                                     >
                                       <X size={13} />
@@ -3247,7 +3202,7 @@ export default function Generator() {
                                 )}
                                 <button 
                                   onClick={() => handleDeleteLog(log.gen_log_id)}
-                                  className="text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 p-1.5 rounded transition-colors inline-flex items-center cursor-pointer"
+                                  className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 rounded transition-colors inline-flex items-center cursor-pointer"
                                   title="Xóa"
                                 >
                                   <Trash size={13} />
