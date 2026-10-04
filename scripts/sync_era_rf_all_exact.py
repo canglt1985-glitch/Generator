@@ -110,7 +110,29 @@ def main():
                 if sid:
                     era_by_site_sector[sid][sec_char] = info
 
-    print(f"✅ Đã nạp {len(era_by_cell)} thiết kế cell từ ERA_RF_ALL_2026.xlsx ({len(era_by_site_sector)} trạm).")
+    # Các thông số hiệu chỉnh thủ công theo thực tế hiện trường từ người dùng
+    manual_site_overrides = {
+        'DNTN60': {'A': {'azimuth': 280, 'height': 40, 'tilt_total': 4, 'tilt_mech': 0, 'tilt_elec': 4}},
+        'DNIDGI30': {'A': {'azimuth': 280, 'height': 40, 'tilt_total': 4, 'tilt_mech': 0, 'tilt_elec': 4}}
+    }
+    for sid, sec_dict in manual_site_overrides.items():
+        for sec_char, info in sec_dict.items():
+            if sid not in era_by_site_sector:
+                era_by_site_sector[sid] = {}
+            era_by_site_sector[sid][sec_char] = {
+                'sheet': 'MANUAL',
+                'old_id': sid,
+                'new_id': sid,
+                'cell_name': f"{sid}_{sec_char}",
+                'azimuth': info['azimuth'],
+                'height': info['height'],
+                'tilt_total': info['tilt_total'],
+                'tilt_mech': info['tilt_mech'],
+                'tilt_elec': info['tilt_elec'],
+                'sector': sec_char
+            }
+
+    print(f"✅ Đã nạp {len(era_by_cell)} thiết kế cell từ ERA_RF_ALL_2026.xlsx ({len(era_by_site_sector)} trạm, bao gồm các hiệu chỉnh thủ công).")
 
     # 2. Nạp toàn bộ datacells từ Supabase
     all_cells = []
