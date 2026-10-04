@@ -270,17 +270,18 @@ export function getSectorTiltDisplay(sec, site = null) {
  * - 4G: 1 lớp Màu Ngọc duy nhất (ở giữa).
  * - 5G: Đỏ 2 lớp thanh mảnh (3800 trong, 2600 ngoài).
  * 
- * Thiết kế tỉ lệ thẩm mỹ từ trong ra ngoài (Monotonic Tapering & Slender Petal):
- * - 3G (trong cùng): góc mở 48°, tán rộng ôm sát trạm.
- * - 4G (ở giữa): góc mở 38°, thon gọn chuyển tiếp.
- * - 5G 3800 (5G-A): góc mở 28°, thanh mảnh tinh tế.
- * - 5G 2600 (ngoài cùng): góc mở 22°, vát nhọn sắc sảo ở đỉnh búp sóng.
+ * Thiết kế góc mở chuẩn 50° đồng nhất (Collinear Sector Rays):
+ * - Giữ góc mở 50° cho mọi tầng (3G, 4G, 5G L1, 5G L2) giúp 2 viền dọc 2 bên thẳng tắp tuyệt đối từ gốc đến ngọn.
+ * - Tăng độ dày các tầng (Tổng bán kính vươn dài 120m bề thế, rõ nét trên ảnh vệ tinh).
+ * - Chống chồng lấn tự động (Dynamic Overlap Guard): co góc mở nếu các sector liền kề cách nhau < 58°.
  * 
  * @param {Object} sec Dữ liệu sector
  * @param {boolean} isDual5g Cờ trạm có Dual 5G (5G-A)
  * @param {boolean} hasSite5g Cờ trạm có phát 5G
  * @param {boolean} isSranSwap Cờ trạm là SRAN (swap_solution 3G4G) hay 4G Độc lập
  * @param {number} scale Hệ số phóng to theo Zoom
+ * @param {boolean} hasSite3g Cờ trạm có phát 3G ở các cell khác
+ * @param {number} minAzimuthDiff Góc lệch nhỏ nhất tới các sector khác của cùng trạm
  * @returns {Array} Danh sách các lớp búp sóng liền kề với [rInner, rOuter] chính xác
  */
 export function getSectorContiguousLayers(
@@ -311,23 +312,17 @@ export function getSectorContiguousLayers(
   // Cấu trúc tương đồng: Nếu trạm có 3G ở các cell khác, giữ cữ slot 3G cho cell khuyết 3G
   const siteHas3g = hasSite3g || has3g;
 
-  // Thuật toán búp sóng khí động học (Aerodynamic Tapering):
-  // Mở rộng búp sóng hài hòa, tăng góc mở 5G 3800 lên 30° cho cân đối (3G: 58° -> 4G: 48° -> 5G L1: 38° -> 5G-A: 30°)
+  // Góc mở đồng nhất 50°: Giúp 2 viền biên dọc 2 bên thẳng hàng tắp (Collinear Rays)
   // Chống chồng lấn tự động (Overlap Guard): không vượt quá minAzimuthDiff - 8°
   const maxSafeBw = Math.max(18, minAzimuthDiff - 8);
-  const bw3g = Math.min(58, maxSafeBw);
-  const bw4g = Math.min(48, maxSafeBw);
-
-  // Đối với 5G: Tầng phủ sóng 2.6G rộng 38°, tầng dung lượng Capacity (3.8G) tăng lên 30° cân đối
-  const bw5g2600 = Math.min(has5g3800 ? 38 : 36, maxSafeBw);
-  const bw5g3800 = Math.min(30, maxSafeBw);
+  const uniformBw = Math.min(50, maxSafeBw);
 
   const layers = [];
-  let currentR = 14; // Bán kính bắt đầu sát chân marker trạm BTS
+  let currentR = 16; // Bán kính bắt đầu sát chân marker trạm BTS (m)
 
   // 1. 🟢 Lớp 3G (Xanh lá cây tươi #22c55e - Giữ nguyên màu)
-  // Độ dày chuẩn đồng đều: 16m
-  const width3g = has4g ? 16 : 28;
+  // Độ dày chuẩn: 26m (vươn tới 42m)
+  const width3g = has4g ? 26 : 45;
   if (has3g) {
     const rOuter = currentR + width3g;
     layers.push({
@@ -335,7 +330,7 @@ export function getSectorContiguousLayers(
       tech: '3G',
       label: '2100 MHz',
       badgeClass: 'bg-emerald-100 text-emerald-800',
-      beamwidth: bw3g,
+      beamwidth: uniformBw,
       rInner: currentR * scale,
       rOuter: rOuter * scale,
       fillColor: SECTOR_LAYER_CONFIG['3G'].fillColor,
@@ -352,10 +347,10 @@ export function getSectorContiguousLayers(
   }
 
   // 2. 💎 Lớp 4G (1 LỚP DUY NHẤT - Màu Ngọc Cyan huỳnh quang #00f0ff)
-  // Độ dày chuẩn đồng đều: 16m (hoặc 20m nếu chỉ 3G+4G, 28m nếu chỉ có 4G đơn lẻ)
+  // Độ dày chuẩn: 28m khi có 5G (vươn tới 70m), 34m nếu chỉ có 3G+4G (vươn tới 76m), 50m nếu chỉ có 4G đơn lẻ
   if (has4g) {
     const hasAny5g = has5g3800 || has5g2600;
-    const width = hasAny5g ? 16 : (has3g || siteHas3g ? 20 : 28);
+    const width = hasAny5g ? 28 : (has3g || siteHas3g ? 34 : 50);
     const rOuter = currentR + width;
     const techName = isSranSwap ? '4G SRAN' : '4G';
     const has2100 = Boolean(sec.has_4g_2100);
@@ -365,7 +360,7 @@ export function getSectorContiguousLayers(
       tech: techName,
       label: bandLabel,
       badgeClass: 'bg-cyan-100 text-cyan-900',
-      beamwidth: bw4g,
+      beamwidth: uniformBw,
       rInner: currentR * scale,
       rOuter: rOuter * scale,
       fillColor: SECTOR_LAYER_CONFIG['4G'].fillColor,
@@ -378,16 +373,16 @@ export function getSectorContiguousLayers(
   }
 
   // 3. 🚨 Lớp 5G Phủ Sóng (Coverage): Băng 2600 MHz (NR26 - Đỏ cờ tươi rực rỡ #ff0033)
-  // Độ dày chuẩn đồng đều: 16m
+  // Độ dày chuẩn: 28m (vươn tới 98m)
   if (has5g2600) {
-    const width = 16;
+    const width = 28;
     const rOuter = currentR + width;
     layers.push({
       key: '5G_2600',
       tech: '5G L1 (2.6 GHz)',
       label: '2600 MHz (NR26)',
       badgeClass: 'bg-red-100 text-red-800 font-bold',
-      beamwidth: bw5g2600,
+      beamwidth: uniformBw,
       rInner: currentR * scale,
       rOuter: rOuter * scale,
       fillColor: SECTOR_LAYER_CONFIG['5G_2600'].fillColor,
@@ -400,22 +395,22 @@ export function getSectorContiguousLayers(
   }
 
   // 4. 🔴 Lớp 5G Dung Lượng (Capacity / 5G-A): Băng 3800 MHz (NR38 - Đỏ hồng lựu #e11d48)
-  // Capacity giảm 1 chút: độ dày chỉ 11m (giảm 30% so với 16m), góc mở 30° cân đối
+  // Độ dày chuẩn: 22m (vươn tới 120m bề thế), viền thanh thoát làm điểm nhấn ngoài cùng
   if (has5g3800) {
-    const width = 11;
+    const width = has5g2600 ? 22 : 30;
     const rOuter = currentR + width;
     layers.push({
       key: '5G_3800',
       tech: '5G-A (3.8 GHz)',
       label: '3800 MHz (NR38)',
       badgeClass: 'bg-rose-100 text-rose-900 border border-rose-300 font-black',
-      beamwidth: bw5g3800,
+      beamwidth: uniformBw,
       rInner: currentR * scale,
       rOuter: rOuter * scale,
       fillColor: SECTOR_LAYER_CONFIG['5G_3800'].fillColor,
       color: SECTOR_LAYER_CONFIG['5G_3800'].color,
       weight: SECTOR_LAYER_CONFIG['5G_3800'].weight,
-      fillOpacity: 0.50,
+      fillOpacity: 0.52,
       zIndex: SECTOR_LAYER_CONFIG['5G_3800'].zIndex
     });
     currentR = rOuter;
