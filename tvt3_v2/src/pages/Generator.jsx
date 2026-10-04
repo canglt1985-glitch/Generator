@@ -1158,7 +1158,7 @@ export default function Generator() {
 
   // Download PDF Tổng hợp Tra Cứu GDT (Nhóm 1 - ĐN)
   const handleDownloadEgovPdf = () => {
-    const pdfUrl = '/reports/1_TONG HOP HINH ANH EGOV_DONG_NAI_67TRAM.pdf';
+    const pdfUrl = '/reports/1_TONG_HOP_HINH_ANH_EGOV_DONG_NAI_67TRAM.pdf';
     const link = document.createElement('a');
     link.href = pdfUrl;
     link.download = '1_TONG_HOP_HINH_ANH_EGOV_DONG_NAI_67TRAM.pdf';
