@@ -10,16 +10,14 @@ import {
   getOmniContiguousLayers
 } from '../../utils/cellSectorGeometry';
 
-// 18 trạm thực tế đang thiếu hồ sơ thiết kế RF (đang gán tạm dummy 0°/120°/240°)
+// 9 trạm thực tế đang thiếu hồ sơ thiết kế RF ERA (đang gán tạm dummy 0°/120°/240°)
 const MISSING_RF_SITES = new Set([
-  'DNLK05', 'DNLK06', 'DNLK09', 'DNLK10', 'DNLK42', 'DNLK76',
-  'DNTN04', 'DNTN44', 'DNTN60',
-  'DNTP29', 'DNTP38',
-  'DNXL07', 'DNXL46', 'DNXL64', 'DNXL75',
-  'DNDQ18', 'DNDQ22', 'DNDQ67',
-  'DNILKH00', 'DNIBLC01', 'DNIHGO02', 'DNILKH03', 'DNIBVI14', 'DNIBVI13',
-  'DNIDGI04', 'DNIDGI23', 'DNIDGI30', 'DNITPU11', 'DNITLA08',
-  'DNIXLO02', 'DNIXBA08', 'DNIXPH05', 'DNIXLO26', 'DNIDQU06', 'DNITNS00', 'DNITNH10'
+  'DNLK06', 'DNLK09', 'DNLK10', 'DNLK42',
+  'DNXL07', 'DNXL46', 'DNXL64',
+  'DNDQ18', 'DNDQ22',
+  'DNIBLC01', 'DNIHGO02', 'DNILKH03', 'DNIBVI14',
+  'DNIXLO02', 'DNIXBA08', 'DNIXPH05',
+  'DNIDQU06', 'DNITNS00'
 ]);
 
 /**

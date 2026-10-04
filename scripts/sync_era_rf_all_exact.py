@@ -2,10 +2,11 @@
 # -*- coding: utf-8 -*-
 """
 Script Đồng Bộ Chính Xác Thiết Kế RF Từ File ERA_RF_ALL_2026.xlsx:
-- Đọc Cột G (Azimuth), Cột I (Height), Cột J (Tilt Total), Cột K (Mtilt), Cột L (Etilt).
+- Nguồn: Google Drive ERA_RF_ALL_2026.xlsx (Cập nhật 10:54 04/10/2026)
+- Đọc Cột G (Azimuth_Physical), Cột I (Height), Cột J (Total Tilt), Cột K (Mtilt), Cột L (Etilt).
 - Cập nhật trực tiếp vào bảng 'datacells'.
-- Đồng bộ các cell cùng sector (4D, 3G) theo đúng góc hướng thiết kế ERA.
-- Tái tổng hợp 'technical_info.rf_summary.sectors' chuẩn xác cho 'datasites' (bao gồm trạm 4 sector như DNXL06, DNCM48, DNDQ41, DNCM06).
+- Đồng bộ các cell cùng sector (4G, 5G, 3G) theo đúng góc hướng thiết kế ERA.
+- Tái tổng hợp 'technical_info.rf_summary.sectors' chuẩn xác cho bảng 'datasites'.
 """
 
 import os
@@ -14,9 +15,10 @@ import json
 import ssl
 import urllib.request
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import openpyxl
 
-ERA_FILE = '/Users/cang_it/Desktop/QL_VienThong_DongNai/05_HaTang_KyThuat_5G/ERA_RF_ALL_2026.xlsx'
+ERA_FILE = '/Users/cang_it/Library/CloudStorage/GoogleDrive-canglt1985@gmail.com/My Drive/data cell/ERA_RF_ALL_2026.xlsx'
 SUPABASE_URL = 'https://lnmoczxjweuifacqujcu.supabase.co'
 SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxubW9jenhqd2V1aWZhY3F1amN1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2MzcxOTYsImV4cCI6MjA5NDIxMzE5Nn0.C0Si7ChY4T_mxLylSkDNJOUcj9D0uuGW_L4t7p9yONI'
 
@@ -40,17 +42,42 @@ def parse_num(v):
     except:
         return None
 
+def patch_cell(cid, patch):
+    patch_url = f"{SUPABASE_URL}/rest/v1/datacells?cell_id=eq.{cid}"
+    patch_data = json.dumps(patch).encode('utf-8')
+    req = urllib.request.Request(patch_url, data=patch_data, headers=headers, method='PATCH')
+    try:
+        with urllib.request.urlopen(req, context=ctx) as resp:
+            return cid, True, None
+    except Exception as e:
+        return cid, False, str(e)
+
+def patch_site(sid, tech_info):
+    patch_site_url = f"{SUPABASE_URL}/rest/v1/datasites?site_id=eq.{sid}"
+    patch_site_data = json.dumps({'technical_info': tech_info}).encode('utf-8')
+    req = urllib.request.Request(patch_site_url, data=patch_site_data, headers=headers, method='PATCH')
+    try:
+        with urllib.request.urlopen(req, context=ctx) as resp:
+            return sid, True, None
+    except Exception as e:
+        return sid, False, str(e)
+
 def main():
     print("================================================================================")
     print("🚀 BẮT ĐẦU ĐỒNG BỘ THIẾT KẾ RF TỪ ERA_RF_ALL_2026.XLSX VÀO SUPABASE")
+    print(f"📁 Nguồn file: {ERA_FILE}")
     print("================================================================================")
+
+    if not os.path.exists(ERA_FILE):
+        print(f"❌ Không tìm thấy file: {ERA_FILE}")
+        sys.exit(1)
 
     # 1. Đọc file ERA_RF_ALL
     wb = openpyxl.load_workbook(ERA_FILE, data_only=True)
     era_by_cell = {}
-    era_by_site_sector = defaultdict(dict) # site_id -> sector_letter -> dict
+    era_by_site_sector = defaultdict(dict)  # site_id -> sector_letter -> dict
 
-    for sname in ['4G', '5G']:
+    for sname in ['5G', '4G']:
         sheet = wb[sname]
         for r in range(2, sheet.max_row + 1):
             old_id = str(sheet.cell(r, 1).value or '').strip().upper()
@@ -83,7 +110,7 @@ def main():
                 if sid:
                     era_by_site_sector[sid][sec_char] = info
 
-    print(f"✅ Đã nạp {len(era_by_cell)} thiết kế cell từ ERA_RF_ALL_2026.xlsx.")
+    print(f"✅ Đã nạp {len(era_by_cell)} thiết kế cell từ ERA_RF_ALL_2026.xlsx ({len(era_by_site_sector)} trạm).")
 
     # 2. Nạp toàn bộ datacells từ Supabase
     all_cells = []
@@ -169,22 +196,21 @@ def main():
 
     print(f"\n⚡ Phát hiện {len(updated_cells)} cells cần cập nhật thông số từ ERA (trên {len(affected_sites)} trạm).")
 
-    # 5. Cập nhật từng cell vào bảng datacells
-    print("⏳ Đang cập nhật vào bảng 'datacells'...")
+    # 5. Cập nhật song song vào bảng datacells
+    print("⏳ Đang cập nhật vào bảng 'datacells' (10 workers song song)...")
     success_cell_count = 0
-    for cid, patch in updated_cells:
-        patch_url = f"{SUPABASE_URL}/rest/v1/datacells?cell_id=eq.{cid}"
-        patch_data = json.dumps(patch).encode('utf-8')
-        req = urllib.request.Request(patch_url, data=patch_data, headers=headers, method='PATCH')
-        try:
-            with urllib.request.urlopen(req, context=ctx) as resp:
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        futures = [executor.submit(patch_cell, cid, patch) for cid, patch in updated_cells]
+        for f in as_completed(futures):
+            cid, ok, err = f.result()
+            if ok:
                 success_cell_count += 1
-        except Exception as e:
-            print(f"❌ Lỗi cập nhật cell {cid}: {e}")
+            else:
+                print(f"❌ Lỗi cập nhật cell {cid}: {err}")
 
     print(f"✅ Đã cập nhật thành công {success_cell_count}/{len(updated_cells)} cells vào bảng 'datacells'.")
 
-    # 6. Tái tổng hợp rf_summary.sectors cho các trạm bị ảnh hưởng (đặc biệt các trạm 4 sector)
+    # 6. Tái tổng hợp rf_summary.sectors cho các trạm bị ảnh hưởng
     print("\n🔄 Bước 6: Tái tổng hợp rf_summary.sectors cho bảng 'datasites'...")
 
     # Nạp lại datacells sau cập nhật
@@ -209,7 +235,8 @@ def main():
         target = site_canon.get(sid) or site_canon.get(sold) or sid or sold
         cells_by_site[target].append(c)
 
-    updated_sites_count = 0
+    # Lập danh sách patch cho datasites
+    site_patches = []
     for s in sites:
         sid = (s.get('site_id') or '').strip().upper()
         sold = (s.get('site_id_old') or '').strip().upper()
@@ -277,23 +304,28 @@ def main():
 
         sectors_list = sorted(list(sector_map.values()), key=lambda x: x['sector'])
 
-        # Cập nhật vào datasites
-        ti = s.get('technical_info') or {}
-        rf_summary = ti.get('rf_summary') or {}
+        # Cập nhật vào datasites.technical_info bảo toàn các trường khác
+        ti = dict(s.get('technical_info') or {})
+        rf_summary = dict(ti.get('rf_summary') or {})
         rf_summary['sectors'] = sectors_list
+        ti['rf_summary'] = rf_summary
 
-        patch_site_url = f"{SUPABASE_URL}/rest/v1/datasites?site_id=eq.{sid}"
-        patch_site_data = json.dumps({'technical_info': {'rf_summary': rf_summary}}).encode('utf-8')
-        req = urllib.request.Request(patch_site_url, data=patch_site_data, headers=headers, method='PATCH')
-        try:
-            with urllib.request.urlopen(req, context=ctx) as resp:
-                updated_sites_count += 1
-        except Exception as e:
-            print(f"❌ Lỗi cập nhật trạm {sid}: {e}")
+        site_patches.append((sid, ti))
 
-    print(f"✅ Đã cập nhật thành công {updated_sites_count} trạm trong bảng 'datasites'.")
+    print(f"⏳ Đang cập nhật {len(site_patches)} trạm trong bảng 'datasites' (10 workers song song)...")
+    success_site_count = 0
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        futures = [executor.submit(patch_site, sid, ti) for sid, ti in site_patches]
+        for f in as_completed(futures):
+            sid, ok, err = f.result()
+            if ok:
+                success_site_count += 1
+            else:
+                print(f"❌ Lỗi cập nhật trạm {sid}: {err}")
+
+    print(f"✅ Đã cập nhật thành công {success_site_count}/{len(site_patches)} trạm trong bảng 'datasites'.")
     print("================================================================================")
-    print("🎉 HOÀN TẤT ĐỒNG BỘ THIẾT KẾ RF TỪ FILE ERA!")
+    print("🎉 HOÀN TẤT ĐỒNG BỘ THIẾT KẾ RF TỪ FILE ERA MỚI NHẤT!")
     print("================================================================================")
 
 if __name__ == '__main__':
