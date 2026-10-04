@@ -10,6 +10,18 @@ import {
   getOmniContiguousLayers
 } from '../../utils/cellSectorGeometry';
 
+// 18 trạm thực tế đang thiếu hồ sơ thiết kế RF (đang gán tạm dummy 0°/120°/240°)
+const MISSING_RF_SITES = new Set([
+  'DNLK05', 'DNLK06', 'DNLK09', 'DNLK10', 'DNLK42', 'DNLK76',
+  'DNTN04', 'DNTN44', 'DNTN60',
+  'DNTP29', 'DNTP38',
+  'DNXL07', 'DNXL46', 'DNXL64', 'DNXL75',
+  'DNDQ18', 'DNDQ22', 'DNDQ67',
+  'DNILKH00', 'DNIBLC01', 'DNIHGO02', 'DNILKH03', 'DNIBVI14', 'DNIBVI13',
+  'DNIDGI04', 'DNIDGI23', 'DNIDGI30', 'DNITPU11', 'DNITLA08',
+  'DNIXLO02', 'DNIXBA08', 'DNIXPH05', 'DNIXLO26', 'DNIDQU06', 'DNITNS00', 'DNITNH10'
+]);
+
 /**
  * Component hiển thị các cánh sóng đa tầng LIỀN KỀ NHAU (KHÔNG KHOẢNG TRỐNG):
  * - Trạm Macro: Cánh sóng định hướng (Annular Sectors) 3G / 4G / 5G.
@@ -33,6 +45,10 @@ export default function CellSectorWedges({
   // Hệ số co giãn bán kính theo mức Zoom để búp sóng không bị teo nhỏ ở Zoom 14-15
   const scale = getZoomAdaptiveScale(zoom);
   const siteLabel = site.site_id_old || site.site_id;
+
+  // Nhận diện trạm thuộc danh sách 18 trạm đang chờ bổ sung thiết kế RF
+  const isMissingRf = MISSING_RF_SITES.has(String(site.site_id_old || '').toUpperCase()) || 
+                      MISSING_RF_SITES.has(String(site.site_id || '').toUpperCase());
 
   // 1. Kiểm tra trạm AGG (Truyền dẫn): Không có phát sóng 3G/4G/5G -> Tuyệt đối không hiển thị cánh sóng!
   const coverage = getSiteCoverageType(site);
@@ -124,28 +140,44 @@ export default function CellSectorWedges({
 
   const isDual5g = Boolean(rfSummary?.is_dual_5g);
   const isSranSwap = Boolean(rfSummary?.is_sran_swap);
+  const hasSite3g = cells3g > 0 || sectors.some(s => s.has_3g);
 
+  // Tính góc hướng chuẩn cho tất cả các sector để quét khoảng cách góc tới sector lân cận
+  const resolvedAzimuths = sectors.map((sec, idx) => {
+    const secName = sec.sector || String.fromCharCode(65 + idx);
+    return (sec.azimuth == null || isNaN(sec.azimuth))
+      ? getFallbackAzimuth(secName, idx, sectors.length)
+      : Number(sec.azimuth);
+  });
 
   return (
     <>
       {sectors.map((sec, secIdx) => {
         const secName = sec.sector || String.fromCharCode(65 + secIdx);
-        const isEstimated = sec.azimuth == null || isNaN(sec.azimuth);
-        const azimuth = isEstimated
-          ? getFallbackAzimuth(secName, secIdx, sectors.length)
-          : Number(sec.azimuth);
+        const isEstimated = isMissingRf || sec.azimuth == null || isNaN(sec.azimuth);
+        const azimuth = resolvedAzimuths[secIdx];
+
+        // Tìm góc lệch nhỏ nhất tới các sector khác của cùng trạm
+        let minDiff = 360;
+        resolvedAzimuths.forEach((otherAz, oIdx) => {
+          if (oIdx !== secIdx) {
+            let diff = Math.abs(azimuth - otherAz) % 360;
+            if (diff > 180) diff = 360 - diff;
+            if (diff < minDiff) minDiff = diff;
+          }
+        });
 
         const heightStr = sec.height ? `${sec.height}m` : null;
         const tiltStr = getSectorTiltDisplay(sec, site);
 
-        // Lấy danh sách các tầng cánh sóng LIỀN KỀ NHAU (Zero Gap, 4G 1 lớp duy nhất)
-        const contiguousLayers = getSectorContiguousLayers(sec, isDual5g, has5g, isSranSwap, scale);
+        // Lấy danh sách các tầng cánh sóng LIỀN KỀ NHAU (Phương án 4: Phân tầng tần số, khuyết 3G để trống vòng trong)
+        const contiguousLayers = getSectorContiguousLayers(sec, isDual5g, has5g, isSranSwap, scale, hasSite3g, minDiff);
 
         return (
           <React.Fragment key={`sec-${site.site_id}-${secName}-${azimuth}`}>
             {contiguousLayers.map(layer => {
               const poly = createAnnularSectorPolygon(
-                lat, lng, azimuth, 65,
+                lat, lng, azimuth, layer.beamwidth || 45,
                 layer.rInner, layer.rOuter
               );
               if (!poly) return null;
@@ -167,7 +199,7 @@ export default function CellSectorWedges({
                       site, 
                       sector: secName, 
                       tech: layer.label, 
-                      azimuth,
+                      azimuth: `${azimuth}${isMissingRf ? ' (ước tính - chờ RF)' : isEstimated ? ' (ước tính)' : ''}`,
                       tiltStr,
                       heightStr 
                     })
@@ -187,7 +219,9 @@ export default function CellSectorWedges({
                       </div>
                       <div className="text-slate-600 flex justify-between">
                         <span>Góc hướng:</span>
-                        <b className="font-mono text-slate-800">{azimuth} {isEstimated ? '(ước tính)' : ''}</b>
+                        <b className="font-mono text-slate-800">
+                          {azimuth} {isMissingRf ? '(ước tính - chờ RF)' : isEstimated ? '(ước tính)' : ''}
+                        </b>
                       </div>
                       <div className="text-slate-600 flex justify-between">
                         <span>Độ nghiêng (Tilt):</span>

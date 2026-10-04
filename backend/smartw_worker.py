@@ -1464,14 +1464,39 @@ def _get_site_and_qlt_info(site_raw: str):
         mgmt = matched.get("management_info") or {}
         qlt_name = (mgmt.get("qlt") or "").strip()
         qlt_phone = str(mgmt.get("sdt_qlt") or "").strip()
-        if qlt_name and qlt_phone and qlt_phone != "None":
-            qlt_display = f"{qlt_name} ({qlt_phone})"
-        elif qlt_name:
+        if qlt_name:
             qlt_display = qlt_name
         elif qlt_phone and qlt_phone != "None":
             qlt_display = qlt_phone
 
     return tram_cell_display, qlt_display, qlt_name, qlt_phone
+
+
+def _parse_pakh_date_str(row: dict) -> str:
+    """Extract dd/mm in GMT+7 from PAKH row, default to 'Gần đây'."""
+    raw = row.get('thoiGianGhiNhan') or row.get('tgTaoWo')
+    if not raw:
+        return 'Gần đây'
+    try:
+        from datetime import timezone
+        s_raw = str(raw).strip()
+        if 'T' in s_raw or '+' in s_raw or s_raw.endswith('Z'):
+            dt = datetime.fromisoformat(s_raw.replace('Z', '+00:00'))
+            dt_local = dt.astimezone(timezone(timedelta(hours=7)))
+            return dt_local.strftime('%d/%m')
+    except Exception:
+        pass
+
+    formats = ['%d/%m/%Y %H:%M:%S', '%d/%m/%Y %H:%M', '%Y-%m-%d %H:%M:%S', '%d/%m/%Y']
+    for fmt in formats:
+        try:
+            dt = datetime.strptime(str(raw).strip(), fmt)
+            return dt.strftime('%d/%m')
+        except Exception:
+            pass
+
+    return 'Gần đây'
+
 
 
 def format_pakh_message(row: dict) -> str:
@@ -1773,7 +1798,52 @@ def process_pakh_alerts(pakh_list: list, job_type: str = 'pakh'):
                 active_tickets.append(row)
 
         if active_tickets:
-            lines1 = ["⏳ *PAKH TỒN ĐỌNG*\n"]
+            # Group tickets by QLT (Người quản lý trạm) & Date
+            qlt_counts = defaultdict(lambda: defaultdict(int))
+            qlt_totals = defaultdict(int)
+
+            for row in active_tickets:
+                ma_tram = row.get("maTram") or ""
+                _, _, q_name, _ = _get_site_and_qlt_info(ma_tram)
+                qlt = q_name.split()[-1] if q_name else _get_site_qlt_short(ma_tram)
+                if not qlt:
+                    qlt = 'Khác'
+                d_str = _parse_pakh_date_str(row)
+                qlt_counts[qlt][d_str] += 1
+                qlt_totals[qlt] += 1
+
+            sorted_qlts = sorted(
+                [q for q in qlt_totals.keys() if q != 'Khác'],
+                key=lambda q: (-qlt_totals[q], q)
+            )
+            if 'Khác' in qlt_totals and qlt_totals['Khác'] > 0:
+                sorted_qlts.append('Khác')
+
+            lines1 = [
+                "⏳ *PAKH TỒN ĐỌNG*",
+                f"📊 Tổng số PAKH: *{len(active_tickets)}* PAKH",
+                "───────────────"
+            ]
+
+            def _date_sort_key(d_str):
+                try:
+                    parts = d_str.split('/')
+                    if len(parts) == 2:
+                        return (int(parts[1]), int(parts[0]))
+                except Exception:
+                    pass
+                return (0, 0)
+
+            for qlt in sorted_qlts:
+                tot = qlt_totals[qlt]
+                if tot > 0:
+                    dates = sorted(qlt_counts[qlt].keys(), key=_date_sort_key, reverse=True)
+                    date_breakdown = ' | '.join(f'{d}: {qlt_counts[qlt][d]}' for d in dates)
+                    lines1.append(f"🔹 *{qlt}:* *{tot}* PAKH ({date_breakdown})")
+
+            lines1.append("───────────────")
+            lines1.append("")
+
             for row in active_tickets:
                 sdt = row.get("soThueBao") or "SĐT --"
                 ma_tram = row.get("maTram") or ""

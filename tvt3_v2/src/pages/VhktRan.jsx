@@ -581,23 +581,72 @@ export default function VhktRan() {
 
   // Generate plain text for PAKH matching user format
   const generatePakhMessageText = () => {
-    const lines = ['⏳ *PAKH TỒN ĐỌNG*', ''];
     if (activePakhList.length === 0) {
-      lines.push('• (Không có phản ánh tồn đọng)');
-    } else {
-      activePakhList.forEach(p => {
-        const sdt = p.so_thue_bao || p.soThueBao || '--';
-        const tram = p.ma_tram || p.maTram || '--';
-        const tg = p.tgclTtml || p.tg_con_lai || p.tgConLai || '--';
-        const { newId, oldId, qlt, sdtQlt } = resolvePakhSite(tram, p);
-        const sitePair = newId && oldId && newId !== oldId 
-          ? `(${newId} / ${oldId})` 
-          : (newId || oldId ? `(${newId || oldId})` : '');
-        const qltText = qlt ? ` | QLT: ${qlt}${sdtQlt ? ` (${sdtQlt})` : ''}` : '';
-        lines.push(`• SĐT: ${sdt} - Trạm: ${tram} ${sitePair}${qltText}`.trim());
-        lines.push(`  ⏳ Hạn còn lại: ${tg}`);
-      });
+      return '⏳ *PAKH TỒN ĐỌNG*\n\n• (Không có phản ánh tồn đọng)';
     }
+
+    const qltCounts = {};
+    const qltTotals = {};
+
+    activePakhList.forEach(p => {
+      const tram = p.ma_tram || p.maTram || '';
+      const { qlt } = resolvePakhSite(tram, p);
+      const qltShort = qlt ? qlt.trim().split(' ').pop() : 'Khác';
+
+      const rawDate = p.thoi_gian_ghi_nhan || p.thoiGianGhiNhan || p.tg_tao_wo || p.tgTaoWo;
+      let dateStr = 'Gần đây';
+      if (rawDate) {
+        try {
+          const d = new Date(rawDate);
+          if (!isNaN(d.getTime())) {
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            dateStr = `${day}/${month}`;
+          }
+        } catch (e) {}
+      }
+
+      if (!qltCounts[qltShort]) qltCounts[qltShort] = {};
+      qltCounts[qltShort][dateStr] = (qltCounts[qltShort][dateStr] || 0) + 1;
+      qltTotals[qltShort] = (qltTotals[qltShort] || 0) + 1;
+    });
+
+    const sortedQlts = Object.keys(qltTotals)
+      .filter(q => q !== 'Khác')
+      .sort((a, b) => qltTotals[b] - qltTotals[a] || a.localeCompare(b));
+    if (qltTotals['Khác'] > 0) {
+      sortedQlts.push('Khác');
+    }
+
+    const lines = [
+      '⏳ *PAKH TỒN ĐỌNG*',
+      `📊 Tổng số PAKH: *${activePakhList.length}* PAKH`,
+      '───────────────'
+    ];
+
+    sortedQlts.forEach(q => {
+      const tot = qltTotals[q];
+      const dates = Object.keys(qltCounts[q]).sort().reverse();
+      const dateBreakdown = dates.map(d => `${d}: ${qltCounts[q][d]}`).join(' | ');
+      lines.push(`🔹 *${q}:* *${tot}* PAKH (${dateBreakdown})`);
+    });
+
+    lines.push('───────────────');
+    lines.push('');
+
+    activePakhList.forEach(p => {
+      const sdt = p.so_thue_bao || p.soThueBao || '--';
+      const tram = p.ma_tram || p.maTram || '--';
+      const tg = p.tgclTtml || p.tg_con_lai || p.tgConLai || '--';
+      const { newId, oldId, qlt } = resolvePakhSite(tram, p);
+      const sitePair = newId && oldId && newId !== oldId 
+        ? `(${newId} / ${oldId})` 
+        : (newId || oldId ? `(${newId || oldId})` : '');
+      const qltText = qlt ? ` | QLT: ${qlt}` : '';
+      lines.push(`• SĐT: ${sdt} - Trạm: ${tram} ${sitePair}${qltText}`.trim());
+      lines.push(`  ⏳ Hạn còn lại: ${tg}`);
+    });
+
     return lines.join('\n').trim();
   };
 

@@ -103,9 +103,9 @@ export function getFallbackAzimuth(sectorName, index = 0, total = 3) {
  * Hệ số này giúp bung rộng búp sóng ở zoom thấp để người dùng nhìn rõ góc hướng và phân lớp.
  */
 export function getZoomAdaptiveScale(zoom = 15) {
-  if (zoom <= 14) return 1.8;
-  if (zoom === 15) return 1.4;
-  if (zoom === 16) return 1.15;
+  if (zoom <= 14) return 1.4;
+  if (zoom === 15) return 1.2;
+  if (zoom === 16) return 1.05;
   return 1.0;
 }
 
@@ -121,7 +121,7 @@ export const SECTOR_LAYER_CONFIG = {
   // 🟢 1. 3G: 1 lớp Xanh lá cây
   '3G': {
     name: '3G',
-    label: '3G (2100 / 900 MHz)',
+    label: '2100 MHz',
     techCategory: '3G',
     fillColor: '#22c55e',      // Xanh lá cây tươi
     color: '#ffffff',          // Viền trắng tinh khiết chống chìm nền vệ tinh
@@ -133,7 +133,7 @@ export const SECTOR_LAYER_CONFIG = {
   // 💎 2. 4G: 1 lớp Màu Ngọc Cyan huỳnh quang
   '4G': {
     name: '4G',
-    label: '4G LTE (1800 / 2100 MHz)',
+    label: '1800 MHz',
     techCategory: '4G',
     fillColor: '#00f0ff',      // Xanh lơ Cyan huỳnh quang (Electric Aqua)
     color: '#ffffff',          // Viền trắng
@@ -145,7 +145,7 @@ export const SECTOR_LAYER_CONFIG = {
   // Fallback alias cho các component khác
   '4G_1800_1': {
     name: '4G',
-    label: '4G LTE (1800 / 2100 MHz)',
+    label: '1800 MHz',
     techCategory: '4G',
     fillColor: '#00f0ff',
     color: '#ffffff',
@@ -157,7 +157,7 @@ export const SECTOR_LAYER_CONFIG = {
   // 🔴 3. 5G Lớp trong: Băng 3800 MHz (NR38 / 5G-A)
   '5G_3800': {
     name: '5G_3800',
-    label: '5G-A (3.8 GHz - NR38)',
+    label: '3800 MHz (NR38)',
     techCategory: '5G',
     fillColor: '#e11d48',      // Đỏ hồng lựu / Crimson Rose
     color: '#ffffff',          // Viền trắng
@@ -167,7 +167,7 @@ export const SECTOR_LAYER_CONFIG = {
   },
   '5G_L2': {
     name: '5G_3800',
-    label: '5G-A (3.8 GHz - NR38)',
+    label: '3800 MHz (NR38)',
     techCategory: '5G',
     fillColor: '#e11d48',
     color: '#ffffff',
@@ -179,7 +179,7 @@ export const SECTOR_LAYER_CONFIG = {
   // 🚨 4. 5G Lớp ngoài: Băng 2600 MHz (NR26)
   '5G_2600': {
     name: '5G_2600',
-    label: '5G Lớp 1 (2.6 GHz - NR26)',
+    label: '2600 MHz (NR26)',
     techCategory: '5G',
     fillColor: '#ff0033',      // Đỏ cờ tươi rực rỡ (Neon Scarlet)
     color: '#ffffff',          // Viền trắng
@@ -189,7 +189,7 @@ export const SECTOR_LAYER_CONFIG = {
   },
   '5G_L1': {
     name: '5G_2600',
-    label: '5G Lớp 1 (2.6 GHz - NR26)',
+    label: '2600 MHz (NR26)',
     techCategory: '5G',
     fillColor: '#ff0033',
     color: '#ffffff',
@@ -266,9 +266,15 @@ export function getSectorTiltDisplay(sec, site = null) {
 /**
  * Tính toán danh sách các tầng cánh sóng LIỀN KỀ NHAU (KHÔNG KHOẢNG TRỐNG):
  * - Bán kính trong của lớp sau = Bán kính ngoài của lớp trước.
- * - 3G: Xanh lá cây (trong cùng).
+ * - 3G: Xanh lá cây tươi (trong cùng).
  * - 4G: 1 lớp Màu Ngọc duy nhất (ở giữa).
- * - 5G: Đỏ 2 lớp (3800 trong, 2600 ngoài).
+ * - 5G: Đỏ 2 lớp thanh mảnh (3800 trong, 2600 ngoài).
+ * 
+ * Thiết kế tỉ lệ thẩm mỹ từ trong ra ngoài (Monotonic Tapering & Slender Petal):
+ * - 3G (trong cùng): góc mở 48°, tán rộng ôm sát trạm.
+ * - 4G (ở giữa): góc mở 38°, thon gọn chuyển tiếp.
+ * - 5G 3800 (5G-A): góc mở 28°, thanh mảnh tinh tế.
+ * - 5G 2600 (ngoài cùng): góc mở 22°, vát nhọn sắc sảo ở đỉnh búp sóng.
  * 
  * @param {Object} sec Dữ liệu sector
  * @param {boolean} isDual5g Cờ trạm có Dual 5G (5G-A)
@@ -277,24 +283,59 @@ export function getSectorTiltDisplay(sec, site = null) {
  * @param {number} scale Hệ số phóng to theo Zoom
  * @returns {Array} Danh sách các lớp búp sóng liền kề với [rInner, rOuter] chính xác
  */
-export function getSectorContiguousLayers(sec, isDual5g = false, hasSite5g = false, isSranSwap = false, scale = 1.0) {
+export function getSectorContiguousLayers(
+  sec, 
+  isDual5g = false, 
+  hasSite5g = false, 
+  isSranSwap = false, 
+  scale = 1.0,
+  hasSite3g = false,
+  minAzimuthDiff = 360
+) {
   const has3g = Boolean(sec.has_3g);
   const has4g = Boolean(sec.has_4g || sec.has_4g_1800_1 || sec.has_4g_1800_2 || sec.has_4g_2100);
-  const has5g3800 = Boolean(sec.has_5g_l2 || sec.has_5g_3800 || (isDual5g && (sec.has_5g_l1 || hasSite5g)));
-  const has5g2600 = Boolean(sec.has_5g_l1 || sec.has_5g_2600 || hasSite5g);
+
+  // Nhận diện cờ 5G chính xác cấp Sector:
+  // Nếu sector đã có cấu hình rõ ràng (có has_5g_l1 hoặc has_5g_l2 hoặc has_5g_2600 hoặc has_5g_3800),
+  // thì TUYỆT ĐỐI KHÔNG fallback sang hasSite5g (tránh trường hợp trạm có 4 sector 4G nhưng chỉ có 3 sector 5G như DNCM06).
+  const hasExplicit5g = ('has_5g_l1' in sec) || ('has_5g_l2' in sec) || ('has_5g_2600' in sec) || ('has_5g_3800' in sec);
+  
+  const has5g3800 = hasExplicit5g 
+    ? Boolean(sec.has_5g_l2 || sec.has_5g_3800)
+    : Boolean(isDual5g && hasSite5g);
+
+  const has5g2600 = hasExplicit5g
+    ? Boolean(sec.has_5g_l1 || sec.has_5g_2600)
+    : Boolean(hasSite5g);
+
+  // Cấu trúc tương đồng: Nếu trạm có 3G ở các cell khác, giữ cữ slot 3G cho cell khuyết 3G
+  const siteHas3g = hasSite3g || has3g;
+
+  // Thuật toán búp sóng khí động học (Aerodynamic Tapering):
+  // Mở rộng búp sóng hài hòa, tăng góc mở 5G 3800 lên 30° cho cân đối (3G: 58° -> 4G: 48° -> 5G L1: 38° -> 5G-A: 30°)
+  // Chống chồng lấn tự động (Overlap Guard): không vượt quá minAzimuthDiff - 8°
+  const maxSafeBw = Math.max(18, minAzimuthDiff - 8);
+  const bw3g = Math.min(58, maxSafeBw);
+  const bw4g = Math.min(48, maxSafeBw);
+
+  // Đối với 5G: Tầng phủ sóng 2.6G rộng 38°, tầng dung lượng Capacity (3.8G) tăng lên 30° cân đối
+  const bw5g2600 = Math.min(has5g3800 ? 38 : 36, maxSafeBw);
+  const bw5g3800 = Math.min(30, maxSafeBw);
 
   const layers = [];
-  let currentR = 18; // Bán kính bắt đầu sát chân marker trạm BTS
+  let currentR = 14; // Bán kính bắt đầu sát chân marker trạm BTS
 
-  // 1. 🟢 Lớp 3G (Xanh lá cây tươi)
+  // 1. 🟢 Lớp 3G (Xanh lá cây tươi #22c55e - Giữ nguyên màu)
+  // Độ dày chuẩn đồng đều: 16m
+  const width3g = has4g ? 16 : 28;
   if (has3g) {
-    const width = has4g ? 36 : 60;
-    const rOuter = currentR + width;
+    const rOuter = currentR + width3g;
     layers.push({
       key: '3G',
       tech: '3G',
-      label: '3G (2100 / 900 MHz)',
+      label: '2100 MHz',
       badgeClass: 'bg-emerald-100 text-emerald-800',
+      beamwidth: bw3g,
       rInner: currentR * scale,
       rOuter: rOuter * scale,
       fillColor: SECTOR_LAYER_CONFIG['3G'].fillColor,
@@ -303,20 +344,28 @@ export function getSectorContiguousLayers(sec, isDual5g = false, hasSite5g = fal
       fillOpacity: SECTOR_LAYER_CONFIG['3G'].fillOpacity,
       zIndex: SECTOR_LAYER_CONFIG['3G'].zIndex
     });
-    currentR = rOuter; // LIỀN KỀ: Điểm cuối của 3G là điểm bắt đầu của 4G!
+    currentR = rOuter;
+  } else if (siteHas3g) {
+    // Cell khuyết 3G nhưng trạm có 3G (như Sec C DNCM06):
+    // Để trống vòng trong (không tô màu), đẩy bán kính bắt đầu của 4G ra ngoài để đồng đều các cell!
+    currentR += width3g;
   }
 
-  // 2. 💎 Lớp 4G (1 LỚP DUY NHẤT - Màu Ngọc Cyan huỳnh quang)
+  // 2. 💎 Lớp 4G (1 LỚP DUY NHẤT - Màu Ngọc Cyan huỳnh quang #00f0ff)
+  // Độ dày chuẩn đồng đều: 16m (hoặc 20m nếu chỉ 3G+4G, 28m nếu chỉ có 4G đơn lẻ)
   if (has4g) {
-    // Độ dày: 50m nếu có 5G phía ngoài, 70m nếu trạm chỉ có 4G
-    const width = (has5g3800 || has5g2600) ? 50 : 70;
+    const hasAny5g = has5g3800 || has5g2600;
+    const width = hasAny5g ? 16 : (has3g || siteHas3g ? 20 : 28);
     const rOuter = currentR + width;
     const techName = isSranSwap ? '4G SRAN' : '4G';
+    const has2100 = Boolean(sec.has_4g_2100);
+    const bandLabel = has2100 ? '1800 / 2100 MHz' : '1800 MHz';
     layers.push({
       key: '4G',
       tech: techName,
-      label: `${techName} (1800 / 2100 MHz)`,
+      label: bandLabel,
       badgeClass: 'bg-cyan-100 text-cyan-900',
+      beamwidth: bw4g,
       rInner: currentR * scale,
       rOuter: rOuter * scale,
       fillColor: SECTOR_LAYER_CONFIG['4G'].fillColor,
@@ -328,35 +377,17 @@ export function getSectorContiguousLayers(sec, isDual5g = false, hasSite5g = fal
     currentR = rOuter; // LIỀN KỀ: Điểm cuối của 4G là điểm bắt đầu của 5G!
   }
 
-  // 3. 🔴 Lớp 5G Trong: Băng 3800 MHz (NR38 / 5G-A - Đỏ hồng lựu)
-  if (has5g3800) {
-    const width = has5g2600 ? 44 : 60;
-    const rOuter = currentR + width;
-    layers.push({
-      key: '5G_3800',
-      tech: '5G-A (3.8 GHz)',
-      label: '5G-A (3.8 GHz - NR38)',
-      badgeClass: 'bg-rose-100 text-rose-900 border border-rose-300 font-black',
-      rInner: currentR * scale,
-      rOuter: rOuter * scale,
-      fillColor: SECTOR_LAYER_CONFIG['5G_3800'].fillColor,
-      color: SECTOR_LAYER_CONFIG['5G_3800'].color,
-      weight: SECTOR_LAYER_CONFIG['5G_3800'].weight,
-      fillOpacity: SECTOR_LAYER_CONFIG['5G_3800'].fillOpacity,
-      zIndex: SECTOR_LAYER_CONFIG['5G_3800'].zIndex
-    });
-    currentR = rOuter; // LIỀN KỀ: Điểm cuối của 5G 3800 là điểm bắt đầu của 5G 2600!
-  }
-
-  // 4. 🚨 Lớp 5G Ngoài: Băng 2600 MHz (NR26 - Đỏ cờ tươi rực rỡ)
+  // 3. 🚨 Lớp 5G Phủ Sóng (Coverage): Băng 2600 MHz (NR26 - Đỏ cờ tươi rực rỡ #ff0033)
+  // Độ dày chuẩn đồng đều: 16m
   if (has5g2600) {
-    const width = 45;
+    const width = 16;
     const rOuter = currentR + width;
     layers.push({
       key: '5G_2600',
       tech: '5G L1 (2.6 GHz)',
-      label: '5G Lớp 1 (2.6 GHz - NR26)',
+      label: '2600 MHz (NR26)',
       badgeClass: 'bg-red-100 text-red-800 font-bold',
+      beamwidth: bw5g2600,
       rInner: currentR * scale,
       rOuter: rOuter * scale,
       fillColor: SECTOR_LAYER_CONFIG['5G_2600'].fillColor,
@@ -364,6 +395,28 @@ export function getSectorContiguousLayers(sec, isDual5g = false, hasSite5g = fal
       weight: SECTOR_LAYER_CONFIG['5G_2600'].weight,
       fillOpacity: SECTOR_LAYER_CONFIG['5G_2600'].fillOpacity,
       zIndex: SECTOR_LAYER_CONFIG['5G_2600'].zIndex
+    });
+    currentR = rOuter;
+  }
+
+  // 4. 🔴 Lớp 5G Dung Lượng (Capacity / 5G-A): Băng 3800 MHz (NR38 - Đỏ hồng lựu #e11d48)
+  // Capacity giảm 1 chút: độ dày chỉ 11m (giảm 30% so với 16m), góc mở 30° cân đối
+  if (has5g3800) {
+    const width = 11;
+    const rOuter = currentR + width;
+    layers.push({
+      key: '5G_3800',
+      tech: '5G-A (3.8 GHz)',
+      label: '3800 MHz (NR38)',
+      badgeClass: 'bg-rose-100 text-rose-900 border border-rose-300 font-black',
+      beamwidth: bw5g3800,
+      rInner: currentR * scale,
+      rOuter: rOuter * scale,
+      fillColor: SECTOR_LAYER_CONFIG['5G_3800'].fillColor,
+      color: SECTOR_LAYER_CONFIG['5G_3800'].color,
+      weight: SECTOR_LAYER_CONFIG['5G_3800'].weight,
+      fillOpacity: 0.50,
+      zIndex: SECTOR_LAYER_CONFIG['5G_3800'].zIndex
     });
     currentR = rOuter;
   }
