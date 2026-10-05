@@ -3,7 +3,7 @@ import { supabase } from '../supabaseClient';
 import { 
   ClipboardList, Calendar, AlertTriangle, Search, Plus, Edit, Trash, 
   MapPin, User, Clock, CheckCircle2, AlertCircle, Eye, X, Filter, ExternalLink,
-  Zap, Download, Copy, Check, FileText, BatteryCharging, Wrench
+  Zap, Download, Copy, Check, FileText, BatteryCharging, Wrench, Layers
 } from 'lucide-react';
 import DatasiteDetailFullscreen from '../components/datasites/DatasiteDetailFullscreen';
 import { useCurrentUser } from '../utils/useCurrentUser';
@@ -188,7 +188,13 @@ export default function DailyWork() {
   const [editingIssue, setEditingIssue] = useState(null);
   const [issueStatus, setIssueStatus] = useState('Chưa XL');
   const [issueResolvedAt, setIssueResolvedAt] = useState('');
-  const [issueB4Filter, setIssueB4Filter] = useState('ALL'); // 'ALL' | 'APPROVED' | 'NEW_PROPOSED' | 'BATTERY_ONLY'
+  const [issueB4Batch, setIssueB4Batch] = useState('');
+  const [issueB4Approved, setIssueB4Approved] = useState(false);
+
+  // Phân tách 3 Luồng Công Việc Rạch Ròi: Sửa chữa B4 | Vật tư UCTT (Ắc quy) | Hạ tầng CSHT | Tất cả
+  const [issueWorkstream, setIssueWorkstream] = useState('B4_REPAIR'); // 'B4_REPAIR' | 'BATTERY_UCTT' | 'LOCAL_INFRA' | 'ALL'
+  const [b4BatchFilter, setB4BatchFilter] = useState('ALL'); // 'ALL' | 'DOT_2' | 'DOT_1'
+  const [bulkBatchChoice, setBulkBatchChoice] = useState('Đợt 2');
 
   // Tra cứu trạm hiện tại đang nhập trong form báo hỏng để lấy thiết bị phụ trợ (MPĐ, Máy lạnh)
   const currentMatchedStation = useMemo(() => {
@@ -379,20 +385,33 @@ export default function DailyWork() {
 
   const filteredDefectsLogs = useMemo(() => {
     let result = defectsLogs;
-    if (issueB4Filter === 'APPROVED') {
-      result = result.filter(def => def.existing_issues?.b4_approved === true);
-    } else if (issueB4Filter === 'NEW_PROPOSED') {
+
+    // Lọc theo Luồng Công Việc Chính (Workstream)
+    if (issueWorkstream === 'B4_REPAIR') {
       result = result.filter(def => {
         const issues = def.existing_issues || {};
         const isMpdOrAc = issues.category === 'Máy phát điện' || issues.category === 'Máy lạnh';
-        return isMpdOrAc && !issues.b4_approved && !isBatteryProposal(def);
+        return isMpdOrAc && !isBatteryProposal(def);
       });
-    } else if (issueB4Filter === 'BATTERY_ONLY') {
+
+      // Lọc phụ theo Đợt B4
+      if (b4BatchFilter === 'DOT_2') {
+        result = result.filter(def => {
+          const issues = def.existing_issues || {};
+          return !issues.b4_approved || issues.b4_batch === 'Đợt 2';
+        });
+      } else if (b4BatchFilter === 'DOT_1') {
+        result = result.filter(def => {
+          const issues = def.existing_issues || {};
+          return issues.b4_approved === true || issues.b4_batch === 'Đợt 1';
+        });
+      }
+    } else if (issueWorkstream === 'BATTERY_UCTT') {
       result = result.filter(def => isBatteryProposal(def));
-    } else if (issueB4Filter === 'LOCAL_INFRA') {
+    } else if (issueWorkstream === 'LOCAL_INFRA') {
       result = result.filter(def => {
         const cat = def.existing_issues?.category;
-        return cat && cat !== 'Máy phát điện' && cat !== 'Máy lạnh';
+        return cat && cat !== 'Máy phát điện' && cat !== 'Máy lạnh' && !isBatteryProposal(def);
       });
     }
 
@@ -400,25 +419,41 @@ export default function DailyWork() {
     const q = searchQuery.toLowerCase();
     return result.filter(def => {
       const issues = def.existing_issues || {};
+      const siteIds = getSiteIds(def.site_id);
       return (
         (def.site_id || '').toLowerCase().includes(q) ||
+        (siteIds.oldId || '').toLowerCase().includes(q) ||
+        (siteIds.newId || '').toLowerCase().includes(q) ||
         (issues.category || '').toLowerCase().includes(q) ||
         (issues.description || '').toLowerCase().includes(q) ||
         (issues.reporter || '').toLowerCase().includes(q) ||
         (issues.b4_batch || '').toLowerCase().includes(q)
       );
     });
-  }, [defectsLogs, searchQuery, issueB4Filter]);
+  }, [defectsLogs, searchQuery, issueWorkstream, b4BatchFilter, getSiteIds]);
 
-  const approvedB4Count = useMemo(() => {
-    return defectsLogs.filter(d => d.existing_issues?.b4_approved === true).length;
+  const b4RepairCount = useMemo(() => {
+    return defectsLogs.filter(d => {
+      const cat = d.existing_issues?.category;
+      return (cat === 'Máy phát điện' || cat === 'Máy lạnh') && !isBatteryProposal(d);
+    }).length;
   }, [defectsLogs]);
 
-  const newProposedB4Count = useMemo(() => {
+  const b4ApprovedCount = useMemo(() => {
     return defectsLogs.filter(d => {
       const issues = d.existing_issues || {};
-      const isMpdOrAc = issues.category === 'Máy phát điện' || issues.category === 'Máy lạnh';
-      return isMpdOrAc && !issues.b4_approved && !isBatteryProposal(d);
+      const cat = issues.category;
+      const isMpdOrAc = cat === 'Máy phát điện' || cat === 'Máy lạnh';
+      return isMpdOrAc && !isBatteryProposal(d) && (issues.b4_approved === true || issues.b4_batch === 'Đợt 1');
+    }).length;
+  }, [defectsLogs]);
+
+  const b4ProposedDot2Count = useMemo(() => {
+    return defectsLogs.filter(d => {
+      const issues = d.existing_issues || {};
+      const cat = issues.category;
+      const isMpdOrAc = cat === 'Máy phát điện' || cat === 'Máy lạnh';
+      return isMpdOrAc && !isBatteryProposal(d) && (!issues.b4_approved || issues.b4_batch === 'Đợt 2');
     }).length;
   }, [defectsLogs]);
 
@@ -429,7 +464,7 @@ export default function DailyWork() {
   const localInfraCount = useMemo(() => {
     return defectsLogs.filter(d => {
       const cat = d.existing_issues?.category;
-      return cat && cat !== 'Máy phát điện' && cat !== 'Máy lạnh';
+      return cat && cat !== 'Máy phát điện' && cat !== 'Máy lạnh' && !isBatteryProposal(d);
     }).length;
   }, [defectsLogs]);
 
@@ -622,10 +657,13 @@ export default function DailyWork() {
       if (editingIssue) {
         // Edit mode
         const updatedIssues = {
+          ...(editingIssue.existing_issues || {}),
           category: issueCategory,
           description: issueDescription.trim(),
           status: issueStatus,
           reporter: issueReporter.trim(),
+          b4_batch: issueB4Batch || null,
+          b4_approved: issueB4Approved,
           ...proposalFields
         };
         const updatedSolutions = issueStatus === "Đã XL" 
@@ -655,6 +693,8 @@ export default function DailyWork() {
             description: issueDescription.trim(),
             status: "Chưa XL",
             reporter: issueReporter.trim(),
+            b4_batch: issueB4Batch || null,
+            b4_approved: issueB4Approved,
             ...proposalFields
           },
           proposed_solutions: {}
@@ -726,6 +766,8 @@ export default function DailyWork() {
     setBatteryQuantity(1);
     setBatteryPoleType('Cọc nổi (Top Post - phổ biến)');
     setBatteryOldStatus('Bình bị phù / Sụt áp không đề được máy');
+    setIssueB4Batch('');
+    setIssueB4Approved(false);
   }
 
   function handleStartEditIssue(issue) {
@@ -743,6 +785,8 @@ export default function DailyWork() {
     setIssueResolvedAt(solutions.resolved_at || '');
     setIssueDeviceType(dataDetail.device_type || 'MPD_CO_DINH');
     setIssueB4CategoryIdx(dataDetail.b4_category_idx !== undefined ? dataDetail.b4_category_idx : 0);
+    setIssueB4Batch(dataDetail.b4_batch || '');
+    setIssueB4Approved(dataDetail.b4_approved || false);
     
     // Tách bạch proposal_type
     const isBattery = dataDetail.proposal_type === 'BATTERY_PURCHASE' || 
@@ -760,49 +804,46 @@ export default function DailyWork() {
     setShowAddIssueModal(true);
   }
 
-  function handleExportB4Repair(deviceType = 'ALL') {
-    let targetLogs = filteredDefectsLogs;
+  function handleExportB4Repair(mode = 'DOT_2') {
+    let targetLogs = defectsLogs.filter(l => {
+      const cat = l.existing_issues?.category;
+      return (cat === 'Máy phát điện' || cat === 'Máy lạnh') && !isBatteryProposal(l);
+    });
+
     if (selectedIssueIds.length > 0) {
-      targetLogs = filteredDefectsLogs.filter(issue => selectedIssueIds.includes(issue.log_id));
+      targetLogs = defectsLogs.filter(issue => selectedIssueIds.includes(issue.log_id) && !isBatteryProposal(issue));
     } else {
-      // Tự động lọc danh mục tương ứng nếu không tick chọn checkbox thủ công
-      // CHỈ lấy đúng Máy phát điện hoặc Máy lạnh, tuyệt đối không lấy Hệ thống điện, Nhà trạm, Cột anten...
-      if (deviceType === 'MPD_CO_DINH') {
-        targetLogs = filteredDefectsLogs.filter(l => 
-          l.existing_issues?.category === 'Máy phát điện' && l.existing_issues?.device_type !== 'MPD_DI_DONG'
-        );
-      } else if (deviceType === 'MPD_DI_DONG') {
-        targetLogs = filteredDefectsLogs.filter(l => 
-          l.existing_issues?.category === 'Máy phát điện' && l.existing_issues?.device_type === 'MPD_DI_DONG'
-        );
-      } else if (deviceType === 'DHKK') {
-        targetLogs = filteredDefectsLogs.filter(l => 
-          l.existing_issues?.category === 'Máy lạnh'
-        );
-      } else if (deviceType === 'ALL') {
-        // Mặc định xuất các ca CHƯA DUYỆT (Đợt 2) để trình Ban 4
-        targetLogs = filteredDefectsLogs.filter(l => {
-          const cat = l.existing_issues?.category;
-          const isApproved = l.existing_issues?.b4_approved;
-          return (cat === 'Máy phát điện' || cat === 'Máy lạnh') && !isApproved;
-        });
+      if (mode === 'DOT_2') {
+        targetLogs = targetLogs.filter(l => !l.existing_issues?.b4_approved || l.existing_issues?.b4_batch === 'Đợt 2');
+      } else if (mode === 'DOT_1') {
+        targetLogs = targetLogs.filter(l => l.existing_issues?.b4_approved === true || l.existing_issues?.b4_batch === 'Đợt 1');
+      } else if (mode === 'MPD_CO_DINH') {
+        targetLogs = targetLogs.filter(l => l.existing_issues?.category === 'Máy phát điện' && l.existing_issues?.device_type !== 'MPD_DI_DONG');
+      } else if (mode === 'MPD_DI_DONG') {
+        targetLogs = targetLogs.filter(l => l.existing_issues?.category === 'Máy phát điện' && l.existing_issues?.device_type === 'MPD_DI_DONG');
+      } else if (mode === 'DHKK') {
+        targetLogs = targetLogs.filter(l => l.existing_issues?.category === 'Máy lạnh');
       }
     }
 
-    // Tuyệt đối loại trừ đề xuất mua ắc quy đề khỏi gói B4 (chờ đợt đề xuất sau)
-    targetLogs = targetLogs.filter(l => !isBatteryProposal(l));
-
     if (targetLogs.length === 0) {
-      alert("Không có tồn tại sửa chữa MPĐ / ĐHKK chưa duyệt nào phù hợp để xuất file B4! (Các ca đã duyệt thuộc Đợt 1, ắc quy đề và hạ tầng đã được tách riêng)");
+      alert("Không có tồn tại sửa chữa MPĐ / ĐHKK nào phù hợp với tùy chọn xuất!");
       return;
     }
+
+    // Sắp xếp ưu tiên theo thứ tự b4_order nếu có
+    targetLogs.sort((a, b) => {
+      const orderA = a.existing_issues?.b4_order || 9999;
+      const orderB = b.existing_issues?.b4_order || 9999;
+      return orderA - orderB;
+    });
 
     const exportItems = targetLogs.map(log => {
       const dataDetail = log.existing_issues || {};
       let devType = dataDetail.device_type;
       if (!devType) {
         if (dataDetail.category === 'Máy lạnh') devType = 'DHKK';
-        else devType = deviceType === 'MPD_DI_DONG' ? 'MPD_DI_DONG' : 'MPD_CO_DINH';
+        else devType = mode === 'MPD_DI_DONG' ? 'MPD_DI_DONG' : 'MPD_CO_DINH';
       }
       return {
         site_id: log.site_id,
@@ -815,26 +856,63 @@ export default function DailyWork() {
       };
     });
 
-    const fileName = deviceType === 'ALL' 
-      ? 'TVT3-B4. Bieu mau chuyen mon sua DHKK & MPD_Dot 2.xlsx'
-      : `TVT3_De_Nghi_Sua_Chua_B4_${deviceType}_${new Date().toISOString().substring(0, 10).replace(/-/g, '')}.xlsx`;
+    let fileName = 'TVT3-B4. Bieu mau chuyen mon sua DHKK & MPD.xlsx';
+    if (mode === 'DOT_2') fileName = 'TVT3-B4. Bieu mau chuyen mon sua DHKK & MPD_Dot 2.xlsx';
+    else if (mode === 'DOT_1') fileName = 'TVT3-B4. Bieu mau chuyen mon sua DHKK & MPD_Dot 1.xlsx';
+    else if (mode === 'MPD_CO_DINH') fileName = 'TVT3_De_Nghi_Sua_Chua_B4_MPD_Co_Dinh.xlsx';
+    else if (mode === 'DHKK') fileName = 'TVT3_De_Nghi_Sua_Chua_B4_DHKK.xlsx';
 
     exportB4RepairProposal({
       items: exportItems,
       datasites: stations,
-      targetCategory: deviceType,
+      targetCategory: (mode === 'MPD_CO_DINH' || mode === 'MPD_DI_DONG' || mode === 'DHKK') ? mode : 'ALL',
       customFileName: fileName
     });
     setShowB4ExportDropdown(false);
   }
 
-  async function handleBulkApproveB4(batchName = 'Đợt 2') {
+  async function handleBulkAssignBatch(batchName = 'Đợt 2', isApproved = false) {
     if (selectedIssueIds.length === 0) {
-      alert("Vui lòng tick chọn ít nhất 1 ca để duyệt!");
+      alert("Vui lòng tick chọn ít nhất 1 ca để cập nhật!");
       return;
     }
-    const confirmMsg = `Xác nhận phê duyệt B4 (${batchName}) cho ${selectedIssueIds.length} ca được chọn?`;
+    const statusText = isApproved ? "ĐÃ DUYỆT" : "CHỜ DUYỆT";
+    const confirmMsg = `Xác nhận gán ${selectedIssueIds.length} ca đã chọn vào ${batchName} (${statusText}) theo đúng thứ tự đã tick chọn?`;
     if (!window.confirm(confirmMsg)) return;
+
+    try {
+      // Loop with index to record b4_order according to user selection order
+      for (let i = 0; i < selectedIssueIds.length; i++) {
+        const logId = selectedIssueIds[i];
+        const item = defectsLogs.find(d => d.log_id === logId);
+        if (!item) continue;
+        const updatedIssues = {
+          ...(item.existing_issues || {}),
+          b4_approved: isApproved,
+          b4_batch: batchName,
+          b4_order: i + 1,
+          b4_approved_date: isApproved ? new Date().toISOString() : (item.existing_issues?.b4_approved_date || null)
+        };
+        await supabase
+          .from('operation_defects_logs')
+          .update({ existing_issues: updatedIssues })
+          .eq('log_id', logId);
+      }
+      alert(`Đã lưu ${selectedIssueIds.length} ca vào ${batchName} (${statusText}) thành công!`);
+      setSelectedIssueIds([]);
+      fetchDefectsLogs();
+    } catch (err) {
+      console.error(err);
+      alert("Lỗi khi cập nhật đợt B4: " + err.message);
+    }
+  }
+
+  async function handleBulkRemoveBatch() {
+    if (selectedIssueIds.length === 0) {
+      alert("Vui lòng tick chọn ít nhất 1 ca!");
+      return;
+    }
+    if (!window.confirm(`Hủy phân đợt B4 cho ${selectedIssueIds.length} ca đã chọn?`)) return;
 
     try {
       for (const logId of selectedIssueIds) {
@@ -842,21 +920,21 @@ export default function DailyWork() {
         if (!item) continue;
         const updatedIssues = {
           ...(item.existing_issues || {}),
-          b4_approved: true,
-          b4_batch: batchName,
-          b4_approved_date: new Date().toISOString()
+          b4_approved: false,
+          b4_batch: null,
+          b4_order: null
         };
         await supabase
           .from('operation_defects_logs')
           .update({ existing_issues: updatedIssues })
           .eq('log_id', logId);
       }
-      alert(`Đã phê duyệt B4 ${batchName} thành công cho ${selectedIssueIds.length} ca!`);
+      alert(`Đã hủy phân đợt cho ${selectedIssueIds.length} ca!`);
       setSelectedIssueIds([]);
       fetchDefectsLogs();
     } catch (err) {
       console.error(err);
-      alert("Lỗi khi duyệt B4: " + err.message);
+      alert("Lỗi khi hủy phân đợt: " + err.message);
     }
   }
 
@@ -1306,108 +1384,126 @@ export default function DailyWork() {
 
           {activeTab === 'issues' && (
             <div className="flex items-center gap-2">
-              <div className="relative inline-flex items-center rounded-lg shadow-sm">
-                <button 
-                  onClick={() => handleExportB4Repair('ALL')}
-                  className="inline-flex items-center justify-center px-3.5 py-1.5 text-[13px] font-bold rounded-l-lg text-emerald-800 bg-emerald-50 border border-emerald-300 hover:bg-emerald-100 transition-colors cursor-pointer h-[34px] gap-1.5"
-                  title="Xuất file B4 Đợt 2 (chỉ các ca chưa duyệt để trình Ban 4, lấy theo mã trạm cũ)"
-                >
-                  <ClipboardList className="h-4 w-4 text-emerald-600" />
-                  <span>📄 Xuất B4 Đợt 2 (Chưa duyệt)</span>
-                </button>
+              {issueWorkstream === 'B4_REPAIR' && (
+                <div className="relative inline-flex items-center rounded-lg shadow-sm">
+                  <button 
+                    onClick={() => handleExportB4Repair(b4BatchFilter === 'DOT_1' ? 'DOT_1' : 'DOT_2')}
+                    className="inline-flex items-center justify-center px-3.5 py-1.5 text-[13px] font-bold rounded-l-lg text-emerald-800 bg-emerald-50 border border-emerald-300 hover:bg-emerald-100 transition-colors cursor-pointer h-[34px] gap-1.5"
+                    title="Xuất file B4 (ExcelJS Executive Styling chuẩn TCT & Ban 4)"
+                  >
+                    <ClipboardList className="h-4 w-4 text-emerald-600" />
+                    <span>📄 {b4BatchFilter === 'DOT_1' ? `Xuất B4 Đợt 1 (${b4ApprovedCount})` : `Xuất B4 Đợt 2 (${b4ProposedDot2Count})`}</span>
+                  </button>
+                  <button
+                    onClick={() => setShowB4ExportDropdown(!showB4ExportDropdown)}
+                    className="px-2 py-1.5 text-emerald-800 bg-emerald-50 border-t border-b border-r border-emerald-300 hover:bg-emerald-100 rounded-r-lg transition-colors cursor-pointer h-[34px]"
+                    title="Tùy chọn xuất file B4"
+                  >
+                    <span className="text-[10px]">▼</span>
+                  </button>
+
+                  {showB4ExportDropdown && (
+                    <div className="absolute right-0 top-full mt-1.5 w-80 bg-white border border-slate-200 rounded-xl shadow-xl z-50 p-2 space-y-1 text-left">
+                      <div className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100">
+                        Biểu mẫu B4 Ban 4 (Lấy theo tên cũ):
+                      </div>
+                      <button
+                        onClick={() => handleExportB4Repair('DOT_2')}
+                        className="w-full text-left px-3 py-2 text-xs font-bold text-emerald-900 bg-emerald-50/80 hover:bg-emerald-100 rounded-lg flex items-center gap-2 cursor-pointer border border-emerald-200 transition-all"
+                      >
+                        <ClipboardList className="h-4 w-4 text-emerald-600 shrink-0" />
+                        <div>
+                          <div>📄 Xuất B4 Đợt 2 - Để trình duyệt (Khuyên dùng)</div>
+                          <div className="text-[10px] font-normal text-emerald-700">{b4ProposedDot2Count} ca MPĐ &amp; ĐHKK chưa duyệt</div>
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => handleExportB4Repair('DOT_1')}
+                        className="w-full text-left px-3 py-2 text-xs font-bold text-teal-900 bg-teal-50/80 hover:bg-teal-100 rounded-lg flex items-center gap-2 cursor-pointer border border-teal-200 transition-all"
+                      >
+                        <CheckCircle2 className="h-4 w-4 text-teal-600 shrink-0" />
+                        <div>
+                          <div>🟢 Xuất B4 Đợt 1 - Đã phê duyệt</div>
+                          <div className="text-[10px] font-normal text-teal-700">{b4ApprovedCount} ca MPĐ đã duyệt đợt trước</div>
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => handleExportB4Repair('ALL')}
+                        className="w-full text-left px-3 py-2 text-xs font-bold text-slate-800 bg-slate-50 hover:bg-slate-100 rounded-lg flex items-center gap-2 cursor-pointer border border-slate-200 transition-all"
+                      >
+                        <Layers className="h-4 w-4 text-slate-600 shrink-0" />
+                        <div>
+                          <div>📋 Xuất Tất Cả 49 ca B4 (Cả Đợt 1 &amp; Đợt 2)</div>
+                        </div>
+                      </button>
+
+                      <div className="px-3 pt-2 pb-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        Hoặc chỉ xuất riêng từng sheet:
+                      </div>
+                      <button
+                        onClick={() => handleExportB4Repair('MPD_CO_DINH')}
+                        className="w-full text-left px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 rounded-md flex items-center gap-2 cursor-pointer"
+                      >
+                        ⚡ Chỉ xuất Sheet MPĐ Cố Định
+                      </button>
+                      <button
+                        onClick={() => handleExportB4Repair('DHKK')}
+                        className="w-full text-left px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 rounded-md flex items-center gap-2 cursor-pointer"
+                      >
+                        ❄️ Chỉ xuất Sheet Điều Hòa
+                      </button>
+                      <button
+                        onClick={() => handleExportB4Repair('MPD_DI_DONG')}
+                        className="w-full text-left px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 rounded-md flex items-center gap-2 cursor-pointer"
+                      >
+                        🚗 Chỉ xuất Sheet MPĐ Di Động
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {issueWorkstream === 'BATTERY_UCTT' && (
                 <button
-                  onClick={() => setShowB4ExportDropdown(!showB4ExportDropdown)}
-                  className="px-2 py-1.5 text-emerald-800 bg-emerald-50 border-t border-b border-r border-emerald-300 hover:bg-emerald-100 rounded-r-lg transition-colors cursor-pointer h-[34px]"
-                  title="Tùy chọn xuất file B4 hoặc bảng kê ắc quy"
+                  onClick={handleExportBatteryPurchase}
+                  className="inline-flex items-center justify-center px-3.5 py-1.5 text-[13px] font-bold rounded-lg text-teal-900 bg-teal-50 border border-teal-300 hover:bg-teal-100 shadow-sm transition-colors cursor-pointer h-[34px] gap-1.5"
+                  title="Xuất bảng kê mua sắm ắc quy đề MPĐ"
                 >
-                  <span className="text-[10px]">▼</span>
+                  <BatteryCharging className="h-4 w-4 text-teal-600" />
+                  <span>🔋 Xuất Bảng Kê Ắc Quy Đề ({batteryPurchaseCount})</span>
                 </button>
+              )}
 
-                {showB4ExportDropdown && (
-                  <div className="absolute right-0 top-full mt-1.5 w-80 bg-white border border-slate-200 rounded-xl shadow-xl z-50 p-2 space-y-1 text-left">
-                    <div className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100">
-                      Biểu mẫu B4 Ban 4 (Lấy theo tên cũ):
-                    </div>
-                    <button
-                      onClick={() => handleExportB4Repair('ALL')}
-                      className="w-full text-left px-3 py-2 text-xs font-bold text-emerald-900 bg-emerald-50/80 hover:bg-emerald-100 rounded-lg flex items-center gap-2 cursor-pointer border border-emerald-200 transition-all"
-                      title="Xuất 1 file Excel duy nhất gồm 16 ca MPĐ và 5 ca ĐHKK chưa duyệt để trình Ban 4 (lấy theo tên cũ)"
-                    >
-                      <ClipboardList className="h-4 w-4 text-emerald-600 shrink-0" />
-                      <div>
-                        <div>📄 1. Xuất B4 Đợt 2 - Để trình duyệt (Khuyên dùng)</div>
-                        <div className="text-[10px] font-normal text-emerald-700">Chỉ gồm các ca chưa duyệt, mã trạm lấy theo tên cũ</div>
-                      </div>
-                    </button>
+              {issueWorkstream === 'LOCAL_INFRA' && (
+                <button
+                  onClick={handleExportLocalInfrastructure}
+                  className="inline-flex items-center justify-center px-3.5 py-1.5 text-[13px] font-bold rounded-lg text-amber-900 bg-amber-50 border border-amber-300 hover:bg-amber-100 shadow-sm transition-colors cursor-pointer h-[34px] gap-1.5"
+                  title="Xuất bảng kê tồn tại hạ tầng CSHT địa bàn"
+                >
+                  <Wrench className="h-4 w-4 text-amber-600" />
+                  <span>🏗️ Xuất Bảng Kê CSHT Địa Bàn ({localInfraCount})</span>
+                </button>
+              )}
 
-                    <div className="px-3 pt-2 pb-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                      Hoặc chỉ xuất riêng từng sheet:
-                    </div>
-                    <button
-                      onClick={() => handleExportB4Repair('MPD_CO_DINH')}
-                      className="w-full text-left px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 rounded-md flex items-center gap-2 cursor-pointer"
-                    >
-                      ⚡ Chỉ xuất Sheet MPĐ Cố Định
-                    </button>
-                    <button
-                      onClick={() => handleExportB4Repair('DHKK')}
-                      className="w-full text-left px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 rounded-md flex items-center gap-2 cursor-pointer"
-                    >
-                      ❄️ Chỉ xuất Sheet Điều Hòa
-                    </button>
-                    <button
-                      onClick={() => handleExportB4Repair('MPD_DI_DONG')}
-                      className="w-full text-left px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 rounded-md flex items-center gap-2 cursor-pointer"
-                    >
-                      🚗 Chỉ xuất Sheet MPĐ Di Động
-                    </button>
+              {issueWorkstream === 'ALL' && (
+                <button 
+                  onClick={handleExportIssuesExcel}
+                  className="inline-flex items-center justify-center px-3.5 py-1.5 text-[13px] font-bold rounded-lg text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 shadow-sm transition-colors cursor-pointer h-[34px] gap-1.5"
+                >
+                  <Download className="h-4 w-4 text-slate-600" />
+                  <span>Xuất Toàn Bộ Excel ({defectsLogs.length})</span>
+                </button>
+              )}
 
-                    <div className="border-t border-slate-100 my-1 pt-1">
-                      <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-teal-600">
-                        Vật tư tiêu hao (Chờ đợt đề xuất mua sắm riêng):
-                      </div>
-                      <button
-                        onClick={handleExportBatteryPurchase}
-                        className="w-full text-left px-3 py-2 text-xs font-bold text-teal-900 bg-teal-50 hover:bg-teal-100/90 rounded-lg flex items-center gap-2 cursor-pointer border border-teal-200/80 transition-all"
-                        title="Xuất danh sách ắc quy đề MPĐ hư hỏng cần mua sắm thay thế (không đưa vào Ban 4, để dành khi có đợt)"
-                      >
-                        <BatteryCharging size={16} className="text-teal-600 shrink-0" />
-                        <div>
-                          <div>🔋 Bảng kê Mua sắm Ắc quy đề MPĐ</div>
-                          <div className="text-[10px] font-normal text-teal-700">Tách riêng {defectsLogs.filter(d => isBatteryProposal(d)).length} bình chờ đợt đề xuất mua sắm</div>
-                        </div>
-                      </button>
-                    </div>
-
-                    <div className="border-t border-slate-100 my-1 pt-1">
-                      <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-700">
-                        Hạ tầng mạng lưới (Sửa chữa tại địa bàn):
-                      </div>
-                      <button
-                        onClick={handleExportLocalInfrastructure}
-                        className="w-full text-left px-3 py-2 text-xs font-bold text-amber-950 bg-amber-50 hover:bg-amber-100/90 rounded-lg flex items-center gap-2 cursor-pointer border border-amber-200/80 transition-all"
-                        title="Xuất bảng kê các tồn tại thuộc Hệ thống điện, Nhà trạm, Cột anten, Tiếp đất để địa bàn/Tỉnh xử lý"
-                      >
-                        <Wrench size={16} className="text-amber-600 shrink-0" />
-                        <div>
-                          <div>🏗️ Bảng kê Sửa chữa Hạ tầng Địa bàn</div>
-                          <div className="text-[10px] font-normal text-amber-700">Tách riêng {defectsLogs.filter(d => {
-                            const c = d.existing_issues?.category;
-                            return c && c !== 'Máy phát điện' && c !== 'Máy lạnh';
-                          }).length} ca điện, trạm, cột, tiếp đất</div>
-                        </div>
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <button 
-                onClick={handleExportIssuesExcel}
-                className="inline-flex items-center justify-center px-3.5 py-1.5 text-[13px] font-bold rounded-lg text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 shadow-sm transition-colors cursor-pointer h-[34px]"
-              >
-                Xuất Excel Thường
-              </button>
+              {issueWorkstream !== 'ALL' && (
+                <button 
+                  onClick={handleExportIssuesExcel}
+                  className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 shadow-2xs transition-colors cursor-pointer h-[34px]"
+                  title="Xuất dạng bảng dữ liệu thô"
+                >
+                  Excel Thường
+                </button>
+              )}
             </div>
           )}
 
@@ -1457,10 +1553,32 @@ export default function DailyWork() {
                 )}
                 {activeTab === 'issues' && (
                   <button 
-                    onClick={() => { resetIssueForm(); setShowAddIssueModal(true); }}
-                    className="inline-flex items-center justify-center px-4 py-2 text-[13px] font-bold rounded-lg text-white bg-red-600 hover:bg-red-700 shadow-sm transition-colors cursor-pointer h-[34px]"
+                    onClick={() => { 
+                      resetIssueForm(); 
+                      if (issueWorkstream === 'BATTERY_UCTT') {
+                        setIssueCategory('Máy phát điện');
+                        setIssueProposalType('BATTERY_PURCHASE');
+                      } else if (issueWorkstream === 'LOCAL_INFRA') {
+                        setIssueCategory('Hệ thống điện');
+                        setIssueProposalType('B4_REPAIR');
+                      } else {
+                        setIssueCategory('Máy phát điện');
+                        setIssueProposalType('B4_REPAIR');
+                      }
+                      setShowAddIssueModal(true); 
+                    }}
+                    className={`inline-flex items-center justify-center px-4 py-2 text-[13px] font-bold rounded-lg text-white shadow-sm transition-colors cursor-pointer h-[34px] ${
+                      issueWorkstream === 'BATTERY_UCTT' ? 'bg-teal-600 hover:bg-teal-700' :
+                      issueWorkstream === 'LOCAL_INFRA' ? 'bg-amber-600 hover:bg-amber-700' :
+                      issueWorkstream === 'B4_REPAIR' ? 'bg-blue-600 hover:bg-blue-700' :
+                      'bg-red-600 hover:bg-red-700'
+                    }`}
                   >
-                    <Plus className="h-4 w-4 mr-1.5" /> Cập nhật tồn tại
+                    <Plus className="h-4 w-4 mr-1.5" />
+                    {issueWorkstream === 'BATTERY_UCTT' ? 'Đề xuất mua ắc quy' :
+                     issueWorkstream === 'LOCAL_INFRA' ? 'Báo tồn tại CSHT' :
+                     issueWorkstream === 'B4_REPAIR' ? 'Báo hỏng MPĐ / ĐHKK' :
+                     'Cập nhật tồn tại'}
                   </button>
                 )}
               </>
@@ -1541,108 +1659,227 @@ export default function DailyWork() {
           />
         </div>
 
-        {/* B4 Sub-filters for Issues Tab */}
+        {/* Stream Separation Segmented Switcher for Issues Tab */}
         {activeTab === 'issues' && (
           <div className="space-y-3 pt-3 mt-3 border-t border-slate-100">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
-                <Filter size={12} className="text-slate-400" /> Phân loại B4 / Đợt:
-              </span>
+            {/* 4 Main Workstream Tabs */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+              {/* Tab 1: Sửa chữa B4 */}
               <button
                 type="button"
-                onClick={() => setIssueB4Filter('ALL')}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  issueB4Filter === 'ALL'
-                    ? 'bg-slate-800 text-white shadow-xs'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                onClick={() => { setIssueWorkstream('B4_REPAIR'); setSelectedIssueIds([]); }}
+                className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                  issueWorkstream === 'B4_REPAIR'
+                    ? 'bg-blue-50/80 border-blue-400 text-blue-900 shadow-sm ring-2 ring-blue-300/60'
+                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300'
                 }`}
               >
-                Tất cả ({defectsLogs.length})
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                    <span>⚡</span> Sửa chữa B4
+                  </span>
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-bold font-mono ${
+                    issueWorkstream === 'B4_REPAIR' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700'
+                  }`}>
+                    {b4RepairCount}
+                  </span>
+                </div>
+                <div className="text-[11px] text-slate-500 mt-1">
+                  Máy phát điện &amp; Điều hòa (Ban 4)
+                </div>
               </button>
+
+              {/* Tab 2: Vật tư UCTT (Ắc quy) */}
               <button
                 type="button"
-                onClick={() => setIssueB4Filter('NEW_PROPOSED')}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                  issueB4Filter === 'NEW_PROPOSED'
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'bg-blue-50 text-blue-800 border border-blue-200 hover:bg-blue-100'
+                onClick={() => { setIssueWorkstream('BATTERY_UCTT'); setSelectedIssueIds([]); }}
+                className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                  issueWorkstream === 'BATTERY_UCTT'
+                    ? 'bg-teal-50/80 border-teal-400 text-teal-900 shadow-sm ring-2 ring-teal-300/60'
+                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300'
                 }`}
-                title="Các ca MPĐ và ĐHKK phát sinh mới đang đề xuất Ban 4 thẩm định duyệt"
               >
-                <span>🔵 B4 Đợt 2 (Chờ duyệt)</span>
-                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold ${issueB4Filter === 'NEW_PROPOSED' ? 'bg-white/25 text-white' : 'bg-blue-200 text-blue-900'}`}>{newProposedB4Count}</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                    <span>🔋</span> Vật tư UCTT
+                  </span>
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-bold font-mono ${
+                    issueWorkstream === 'BATTERY_UCTT' ? 'bg-teal-600 text-white' : 'bg-slate-100 text-slate-700'
+                  }`}>
+                    {batteryPurchaseCount}
+                  </span>
+                </div>
+                <div className="text-[11px] text-slate-500 mt-1">
+                  Ắc quy đề MPĐ mua sắm riêng
+                </div>
               </button>
+
+              {/* Tab 3: Hạ tầng CSHT */}
               <button
                 type="button"
-                onClick={() => setIssueB4Filter('APPROVED')}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                  issueB4Filter === 'APPROVED'
-                    ? 'bg-emerald-600 text-white shadow-xs'
-                    : 'bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100'
+                onClick={() => { setIssueWorkstream('LOCAL_INFRA'); setSelectedIssueIds([]); }}
+                className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                  issueWorkstream === 'LOCAL_INFRA'
+                    ? 'bg-amber-50/80 border-amber-400 text-amber-900 shadow-sm ring-2 ring-amber-300/60'
+                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300'
                 }`}
-                title="Các ca MPĐ đã được Ban 4 phê duyệt trong đợt trước"
               >
-                <span>🟢 B4 Đợt 1 (Đã duyệt)</span>
-                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold ${issueB4Filter === 'APPROVED' ? 'bg-white/25 text-white' : 'bg-emerald-200 text-emerald-900'}`}>{approvedB4Count}</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                    <span>🗼</span> Hạ tầng CSHT
+                  </span>
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-bold font-mono ${
+                    issueWorkstream === 'LOCAL_INFRA' ? 'bg-amber-600 text-white' : 'bg-slate-100 text-slate-700'
+                  }`}>
+                    {localInfraCount}
+                  </span>
+                </div>
+                <div className="text-[11px] text-slate-500 mt-1">
+                  Điện, Cột, Nhà trạm, Tiếp đất
+                </div>
               </button>
+
+              {/* Tab 4: Tất cả tồn tại */}
               <button
                 type="button"
-                onClick={() => setIssueB4Filter('BATTERY_ONLY')}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                  issueB4Filter === 'BATTERY_ONLY'
-                    ? 'bg-teal-600 text-white shadow-xs'
-                    : 'bg-teal-50 text-teal-800 border border-teal-200 hover:bg-teal-100'
+                onClick={() => { setIssueWorkstream('ALL'); setSelectedIssueIds([]); }}
+                className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                  issueWorkstream === 'ALL'
+                    ? 'bg-slate-800 border-slate-900 text-white shadow-sm ring-2 ring-slate-400/60'
+                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300'
                 }`}
-                title="Lọc riêng danh sách tồn tại hư hỏng ắc quy đề MPĐ để mua sắm vật tư"
               >
-                <span>🔋 Ắc quy đề MPĐ</span>
-                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold ${issueB4Filter === 'BATTERY_ONLY' ? 'bg-white/25 text-white' : 'bg-teal-200 text-teal-900'}`}>{batteryPurchaseCount}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setIssueB4Filter('LOCAL_INFRA')}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                  issueB4Filter === 'LOCAL_INFRA'
-                    ? 'bg-amber-600 text-white shadow-xs'
-                    : 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100'
-                }`}
-                title="Lọc các tồn tại thuộc Hệ thống điện, Nhà trạm, Cột anten, Tiếp đất để địa bàn/Tỉnh xử lý"
-              >
-                <span>🏗️ Hạ tầng địa bàn</span>
-                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold ${issueB4Filter === 'LOCAL_INFRA' ? 'bg-white/25 text-white' : 'bg-amber-200 text-amber-900'}`}>{localInfraCount}</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                    <span>📋</span> Tất cả tồn tại
+                  </span>
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-bold font-mono ${
+                    issueWorkstream === 'ALL' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700'
+                  }`}>
+                    {defectsLogs.length}
+                  </span>
+                </div>
+                <div className={`text-[11px] mt-1 ${issueWorkstream === 'ALL' ? 'text-slate-300' : 'text-slate-500'}`}>
+                  Toàn bộ danh mục mạng lưới
+                </div>
               </button>
             </div>
 
-            {/* Bulk Action Bar when items are selected */}
-            {selectedIssueIds.length > 0 && (
-              <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="text-xs font-bold text-blue-900 flex items-center gap-2">
-                  <span>📌 Đang chọn <strong>{selectedIssueIds.length}</strong> ca tồn tại:</span>
-                </div>
-                <div className="flex items-center gap-2">
+            {/* Sub-filter row when in B4_REPAIR workstream */}
+            {issueWorkstream === 'B4_REPAIR' && (
+              <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 bg-blue-50/50 rounded-xl border border-blue-100">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-bold text-blue-900 flex items-center gap-1">
+                    <Filter size={13} className="text-blue-600" /> Lọc theo Đợt B4:
+                  </span>
                   <button
                     type="button"
-                    onClick={() => handleBulkApproveB4('Đợt 2')}
-                    className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-bold transition-colors cursor-pointer shadow-xs flex items-center gap-1"
-                    title="Đánh dấu các ca được chọn là đã được Ban 4 duyệt Đợt 2"
+                    onClick={() => setB4BatchFilter('ALL')}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      b4BatchFilter === 'ALL'
+                        ? 'bg-blue-700 text-white shadow-2xs'
+                        : 'bg-white text-slate-600 border border-slate-200 hover:bg-blue-50'
+                    }`}
+                  >
+                    Tất cả ({b4RepairCount})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setB4BatchFilter('DOT_2')}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                      b4BatchFilter === 'DOT_2'
+                        ? 'bg-blue-600 text-white shadow-2xs'
+                        : 'bg-white text-blue-800 border border-blue-200 hover:bg-blue-50'
+                    }`}
+                    title="Các ca MPĐ và ĐHKK phát sinh mới đang đề xuất Ban 4 thẩm định phê duyệt"
+                  >
+                    <span>🔵 Đợt 2 (Chờ duyệt)</span>
+                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold ${
+                      b4BatchFilter === 'DOT_2' ? 'bg-white/25 text-white' : 'bg-blue-100 text-blue-800'
+                    }`}>{b4ProposedDot2Count}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setB4BatchFilter('DOT_1')}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                      b4BatchFilter === 'DOT_1'
+                        ? 'bg-emerald-600 text-white shadow-2xs'
+                        : 'bg-white text-emerald-800 border border-emerald-200 hover:bg-emerald-50'
+                    }`}
+                    title="Các ca MPĐ đã được Ban 4 phê duyệt trong đợt trước"
+                  >
+                    <span>🟢 Đợt 1 (Đã duyệt)</span>
+                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold ${
+                      b4BatchFilter === 'DOT_1' ? 'bg-white/25 text-white' : 'bg-emerald-100 text-emerald-800'
+                    }`}>{b4ApprovedCount}</span>
+                  </button>
+                </div>
+
+                <div className="text-[11px] text-slate-500 italic hidden sm:block">
+                  💡 Tick chọn trạm để gán vào đợt hoặc duyệt hàng loạt theo thứ tự
+                </div>
+              </div>
+            )}
+
+            {/* Upgraded Bulk Action Bar when items are selected */}
+            {selectedIssueIds.length > 0 && (
+              <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white rounded-xl shadow-md border border-blue-800">
+                <div className="flex items-center gap-2">
+                  <span className="bg-blue-500/30 text-blue-200 border border-blue-400/40 px-2.5 py-1 rounded-lg text-xs font-bold font-mono">
+                    ✓ Đã chọn {selectedIssueIds.length} ca
+                  </span>
+                  <span className="text-xs text-slate-300 hidden md:inline">
+                    (theo đúng thứ tự đã tick chọn)
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs text-slate-300 font-medium">Chọn đợt:</span>
+                  <select
+                    value={bulkBatchChoice}
+                    onChange={(e) => setBulkBatchChoice(e.target.value)}
+                    className="bg-slate-800 border border-slate-600 text-white text-xs rounded-lg px-2.5 py-1.5 font-bold focus:ring-1 focus:ring-blue-400 cursor-pointer"
+                  >
+                    <option value="Đợt 2">Đợt 2</option>
+                    <option value="Đợt 1">Đợt 1</option>
+                    <option value="Đợt 3">Đợt 3</option>
+                    <option value="Đợt 4">Đợt 4</option>
+                  </select>
+
+                  <button
+                    type="button"
+                    onClick={() => handleBulkAssignBatch(bulkBatchChoice, false)}
+                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition-all cursor-pointer shadow-xs flex items-center gap-1.5"
+                    title="Gán các ca đã chọn vào đợt với trạng thái Chờ duyệt (để trình Ban 4)"
+                  >
+                    <span>🔵 Gán vào {bulkBatchChoice} (Chờ duyệt)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleBulkAssignBatch(bulkBatchChoice, true)}
+                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition-all cursor-pointer shadow-xs flex items-center gap-1.5"
+                    title="Đánh dấu các ca đã chọn là ĐÃ DUYỆT thuộc đợt này"
                   >
                     <CheckCircle2 size={13} />
-                    <span>Duyệt B4 Đợt 2</span>
+                    <span>✅ Đã duyệt {bulkBatchChoice}</span>
                   </button>
+
                   <button
                     type="button"
-                    onClick={handleBulkUnapproveB4}
-                    className="px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded text-xs font-semibold transition-colors cursor-pointer"
-                    title="Hủy trạng thái duyệt B4 của các ca đã chọn"
+                    onClick={handleBulkRemoveBatch}
+                    className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                    title="Hủy gán đợt cho các ca đã chọn"
                   >
-                    Bỏ duyệt
+                    Hủy đợt
                   </button>
+
                   <button
                     type="button"
                     onClick={() => setSelectedIssueIds([])}
-                    className="px-2 py-1 text-slate-500 hover:text-slate-700 text-xs font-medium cursor-pointer"
+                    className="px-2 py-1.5 text-slate-400 hover:text-white text-xs font-medium cursor-pointer"
                   >
-                    Hủy chọn
+                    Bỏ chọn
                   </button>
                 </div>
               </div>
@@ -1925,10 +2162,10 @@ export default function DailyWork() {
                         <table className="min-w-full divide-y divide-gray-200 text-left">
                           <thead className="bg-slate-50 text-xs font-bold text-slate-500 uppercase tracking-wider">
                             <tr>
-                              <th scope="col" className="px-3 py-3 w-10 text-center">
+                              <th scope="col" className="px-3 py-3 w-12 text-center">
                                 <input 
                                   type="checkbox"
-                                  className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                  className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer h-4 w-4"
                                   checked={filteredDefectsLogs.length > 0 && selectedIssueIds.length === filteredDefectsLogs.length}
                                   onChange={(e) => {
                                     if (e.target.checked) {
@@ -1939,15 +2176,16 @@ export default function DailyWork() {
                                   }}
                                 />
                               </th>
-                              <th scope="col" className="px-4 py-3">Ngày phát hiện</th>
-                              <th scope="col" className="px-4 py-3">Site ID cũ</th>
-                              <th scope="col" className="px-4 py-3">Site ID mới</th>
-                              <th scope="col" className="px-4 py-3">Hạng mục</th>
+                              <th scope="col" className="px-3 py-3 whitespace-nowrap">Ngày</th>
+                              <th scope="col" className="px-3 py-3 whitespace-nowrap">Site ID cũ</th>
+                              <th scope="col" className="px-3 py-3 whitespace-nowrap">Site ID mới</th>
+                              <th scope="col" className="px-4 py-3 whitespace-nowrap">Hạng mục</th>
+                              <th scope="col" className="px-4 py-3 whitespace-nowrap text-center">Đợt B4 / Phân loại</th>
                               <th scope="col" className="px-4 py-3">Mô tả tồn tại</th>
-                              <th scope="col" className="px-4 py-3">Người báo cáo</th>
-                              <th scope="col" className="px-4 py-3">Trạng thái</th>
-                              <th scope="col" className="px-4 py-3">Ngày xử lý</th>
-                              {user && <th scope="col" className="px-4 py-3 text-right">Hành động</th>}
+                              <th scope="col" className="px-3 py-3 whitespace-nowrap">Người báo</th>
+                              <th scope="col" className="px-3 py-3 whitespace-nowrap text-center">Trạng thái</th>
+                              <th scope="col" className="px-3 py-3 whitespace-nowrap">Ngày xong</th>
+                              {user && <th scope="col" className="px-3 py-3 text-right whitespace-nowrap">Hành động</th>}
                             </tr>
                           </thead>
                           <tbody className="bg-white divide-y divide-gray-100 text-[13px] text-gray-700">
@@ -1956,25 +2194,40 @@ export default function DailyWork() {
                               const solutions = issue.proposed_solutions || {};
                               const isResolved = dataDetail.status === "Đã XL";
                               const siteIds = getSiteIds(issue.site_id);
+                              const isSelected = selectedIssueIds.includes(issue.log_id);
+                              const selectIndex = isSelected ? selectedIssueIds.indexOf(issue.log_id) + 1 : null;
+                              const isB4Cat = dataDetail.category === 'Máy phát điện' || dataDetail.category === 'Máy lạnh';
+                              const isBattery = isBatteryProposal(issue);
+
                               return (
-                                <tr key={issue.log_id} className={`hover:bg-slate-50/50 transition-colors ${isResolved ? 'bg-emerald-50/10' : ''}`}>
-                                  <td className="px-3 py-3 text-center">
-                                    <input 
-                                      type="checkbox"
-                                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                                      checked={selectedIssueIds.includes(issue.log_id)}
-                                      onChange={(e) => {
-                                        if (e.target.checked) {
-                                          setSelectedIssueIds(prev => [...prev, issue.log_id]);
-                                        } else {
-                                          setSelectedIssueIds(prev => prev.filter(id => id !== issue.log_id));
-                                        }
-                                      }}
-                                    />
+                                <tr 
+                                  key={issue.log_id} 
+                                  className={`hover:bg-blue-50/30 transition-colors ${isSelected ? 'bg-blue-50/60' : isResolved ? 'bg-emerald-50/10' : ''}`}
+                                >
+                                  <td className="px-3 py-2.5 text-center">
+                                    <div className="flex items-center justify-center gap-1">
+                                      <input 
+                                        type="checkbox"
+                                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer h-4 w-4"
+                                        checked={isSelected}
+                                        onChange={(e) => {
+                                          if (e.target.checked) {
+                                            setSelectedIssueIds(prev => [...prev, issue.log_id]);
+                                          } else {
+                                            setSelectedIssueIds(prev => prev.filter(id => id !== issue.log_id));
+                                          }
+                                        }}
+                                      />
+                                      {isSelected && (
+                                        <span className="text-[10px] font-bold font-mono text-blue-700 bg-blue-100 rounded px-1 min-w-[16px] text-center" title="Thứ tự tick chọn">
+                                          #{selectIndex}
+                                        </span>
+                                      )}
+                                    </div>
                                   </td>
-                                  <td className="px-4 py-3 whitespace-nowrap text-slate-500 font-mono">{issue.date}</td>
-                                  <td className="px-4 py-3 whitespace-nowrap font-bold text-slate-900">{siteIds.oldId}</td>
-                                  <td className="px-4 py-3 whitespace-nowrap">
+                                  <td className="px-3 py-2.5 whitespace-nowrap text-slate-500 font-mono text-xs">{issue.date}</td>
+                                  <td className="px-3 py-2.5 whitespace-nowrap font-bold text-slate-900">{siteIds.oldId}</td>
+                                  <td className="px-3 py-2.5 whitespace-nowrap">
                                     <button
                                       onClick={() => handleOpenSiteDetail(issue.site_id, 'infrastructure')}
                                       className="bg-red-50 hover:bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded border border-red-100 text-xs hover:text-red-800 transition-colors cursor-pointer flex items-center gap-1"
@@ -1984,55 +2237,57 @@ export default function DailyWork() {
                                       <ExternalLink size={10} className="opacity-60" />
                                     </button>
                                   </td>
-                                  <td className="px-4 py-3 whitespace-nowrap font-semibold text-slate-600">
-                                    <div className="flex flex-col gap-1">
-                                      <div className="flex items-center gap-1.5 flex-wrap">
-                                        <span>{dataDetail.category || '—'}</span>
-                                        {dataDetail.proposal_type === 'BATTERY_PURCHASE' ? (
-                                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-teal-100 text-teal-800 border border-teal-200" title="Đề xuất Mua sắm ắc quy đề riêng (không đưa vào Ban 4)">
-                                            🔋 Mua ắc quy {dataDetail.battery_details?.capacity || ''}
-                                          </span>
-                                        ) : (
-                                          <>
-                                            {dataDetail.device_type === 'MPD_CO_DINH' && (
-                                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800" title="Đã cấu hình B4 MPĐ Cố định">
-                                                ⚡ B4 MPĐ
-                                              </span>
-                                            )}
-                                            {dataDetail.device_type === 'DHKK' && (
-                                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-cyan-100 text-cyan-800" title="Đã cấu hình B4 ĐHKK">
-                                                ❄️ B4 ĐHKK
-                                              </span>
-                                            )}
-                                          </>
-                                        )}
-                                      </div>
-                                      {dataDetail.b4_approved ? (
-                                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 w-fit" title={`Đã được Ban 4 phê duyệt chi phí sửa chữa ${dataDetail.b4_batch || "Đợt 1"}`}>
-                                          ✅ B4 {dataDetail.b4_batch || "Đợt 1"} (Đã duyệt)
-                                        </span>
-                                      ) : dataDetail.proposal_type === "BATTERY_PURCHASE" ? (
-                                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-teal-50 text-teal-700 border border-teal-200 w-fit" title="Vật tư tiêu hao chờ duyệt mua riêng nội bộ tỉnh">
-                                          🛒 Ắc quy đề (Chờ đợt mua)
-                                        </span>
-                                      ) : (dataDetail.category === "Máy phát điện" || dataDetail.category === "Máy lạnh") ? (
-                                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-800 border border-blue-200 w-fit" title="Đang đề xuất Ban 4 thẩm định phê duyệt">
-                                          🔵 B4 {dataDetail.b4_batch || "Đợt 2"} (Chờ duyệt)
-                                        </span>
-                                      ) : (
-                                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 w-fit" title="Tồn tại hạ tầng mạng lưới sửa chữa tại địa bàn">
-                                          🏗️ Hạ tầng địa bàn
-                                        </span>
-                                      )}
+
+                                  {/* HẠNG MỤC: GỌN GÀNG 1 DÒNG DUY NHẤT, KHÔNG CÓ BADGE RÁC */}
+                                  <td className="px-4 py-2.5 whitespace-nowrap font-medium text-slate-700">
+                                    <div className="flex items-center gap-1.5">
+                                      {dataDetail.category === 'Máy phát điện' && <span className="text-amber-500">⚡</span>}
+                                      {dataDetail.category === 'Máy lạnh' && <span className="text-cyan-500">❄️</span>}
+                                      {dataDetail.category === 'Cột anten' && <span className="text-indigo-500">🗼</span>}
+                                      {dataDetail.category === 'Nhà trạm' && <span className="text-emerald-500">🏠</span>}
+                                      {dataDetail.category === 'Hệ thống điện' && <span className="text-yellow-500">🔌</span>}
+                                      {dataDetail.category === 'Hệ thống tiếp đất' && <span className="text-green-500">⚡</span>}
+                                      {dataDetail.category === 'Hệ thống PCCC' && <span className="text-red-500">🧯</span>}
+                                      <span>{dataDetail.category || '—'}</span>
                                     </div>
                                   </td>
-                                  <td className="px-4 py-3 max-w-md truncate font-medium text-slate-800" title={dataDetail.description}>{dataDetail.description}</td>
-                                  <td className="px-4 py-3 whitespace-nowrap text-slate-500">{dataDetail.reporter || '—'}</td>
-                                  <td className="px-4 py-3 whitespace-nowrap">
+
+                                  {/* CỘT PHÂN ĐỢT B4 / PHÂN LOẠI RIÊNG BIỆT */}
+                                  <td className="px-4 py-2.5 whitespace-nowrap text-center">
+                                    {isBattery ? (
+                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-teal-50 text-teal-700 border border-teal-200" title="Vật tư tiêu hao - Mua sắm riêng">
+                                        🔋 Mua ắc quy {dataDetail.battery_details?.capacity ? `(${dataDetail.battery_details.capacity})` : ''}
+                                      </span>
+                                    ) : isB4Cat ? (
+                                      dataDetail.b4_approved ? (
+                                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-300" title={`Ban 4 đã phê duyệt chi phí sửa chữa ${dataDetail.b4_batch || 'Đợt 1'}`}>
+                                          🟢 {dataDetail.b4_batch || 'Đợt 1'} {dataDetail.b4_order ? `#${dataDetail.b4_order}` : ''} (Đã duyệt)
+                                        </span>
+                                      ) : dataDetail.b4_batch ? (
+                                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-xs font-bold bg-blue-50 text-blue-800 border border-blue-200" title="Đang đề xuất Ban 4 thẩm định phê duyệt">
+                                          🔵 {dataDetail.b4_batch} {dataDetail.b4_order ? `#${dataDetail.b4_order}` : ''} (Chờ duyệt)
+                                        </span>
+                                      ) : (
+                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium text-slate-400 bg-slate-50 border border-slate-200">
+                                          ⚪ Chưa phân đợt
+                                        </span>
+                                      )
+                                    ) : (
+                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium text-amber-800 bg-amber-50 border border-amber-200" title="Tồn tại hạ tầng xử lý tại địa bàn">
+                                        🏗️ Hạ tầng địa bàn
+                                      </span>
+                                    )}
+                                  </td>
+
+                                  <td className="px-4 py-2.5 max-w-md truncate font-medium text-slate-800" title={dataDetail.description}>
+                                    {dataDetail.description}
+                                  </td>
+                                  <td className="px-3 py-2.5 whitespace-nowrap text-slate-500 text-xs">{dataDetail.reporter || '—'}</td>
+                                  <td className="px-3 py-2.5 whitespace-nowrap text-center">
                                     {user ? (
                                       <button
                                         onClick={() => handleToggleIssueStatus(issue)}
-                                        className={`text-[11px] font-bold px-2.5 py-1 rounded-full cursor-pointer flex items-center gap-1 transition-all ${
+                                        className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full cursor-pointer inline-flex items-center gap-1 transition-all ${
                                           isResolved 
                                             ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' 
                                             : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
@@ -2043,7 +2298,7 @@ export default function DailyWork() {
                                       </button>
                                     ) : (
                                       <span
-                                        className={`text-[11px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 inline-flex ${
+                                        className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full inline-flex items-center gap-1 ${
                                           isResolved 
                                             ? 'bg-emerald-100 text-emerald-700' 
                                             : 'bg-amber-100 text-amber-800'
@@ -2054,11 +2309,11 @@ export default function DailyWork() {
                                       </span>
                                     )}
                                   </td>
-                                  <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-500 font-mono">
+                                  <td className="px-3 py-2.5 whitespace-nowrap text-xs text-slate-500 font-mono">
                                     {isResolved && solutions.resolved_at ? `✅ ${solutions.resolved_at}` : '—'}
                                   </td>
                                   {user && (
-                                    <td className="px-4 py-3 whitespace-nowrap text-right text-xs">
+                                    <td className="px-3 py-2.5 whitespace-nowrap text-right text-xs">
                                       <button
                                         onClick={() => handleStartEditIssue(issue)}
                                         className="text-blue-600 hover:text-blue-800 font-semibold inline-flex items-center gap-1 cursor-pointer ml-auto"
@@ -2076,35 +2331,62 @@ export default function DailyWork() {
                       </div>
 
                       {/* Mobile View Card Grid */}
-                      <div className="lg:hidden grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="lg:hidden grid grid-cols-1 md:grid-cols-2 gap-3">
                         {filteredDefectsLogs.map((issue) => {
                           const dataDetail = issue.existing_issues || {};
                           const solutions = issue.proposed_solutions || {};
                           const isResolved = dataDetail.status === "Đã XL";
                           const siteIds = getSiteIds(issue.site_id);
+                          const isSelected = selectedIssueIds.includes(issue.log_id);
+                          const selectIndex = isSelected ? selectedIssueIds.indexOf(issue.log_id) + 1 : null;
+                          const isB4Cat = dataDetail.category === 'Máy phát điện' || dataDetail.category === 'Máy lạnh';
+                          const isBattery = isBatteryProposal(issue);
+
                           return (
                             <div 
                               key={issue.log_id} 
-                              className={`rounded-xl border p-4 shadow-sm transition-all hover:shadow-md flex flex-col justify-between ${
-                                isResolved 
-                                  ? 'bg-emerald-50/20 border-emerald-100/70' 
-                                  : 'bg-white border-slate-200'
+                              className={`rounded-xl border p-3.5 shadow-2xs transition-all hover:shadow-md flex flex-col justify-between ${
+                                isSelected 
+                                  ? 'bg-blue-50/50 border-blue-300 ring-1 ring-blue-300'
+                                  : isResolved 
+                                    ? 'bg-emerald-50/20 border-emerald-100/70' 
+                                    : 'bg-white border-slate-200'
                               }`}
                             >
                               <div>
-                                <div className="flex justify-between items-start mb-3">
-                                  <button
-                                    onClick={() => handleOpenSiteDetail(issue.site_id, 'infrastructure')}
-                                    className="bg-red-50 hover:bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded text-xs transition-colors cursor-pointer flex items-center gap-1"
-                                    title="Xem và cập nhật thiết bị phụ trợ trạm này"
-                                  >
-                                    {siteIds.oldId} &rarr; {siteIds.newId}
-                                    <ExternalLink size={10} className="opacity-60" />
-                                  </button>
+                                <div className="flex justify-between items-center mb-2.5">
+                                  <div className="flex items-center gap-2">
+                                    <input 
+                                      type="checkbox"
+                                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer h-4 w-4"
+                                      checked={isSelected}
+                                      onChange={(e) => {
+                                        if (e.target.checked) {
+                                          setSelectedIssueIds(prev => [...prev, issue.log_id]);
+                                        } else {
+                                          setSelectedIssueIds(prev => prev.filter(id => id !== issue.log_id));
+                                        }
+                                      }}
+                                    />
+                                    {isSelected && (
+                                      <span className="text-[10px] font-bold font-mono text-blue-700 bg-blue-100 rounded px-1.5 py-0.2">
+                                        #{selectIndex}
+                                      </span>
+                                    )}
+                                    <button
+                                      onClick={() => handleOpenSiteDetail(issue.site_id, 'infrastructure')}
+                                      className="bg-red-50 hover:bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded text-xs transition-colors cursor-pointer flex items-center gap-1"
+                                      title="Xem và cập nhật thiết bị phụ trợ trạm này"
+                                    >
+                                      {siteIds.oldId} &rarr; {siteIds.newId}
+                                      <ExternalLink size={10} className="opacity-60" />
+                                    </button>
+                                  </div>
+
                                   {user ? (
                                     <button
                                       onClick={() => handleToggleIssueStatus(issue)}
-                                      className={`text-[11px] font-bold px-2 py-1 rounded-full cursor-pointer flex items-center gap-1 transition-all ${
+                                      className={`text-[11px] font-bold px-2 py-0.5 rounded-full cursor-pointer flex items-center gap-1 transition-all ${
                                         isResolved 
                                           ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' 
                                           : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
@@ -2115,7 +2397,7 @@ export default function DailyWork() {
                                     </button>
                                   ) : (
                                     <span
-                                      className={`text-[11px] font-bold px-2 py-1 rounded-full flex items-center gap-1 inline-flex ${
+                                      className={`text-[11px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 inline-flex ${
                                         isResolved 
                                           ? 'bg-emerald-100 text-emerald-700' 
                                           : 'bg-amber-100 text-amber-800'
@@ -2127,75 +2409,63 @@ export default function DailyWork() {
                                   )}
                                 </div>
 
-                                <div className="space-y-2">
-                                  <div className="flex items-center gap-1.5 flex-wrap">
-                                    <span className="text-[13px] text-slate-500 uppercase tracking-wider font-bold">
+                                <div className="space-y-1.5">
+                                  <div className="flex items-center justify-between text-xs">
+                                    <span className="font-bold text-slate-700 flex items-center gap-1">
+                                      {dataDetail.category === 'Máy phát điện' && <span>⚡</span>}
+                                      {dataDetail.category === 'Máy lạnh' && <span>❄️</span>}
+                                      {dataDetail.category === 'Cột anten' && <span>🗼</span>}
+                                      {dataDetail.category === 'Nhà trạm' && <span>🏠</span>}
+                                      {dataDetail.category === 'Hệ thống điện' && <span>🔌</span>}
                                       {dataDetail.category || 'Chưa phân loại'}
                                     </span>
-                                    {dataDetail.proposal_type === 'BATTERY_PURCHASE' ? (
-                                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-teal-100 text-teal-800 border border-teal-200">
-                                        🔋 Mua ắc quy {dataDetail.battery_details?.capacity || ''}
+
+                                    {/* Badge Đợt B4 */}
+                                    {isBattery ? (
+                                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-teal-50 text-teal-700 border border-teal-200">
+                                        🔋 Mua ắc quy
                                       </span>
+                                    ) : isB4Cat ? (
+                                      dataDetail.b4_approved ? (
+                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                          🟢 {dataDetail.b4_batch || 'Đợt 1'} {dataDetail.b4_order ? `#${dataDetail.b4_order}` : ''}
+                                        </span>
+                                      ) : dataDetail.b4_batch ? (
+                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-800 border border-blue-200">
+                                          🔵 {dataDetail.b4_batch} {dataDetail.b4_order ? `#${dataDetail.b4_order}` : ''}
+                                        </span>
+                                      ) : (
+                                        <span className="text-[10px] text-slate-400">⚪ Chưa phân đợt</span>
+                                      )
                                     ) : (
-                                      <>
-                                        {dataDetail.device_type === 'MPD_CO_DINH' && (
-                                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">
-                                            ⚡ B4 MPĐ
-                                          </span>
-                                        )}
-                                        {dataDetail.device_type === 'DHKK' && (
-                                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-cyan-100 text-cyan-800">
-                                            ❄️ B4 ĐHKK
-                                          </span>
-                                        )}
-                                      </>
-                                    )}
-                                    {dataDetail.b4_approved ? (
-                                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300">
-                                        ✅ B4 {dataDetail.b4_batch || 'Đợt 1'} (Đã duyệt)
-                                      </span>
-                                    ) : dataDetail.proposal_type === 'BATTERY_PURCHASE' ? (
-                                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-teal-50 text-teal-700 border border-teal-200">
-                                        🛒 Ắc quy đề (Chờ đợt mua)
-                                      </span>
-                                    ) : (dataDetail.category === 'Máy phát điện' || dataDetail.category === 'Máy lạnh') ? (
-                                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-800 border border-blue-200">
-                                        🔵 B4 {dataDetail.b4_batch || 'Đợt 2'} (Chờ duyệt)
-                                      </span>
-                                    ) : (
-                                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200">
+                                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200">
                                         🏗️ Hạ tầng địa bàn
                                       </span>
                                     )}
                                   </div>
-                                  <p className="text-sm font-semibold text-slate-800 leading-snug line-clamp-3" title={dataDetail.description}>
-                                    {dataDetail.description}
+
+                                  <p className="text-xs text-slate-800 font-medium line-clamp-2" title={dataDetail.description}>
+                                    {dataDetail.description || 'Không có mô tả chi tiết'}
                                   </p>
                                 </div>
                               </div>
 
-                              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-                                <span className="flex items-center gap-1">
-                                  <User size={13} className="text-slate-400" /> {dataDetail.reporter || 'N/A'}
-                                </span>
-                                <span className="flex items-center gap-1 font-medium font-mono text-slate-600">
-                                  <Calendar size={13} className="text-slate-400" /> {issue.date}
-                                </span>
-                              </div>
-                              {isResolved && solutions.resolved_at && (
-                                <div className="mt-2 text-[11px] font-medium text-emerald-600 bg-emerald-100/40 px-2 py-1 rounded border border-emerald-200/50 text-center flex items-center justify-center gap-1">
-                                  ✅ Đã xử lý xong vào: {solutions.resolved_at}
+                              <div className="flex justify-between items-center pt-2.5 mt-2.5 border-t border-slate-100 text-[11px] text-slate-500">
+                                <div>
+                                  <span>Báo cáo: </span>
+                                  <span className="font-medium text-slate-700">{dataDetail.reporter || '—'}</span>
+                                  <span className="mx-1 text-slate-300">•</span>
+                                  <span className="font-mono">{issue.date}</span>
                                 </div>
-                              )}
-                              {user && (
-                                <button
-                                  onClick={() => handleStartEditIssue(issue)}
-                                  className="mt-3 w-full bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 font-semibold px-3 py-1.5 rounded-lg text-xs flex items-center justify-center gap-1 transition-all"
-                                >
-                                  <Edit size={14} className="text-slate-500" />
-                                  Chỉnh sửa chi tiết
-                                </button>
-                              )}
+                                {user && (
+                                  <button
+                                    onClick={() => handleStartEditIssue(issue)}
+                                    className="text-blue-600 hover:text-blue-800 font-semibold inline-flex items-center gap-1 cursor-pointer"
+                                  >
+                                    <Edit size={12} /> Sửa
+                                  </button>
+                                )}
+                              </div>
                             </div>
                           );
                         })}
@@ -3260,6 +3530,42 @@ export default function DailyWork() {
                         />
                       </div>
                     )}
+                  </div>
+                )}
+
+                {/* B4 Batch & Approval Selection in Modal */}
+                {(issueCategory === 'Máy phát điện' || issueCategory === 'Máy lạnh') && issueProposalType !== 'BATTERY_PURCHASE' && (
+                  <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-xl space-y-2">
+                    <div className="text-xs font-bold text-blue-900 uppercase tracking-wider flex items-center gap-1.5">
+                      <span>⚡</span> Quản lý Phân đợt B4 Ban 4
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-600 mb-1">Đợt đề xuất / phê duyệt</label>
+                        <select
+                          value={issueB4Batch}
+                          onChange={(e) => setIssueB4Batch(e.target.value)}
+                          className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs bg-white font-medium"
+                        >
+                          <option value="">-- Chưa phân đợt --</option>
+                          <option value="Đợt 2">Đợt 2 (Chờ thẩm định / Đang trình)</option>
+                          <option value="Đợt 1">Đợt 1 (Đã duyệt đợt trước)</option>
+                          <option value="Đợt 3">Đợt 3</option>
+                          <option value="Đợt 4">Đợt 4</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-600 mb-1">Trạng thái duyệt chi phí B4</label>
+                        <select
+                          value={issueB4Approved ? 'APPROVED' : 'PENDING'}
+                          onChange={(e) => setIssueB4Approved(e.target.value === 'APPROVED')}
+                          className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs bg-white font-medium"
+                        >
+                          <option value="PENDING">🔵 Chờ duyệt (Để trình B4)</option>
+                          <option value="APPROVED">🟢 Đã phê duyệt chi phí</option>
+                        </select>
+                      </div>
+                    </div>
                   </div>
                 )}
 
