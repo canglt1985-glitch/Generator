@@ -1819,9 +1819,10 @@ def process_pakh_alerts(pakh_list: list, job_type: str = 'pakh'):
             if 'Khác' in qlt_totals and qlt_totals['Khác'] > 0:
                 sorted_qlts.append('Khác')
 
-            lines1 = [
-                "⏳ *PAKH TỒN ĐỌNG*",
-                f"📊 Tổng số PAKH: *{len(active_tickets)}* PAKH",
+            # TIN 1: TỔNG HỢP PAKH TỒN ĐỌNG (theo nhân sự & ngày)
+            lines_summary = [
+                "📊 *TỔNG HỢP PAKH TỒN ĐỌNG*",
+                f"📈 Tổng số PAKH: *{len(active_tickets)}* PAKH",
                 "───────────────"
             ]
 
@@ -1839,10 +1840,21 @@ def process_pakh_alerts(pakh_list: list, job_type: str = 'pakh'):
                 if tot > 0:
                     dates = sorted(qlt_counts[qlt].keys(), key=_date_sort_key, reverse=True)
                     date_breakdown = ' | '.join(f'{d}: {qlt_counts[qlt][d]}' for d in dates)
-                    lines1.append(f"🔹 *{qlt}:* *{tot}* PAKH ({date_breakdown})")
+                    lines_summary.append(f"🔹 *{qlt}:* *{tot}* PAKH ({date_breakdown})")
 
-            lines1.append("───────────────")
-            lines1.append("")
+            lines_summary.append("───────────────")
+            _send_viber_report(lines_summary, token=pakh_token, sender=pakh_sender)
+            logger.info("Viber Alert: Sent PAKH Message 1 (Summary)")
+
+            # Chờ 1.5s để Viber nhận tin nhắn theo đúng thứ tự
+            import time
+            time.sleep(1.5)
+
+            # TIN 2: CHI TIẾT PAKH TỒN ĐỌNG
+            lines_details = [
+                f"⏳ *CHI TIẾT PAKH TỒN ĐỌNG* (*{len(active_tickets)}* PAKH)",
+                "───────────────"
+            ]
 
             for row in active_tickets:
                 sdt = row.get("soThueBao") or "SĐT --"
@@ -1850,15 +1862,16 @@ def process_pakh_alerts(pakh_list: list, job_type: str = 'pakh'):
                 tram, qlt_disp, _, _ = _get_site_and_qlt_info(ma_tram)
                 tg_con_lai = row.get("tgclTtml") or row.get("tgConLai") or "N/A"
                 qlt_suffix = f" | QLT: {qlt_disp}" if qlt_disp else ""
-                lines1.append(f"• SĐT: {sdt} - Trạm: {tram}{qlt_suffix}\n  ⏳ Hạn còn lại: {tg_con_lai}")
-            _send_viber_report(lines1, token=pakh_token, sender=pakh_sender)
-            logger.info("Viber Alert: Sent PAKH summary (unresolved) report")
+                lines_details.append(f"• SĐT: {sdt} - Trạm: {tram}{qlt_suffix}\n  ⏳ Hạn còn lại: {tg_con_lai}")
+
+            _send_viber_report(lines_details, token=pakh_token, sender=pakh_sender)
+            logger.info("Viber Alert: Sent PAKH Message 2 (Details)")
         else:
             # Chỉ gửi báo cáo trống vào 7h sáng và 7h tối để tránh spam
             import datetime
             current_hour = datetime.datetime.now().hour
             if current_hour in [7, 19]:
-                _send_viber_report(["⏳ *PAKH TỒN ĐỌNG*\n\n- Không có phiếu tồn đọng nào. 🎉"], token=pakh_token, sender=pakh_sender)
+                _send_viber_report(["📊 *TỔNG HỢP PAKH TỒN ĐỌNG*\n\n- Không có phiếu tồn đọng nào. 🎉"], token=pakh_token, sender=pakh_sender)
                 logger.info("Viber Alert: No unresolved tickets, sent empty summary report")
             else:
                 logger.info(f"Viber Alert: No unresolved tickets, skipped empty report at hour {current_hour} to prevent spam")

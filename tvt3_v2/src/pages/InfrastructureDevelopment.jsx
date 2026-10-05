@@ -19,6 +19,31 @@ const STAGES = [
   { id: 'contract', label: 'Trình ký Hợp đồng', color: 'emerald', desc: 'Hoàn tất hồ sơ & Trình ký hợp đồng thuê mặt bằng' }
 ];
 
+export const SITES_4_PACKAGES = [
+  '26DNa242', '26DNa244', '26DNa175', '26DNa187', '26DNa250',
+  '26DNa162', '26DNa245', '26DNa247', '26DNa246', '26DNa164',
+  '26DNa166', '26DNa258', '26DNa168', '26DNa163', '26DNa167'
+];
+
+export const SITES_TCT_OK_SO_HTCS = [
+  '26DNa158', '26DNa185', '26DNa181', '26DNa186', '26DNa184', 
+  '26DNa165', '26DNa155', '26DNa156', '26DNa157', '26DNa170', 
+  '26DNa052', '26DNa159', '26DNa255', '26DNa053', '26DNa070',
+  '26DNa179', '26DNa131', '26DNa076', '26DNa080', 'DNTNL1', 
+  'DNTNL2', 'DNXL10', '26DNa311', '26DNa316', '26DNa318', 
+  '26DNa330', '26DNa290', '26DNa291', '26DNa295'
+];
+
+export const SITES_SO_OK_TCT_PENDING = [
+  '26DNa301', '26DNa303', '26DNa305', '26DNa315', '26DNa321', 
+  '26DNa322', '26DNa327', '26DNa328', '26DNa331', '26DNa332', 
+  '26DNa340', '26DNa342', '26DNa281', '26DNa288', '26DNa289', 
+  '26DNa292', '26DNa293', 'DNIXTC00', '26DNa294', '26DNa296', 
+  'TVT3_19', 'QLCL_10', 'TVT3_27', 'TVT3_29', 'VKD4_02', 
+  'VKD4_33', 'TVT3_43', 'VKD3_01', 'VKD3_06', 'VKD3_07', 
+  'TVT3_26', 'TVT3_11', 'TVT3_38', 'VKD3_20'
+];
+
 export default function InfrastructureDevelopment() {
   const { user } = useCurrentUser();
   const [projects, setProjects] = useState([]);
@@ -142,6 +167,7 @@ export default function InfrastructureDevelopment() {
   const [filterPackage, setFilterPackage] = useState('');
   const [filterContractReady, setFilterContractReady] = useState('');
   const [filterImplementationType, setFilterImplementationType] = useState('');
+  const [filterReviewGroup, setFilterReviewGroup] = useState('');
   
   // Form State for new proposal
   const [newProject, setNewProject] = useState({
@@ -388,6 +414,12 @@ export default function InfrastructureDevelopment() {
     contract: contractSignedCount // 5. Trình ký Hợp đồng (12)
   };
 
+  // 7. Nhóm rà soát đặc thù TVT3 (4 Gói MBF & Phê duyệt TCT/Sở)
+  const count4Packages = tvt3ScopeProjects.filter(p => SITES_4_PACKAGES.includes(p.planning_id_new)).length;
+  const countTctOkSoHtcs = tvt3ScopeProjects.filter(p => SITES_TCT_OK_SO_HTCS.includes(p.planning_id_new)).length;
+  const countTctOkSoHtcsSurveyed = tvt3ScopeProjects.filter(p => SITES_TCT_OK_SO_HTCS.includes(p.planning_id_new) && p.latitude_survey && p.longitude_survey).length;
+  const countSoOkTctPending = tvt3ScopeProjects.filter(p => SITES_SO_OK_TCT_PENDING.includes(p.planning_id_new)).length;
+
   // Gap analysis / density
   const getDensityData = () => {
     const data = districts.map(dist => {
@@ -463,7 +495,16 @@ export default function InfrastructureDevelopment() {
       (filterImplementationType === 'MBF_INVEST' ? (proj.implementation_type === 'MBF đầu tư' || !proj.implementation_type) : 
       (proj.implementation_type !== 'MBF đầu tư'));
 
-    return matchesSearch && matchesDistrict && matchesStage && matchesStatus && matchesPackage && matchesContractReady && matchesImplType;
+    let matchesReviewGroup = true;
+    if (filterReviewGroup === '4_PACKAGES') {
+      matchesReviewGroup = SITES_4_PACKAGES.includes(proj.planning_id_new);
+    } else if (filterReviewGroup === 'TCT_OK_SO_HTCS') {
+      matchesReviewGroup = SITES_TCT_OK_SO_HTCS.includes(proj.planning_id_new);
+    } else if (filterReviewGroup === 'SO_OK_TCT_PENDING') {
+      matchesReviewGroup = SITES_SO_OK_TCT_PENDING.includes(proj.planning_id_new);
+    }
+
+    return matchesSearch && matchesDistrict && matchesStage && matchesStatus && matchesPackage && matchesContractReady && matchesImplType && matchesReviewGroup;
   });
 
   // Handle stage transition
@@ -1354,6 +1395,15 @@ export default function InfrastructureDevelopment() {
             <Download className="h-4 w-4 mr-1.5 text-slate-500" /> Xuất Excel
           </button>
 
+          <a 
+            href="/reports/Bao_Cao_Ra_Soat_CSHT_TVT3_2026.xlsx"
+            download="Bao_Cao_Ra_Soat_CSHT_TVT3_2026.xlsx"
+            className="inline-flex items-center justify-center px-3.5 py-2 text-xs font-bold rounded-lg text-emerald-800 bg-emerald-50 border border-emerald-300 hover:bg-emerald-100 shadow-sm transition-colors cursor-pointer"
+            title="Tải Báo cáo Excel 4 Sheet chuyên nghiệp: 4 Gói MBF Đầu Tư, TCT Duyệt Sở HTCS, Sở Duyệt Chờ TCT, Tổng hợp 86 trạm"
+          >
+            <Download className="h-4 w-4 mr-1.5 text-emerald-600" /> Báo Cáo Rà Soát CSHT
+          </a>
+
           <label className="inline-flex items-center justify-center px-3.5 py-2 text-xs font-bold rounded-lg text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 shadow-sm transition-colors cursor-pointer">
             <Upload className="h-4 w-4 mr-1.5 text-slate-500" /> Nhập Excel
             <input 
@@ -1536,6 +1586,109 @@ export default function InfrastructureDevelopment() {
                     <span className="text-[11px] font-bold text-teal-600 bg-teal-50 px-2 py-0.5 rounded-full">Đã Trình Ký</span>
                   </div>
                   <p className="text-[11px] text-slate-400 mt-2">Hoàn thành thủ tục giấy tờ của Tổ</p>
+                </div>
+              </div>
+
+              {/* BỘ LỌC CHIẾN LƯỢC RÀ SOÁT CSHT TVT3 (3 NHÓM TRỌNG ĐIỂM) */}
+              <div className="bg-gradient-to-r from-slate-900 to-slate-800 p-5 rounded-2xl text-white shadow-md space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-700/60 pb-3">
+                  <div>
+                    <h3 className="text-sm font-black uppercase tracking-wider text-amber-400 flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4" />
+                      Phân Nhóm Trọng Điểm Rà Soát CSHT TVT3 (Theo Yêu Cầu Điều Hành)
+                    </h3>
+                    <p className="text-xs text-slate-300 mt-0.5">
+                      Bấm vào từng khối để lọc ngay danh sách trạm & kiểm tra chi tiết tình trạng khảo sát, hồ sơ hợp đồng
+                    </p>
+                  </div>
+                  <a 
+                    href="/reports/Bao_Cao_Ra_Soat_CSHT_TVT3_2026.xlsx"
+                    download="Bao_Cao_Ra_Soat_CSHT_TVT3_2026.xlsx"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer shadow-xs"
+                    title="Tải trọn bộ Báo Cáo Rà Soát CSHT TVT3 định dạng Excel 4 Sheet"
+                  >
+                    <Download className="h-3.5 w-3.5" /> Báo Cáo Excel 4 Sheet
+                  </a>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Khối 1: 4 Gói MBF Đầu Tư */}
+                  <div 
+                    onClick={() => { setFilterReviewGroup('4_PACKAGES'); setActiveTab('list'); }}
+                    className={`bg-slate-800/80 hover:bg-slate-700/80 border ${filterReviewGroup === '4_PACKAGES' ? 'border-blue-400 ring-2 ring-blue-500/50' : 'border-blue-500/40 hover:border-blue-400'} rounded-xl p-4 cursor-pointer transition-all group`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-blue-300 uppercase tracking-wide">🎯 4 Gói MBF Tự Đầu Tư</span>
+                      <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-500/20 text-blue-300 border border-blue-400/30">
+                        {count4Packages} Trạm
+                      </span>
+                    </div>
+                    <div className="mt-2.5 flex items-baseline gap-2">
+                      <span className="text-2xl font-black text-white">{count4Packages}</span>
+                      <span className="text-xs text-slate-300">trạm (Gói 2, 3, 4)</span>
+                    </div>
+                    <div className="mt-3 pt-2.5 border-t border-slate-700/50 flex flex-wrap gap-1.5 text-[10px]">
+                      <span className="bg-emerald-950/80 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-md font-semibold">
+                        7 Đủ ĐK HĐ
+                      </span>
+                      <span className="bg-amber-950/80 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-md font-semibold">
+                        2 Có file Word
+                      </span>
+                      <span className="bg-rose-950/80 text-rose-300 border border-rose-500/30 px-2 py-0.5 rounded-md font-semibold">
+                        6 Thiếu hồ sơ
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Khối 2: TCT Duyệt - Sở Dùng Chung */}
+                  <div 
+                    onClick={() => { setFilterReviewGroup('TCT_OK_SO_HTCS'); setActiveTab('list'); }}
+                    className={`bg-slate-800/80 hover:bg-slate-700/80 border ${filterReviewGroup === 'TCT_OK_SO_HTCS' ? 'border-amber-400 ring-2 ring-amber-500/50' : 'border-amber-500/40 hover:border-amber-400'} rounded-xl p-4 cursor-pointer transition-all group`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-amber-300 uppercase tracking-wide">⚠️ TCT Duyệt - Sở Dùng Chung</span>
+                      <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-400/30">
+                        {countTctOkSoHtcs} Trạm
+                      </span>
+                    </div>
+                    <div className="mt-2.5 flex items-baseline gap-2">
+                      <span className="text-2xl font-black text-white">{countTctOkSoHtcs}</span>
+                      <span className="text-xs text-slate-300">trạm Sở bắt dùng chung</span>
+                    </div>
+                    <div className="mt-3 pt-2.5 border-t border-slate-700/50 flex flex-wrap gap-1.5 text-[10px]">
+                      <span className="bg-emerald-950/80 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-md font-semibold">
+                        {countTctOkSoHtcsSurveyed} Đã Khảo Sát
+                      </span>
+                      <span className="bg-slate-700/60 text-slate-300 border border-slate-600 px-2 py-0.5 rounded-md font-semibold">
+                        {countTctOkSoHtcs - countTctOkSoHtcsSurveyed} Chưa Khảo Sát
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Khối 3: Sở Duyệt - Chờ TCT */}
+                  <div 
+                    onClick={() => { setFilterReviewGroup('SO_OK_TCT_PENDING'); setActiveTab('list'); }}
+                    className={`bg-slate-800/80 hover:bg-slate-700/80 border ${filterReviewGroup === 'SO_OK_TCT_PENDING' ? 'border-purple-400 ring-2 ring-purple-500/50' : 'border-purple-500/40 hover:border-purple-400'} rounded-xl p-4 cursor-pointer transition-all group`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-purple-300 uppercase tracking-wide">⏳ Sở Duyệt - Chờ TCT QĐĐT</span>
+                      <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-purple-500/20 text-purple-300 border border-purple-400/30">
+                        {countSoOkTctPending} Trạm
+                      </span>
+                    </div>
+                    <div className="mt-2.5 flex items-baseline gap-2">
+                      <span className="text-2xl font-black text-white">{countSoOkTctPending}</span>
+                      <span className="text-xs text-slate-300">trạm Sở duyệt xây mới</span>
+                    </div>
+                    <div className="mt-3 pt-2.5 border-t border-slate-700/50 flex flex-wrap gap-1.5 text-[10px]">
+                      <span className="bg-purple-950/80 text-purple-200 border border-purple-400/30 px-2 py-0.5 rounded-md font-semibold">
+                        🎯 100% Đã Có Tọa Độ KS
+                      </span>
+                      <span className="bg-slate-700/60 text-slate-300 px-2 py-0.5 rounded-md font-semibold">
+                        Chờ phân bổ gói
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -1873,6 +2026,16 @@ export default function InfrastructureDevelopment() {
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <select
+                    value={filterReviewGroup}
+                    onChange={(e) => setFilterReviewGroup(e.target.value)}
+                    className="text-xs bg-amber-50 hover:bg-amber-100 border border-amber-300 rounded-lg px-2.5 py-1.5 font-bold text-amber-900 focus:outline-none"
+                  >
+                    <option value="">🎯 Tất cả Nhóm Rà Soát</option>
+                    <option value="4_PACKAGES">🎯 4 Gói MBF Đầu Tư ({count4Packages})</option>
+                    <option value="TCT_OK_SO_HTCS">⚠️ TCT Duyệt - Sở Dùng Chung ({countTctOkSoHtcs})</option>
+                    <option value="SO_OK_TCT_PENDING">⏳ Sở Duyệt - Chờ TCT ({countSoOkTctPending})</option>
+                  </select>
+                  <select
                     value={filterImplementationType}
                     onChange={(e) => setFilterImplementationType(e.target.value)}
                     className="text-xs bg-blue-50/80 hover:bg-blue-100 border border-blue-200 rounded-lg px-2.5 py-1.5 font-bold text-blue-700 focus:outline-none"
@@ -1926,13 +2089,23 @@ export default function InfrastructureDevelopment() {
                     <option value="NOK">Trạm không khả thi (NOK)</option>
                   </select>
 
-                  <button 
-                    onClick={handleExportExcel}
-                    className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer ml-auto"
-                    title="Xuất danh sách đang lọc ra Excel"
-                  >
-                    <Download className="h-3.5 w-3.5" /> Xuất Excel ({filteredProjects.length})
-                  </button>
+                  <div className="flex items-center gap-1.5 ml-auto">
+                    <a 
+                      href="/reports/Bao_Cao_Ra_Soat_CSHT_TVT3_2026.xlsx"
+                      download="Bao_Cao_Ra_Soat_CSHT_TVT3_2026.xlsx"
+                      className="text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold px-3 py-1.5 rounded-lg shadow-2xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                      title="Tải trọn bộ Báo Cáo Rà Soát CSHT TVT3 định dạng Excel 4 Sheet chuyên nghiệp"
+                    >
+                      <Download className="h-3.5 w-3.5 text-emerald-600" /> Báo Cáo 4 Sheet
+                    </a>
+                    <button 
+                      onClick={handleExportExcel}
+                      className="text-xs bg-slate-700 hover:bg-slate-800 text-white font-bold px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer"
+                      title="Xuất danh sách đang lọc ra Excel"
+                    >
+                      <Download className="h-3.5 w-3.5" /> Xuất Excel ({filteredProjects.length})
+                    </button>
+                  </div>
                 </div>
               </div>
 

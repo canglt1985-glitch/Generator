@@ -1168,6 +1168,18 @@ export default function Generator() {
     document.body.removeChild(link);
   };
 
+  // Download PDF Bản thể hiện Hóa đơn điện tử (Nhóm 1 - ĐN)
+  const handleDownloadInvoicePdf = () => {
+    const pdfUrl = '/reports/2_TONG_HOP_HOA_DON_DIEN_TU_DONG_NAI_67TRAM_T09_2026.pdf';
+    const link = document.createElement('a');
+    link.href = pdfUrl;
+    link.download = '2_TONG_HOP_HOA_DON_DIEN_TU_DONG_NAI_67TRAM_T09_2026.pdf';
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // Export Anomalies to Excel
   const exportAnomaliesToExcel = async () => {
     const XLSX = await getXLSX();
@@ -2253,6 +2265,13 @@ export default function Generator() {
                 title="Tải file PDF tổng hợp minh chứng tra cứu Hóa đơn điện tử GDT (Tổng cục Thuế) của 15 hóa đơn Nhóm 1 ĐN"
               >
                 <FileText className="h-3.5 w-3.5 text-rose-600" /> PDF GDT (Nhóm 1)
+              </button>
+              <button
+                onClick={handleDownloadInvoicePdf}
+                className="inline-flex items-center justify-center px-2.5 py-1.5 text-xs font-bold rounded-lg text-emerald-800 border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 shadow-2xs transition-colors cursor-pointer gap-1"
+                title="Tải file PDF tổng hợp toàn bộ 15 Bản thể hiện Hóa đơn điện tử thực tế Tháng 09/2026 của Nhóm 1 ĐN"
+              >
+                <FileText className="h-3.5 w-3.5 text-emerald-600" /> PDF Hóa Đơn (Nhóm 1)
               </button>
               <button
                 onClick={() => exportInvoicesZip('group1')}

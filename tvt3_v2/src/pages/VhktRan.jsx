@@ -496,6 +496,44 @@ export default function VhktRan() {
   const displayedVhkt = useMemo(() => [...vhktData].sort((a, b) => (b.md_so_lan || 0) - (a.md_so_lan || 0)), [vhktData]);
   const displayedPakh = activePakhList;
 
+  // Grouped PAKH stats for summary card display and message generation
+  const pakhStats = useMemo(() => {
+    const qltCounts = {};
+    const qltTotals = {};
+
+    activePakhList.forEach(p => {
+      const tram = p.ma_tram || p.maTram || '';
+      const { qlt } = resolvePakhSite(tram, p);
+      const qltShort = qlt ? qlt.trim().split(' ').pop() : 'Khác';
+
+      const rawDate = p.thoi_gian_ghi_nhan || p.thoiGianGhiNhan || p.tg_tao_wo || p.tgTaoWo;
+      let dateStr = 'Gần đây';
+      if (rawDate) {
+        try {
+          const d = new Date(rawDate);
+          if (!isNaN(d.getTime())) {
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            dateStr = `${day}/${month}`;
+          }
+        } catch (e) {}
+      }
+
+      if (!qltCounts[qltShort]) qltCounts[qltShort] = {};
+      qltCounts[qltShort][dateStr] = (qltCounts[qltShort][dateStr] || 0) + 1;
+      qltTotals[qltShort] = (qltTotals[qltShort] || 0) + 1;
+    });
+
+    const sortedQlts = Object.keys(qltTotals)
+      .filter(q => q !== 'Khác')
+      .sort((a, b) => qltTotals[b] - qltTotals[a] || a.localeCompare(b));
+    if (qltTotals['Khác'] > 0) {
+      sortedQlts.push('Khác');
+    }
+
+    return { qltCounts, qltTotals, sortedQlts };
+  }, [activePakhList, siteMap, siteInfoMap]);
+
   // Grouped active alarms for message style (memoized)
   const groupedMd = useMemo(() => groupAlarmsForSection(displayedMd), [displayedMd]);
   const groupedMpd = useMemo(() => groupAlarmsForSection(displayedMpd), [displayedMpd]);
@@ -579,60 +617,41 @@ export default function VhktRan() {
     return lines.join('\n').trim();
   };
 
-  // Generate plain text for PAKH matching user format
-  const generatePakhMessageText = () => {
+  // Generate plain text for PAKH - Message 1: Summary by QLT & Date
+  const generatePakhSummaryText = () => {
     if (activePakhList.length === 0) {
-      return '⏳ *PAKH TỒN ĐỌNG*\n\n• (Không có phản ánh tồn đọng)';
+      return '📊 *TỔNG HỢP PAKH TỒN ĐỌNG*\n\n- Không có phiếu tồn đọng nào. 🎉';
     }
 
-    const qltCounts = {};
-    const qltTotals = {};
-
-    activePakhList.forEach(p => {
-      const tram = p.ma_tram || p.maTram || '';
-      const { qlt } = resolvePakhSite(tram, p);
-      const qltShort = qlt ? qlt.trim().split(' ').pop() : 'Khác';
-
-      const rawDate = p.thoi_gian_ghi_nhan || p.thoiGianGhiNhan || p.tg_tao_wo || p.tgTaoWo;
-      let dateStr = 'Gần đây';
-      if (rawDate) {
-        try {
-          const d = new Date(rawDate);
-          if (!isNaN(d.getTime())) {
-            const day = String(d.getDate()).padStart(2, '0');
-            const month = String(d.getMonth() + 1).padStart(2, '0');
-            dateStr = `${day}/${month}`;
-          }
-        } catch (e) {}
-      }
-
-      if (!qltCounts[qltShort]) qltCounts[qltShort] = {};
-      qltCounts[qltShort][dateStr] = (qltCounts[qltShort][dateStr] || 0) + 1;
-      qltTotals[qltShort] = (qltTotals[qltShort] || 0) + 1;
-    });
-
-    const sortedQlts = Object.keys(qltTotals)
-      .filter(q => q !== 'Khác')
-      .sort((a, b) => qltTotals[b] - qltTotals[a] || a.localeCompare(b));
-    if (qltTotals['Khác'] > 0) {
-      sortedQlts.push('Khác');
-    }
+    const { qltCounts, qltTotals, sortedQlts } = pakhStats;
 
     const lines = [
-      '⏳ *PAKH TỒN ĐỌNG*',
-      `📊 Tổng số PAKH: *${activePakhList.length}* PAKH`,
+      '📊 *TỔNG HỢP PAKH TỒN ĐỌNG*',
+      `📈 Tổng số PAKH: *${activePakhList.length}* PAKH`,
       '───────────────'
     ];
 
     sortedQlts.forEach(q => {
       const tot = qltTotals[q];
-      const dates = Object.keys(qltCounts[q]).sort().reverse();
+      const dates = Object.keys(qltCounts[q] || {}).sort().reverse();
       const dateBreakdown = dates.map(d => `${d}: ${qltCounts[q][d]}`).join(' | ');
       lines.push(`🔹 *${q}:* *${tot}* PAKH (${dateBreakdown})`);
     });
 
     lines.push('───────────────');
-    lines.push('');
+    return lines.join('\n').trim();
+  };
+
+  // Generate plain text for PAKH - Message 2: Ticket details list
+  const generatePakhDetailText = () => {
+    if (activePakhList.length === 0) {
+      return '⏳ *CHI TIẾT PAKH TỒN ĐỌNG*\n\n• (Không có phản ánh tồn đọng)';
+    }
+
+    const lines = [
+      `⏳ *CHI TIẾT PAKH TỒN ĐỌNG* (*${activePakhList.length}* PAKH)`,
+      '───────────────'
+    ];
 
     activePakhList.forEach(p => {
       const sdt = p.so_thue_bao || p.soThueBao || '--';
@@ -648,6 +667,11 @@ export default function VhktRan() {
     });
 
     return lines.join('\n').trim();
+  };
+
+  // Keep backward-compatibility
+  const generatePakhMessageText = () => {
+    return `${generatePakhSummaryText()}\n\n${generatePakhDetailText()}`;
   };
 
   // Copy to clipboard helper
@@ -676,6 +700,16 @@ export default function VhktRan() {
   const handleCopy = (sectionKey) => {
     const text = generateMessageText(sectionKey);
     copyToClipboard(text, sectionKey);
+  };
+
+  const handleCopyPakhSummary = () => {
+    const text = generatePakhSummaryText();
+    copyToClipboard(text, 'pakh_summary');
+  };
+
+  const handleCopyPakhDetail = () => {
+    const text = generatePakhDetailText();
+    copyToClipboard(text, 'pakh_detail');
   };
 
   const handleCopyPakh = () => {
@@ -1278,28 +1312,45 @@ export default function VhktRan() {
               </div>
             )}
 
-            {/* Tab: PAKH - Mobile hiển thị dạng tin nhắn chuẩn mẫu */}
+            {/* Tab: PAKH - Hiển thị dạng tin nhắn tách biệt và bảng dữ liệu */}
             {activeTab === 'pakh' && (
               <div>
                 {/* Mobile View: PAKH tồn đọng dạng tin nhắn */}
                 <div className="block lg:hidden p-3 bg-slate-50">
                   <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
                     {/* Header */}
-                    <div className="flex items-center justify-between px-3.5 py-2.5 bg-slate-50 border-b border-slate-100">
+                    <div className="flex items-center justify-between px-3.5 py-2.5 bg-slate-50 border-b border-slate-100 flex-wrap gap-2">
                       <div className="flex items-center gap-1.5 font-mono font-bold text-slate-800 text-sm">
                         <span className="text-base">⏳</span>
                         <span>PAKH TỒN ĐỌNG:</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 font-mono">
+                        <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 font-mono ml-1">
                           {displayedPakh.length}
                         </span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
                         <button
-                          onClick={handleCopyPakh}
-                          className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-slate-600 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg shadow-2xs cursor-pointer active:scale-95 transition-all"
-                          title="Sao chép PAKH tồn đọng"
+                          onClick={handleCopyPakhSummary}
+                          className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg shadow-2xs cursor-pointer active:scale-95 transition-all"
+                          title="Sao chép Tin 1: Tin Tổng Hợp (theo nhân sự & ngày)"
                         >
-                          {copiedSection === 'pakh' ? (
+                          {copiedSection === 'pakh_summary' ? (
+                            <>
+                              <Check className="h-3.5 w-3.5 text-emerald-600" />
+                              <span className="text-emerald-700 font-bold">Đã chép</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="h-3.5 w-3.5 text-blue-600" />
+                              <span>Tin Tổng Hợp</span>
+                            </>
+                          )}
+                        </button>
+                        <button
+                          onClick={handleCopyPakhDetail}
+                          className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg shadow-2xs cursor-pointer active:scale-95 transition-all"
+                          title="Sao chép Tin 2: Tin Chi Tiết Tồn Đọng"
+                        >
+                          {copiedSection === 'pakh_detail' ? (
                             <>
                               <Check className="h-3.5 w-3.5 text-emerald-600" />
                               <span className="text-emerald-700 font-bold">Đã chép</span>
@@ -1307,14 +1358,37 @@ export default function VhktRan() {
                           ) : (
                             <>
                               <Copy className="h-3.5 w-3.5 text-slate-500" />
-                              <span>Chép</span>
+                              <span>Tin Tồn Đọng</span>
                             </>
                           )}
                         </button>
                       </div>
                     </div>
 
-                    {/* Content List dạng tin nhắn y hệt mẫu user */}
+                    {/* Khối tóm tắt thống kê theo nhân sự (Tin 1) */}
+                    {pakhStats.sortedQlts.length > 0 && (
+                      <div className="px-3.5 py-2.5 bg-blue-50/40 border-b border-blue-100 text-xs font-mono space-y-1">
+                        <div className="font-bold text-slate-700 text-[11px] uppercase tracking-wider mb-1 flex items-center justify-between">
+                          <span>📊 Phân bổ theo nhân sự:</span>
+                          <span className="text-blue-600 font-bold">{displayedPakh.length} PAKH</span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                          {pakhStats.sortedQlts.map(q => {
+                            const tot = pakhStats.qltTotals[q];
+                            const dates = Object.keys(pakhStats.qltCounts[q] || {}).sort().reverse();
+                            const dateBreakdown = dates.map(d => `${d}: ${pakhStats.qltCounts[q][d]}`).join(' | ');
+                            return (
+                              <div key={q} className="bg-white px-2 py-1 rounded border border-blue-100 flex items-center justify-between text-[11px]">
+                                <span className="font-bold text-slate-800">🔹 {q}:</span>
+                                <span><strong className="text-blue-600 font-bold">{tot}</strong> PAKH <span className="text-slate-400">({dateBreakdown})</span></span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Content List dạng tin nhắn chi tiết (Tin 2) */}
                     <div className="p-3 bg-white space-y-3 font-mono text-xs sm:text-sm">
                       {displayedPakh.length === 0 ? (
                         <div className="text-slate-400 text-xs italic py-1 pl-2">
@@ -1378,8 +1452,52 @@ export default function VhktRan() {
                   </div>
                 </div>
 
-                {/* Desktop View: Full Table */}
+                {/* Desktop View: Full Table with Copy Controls */}
                 <div className="hidden lg:block overflow-x-auto">
+                  <div className="flex items-center justify-between px-4 py-2.5 bg-slate-50 border-b border-slate-200">
+                    <div className="flex items-center gap-2">
+                      <span className="text-base">📊</span>
+                      <span className="text-xs font-bold text-slate-800 uppercase tracking-wider font-mono">
+                        Danh Sách PAKH Tồn Đọng ({displayedPakh.length} phiếu)
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={handleCopyPakhSummary}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg shadow-2xs cursor-pointer active:scale-95 transition-all"
+                        title="Sao chép Tin 1: Tin Tổng Hợp PAKH"
+                      >
+                        {copiedSection === 'pakh_summary' ? (
+                          <>
+                            <Check className="h-3.5 w-3.5 text-emerald-600" />
+                            <span className="text-emerald-700 font-bold">Đã chép tin tổng hợp</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-3.5 w-3.5 text-blue-600" />
+                            <span>Chép Tin Tổng Hợp</span>
+                          </>
+                        )}
+                      </button>
+                      <button
+                        onClick={handleCopyPakhDetail}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg shadow-2xs cursor-pointer active:scale-95 transition-all"
+                        title="Sao chép Tin 2: Tin Chi Tiết Tồn Đọng"
+                      >
+                        {copiedSection === 'pakh_detail' ? (
+                          <>
+                            <Check className="h-3.5 w-3.5 text-emerald-600" />
+                            <span className="text-emerald-700 font-bold">Đã chép tin tồn đọng</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-3.5 w-3.5 text-slate-500" />
+                            <span>Chép Tin Tồn Đọng</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
                   {displayedPakh.length === 0 ? (
                     <div className="p-12 text-center text-gray-500 text-sm space-y-2">
                       <p>✅ Không có phản ánh khách hàng (PAKH) nào cần xử lý.</p>
