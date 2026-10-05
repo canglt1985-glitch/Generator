@@ -9,6 +9,7 @@ import DatasiteDetailFullscreen from '../components/datasites/DatasiteDetailFull
 import { useCurrentUser } from '../utils/useCurrentUser';
 import { exportB4RepairProposal, B4_REPAIR_CATEGORIES } from '../utils/b4RepairExporter';
 import { exportMobileEquipmentToExcel } from '../utils/excel';
+import b4ReferenceCatalog from '../data/b4ReferenceCatalog.json';
 
 
 const getTodayDMY = () => {
@@ -170,6 +171,7 @@ export default function DailyWork() {
   const [editingIssue, setEditingIssue] = useState(null);
   const [issueStatus, setIssueStatus] = useState('Chưa XL');
   const [issueResolvedAt, setIssueResolvedAt] = useState('');
+  const [issueB4Filter, setIssueB4Filter] = useState('ALL'); // 'ALL' | 'APPROVED' | 'NEW_PROPOSED'
 
   // Tra cứu trạm hiện tại đang nhập trong form báo hỏng để lấy thiết bị phụ trợ (MPĐ, Máy lạnh)
   const currentMatchedStation = useMemo(() => {
@@ -359,9 +361,20 @@ export default function DailyWork() {
   }, [powerSchedules, searchQuery]);
 
   const filteredDefectsLogs = useMemo(() => {
-    if (!searchQuery.trim()) return defectsLogs;
+    let result = defectsLogs;
+    if (issueB4Filter === 'APPROVED') {
+      result = result.filter(def => def.existing_issues?.b4_approved === true);
+    } else if (issueB4Filter === 'NEW_PROPOSED') {
+      result = result.filter(def => {
+        const issues = def.existing_issues || {};
+        const isMpdOrAc = issues.category === 'Máy phát điện' || issues.category === 'Máy lạnh';
+        return isMpdOrAc && !issues.b4_approved;
+      });
+    }
+
+    if (!searchQuery.trim()) return result;
     const q = searchQuery.toLowerCase();
-    return defectsLogs.filter(def => {
+    return result.filter(def => {
       const issues = def.existing_issues || {};
       return (
         (def.site_id || '').toLowerCase().includes(q) ||
@@ -370,7 +383,19 @@ export default function DailyWork() {
         (issues.reporter || '').toLowerCase().includes(q)
       );
     });
-  }, [defectsLogs, searchQuery]);
+  }, [defectsLogs, searchQuery, issueB4Filter]);
+
+  const approvedB4Count = useMemo(() => {
+    return defectsLogs.filter(d => d.existing_issues?.b4_approved === true).length;
+  }, [defectsLogs]);
+
+  const newProposedB4Count = useMemo(() => {
+    return defectsLogs.filter(d => {
+      const issues = d.existing_issues || {};
+      const isMpdOrAc = issues.category === 'Máy phát điện' || issues.category === 'Máy lạnh';
+      return isMpdOrAc && !issues.b4_approved;
+    }).length;
+  }, [defectsLogs]);
 
   // Autocomplete site suggestions for Daily Log form
   const logSiteSuggestions = useMemo(() => {
@@ -1238,6 +1263,50 @@ export default function DailyWork() {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
+
+        {/* B4 Sub-filters for Issues Tab */}
+        {activeTab === 'issues' && (
+          <div className="flex flex-wrap items-center gap-2 pt-3 mt-3 border-t border-slate-100">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+              <Filter size={12} className="text-slate-400" /> Phân loại B4:
+            </span>
+            <button
+              type="button"
+              onClick={() => setIssueB4Filter('ALL')}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                issueB4Filter === 'ALL'
+                  ? 'bg-slate-800 text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              Tất cả ({defectsLogs.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setIssueB4Filter('APPROVED')}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                issueB4Filter === 'APPROVED'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100'
+              }`}
+            >
+              <span>✅ Đã duyệt B4</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold ${issueB4Filter === 'APPROVED' ? 'bg-white/25 text-white' : 'bg-emerald-200 text-emerald-900'}`}>{approvedB4Count}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setIssueB4Filter('NEW_PROPOSED')}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                issueB4Filter === 'NEW_PROPOSED'
+                  ? 'bg-amber-600 text-white shadow-xs'
+                  : 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100'
+              }`}
+            >
+              <span>🔥 Phát sinh cần đề xuất</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold ${issueB4Filter === 'NEW_PROPOSED' ? 'bg-white/25 text-white' : 'bg-amber-200 text-amber-900'}`}>{newProposedB4Count}</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Content Section */}
@@ -1574,18 +1643,29 @@ export default function DailyWork() {
                                     </button>
                                   </td>
                                   <td className="px-4 py-3 whitespace-nowrap font-semibold text-slate-600">
-                                    <div className="flex items-center gap-1.5">
-                                      <span>{dataDetail.category || '—'}</span>
-                                      {dataDetail.device_type === 'MPD_CO_DINH' && (
-                                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800" title="Đã cấu hình B4 MPĐ Cố định">
-                                          ⚡ B4 MPĐ
+                                    <div className="flex flex-col gap-1">
+                                      <div className="flex items-center gap-1.5">
+                                        <span>{dataDetail.category || '—'}</span>
+                                        {dataDetail.device_type === 'MPD_CO_DINH' && (
+                                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800" title="Đã cấu hình B4 MPĐ Cố định">
+                                            ⚡ B4 MPĐ
+                                          </span>
+                                        )}
+                                        {dataDetail.device_type === 'DHKK' && (
+                                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-cyan-100 text-cyan-800" title="Đã cấu hình B4 ĐHKK">
+                                            ❄️ B4 ĐHKK
+                                          </span>
+                                        )}
+                                      </div>
+                                      {dataDetail.b4_approved ? (
+                                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 w-fit" title={`Đã được TCT/Đài phê duyệt chi phí sửa chữa (STT #${dataDetail.b4_stt || ''})`}>
+                                          ✅ Đã duyệt B4 #{dataDetail.b4_stt || ''}
                                         </span>
-                                      )}
-                                      {dataDetail.device_type === 'DHKK' && (
-                                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-cyan-100 text-cyan-800" title="Đã cấu hình B4 ĐHKK">
-                                          ❄️ B4 ĐHKK
+                                      ) : (dataDetail.category === 'Máy phát điện' || dataDetail.category === 'Máy lạnh') ? (
+                                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 w-fit" title="Tồn tại phát sinh mới, chờ lập danh sách đề xuất đợt tiếp theo">
+                                          ⏳ Chờ đề xuất B4
                                         </span>
-                                      )}
+                                      ) : null}
                                     </div>
                                   </td>
                                   <td className="px-4 py-3 max-w-md truncate font-medium text-slate-800" title={dataDetail.description}>{dataDetail.description}</td>
@@ -2568,6 +2648,23 @@ export default function DailyWork() {
                         </select>
                       </div>
                     </div>
+
+                    {/* Chi tiết nội dung hỏng/sửa diễn giải chuẩn tham chiếu B4 */}
+                    {(() => {
+                      const list = b4ReferenceCatalog[issueDeviceType] || [];
+                      const item = list[issueB4CategoryIdx] || list[0];
+                      if (!item?.dien_giai_chi_tiet) return null;
+                      return (
+                        <div className="p-2.5 bg-amber-100/70 border border-amber-300/60 rounded-lg text-[11px] text-amber-950 space-y-1">
+                          <div className="font-bold flex items-center gap-1.5 text-amber-900">
+                            <span>🔍 Diễn giải nội dung hỏng / sửa chi tiết (Chuẩn tham chiếu B4):</span>
+                          </div>
+                          <p className="text-slate-700 leading-relaxed italic">
+                            {item.dien_giai_chi_tiet}
+                          </p>
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
 

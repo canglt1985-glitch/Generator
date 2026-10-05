@@ -1,0 +1,200 @@
+{
+  "DHKK": [
+    {
+      "idx": 0,
+      "stt": 1,
+      "hang_muc": "Sửa chữa / thay thế máy nén (Compressor)",
+      "dien_giai_chi_tiet": "Cháy block, kẹt block, giảm hiệu suất lạnh, lỗi cuộn dây máy nén, tụ máy nén, quá dòng, quá nhiệt, mất áp suất nén, thay thế compressor"
+    },
+    {
+      "idx": 1,
+      "stt": 2,
+      "hang_muc": "Sửa chữa hệ thống bo mạch điều khiển & điện tử",
+      "dien_giai_chi_tiet": "Mainboard, board công suất, board hiển thị, module inverter, IC điều khiển, nguồn board, lỗi giao tiếp, lỗi điều khiển vận hành"
+    },
+    {
+      "idx": 2,
+      "stt": 3,
+      "hang_muc": "Sửa chữa hệ thống quạt & động cơ quạt",
+      "dien_giai_chi_tiet": "Quạt dàn nóng, quạt dàn lạnh, motor quạt, tụ quạt, cánh quạt, lỗi không quay/quay yếu, rung lắc, tiếng ồn bất thường"
+    },
+    {
+      "idx": 3,
+      "stt": 4,
+      "hang_muc": "Sửa chữa hệ thống môi chất lạnh (Gas lạnh)",
+      "dien_giai_chi_tiet": "Nạp gas, hút chân không, xử lý rò rỉ gas, thay van tiết lưu, phin lọc gas, van điện từ, kiểm tra áp suất gas, xử lý thiếu/thừa gas"
+    },
+    {
+      "idx": 4,
+      "stt": 5,
+      "hang_muc": "Sửa chữa hệ thống cảm biến & điều khiển nhiệt độ",
+      "dien_giai_chi_tiet": "Sensor nhiệt độ, thermostat, relay điều khiển, cảm biến dàn nóng/dàn lạnh, cảm biến phòng, lỗi sai lệch nhiệt độ, lỗi tự ngắt vận hành"
+    },
+    {
+      "idx": 5,
+      "stt": 6,
+      "hang_muc": "Sửa chữa hệ thống điện nguồn & bảo vệ điều hòa",
+      "dien_giai_chi_tiet": "Contactor, CB, MCCB, relay bảo vệ, tụ điện, dây nguồn, terminal điện, chống mất pha, chống quá áp/quá tải, xử lý lỗi cấp nguồn"
+    },
+    {
+      "idx": 6,
+      "stt": 7,
+      "hang_muc": "Sửa chữa hệ thống trao đổi nhiệt (Dàn nóng / Dàn lạnh)",
+      "dien_giai_chi_tiet": "Dàn nóng, dàn lạnh, vệ sinh coil, xử lý ăn mòn, hàn vá/thay thế ống đồng, xử lý thủng coil, nghẹt dàn, giảm hiệu suất trao đổi nhiệt"
+    },
+    {
+      "idx": 7,
+      "stt": 8,
+      "hang_muc": "Sửa chữa hệ thống đường ống đồng & bảo ôn",
+      "dien_giai_chi_tiet": "Đường ống gas, bảo ôn, mối nối ống đồng, hàn nối, rò rỉ ống, suy giảm cách nhiệt, thay thế đường ống"
+    },
+    {
+      "idx": 8,
+      "stt": 9,
+      "hang_muc": "Sửa chữa hệ thống điều khiển trung tâm / Inverter / BMS",
+      "dien_giai_chi_tiet": "Inverter, module điều khiển trung tâm, bộ điều khiển nhóm, gateway BMS, truyền thông điều hòa, lỗi kết nối hệ thống"
+    },
+    {
+      "idx": 9,
+      "stt": 10,
+      "hang_muc": "Sửa chữa hệ thống đường ống đồng & bảo ôn",
+      "dien_giai_chi_tiet": "Đường ống gas, bảo ôn, mối nối ống đồng, hàn nối, rò rỉ ống, suy giảm cách nhiệt, thay thế đường ống"
+    },
+    {
+      "idx": 10,
+      "stt": 11,
+      "hang_muc": "Bảo dưỡng – sửa chữa tổng thể điều hòa",
+      "dien_giai_chi_tiet": "Vệ sinh tổng thể, cân chỉnh vận hành, kiểm tra dòng điện – áp suất – nhiệt độ, siết đầu nối, chạy thử, thay vật tư tiêu hao định kỳ"
+    }
+  ],
+  "MPD_CO_DINH": [
+    {
+      "idx": 0,
+      "stt": 1,
+      "hang_muc": "Đại tu động cơ Diesel",
+      "dien_giai_chi_tiet": "Piston, xylanh, bạc biên, bạc trục cơ, trục cam, xu páp, gioăng, phớt, bơm nhớt, căn chỉnh khe hở, đại tu block máy, kiểm tra áp suất nén, xử lý rung/lệch đồng tâm"
+    },
+    {
+      "idx": 1,
+      "stt": 2,
+      "hang_muc": "Sửa chữa đầu phát điện (Alternator AC)",
+      "dien_giai_chi_tiet": "Cuộn dây stator/rotor, AVR, diode chỉnh lưu, chổi than, vòng tiếp điện, bạc đạn đầu phát, cách điện cuộn dây, xử lý mất pha/dao động điện áp"
+    },
+    {
+      "idx": 2,
+      "stt": 3,
+      "hang_muc": "Sửa chữa hệ thống khởi động & nguồn DC",
+      "dien_giai_chi_tiet": "Củ đề (starter motor), solenoid đề, acquy, bộ sạc acquy, dây nguồn DC, cọc acquy, relay đề, kiểm tra điện áp khởi động, xử lý lỗi không đề/đề yếu"
+    },
+    {
+      "idx": 3,
+      "stt": 4,
+      "hang_muc": "Sửa chữa hệ thống nhiên liệu",
+      "dien_giai_chi_tiet": "Bơm dầu, kim phun, lọc nhiên liệu, đường ống nhiên liệu, bơm tay, bơm cao áp, chỉnh áp suất nhiên liệu, xử lý rò rỉ dầu, nghẹt nhiên liệu, tiêu hao nhiên liệu bất thường"
+    },
+    {
+      "idx": 4,
+      "stt": 5,
+      "hang_muc": "Sửa chữa hệ thống làm mát",
+      "dien_giai_chi_tiet": "Két nước, bơm nước, quạt làm mát, thermostat, cảm biến nhiệt độ, đường ống nước, dung dịch làm mát, xử lý quá nhiệt, rò nước, tuần hoàn làm mát kém"
+    },
+    {
+      "idx": 5,
+      "stt": 6,
+      "hang_muc": "Sửa chữa hệ thống điều khiển & ATS",
+      "dien_giai_chi_tiet": "Controller, ATS, module điều khiển, màn hình HMI, bo mạch điều khiển, cảm biến vận hành, cấu hình logic điều khiển, chế độ Auto/Manual, lỗi chuyển nguồn ATS"
+    },
+    {
+      "idx": 6,
+      "stt": 7,
+      "hang_muc": "Sửa chữa hệ thống điện công suất",
+      "dien_giai_chi_tiet": "CB/MCCB/ACB, contactor công suất, đầu cos, đầu nối, busbar, dây động lực, terminal điện, đo cách điện, xử lý quá tải, chập cháy, mất tiếp xúc công suất"
+    },
+    {
+      "idx": 7,
+      "stt": 8,
+      "hang_muc": "Sửa chữa hệ thống xả – khí nạp",
+      "dien_giai_chi_tiet": "Turbo tăng áp, cổ góp xả, ống xả, tiêu âm, lọc gió, đường ống khí nạp, intercooler (nếu có), xử lý khói đen, hụt công suất, nghẹt khí xả"
+    },
+    {
+      "idx": 8,
+      "stt": 9,
+      "hang_muc": "Sửa chữa hệ thống Relay & bảo vệ",
+      "dien_giai_chi_tiet": "Relay điều khiển, relay trung gian, relay bảo vệ, relay tắt máy, relay báo động, mạch shutdown, mạch bảo vệ áp suất dầu/nhiệt độ, xử lý lỗi logic liên động"
+    },
+    {
+      "idx": 9,
+      "stt": 10,
+      "hang_muc": "Sửa chữa hệ thống nạp DC / Dinamo sạc acquy",
+      "dien_giai_chi_tiet": "Dinamo sạc bình, cuộn stator/rotor, diode chỉnh lưu nạp, regulator sạc, dây curoa, bạc đạn, puly, xử lý lỗi không nạp acquy, điện áp nạp thấp/cao bất thường"
+    },
+    {
+      "idx": 10,
+      "stt": 11,
+      "hang_muc": "Bảo dưỡng – hiệu chỉnh tổng thể MFD",
+      "dien_giai_chi_tiet": "Kiểm tra tải, chạy thử tải giả tải/thực tải, cân chỉnh vận hành, đo điện áp – dòng – tần số, vệ sinh tổng thể, siết đầu nối, kiểm tra thông số vận hành định kỳ"
+    }
+  ],
+  "MPD_DI_DONG": [
+    {
+      "idx": 0,
+      "stt": 1,
+      "hang_muc": "Sửa chữa động cơ máy phát (Diesel/Gasoline Engine)",
+      "dien_giai_chi_tiet": "Đại tu động cơ, piston, xylanh, bạc, trục cơ, gioăng phớt, giảm công suất, khó nổ, rung lắc, hao dầu, khói bất thường, căn chỉnh vận hành"
+    },
+    {
+      "idx": 1,
+      "stt": 2,
+      "hang_muc": "Sửa chữa đầu phát điện (Alternator AC)",
+      "dien_giai_chi_tiet": "AVR, rotor, stator, diode chỉnh lưu, chổi than, vòng tiếp điện, bạc đạn, lỗi điện áp không ổn định, mất pha, không phát điện"
+    },
+    {
+      "idx": 2,
+      "stt": 3,
+      "hang_muc": "Sửa chữa hệ thống khởi động & nguồn DC",
+      "dien_giai_chi_tiet": "Đề nổ (starter), solenoid đề, acquy, bộ sạc acquy, dây nguồn DC, relay đề, lỗi không đề, đề yếu, sụt áp khởi động"
+    },
+    {
+      "idx": 3,
+      "stt": 4,
+      "hang_muc": "Sửa chữa hệ thống nhiên liệu",
+      "dien_giai_chi_tiet": "Bình dầu, bơm dầu, kim phun/chế hòa khí (tùy loại máy), lọc nhiên liệu, đường ống nhiên liệu, van khóa dầu, xử lý rò rỉ, nghẹt nhiên liệu, hao nhiên liệu"
+    },
+    {
+      "idx": 4,
+      "stt": 5,
+      "hang_muc": "Sửa chữa hệ thống làm mát",
+      "dien_giai_chi_tiet": "Quạt làm mát, két nước, bơm nước, cảm biến nhiệt, thermostat, đường nước, lỗi quá nhiệt, rò nước, hiệu suất làm mát kém"
+    },
+    {
+      "idx": 5,
+      "stt": 6,
+      "hang_muc": "Sửa chữa hệ thống điều khiển & hiển thị",
+      "dien_giai_chi_tiet": "Bộ điều khiển, đồng hồ hiển thị, controller, bảng điều khiển, màn hình LCD/LED, cảm biến, công tắc vận hành, cảnh báo lỗi"
+    },
+    {
+      "idx": 6,
+      "stt": 7,
+      "hang_muc": "Sửa chữa khung vỏ – cách âm – cơ khí phụ trợ",
+      "dien_giai_chi_tiet": "Cabin cách âm, khung máy, bánh xe, khung kéo, tay nâng, bản lề, khóa cửa, đệm chống rung, vỏ bảo vệ, xử lý móp méo/gỉ sét"
+    },
+    {
+      "idx": 7,
+      "stt": 8,
+      "hang_muc": "Sửa chữa hệ thống điện đầu ra / điện công suất",
+      "dien_giai_chi_tiet": "CB, MCCB, ổ cắm, contactor, dây tải, đầu nối điện, terminal, đầu cos, đo cách điện, xử lý quá tải/chập cháy"
+    },
+    {
+      "idx": 8,
+      "stt": 9,
+      "hang_muc": "Sửa chữa hệ thống hòa khí / nạp khí (áp dụng theo chủng loại máy)",
+      "dien_giai_chi_tiet": "Bộ chế hòa khí (máy xăng), turbo/đường khí nạp (máy diesel), lọc gió,"
+    },
+    {
+      "idx": 9,
+      "stt": 10,
+      "hang_muc": "Bảo dưỡng tổng thể máy phát điện di động",
+      "dien_giai_chi_tiet": "Vệ sinh máy, thay dầu, thay lọc dầu/lọc gió/lọc nhiên liệu, cân chỉnh vận hành, kiểm tra tải, đo điện áp – dòng – tần số"
+    }
+  ]
+}

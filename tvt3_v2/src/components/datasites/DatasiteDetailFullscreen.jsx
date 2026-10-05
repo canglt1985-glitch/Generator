@@ -10,6 +10,7 @@ import PaymentSchedulePanel from './PaymentSchedulePanel';
 import SiteRfDataPanel from './SiteRfDataPanel';
 import { useCurrentUser } from '../../utils/useCurrentUser';
 import { exportB4RepairProposal, B4_REPAIR_CATEGORIES } from '../../utils/b4RepairExporter';
+import b4ReferenceCatalog from '../../data/b4ReferenceCatalog.json';
 
 export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, onExportExcel, onEditSite, onDeleteSite }) {
   const { user } = useCurrentUser();
@@ -715,7 +716,31 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, on
                             <InfoRow label="Ngày sử dụng" value={item.ngay_su_dung} />
                             <InfoRow label="Bảo hành" value={item.bao_hanh} />
                             <InfoRow label="Mã tài sản" value={item.ma_tai_san} />
+                            {item.ma_vat_tu && <InfoRow label="Mã vật tư EAM" value={item.ma_vat_tu} />}
+                            {item.ma_tai_san_moi && <InfoRow label="Mã TSCĐ mới (2027B)" value={item.ma_tai_san_moi} />}
                           </div>
+
+                          {/* Thông tin phê duyệt sửa chữa B4 */}
+                          {item.b4_approved_repair_2025 && (
+                            <div className="mt-3 p-3 bg-emerald-50/90 border border-emerald-300 rounded-xl space-y-1">
+                              <div className="flex items-center justify-between text-xs font-bold text-emerald-900">
+                                <span className="flex items-center gap-1.5">
+                                  ✅ Đã phê duyệt sửa chữa B4 (TCT / Đài)
+                                </span>
+                                <span className="text-[10px] bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded-full font-mono">
+                                  STT #{item.b4_approved_repair_2025.stt}
+                                </span>
+                              </div>
+                              <div className="text-xs text-slate-700">
+                                <span className="font-semibold text-slate-900">Nội dung duyệt:</span> {item.b4_approved_repair_2025.mo_ta}
+                              </div>
+                              {item.b4_approved_repair_2025.hang_muc && item.b4_approved_repair_2025.hang_muc.length > 0 && (
+                                <div className="text-[11px] text-emerald-800">
+                                  <span className="font-semibold">Hạng mục:</span> {item.b4_approved_repair_2025.hang_muc.join(', ')}
+                                </div>
+                              )}
+                            </div>
+                          )}
 
                           {/* Accu đề con */}
                           {item.accu_de && item.accu_de.length > 0 && (
@@ -1434,6 +1459,23 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, on
                     ))}
                   </select>
                 </div>
+
+                {/* Chi tiết nội dung hỏng/sửa diễn giải chuẩn tham chiếu B4 */}
+                {(() => {
+                  const list = b4ReferenceCatalog[b4DeviceType] || [];
+                  const item = list[b4CategoryIdx] || list[0];
+                  if (!item?.dien_giai_chi_tiet) return null;
+                  return (
+                    <div className="p-2.5 bg-amber-100/70 border border-amber-300/60 rounded-lg text-[11px] text-amber-950 space-y-1">
+                      <div className="font-bold flex items-center gap-1.5 text-amber-900">
+                        <span>🔍 Diễn giải nội dung hỏng / sửa chi tiết (Chuẩn tham chiếu B4):</span>
+                      </div>
+                      <p className="text-slate-700 leading-relaxed italic">
+                        {item.dien_giai_chi_tiet}
+                      </p>
+                    </div>
+                  );
+                })()}
 
                 {/* 1-Tap Quick Tags */}
                 <div className="space-y-1.5">
