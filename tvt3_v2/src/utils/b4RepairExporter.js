@@ -358,11 +358,15 @@ function createReferenceWorksheet(XLSX) {
 export async function exportB4RepairProposal({ items = [], datasites = [], targetCategory = 'ALL', customFileName = '' }) {
   const XLSX = await import('xlsx');
   
-  // Tuyệt đối loại trừ các mục Đề xuất mua ắc quy ra khỏi Biểu mẫu Sửa chữa Ban 4
-  const validItems = items.filter(it => !isBatteryProposal(it));
+  // B4 Ban 4 CHỈ duyệt MPĐ và ĐHKK. Tuyệt đối loại trừ Hạ tầng địa bàn và Ắc quy đề
+  const validItems = items.filter(it => {
+    if (isBatteryProposal(it)) return false;
+    const cat = it.category || it.existing_issues?.category;
+    return cat === 'Máy phát điện' || cat === 'Máy lạnh';
+  });
   
   if (!validItems || validItems.length === 0) {
-    alert('Không có hạng mục sửa chữa nào phù hợp để xuất Biểu mẫu Ban 4 (Các đề xuất mua ắc quy đã được lọc riêng ra bảng mua sắm vật tư)!');
+    alert('Không có hạng mục sửa chữa MPĐ / ĐHKK nào phù hợp để xuất Biểu mẫu Ban 4! (Các đề xuất mua ắc quy và tồn tại hạ tầng địa bàn đã được tách riêng)');
     return;
   }
 
@@ -377,16 +381,13 @@ export async function exportB4RepairProposal({ items = [], datasites = [], targe
 
   const wb = XLSX.utils.book_new();
 
-  // TÁCH CÁC MỤC THEO DANH MỤC
-  const mpdItems = validItems.filter(it => 
-    it.category === 'Máy phát điện' || (it.device_type && it.device_type.includes('MPD'))
-  );
-  const dhkkItems = validItems.filter(it => 
-    it.category === 'Máy lạnh' || it.device_type === 'DHKK'
-  );
-  const mobileMpdItems = validItems.filter(it => 
-    it.device_type === 'MPD_DI_DONG'
-  );
+  // TÁCH CÁC MỤC THEO ĐÚNG 3 NHÓM THIẾT BỊ B4
+  const isMpd = it => (it.category === 'Máy phát điện' || it.existing_issues?.category === 'Máy phát điện');
+  const isDhkk = it => (it.category === 'Máy lạnh' || it.existing_issues?.category === 'Máy lạnh');
+
+  const mpdItems = validItems.filter(it => isMpd(it) && it.device_type !== 'MPD_DI_DONG');
+  const dhkkItems = validItems.filter(it => isDhkk(it));
+  const mobileMpdItems = validItems.filter(it => isMpd(it) && it.device_type === 'MPD_DI_DONG');
 
   // XUẤT CHUNG 1 FILE DUY NHẤT (TOÀN BỘ CÁC SHEET THEO CHUẨN BAN 4)
   if (targetCategory === 'ALL') {
@@ -533,4 +534,101 @@ export async function exportBatteryPurchaseList({ items = [], datasites = [], cu
   const finalFileName = customFileName || `TVT3_De_Xuat_Mua_Sam_Accu_MPD_${todayStr}.xlsx`;
   XLSX.writeFile(wb, finalFileName);
 }
+
+/**
+ * Xuất file Excel Bảng Kê Tồn Tại & Đề Xuất Sửa Chữa Hạ Tầng Địa Bàn
+ * (Hệ thống điện, Nhà trạm, Cột anten, Hệ thống tiếp đất... để Tổ / Đài / Tỉnh xử lý tại địa phương)
+ */
+export async function exportLocalInfrastructureProposal({ items = [], datasites = [], customFileName = '' }) {
+  const XLSX = await import('xlsx');
+  
+  // Lọc các ca thuộc nhóm Hạ tầng địa bàn (không phải MPĐ và ĐHKK)
+  const infraItems = items.filter(it => {
+    const issues = it.existing_issues || it;
+    const cat = issues.category;
+    return cat && cat !== 'Máy phát điện' && cat !== 'Máy lạnh';
+  });
+
+  if (!infraItems || infraItems.length === 0) {
+    alert('Không có tồn tại hạ tầng địa bàn nào để xuất file!');
+    return;
+  }
+
+  const siteMap = {};
+  datasites.forEach(s => {
+    const sId = String(s.site_id || '').trim().toUpperCase();
+    const sOld = String(s.site_id_old || '').trim().toUpperCase();
+    if (sId) siteMap[sId] = s;
+    if (sOld) siteMap[sOld] = s;
+  });
+
+  const wb = XLSX.utils.book_new();
+
+  // Tiêu đề & Header
+  const titleRow = ['TỔNG HỢP TỒN TẠI & ĐỀ XUẤT SỬA CHỮA HẠ TẦNG ĐỊA BÀN - TỔ VIỄN THÔNG 3'];
+  const subTitleRow = [`Thời điểm xuất: ${new Date().toLocaleDateString('vi-VN')} | Đơn vị: Tổ Viễn Thông 3 - Phòng Kỹ thuật Viễn thông | Phạm vi: Sửa chữa tại địa phương`];
+  const emptyRow = [];
+
+  const headers = [
+    'STT', 'Mã trạm mới', 'Mã trạm cũ', 'Tên trạm', 'Huyện / Thị xã', 'Xã / Phường',
+    'Phân nhóm hạ tầng', 'Nội dung tồn tại / Hư hỏng thực tế', 'Đề xuất phương án sửa chữa tại chỗ',
+    'Ngày phát hiện', 'Người báo cáo', 'Tình trạng xử lý', 'Đơn vị thực hiện', 'Ghi chú'
+  ];
+
+  const rows = infraItems.map((item, idx) => {
+    const issues = item.existing_issues || item;
+    const sId = String(item.site_id || issues.site_id || '').trim().toUpperCase();
+    const sObj = siteMap[sId] || {};
+    const loc = sObj.location_info || {};
+
+    return [
+      idx + 1,
+      sObj.site_id || sId,
+      sObj.site_id_old || '-',
+      sObj.name || sObj.site_name || sId,
+      loc.district || sObj.district || '-',
+      loc.ward || sObj.ward || '-',
+      issues.category || 'Hạ tầng',
+      issues.description || '',
+      issues.proposed_solution || 'Sửa chữa / khắc phục tại chỗ',
+      item.date || issues.date || '',
+      issues.reporter || '',
+      issues.status || 'Chưa XL',
+      'Tổ Viễn Thông 3 / Đài ĐN',
+      'Đề xuất sửa chữa địa bàn'
+    ];
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet([
+    titleRow,
+    subTitleRow,
+    emptyRow,
+    headers,
+    ...rows
+  ]);
+
+  ws['!cols'] = [
+    { wch: 6 },  // STT
+    { wch: 14 }, // Mã mới
+    { wch: 14 }, // Mã cũ
+    { wch: 24 }, // Tên trạm
+    { wch: 18 }, // Huyện
+    { wch: 18 }, // Xã
+    { wch: 20 }, // Phân nhóm hạ tầng
+    { wch: 45 }, // Mô tả
+    { wch: 32 }, // Đề xuất
+    { wch: 14 }, // Ngày
+    { wch: 18 }, // Người báo cáo
+    { wch: 14 }, // Tình trạng
+    { wch: 24 }, // Đơn vị
+    { wch: 24 }  // Ghi chú
+  ];
+
+  XLSX.utils.book_append_sheet(wb, ws, 'Ha_Tang_Dia_Ban');
+
+  const todayStr = new Date().toISOString().substring(0, 10).replace(/-/g, '');
+  const finalFileName = customFileName || `TVT3_Ton_Tai_De_Xuat_Sua_Chua_Ha_Tang_Dia_Ban_${todayStr}.xlsx`;
+  XLSX.writeFile(wb, finalFileName);
+}
+
 

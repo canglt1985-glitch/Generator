@@ -3,13 +3,14 @@ import { supabase } from '../supabaseClient';
 import { 
   ClipboardList, Calendar, AlertTriangle, Search, Plus, Edit, Trash, 
   MapPin, User, Clock, CheckCircle2, AlertCircle, Eye, X, Filter, ExternalLink,
-  Zap, Download, Copy, Check, FileText, BatteryCharging
+  Zap, Download, Copy, Check, FileText, BatteryCharging, Wrench
 } from 'lucide-react';
 import DatasiteDetailFullscreen from '../components/datasites/DatasiteDetailFullscreen';
 import { useCurrentUser } from '../utils/useCurrentUser';
 import { 
   exportB4RepairProposal, 
   exportBatteryPurchaseList,
+  exportLocalInfrastructureProposal,
   isBatteryProposal,
   BATTERY_CAPACITY_OPTIONS, 
   BATTERY_STATUS_OPTIONS, 
@@ -752,25 +753,24 @@ export default function DailyWork() {
       targetLogs = filteredDefectsLogs.filter(issue => selectedIssueIds.includes(issue.log_id));
     } else {
       // Tự động lọc danh mục tương ứng nếu không tick chọn checkbox thủ công
-      if (deviceType === 'MPD_CO_DINH' || deviceType === 'MPD_DI_DONG') {
-        const mpdLogs = filteredDefectsLogs.filter(l => 
-          (l.existing_issues?.category === 'Máy phát điện') ||
-          (l.existing_issues?.device_type && l.existing_issues.device_type.includes('MPD'))
+      // CHỈ lấy đúng Máy phát điện hoặc Máy lạnh, tuyệt đối không lấy Hệ thống điện, Nhà trạm, Cột anten...
+      if (deviceType === 'MPD_CO_DINH') {
+        targetLogs = filteredDefectsLogs.filter(l => 
+          l.existing_issues?.category === 'Máy phát điện' && l.existing_issues?.device_type !== 'MPD_DI_DONG'
         );
-        if (mpdLogs.length > 0) targetLogs = mpdLogs;
+      } else if (deviceType === 'MPD_DI_DONG') {
+        targetLogs = filteredDefectsLogs.filter(l => 
+          l.existing_issues?.category === 'Máy phát điện' && l.existing_issues?.device_type === 'MPD_DI_DONG'
+        );
       } else if (deviceType === 'DHKK') {
-        const dhkkLogs = filteredDefectsLogs.filter(l => 
-          (l.existing_issues?.category === 'Máy lạnh') ||
-          (l.existing_issues?.device_type === 'DHKK')
+        targetLogs = filteredDefectsLogs.filter(l => 
+          l.existing_issues?.category === 'Máy lạnh'
         );
-        if (dhkkLogs.length > 0) targetLogs = dhkkLogs;
       } else if (deviceType === 'ALL') {
-        const allRepairLogs = filteredDefectsLogs.filter(l => {
+        targetLogs = filteredDefectsLogs.filter(l => {
           const cat = l.existing_issues?.category;
-          const devType = l.existing_issues?.device_type || '';
-          return cat === 'Máy phát điện' || cat === 'Máy lạnh' || devType.includes('MPD') || devType === 'DHKK';
+          return cat === 'Máy phát điện' || cat === 'Máy lạnh';
         });
-        if (allRepairLogs.length > 0) targetLogs = allRepairLogs;
       }
     }
 
@@ -778,7 +778,7 @@ export default function DailyWork() {
     targetLogs = targetLogs.filter(l => !isBatteryProposal(l));
 
     if (targetLogs.length === 0) {
-      alert("Không có tồn tại sửa chữa MPĐ / ĐHKK nào phù hợp để xuất file B4! (Các ca hỏng ắc quy đề được tách riêng, chờ đợt đề xuất mua sắm)");
+      alert("Không có tồn tại sửa chữa MPĐ / ĐHKK nào phù hợp để xuất file B4! (Các ca hỏng ắc quy đề và hạ tầng địa bàn đã được tách riêng)");
       return;
     }
 
@@ -809,6 +809,29 @@ export default function DailyWork() {
       datasites: stations,
       targetCategory: deviceType,
       customFileName: fileName
+    });
+    setShowB4ExportDropdown(false);
+  }
+
+  function handleExportLocalInfrastructure() {
+    let targetLogs = filteredDefectsLogs;
+    if (selectedIssueIds.length > 0) {
+      targetLogs = filteredDefectsLogs.filter(issue => selectedIssueIds.includes(issue.log_id));
+    } else {
+      targetLogs = defectsLogs.filter(l => {
+        const cat = l.existing_issues?.category;
+        return cat && cat !== 'Máy phát điện' && cat !== 'Máy lạnh';
+      });
+    }
+
+    if (targetLogs.length === 0) {
+      alert("Không có tồn tại hạ tầng địa bàn nào (Hệ thống điện, Nhà trạm, Cột anten...) để xuất file!");
+      return;
+    }
+
+    exportLocalInfrastructureProposal({
+      items: targetLogs,
+      datasites: stations
     });
     setShowB4ExportDropdown(false);
   }
@@ -1276,6 +1299,26 @@ export default function DailyWork() {
                         <div>
                           <div>🔋 Bảng kê Mua sắm Ắc quy đề MPĐ</div>
                           <div className="text-[10px] font-normal text-teal-700">Tách riêng {defectsLogs.filter(d => isBatteryProposal(d)).length} bình chờ đợt đề xuất mua sắm</div>
+                        </div>
+                      </button>
+                    </div>
+
+                    <div className="border-t border-slate-100 my-1 pt-1">
+                      <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-700">
+                        Hạ tầng mạng lưới (Sửa chữa tại địa bàn):
+                      </div>
+                      <button
+                        onClick={handleExportLocalInfrastructure}
+                        className="w-full text-left px-3 py-2 text-xs font-bold text-amber-950 bg-amber-50 hover:bg-amber-100/90 rounded-lg flex items-center gap-2 cursor-pointer border border-amber-200/80 transition-all"
+                        title="Xuất bảng kê các tồn tại thuộc Hệ thống điện, Nhà trạm, Cột anten, Tiếp đất để địa bàn/Tỉnh xử lý"
+                      >
+                        <Wrench size={16} className="text-amber-600 shrink-0" />
+                        <div>
+                          <div>🏗️ Bảng kê Sửa chữa Hạ tầng Địa bàn</div>
+                          <div className="text-[10px] font-normal text-amber-700">Tách riêng {defectsLogs.filter(d => {
+                            const c = d.existing_issues?.category;
+                            return c && c !== 'Máy phát điện' && c !== 'Máy lạnh';
+                          }).length} ca điện, trạm, cột, tiếp đất</div>
                         </div>
                       </button>
                     </div>

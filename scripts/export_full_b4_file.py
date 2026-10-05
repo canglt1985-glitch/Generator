@@ -111,9 +111,10 @@ def main():
         cat = issues.get('category')
         dev_type = issues.get('device_type') or ''
         
-        if cat == 'Máy phát điện' or 'MPD' in dev_type:
+        # B4 Ban 4 CHỈ duyệt MPĐ và ĐHKK. Tuyệt đối không lấy Hệ thống điện, Nhà trạm, Cột anten, Tiếp đất...
+        if cat == 'Máy phát điện':
             mpd_new_items.append(d)
-        elif cat == 'Máy lạnh' or dev_type == 'DHKK':
+        elif cat == 'Máy lạnh':
             dhkk_new_items.append(d)
 
     print(f"⚡ Số ca MPĐ cố định phát sinh cần đề xuất B4: {len(mpd_new_items)}")
@@ -302,15 +303,106 @@ def main():
         current_stt_dhkk += 1
         write_row_dhkk += 1
 
-    # Lưu file
+    # Lưu file B4
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     wb.save(OUTPUT_FILE)
     print(f"\n🎉 THÀNH CÔNG! Đã xuất trọn bộ Biểu mẫu B4 chung 1 file duy nhất:")
     print(f"👉 {OUTPUT_FILE}")
-    print(f"   - Sheet 'Máy phát điện_Cố định': Gồm 28 ca cũ đã duyệt + {len(mpd_new_items)} ca mới (100% không lẫn ắc quy)")
+    print(f"   - Sheet 'Máy phát điện_Cố định': Gồm 28 ca cũ đã duyệt + {len(mpd_new_items)} ca mới (100% không lẫn ắc quy, không lẫn hạ tầng)")
     print(f"   - Sheet 'Điều hòa': Gồm {len(dhkk_new_items)} ca máy lạnh phát sinh cần đề xuất")
     print(f"   - Sheet 'Máy phát điện_Di động': Giữ nguyên cấu trúc chuẩn")
     print(f"   - Sheet 'Diễn giải DM hỏng tham chiếu': Đầy đủ 11 danh mục kỹ thuật Ban 4")
+
+    # -------------------------------------------------------------------------
+    # XUẤT FILE RIÊNG: TỒN TẠI & ĐỀ XUẤT SỬA CHỮA HẠ TẦNG ĐỊA BÀN
+    # (Hệ thống điện, Nhà trạm, Cột anten, Hệ thống tiếp đất...)
+    # -------------------------------------------------------------------------
+    infra_items = []
+    for d in defects:
+        issues = d.get('existing_issues') or {}
+        cat = issues.get('category')
+        # Lấy tất cả các ca thuộc Hạ tầng địa bàn (không phải MPĐ và ĐHKK)
+        if cat in ['Hệ thống điện', 'Nhà trạm', 'Cột anten', 'Hệ thống tiếp đất', 'Khác', 'Thiết bị vô tuyến']:
+            infra_items.append(d)
+
+    print(f"\n🏗️ Đang xuất File Tồn tại & Đề xuất Sửa chữa Hạ tầng Địa bàn ({len(infra_items)} ca)...")
+    wb_infra = openpyxl.Workbook()
+    ws_infra = wb_infra.active
+    ws_infra.title = "Ha_Tang_Dia_Ban"
+
+    title_fill = PatternFill(start_color="1F497D", end_color="1F497D", fill_type="solid")
+    header_fill = PatternFill(start_color="DCE6F1", end_color="DCE6F1", fill_type="solid")
+    white_bold = Font(name="Times New Roman", size=14, bold=True, color="FFFFFF")
+    header_font = Font(name="Times New Roman", size=11, bold=True, color="000000")
+
+    # Tiêu đề
+    ws_infra.merge_cells("A1:K1")
+    ws_infra.cell(1, 1, "TỔNG HỢP TỒN TẠI & ĐỀ XUẤT SỬA CHỮA HẠ TẦNG ĐỊA BÀN - TỔ VIỄN THÔNG 3")
+    ws_infra.cell(1, 1).font = white_bold
+    ws_infra.cell(1, 1).fill = title_fill
+    ws_infra.cell(1, 1).alignment = Alignment(horizontal="center", vertical="center")
+    ws_infra.row_dimensions[1].height = 35
+
+    ws_infra.merge_cells("A2:K2")
+    ws_infra.cell(2, 1, f"Đơn vị: Tổ Viễn Thông 3 | Thời điểm xuất: {datetime.now().strftime('%d/%m/%Y')} | Phạm vi: Nội bộ Tỉnh / Đài xử lý tại địa bàn")
+    ws_infra.cell(2, 1).font = Font(name="Times New Roman", size=10, italic=True)
+    ws_infra.cell(2, 1).alignment = Alignment(horizontal="center", vertical="center")
+
+    infra_headers = [
+        "STT", "Mã trạm mới", "Mã trạm cũ", "Tên trạm", "Huyện / Thị xã",
+        "Phân nhóm hạ tầng", "Chi tiết tồn tại / Hư hỏng thực tế", "Đề xuất phương án sửa chữa tại chỗ",
+        "Ngày phát hiện", "Người báo cáo", "Tình trạng xử lý"
+    ]
+    ws_infra.append([]) # Dòng 3 trống
+    ws_infra.append(infra_headers) # Dòng 4 header
+    ws_infra.row_dimensions[4].height = 28
+
+    for col_idx in range(1, len(infra_headers) + 1):
+        c = ws_infra.cell(4, col_idx)
+        c.fill = header_fill
+        c.font = header_font
+        c.alignment = center_align
+        c.border = thin_border
+
+    for idx, item in enumerate(infra_items, start=1):
+        s_id = str(item.get("site_id") or "").strip().upper()
+        s_obj = site_map.get(s_id) or {}
+        loc = s_obj.get("location_info") or {}
+        issues = item.get("existing_issues") or {}
+
+        r_data = [
+            idx,
+            s_obj.get("site_id") or s_id,
+            s_obj.get("site_id_old") or "-",
+            s_obj.get("name") or s_obj.get("site_name") or s_id,
+            loc.get("district") or s_obj.get("district") or "-",
+            issues.get("category") or "Hạ tầng",
+            issues.get("description") or "",
+            issues.get("proposed_solution") or "Sửa chữa / khắc phục tại chỗ",
+            item.get("date") or "",
+            issues.get("reporter") or "",
+            issues.get("status") or "Chưa XL"
+        ]
+        ws_infra.append(r_data)
+        curr_row = 4 + idx
+        for c_idx in range(1, len(r_data) + 1):
+            cell = ws_infra.cell(curr_row, c_idx)
+            cell.font = regular_font
+            cell.border = thin_border
+            if c_idx in [1, 2, 3, 5, 6, 9, 10, 11]:
+                cell.alignment = center_align
+            else:
+                cell.alignment = left_align
+
+    # Set column widths
+    widths = [6, 14, 14, 24, 18, 18, 45, 30, 14, 18, 14]
+    for i, w in enumerate(widths, start=1):
+        col_letter = openpyxl.utils.get_column_letter(i)
+        ws_infra.column_dimensions[col_letter].width = w
+
+    infra_filename = os.path.join(OUTPUT_DIR, f"TVT3_Ton_Tai_De_Xuat_Sua_Chua_Ha_Tang_Dia_Ban_{datetime.now().strftime('%Y%m%d')}.xlsx")
+    wb_infra.save(infra_filename)
+    print(f"👉 File Đề xuất Hạ tầng Địa bàn: {infra_filename}")
 
 if __name__ == '__main__':
     main()
