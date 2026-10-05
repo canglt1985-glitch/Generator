@@ -40,9 +40,14 @@ STATION_ERP_MAPPINGS = {
     'DNIDQN1': {'book_site': 'DNLTB8', 'erp_code': '00042789', 'ma_vt': '00042789100010', 'ma_tscd_moi': '2027B1500000980'},
     'DNLK73': {'book_site': 'DNTN24', 'erp_code': '00021782', 'ma_vt': '00021782100001', 'ma_tscd_moi': '2027B1500000773'},
     'DNTNL2': {'book_site': 'DNITNT1', 'erp_code': '00021860', 'ma_vt': '00021860100001', 'ma_tscd_moi': '2027B1500000882'},
+    'DNTP23': {'book_site': 'DNTP23', 'erp_code': '00021837', 'ma_vt': '00021837100001', 'ma_tscd_moi': '2027B1500000613'},
     'DNTP30': {'book_site': 'DNTP08', 'erp_code': '00021002', 'ma_vt': '00021002100001', 'ma_tscd_moi': '2027B1500000130'},
+    'DNTP34': {'book_site': 'DNTP42', 'erp_code': '00020491', 'ma_vt': '00020491100001', 'ma_tscd_moi': '2027B1500000140'},
     'DNTP42': {'book_site': 'DNTP42', 'erp_code': '00020491', 'ma_vt': '00020491100001', 'ma_tscd_moi': '2027B1500000140'},
     'DNTP53': {'book_site': 'DNTN43', 'erp_code': '00022160', 'ma_vt': '00022160100001', 'ma_tscd_moi': '2027B1500000153'},
+    'DNDQ25': {'book_site': 'DNDQ23', 'erp_code': '00020990', 'ma_vt': '00020990100001', 'ma_tscd_moi': '2027B1500000490'},
+    'DNLK37': {'book_site': 'DNLK14', 'erp_code': '00020612', 'ma_vt': '00020612100001', 'ma_tscd_moi': '2027B1500000717'},
+    'DNDQ41': {'book_site': 'DNDQ05', 'erp_code': '00020930', 'ma_vt': '00020930100001', 'ma_tscd_moi': '2027B1500000858'},
     'DNXL37': {'book_site': 'DNLK40', 'erp_code': '00020650', 'ma_vt': '00020650100001', 'ma_tscd_moi': '2027B1500000937'},
     'DNXL49': {'book_site': 'DNLK27', 'erp_code': '00021048', 'ma_vt': '00021048100001', 'ma_tscd_moi': '2027B1500000949'},
     'DNXL65': {'book_site': 'DNTP03', 'erp_code': '00020811', 'ma_vt': '00020811100001', 'ma_tscd_moi': '2027B1500000965'},
@@ -109,7 +114,6 @@ def main():
             continue
             
         cat = issues.get('category')
-        dev_type = issues.get('device_type') or ''
         
         # B4 Ban 4 CHỈ duyệt MPĐ và ĐHKK. Tuyệt đối không lấy Hệ thống điện, Nhà trạm, Cột anten, Tiếp đất...
         if cat == 'Máy phát điện':
@@ -125,22 +129,52 @@ def main():
         raise FileNotFoundError(f"Không tìm thấy file mẫu: {ORIGINAL_TEMPLATE}")
 
     wb = openpyxl.load_workbook(ORIGINAL_TEMPLATE)
+    
+    # === HỆ THỐNG THẨM MỸ EXECUTIVE DESIGN SYSTEM ===
     thin_border = Border(
-        left=Side(style='thin', color='D3D3D3'),
-        right=Side(style='thin', color='D3D3D3'),
-        top=Side(style='thin', color='D3D3D3'),
-        bottom=Side(style='thin', color='D3D3D3')
+        left=Side(style='thin', color='A6A6A6'),
+        right=Side(style='thin', color='A6A6A6'),
+        top=Side(style='thin', color='A6A6A6'),
+        bottom=Side(style='thin', color='A6A6A6')
     )
-    regular_font = Font(name='Times New Roman', size=11)
-    bold_font = Font(name='Times New Roman', size=11, bold=True)
+    
+    header_info_fill = PatternFill(start_color='D9E1F2', end_color='D9E1F2', fill_type='solid')   # Xanh Băng thanh lịch
+    header_cat_fill = PatternFill(start_color='FCE4D6', end_color='FCE4D6', fill_type='solid')    # Cam Nhạt kỹ thuật
+    defect_badge_fill = PatternFill(start_color='FFF2CC', end_color='FFF2CC', fill_type='solid')  # Vàng Nắng ấm nổi bật
+    
+    header_font = Font(name='Times New Roman', size=11, bold=True, color='000000')
+    header2_font = Font(name='Times New Roman', size=10, bold=True, italic=True, color='333333')
+    regular_font = Font(name='Times New Roman', size=11, bold=False, color='000000')
+    bold_site_font = Font(name='Times New Roman', size=11, bold=True, color='000000')
+    defect_x_font = Font(name='Times New Roman', size=12, bold=True, color='C00000')              # Đỏ MobiFone đậm
+    
     center_align = Alignment(horizontal='center', vertical='center')
     left_align = Alignment(horizontal='left', vertical='center')
+    left_wrap_align = Alignment(horizontal='left', vertical='center', wrap_text=True)
+    right_align = Alignment(horizontal='right', vertical='center')
 
-    # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
     # SHEET 1: Máy phát điện_Cố định (26 Cột) - XUẤT ĐỢT 2 (CHƯA DUYỆT)
     # -------------------------------------------------------------------------
     ws_mpd = wb['Máy phát điện_Cố định']
+    ws_mpd.sheet_properties.tabColor = 'ED7D31'  # Tab màu Đỏ Cam
+    
+    # Định dạng Header Row 1 & 2
+    ws_mpd.row_dimensions[1].height = 68
+    ws_mpd.row_dimensions[2].height = 22
+    for c in range(1, 27):
+        fill = header_info_fill if c <= 15 else header_cat_fill
+        c1 = ws_mpd.cell(1, c)
+        c1.font = header_font
+        c1.fill = fill
+        c1.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+        c1.border = thin_border
+        
+        c2 = ws_mpd.cell(2, c)
+        c2.font = header2_font
+        c2.fill = fill
+        c2.alignment = center_align
+        c2.border = thin_border
     
     # Xóa sạch các dòng cũ nếu có từ dòng 3 trở đi để chỉ xuất danh sách trình duyệt mới
     if ws_mpd.max_row > 2:
@@ -201,18 +235,43 @@ def main():
 
         row_vals = [
             current_stt, 'Đồng Nai', display_site_id, phan_loai, ten_tb,
-            ma_vt, ma_tscd, serial, ngay_sd, hang_sx,
+            str(ma_vt) if ma_vt else '', str(ma_tscd) if ma_tscd else '',
+            str(serial) if serial else '', ngay_sd, hang_sx,
             cong_suat, cong_cu_ql, so_lan_sua, mo_ta, chi_phi
         ] + cat_marks
 
+        ws_mpd.row_dimensions[write_row].height = 30
+
         for col_idx, val in enumerate(row_vals, start=1):
             cell = ws_mpd.cell(write_row, col_idx, val)
-            cell.font = regular_font
             cell.border = thin_border
-            if col_idx in [1, 2, 4, 9, 10, 11, 12, 13] or col_idx >= 16:
+            
+            # Cột Mã trạm: In đậm
+            if col_idx == 3:
+                cell.font = bold_site_font
                 cell.alignment = center_align
+            # Cột Mô tả hư hỏng: Canh trái, wrap text
+            elif col_idx == 14:
+                cell.font = regular_font
+                cell.alignment = left_wrap_align
+            # Cột Chi phí: Canh phải
+            elif col_idx == 15:
+                cell.font = regular_font
+                cell.alignment = right_align
+            # 11 Cột Hạng mục lỗi kỹ thuật: Nếu có 'X' thì nổi bật Badge Vàng + Chữ Đỏ
+            elif col_idx >= 16:
+                if val == 'X':
+                    cell.font = defect_x_font
+                    cell.fill = defect_badge_fill
+                else:
+                    cell.font = regular_font
+                cell.alignment = center_align
+            # Toàn bộ các cột mã và thông số khác: Canh giữa chuẩn mực
             else:
-                cell.alignment = left_align
+                cell.font = regular_font
+                cell.alignment = center_align
+                if col_idx == 6:
+                    cell.number_format = '@'  # Đảm bảo mã VT 14 số không mất số 0 đầu
 
         current_stt += 1
         write_row += 1
@@ -221,6 +280,24 @@ def main():
     # SHEET 2: Điều hòa (25 Cột) - XUẤT ĐỢT 2 (CHƯA DUYỆT)
     # -------------------------------------------------------------------------
     ws_dhkk = wb['Điều hòa']
+    ws_dhkk.sheet_properties.tabColor = '2E75B6'  # Tab màu Xanh Dương MobiFone
+    
+    # Định dạng Header Row 1 & 2
+    ws_dhkk.row_dimensions[1].height = 68
+    ws_dhkk.row_dimensions[2].height = 22
+    for c in range(1, 26):
+        fill = header_info_fill if c <= 14 else header_cat_fill
+        c1 = ws_dhkk.cell(1, c)
+        c1.font = header_font
+        c1.fill = fill
+        c1.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+        c1.border = thin_border
+        
+        c2 = ws_dhkk.cell(2, c)
+        c2.font = header2_font
+        c2.fill = fill
+        c2.alignment = center_align
+        c2.border = thin_border
     
     if ws_dhkk.max_row > 2:
         ws_dhkk.delete_rows(3, ws_dhkk.max_row - 2)
@@ -278,21 +355,52 @@ def main():
 
         row_vals = [
             current_stt_dhkk, 'Đồng Nai', display_site_id, phan_loai, ten_tb,
-            ma_tscd, serial, ngay_sd, hang_sx, cong_suat,
+            str(ma_tscd) if ma_tscd else '', str(serial) if serial else '',
+            ngay_sd, hang_sx, cong_suat,
             cong_cu_ql, so_lan_sua, mo_ta, chi_phi
         ] + cat_marks
 
+        ws_dhkk.row_dimensions[write_row_dhkk].height = 30
+
         for col_idx, val in enumerate(row_vals, start=1):
             cell = ws_dhkk.cell(write_row_dhkk, col_idx, val)
-            cell.font = regular_font
             cell.border = thin_border
-            if col_idx in [1, 2, 4, 8, 9, 10, 11, 12] or col_idx >= 15:
+            
+            # Cột Mã trạm: In đậm
+            if col_idx == 3:
+                cell.font = bold_site_font
                 cell.alignment = center_align
+            # Cột Mô tả hư hỏng: Canh trái, wrap text
+            elif col_idx == 13:
+                cell.font = regular_font
+                cell.alignment = left_wrap_align
+            # Cột Chi phí: Canh phải
+            elif col_idx == 14:
+                cell.font = regular_font
+                cell.alignment = right_align
+            # 11 Cột Hạng mục lỗi kỹ thuật: Nếu có 'X' thì nổi bật Badge Vàng + Chữ Đỏ
+            elif col_idx >= 15:
+                if val == 'X':
+                    cell.font = defect_x_font
+                    cell.fill = defect_badge_fill
+                else:
+                    cell.font = regular_font
+                cell.alignment = center_align
+            # Toàn bộ các cột mã và thông số khác: Canh giữa chuẩn mực
             else:
-                cell.alignment = left_align
+                cell.font = regular_font
+                cell.alignment = center_align
+                if col_idx == 6:
+                    cell.number_format = '@'  # Đảm bảo mã VT/CCDC 14 số không mất số 0 đầu
 
         current_stt_dhkk += 1
         write_row_dhkk += 1
+
+    # Format Tab colors cho các sheet còn lại
+    if 'Máy phát điện_Di động' in wb.sheetnames:
+        wb['Máy phát điện_Di động'].sheet_properties.tabColor = 'FFC000'
+    if 'Diễn giải DM hỏng tham chiếu' in wb.sheetnames:
+        wb['Diễn giải DM hỏng tham chiếu'].sheet_properties.tabColor = '708090'
 
     # Lưu file B4
     os.makedirs(OUTPUT_DIR, exist_ok=True)

@@ -1,8 +1,20 @@
 /**
  * Module: b4RepairExporter.js
  * Chuẩn hóa Xuất Biểu Mẫu Chuyên Môn Sửa Chữa B4 (Máy Phát Điện & Điều Hòa Không Khí)
+ * Sử dụng ExcelJS Executive Styling: Times New Roman, Header Phối Màu, Badge X Nổi Bật.
  * Khớp 100% Biểu mẫu đã được TCT và Đài Viễn thông phê duyệt.
  */
+
+import { saveAs } from 'file-saver';
+
+let _ExcelJS = null;
+const getExcelJS = async () => {
+  if (!_ExcelJS) {
+    const m = await import('exceljs');
+    _ExcelJS = m.default || m;
+  }
+  return _ExcelJS;
+};
 
 // 11 Hạng mục kỹ thuật chuẩn hóa B4 (Khớp Sheet "Diễn giải DM hỏng tham chiếu")
 export const B4_REPAIR_CATEGORIES = {
@@ -46,19 +58,24 @@ export const B4_REPAIR_CATEGORIES = {
   ]
 };
 
-// Từ điển Mapping 17 Trạm Điều Chuyển (Trạm Thực Tế -> Trạm Sổ Sách Kế Toán ERP & Mã Tài Sản)
+// Từ điển Mapping Trạm Điều Chuyển (Trạm Thực Tế -> Trạm Sổ Sách Kế Toán ERP, Mã Vật Tư 14 số & Mã TSCĐ)
 export const STATION_ERP_MAPPINGS = {
   'DNCM14': { book_site: 'DNCM11', erp_code: '00021130', ma_vt: '00021130100001', ma_tscd_moi: '2027B1500000924' },
   'DNCM15': { book_site: 'DNCM23', erp_code: '00021649', ma_vt: '00021649100001', ma_tscd_moi: '2027B1500000925' },
   'DNCM45': { book_site: 'DNLK71', erp_code: '00022222', ma_vt: '00022222100001', ma_tscd_moi: '2027B1500000671' },
   'DNDQ03': { book_site: 'DNTP44', erp_code: '00020511', ma_vt: '00020511100001', ma_tscd_moi: '2027B1500000640' },
   'DNDQ16': { book_site: 'DNDQ16', erp_code: '00021185', ma_vt: '00021185100001', ma_tscd_moi: '' },
+  'DNDQ25': { book_site: 'DNDQ23', erp_code: '00020990', ma_vt: '00020990100001', ma_tscd_moi: '2027B1500000490' },
   'DNDQ31': { book_site: 'DNDQ51', erp_code: '00020505', ma_vt: '00020505100001', ma_tscd_moi: '2027B1500000631' },
+  'DNDQ41': { book_site: 'DNDQ05', erp_code: '00020930', ma_vt: '00020930100001', ma_tscd_moi: '2027B1500000858' },
   'DNDQ58': { book_site: 'DNDQ31', erp_code: '00020493', ma_vt: '00020493100001', ma_tscd_moi: '2027B1500000638' },
   'DNIDQN1': { book_site: 'DNLTB8', erp_code: '00042789', ma_vt: '00042789100010', ma_tscd_moi: '2027B1500000980' },
+  'DNLK37': { book_site: 'DNLK14', erp_code: '00020612', ma_vt: '00020612100001', ma_tscd_moi: '2027B1500000717' },
   'DNLK73': { book_site: 'DNTN24', erp_code: '00021782', ma_vt: '00021782100001', ma_tscd_moi: '2027B1500000773' },
   'DNTNL2': { book_site: 'DNITNT1', erp_code: '00021860', ma_vt: '00021860100001', ma_tscd_moi: '2027B1500000882' },
+  'DNTP23': { book_site: 'DNTP23', erp_code: '00021837', ma_vt: '00021837100001', ma_tscd_moi: '2027B1500000613' },
   'DNTP30': { book_site: 'DNTP08', erp_code: '00021002', ma_vt: '00021002100001', ma_tscd_moi: '2027B1500000130' },
+  'DNTP34': { book_site: 'DNTP42', erp_code: '00020491', ma_vt: '00020491100001', ma_tscd_moi: '2027B1500000140' },
   'DNTP42': { book_site: 'DNTP42', erp_code: '00020491', ma_vt: '00020491100001', ma_tscd_moi: '2027B1500000140' },
   'DNTP53': { book_site: 'DNTN43', erp_code: '00022160', ma_vt: '00022160100001', ma_tscd_moi: '2027B1500000153' },
   'DNXL37': { book_site: 'DNLK40', erp_code: '00020650', ma_vt: '00020650100001', ma_tscd_moi: '2027B1500000937' },
@@ -92,7 +109,7 @@ export const BATTERY_POLE_OPTIONS = [
   'Cọc bắt bulong / ốc vít'
 ];
 
-// Hàm nhận diện chuẩn xác đề xuất mua ắc quy đề MPĐ (bao gồm cả từ khóa accu, acquy, bình đề...)
+// Hàm nhận diện chuẩn xác đề xuất mua ắc quy đề MPĐ
 export function isBatteryProposal(item) {
   if (!item) return false;
   const issues = item.existing_issues || item;
@@ -110,7 +127,36 @@ export function isBatteryProposal(item) {
          desc.includes('bình ắc');
 }
 
-function createMpdCoDinhWorksheet(items, siteMap, XLSX) {
+// === HỆ THỐNG THẨM MỸ EXECUTIVE DESIGN SYSTEM ===
+const THIN_BORDER = {
+  top: { style: 'thin', color: { argb: 'FFA6A6A6' } },
+  left: { style: 'thin', color: { argb: 'FFA6A6A6' } },
+  bottom: { style: 'thin', color: { argb: 'FFA6A6A6' } },
+  right: { style: 'thin', color: { argb: 'FFA6A6A6' } }
+};
+
+const FONT_HEADER = { name: 'Times New Roman', size: 11, bold: true, color: { argb: 'FF000000' } };
+const FONT_HEADER2 = { name: 'Times New Roman', size: 10, bold: true, italic: true, color: { argb: 'FF333333' } };
+const FONT_REGULAR = { name: 'Times New Roman', size: 11, bold: false, color: { argb: 'FF000000' } };
+const FONT_BOLD_SITE = { name: 'Times New Roman', size: 11, bold: true, color: { argb: 'FF000000' } };
+const FONT_DEFECT_X = { name: 'Times New Roman', size: 12, bold: true, color: { argb: 'FFC00000' } };
+
+const FILL_HEADER_INFO = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9E1F2' } };
+const FILL_HEADER_CAT = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFCE4D6' } };
+const FILL_DEFECT_BADGE = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF2CC' } };
+
+const ALIGN_CENTER = { horizontal: 'center', vertical: 'middle' };
+const ALIGN_LEFT_WRAP = { horizontal: 'left', vertical: 'middle', wrapText: true };
+const ALIGN_RIGHT = { horizontal: 'right', vertical: 'middle' };
+
+/**
+ * Xây dựng Sheet Máy phát điện Cố định (26 Cột) bằng ExcelJS
+ */
+function buildFixedGeneratorSheet(workbook, sheetName, items, siteMap) {
+  const ws = workbook.addWorksheet(sheetName, {
+    properties: { tabColor: { argb: 'FFED7D31' } }
+  });
+
   const headerRow1 = [
     'STT', 'Tỉnh', 'Mã ERP trạm đặt thiết bị', 'Phân loại', 'Tên thiết bị/vật tư',
     'thiết bị/vật tư', 'Mã tài sản/ mã CCDC', 'Serial (CÓ THÌ GHI, KHÔNG THÌ ĐỂ TRỐNG)',
@@ -131,17 +177,36 @@ function createMpdCoDinhWorksheet(items, siteMap, XLSX) {
     '(16)', '(17)', '(18)', '(19)', '(20)', '(21)', '(22)', '(23)', '(24)', '(25)', '(26)'
   ];
 
-  const rows = [headerRow1, headerRow2];
+  // Header 1
+  const r1 = ws.addRow(headerRow1);
+  r1.height = 68;
+  r1.eachCell((cell, colNumber) => {
+    cell.font = FONT_HEADER;
+    cell.fill = colNumber <= 15 ? FILL_HEADER_INFO : FILL_HEADER_CAT;
+    cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+    cell.border = THIN_BORDER;
+  });
 
-  items.forEach((item, idx) => {
-    const rawSiteId = String(item.site_id || item.site_code || item.tram || '').trim().toUpperCase();
+  // Header 2
+  const r2 = ws.addRow(headerRow2);
+  r2.height = 22;
+  r2.eachCell((cell, colNumber) => {
+    cell.font = FONT_HEADER2;
+    cell.fill = colNumber <= 15 ? FILL_HEADER_INFO : FILL_HEADER_CAT;
+    cell.alignment = ALIGN_CENTER;
+    cell.border = THIN_BORDER;
+  });
+
+  // Data rows
+  items.forEach((d, idx) => {
+    const rawSiteId = String(d.site_id || d.site_code || d.tram || '').trim().toUpperCase();
     const erpMap = STATION_ERP_MAPPINGS[rawSiteId];
     const siteObj = siteMap[rawSiteId] || (erpMap ? siteMap[erpMap.book_site] : {}) || {};
-    // ƯU TIÊN LẤY THEO TÊN CŨ (Mã trạm cũ) THEO YÊU CẦU BAN 4
     const displaySiteId = erpMap ? erpMap.book_site : (siteObj.site_id_old || rawSiteId);
     const infra = siteObj.infrastructure_info || {};
     const mpdList = infra.may_phat_dien?.mpd || [];
     const equip = mpdList[0] || {};
+    const item = d.existing_issues || d;
 
     const phanLoai = item.phan_loai || equip.phan_loai || (equip.ma_tai_san_moi ? 'TSCĐ' : 'Hiện vật');
     const tenThietBi = 'Máy phát điện';
@@ -183,15 +248,15 @@ function createMpdCoDinhWorksheet(items, siteMap, XLSX) {
       catCols.push(selectedCats.has(i) ? 'X' : null);
     }
 
-    rows.push([
+    const rowData = [
       idx + 1,
       'Đồng Nai',
       displaySiteId,
       phanLoai,
       tenThietBi,
-      maVT,
-      maTSCD,
-      serial,
+      maVT ? String(maVT) : '',
+      maTSCD ? String(maTSCD) : '',
+      serial ? String(serial) : '',
       ngayDuaVaoSD,
       hangSX,
       congSuat,
@@ -200,21 +265,57 @@ function createMpdCoDinhWorksheet(items, siteMap, XLSX) {
       moTaHuHong,
       chiPhiDuKien,
       ...catCols
-    ]);
+    ];
+
+    const row = ws.addRow(rowData);
+    row.height = 30;
+
+    row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+      cell.border = THIN_BORDER;
+
+      if (colNumber === 3) {
+        cell.font = FONT_BOLD_SITE;
+        cell.alignment = ALIGN_CENTER;
+      } else if (colNumber === 14) {
+        cell.font = FONT_REGULAR;
+        cell.alignment = ALIGN_LEFT_WRAP;
+      } else if (colNumber === 15) {
+        cell.font = FONT_REGULAR;
+        cell.alignment = ALIGN_RIGHT;
+        if (cell.value) cell.numFmt = '#,##0';
+      } else if (colNumber >= 16) {
+        if (cell.value === 'X') {
+          cell.font = FONT_DEFECT_X;
+          cell.fill = FILL_DEFECT_BADGE;
+        } else {
+          cell.font = FONT_REGULAR;
+        }
+        cell.alignment = ALIGN_CENTER;
+      } else {
+        cell.font = FONT_REGULAR;
+        cell.alignment = ALIGN_CENTER;
+        if (colNumber === 6) cell.numFmt = '@';
+      }
+    });
   });
 
-  const ws = XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols'] = [
-    { wch: 6 }, { wch: 12 }, { wch: 16 }, { wch: 12 }, { wch: 18 },
-    { wch: 18 }, { wch: 20 }, { wch: 22 }, { wch: 16 }, { wch: 16 },
-    { wch: 14 }, { wch: 16 }, { wch: 14 }, { wch: 40 }, { wch: 22 },
-    { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 },
-    { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }
-  ];
+  // Cột widths
+  const widths = [6, 12, 16, 12, 18, 20, 22, 16, 16, 16, 16, 14, 12, 42, 22, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9];
+  widths.forEach((w, i) => {
+    ws.getColumn(i + 1).width = w;
+  });
+
   return ws;
 }
 
-function createDhkkWorksheet(items, siteMap, XLSX) {
+/**
+ * Xây dựng Sheet Điều Hòa (25 Cột) bằng ExcelJS
+ */
+function buildDhkkSheet(workbook, sheetName, items, siteMap) {
+  const ws = workbook.addWorksheet(sheetName, {
+    properties: { tabColor: { argb: 'FF2E75B6' } }
+  });
+
   const headerRow1 = [
     'STT', 'Tỉnh', 'Mã ERP trạm đặt thiết bị', 'Phân loại', 'Tên thiết bị/vật tư',
     'Mã tài sản/ mã CCDC', 'Serial (CÓ THÌ GHI, KHÔNG THÌ ĐỂ TRỐNG)',
@@ -235,17 +336,36 @@ function createDhkkWorksheet(items, siteMap, XLSX) {
     '(15)', '(16)', '(17)', '(18)', '(19)', '(20)', '(21)', '(22)', '(23)', '(24)', '(25)'
   ];
 
-  const rows = [headerRow1, headerRow2];
+  // Header 1
+  const r1 = ws.addRow(headerRow1);
+  r1.height = 68;
+  r1.eachCell((cell, colNumber) => {
+    cell.font = FONT_HEADER;
+    cell.fill = colNumber <= 14 ? FILL_HEADER_INFO : FILL_HEADER_CAT;
+    cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+    cell.border = THIN_BORDER;
+  });
 
-  items.forEach((item, idx) => {
-    const rawSiteId = String(item.site_id || item.site_code || item.tram || '').trim().toUpperCase();
+  // Header 2
+  const r2 = ws.addRow(headerRow2);
+  r2.height = 22;
+  r2.eachCell((cell, colNumber) => {
+    cell.font = FONT_HEADER2;
+    cell.fill = colNumber <= 14 ? FILL_HEADER_INFO : FILL_HEADER_CAT;
+    cell.alignment = ALIGN_CENTER;
+    cell.border = THIN_BORDER;
+  });
+
+  // Data rows
+  items.forEach((d, idx) => {
+    const rawSiteId = String(d.site_id || d.site_code || d.tram || '').trim().toUpperCase();
     const erpMap = STATION_ERP_MAPPINGS[rawSiteId];
     const siteObj = siteMap[rawSiteId] || (erpMap ? siteMap[erpMap.book_site] : {}) || {};
-    // ƯU TIÊN LẤY THEO TÊN CŨ (Mã trạm cũ) THEO YÊU CẦU BAN 4
     const displaySiteId = erpMap ? erpMap.book_site : (siteObj.site_id_old || rawSiteId);
     const infra = siteObj.infrastructure_info || {};
     const mlList = infra.may_lanh || [];
     const equip = mlList[0] || {};
+    const item = d.existing_issues || d;
 
     const phanLoai = item.phan_loai || equip.phan_loai || 'CCDC';
     const tenThietBi = 'Điều hòa nhiệt độ';
@@ -286,14 +406,14 @@ function createDhkkWorksheet(items, siteMap, XLSX) {
       catCols.push(selectedCats.has(i) ? 'X' : null);
     }
 
-    rows.push([
+    const rowData = [
       idx + 1,
       'Đồng Nai',
       displaySiteId,
       phanLoai,
       tenThietBi,
-      maTSCD,
-      serial,
+      maTSCD ? String(maTSCD) : '',
+      serial ? String(serial) : '',
       ngayDuaVaoSD,
       hangSX,
       congSuat,
@@ -302,21 +422,57 @@ function createDhkkWorksheet(items, siteMap, XLSX) {
       moTaHuHong,
       chiPhiDuKien,
       ...catCols
-    ]);
+    ];
+
+    const row = ws.addRow(rowData);
+    row.height = 30;
+
+    row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+      cell.border = THIN_BORDER;
+
+      if (colNumber === 3) {
+        cell.font = FONT_BOLD_SITE;
+        cell.alignment = ALIGN_CENTER;
+      } else if (colNumber === 13) {
+        cell.font = FONT_REGULAR;
+        cell.alignment = ALIGN_LEFT_WRAP;
+      } else if (colNumber === 14) {
+        cell.font = FONT_REGULAR;
+        cell.alignment = ALIGN_RIGHT;
+        if (cell.value) cell.numFmt = '#,##0';
+      } else if (colNumber >= 15) {
+        if (cell.value === 'X') {
+          cell.font = FONT_DEFECT_X;
+          cell.fill = FILL_DEFECT_BADGE;
+        } else {
+          cell.font = FONT_REGULAR;
+        }
+        cell.alignment = ALIGN_CENTER;
+      } else {
+        cell.font = FONT_REGULAR;
+        cell.alignment = ALIGN_CENTER;
+        if (colNumber === 6) cell.numFmt = '@';
+      }
+    });
   });
 
-  const ws = XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols'] = [
-    { wch: 6 }, { wch: 12 }, { wch: 16 }, { wch: 12 }, { wch: 18 },
-    { wch: 20 }, { wch: 22 }, { wch: 16 }, { wch: 16 }, { wch: 16 },
-    { wch: 16 }, { wch: 14 }, { wch: 40 }, { wch: 22 },
-    { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 },
-    { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }
-  ];
+  // Cột widths
+  const widths = [6, 12, 16, 12, 18, 20, 22, 16, 16, 16, 14, 12, 42, 22, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9];
+  widths.forEach((w, i) => {
+    ws.getColumn(i + 1).width = w;
+  });
+
   return ws;
 }
 
-function createReferenceWorksheet(XLSX) {
+/**
+ * Xây dựng Sheet Diễn giải Danh mục hỏng tham chiếu bằng ExcelJS
+ */
+function buildReferenceSheet(workbook) {
+  const ws = workbook.addWorksheet('Diễn giải DM hỏng tham chiếu', {
+    properties: { tabColor: { argb: 'FF708090' } }
+  });
+
   const refHeader = ['STT', 'Hạng mục chuyên môn ĐHKK & MPĐ', 'Nội dung hư hỏng diễn giải chi tiết chuẩn hóa Mobifone'];
   const refContent = [
     ['--- HẠNG MỤC SỬA CHỮA MÁY PHÁT ĐIỆN CỐ ĐỊNH & DI ĐỘNG ---', '', ''],
@@ -345,21 +501,44 @@ function createReferenceWorksheet(XLSX) {
     [11, '11. Sửa chữa hệ thống điều khiển trung tâm / Inverter / BMS', 'Inverter, module điều khiển trung tâm, gateway BMS, truyền thông điều hòa...']
   ];
 
-  const ws = XLSX.utils.aoa_to_sheet([refHeader, ...refContent]);
-  ws['!cols'] = [{ wch: 6 }, { wch: 45 }, { wch: 65 }];
+  const headerRow = ws.addRow(refHeader);
+  headerRow.height = 30;
+  headerRow.eachCell(c => {
+    c.font = FONT_HEADER;
+    c.fill = FILL_HEADER_INFO;
+    c.alignment = ALIGN_CENTER;
+    c.border = THIN_BORDER;
+  });
+
+  refContent.forEach(r => {
+    const isSection = String(r[0]).startsWith('---');
+    const row = ws.addRow(r);
+    row.height = isSection ? 26 : 28;
+    row.eachCell((c, colNum) => {
+      c.border = THIN_BORDER;
+      if (isSection) {
+        c.font = FONT_BOLD_SITE;
+        c.fill = FILL_HEADER_CAT;
+      } else {
+        c.font = FONT_REGULAR;
+        c.alignment = colNum === 1 ? ALIGN_CENTER : (colNum === 2 ? ALIGN_CENTER : ALIGN_LEFT_WRAP);
+      }
+    });
+  });
+
+  ws.getColumn(1).width = 6;
+  ws.getColumn(2).width = 45;
+  ws.getColumn(3).width = 75;
+
   return ws;
 }
 
 /**
  * Xuất file Excel Biểu Mẫu B4 Đề Nghị Sửa Chữa (Chuẩn Mobifone).
- * Hỗ trợ xuất CHUNG 1 FILE DUY NHẤT gồm toàn bộ các Sheet (MPĐ Cố Định + Điều Hòa + Di Động + Diễn giải)
- * @param {Array} items Danh sách tồn tại / sự cố cần sửa chữa
- * @param {Array} datasites Danh sách trạm từ Supabase để tra cứu thông tin tài sản
- * @param {String} targetCategory 'ALL' | 'MPD_CO_DINH' | 'DHKK' | 'MPD_DI_DONG'
- * @param {String} customFileName Tên file tùy chỉnh
+ * Hỗ trợ xuất CHUNG 1 FILE DUY NHẤT gồm toàn bộ các Sheet bằng ExcelJS Executive Template
  */
 export async function exportB4RepairProposal({ items = [], datasites = [], targetCategory = 'ALL', customFileName = '' }) {
-  const XLSX = await import('xlsx');
+  const ExcelJS = await getExcelJS();
   
   // B4 Ban 4 CHỈ duyệt MPĐ và ĐHKK. Tuyệt đối loại trừ Hạ tầng địa bàn và Ắc quy đề
   const validItems = items.filter(it => {
@@ -382,9 +561,11 @@ export async function exportB4RepairProposal({ items = [], datasites = [], targe
     if (sOld) siteMap[sOld] = s;
   });
 
-  const wb = XLSX.utils.book_new();
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'TVT3 Management System';
+  workbook.lastModifiedBy = 'Tổ Viễn Thông 3';
+  workbook.created = new Date();
 
-  // TÁCH CÁC MỤC THEO ĐÚNG 3 NHÓM THIẾT BỊ B4
   const isMpd = it => (it.category === 'Máy phát điện' || it.existing_issues?.category === 'Máy phát điện');
   const isDhkk = it => (it.category === 'Máy lạnh' || it.existing_issues?.category === 'Máy lạnh');
 
@@ -392,55 +573,46 @@ export async function exportB4RepairProposal({ items = [], datasites = [], targe
   const dhkkItems = validItems.filter(it => isDhkk(it));
   const mobileMpdItems = validItems.filter(it => isMpd(it) && it.device_type === 'MPD_DI_DONG');
 
-  // XUẤT CHUNG 1 FILE DUY NHẤT (TOÀN BỘ CÁC SHEET THEO CHUẨN BAN 4)
   if (targetCategory === 'ALL') {
     // Sheet 1: Điều hòa
-    const wsDhkk = createDhkkWorksheet(dhkkItems, siteMap, XLSX);
-    XLSX.utils.book_append_sheet(wb, wsDhkk, 'Điều hòa');
-
+    buildDhkkSheet(workbook, 'Điều hòa', dhkkItems, siteMap);
     // Sheet 2: Máy phát điện_Cố định
-    const wsMpd = createMpdCoDinhWorksheet(mpdItems, siteMap, XLSX);
-    XLSX.utils.book_append_sheet(wb, wsMpd, 'Máy phát điện_Cố định');
-
+    buildFixedGeneratorSheet(workbook, 'Máy phát điện_Cố định', mpdItems, siteMap);
     // Sheet 3: Máy phát điện_Di động
-    const wsMobile = createMpdCoDinhWorksheet(mobileMpdItems, siteMap, XLSX);
-    XLSX.utils.book_append_sheet(wb, wsMobile, 'Máy phát điện_Di động');
-
-    // Sheet 4: Diễn giải tham chiếu
-    const wsRef = createReferenceWorksheet(XLSX);
-    XLSX.utils.book_append_sheet(wb, wsRef, 'Diễn giải DM hỏng tham chiếu');
+    buildFixedGeneratorSheet(workbook, 'Máy phát điện_Di động', mobileMpdItems, siteMap);
+    // Sheet 4: Diễn giải DM hỏng tham chiếu
+    buildReferenceSheet(workbook);
 
     const finalFileName = customFileName || `TVT3-B4. Bieu mau chuyen mon sua DHKK & MPD.xlsx`;
-    XLSX.writeFile(wb, finalFileName);
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    saveAs(blob, finalFileName);
     return;
   }
 
   // NẾU XUẤT RIÊNG TỪNG LOẠI
   if (targetCategory === 'MPD_CO_DINH') {
-    const ws = createMpdCoDinhWorksheet(mpdItems.length > 0 ? mpdItems : validItems, siteMap, XLSX);
-    XLSX.utils.book_append_sheet(wb, ws, 'Máy phát điện_Cố định');
+    buildFixedGeneratorSheet(workbook, 'Máy phát điện_Cố định', mpdItems.length > 0 ? mpdItems : validItems, siteMap);
   } else if (targetCategory === 'DHKK') {
-    const ws = createDhkkWorksheet(dhkkItems.length > 0 ? dhkkItems : validItems, siteMap, XLSX);
-    XLSX.utils.book_append_sheet(wb, ws, 'Điều hòa');
+    buildDhkkSheet(workbook, 'Điều hòa', dhkkItems.length > 0 ? dhkkItems : validItems, siteMap);
   } else if (targetCategory === 'MPD_DI_DONG') {
-    const ws = createMpdCoDinhWorksheet(mobileMpdItems.length > 0 ? mobileMpdItems : validItems, siteMap, XLSX);
-    XLSX.utils.book_append_sheet(wb, ws, 'Máy phát điện_Di động');
+    buildFixedGeneratorSheet(workbook, 'Máy phát điện_Di động', mobileMpdItems.length > 0 ? mobileMpdItems : validItems, siteMap);
   }
 
-  const wsRef = createReferenceWorksheet(XLSX);
-  XLSX.utils.book_append_sheet(wb, wsRef, 'Diễn giải DM hỏng tham chiếu');
+  buildReferenceSheet(workbook);
 
   const todayStr = new Date().toISOString().substring(0, 10).replace(/-/g, '');
   const finalFileName = customFileName || `TVT3_De_Nghi_Sua_Chua_B4_${targetCategory}_${todayStr}.xlsx`;
-  XLSX.writeFile(wb, finalFileName);
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  saveAs(blob, finalFileName);
 }
 
 /**
- * Xuất file Excel Bảng Kê Tổng Hợp Đề Xuất Mua Mới Ắc Quy Đề MPD
- * Phục vụ trình Phòng Kỹ thuật / Hậu cần làm thủ tục mua sắm tập trung theo lô.
+ * Xuất file Excel Bảng Kê Tổng Hợp Đề Xuất Mua Mới Ắc Quy Đề MPD bằng ExcelJS
  */
 export async function exportBatteryPurchaseList({ items = [], datasites = [], customFileName = '' }) {
-  const XLSX = await import('xlsx');
+  const ExcelJS = await getExcelJS();
   const batteryItems = items.filter(it => 
     it.proposal_type === 'BATTERY_PURCHASE' || 
     (it.category === 'Máy phát điện' && String(it.description || '').toLowerCase().includes('ắc quy')) ||
@@ -460,13 +632,27 @@ export async function exportBatteryPurchaseList({ items = [], datasites = [], cu
     if (sOld) siteMap[sOld] = s;
   });
 
-  const wb = XLSX.utils.book_new();
+  const workbook = new ExcelJS.Workbook();
+  const ws = workbook.addWorksheet('De_Xuat_Mua_Accu_MPD', {
+    properties: { tabColor: { argb: 'FF00A86B' } }
+  });
 
-  // Tiêu đề & Header
-  const titleRow = ['TỔNG HỢP NHU CẦU ĐỀ XUẤT MUA SẮM ẮC QUY KHỞI ĐỘNG MÁY PHÁT ĐIỆN - TỔ VIỄN THÔNG 3'];
-  const subTitleRow = [`Thời điểm xuất: ${new Date().toLocaleDateString('vi-VN')} | Đơn vị đề xuất: Tổ Viễn Thông 3 - Phòng Kỹ thuật Viễn thông`];
-  const emptyRow = [];
-  
+  // Tiêu đề
+  ws.mergeCells('A1:R1');
+  const tCell = ws.getCell('A1');
+  tCell.value = 'TỔNG HỢP NHU CẦU ĐỀ XUẤT MUA SẮM ẮC QUY KHỞI ĐỘNG MÁY PHÁT ĐIỆN - TỔ VIỄN THÔNG 3';
+  tCell.font = { name: 'Times New Roman', size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
+  tCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F497D' } };
+  tCell.alignment = ALIGN_CENTER;
+  ws.getRow(1).height = 35;
+
+  ws.mergeCells('A2:R2');
+  const stCell = ws.getCell('A2');
+  stCell.value = `Thời điểm xuất: ${new Date().toLocaleDateString('vi-VN')} | Đơn vị đề xuất: Tổ Viễn Thông 3 - Phòng Kỹ thuật Viễn thông`;
+  stCell.font = { name: 'Times New Roman', size: 10, italic: true };
+  stCell.alignment = ALIGN_CENTER;
+  ws.getRow(2).height = 20;
+
   const headers = [
     'STT', 'Mã trạm mới', 'Mã trạm cũ', 'Tên trạm', 'Huyện / Thị xã', 'Địa bàn xã/phường',
     'Loại MPĐ', 'Mã máy / Nhãn hiệu', 'Công suất MPĐ (kVA)',
@@ -474,12 +660,21 @@ export async function exportBatteryPurchaseList({ items = [], datasites = [], cu
     'Hiện trạng bình cũ / Lý do thay thế', 'Mô tả chi tiết', 'Ngày phát hiện', 'Người đề xuất', 'Ghi chú'
   ];
 
-  const rows = batteryItems.map((item, idx) => {
+  const hRow = ws.addRow(headers);
+  hRow.height = 28;
+  hRow.eachCell(c => {
+    c.font = FONT_HEADER;
+    c.fill = FILL_HEADER_INFO;
+    c.alignment = ALIGN_CENTER;
+    c.border = THIN_BORDER;
+  });
+
+  batteryItems.forEach((item, idx) => {
     const sObj = siteMap[String(item.site_id || '').trim().toUpperCase()] || {};
     const loc = sObj.location_info || {};
     const bDetail = item.battery_details || {};
 
-    return [
+    const rData = [
       idx + 1,
       sObj.site_id || item.site_id,
       sObj.site_id_old || '-',
@@ -499,53 +694,38 @@ export async function exportBatteryPurchaseList({ items = [], datasites = [], cu
       item.reporter || '',
       'Đề xuất mua sắm mới (Nội bộ Tỉnh)'
     ];
+
+    const row = ws.addRow(rData);
+    row.height = 28;
+    row.eachCell((c, colNum) => {
+      c.font = FONT_REGULAR;
+      c.border = THIN_BORDER;
+      if ([1, 2, 3, 7, 9, 10, 11, 12, 13, 16, 17].includes(colNum)) {
+        c.alignment = ALIGN_CENTER;
+      } else {
+        c.alignment = ALIGN_LEFT_WRAP;
+      }
+    });
   });
 
-  const ws = XLSX.utils.aoa_to_sheet([
-    titleRow,
-    subTitleRow,
-    emptyRow,
-    headers,
-    ...rows
-  ]);
-
-  // Set độ rộng cột
-  ws['!cols'] = [
-    { wch: 6 },  // STT
-    { wch: 14 }, // Mã trạm mới
-    { wch: 14 }, // Mã trạm cũ
-    { wch: 24 }, // Tên trạm
-    { wch: 18 }, // Huyện
-    { wch: 18 }, // Xã
-    { wch: 16 }, // Loại MPĐ
-    { wch: 20 }, // Mã máy
-    { wch: 16 }, // Công suất
-    { wch: 24 }, // Dung lượng Ah
-    { wch: 12 }, // Điện áp
-    { wch: 14 }, // Số lượng
-    { wch: 18 }, // Loại cọc
-    { wch: 32 }, // Hiện trạng bình cũ
-    { wch: 35 }, // Mô tả
-    { wch: 14 }, // Ngày
-    { wch: 18 }, // Người đề xuất
-    { wch: 24 }, // Ghi chú
-  ];
-
-  XLSX.utils.book_append_sheet(wb, ws, 'De_Xuat_Mua_Accu_MPD');
+  const widths = [6, 14, 14, 24, 18, 18, 16, 20, 16, 24, 12, 14, 18, 32, 35, 14, 18, 24];
+  widths.forEach((w, i) => {
+    ws.getColumn(i + 1).width = w;
+  });
 
   const todayStr = new Date().toISOString().substring(0, 10).replace(/-/g, '');
   const finalFileName = customFileName || `TVT3_De_Xuat_Mua_Sam_Accu_MPD_${todayStr}.xlsx`;
-  XLSX.writeFile(wb, finalFileName);
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  saveAs(blob, finalFileName);
 }
 
 /**
- * Xuất file Excel Bảng Kê Tồn Tại & Đề Xuất Sửa Chữa Hạ Tầng Địa Bàn
- * (Hệ thống điện, Nhà trạm, Cột anten, Hệ thống tiếp đất... để Tổ / Đài / Tỉnh xử lý tại địa phương)
+ * Xuất file Excel Bảng Kê Tồn Tại & Đề Xuất Sửa Chữa Hạ Tầng Địa Bàn bằng ExcelJS
  */
 export async function exportLocalInfrastructureProposal({ items = [], datasites = [], customFileName = '' }) {
-  const XLSX = await import('xlsx');
+  const ExcelJS = await getExcelJS();
   
-  // Lọc các ca thuộc nhóm Hạ tầng địa bàn (không phải MPĐ và ĐHKK)
   const infraItems = items.filter(it => {
     const issues = it.existing_issues || it;
     const cat = issues.category;
@@ -565,73 +745,82 @@ export async function exportLocalInfrastructureProposal({ items = [], datasites 
     if (sOld) siteMap[sOld] = s;
   });
 
-  const wb = XLSX.utils.book_new();
+  const workbook = new ExcelJS.Workbook();
+  const ws = workbook.addWorksheet('Ha_Tang_Dia_Ban', {
+    properties: { tabColor: { argb: 'FF1F497D' } }
+  });
 
-  // Tiêu đề & Header
-  const titleRow = ['TỔNG HỢP TỒN TẠI & ĐỀ XUẤT SỬA CHỮA HẠ TẦNG ĐỊA BÀN - TỔ VIỄN THÔNG 3'];
-  const subTitleRow = [`Thời điểm xuất: ${new Date().toLocaleDateString('vi-VN')} | Đơn vị: Tổ Viễn Thông 3 - Phòng Kỹ thuật Viễn thông | Phạm vi: Sửa chữa tại địa phương`];
-  const emptyRow = [];
+  ws.mergeCells('A1:K1');
+  const tCell = ws.getCell('A1');
+  tCell.value = 'TỔNG HỢP TỒN TẠI & ĐỀ XUẤT SỬA CHỮA HẠ TẦNG ĐỊA BÀN - TỔ VIỄN THÔNG 3';
+  tCell.font = { name: 'Times New Roman', size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
+  tCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F497D' } };
+  tCell.alignment = ALIGN_CENTER;
+  ws.getRow(1).height = 35;
+
+  ws.mergeCells('A2:K2');
+  const stCell = ws.getCell('A2');
+  stCell.value = `Đơn vị: Tổ Viễn Thông 3 | Thời điểm xuất: ${new Date().toLocaleDateString('vi-VN')} | Phạm vi: Nội bộ Tỉnh / Đài xử lý tại địa bàn`;
+  stCell.font = { name: 'Times New Roman', size: 10, italic: true };
+  stCell.alignment = ALIGN_CENTER;
+  ws.getRow(2).height = 20;
 
   const headers = [
-    'STT', 'Mã trạm mới', 'Mã trạm cũ', 'Tên trạm', 'Huyện / Thị xã', 'Xã / Phường',
-    'Phân nhóm hạ tầng', 'Nội dung tồn tại / Hư hỏng thực tế', 'Đề xuất phương án sửa chữa tại chỗ',
-    'Ngày phát hiện', 'Người báo cáo', 'Tình trạng xử lý', 'Đơn vị thực hiện', 'Ghi chú'
+    'STT', 'Mã trạm mới', 'Mã trạm cũ', 'Tên trạm', 'Huyện / Thị xã',
+    'Phân nhóm hạ tầng', 'Chi tiết tồn tại / Hư hỏng thực tế', 'Đề xuất phương án sửa chữa tại chỗ',
+    'Ngày phát hiện', 'Người báo cáo', 'Tình trạng xử lý'
   ];
 
-  const rows = infraItems.map((item, idx) => {
-    const issues = item.existing_issues || item;
-    const sId = String(item.site_id || issues.site_id || '').trim().toUpperCase();
+  const hRow = ws.addRow(headers);
+  hRow.height = 28;
+  hRow.eachCell(c => {
+    c.font = FONT_HEADER;
+    c.fill = FILL_HEADER_INFO;
+    c.alignment = ALIGN_CENTER;
+    c.border = THIN_BORDER;
+  });
+
+  infraItems.forEach((item, idx) => {
+    const sId = String(item.site_id || '').trim().toUpperCase();
     const sObj = siteMap[sId] || {};
     const loc = sObj.location_info || {};
+    const issues = item.existing_issues || item;
 
-    return [
+    const rData = [
       idx + 1,
       sObj.site_id || sId,
       sObj.site_id_old || '-',
       sObj.name || sObj.site_name || sId,
       loc.district || sObj.district || '-',
-      loc.ward || sObj.ward || '-',
       issues.category || 'Hạ tầng',
       issues.description || '',
       issues.proposed_solution || 'Sửa chữa / khắc phục tại chỗ',
-      item.date || issues.date || '',
+      item.date || '',
       issues.reporter || '',
-      issues.status || 'Chưa XL',
-      'Tổ Viễn Thông 3 / Đài ĐN',
-      'Đề xuất sửa chữa địa bàn'
+      issues.status || 'Chưa XL'
     ];
+
+    const row = ws.addRow(rData);
+    row.height = 28;
+    row.eachCell((c, colNum) => {
+      c.font = FONT_REGULAR;
+      c.border = THIN_BORDER;
+      if ([1, 2, 3, 5, 6, 9, 10, 11].includes(colNum)) {
+        c.alignment = ALIGN_CENTER;
+      } else {
+        c.alignment = ALIGN_LEFT_WRAP;
+      }
+    });
   });
 
-  const ws = XLSX.utils.aoa_to_sheet([
-    titleRow,
-    subTitleRow,
-    emptyRow,
-    headers,
-    ...rows
-  ]);
-
-  ws['!cols'] = [
-    { wch: 6 },  // STT
-    { wch: 14 }, // Mã mới
-    { wch: 14 }, // Mã cũ
-    { wch: 24 }, // Tên trạm
-    { wch: 18 }, // Huyện
-    { wch: 18 }, // Xã
-    { wch: 20 }, // Phân nhóm hạ tầng
-    { wch: 45 }, // Mô tả
-    { wch: 32 }, // Đề xuất
-    { wch: 14 }, // Ngày
-    { wch: 18 }, // Người báo cáo
-    { wch: 14 }, // Tình trạng
-    { wch: 24 }, // Đơn vị
-    { wch: 24 }  // Ghi chú
-  ];
-
-  XLSX.utils.book_append_sheet(wb, ws, 'Ha_Tang_Dia_Ban');
+  const widths = [6, 14, 14, 24, 18, 18, 45, 30, 14, 18, 14];
+  widths.forEach((w, i) => {
+    ws.getColumn(i + 1).width = w;
+  });
 
   const todayStr = new Date().toISOString().substring(0, 10).replace(/-/g, '');
   const finalFileName = customFileName || `TVT3_Ton_Tai_De_Xuat_Sua_Chua_Ha_Tang_Dia_Ban_${todayStr}.xlsx`;
-  XLSX.writeFile(wb, finalFileName);
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  saveAs(blob, finalFileName);
 }
-
-
