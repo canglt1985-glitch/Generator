@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Script Đồng Bộ Chính Xác Thiết Kế RF Từ File ERA_RF_ALL_2026.xlsx:
-- Nguồn: Google Drive ERA_RF_ALL_2026.xlsx (Cập nhật 10:54 04/10/2026)
-- Đọc Cột G (Azimuth_Physical), Cột I (Height), Cột J (Total Tilt), Cột K (Mtilt), Cột L (Etilt).
-- Cập nhật trực tiếp vào bảng 'datacells'.
-- Đồng bộ các cell cùng sector (4G, 5G, 3G) theo đúng góc hướng thiết kế ERA.
-- Tái tổng hợp 'technical_info.rf_summary.sectors' chuẩn xác cho bảng 'datasites'.
+Script Đồng Bộ Chính Xác Toàn Bộ Thiết Kế RF Từ File ERA_RF_ALL_2026.xlsx:
+- Nguồn: Google Drive ERA_RF_ALL_2026.xlsx (Cập nhật 04/10/2026)
+- Tự động nạp các cell mới (4G/5G) vào bảng 'datacells'.
+- Đồng bộ Azimuth, Height, Tilt (Total, Mech, Elec), Band, Layer 5G cho toàn bộ cells.
+- Tái tổng hợp đầy đủ 'technical_info.rf_summary' (has_5g, is_dual_5g, cells_5g, sectors) cho bảng 'datasites'.
 """
 
 import os
@@ -26,8 +25,7 @@ ctx = ssl._create_unverified_context()
 headers = {
     'apikey': SUPABASE_KEY,
     'Authorization': f'Bearer {SUPABASE_KEY}',
-    'Content-Type': 'application/json',
-    'Prefer': 'return=representation'
+    'Content-Type': 'application/json'
 }
 
 def parse_num(v):
@@ -64,7 +62,7 @@ def patch_site(sid, tech_info):
 
 def main():
     print("================================================================================")
-    print("🚀 BẮT ĐẦU ĐỒNG BỘ THIẾT KẾ RF TỪ ERA_RF_ALL_2026.XLSX VÀO SUPABASE")
+    print("🚀 BẮT ĐẦU ĐỒNG BỘ TOÀN DIỆN THIẾT KẾ RF TỪ ERA_RF_ALL_2026.XLSX VÀO SUPABASE")
     print(f"📁 Nguồn file: {ERA_FILE}")
     print("================================================================================")
 
@@ -72,70 +70,29 @@ def main():
         print(f"❌ Không tìm thấy file: {ERA_FILE}")
         sys.exit(1)
 
-    # 1. Đọc file ERA_RF_ALL
-    wb = openpyxl.load_workbook(ERA_FILE, data_only=True)
-    era_by_cell = {}
-    era_by_site_sector = defaultdict(dict)  # site_id -> sector_letter -> dict
+    # 1. Nạp datasites từ Supabase
+    req_s = urllib.request.Request(
+        f'{SUPABASE_URL}/rest/v1/datasites?select=*',
+        headers=headers
+    )
+    with urllib.request.urlopen(req_s, context=ctx) as resp:
+        sites = json.loads(resp.read().decode('utf-8'))
+    print(f"✅ Đã nạp {len(sites)} trạm từ bảng 'datasites'.")
 
-    for sname in ['5G', '4G']:
-        sheet = wb[sname]
-        for r in range(2, sheet.max_row + 1):
-            old_id = str(sheet.cell(r, 1).value or '').strip().upper()
-            new_id = str(sheet.cell(r, 2).value or '').strip().upper()
-            cell_name = str(sheet.cell(r, 3).value or '').strip()
-            az = parse_num(sheet.cell(r, 7).value)
-            h = parse_num(sheet.cell(r, 9).value)
-            tilt = parse_num(sheet.cell(r, 10).value)
-            mtilt = parse_num(sheet.cell(r, 11).value) or 0
-            etilt = parse_num(sheet.cell(r, 12).value) or 0
-
-            if not cell_name or az is None:
-                continue
-
-            sec_char = cell_name[-1].upper() if cell_name else 'A'
-            info = {
-                'sheet': sname,
-                'old_id': old_id,
-                'new_id': new_id,
-                'cell_name': cell_name,
-                'azimuth': az,
-                'height': h,
-                'tilt_total': tilt,
-                'tilt_mech': mtilt,
-                'tilt_elec': etilt,
-                'sector': sec_char
-            }
-            era_by_cell[cell_name] = info
-            for sid in set([old_id, new_id]):
-                if sid:
-                    era_by_site_sector[sid][sec_char] = info
-
-    # Các thông số hiệu chỉnh thủ công theo thực tế hiện trường từ người dùng
-    manual_site_overrides = {
-        'DNTN60': {'A': {'azimuth': 280, 'height': 40, 'tilt_total': 4, 'tilt_mech': 0, 'tilt_elec': 4}},
-        'DNIDGI30': {'A': {'azimuth': 280, 'height': 40, 'tilt_total': 4, 'tilt_mech': 0, 'tilt_elec': 4}}
-    }
-    for sid, sec_dict in manual_site_overrides.items():
-        for sec_char, info in sec_dict.items():
-            if sid not in era_by_site_sector:
-                era_by_site_sector[sid] = {}
-            era_by_site_sector[sid][sec_char] = {
-                'sheet': 'MANUAL',
-                'old_id': sid,
-                'new_id': sid,
-                'cell_name': f"{sid}_{sec_char}",
-                'azimuth': info['azimuth'],
-                'height': info['height'],
-                'tilt_total': info['tilt_total'],
-                'tilt_mech': info['tilt_mech'],
-                'tilt_elec': info['tilt_elec'],
-                'sector': sec_char
-            }
-
-    print(f"✅ Đã nạp {len(era_by_cell)} thiết kế cell từ ERA_RF_ALL_2026.xlsx ({len(era_by_site_sector)} trạm, bao gồm các hiệu chỉnh thủ công).")
+    site_canon = {}
+    site_by_id = {}
+    for s in sites:
+        sid = (s.get('site_id') or '').strip().upper()
+        sold = (s.get('site_id_old') or '').strip().upper()
+        if sid:
+            site_canon[sid] = sid
+            site_by_id[sid] = s
+        if sold:
+            site_canon[sold] = sid
 
     # 2. Nạp toàn bộ datacells từ Supabase
     all_cells = []
+    all_cids = set()
     offset = 0
     limit = 1000
     while True:
@@ -146,33 +103,115 @@ def main():
         with urllib.request.urlopen(req_c, context=ctx) as resp:
             batch = json.loads(resp.read().decode('utf-8'))
             all_cells.extend(batch)
+            for b in batch: all_cids.add(b['cell_id'])
             if len(batch) < limit:
                 break
             offset += limit
 
     print(f"✅ Đã nạp {len(all_cells)} cell từ bảng 'datacells'.")
 
-    # 3. Nạp datasites từ Supabase
-    req_s = urllib.request.Request(
-        f'{SUPABASE_URL}/rest/v1/datasites?select=site_id,site_id_old,name,management_info,classification,technical_info',
-        headers=headers
-    )
-    with urllib.request.urlopen(req_s, context=ctx) as resp:
-        sites = json.loads(resp.read().decode('utf-8'))
-    print(f"✅ Đã nạp {len(sites)} trạm từ bảng 'datasites'.")
+    # 3. Đọc file ERA_RF_ALL
+    wb = openpyxl.load_workbook(ERA_FILE, data_only=True)
+    era_by_cell = {}
+    era_by_site_sector = defaultdict(dict)
+    era_sites_5g = set()
+    era_sites_dual = set()
+    missing_cells_to_insert = []
 
-    # Tạo tra cứu canonical site_id
-    site_canon = {}
-    for s in sites:
-        sid = (s.get('site_id') or '').strip().upper()
-        sold = (s.get('site_id_old') or '').strip().upper()
-        if sid: site_canon[sid] = sid
-        if sold: site_canon[sold] = sid
+    for sname in ['4G', '5G']:
+        sheet = wb[sname]
+        headers_row = [c for c in next(sheet.iter_rows(values_only=True))]
+        for r in sheet.iter_rows(values_only=True):
+            d = dict(zip(headers_row, r))
+            old_id = str(d.get('Old site name') or '').strip().upper()
+            new_id = str(d.get('Site name') or '').strip().upper()
+            cell_name = str(d.get('Cell name') or '').strip().upper()
+            if not cell_name:
+                continue
 
-    # 4. Xác định các cell cần cập nhật
+            target = site_canon.get(old_id) or site_canon.get(new_id)
+            if not target:
+                continue
+
+            az = parse_num(d.get('Azimuth_Physical'))
+            h = parse_num(d.get('Height'))
+            tilt = parse_num(d.get('Total Tilt'))
+            mtilt = parse_num(d.get('Mtilt')) or 0
+            etilt = parse_num(d.get('Etilt')) or 0
+            band_str = str(d.get('Band') or '').strip()
+
+            if sname == '5G':
+                era_sites_5g.add(target)
+                if '3800' in band_str:
+                    era_sites_dual.add(target)
+
+            sec_char = cell_name[-1].upper() if cell_name else 'A'
+            info = {
+                'sheet': sname,
+                'old_id': old_id,
+                'new_id': new_id,
+                'target_sid': target,
+                'cell_name': cell_name,
+                'azimuth': az,
+                'height': h,
+                'tilt_total': tilt,
+                'tilt_mech': mtilt,
+                'tilt_elec': etilt,
+                'band': band_str,
+                'sector': sec_char
+            }
+            era_by_cell[cell_name] = info
+            if az is not None:
+                era_by_site_sector[target][sec_char] = info
+
+            # Kiểm tra xem cell này đã có trong datacells chưa
+            if cell_name not in all_cids:
+                matched_s = site_by_id[target]
+                lat = matched_s.get('location_info', {}).get('vi_do')
+                lon = matched_s.get('location_info', {}).get('kinh_do')
+                ran = '5G' if sname == '5G' else '4G'
+                layer_5g = 2 if ('3800' in band_str) else (1 if sname == '5G' else 0)
+
+                missing_cells_to_insert.append({
+                    'cell_id': cell_name,
+                    'site_id': target,
+                    'site_id_old': matched_s.get('site_id_old'),
+                    'cell_name_new': cell_name,
+                    'cell_name_old': cell_name,
+                    'ran': ran,
+                    'band': band_str,
+                    'vendor': 'ERICSSON',
+                    'status': 'ACTIVE',
+                    'azimuth': az,
+                    'height': h,
+                    'tilt_total': tilt,
+                    'tilt_mech': mtilt,
+                    'tilt_elec': etilt,
+                    'sector': sec_char,
+                    'beamwidth': 65,
+                    'layer_5g': layer_5g,
+                    'latitude': float(lat) if lat else None,
+                    'longitude': float(lon) if lon else None
+                })
+                all_cids.add(cell_name)
+
+    print(f"✅ Đã quét {len(era_by_cell)} thiết kế cell từ ERA_RF_ALL.")
+    if missing_cells_to_insert:
+        print(f"⚡ Phát hiện {len(missing_cells_to_insert)} cell mới trong ERA chưa có trong 'datacells'. Đang nạp...")
+        ins_headers = dict(headers)
+        ins_headers['Prefer'] = 'resolution=merge-duplicates'
+        for i in range(0, len(missing_cells_to_insert), 10):
+            batch = missing_cells_to_insert[i:i+10]
+            req_ins = urllib.request.Request(f'{SUPABASE_URL}/rest/v1/datacells', data=json.dumps(batch).encode('utf-8'), headers=ins_headers, method='POST')
+            try:
+                with urllib.request.urlopen(req_ins, context=ctx) as resp:
+                    pass
+            except Exception as e:
+                print(f"❌ Lỗi nạp batch: {e}")
+        print("✅ Hoàn tất nạp cell mới vào 'datacells'.")
+
+    # 4. Xác định các cell hiện tại cần cập nhật
     updated_cells = []
-    affected_sites = set()
-
     for c in all_cells:
         cid = c.get('cell_id')
         cnew = c.get('cell_name_new')
@@ -181,13 +220,10 @@ def main():
         sold = (c.get('site_id_old') or '').strip().upper()
         sec = (c.get('sector') or (cid[-1] if cid else 'A')).upper()
 
-        target_canon = site_canon.get(sid) or site_canon.get(sold) or sid or sold
-
-        # Tra cứu thiết kế ERA: theo cell_name hoặc theo (site_id, sector)
+        target_canon = site_canon.get(sid) or site_canon.get(sold) or sid
         era = era_by_cell.get(cid) or era_by_cell.get(cnew) or era_by_cell.get(cold)
         if not era:
-            # Tra theo site và sector
-            era = era_by_site_sector.get(sid, {}).get(sec) or era_by_site_sector.get(sold, {}).get(sec)
+            era = era_by_site_sector.get(target_canon, {}).get(sec)
 
         if era:
             need_update = False
@@ -202,41 +238,34 @@ def main():
             if era['tilt_total'] is not None and c.get('tilt_total') != era['tilt_total']:
                 patch['tilt_total'] = era['tilt_total']
                 need_update = True
-            if era['tilt_elec'] is not None and c.get('tilt_elec') != era['tilt_elec']:
-                patch['tilt_elec'] = era['tilt_elec']
-                need_update = True
             if era['tilt_mech'] is not None and c.get('tilt_mech') != era['tilt_mech']:
                 patch['tilt_mech'] = era['tilt_mech']
                 need_update = True
-            if c.get('sector') != sec:
-                patch['sector'] = sec
+            if era['tilt_elec'] is not None and c.get('tilt_elec') != era['tilt_elec']:
+                patch['tilt_elec'] = era['tilt_elec']
                 need_update = True
+
+            # Manual override cho DNTN60 (DNIDGI30)
+            if target_canon in ('DNTN60', 'DNIDGI30'):
+                if patch.get('azimuth') != 280:
+                    patch['azimuth'] = 280
+                    need_update = True
 
             if need_update:
                 updated_cells.append((cid, patch))
-                affected_sites.add(target_canon)
 
-    print(f"\n⚡ Phát hiện {len(updated_cells)} cells cần cập nhật thông số từ ERA (trên {len(affected_sites)} trạm).")
+    if updated_cells:
+        print(f"⏳ Đang cập nhật {len(updated_cells)} cells vào bảng 'datacells' (10 workers song song)...")
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            futures = [executor.submit(patch_cell, cid, patch) for cid, patch in updated_cells]
+            for f in as_completed(futures):
+                cid, ok, err = f.result()
+                if not ok:
+                    print(f"❌ Lỗi cập nhật cell {cid}: {err}")
+        print("✅ Hoàn tất cập nhật các cell trong 'datacells'.")
 
-    # 5. Cập nhật song song vào bảng datacells
-    print("⏳ Đang cập nhật vào bảng 'datacells' (10 workers song song)...")
-    success_cell_count = 0
-    with ThreadPoolExecutor(max_workers=10) as executor:
-        futures = [executor.submit(patch_cell, cid, patch) for cid, patch in updated_cells]
-        for f in as_completed(futures):
-            cid, ok, err = f.result()
-            if ok:
-                success_cell_count += 1
-            else:
-                print(f"❌ Lỗi cập nhật cell {cid}: {err}")
-
-    print(f"✅ Đã cập nhật thành công {success_cell_count}/{len(updated_cells)} cells vào bảng 'datacells'.")
-
-    # 6. Tái tổng hợp rf_summary.sectors cho các trạm bị ảnh hưởng
-    print("\n🔄 Bước 6: Tái tổng hợp rf_summary.sectors cho bảng 'datasites'...")
-
-    # Nạp lại datacells sau cập nhật
-    cells_by_site = defaultdict(list)
+    # 5. Tái nạp datacells đầy đủ để tổng hợp chuẩn xác datasites
+    print("\n🔄 Bước 5: Nạp lại datacells và tái tổng hợp rf_summary cho datasites...")
     all_cells_fresh = []
     offset = 0
     while True:
@@ -251,39 +280,68 @@ def main():
                 break
             offset += limit
 
+    cells_by_site = defaultdict(list)
     for c in all_cells_fresh:
         sid = (c.get('site_id') or '').strip().upper()
         sold = (c.get('site_id_old') or '').strip().upper()
-        target = site_canon.get(sid) or site_canon.get(sold) or sid or sold
-        cells_by_site[target].append(c)
+        target = site_canon.get(sid) or site_canon.get(sold) or sid
+        if target:
+            cells_by_site[target].append(c)
 
-    # Lập danh sách patch cho datasites
+    # 6. Tái tổng hợp rf_summary cho các trạm
     site_patches = []
     for s in sites:
         sid = (s.get('site_id') or '').strip().upper()
         sold = (s.get('site_id_old') or '').strip().upper()
-        target_canon = site_canon.get(sid) or site_canon.get(sold) or sid
+        target = site_canon.get(sid) or site_canon.get(sold) or sid
 
-        # Chỉ cập nhật các trạm có cell bị ảnh hưởng hoặc trạm có thiết kế trong ERA
-        if target_canon not in affected_sites and sid not in affected_sites and sold not in affected_sites:
+        c_list = cells_by_site.get(target, [])
+        if not c_list and target not in era_by_site_sector:
             continue
 
-        c_list = cells_by_site.get(target_canon) or cells_by_site.get(sid) or cells_by_site.get(sold) or []
-        if not c_list:
-            continue
+        ti = dict(s.get('technical_info') or {})
+        rf = dict(ti.get('rf_summary') or {})
 
-        # Gom nhóm sectors theo ký tự sector
-        sector_map = {}
+        # Bảo toàn 5 sector đặc thù của DNLK05
+        if sid in ('DNLK05', 'DNILKH00') or sold in ('DNLK05', 'DNILKH00'):
+            existing_secs = rf.get('sectors', [])
+            if len(existing_secs) == 5:
+                continue
+
+        c3g = [c for c in c_list if str(c.get('ran')).upper() == '3G']
+        c4g = [c for c in c_list if str(c.get('ran')).upper() == '4G']
+        c5g = [c for c in c_list if str(c.get('ran')).upper() == '5G']
+        c5g_l1 = [c for c in c5g if c.get('layer_5g') == 1 or '2600' in str(c.get('band'))]
+        c5g_l2 = [c for c in c5g if c.get('layer_5g') == 2 or '3800' in str(c.get('band'))]
+
+        has_5g = len(c5g) > 0 or target in era_sites_5g
+        is_dual = (len(c5g_l1) > 0 and len(c5g_l2) > 0) or target in era_sites_dual
+
+        rf['cells_3g'] = len(c3g)
+        rf['cells_4g'] = len(c4g)
+        rf['cells_5g'] = len(c5g)
+        rf['cells_5g_l1'] = len(c5g_l1)
+        rf['cells_5g_l2'] = len(c5g_l2)
+        rf['total_cells'] = len(c_list)
+        rf['has_5g'] = has_5g
+        rf['is_dual_5g'] = is_dual
+        if is_dual:
+            rf['config_5g'] = 'NR26 64T + NR38 64T'
+        elif has_5g:
+            rf['config_5g'] = 'NR26 64T'
+
+        # Gom nhóm sectors
+        sec_map = {}
         for c in c_list:
-            sec_name = (c.get('sector') or (c.get('cell_id')[-1] if c.get('cell_id') else 'A')).upper()
-            if sec_name not in sector_map:
-                sector_map[sec_name] = {
-                    'sector': sec_name,
+            sec = (c.get('sector') or c.get('cell_id')[-1]).upper()
+            if sec not in sec_map:
+                sec_map[sec] = {
+                    'sector': sec,
                     'azimuth': c.get('azimuth'),
                     'height': c.get('height'),
-                    'tilt_elec': c.get('tilt_elec'),
-                    'tilt_mech': c.get('tilt_mech') or 0,
                     'tilt_total': c.get('tilt_total'),
+                    'tilt_mech': c.get('tilt_mech') or 0,
+                    'tilt_elec': c.get('tilt_elec') or 0,
                     'has_3g': False,
                     'has_4g': False,
                     'has_4g_1800_1': False,
@@ -292,53 +350,65 @@ def main():
                     'has_5g_l1': False,
                     'has_5g_l2': False
                 }
-
-            # Cập nhật thông số tốt nhất nếu cell này có
-            if c.get('azimuth') is not None:
-                sector_map[sec_name]['azimuth'] = c.get('azimuth')
-            if c.get('height') is not None:
-                sector_map[sec_name]['height'] = c.get('height')
-            if c.get('tilt_total') is not None:
-                sector_map[sec_name]['tilt_total'] = c.get('tilt_total')
-                sector_map[sec_name]['tilt_elec'] = c.get('tilt_elec')
-                sector_map[sec_name]['tilt_mech'] = c.get('tilt_mech') or 0
-
             ran = str(c.get('ran') or '').upper()
             band = str(c.get('band') or '')
-            layer_5g = c.get('layer_5g')
+            l5g = c.get('layer_5g')
+
+            if c.get('azimuth') is not None:
+                sec_map[sec]['azimuth'] = c.get('azimuth')
+            if c.get('height') is not None:
+                sec_map[sec]['height'] = c.get('height')
+            if c.get('tilt_total') is not None:
+                sec_map[sec]['tilt_total'] = c.get('tilt_total')
+                sec_map[sec]['tilt_mech'] = c.get('tilt_mech') or 0
+                sec_map[sec]['tilt_elec'] = c.get('tilt_elec') or 0
 
             if ran == '3G':
-                sector_map[sec_name]['has_3g'] = True
+                sec_map[sec]['has_3g'] = True
             elif ran == '4G':
-                sector_map[sec_name]['has_4g'] = True
+                sec_map[sec]['has_4g'] = True
                 if '2100' in band:
-                    sector_map[sec_name]['has_4g_2100'] = True
+                    sec_map[sec]['has_4g_2100'] = True
                 else:
-                    if not sector_map[sec_name]['has_4g_1800_1']:
-                        sector_map[sec_name]['has_4g_1800_1'] = True
+                    if not sec_map[sec]['has_4g_1800_1']:
+                        sec_map[sec]['has_4g_1800_1'] = True
                     else:
-                        sector_map[sec_name]['has_4g_1800_2'] = True
+                        sec_map[sec]['has_4g_1800_2'] = True
             elif ran == '5G':
-                if layer_5g == 2 or '3800' in band:
-                    sector_map[sec_name]['has_5g_l2'] = True
-                if layer_5g == 1 or '2600' in band or not ('3800' in band):
-                    sector_map[sec_name]['has_5g_l1'] = True
+                if l5g == 2 or '3800' in band:
+                    sec_map[sec]['has_5g_l2'] = True
+                if l5g == 1 or '2600' in band or not ('3800' in band):
+                    sec_map[sec]['has_5g_l1'] = True
 
-        # Bảo toàn cấu hình 5 sector đặc thù của DNLK05 (DNILKH00)
-        if sid in ('DNLK05', 'DNILKH00') or sold in ('DNLK05', 'DNILKH00'):
-            # Nếu đã có 5 sector trong DB thì giữ nguyên cấu hình chi tiết 5 sector
-            existing_secs = (s.get('technical_info') or {}).get('rf_summary', {}).get('sectors', [])
-            if len(existing_secs) == 5:
-                sector_map = {sec['sector']: sec for sec in existing_secs}
+        for sec_char, e_info in era_by_site_sector.get(target, {}).items():
+            if sec_char in sec_map:
+                if sec_map[sec_char]['azimuth'] is None:
+                    sec_map[sec_char]['azimuth'] = e_info['azimuth']
+                if sec_map[sec_char]['height'] is None:
+                    sec_map[sec_char]['height'] = e_info['height']
+                if sec_map[sec_char]['tilt_total'] is None:
+                    sec_map[sec_char]['tilt_total'] = e_info['tilt_total']
+                    sec_map[sec_char]['tilt_mech'] = e_info['tilt_mech']
+                    sec_map[sec_char]['tilt_elec'] = e_info['tilt_elec']
+                if e_info['sheet'] == '5G':
+                    if '3800' in e_info['band']:
+                        sec_map[sec_char]['has_5g_l2'] = True
+                    else:
+                        sec_map[sec_char]['has_5g_l1'] = True
 
-        sectors_list = sorted(list(sector_map.values()), key=lambda x: x['sector'])
+        # Ghim góc hướng 280 cho DNTN60 (DNIDGI30)
+        if sid in ('DNTN60', 'DNIDGI30') or sold in ('DNTN60', 'DNIDGI30'):
+            if 'A' in sec_map:
+                sec_map['A']['azimuth'] = 280
 
-        # Cập nhật vào datasites.technical_info bảo toàn các trường khác
-        ti = dict(s.get('technical_info') or {})
-        rf_summary = dict(ti.get('rf_summary') or {})
-        rf_summary['sectors'] = sectors_list
-        ti['rf_summary'] = rf_summary
+        # Nếu trạm là Dual 5G, mọi sector 5G đều có cả 2.6G và 3.8G
+        if is_dual:
+            for sec in sec_map.values():
+                if sec['has_5g_l2']:
+                    sec['has_5g_l1'] = True
 
+        rf['sectors'] = sorted(list(sec_map.values()), key=lambda x: x['sector'])
+        ti['rf_summary'] = rf
         site_patches.append((sid, ti))
 
     print(f"⏳ Đang cập nhật {len(site_patches)} trạm trong bảng 'datasites' (10 workers song song)...")
@@ -354,7 +424,7 @@ def main():
 
     print(f"✅ Đã cập nhật thành công {success_site_count}/{len(site_patches)} trạm trong bảng 'datasites'.")
     print("================================================================================")
-    print("🎉 HOÀN TẤT ĐỒNG BỘ THIẾT KẾ RF TỪ FILE ERA MỚI NHẤT!")
+    print("🎉 HOÀN TẤT ĐỒNG BỘ TOÀN DIỆN THIẾT KẾ RF TỪ FILE ERA!")
     print("================================================================================")
 
 if __name__ == '__main__':
