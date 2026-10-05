@@ -137,33 +137,24 @@ def main():
     left_align = Alignment(horizontal='left', vertical='center')
 
     # -------------------------------------------------------------------------
-    # SHEET 1: Máy phát điện_Cố định (26 Cột)
+    # -------------------------------------------------------------------------
+    # SHEET 1: Máy phát điện_Cố định (26 Cột) - XUẤT ĐỢT 2 (CHƯA DUYỆT)
     # -------------------------------------------------------------------------
     ws_mpd = wb['Máy phát điện_Cố định']
     
-    # Tìm dòng bắt đầu ghi dữ liệu mới (sau các dòng đã có)
-    # Kiểm tra xem có dòng dữ liệu cũ không
-    last_row = 2
-    for r in range(3, ws_mpd.max_row + 1):
-        if ws_mpd.cell(r, 1).value or ws_mpd.cell(r, 3).value:
-            last_row = r
+    # Xóa sạch các dòng cũ nếu có từ dòng 3 trở đi để chỉ xuất danh sách trình duyệt mới
+    if ws_mpd.max_row > 2:
+        ws_mpd.delete_rows(3, ws_mpd.max_row - 2)
 
-    start_stt = last_row - 2  # Số lượng ca cũ
-    print(f"📌 Sheet 'Máy phát điện_Cố định': Dòng cuối hiện tại là {last_row} (đã có {start_stt} ca cũ).")
-
-    # Thêm dòng phân cách đánh dấu đợt đề xuất mới
-    sep_row = last_row + 1
-    ws_mpd.cell(sep_row, 3, "--- CÁC CA PHÁT SINH MỚI ĐỀ XUẤT ĐỢT NÀY (ĐÃ LOẠI TRỪ ẮC QUY ĐỀ) ---")
-    ws_mpd.cell(sep_row, 3).font = Font(name='Times New Roman', size=11, bold=True, color='B22222')
-    ws_mpd.cell(sep_row, 3).alignment = left_align
-
-    write_row = sep_row + 1
-    current_stt = start_stt + 1
+    write_row = 3
+    current_stt = 1
 
     for d in mpd_new_items:
         raw_site_id = str(d.get('site_id') or '').strip().upper()
         erp_map = STATION_ERP_MAPPINGS.get(raw_site_id)
-        display_site_id = erp_map['book_site'] if erp_map else raw_site_id
+        site_obj = site_map.get(raw_site_id) or (site_map.get(erp_map['book_site']) if erp_map else {}) or {}
+        # ƯU TIÊN LẤY THEO TÊN CŨ (Mã trạm cũ) THEO YÊU CẦU BAN 4
+        display_site_id = erp_map['book_site'] if erp_map else (site_obj.get('site_id_old') or raw_site_id)
 
         site_obj = site_map.get(raw_site_id) or site_map.get(display_site_id) or {}
         infra = site_obj.get('infrastructure_info') or {}
@@ -227,24 +218,24 @@ def main():
         write_row += 1
 
     # -------------------------------------------------------------------------
-    # SHEET 2: Điều hòa (25 Cột)
+    # SHEET 2: Điều hòa (25 Cột) - XUẤT ĐỢT 2 (CHƯA DUYỆT)
     # -------------------------------------------------------------------------
     ws_dhkk = wb['Điều hòa']
     
-    # Kiểm tra dòng dữ liệu
-    last_row_dhkk = 2
-    for r in range(3, ws_dhkk.max_row + 1):
-        if ws_dhkk.cell(r, 1).value or ws_dhkk.cell(r, 3).value:
-            last_row_dhkk = r
+    if ws_dhkk.max_row > 2:
+        ws_dhkk.delete_rows(3, ws_dhkk.max_row - 2)
 
-    write_row_dhkk = last_row_dhkk + 1
-    current_stt_dhkk = (last_row_dhkk - 2) + 1
+    write_row_dhkk = 3
+    current_stt_dhkk = 1
 
-    print(f"📌 Sheet 'Điều hòa': Bắt đầu ghi từ dòng {write_row_dhkk}.")
+    print(f"📌 Sheet 'Điều hòa': Bắt đầu ghi từ dòng 3 (STT 1..{len(dhkk_new_items)}).")
 
     for d in dhkk_new_items:
         raw_site_id = str(d.get('site_id') or '').strip().upper()
-        site_obj = site_map.get(raw_site_id) or {}
+        erp_map = STATION_ERP_MAPPINGS.get(raw_site_id)
+        site_obj = site_map.get(raw_site_id) or (site_map.get(erp_map['book_site']) if erp_map else {}) or {}
+        # ƯU TIÊN LẤY THEO TÊN CŨ (Mã trạm cũ) THEO YÊU CẦU BAN 4
+        display_site_id = erp_map['book_site'] if erp_map else (site_obj.get('site_id_old') or raw_site_id)
         infra = site_obj.get('infrastructure_info') or {}
         ml_list = infra.get('may_lanh') or []
         equip = ml_list[0] if ml_list else {}
@@ -286,7 +277,7 @@ def main():
         cat_marks = ['X' if i in selected_cats else '' for i in range(11)]
 
         row_vals = [
-            current_stt_dhkk, 'Đồng Nai', raw_site_id, phan_loai, ten_tb,
+            current_stt_dhkk, 'Đồng Nai', display_site_id, phan_loai, ten_tb,
             ma_tscd, serial, ngay_sd, hang_sx, cong_suat,
             cong_cu_ql, so_lan_sua, mo_ta, chi_phi
         ] + cat_marks

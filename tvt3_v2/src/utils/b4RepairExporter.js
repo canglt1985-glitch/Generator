@@ -136,9 +136,9 @@ function createMpdCoDinhWorksheet(items, siteMap, XLSX) {
   items.forEach((item, idx) => {
     const rawSiteId = String(item.site_id || item.site_code || item.tram || '').trim().toUpperCase();
     const erpMap = STATION_ERP_MAPPINGS[rawSiteId];
-    const displaySiteId = erpMap ? erpMap.book_site : rawSiteId;
-
-    const siteObj = siteMap[rawSiteId] || siteMap[displaySiteId] || {};
+    const siteObj = siteMap[rawSiteId] || (erpMap ? siteMap[erpMap.book_site] : {}) || {};
+    // ƯU TIÊN LẤY THEO TÊN CŨ (Mã trạm cũ) THEO YÊU CẦU BAN 4
+    const displaySiteId = erpMap ? erpMap.book_site : (siteObj.site_id_old || rawSiteId);
     const infra = siteObj.infrastructure_info || {};
     const mpdList = infra.may_phat_dien?.mpd || [];
     const equip = mpdList[0] || {};
@@ -239,7 +239,10 @@ function createDhkkWorksheet(items, siteMap, XLSX) {
 
   items.forEach((item, idx) => {
     const rawSiteId = String(item.site_id || item.site_code || item.tram || '').trim().toUpperCase();
-    const siteObj = siteMap[rawSiteId] || {};
+    const erpMap = STATION_ERP_MAPPINGS[rawSiteId];
+    const siteObj = siteMap[rawSiteId] || (erpMap ? siteMap[erpMap.book_site] : {}) || {};
+    // ƯU TIÊN LẤY THEO TÊN CŨ (Mã trạm cũ) THEO YÊU CẦU BAN 4
+    const displaySiteId = erpMap ? erpMap.book_site : (siteObj.site_id_old || rawSiteId);
     const infra = siteObj.infrastructure_info || {};
     const mlList = infra.may_lanh || [];
     const equip = mlList[0] || {};
@@ -286,7 +289,7 @@ function createDhkkWorksheet(items, siteMap, XLSX) {
     rows.push([
       idx + 1,
       'Đồng Nai',
-      rawSiteId,
+      displaySiteId,
       phanLoai,
       tenThietBi,
       maTSCD,
