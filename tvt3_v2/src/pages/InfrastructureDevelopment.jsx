@@ -10,7 +10,7 @@ import {
   TrendingUp, Activity, Server, FileText, ArrowRight, ChevronLeft,
   X, HelpCircle, Check, Play, Edit3, Download, Upload,
   Building2, Send, History, Sparkles, Share2, CheckSquare, FileSpreadsheet, Landmark,
-  RotateCcw
+  RotateCcw, SlidersHorizontal
 } from 'lucide-react';
 
 const STAGES = [
@@ -19,6 +19,23 @@ const STAGES = [
   { id: 'skhcn', label: 'Sở KHCN Chấp thuận', color: 'amber', desc: 'Văn bản chấp thuận của Sở KHCN (Xây mới hoặc dùng chung CSHT)' },
   { id: 'tct_approval', label: 'TCT Phê duyệt QĐĐT', color: 'purple', desc: 'Tổng công ty phê duyệt Lần 1 / Quyết định đầu tư / Lên gói thầu' },
   { id: 'contract', label: 'Trình ký Hợp đồng', color: 'emerald', desc: 'Hoàn tất hồ sơ & Trình ký hợp đồng thuê mặt bằng' }
+];
+
+export const COLUMN_CONFIG = [
+  { id: 'planning_id_old', label: 'Mã QH cũ', default: true },
+  { id: 'package', label: 'Gói triển khai', default: true },
+  { id: 'ward', label: 'Địa bàn Quy hoạch', default: true },
+  { id: 'district_old', label: 'Địa bàn cũ', default: false },
+  { id: 'nearest_site', label: 'Trạm gần nhất', default: true },
+  { id: 'coords_plan', label: 'Tọa độ QH', default: false },
+  { id: 'coords_survey', label: 'Tọa độ KS', default: false },
+  { id: 'coords_diff', label: 'Sai lệch', default: false },
+  { id: 'skhcn', label: '🏛️ Sở KH&CN', default: true },
+  { id: 'tct_approval', label: '🏢 TCT Phê duyệt', default: true },
+  { id: 'antenna', label: 'Loại cột & Độ cao', default: true },
+  { id: 'proposed_rent', label: 'Giá thuê đề xuất', default: true },
+  { id: 'contract_ready', label: 'Trình ký', default: true },
+  { id: 'status', label: 'Trạng thái', default: true }
 ];
 
 export const SITES_4_PACKAGES = [
@@ -231,6 +248,59 @@ export default function InfrastructureDevelopment() {
   const [filterContractReady, setFilterContractReady] = useState('');
   const [filterImplementationType, setFilterImplementationType] = useState('');
   const [filterReviewGroup, setFilterReviewGroup] = useState('');
+  
+  // Quản lý hiển thị các cột linh hoạt (Flexible Columns Visibility)
+  const [visibleColumns, setVisibleColumns] = useState(() => {
+    try {
+      const saved = localStorage.getItem('tvt3_csht_visible_columns');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    const defaults = {};
+    COLUMN_CONFIG.forEach(c => { defaults[c.id] = c.default; });
+    return defaults;
+  });
+
+  const [showColumnDropdown, setShowColumnDropdown] = useState(false);
+
+  const toggleColumn = (colId) => {
+    setVisibleColumns(prev => {
+      const updated = { ...prev, [colId]: !prev[colId] };
+      try {
+        localStorage.setItem('tvt3_csht_visible_columns', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+  };
+
+  const setColumnPreset = (preset) => {
+    let updated = {};
+    if (preset === 'COMPACT') {
+      COLUMN_CONFIG.forEach(c => { updated[c.id] = c.default; });
+    } else if (preset === 'COORDS') {
+      updated = {
+        planning_id_old: true,
+        package: true,
+        ward: true,
+        district_old: false,
+        nearest_site: true,
+        coords_plan: true,
+        coords_survey: true,
+        coords_diff: true,
+        skhcn: true,
+        tct_approval: true,
+        antenna: false,
+        proposed_rent: false,
+        contract_ready: true,
+        status: true
+      };
+    } else {
+      COLUMN_CONFIG.forEach(c => { updated[c.id] = true; });
+    }
+    setVisibleColumns(updated);
+    try {
+      localStorage.setItem('tvt3_csht_visible_columns', JSON.stringify(updated));
+    } catch (e) {}
+  };
   
   // Form State for new proposal
   const [newProject, setNewProject] = useState({
@@ -2659,6 +2729,95 @@ export default function InfrastructureDevelopment() {
                   >
                     <Download className="h-3.5 w-3.5 text-slate-300" /> Xuất Excel ({filteredProjects.length})
                   </button>
+
+                  {/* Nút Tùy chỉnh cột hiển thị */}
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setShowColumnDropdown(prev => !prev)}
+                      className="text-xs bg-slate-100 hover:bg-slate-200/90 text-slate-700 border border-slate-300 font-bold px-3 py-2 rounded-xl shadow-2xs flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap"
+                      title="Tùy chọn ẩn/hiện các cột trên bảng dữ liệu"
+                    >
+                      <SlidersHorizontal className="h-3.5 w-3.5 text-slate-600" />
+                      <span>Cột ({Object.values(visibleColumns).filter(Boolean).length + 1}/{COLUMN_CONFIG.length + 1})</span>
+                    </button>
+
+                    {showColumnDropdown && (
+                      <>
+                        <div 
+                          className="fixed inset-0 z-30" 
+                          onClick={() => setShowColumnDropdown(false)} 
+                        />
+                        <div className="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-2xl border border-slate-200 p-3.5 z-40 animate-in fade-in-50 zoom-in-95 duration-150">
+                          <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-100">
+                            <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                              <SlidersHorizontal className="h-3.5 w-3.5 text-blue-600" />
+                              Tùy biến cột hiển thị
+                            </span>
+                            <button 
+                              type="button"
+                              onClick={() => setShowColumnDropdown(false)}
+                              className="p-1 text-slate-400 hover:text-slate-600 rounded-md cursor-pointer"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+
+                          {/* Quick Presets */}
+                          <div className="grid grid-cols-3 gap-1 mb-2.5 pb-2.5 border-b border-slate-100">
+                            <button
+                              type="button"
+                              onClick={() => setColumnPreset('COMPACT')}
+                              className="text-[10px] font-bold py-1.5 px-1 rounded-lg bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-700 text-center transition-colors cursor-pointer"
+                            >
+                              👁️ Xem gọn
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setColumnPreset('COORDS')}
+                              className="text-[10px] font-bold py-1.5 px-1 rounded-lg bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 text-slate-700 text-center transition-colors cursor-pointer"
+                            >
+                              📐 Tọa độ
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setColumnPreset('ALL')}
+                              className="text-[10px] font-bold py-1.5 px-1 rounded-lg bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 text-center transition-colors cursor-pointer"
+                            >
+                              📋 Hiện tất cả
+                            </button>
+                          </div>
+
+                          {/* Column Checkboxes List */}
+                          <div className="max-h-64 overflow-y-auto space-y-1 pr-1 text-xs">
+                            <div className="flex items-center justify-between px-2 py-1 rounded bg-slate-50 text-slate-500 font-semibold select-none">
+                              <span>Mã QH mới</span>
+                              <span className="text-[10px] text-blue-600 font-bold bg-blue-50 px-1.5 py-0.5 rounded">Cố định</span>
+                            </div>
+                            {COLUMN_CONFIG.map(col => {
+                              const isChecked = Boolean(visibleColumns[col.id]);
+                              return (
+                                <label 
+                                  key={col.id} 
+                                  className="flex items-center justify-between px-2 py-1 rounded hover:bg-slate-50 cursor-pointer text-slate-700 select-none transition-colors"
+                                >
+                                  <span className={isChecked ? 'font-medium text-slate-800' : 'text-slate-400'}>
+                                    {col.label}
+                                  </span>
+                                  <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    onChange={() => toggleColumn(col.id)}
+                                    className="rounded text-blue-600 focus:ring-blue-500 h-3.5 w-3.5 cursor-pointer"
+                                  />
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -2879,31 +3038,62 @@ export default function InfrastructureDevelopment() {
               )}
 
               {/* Table */}
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse">
+              <div className="overflow-x-auto border border-slate-200/80 rounded-2xl shadow-sm bg-white">
+                <table className="w-full text-left text-xs border-collapse min-w-max">
                   <thead>
-                    <tr className="bg-slate-50 border-b border-slate-100 text-slate-500 font-semibold">
-                      <th className="py-2.5 px-3">Mã QH mới</th>
-                      <th className="py-2.5 px-3">Mã QH cũ</th>
-                      <th className="py-2.5 px-3">Gói</th>
-                      <th className="py-2.5 px-3">Địa bàn Quy hoạch</th>
-                      <th className="py-2.5 px-3 hidden md:table-cell">Địa bàn cũ</th>
-                      <th className="py-2.5 px-3 hidden lg:table-cell">Trạm gần nhất</th>
-                      <th className="py-2.5 px-3 hidden xl:table-cell">Tọa độ QH</th>
-                      <th className="py-2.5 px-3 hidden xl:table-cell">Tọa độ KS</th>
-                      <th className="py-2.5 px-3 hidden xl:table-cell">Sai lệch</th>
-                      <th className="py-2.5 px-3">🏛️ Sở KH&amp;CN</th>
-                      <th className="py-2.5 px-3">🏢 TCT Phê duyệt</th>
-                      <th className="py-2.5 px-3">Loại cột &amp; Độ cao</th>
-                      <th className="py-2.5 px-3 text-right">Giá thuê đề xuất</th>
-                      <th className="py-2.5 px-3 text-center">Trình ký</th>
-                      <th className="py-2.5 px-3 text-center">Trạng thái</th>
+                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold select-none">
+                      {/* Cột Mã QH mới ghim cố định bên trái */}
+                      <th className="py-2.5 px-3 sticky left-0 z-20 bg-slate-100 font-bold border-r border-slate-200 text-slate-700 whitespace-nowrap shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)]">
+                        Mã QH mới
+                      </th>
+                      {visibleColumns.planning_id_old && (
+                        <th className="py-2.5 px-3 whitespace-nowrap">Mã QH cũ</th>
+                      )}
+                      {visibleColumns.package && (
+                        <th className="py-2.5 px-3 whitespace-nowrap">Gói</th>
+                      )}
+                      {visibleColumns.ward && (
+                        <th className="py-2.5 px-3 whitespace-nowrap min-w-[140px]">Địa bàn Quy hoạch</th>
+                      )}
+                      {visibleColumns.district_old && (
+                        <th className="py-2.5 px-3 whitespace-nowrap">Địa bàn cũ</th>
+                      )}
+                      {visibleColumns.nearest_site && (
+                        <th className="py-2.5 px-3 whitespace-nowrap">Trạm gần nhất</th>
+                      )}
+                      {visibleColumns.coords_plan && (
+                        <th className="py-2.5 px-3 whitespace-nowrap">Tọa độ QH</th>
+                      )}
+                      {visibleColumns.coords_survey && (
+                        <th className="py-2.5 px-3 whitespace-nowrap">Tọa độ KS</th>
+                      )}
+                      {visibleColumns.coords_diff && (
+                        <th className="py-2.5 px-3 whitespace-nowrap">Sai lệch</th>
+                      )}
+                      {visibleColumns.skhcn && (
+                        <th className="py-2.5 px-3 whitespace-nowrap">🏛️ Sở KH&amp;CN</th>
+                      )}
+                      {visibleColumns.tct_approval && (
+                        <th className="py-2.5 px-3 whitespace-nowrap">🏢 TCT Phê duyệt</th>
+                      )}
+                      {visibleColumns.antenna && (
+                        <th className="py-2.5 px-3 whitespace-nowrap">Loại cột &amp; Độ cao</th>
+                      )}
+                      {visibleColumns.proposed_rent && (
+                        <th className="py-2.5 px-3 text-right whitespace-nowrap">Giá thuê đề xuất</th>
+                      )}
+                      {visibleColumns.contract_ready && (
+                        <th className="py-2.5 px-3 text-center whitespace-nowrap">Trình ký</th>
+                      )}
+                      {visibleColumns.status && (
+                        <th className="py-2.5 px-3 text-center whitespace-nowrap">Trạng thái</th>
+                      )}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {filteredProjects.length === 0 ? (
                       <tr>
-                        <td colSpan="13" className="py-8 text-center text-slate-400 font-medium bg-slate-50/20">
+                        <td colSpan="20" className="py-8 text-center text-slate-400 font-medium bg-slate-50/20">
                           Không tìm thấy kết quả phù hợp.
                         </td>
                       </tr>
@@ -2916,171 +3106,227 @@ export default function InfrastructureDevelopment() {
                           <tr 
                             key={proj.project_id} 
                             onClick={() => selectProject(proj)}
-                            className="hover:bg-slate-50/50 cursor-pointer transition-colors"
+                            className="group hover:bg-slate-50/80 cursor-pointer transition-colors"
                           >
-                             <td className="py-3 px-3 font-bold text-blue-600">
-                               {(() => {
-                                 const displayId = getDisplayPlanningId(proj.planning_id_new, proj.planning_id_old);
-                                 if (displayId === 'Chờ duyệt') {
-                                   return (
-                                     <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
-                                       Chờ duyệt
-                                     </span>
-                                   );
-                                 }
-                                 return (
-                                    <span className="inline-flex items-center gap-1">
-                                      {displayId}
-                                      {(proj.skhcn_resubmit_status === 'RESUBMIT_APPROVED_BUILD' || proj.skhcn_resubmit_status === 'RESOLVED_NEW_BUILD') && (
-                                        <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 whitespace-nowrap" title="Sở KH&CN đã chấp thuận xây mới sau tái trình">
-                                          Sở OK XM
-                                        </span>
-                                      )}
-                                      {(proj.skhcn_resubmit_status === 'WAITING_SO_FEEDBACK' || proj.skhcn_resubmit_status === 'RESUBMIT_PENDING') && (
-                                        <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-100 text-amber-800 border border-amber-300 whitespace-nowrap animate-pulse" title="Đang chờ Sở KH&CN thẩm định tái trình">
-                                          Chờ Sở
-                                        </span>
-                                      )}
-                                    </span>
-                                  );
-                               })()}
-                             </td>
-                            <td className="py-3 px-3 text-slate-400 font-medium">{proj.planning_id_old || '-'}</td>
-                             <td className="py-3 px-3">
-                               {proj.deployment_package ? (
-                                 <span className="px-1.5 py-0.5 text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-100 rounded">
-                                   {proj.deployment_package}
-                                 </span>
-                               ) : (
-                                 <span className="text-slate-300 italic">-</span>
-                               )}
-                             </td>
-                            <td className="py-3 px-3 text-slate-600 font-semibold">
-                              {proj.ward ? (proj.district && !proj.ward.includes(proj.district) ? `${proj.ward}, ${proj.district}` : proj.ward) : (proj.district || 'Chưa xác định')}
-                            </td>
-                            <td className="py-3 px-3 text-slate-500 hidden md:table-cell">
-                              {oldLoc}
-                            </td>
-                            <td className="py-3 px-3 text-blue-600 font-semibold hidden lg:table-cell">
-                              {nearestSite && nearestSite.distance < 10 
-                                ? `${nearestSite.site_id_old || nearestSite.site_id} (${nearestSite.distance.toFixed(1)} km)` 
-                                : '-'}
-                            </td>
-                            <td className="py-3 px-3 text-slate-500 hidden xl:table-cell font-mono text-[11px]">
-                              {proj.latitude_plan && proj.longitude_plan ? `${proj.latitude_plan.toFixed(5)}, ${proj.longitude_plan.toFixed(5)}` : '-'}
-                            </td>
-                            <td className="py-3 px-3 text-slate-500 hidden xl:table-cell font-mono text-[11px]">
-                              {proj.latitude_survey && proj.longitude_survey ? `${proj.latitude_survey.toFixed(5)}, ${proj.longitude_survey.toFixed(5)}` : 'Chưa khảo sát'}
-                            </td>
-                            <td className="py-3 px-3 text-slate-600 hidden xl:table-cell font-semibold">
+                            {/* Cột Mã QH mới Sticky */}
+                            <td className="py-3 px-3 font-bold text-blue-600 sticky left-0 z-10 bg-white group-hover:bg-slate-50 border-r border-slate-200 whitespace-nowrap shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)]">
                               {(() => {
-                                if (proj.latitude_plan && proj.longitude_plan && proj.latitude_survey && proj.longitude_survey) {
-                                  const distM = haversine(proj.latitude_plan, proj.longitude_plan, proj.latitude_survey, proj.longitude_survey) * 1000;
-                                  return distM < 1000 
-                                    ? `${Math.round(distM)} m` 
-                                    : `${(distM / 1000).toFixed(2)} km`;
-                                }
-                                return '-';
-                              })()}
-                            </td>
-                            {/* 🏛️ Phê duyệt Sở KH&CN */}
-                            <td className="py-3 px-3">
-                              {proj.skhcn_status === 'Chấp thuận xây dựng mới' ? (
-                                <div>
-                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                                    <CheckCircle2 className="h-2.5 w-2.5 text-emerald-600" /> Xây mới
-                                  </span>
-                                  {proj.skhcn_confirmed && (
-                                    <span className="block text-[9px] text-slate-400 mt-0.5 truncate max-w-[110px]" title={proj.skhcn_confirmed}>
-                                      {proj.skhcn_confirmed}
-                                    </span>
-                                  )}
-                                </div>
-                              ) : proj.skhcn_status === 'Đề nghị dùng chung CSHT' ? (
-                                <div>
-                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                                    <AlertTriangle className="h-2.5 w-2.5 text-amber-600" /> Dùng chung
-                                  </span>
-                                  <span className="block text-[9px] text-rose-500 font-semibold mt-0.5">
-                                    &lt; 400m
-                                  </span>
-                                </div>
-                              ) : (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-50 text-slate-500 border border-slate-200">
-                                  ⏳ Chờ duyệt
-                                </span>
-                              )}
-                            </td>
-
-                            {/* 🏢 Phê duyệt TCT */}
-                            <td className="py-3 px-3">
-                              {proj.approval_batch?.includes('7203') ? (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100/80 text-emerald-900 border border-emerald-300">
-                                  ✨ Bổ sung 7203
-                                </span>
-                              ) : proj.deployment_package ? (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                                  🎯 {proj.deployment_package}
-                                </span>
-                              ) : proj.approval_batch?.includes('Đợt 1') ? (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                                  ✅ Đợt 1
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-                                  ⏳ Chờ bổ sung
-                                </span>
-                              )}
-                              {proj.planning_id_new === '26DNa246' ? (
-                                <span className="inline-block mt-0.5 px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-100 text-amber-900 border border-amber-300" title="Không có sổ đỏ - Chuyển sang Dùng chung CSHT">
-                                  ⚠️ Dùng chung (K.sổ đỏ)
-                                </span>
-                              ) : SITES_TSCA_LUONG_DUNG.includes(proj.planning_id_new) ? (
-                                <span className="inline-block mt-0.5 px-1.5 py-0.2 rounded text-[9px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200" title="Trụ sở Công an áp dụng MBF đầu tư mới cho Lưỡng dụng">
-                                  🛡️ MBF ĐT (Lưỡng dụng)
-                                </span>
-                              ) : (
-                                <span className="block text-[9px] text-slate-400 mt-0.5">
-                                  {proj.implementation_type || 'MBF đầu tư'}
-                                </span>
-                              )}
-                            </td>
-                            <td className="py-3 px-3 text-slate-500">
-                              {proj.antenna_type ? `${proj.antenna_type} ${proj.height ? `(${proj.height}m)` : ''}` : '-'}
-                            </td>
-                            <td className="py-3 px-3 text-right font-bold text-slate-700">
-                              {proj.proposed_rent ? `${proj.proposed_rent.toLocaleString()} đ` : '-'}
-                            </td>
-                            <td className="py-3 px-3 text-center">
-                              {(() => {
-                                const { isEligible } = checkContractEligibility(proj);
-                                if (proj.survey_status === 'NOK') {
+                                const displayId = getDisplayPlanningId(proj.planning_id_new, proj.planning_id_old);
+                                if (displayId === 'Chờ duyệt') {
                                   return (
-                                    <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold text-red-700 bg-red-50 border border-red-100">
-                                      NOK
+                                    <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 whitespace-nowrap">
+                                      Chờ duyệt
                                     </span>
                                   );
                                 }
-                                return isEligible ? (
-                                  <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100">
-                                    Đủ ĐK
-                                  </span>
-                                ) : (
-                                  <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold text-slate-400 bg-slate-50 border border-slate-200">
-                                    Thiếu TT
+                                return (
+                                  <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                                    <span className="hover:underline">{displayId}</span>
+                                    {(proj.skhcn_resubmit_status === 'RESUBMIT_APPROVED_BUILD' || proj.skhcn_resubmit_status === 'RESOLVED_NEW_BUILD') && (
+                                      <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 whitespace-nowrap" title="Sở KH&CN đã chấp thuận xây mới sau tái trình">
+                                        Sở OK XM
+                                      </span>
+                                    )}
+                                    {(proj.skhcn_resubmit_status === 'WAITING_SO_FEEDBACK' || proj.skhcn_resubmit_status === 'RESUBMIT_PENDING') && (
+                                      <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-100 text-amber-800 border border-amber-300 whitespace-nowrap animate-pulse" title="Đang chờ Sở KH&CN thẩm định tái trình">
+                                        Chờ Sở
+                                      </span>
+                                    )}
                                   </span>
                                 );
                               })()}
                             </td>
-                            <td className="py-3 px-3 text-center">
-                              <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                                proj.overall_status === 'COMPLETED' ? 'text-emerald-700 bg-emerald-50 border-emerald-100' :
-                                proj.overall_status === 'IN_PROGRESS' ? 'text-amber-700 bg-amber-50 border-amber-100' :
-                                'text-slate-600 bg-slate-50 border-slate-100'
-                              }`}>
-                                {proj.overall_status}
-                              </span>
-                            </td>
+
+                            {/* Mã QH cũ */}
+                            {visibleColumns.planning_id_old && (
+                              <td className="py-3 px-3 text-slate-400 font-medium whitespace-nowrap">
+                                {proj.planning_id_old || '-'}
+                              </td>
+                            )}
+
+                            {/* Gói */}
+                            {visibleColumns.package && (
+                              <td className="py-3 px-3 whitespace-nowrap">
+                                {proj.deployment_package ? (
+                                  <span className="px-2 py-0.5 text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded whitespace-nowrap">
+                                    {proj.deployment_package}
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-300 italic">-</span>
+                                )}
+                              </td>
+                            )}
+
+                            {/* Địa bàn Quy hoạch */}
+                            {visibleColumns.ward && (
+                              <td className="py-3 px-3 text-slate-700 font-medium whitespace-nowrap">
+                                {proj.ward ? (proj.district && !proj.ward.includes(proj.district) ? `${proj.ward}, ${proj.district}` : proj.ward) : (proj.district || 'Chưa xác định')}
+                              </td>
+                            )}
+
+                            {/* Địa bàn cũ */}
+                            {visibleColumns.district_old && (
+                              <td className="py-3 px-3 text-slate-500 whitespace-nowrap">
+                                {oldLoc}
+                              </td>
+                            )}
+
+                            {/* Trạm gần nhất */}
+                            {visibleColumns.nearest_site && (
+                              <td className="py-3 px-3 text-blue-600 font-semibold whitespace-nowrap">
+                                {nearestSite && nearestSite.distance < 10 
+                                  ? `${nearestSite.site_id_old || nearestSite.site_id} (${nearestSite.distance.toFixed(1)} km)` 
+                                  : '-'}
+                              </td>
+                            )}
+
+                            {/* Tọa độ QH */}
+                            {visibleColumns.coords_plan && (
+                              <td className="py-3 px-3 text-slate-500 font-mono text-[11px] whitespace-nowrap">
+                                {proj.latitude_plan && proj.longitude_plan ? `${proj.latitude_plan.toFixed(5)}, ${proj.longitude_plan.toFixed(5)}` : '-'}
+                              </td>
+                            )}
+
+                            {/* Tọa độ KS */}
+                            {visibleColumns.coords_survey && (
+                              <td className="py-3 px-3 text-slate-500 font-mono text-[11px] whitespace-nowrap">
+                                {proj.latitude_survey && proj.longitude_survey ? `${proj.latitude_survey.toFixed(5)}, ${proj.longitude_survey.toFixed(5)}` : 'Chưa khảo sát'}
+                              </td>
+                            )}
+
+                            {/* Sai lệch */}
+                            {visibleColumns.coords_diff && (
+                              <td className="py-3 px-3 text-slate-600 font-semibold whitespace-nowrap">
+                                {(() => {
+                                  if (proj.latitude_plan && proj.longitude_plan && proj.latitude_survey && proj.longitude_survey) {
+                                    const distM = haversine(proj.latitude_plan, proj.longitude_plan, proj.latitude_survey, proj.longitude_survey) * 1000;
+                                    return distM < 1000 
+                                      ? `${Math.round(distM)} m` 
+                                      : `${(distM / 1000).toFixed(2)} km`;
+                                  }
+                                  return '-';
+                                })()}
+                              </td>
+                            )}
+
+                            {/* 🏛️ Phê duyệt Sở KH&CN */}
+                            {visibleColumns.skhcn && (
+                              <td className="py-3 px-3 whitespace-nowrap">
+                                {proj.skhcn_status === 'Chấp thuận xây dựng mới' ? (
+                                  <div>
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 whitespace-nowrap">
+                                      <CheckCircle2 className="h-2.5 w-2.5 text-emerald-600" /> Xây mới
+                                    </span>
+                                    {proj.skhcn_confirmed && (
+                                      <span className="block text-[9px] text-slate-400 mt-0.5 truncate max-w-[120px] whitespace-nowrap" title={proj.skhcn_confirmed}>
+                                        {proj.skhcn_confirmed}
+                                      </span>
+                                    )}
+                                  </div>
+                                ) : proj.skhcn_status === 'Đề nghị dùng chung CSHT' ? (
+                                  <div>
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 whitespace-nowrap">
+                                      <AlertTriangle className="h-2.5 w-2.5 text-amber-600" /> Dùng chung
+                                    </span>
+                                    <span className="block text-[9px] text-rose-500 font-semibold mt-0.5 whitespace-nowrap">
+                                      &lt; 400m
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-50 text-slate-500 border border-slate-200 whitespace-nowrap">
+                                    ⏳ Chờ duyệt
+                                  </span>
+                                )}
+                              </td>
+                            )}
+
+                            {/* 🏢 Phê duyệt TCT */}
+                            {visibleColumns.tct_approval && (
+                              <td className="py-3 px-3 whitespace-nowrap">
+                                {proj.approval_batch?.includes('7203') ? (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100/80 text-emerald-900 border border-emerald-300 whitespace-nowrap">
+                                    ✨ Bổ sung 7203
+                                  </span>
+                                ) : proj.deployment_package ? (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 whitespace-nowrap">
+                                    🎯 {proj.deployment_package}
+                                  </span>
+                                ) : proj.approval_batch?.includes('Đợt 1') ? (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 whitespace-nowrap">
+                                    ✅ Đợt 1
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 whitespace-nowrap">
+                                    ⏳ Chờ bổ sung
+                                  </span>
+                                )}
+                                {proj.planning_id_new === '26DNa246' ? (
+                                  <span className="block mt-0.5 px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-100 text-amber-900 border border-amber-300 whitespace-nowrap" title="Không có sổ đỏ - Chuyển sang Dùng chung CSHT">
+                                    ⚠️ Dùng chung (K.sổ đỏ)
+                                  </span>
+                                ) : SITES_TSCA_LUONG_DUNG.includes(proj.planning_id_new) ? (
+                                  <span className="block mt-0.5 px-1.5 py-0.2 rounded text-[9px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 whitespace-nowrap" title="Trụ sở Công an áp dụng MBF đầu tư mới cho Lưỡng dụng">
+                                    🛡️ MBF ĐT (Lưỡng dụng)
+                                  </span>
+                                ) : (
+                                  <span className="block text-[9px] text-slate-400 mt-0.5 whitespace-nowrap">
+                                    {proj.implementation_type || 'MBF đầu tư'}
+                                  </span>
+                                )}
+                              </td>
+                            )}
+
+                            {/* Loại cột & Độ cao */}
+                            {visibleColumns.antenna && (
+                              <td className="py-3 px-3 text-slate-500 whitespace-nowrap">
+                                {proj.antenna_type ? `${proj.antenna_type} ${proj.height ? `(${proj.height}m)` : ''}` : '-'}
+                              </td>
+                            )}
+
+                            {/* Giá thuê đề xuất */}
+                            {visibleColumns.proposed_rent && (
+                              <td className="py-3 px-3 text-right font-bold text-slate-700 whitespace-nowrap">
+                                {proj.proposed_rent ? `${proj.proposed_rent.toLocaleString()} đ` : '-'}
+                              </td>
+                            )}
+
+                            {/* Trình ký */}
+                            {visibleColumns.contract_ready && (
+                              <td className="py-3 px-3 text-center whitespace-nowrap">
+                                {(() => {
+                                  const { isEligible } = checkContractEligibility(proj);
+                                  if (proj.survey_status === 'NOK') {
+                                    return (
+                                      <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold text-red-700 bg-red-50 border border-red-100 whitespace-nowrap">
+                                        NOK
+                                      </span>
+                                    );
+                                  }
+                                  return isEligible ? (
+                                    <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 whitespace-nowrap">
+                                      Đủ ĐK
+                                    </span>
+                                  ) : (
+                                    <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold text-slate-400 bg-slate-50 border border-slate-200 whitespace-nowrap">
+                                      Thiếu TT
+                                    </span>
+                                  );
+                                })()}
+                              </td>
+                            )}
+
+                            {/* Trạng thái */}
+                            {visibleColumns.status && (
+                              <td className="py-3 px-3 text-center whitespace-nowrap">
+                                <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold border whitespace-nowrap ${
+                                  proj.overall_status === 'COMPLETED' ? 'text-emerald-700 bg-emerald-50 border-emerald-100' :
+                                  proj.overall_status === 'IN_PROGRESS' ? 'text-amber-700 bg-amber-50 border-amber-100' :
+                                  'text-slate-600 bg-slate-50 border-slate-100'
+                                }`}>
+                                  {proj.overall_status}
+                                </span>
+                              </td>
+                            )}
                           </tr>
                         );
                       })
