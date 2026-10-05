@@ -44,6 +44,43 @@ const parseDateFromDMY = (dmyStr) => {
   return null;
 };
 
+// Ma trận Sự Cố Nhanh 1-Chạm 30 Giây (Chuẩn hóa tự động Biểu Mẫu B4 & Danh Mục)
+const QUICK_DEFECT_TAGS = {
+  'Máy phát điện': [
+    { label: '🔋 Bình yếu / Hỏng sạc', desc: 'Bình ắc quy yếu / Hỏng bộ nạp DC tự động', b4Idx: 2, deviceType: 'MPD_CO_DINH' },
+    { label: '💧 Xì két nước / Nóng máy', desc: 'Rò rỉ két nước giải nhiệt / Động cơ quá nhiệt', b4Idx: 4, deviceType: 'MPD_CO_DINH' },
+    { label: '🕹️ Hư ATS / Không đề tự động', desc: 'Tủ ATS không tự khởi động / Không chuyển nguồn', b4Idx: 5, deviceType: 'MPD_CO_DINH' },
+    { label: '⚡ Cháy AVR / Mất điện áp', desc: 'Hỏng bo điều áp AVR / Mất kích từ / Mất điện áp ra', b4Idx: 1, deviceType: 'MPD_CO_DINH' },
+    { label: '🔧 Đề dai / Hỏng củ đề', desc: 'Máy đề dai khó nổ / Kẹt chuột đề / Lỗi củ đề', b4Idx: 2, deviceType: 'MPD_CO_DINH' },
+    { label: '🛢️ Rò rỉ nhớt / Nghẹt lọc dầu', desc: 'Chảy dầu nhớt / Tắc lọc nhiên liệu / Rò rỉ ống dầu', b4Idx: 3, deviceType: 'MPD_CO_DINH' },
+    { label: '💨 Đại tu máy / Thổi gioăng', desc: 'Động cơ khói đen / Thổi gioăng quy lát / Cần đại tu', b4Idx: 0, deviceType: 'MPD_CO_DINH' },
+    { label: '🔌 Cháy contactor / Nhảy CB', desc: 'Cháy contactor nguồn máy phát / Nhảy CB phụ tải', b4Idx: 6, deviceType: 'MPD_CO_DINH' }
+  ],
+  'Máy lạnh': [
+    { label: '❄️ Không lạnh / Xì gas', desc: 'Máy chạy không lạnh / Xì rò rỉ hết gas lạnh', b4Idx: 3, deviceType: 'DHKK' },
+    { label: '🛑 Cháy / Kẹt block máy nén', desc: 'Máy nén (block) kêu to / Kẹt cơ / Cháy cuộn dây block', b4Idx: 0, deviceType: 'DHKK' },
+    { label: '🔌 Hỏng bo mạch / Báo lỗi', desc: 'Hỏng bo mạch điều khiển dàn lạnh / Chớp đèn báo lỗi', b4Idx: 1, deviceType: 'DHKK' },
+    { label: '💧 Chảy nước dàn lạnh', desc: 'Nghẹt máng thoát nước ngưng / Chảy nước vào phòng máy', b4Idx: 7, deviceType: 'DHKK' },
+    { label: '🌀 Hỏng quạt nóng / Cháy tụ', desc: 'Kẹt motor quạt dàn nóng / Cháy tụ quạt dàn nóng', b4Idx: 2, deviceType: 'DHKK' },
+    { label: '🌡️ Hỏng sensor cảm biến', desc: 'Hỏng sensor cảm biến nhiệt độ phòng trạm', b4Idx: 4, deviceType: 'DHKK' }
+  ],
+  'Cột anten': [
+    { label: '🗼 Đèn báo không tắt / Hỏng', desc: 'Đèn báo không đỉnh cột không sáng / Hỏng bộ nguồn đèn', b4Idx: null },
+    { label: '⚡ Rỉ sét thanh giằng', desc: 'Thanh giằng / bulong thân cột bị rỉ sét cần bảo dưỡng', b4Idx: null },
+    { label: '🔒 Chùng cáp co néo', desc: 'Dây co néo cột bị chùng / Cần siết lại tăng đơ cáp co', b4Idx: null }
+  ],
+  'Nhà trạm': [
+    { label: '🌧️ Thấm dột trần / Tường', desc: 'Thấm dột trần nhà trạm / Nứt tường thấm nước khi mưa lớn', b4Idx: null },
+    { label: '🚪 Hỏng khóa cửa / Bản lề', desc: 'Hỏng ổ khóa cửa nhà trạm / Cổng trạm rỉ sét kẹt bản lề', b4Idx: null },
+    { label: '🛡️ Nứt sàn / Mối mọt vách', desc: 'Sàn nứt lún / Vách ngăn phòng máy có dấu hiệu mối mọt', b4Idx: null }
+  ],
+  'Hệ thống điện': [
+    { label: '⚡ Nhảy CB tổng / Mất AC', desc: 'Nhảy CB tổng nguồn AC lưới vào trạm / Mất điện lưới kéo dài', b4Idx: null },
+    { label: '🔥 Cháy chống sét van / SPD', desc: 'Cháy thiết bị cắt lọc sét lan truyền (SPD) tủ nguồn AC', b4Idx: null },
+    { label: '🔋 Hỏng module Rectifier', desc: 'Hỏng module nắn dòng Rectifier tủ nguồn DC / Cảnh báo Rectifier fail', b4Idx: null }
+  ]
+};
+
 export default function DailyWork() {
   const { user, displayName } = useCurrentUser();
   const [activeTab, setActiveTab] = useState('daily'); // daily, power, issues
@@ -121,7 +158,7 @@ export default function DailyWork() {
   // Form states - Issue/Defect
   const [issueSiteId, setIssueSiteId] = useState('');
   const [issueDate, setIssueDate] = useState(new Date().toISOString().split('T')[0]);
-  const [issueCategory, setIssueCategory] = useState('Cột anten');
+  const [issueCategory, setIssueCategory] = useState('Máy phát điện');
   const [issueDescription, setIssueDescription] = useState('');
   const [issueReporter, setIssueReporter] = useState(user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'admin');
   const [issueDeviceType, setIssueDeviceType] = useState('MPD_CO_DINH');
@@ -133,6 +170,16 @@ export default function DailyWork() {
   const [editingIssue, setEditingIssue] = useState(null);
   const [issueStatus, setIssueStatus] = useState('Chưa XL');
   const [issueResolvedAt, setIssueResolvedAt] = useState('');
+
+  // Tra cứu trạm hiện tại đang nhập trong form báo hỏng để lấy thiết bị phụ trợ (MPĐ, Máy lạnh)
+  const currentMatchedStation = useMemo(() => {
+    if (!issueSiteId) return null;
+    const q = issueSiteId.trim().toUpperCase();
+    return stations.find(s => 
+      (s.site_id && s.site_id.toUpperCase() === q) || 
+      (s.site_id_old && s.site_id_old.toUpperCase() === q)
+    );
+  }, [issueSiteId, stations]);
 
   // Danh mục hạng mục công việc chuẩn V1 cho Nhật ký
   const categoriesWorkV1 = [
@@ -147,12 +194,12 @@ export default function DailyWork() {
     'Ứng cứu thông tin'
   ];
 
-  // Danh mục hạng mục tồn tại chuẩn V1
+  // Danh mục hạng mục tồn tại chuẩn V1 (Ưu tiên MPĐ và Máy lạnh lên đầu)
   const categoriesDefectsV1 = [
-    'Cột anten',
-    'Nhà trạm',
     'Máy phát điện',
     'Máy lạnh',
+    'Cột anten',
+    'Nhà trạm',
     'Hệ thống điện',
     'Hệ thống tiếp đất',
     'Hệ thống PCCC',
@@ -487,6 +534,12 @@ export default function DailyWork() {
     const canonicalSiteId = matchingSite.site_id;
 
     try {
+      const isB4Applicable = issueCategory === 'Máy phát điện' || issueCategory === 'Máy lạnh';
+      const b4Fields = isB4Applicable ? {
+        device_type: issueDeviceType,
+        b4_category_idx: parseInt(issueB4CategoryIdx) || 0
+      } : {};
+
       if (editingIssue) {
         // Edit mode
         const updatedIssues = {
@@ -494,8 +547,7 @@ export default function DailyWork() {
           description: issueDescription.trim(),
           status: issueStatus,
           reporter: issueReporter.trim(),
-          device_type: issueDeviceType,
-          b4_category_idx: parseInt(issueB4CategoryIdx) || 0
+          ...b4Fields
         };
         const updatedSolutions = issueStatus === "Đã XL" 
           ? { resolved_at: issueResolvedAt || new Date().toISOString().split('T')[0] }
@@ -524,8 +576,7 @@ export default function DailyWork() {
             description: issueDescription.trim(),
             status: "Chưa XL",
             reporter: issueReporter.trim(),
-            device_type: issueDeviceType,
-            b4_category_idx: parseInt(issueB4CategoryIdx) || 0
+            ...b4Fields
           },
           proposed_solutions: {}
         };
@@ -581,7 +632,7 @@ export default function DailyWork() {
   function resetIssueForm() {
     setIssueSiteId('');
     setIssueDate(new Date().toISOString().split('T')[0]);
-    setIssueCategory('Cột anten');
+    setIssueCategory('Máy phát điện');
     setIssueDescription('');
     setIssueReporter(user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'admin');
     setShowIssueSiteSuggestions(false);
@@ -599,7 +650,7 @@ export default function DailyWork() {
     setEditingIssue(issue);
     setIssueSiteId(issue.site_id || '');
     setIssueDate(issue.date || new Date().toISOString().split('T')[0]);
-    setIssueCategory(dataDetail.category || 'Cột anten');
+    setIssueCategory(dataDetail.category || 'Máy phát điện');
     setIssueDescription(dataDetail.description || '');
     setIssueReporter(dataDetail.reporter || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'admin');
     setIssueStatus(dataDetail.status || 'Chưa XL');
@@ -614,10 +665,25 @@ export default function DailyWork() {
     let targetLogs = filteredDefectsLogs;
     if (selectedIssueIds.length > 0) {
       targetLogs = filteredDefectsLogs.filter(issue => selectedIssueIds.includes(issue.log_id));
+    } else {
+      // Tự động lọc danh mục tương ứng nếu không tick chọn checkbox thủ công
+      if (deviceType === 'MPD_CO_DINH' || deviceType === 'MPD_DI_DONG') {
+        const mpdLogs = filteredDefectsLogs.filter(l => 
+          (l.existing_issues?.category === 'Máy phát điện') ||
+          (l.existing_issues?.device_type && l.existing_issues.device_type.includes('MPD'))
+        );
+        if (mpdLogs.length > 0) targetLogs = mpdLogs;
+      } else if (deviceType === 'DHKK') {
+        const dhkkLogs = filteredDefectsLogs.filter(l => 
+          (l.existing_issues?.category === 'Máy lạnh') ||
+          (l.existing_issues?.device_type === 'DHKK')
+        );
+        if (dhkkLogs.length > 0) targetLogs = dhkkLogs;
+      }
     }
 
     if (targetLogs.length === 0) {
-      alert("Không có tồn tại nào được chọn để xuất Biểu mẫu B4!");
+      alert("Không có tồn tại nào phù hợp với biểu mẫu được chọn để xuất file B4!");
       return;
     }
 
@@ -1507,7 +1573,21 @@ export default function DailyWork() {
                                       <ExternalLink size={10} className="opacity-60" />
                                     </button>
                                   </td>
-                                  <td className="px-4 py-3 whitespace-nowrap font-semibold text-slate-600">{dataDetail.category || '—'}</td>
+                                  <td className="px-4 py-3 whitespace-nowrap font-semibold text-slate-600">
+                                    <div className="flex items-center gap-1.5">
+                                      <span>{dataDetail.category || '—'}</span>
+                                      {dataDetail.device_type === 'MPD_CO_DINH' && (
+                                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800" title="Đã cấu hình B4 MPĐ Cố định">
+                                          ⚡ B4 MPĐ
+                                        </span>
+                                      )}
+                                      {dataDetail.device_type === 'DHKK' && (
+                                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-cyan-100 text-cyan-800" title="Đã cấu hình B4 ĐHKK">
+                                          ❄️ B4 ĐHKK
+                                        </span>
+                                      )}
+                                    </div>
+                                  </td>
                                   <td className="px-4 py-3 max-w-md truncate font-medium text-slate-800" title={dataDetail.description}>{dataDetail.description}</td>
                                   <td className="px-4 py-3 whitespace-nowrap text-slate-500">{dataDetail.reporter || '—'}</td>
                                   <td className="px-4 py-3 whitespace-nowrap">
@@ -2212,195 +2292,354 @@ export default function DailyWork() {
         </div>
       )}
 
-      {/* MODAL 2: ADD ISSUE (CẬP NHẬT TỒN TẠI) */}
-      {showAddIssueModal && (
-        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="bg-gradient-to-r from-red-600 to-rose-600 px-6 py-4 flex items-center justify-between text-white">
-              <h2 className="font-bold text-lg flex items-center gap-2">
-                <AlertTriangle size={20} /> {editingIssue ? "Chỉnh sửa tồn tại trạm" : "Cập nhật tồn tại trạm mới"}
-              </h2>
-              <button 
-                onClick={() => { resetIssueForm(); setShowAddIssueModal(false); }}
-                className="p-1 hover:bg-white/10 rounded-full transition-colors text-white/80 hover:text-white cursor-pointer"
-              >
-                <X size={20} />
-              </button>
-            </div>
+      {/* MODAL 2: ADD ISSUE (CẬP NHẬT TỒN TẠI & BÁO HỎNG 30S) */}
+      {showAddIssueModal && (() => {
+        const isB4Applicable = issueCategory === 'Máy phát điện' || issueCategory === 'Máy lạnh';
+        const infra = currentMatchedStation?.infrastructure_info || {};
+        const stationMpd = infra.may_phat_dien?.mpd?.[0];
+        const stationAcs = infra.may_lanh || [];
+        const hasStationDevices = Boolean(stationMpd || (stationAcs && stationAcs.length > 0));
+        const activeQuickTags = QUICK_DEFECT_TAGS[issueCategory] || [];
 
-            <form onSubmit={handleSaveIssue} className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="relative">
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Mã Trạm (Site ID)</label>
-                  <input 
-                    type="text" 
-                    placeholder="Nhập mã cũ hoặc mới..."
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-red-500 focus:border-red-500"
-                    value={issueSiteId}
-                    onChange={(e) => {
-                      setIssueSiteId(e.target.value);
-                      setShowIssueSiteSuggestions(true);
-                    }}
-                    onFocus={() => setShowIssueSiteSuggestions(true)}
-                    onBlur={() => setTimeout(() => setShowIssueSiteSuggestions(false), 200)}
-                  />
-                  {showIssueSiteSuggestions && issueSiteSuggestions.length > 0 && (
-                    <div className="absolute z-[110] left-0 right-0 mt-1 max-h-48 overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-lg">
-                      {issueSiteSuggestions.map(st => (
-                        <button
-                          key={st.site_id}
-                          type="button"
+        return (
+          <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
+              
+              {/* Modal Header */}
+              <div className="bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 px-5 py-3.5 sm:px-6 sm:py-4 flex items-center justify-between text-white shrink-0">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-1.5 bg-white/20 rounded-lg">
+                    <AlertTriangle size={18} />
+                  </div>
+                  <div>
+                    <h2 className="font-bold text-base sm:text-lg leading-tight">
+                      {editingIssue ? "Chỉnh sửa tồn tại trạm" : "Báo hỏng & Quản lý tồn tại trạm"}
+                    </h2>
+                    <p className="text-xs text-red-100">Báo hỏng 30 giây · Chuẩn hóa biểu mẫu B4 TCT</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => { resetIssueForm(); setShowAddIssueModal(false); }}
+                  className="p-1.5 hover:bg-white/10 rounded-full transition-colors text-white/80 hover:text-white cursor-pointer"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <form onSubmit={handleSaveIssue} className="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1">
+                
+                {/* Row 1: Site ID & Date */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <div className="relative">
+                    <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1">
+                      Mã Trạm (Site ID) <span className="text-red-500">*</span>
+                    </label>
+                    <input 
+                      type="text" 
+                      placeholder="Nhập mã cũ hoặc mới (ví dụ: DNCM14, DNDQ03...)"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                      value={issueSiteId}
+                      onChange={(e) => {
+                        setIssueSiteId(e.target.value);
+                        setShowIssueSiteSuggestions(true);
+                      }}
+                      onFocus={() => setShowIssueSiteSuggestions(true)}
+                      onBlur={() => setTimeout(() => setShowIssueSiteSuggestions(false), 200)}
+                    />
+                    {showIssueSiteSuggestions && issueSiteSuggestions.length > 0 && (
+                      <div className="absolute z-[110] left-0 right-0 mt-1 max-h-48 overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-lg">
+                        {issueSiteSuggestions.map(st => (
+                          <button
+                            key={st.site_id}
+                            type="button"
+                            onClick={() => {
+                              setIssueSiteId(st.site_id);
+                              setShowIssueSiteSuggestions(false);
+                            }}
+                            className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 border-b border-slate-100 last:border-0 flex flex-col cursor-pointer"
+                          >
+                            <span className="font-bold text-slate-800">
+                              {st.site_id} {st.site_id_old ? `(${st.site_id_old})` : ''}
+                            </span>
+                            <span className="text-xs text-slate-500 truncate">{st.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1">Ngày phát hiện</label>
+                    <input 
+                      type="date" 
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm font-medium focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                      value={issueDate}
+                      onChange={(e) => setIssueDate(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Device Cards if Station is Matched */}
+                {currentMatchedStation && hasStationDevices && (
+                  <div className="p-3 bg-slate-50/80 border border-slate-200 rounded-xl space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                        <Zap size={14} className="text-amber-500" />
+                        Thiết bị tại trạm {currentMatchedStation.site_id} (Bấm chọn nhanh)
+                      </span>
+                      <span className="text-[11px] text-slate-400">1-chạm tự điền thông tin</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {/* MPD Card */}
+                      {stationMpd && (
+                        <div 
                           onClick={() => {
-                            setIssueSiteId(st.site_id);
-                            setShowIssueSiteSuggestions(false);
+                            setIssueCategory('Máy phát điện');
+                            setIssueDeviceType('MPD_CO_DINH');
                           }}
-                          className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 border-b border-slate-100 last:border-0 flex flex-col cursor-pointer"
+                          className={`p-2.5 rounded-lg border text-left cursor-pointer transition-all ${
+                            issueCategory === 'Máy phát điện' 
+                              ? 'bg-amber-50/90 border-amber-300 ring-2 ring-amber-400/40 shadow-xs' 
+                              : 'bg-white border-slate-200 hover:border-amber-200 hover:bg-amber-50/30'
+                          }`}
                         >
-                          <span className="font-bold text-slate-800">
-                            {st.site_id} {st.site_id_old ? `(${st.site_id_old})` : ''}
-                          </span>
-                          <span className="text-xs text-slate-500 truncate">{st.name}</span>
-                        </button>
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-xs text-amber-900 flex items-center gap-1">
+                              ⚡ {stationMpd.ten || 'Máy phát điện'}
+                            </span>
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">
+                              {stationMpd.cong_suat ? `${stationMpd.cong_suat} kVA` : 'MPĐ'}
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-slate-600 mt-1 truncate">
+                            {stationMpd.nhan_hieu || 'KIBII'} {stationMpd.serial ? `· SN: ${stationMpd.serial}` : ''}
+                          </div>
+                          <div className="text-[10px] text-slate-400 font-mono mt-0.5 truncate">
+                            VT: {stationMpd.ma_vat_tu || '000...'} {stationMpd.ma_tai_san_moi ? `· TS: ${stationMpd.ma_tai_san_moi}` : ''}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* AC Cards */}
+                      {stationAcs.map((ac, idx) => (
+                        <div 
+                          key={idx}
+                          onClick={() => {
+                            setIssueCategory('Máy lạnh');
+                            setIssueDeviceType('DHKK');
+                          }}
+                          className={`p-2.5 rounded-lg border text-left cursor-pointer transition-all ${
+                            issueCategory === 'Máy lạnh' 
+                              ? 'bg-sky-50/90 border-sky-300 ring-2 ring-sky-400/40 shadow-xs' 
+                              : 'bg-white border-slate-200 hover:border-sky-200 hover:bg-sky-50/30'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-xs text-sky-900 flex items-center gap-1">
+                              ❄️ {ac.ten || `Máy lạnh ${idx + 1}`}
+                            </span>
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-sky-100 text-sky-800">
+                              {ac.cong_suat ? `${ac.cong_suat} BTU` : 'ĐHKK'}
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-slate-600 mt-1 truncate">
+                            {ac.nhan_hieu || 'Nagakawa'} {ac.product_code || ''} {ac.serial ? `· SN: ${ac.serial}` : ''}
+                          </div>
+                          <div className="text-[10px] text-slate-400 font-mono mt-0.5 truncate">
+                            VT: {ac.ma_vat_tu || '000...'} · {ac.phan_loai || 'CCDC'}
+                          </div>
+                        </div>
                       ))}
                     </div>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Ngày phát hiện</label>
-                  <input 
-                    type="date" 
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-red-500 focus:border-red-500"
-                    value={issueDate}
-                    onChange={(e) => setIssueDate(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Hạng mục tồn tại</label>
-                  <select 
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-red-500 focus:border-red-500 bg-white font-medium"
-                    value={issueCategory}
-                    onChange={(e) => setIssueCategory(e.target.value)}
-                  >
-                    {categoriesDefectsV1.map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Người báo cáo</label>
-                  <input 
-                    type="text" 
-                    placeholder="Nhập tên người báo cáo..."
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-red-500 focus:border-red-500 font-medium"
-                    value={issueReporter}
-                    onChange={(e) => setIssueReporter(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              {/* B4 Repair Proposal Category Selector */}
-              <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-xl space-y-3">
-                <div className="text-xs font-bold text-amber-900 uppercase tracking-wider flex items-center gap-1.5">
-                  <ClipboardList className="h-4 w-4 text-amber-600" />
-                  <span>Cấu hình Biểu mẫu B4 (Phục vụ Đề xuất Sửa chữa)</span>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-bold text-amber-800 mb-1">Loại thiết bị B4</label>
-                    <select
-                      className="w-full px-2.5 py-1.5 border border-amber-200 rounded-lg text-xs font-bold bg-white text-amber-900 focus:ring-1 focus:ring-amber-500"
-                      value={issueDeviceType}
-                      onChange={(e) => {
-                        setIssueDeviceType(e.target.value);
-                        setIssueB4CategoryIdx(0);
-                      }}
-                    >
-                      <option value="MPD_CO_DINH">⚡ MPĐ Cố định</option>
-                      <option value="MPD_DI_DONG">🚗 MPĐ Di động / Nổ xăng</option>
-                      <option value="DHKK">❄️ Điều hòa thông gió</option>
-                    </select>
                   </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-amber-800 mb-1">Hạng mục sửa chữa chuẩn hóa B4</label>
-                    <select
-                      className="w-full px-2.5 py-1.5 border border-amber-200 rounded-lg text-xs font-medium bg-white text-slate-800 focus:ring-1 focus:ring-amber-500"
-                      value={issueB4CategoryIdx}
-                      onChange={(e) => setIssueB4CategoryIdx(Number(e.target.value))}
-                    >
-                      {(B4_REPAIR_CATEGORIES[issueDeviceType] || []).map((cat, idx) => (
-                        <option key={cat.id} value={idx}>{cat.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              </div>
+                )}
 
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Mô tả chi tiết tồn tại</label>
-                <textarea 
-                  rows="4" 
-                  placeholder="Mô tả cụ thể sự cố cần xử lý..."
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-red-500 focus:border-red-500"
-                  value={issueDescription}
-                  onChange={(e) => setIssueDescription(e.target.value)}
-                />
-              </div>
-
-              {editingIssue && (
-                <div className="grid grid-cols-2 gap-4">
+                {/* Row 2: Category & Reporter */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Trạng thái</label>
+                    <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1">
+                      Hạng mục tồn tại <span className="text-red-500">*</span>
+                    </label>
                     <select 
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-red-500 focus:border-red-500 bg-white font-semibold"
-                      value={issueStatus}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-white font-semibold text-slate-800"
+                      value={issueCategory}
                       onChange={(e) => {
                         const val = e.target.value;
-                        setIssueStatus(val);
-                        if (val === "Đã XL" && !issueResolvedAt) {
-                          setIssueResolvedAt(new Date().toISOString().split('T')[0]);
+                        setIssueCategory(val);
+                        if (val === 'Máy lạnh') {
+                          setIssueDeviceType('DHKK');
+                        } else if (val === 'Máy phát điện') {
+                          setIssueDeviceType('MPD_CO_DINH');
                         }
                       }}
                     >
-                      <option value="Chưa XL">Chưa XL</option>
-                      <option value="Đã XL">Đã XL</option>
+                      {categoriesDefectsV1.map(cat => (
+                        <option key={cat} value={cat}>
+                          {cat === 'Máy phát điện' ? '⚡ ' : cat === 'Máy lạnh' ? '❄️ ' : cat === 'Cột anten' ? '🗼 ' : cat === 'Nhà trạm' ? '🏠 ' : cat === 'Hệ thống điện' ? '🔌 ' : ''}{cat}
+                        </option>
+                      ))}
                     </select>
                   </div>
-                  {issueStatus === "Đã XL" && (
-                    <div>
-                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Ngày xử lý</label>
-                      <input 
-                        type="date" 
-                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-red-500 focus:border-red-500"
-                        value={issueResolvedAt}
-                        onChange={(e) => setIssueResolvedAt(e.target.value)}
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
-                <button 
-                  type="button"
-                  onClick={() => { resetIssueForm(); setShowAddIssueModal(false); }}
-                  className="px-4 py-2 border border-slate-200 text-sm font-semibold rounded-lg text-slate-600 hover:bg-slate-50 cursor-pointer"
-                >
-                  Hủy
-                </button>
-                <button 
-                  type="submit"
-                  className="px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-lg hover:bg-red-700 shadow-sm transition-all cursor-pointer"
-                >
-                  {editingIssue ? "Cập Nhật" : "Báo Cáo"}
-                </button>
-              </div>
-            </form>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1">Người báo cáo</label>
+                    <input 
+                      type="text" 
+                      placeholder="Nhập tên người báo cáo..."
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 font-medium"
+                      value={issueReporter}
+                      onChange={(e) => setIssueReporter(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Quick Problem Tags Matrix */}
+                {activeQuickTags.length > 0 && (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider">
+                        ⚡ Sự cố thường gặp 1-chạm ({issueCategory})
+                      </label>
+                      <span className="text-[11px] text-slate-400">Bấm để tự điền mô tả & chuẩn B4</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {activeQuickTags.map((tag, tIdx) => (
+                        <button
+                          key={tIdx}
+                          type="button"
+                          onClick={() => {
+                            if (tag.deviceType) setIssueDeviceType(tag.deviceType);
+                            if (tag.b4Idx !== null && tag.b4Idx !== undefined) setIssueB4CategoryIdx(tag.b4Idx);
+                            setIssueDescription(prev => {
+                              if (!prev || prev.trim() === '') return tag.desc;
+                              if (prev.includes(tag.desc)) return prev;
+                              return `${prev}\n- ${tag.desc}`;
+                            });
+                          }}
+                          className="px-2.5 py-1 text-xs font-medium bg-slate-100 hover:bg-red-50 hover:text-red-700 hover:border-red-200 border border-slate-200 rounded-lg transition-all cursor-pointer text-slate-700 active:scale-95 text-left"
+                        >
+                          {tag.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* B4 Repair Proposal Category Selector (CHỈ HIỆN KHI LÀ MPĐ HOẶC MÁY LẠNH!) */}
+                {isB4Applicable && (
+                  <div className="p-3.5 bg-amber-50/80 border border-amber-200 rounded-xl space-y-3 animate-in fade-in duration-200">
+                    <div className="text-xs font-bold text-amber-900 uppercase tracking-wider flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
+                        <ClipboardList className="h-4 w-4 text-amber-600" />
+                        Cấu hình Biểu mẫu B4 (Đề xuất sửa chữa TCT / Đài)
+                      </span>
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-200 text-amber-900">
+                        {issueDeviceType === 'DHKK' ? '25 Cột ĐHKK' : '26 Cột MPĐ'}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-bold text-amber-800 mb-1">Loại thiết bị B4</label>
+                        <select
+                          className="w-full px-2.5 py-1.5 border border-amber-200 rounded-lg text-xs font-bold bg-white text-amber-900 focus:ring-1 focus:ring-amber-500"
+                          value={issueDeviceType}
+                          onChange={(e) => {
+                            setIssueDeviceType(e.target.value);
+                            setIssueB4CategoryIdx(0);
+                          }}
+                        >
+                          <option value="MPD_CO_DINH">⚡ MPĐ Cố định</option>
+                          <option value="MPD_DI_DONG">🚗 MPĐ Di động / Nổ xăng</option>
+                          <option value="DHKK">❄️ Điều hòa thông gió</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-amber-800 mb-1">Hạng mục sửa chữa chuẩn hóa B4</label>
+                        <select
+                          className="w-full px-2.5 py-1.5 border border-amber-200 rounded-lg text-xs font-medium bg-white text-slate-800 focus:ring-1 focus:ring-amber-500"
+                          value={issueB4CategoryIdx}
+                          onChange={(e) => setIssueB4CategoryIdx(Number(e.target.value))}
+                        >
+                          {(B4_REPAIR_CATEGORIES[issueDeviceType] || []).map((cat, idx) => (
+                            <option key={cat.id} value={idx}>{cat.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Description */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1">
+                    Mô tả chi tiết tồn tại / sự cố <span className="text-red-500">*</span>
+                  </label>
+                  <textarea 
+                    rows="3" 
+                    placeholder="Mô tả cụ thể sự cố cần xử lý (ví dụ: Hư hỏng két nước, rò rỉ nhớt, máy chạy không lạnh...)"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 font-medium"
+                    value={issueDescription}
+                    onChange={(e) => setIssueDescription(e.target.value)}
+                  />
+                </div>
+
+                {/* Status for Editing */}
+                {editingIssue && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1">Trạng thái</label>
+                      <select 
+                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-white font-semibold"
+                        value={issueStatus}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setIssueStatus(val);
+                          if (val === "Đã XL" && !issueResolvedAt) {
+                            setIssueResolvedAt(new Date().toISOString().split('T')[0]);
+                          }
+                        }}
+                      >
+                        <option value="Chưa XL">Chưa XL</option>
+                        <option value="Đã XL">Đã XL</option>
+                      </select>
+                    </div>
+                    {issueStatus === "Đã XL" && (
+                      <div>
+                        <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1">Ngày xử lý</label>
+                        <input 
+                          type="date" 
+                          className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 font-medium"
+                          value={issueResolvedAt}
+                          onChange={(e) => setIssueResolvedAt(e.target.value)}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Footer Buttons */}
+                <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
+                  <button 
+                    type="button"
+                    onClick={() => { resetIssueForm(); setShowAddIssueModal(false); }}
+                    className="px-4 py-2 border border-slate-200 text-sm font-semibold rounded-lg text-slate-600 hover:bg-slate-50 cursor-pointer"
+                  >
+                    Hủy
+                  </button>
+                  <button 
+                    type="submit"
+                    className="px-5 py-2 bg-gradient-to-r from-red-600 to-rose-600 text-white text-sm font-bold rounded-lg hover:from-red-700 hover:to-rose-700 shadow-md transition-all cursor-pointer"
+                  >
+                    {editingIssue ? "Cập Nhật" : "Báo Cáo Sự Cố"}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* MODAL 3: ADD / EDIT MOBILE EQUIPMENT */}
       {showAddEquipModal && (

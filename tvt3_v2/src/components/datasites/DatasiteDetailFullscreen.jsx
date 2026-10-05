@@ -1289,92 +1289,217 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, on
       </div>
 
       {/* Modal Thêm vào Danh sách Báo Hỏng B4 */}
-      {showAddB4Modal && (
-        <div className="fixed inset-0 z-[200] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200">
-            <div className="bg-gradient-to-r from-amber-500 to-amber-600 px-5 py-4 text-white flex justify-between items-center">
-              <h2 className="font-bold text-base flex items-center gap-2">
-                <FileText size={18} /> Thêm trạm {site.site_id} vào Báo hỏng B4
-              </h2>
-              <button 
-                onClick={() => setShowAddB4Modal(false)}
-                className="p-1 hover:bg-white/10 rounded-full transition-colors text-white/80 hover:text-white cursor-pointer"
-              >
-                <X size={18} />
-              </button>
-            </div>
+      {showAddB4Modal && (() => {
+        const infra = site.infrastructure_info || {};
+        const mpd = infra.may_phat_dien?.mpd?.[0];
+        const acList = infra.may_lanh || [];
+        
+        const quickTagsMPD = [
+          { label: '🔋 Bình yếu / Hỏng sạc', desc: 'Bình ắc quy yếu / Hỏng bộ nạp DC tự động', b4Idx: 2 },
+          { label: '💧 Xì két nước / Nóng máy', desc: 'Rò rỉ két nước giải nhiệt / Động cơ quá nhiệt', b4Idx: 4 },
+          { label: '🕹️ Hư ATS / Không đề tự động', desc: 'Tủ ATS không tự khởi động / Không chuyển nguồn', b4Idx: 5 },
+          { label: '⚡ Cháy AVR / Mất điện áp', desc: 'Hỏng bo điều áp AVR / Mất kích từ / Mất điện áp ra', b4Idx: 1 },
+          { label: '🔧 Đề dai / Hỏng củ đề', desc: 'Máy đề dai khó nổ / Kẹt chuột đề / Lỗi củ đề', b4Idx: 2 },
+          { label: '🛢️ Rò rỉ nhớt / Nghẹt lọc dầu', desc: 'Chảy dầu nhớt / Tắc lọc nhiên liệu / Rò rỉ ống dầu', b4Idx: 3 },
+          { label: '💨 Đại tu máy / Thổi gioăng', desc: 'Động cơ khói đen / Thổi gioăng quy lát / Cần đại tu', b4Idx: 0 },
+          { label: '🔌 Cháy contactor / Nhảy CB', desc: 'Cháy contactor nguồn máy phát / Nhảy CB phụ tải', b4Idx: 6 }
+        ];
 
-            <form onSubmit={handleSaveB4Defect} className="p-5 space-y-4 text-left">
-              <div>
-                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1">Mã trạm báo hỏng</label>
-                <input 
-                  type="text" 
-                  disabled
-                  className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-sm font-bold text-slate-800"
-                  value={`${site.site_id} ${site.name ? `(${site.name})` : ''}`}
-                />
-              </div>
+        const quickTagsAC = [
+          { label: '❄️ Không lạnh / Xì gas', desc: 'Máy chạy không lạnh / Xì rò rỉ hết gas lạnh', b4Idx: 3 },
+          { label: '🛑 Cháy / Kẹt block máy nén', desc: 'Máy nén (block) kêu to / Kẹt cơ / Cháy cuộn dây block', b4Idx: 0 },
+          { label: '🔌 Hỏng bo mạch / Báo lỗi', desc: 'Hỏng bo mạch điều khiển dàn lạnh / Chớp đèn báo lỗi', b4Idx: 1 },
+          { label: '💧 Chảy nước dàn lạnh', desc: 'Nghẹt máng thoát nước ngưng / Chảy nước vào phòng máy', b4Idx: 7 },
+          { label: '🌀 Hỏng quạt nóng / Cháy tụ', desc: 'Kẹt motor quạt dàn nóng / Cháy tụ quạt dàn nóng', b4Idx: 2 },
+          { label: '🌡️ Hỏng sensor cảm biến', desc: 'Hỏng sensor cảm biến nhiệt độ phòng trạm', b4Idx: 4 }
+        ];
 
-              <div>
-                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1">Loại thiết bị B4</label>
-                <select
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm font-bold bg-white text-slate-800 focus:ring-1 focus:ring-amber-500"
-                  value={b4DeviceType}
-                  onChange={(e) => {
-                    setB4DeviceType(e.target.value);
-                    setB4CategoryIdx(0);
-                  }}
-                >
-                  <option value="MPD_CO_DINH">⚡ MPĐ Cố định</option>
-                  <option value="MPD_DI_DONG">🚗 MPĐ Di động / Nổ xăng</option>
-                  <option value="DHKK">❄️ Điều hòa thông gió</option>
-                </select>
-              </div>
+        const currentTags = b4DeviceType === 'DHKK' ? quickTagsAC : quickTagsMPD;
 
-              <div>
-                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1">Hạng mục sửa chữa chuẩn B4</label>
-                <select
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white text-slate-800 focus:ring-1 focus:ring-amber-500"
-                  value={b4CategoryIdx}
-                  onChange={(e) => setB4CategoryIdx(Number(e.target.value))}
-                >
-                  {(B4_REPAIR_CATEGORIES[b4DeviceType] || []).map((cat, idx) => (
-                    <option key={cat.id} value={idx}>{cat.label}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1">Mô tả hiện trạng hư hỏng</label>
-                <textarea 
-                  rows="3" 
-                  placeholder="Nhập mô tả sự cố hư hỏng cần đề xuất sửa chữa..."
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
-                  value={b4Description}
-                  onChange={(e) => setB4Description(e.target.value)}
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-                <button
-                  type="button"
+        return (
+          <div className="fixed inset-0 z-[200] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-xl w-full max-h-[90vh] flex flex-col overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200">
+              
+              {/* Header */}
+              <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 px-5 py-3.5 text-white flex justify-between items-center shrink-0">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 bg-white/20 rounded-lg">
+                    <FileText size={18} />
+                  </div>
+                  <div>
+                    <h2 className="font-bold text-base leading-tight">
+                      Báo Hỏng Biểu Mẫu B4 · Trạm {site.site_id}
+                    </h2>
+                    <p className="text-xs text-amber-100">Chuẩn hóa đề xuất sửa chữa phục vụ Đài & TCT</p>
+                  </div>
+                </div>
+                <button 
                   onClick={() => setShowAddB4Modal(false)}
-                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                  className="p-1.5 hover:bg-white/10 rounded-full transition-colors text-white/80 hover:text-white cursor-pointer"
                 >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  disabled={b4Saving}
-                  className="px-4 py-2 text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-lg shadow-sm transition-colors cursor-pointer disabled:opacity-50"
-                >
-                  {b4Saving ? 'Đang lưu...' : '➕ Thêm vào Danh sách Báo Hỏng B4'}
+                  <X size={18} />
                 </button>
               </div>
-            </form>
+
+              {/* Form Body */}
+              <form onSubmit={handleSaveB4Defect} className="p-5 space-y-4 text-left overflow-y-auto flex-1">
+                
+                {/* Trạm & Loại thiết bị */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1">Mã trạm</label>
+                    <input 
+                      type="text" 
+                      disabled
+                      className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-sm font-bold text-slate-800"
+                      value={`${site.site_id} ${site.name ? `(${site.name})` : ''}`}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1">Loại thiết bị B4</label>
+                    <select
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm font-bold bg-white text-slate-800 focus:ring-2 focus:ring-amber-500"
+                      value={b4DeviceType}
+                      onChange={(e) => {
+                        setB4DeviceType(e.target.value);
+                        setB4CategoryIdx(0);
+                      }}
+                    >
+                      <option value="MPD_CO_DINH">⚡ MPĐ Cố định (26 cột)</option>
+                      <option value="MPD_DI_DONG">🚗 MPĐ Di động (B4)</option>
+                      <option value="DHKK">❄️ Điều hòa thông gió (25 cột)</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Device Context Card */}
+                {b4DeviceType === 'MPD_CO_DINH' && mpd && (
+                  <div className="p-3 bg-amber-50/80 border border-amber-200 rounded-xl space-y-1">
+                    <div className="flex items-center justify-between text-xs font-bold text-amber-900">
+                      <span className="flex items-center gap-1.5">⚡ Thông tin tài sản MPĐ</span>
+                      <span className="px-1.5 py-0.5 rounded bg-amber-200 text-amber-900 font-semibold">{mpd.cong_suat || '--'} kVA</span>
+                    </div>
+                    <div className="text-xs text-slate-700 truncate">
+                      {mpd.nhan_hieu || 'KIBII'} {mpd.model ? `· ${mpd.model}` : ''} {mpd.serial ? `· SN: ${mpd.serial}` : ''}
+                    </div>
+                    <div className="text-[11px] text-slate-500 font-mono truncate">
+                      Mã VT: {mpd.ma_vat_tu || '000...'} {mpd.ma_tai_san_moi ? `· TSCĐ: ${mpd.ma_tai_san_moi}` : ''}
+                    </div>
+                  </div>
+                )}
+
+                {b4DeviceType === 'DHKK' && acList.length > 0 && (
+                  <div className="p-3 bg-sky-50/80 border border-sky-200 rounded-xl space-y-2">
+                    <div className="flex items-center justify-between text-xs font-bold text-sky-900">
+                      <span className="flex items-center gap-1.5">❄️ Máy lạnh tại trạm ({acList.length} máy)</span>
+                      <span className="text-[11px] text-sky-700 font-normal">Bấm để chọn máy hỏng</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                      {acList.map((ac, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => {
+                            setB4Description(prev => {
+                              const prefix = `[${ac.ten || `Máy lạnh ${idx + 1}`}]`;
+                              if (prev && prev.startsWith('[')) {
+                                return prev.replace(/^\[.*?\]\s*/, `${prefix} `);
+                              }
+                              return prev ? `${prefix} ${prev}` : `${prefix} `;
+                            });
+                          }}
+                          className="p-2 bg-white hover:bg-sky-100/60 border border-sky-200 rounded-lg text-left text-xs transition-colors cursor-pointer"
+                        >
+                          <div className="font-bold text-slate-800">{ac.ten || `Máy lạnh ${idx + 1}`} ({ac.cong_suat || '--'} BTU)</div>
+                          <div className="text-[11px] text-slate-500 truncate">{ac.nhan_hieu} {ac.serial ? `· SN: ${ac.serial}` : ''}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Hạng mục sửa chữa chuẩn B4 */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1">
+                    Hạng mục sửa chữa chuẩn hóa B4
+                  </label>
+                  <select
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white text-slate-800 focus:ring-2 focus:ring-amber-500 font-medium"
+                    value={b4CategoryIdx}
+                    onChange={(e) => setB4CategoryIdx(Number(e.target.value))}
+                  >
+                    {(B4_REPAIR_CATEGORIES[b4DeviceType] || []).map((cat, idx) => (
+                      <option key={cat.id} value={idx}>{cat.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* 1-Tap Quick Tags */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider">
+                      ⚡ Sự cố thường gặp 1-chạm
+                    </label>
+                    <span className="text-[11px] text-slate-400">Bấm tự điền mô tả & chuẩn B4</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {currentTags.map((tag, tIdx) => (
+                      <button
+                        key={tIdx}
+                        type="button"
+                        onClick={() => {
+                          setB4CategoryIdx(tag.b4Idx);
+                          setB4Description(prev => {
+                            if (!prev || prev.trim() === '') return tag.desc;
+                            if (prev.includes(tag.desc)) return prev;
+                            return `${prev}\n- ${tag.desc}`;
+                          });
+                        }}
+                        className="px-2.5 py-1 text-xs font-medium bg-slate-100 hover:bg-amber-50 hover:text-amber-800 hover:border-amber-300 border border-slate-200 rounded-lg transition-all cursor-pointer text-slate-700 active:scale-95"
+                      >
+                        {tag.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Mô tả hiện trạng */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1">
+                    Mô tả hiện trạng hư hỏng <span className="text-red-500">*</span>
+                  </label>
+                  <textarea 
+                    rows="3" 
+                    placeholder="Nhập mô tả sự cố hư hỏng cần đề xuất sửa chữa..."
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 font-medium"
+                    value={b4Description}
+                    onChange={(e) => setB4Description(e.target.value)}
+                  />
+                </div>
+
+                {/* Footer Buttons */}
+                <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddB4Modal(false)}
+                    className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={b4Saving}
+                    className="px-5 py-2 text-xs font-bold text-white bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 rounded-lg shadow-sm transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    {b4Saving ? 'Đang lưu...' : '➕ Thêm vào Danh sách Báo Hỏng B4'}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
