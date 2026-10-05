@@ -746,7 +746,7 @@ export default function DailyWork() {
     setShowAddIssueModal(true);
   }
 
-  function handleExportB4Repair(deviceType = 'MPD_CO_DINH') {
+  function handleExportB4Repair(deviceType = 'ALL') {
     let targetLogs = filteredDefectsLogs;
     if (selectedIssueIds.length > 0) {
       targetLogs = filteredDefectsLogs.filter(issue => selectedIssueIds.includes(issue.log_id));
@@ -764,19 +764,31 @@ export default function DailyWork() {
           (l.existing_issues?.device_type === 'DHKK')
         );
         if (dhkkLogs.length > 0) targetLogs = dhkkLogs;
+      } else if (deviceType === 'ALL') {
+        const allRepairLogs = filteredDefectsLogs.filter(l => {
+          const cat = l.existing_issues?.category;
+          const devType = l.existing_issues?.device_type || '';
+          return cat === 'Máy phát điện' || cat === 'Máy lạnh' || devType.includes('MPD') || devType === 'DHKK';
+        });
+        if (allRepairLogs.length > 0) targetLogs = allRepairLogs;
       }
     }
 
-    // Tuyệt đối loại trừ đề xuất mua ắc quy đề khỏi gói B4
+    // Tuyệt đối loại trừ đề xuất mua ắc quy đề khỏi gói B4 (chờ đợt đề xuất sau)
     targetLogs = targetLogs.filter(l => !isBatteryProposal(l));
 
     if (targetLogs.length === 0) {
-      alert("Không có tồn tại sửa chữa nào phù hợp với biểu mẫu được chọn để xuất file B4! (Hư hỏng ắc quy đề đã được chuyển sang danh mục Mua sắm riêng)");
+      alert("Không có tồn tại sửa chữa MPĐ / ĐHKK nào phù hợp để xuất file B4! (Các ca hỏng ắc quy đề được tách riêng, chờ đợt đề xuất mua sắm)");
       return;
     }
 
     const exportItems = targetLogs.map(log => {
       const dataDetail = log.existing_issues || {};
+      let devType = dataDetail.device_type;
+      if (!devType) {
+        if (dataDetail.category === 'Máy lạnh') devType = 'DHKK';
+        else devType = deviceType === 'MPD_DI_DONG' ? 'MPD_DI_DONG' : 'MPD_CO_DINH';
+      }
       return {
         site_id: log.site_id,
         description: dataDetail.description || 'Hư hỏng cần sửa chữa',
@@ -784,15 +796,19 @@ export default function DailyWork() {
         reporter: dataDetail.reporter,
         proposal_type: 'B4_REPAIR',
         b4_category_idx: dataDetail.b4_category_idx !== undefined ? dataDetail.b4_category_idx : 0,
-        device_type: dataDetail.device_type || deviceType
+        device_type: devType
       };
     });
+
+    const fileName = deviceType === 'ALL' 
+      ? 'TVT3-B4. Bieu mau chuyen mon sua DHKK & MPD.xlsx'
+      : `TVT3_De_Nghi_Sua_Chua_B4_${deviceType}_${new Date().toISOString().substring(0, 10).replace(/-/g, '')}.xlsx`;
 
     exportB4RepairProposal({
       items: exportItems,
       datasites: stations,
       targetCategory: deviceType,
-      customFileName: `TVT3_De_Nghi_Sua_Chua_B4_${deviceType}_${new Date().toISOString().substring(0, 10).replace(/-/g, '')}.xlsx`
+      customFileName: fileName
     });
     setShowB4ExportDropdown(false);
   }
@@ -1191,51 +1207,76 @@ export default function DailyWork() {
 
           {activeTab === 'issues' && (
             <div className="flex items-center gap-2">
-              <div className="relative">
+              <div className="relative inline-flex items-center rounded-lg shadow-sm">
                 <button 
-                  onClick={() => setShowB4ExportDropdown(!showB4ExportDropdown)}
-                  className="inline-flex items-center justify-center px-3.5 py-1.5 text-[13px] font-bold rounded-lg text-emerald-800 bg-emerald-50 border border-emerald-300 hover:bg-emerald-100 shadow-sm transition-colors cursor-pointer h-[34px] gap-1.5"
-                  title="Xuất Biểu mẫu B4 Đề nghị Sửa chữa MPĐ/ĐHKK chuẩn 15 cột"
+                  onClick={() => handleExportB4Repair('ALL')}
+                  className="inline-flex items-center justify-center px-3.5 py-1.5 text-[13px] font-bold rounded-l-lg text-emerald-800 bg-emerald-50 border border-emerald-300 hover:bg-emerald-100 transition-colors cursor-pointer h-[34px] gap-1.5"
+                  title="Tải ngay 1 file Excel B4 duy nhất gồm đầy đủ: Máy phát điện_Cố định, Điều hòa, Máy phát điện_Di động (Đã lọc trừ ắc quy đề)"
                 >
                   <ClipboardList className="h-4 w-4 text-emerald-600" />
-                  <span>📄 Xuất Biểu Mẫu B4</span>
+                  <span>📄 Xuất Biểu Mẫu B4 (Chung 1 File)</span>
+                </button>
+                <button
+                  onClick={() => setShowB4ExportDropdown(!showB4ExportDropdown)}
+                  className="px-2 py-1.5 text-emerald-800 bg-emerald-50 border-t border-b border-r border-emerald-300 hover:bg-emerald-100 rounded-r-lg transition-colors cursor-pointer h-[34px]"
+                  title="Tùy chọn xuất file B4 hoặc bảng kê ắc quy"
+                >
+                  <span className="text-[10px]">▼</span>
                 </button>
 
                 {showB4ExportDropdown && (
-                  <div className="absolute right-0 mt-1.5 w-72 bg-white border border-slate-200 rounded-xl shadow-xl z-50 p-2 space-y-1 text-left">
+                  <div className="absolute right-0 top-full mt-1.5 w-80 bg-white border border-slate-200 rounded-xl shadow-xl z-50 p-2 space-y-1 text-left">
                     <div className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100">
-                      Sửa chữa MPĐ / ĐHKK Ban 4:
+                      Biểu mẫu B4 Ban 4 (Chuẩn Multi-sheet):
+                    </div>
+                    <button
+                      onClick={() => handleExportB4Repair('ALL')}
+                      className="w-full text-left px-3 py-2 text-xs font-bold text-emerald-900 bg-emerald-50/80 hover:bg-emerald-100 rounded-lg flex items-center gap-2 cursor-pointer border border-emerald-200 transition-all"
+                      title="Xuất chung 1 file Excel duy nhất gồm đầy đủ các sheet: Điều hòa, MPĐ Cố Định, MPĐ Di Động, Diễn giải tham chiếu"
+                    >
+                      <ClipboardList className="h-4 w-4 text-emerald-600 shrink-0" />
+                      <div>
+                        <div>📄 1. Xuất Chung 1 File B4 (Khuyên dùng)</div>
+                        <div className="text-[10px] font-normal text-emerald-700">Đầy đủ các Sheet: MPĐ Cố định + ĐHKK + MPĐ Di động</div>
+                      </div>
+                    </button>
+
+                    <div className="px-3 pt-2 pb-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      Hoặc chỉ xuất riêng từng sheet:
                     </div>
                     <button
                       onClick={() => handleExportB4Repair('MPD_CO_DINH')}
-                      className="w-full text-left px-3 py-2 text-xs font-bold text-slate-700 hover:bg-emerald-50 hover:text-emerald-800 rounded-lg flex items-center gap-2 cursor-pointer"
+                      className="w-full text-left px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 rounded-md flex items-center gap-2 cursor-pointer"
                     >
-                      ⚡ 1. MPĐ Cố Định (B4 Ban 4)
-                    </button>
-                    <button
-                      onClick={() => handleExportB4Repair('MPD_DI_DONG')}
-                      className="w-full text-left px-3 py-2 text-xs font-bold text-slate-700 hover:bg-amber-50 hover:text-amber-800 rounded-lg flex items-center gap-2 cursor-pointer"
-                    >
-                      🚗 2. MPĐ Di Động / Nổ Xăng (B4 Ban 4)
+                      ⚡ Chỉ xuất Sheet MPĐ Cố Định
                     </button>
                     <button
                       onClick={() => handleExportB4Repair('DHKK')}
-                      className="w-full text-left px-3 py-2 text-xs font-bold text-slate-700 hover:bg-cyan-50 hover:text-cyan-800 rounded-lg flex items-center gap-2 cursor-pointer"
+                      className="w-full text-left px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 rounded-md flex items-center gap-2 cursor-pointer"
                     >
-                      ❄️ 3. Điều Hòa Thông Gió (B4 Ban 4)
+                      ❄️ Chỉ xuất Sheet Điều Hòa
+                    </button>
+                    <button
+                      onClick={() => handleExportB4Repair('MPD_DI_DONG')}
+                      className="w-full text-left px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 rounded-md flex items-center gap-2 cursor-pointer"
+                    >
+                      🚗 Chỉ xuất Sheet MPĐ Di Động
                     </button>
 
                     <div className="border-t border-slate-100 my-1 pt-1">
                       <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-teal-600">
-                        Vật tư tiêu hao nội bộ (Tách riêng):
+                        Vật tư tiêu hao (Chờ đợt đề xuất mua sắm riêng):
                       </div>
                       <button
                         onClick={handleExportBatteryPurchase}
                         className="w-full text-left px-3 py-2 text-xs font-bold text-teal-900 bg-teal-50 hover:bg-teal-100/90 rounded-lg flex items-center gap-2 cursor-pointer border border-teal-200/80 transition-all"
-                        title="Xuất danh sách ắc quy đề MPĐ hư hỏng cần mua sắm thay thế (không đưa vào Ban 4)"
+                        title="Xuất danh sách ắc quy đề MPĐ hư hỏng cần mua sắm thay thế (không đưa vào Ban 4, để dành khi có đợt)"
                       >
                         <BatteryCharging size={16} className="text-teal-600 shrink-0" />
-                        <span>🔋 4. Bảng kê Mua sắm Ắc quy đề MPĐ</span>
+                        <div>
+                          <div>🔋 Bảng kê Mua sắm Ắc quy đề MPĐ</div>
+                          <div className="text-[10px] font-normal text-teal-700">Tách riêng {defectsLogs.filter(d => isBatteryProposal(d)).length} bình chờ đợt đề xuất mua sắm</div>
+                        </div>
                       </button>
                     </div>
                   </div>
