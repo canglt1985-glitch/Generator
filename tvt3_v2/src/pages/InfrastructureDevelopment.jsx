@@ -9,7 +9,7 @@ import {
   MapPin, User, ChevronRight, Calendar, Info, RefreshCw,
   TrendingUp, Activity, Server, FileText, ArrowRight, ChevronLeft,
   X, HelpCircle, Check, Play, Edit3, Download, Upload,
-  Building2, Send, History, Sparkles, Share2, CheckSquare, FileSpreadsheet
+  Building2, Send, History, Sparkles, Share2, CheckSquare, FileSpreadsheet, Landmark
 } from 'lucide-react';
 
 const STAGES = [
@@ -115,7 +115,11 @@ export default function InfrastructureDevelopment() {
     legal_cert_no: '',
     legal_cert_issuer: '',
     legal_cert_date: '',
-    legal_lease_contract: ''
+    legal_lease_contract: '',
+    skhcn_status: '',
+    skhcn_confirmed: '',
+    approval_batch: '',
+    deployment_package: ''
   });
 
   // SKHCN Resubmit Modal State
@@ -202,7 +206,11 @@ export default function InfrastructureDevelopment() {
       legal_cert_no: proj.legal_cert_no || '',
       legal_cert_issuer: proj.legal_cert_issuer || '',
       legal_cert_date: proj.legal_cert_date || '',
-      legal_lease_contract: proj.legal_lease_contract || ''
+      legal_lease_contract: proj.legal_lease_contract || '',
+      skhcn_status: proj.skhcn_status || '',
+      skhcn_confirmed: proj.skhcn_confirmed || '',
+      approval_batch: proj.approval_batch || '',
+      deployment_package: proj.deployment_package || ''
     });
     setIsEditing(false);
   };
@@ -797,6 +805,9 @@ export default function InfrastructureDevelopment() {
         legal_cert_issuer: editForm.legal_cert_issuer || null,
         legal_cert_date: editForm.legal_cert_date || null,
         legal_lease_contract: editForm.legal_lease_contract || null,
+        skhcn_status: editForm.skhcn_status || null,
+        skhcn_confirmed: editForm.skhcn_confirmed || null,
+        approval_batch: editForm.approval_batch || null,
         updated_at: new Date().toISOString()
       };
 
@@ -2642,8 +2653,8 @@ export default function InfrastructureDevelopment() {
                       <th className="py-2.5 px-3 hidden xl:table-cell">Tọa độ QH</th>
                       <th className="py-2.5 px-3 hidden xl:table-cell">Tọa độ KS</th>
                       <th className="py-2.5 px-3 hidden xl:table-cell">Sai lệch</th>
-                      <th className="py-2.5 px-3">Giai đoạn</th>
-                      <th className="py-2.5 px-3">Hình thức</th>
+                      <th className="py-2.5 px-3">🏛️ Sở KH&amp;CN</th>
+                      <th className="py-2.5 px-3">🏢 TCT Phê duyệt</th>
                       <th className="py-2.5 px-3">Loại cột &amp; Độ cao</th>
                       <th className="py-2.5 px-3 text-right">Giá thuê đề xuất</th>
                       <th className="py-2.5 px-3 text-center">Trình ký</th>
@@ -2733,12 +2744,58 @@ export default function InfrastructureDevelopment() {
                                 return '-';
                               })()}
                             </td>
+                            {/* 🏛️ Phê duyệt Sở KH&CN */}
                             <td className="py-3 px-3">
-                              <span className="text-[11px] font-semibold text-slate-600">
-                                {currentStageObj?.label || proj.current_stage}
+                              {proj.skhcn_status === 'Chấp thuận xây dựng mới' ? (
+                                <div>
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                                    <CheckCircle2 className="h-2.5 w-2.5 text-emerald-600" /> Xây mới
+                                  </span>
+                                  {proj.skhcn_confirmed && (
+                                    <span className="block text-[9px] text-slate-400 mt-0.5 truncate max-w-[110px]" title={proj.skhcn_confirmed}>
+                                      {proj.skhcn_confirmed}
+                                    </span>
+                                  )}
+                                </div>
+                              ) : proj.skhcn_status === 'Đề nghị dùng chung CSHT' ? (
+                                <div>
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                                    <AlertTriangle className="h-2.5 w-2.5 text-amber-600" /> Dùng chung
+                                  </span>
+                                  <span className="block text-[9px] text-rose-500 font-semibold mt-0.5">
+                                    &lt; 400m
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-50 text-slate-500 border border-slate-200">
+                                  ⏳ Chờ duyệt
+                                </span>
+                              )}
+                            </td>
+
+                            {/* 🏢 Phê duyệt TCT */}
+                            <td className="py-3 px-3">
+                              {proj.approval_batch?.includes('7203') ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100/80 text-emerald-900 border border-emerald-300">
+                                  ✨ Bổ sung 7203
+                                </span>
+                              ) : proj.deployment_package ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                                  🎯 {proj.deployment_package}
+                                </span>
+                              ) : proj.approval_batch?.includes('Đợt 1') ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                                  ✅ Đợt 1
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                                  ⏳ Chờ bổ sung
+                                </span>
+                              )}
+                              <span className="block text-[9px] text-slate-400 mt-0.5">
+                                {proj.implementation_type || 'MBF đầu tư'}
                               </span>
                             </td>
-                            <td className="py-3 px-3 text-slate-500 font-medium">{proj.implementation_type || '-'}</td>
                             <td className="py-3 px-3 text-slate-500">
                               {proj.antenna_type ? `${proj.antenna_type} ${proj.height ? `(${proj.height}m)` : ''}` : '-'}
                             </td>
@@ -3162,29 +3219,157 @@ export default function InfrastructureDevelopment() {
                         placeholder="Ví dụ: 107.25296"
                       />
                     </div>
-                    {/* TỌA ĐỘ SỞ KHCN DUYỆT */}
-                    <div className="space-y-1 col-span-2 border-t border-slate-100 pt-3">
-                      <span className="text-[11px] font-bold text-purple-600 uppercase">Tọa độ Chấp thuận của Sở KHCN</span>
+                    {/* KHỐI 1: PHÊ DUYỆT SỞ KH&CN ĐỒNG NAI */}
+                    <div className="col-span-2 border border-purple-200/80 bg-purple-50/30 rounded-xl p-3.5 space-y-3">
+                      <div className="flex items-center justify-between border-b border-purple-100 pb-2">
+                        <div className="flex items-center gap-1.5">
+                          <Landmark className="h-4 w-4 text-purple-700" />
+                          <span className="text-[12px] font-bold text-purple-900 uppercase tracking-wide">
+                            1. Phê Duyệt Sở KH&amp;CN Đồng Nai (Quản lý Nhà nước)
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-purple-600 bg-purple-100/70 font-semibold px-2 py-0.5 rounded-full border border-purple-200">
+                          Quy định cự ly trạm ≥ 400m
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-bold text-slate-700 uppercase flex items-center gap-1">
+                            Quyết định thẩm định của Sở
+                          </label>
+                          <select 
+                            value={editForm.skhcn_status || ''}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setEditForm(prev => ({ 
+                                ...prev, 
+                                skhcn_status: val,
+                                implementation_type: val === 'Chấp thuận xây dựng mới' ? 'MBF đầu tư' : (val === 'Đề nghị dùng chung CSHT' ? 'Thuê CSHT có sẵn' : prev.implementation_type)
+                              }));
+                            }}
+                            className="w-full text-xs font-semibold border border-purple-200 rounded-lg px-2.5 py-2 focus:outline-none focus:border-purple-500 bg-white"
+                          >
+                            <option value="">-- Chọn quyết định Sở --</option>
+                            <option value="Chấp thuận xây dựng mới">✅ Chấp thuận xây dựng mới (Cột độc lập)</option>
+                            <option value="Đề nghị dùng chung CSHT">⚠️ Đề nghị dùng chung CSHT (Cách trạm khác &lt; 400m)</option>
+                            <option value="Chờ thẩm định / Chưa nộp">⏳ Đang thẩm định / Chưa nộp</option>
+                          </select>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-bold text-slate-700 uppercase">
+                            Số văn bản Sở chấp thuận
+                          </label>
+                          <input 
+                            type="text"
+                            value={editForm.skhcn_confirmed || ''}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, skhcn_confirmed: e.target.value }))}
+                            className="w-full text-xs border border-purple-200 rounded-lg px-2.5 py-2 focus:outline-none focus:border-purple-500 bg-white"
+                            placeholder="Ví dụ: VB 180/SKHCN-CĐS, VB 2965/SKHCN-CĐS..."
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <label className="text-[11px] font-bold text-slate-700 uppercase">Vĩ độ Sở duyệt (Lat)</label>
+                            {editForm.latitude_survey && (
+                              <button 
+                                type="button"
+                                onClick={() => setEditForm(prev => ({ ...prev, latitude_skhcn: prev.latitude_survey }))}
+                                className="text-[9px] font-semibold text-purple-600 hover:text-purple-800 underline"
+                              >
+                                Lấy từ TĐ KS
+                              </button>
+                            )}
+                          </div>
+                          <input 
+                            type="number" step="any"
+                            value={editForm.latitude_skhcn || ''}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, latitude_skhcn: e.target.value }))}
+                            className="w-full text-xs border border-purple-200 rounded-lg px-2.5 py-2 focus:outline-none focus:border-purple-500 bg-white"
+                            placeholder="Ví dụ: 10.78904"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <label className="text-[11px] font-bold text-slate-700 uppercase">Kinh độ Sở duyệt (Long)</label>
+                            {editForm.longitude_survey && (
+                              <button 
+                                type="button"
+                                onClick={() => setEditForm(prev => ({ ...prev, longitude_skhcn: prev.longitude_survey }))}
+                                className="text-[9px] font-semibold text-purple-600 hover:text-purple-800 underline"
+                              >
+                                Lấy từ TĐ KS
+                              </button>
+                            )}
+                          </div>
+                          <input 
+                            type="number" step="any"
+                            value={editForm.longitude_skhcn || ''}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, longitude_skhcn: e.target.value }))}
+                            className="w-full text-xs border border-purple-200 rounded-lg px-2.5 py-2 focus:outline-none focus:border-purple-500 bg-white"
+                            placeholder="Ví dụ: 107.17012"
+                          />
+                        </div>
+                      </div>
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-[11px] font-bold text-slate-500 uppercase">Vĩ độ Sở KHCN (Lat)</label>
-                      <input 
-                        type="number" step="any"
-                        value={editForm.latitude_skhcn || ''}
-                        onChange={(e) => setEditForm(prev => ({ ...prev, latitude_skhcn: e.target.value }))}
-                        className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-purple-500"
-                        placeholder="Ví dụ: 10.78904"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[11px] font-bold text-slate-500 uppercase">Kinh độ Sở KHCN (Long)</label>
-                      <input 
-                        type="number" step="any"
-                        value={editForm.longitude_skhcn || ''}
-                        onChange={(e) => setEditForm(prev => ({ ...prev, longitude_skhcn: e.target.value }))}
-                        className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-purple-500"
-                        placeholder="Ví dụ: 107.17012"
-                      />
+
+                    {/* KHỐI 2: CHỦ TRƯƠNG & GIAO CHỈ TIÊU TỔNG CÔNG TY */}
+                    <div className="col-span-2 border border-blue-200/80 bg-blue-50/30 rounded-xl p-3.5 space-y-3">
+                      <div className="flex items-center justify-between border-b border-blue-100 pb-2">
+                        <div className="flex items-center gap-1.5">
+                          <Building2 className="h-4 w-4 text-blue-700" />
+                          <span className="text-[12px] font-bold text-blue-900 uppercase tracking-wide">
+                            2. Chủ Trương &amp; Giao Chỉ Tiêu Tổng Công Ty (TCT MobiFone)
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-blue-600 bg-blue-100/70 font-semibold px-2 py-0.5 rounded-full border border-blue-200">
+                          Quyết định đầu tư &amp; Nguồn vốn
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-bold text-slate-700 uppercase">
+                            Đợt phê duyệt của TCT
+                          </label>
+                          <select 
+                            value={editForm.approval_batch || ''}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, approval_batch: e.target.value }))}
+                            className="w-full text-xs font-semibold border border-blue-200 rounded-lg px-2.5 py-2 focus:outline-none focus:border-blue-500 bg-white"
+                          >
+                            <option value="">-- Chọn đợt phê duyệt --</option>
+                            <option value="Phê duyệt Đợt 1 (QĐĐT 2026)">✅ Phê duyệt Đợt 1 (QĐĐT 2026)</option>
+                            <option value="Bổ sung CV 7203 (05/10/2026)">✨ Bổ sung CV 7203 (05/10/2026)</option>
+                            <option value="Chờ TCT phê duyệt bổ sung">⏳ Chờ TCT phê duyệt bổ sung (Quỹ điểm sạch)</option>
+                            <option value="Hủy theo CV 7203 (MORAN)">❌ Hủy theo CV 7203 (Chuyển MORAN)</option>
+                            <option value="Hủy theo CV 7203 (Vùng phủ tốt)">❌ Hủy theo CV 7203 (Vùng phủ tốt)</option>
+                            <option value="Hoãn sang 2027 (CV 7203)">⚠️ Hoãn sang 2027 (CV 7203)</option>
+                          </select>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-bold text-slate-700 uppercase">
+                            Gói triển khai (TCT Giao)
+                          </label>
+                          <select 
+                            value={editForm.deployment_package || ''}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, deployment_package: e.target.value }))}
+                            className="w-full text-xs font-semibold border border-blue-200 rounded-lg px-2.5 py-2 focus:outline-none focus:border-blue-500 bg-white"
+                          >
+                            <option value="">-- Chọn gói thầu --</option>
+                            <option value="Gói 2">🎯 Gói 2 (MBF Tự đầu tư)</option>
+                            <option value="Gói 3">🎯 Gói 3 (MBF Tự đầu tư)</option>
+                            <option value="Gói 4">🎯 Gói 4 (MBF Tự đầu tư)</option>
+                            <option value="Gói bổ sung 7203">✨ Gói bổ sung 7203 (11 trạm mới)</option>
+                            <option value="TSCA">🏛️ TSCA (Trụ sở Công an)</option>
+                            <option value="CSHT có sẵn">🤝 CSHT có sẵn (Dùng chung)</option>
+                            <option value="Chưa phân gói">⏳ Chưa phân gói thầu</option>
+                          </select>
+                        </div>
+                      </div>
                     </div>
                     <div className="space-y-1 col-span-2">
                       <label className="text-[11px] font-bold text-slate-500 uppercase">Địa chỉ khảo sát thực tế</label>
@@ -3849,54 +4034,148 @@ export default function InfrastructureDevelopment() {
                       </span>
                     </div>
                     <div className="space-y-1">
-                      <span className="text-[10px] font-bold text-purple-600 uppercase">Tọa độ Sở KHCN chấp thuận</span>
-                      <span className="text-sm font-medium text-purple-700 block">
-                        {selectedProject.latitude_skhcn && selectedProject.longitude_skhcn 
-                          ? `${selectedProject.latitude_skhcn} / ${selectedProject.longitude_skhcn}`
-                          : 'Chưa cập nhật tọa độ Sở KHCN'}
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">Tọa độ khảo sát thực tế</span>
+                      <span className="text-sm font-semibold text-slate-800 block">
+                        {selectedProject.latitude_survey && selectedProject.longitude_survey 
+                          ? `${selectedProject.latitude_survey} / ${selectedProject.longitude_survey}`
+                          : 'Chưa có tọa độ khảo sát'}
                       </span>
                     </div>
-                    {selectedProject.latitude_plan && selectedProject.longitude_plan && selectedProject.latitude_survey && selectedProject.longitude_survey && (
-                      <div className="space-y-1">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase">Độ lệch (Quy hoạch - Khảo sát)</span>
-                        <span className="text-sm font-bold text-amber-700 block bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-100">
-                          {(() => {
-                            const d = haversine(selectedProject.latitude_plan, selectedProject.longitude_plan, selectedProject.latitude_survey, selectedProject.longitude_survey) * 1000;
-                            return d < 1000 ? `${Math.round(d)} mét` : `${(d / 1000).toFixed(2)} km`;
-                          })()}
-                        </span>
-                      </div>
-                    )}
-                    {selectedProject.latitude_survey && selectedProject.longitude_survey && selectedProject.latitude_skhcn && selectedProject.longitude_skhcn && (
-                      <div className="space-y-1">
-                        <span className="text-[10px] font-bold text-purple-600 uppercase">Độ lệch (Khảo sát - Sở KHCN)</span>
-                        <span className="text-sm font-bold text-purple-800 block bg-purple-50 px-3 py-1.5 rounded-lg border border-purple-100">
-                          {(() => {
-                            const d = haversine(selectedProject.latitude_survey, selectedProject.longitude_survey, selectedProject.latitude_skhcn, selectedProject.longitude_skhcn) * 1000;
-                            return d < 1000 ? `${Math.round(d)} mét` : `${(d / 1000).toFixed(2)} km`;
-                          })()}
-                        </span>
-                      </div>
-                    )}
-                    <div className="space-y-1">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase">Hình thức triển khai</span>
-                      <span className="text-sm font-semibold text-slate-700 block">{selectedProject.implementation_type || '-'}</span>
-                    </div>
+
                     <div className="space-y-1">
                       <span className="text-[10px] font-bold text-slate-400 uppercase">Loại cột &amp; Độ cao</span>
                       <span className="text-sm font-semibold text-slate-700 block">
                         {selectedProject.antenna_type ? `${selectedProject.antenna_type} ${selectedProject.height ? `(${selectedProject.height}m)` : ''}` : '-'}
                       </span>
                     </div>
+
                     <div className="space-y-1">
                       <span className="text-[10px] font-bold text-slate-400 uppercase">Giá thuê đề xuất</span>
                       <span className="text-sm font-bold text-blue-600 block">
                         {selectedProject.proposed_rent ? `${selectedProject.proposed_rent.toLocaleString()} đ/tháng` : '-'}
                       </span>
                     </div>
+
                     <div className="space-y-1">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase">Đợt phê duyệt TCT</span>
-                      <span className="text-sm font-semibold text-slate-700 block">{selectedProject.approval_batch || '-'}</span>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">Hình thức triển khai</span>
+                      <span className="text-sm font-semibold text-slate-700 block">{selectedProject.implementation_type || '-'}</span>
+                    </div>
+
+                    {/* CARD 1: PHÊ DUYỆT SỞ KH&CN ĐỒNG NAI */}
+                    <div className="col-span-2 border border-purple-200 bg-purple-50/30 rounded-xl p-4 space-y-3 shadow-xs">
+                      <div className="flex items-center justify-between border-b border-purple-100 pb-2.5">
+                        <div className="flex items-center gap-2">
+                          <div className="p-1.5 rounded-lg bg-purple-100 text-purple-700">
+                            <Landmark className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <span className="text-xs font-bold text-purple-950 uppercase tracking-wide block">
+                              1. Phê Duyệt Sở KH&amp;CN Đồng Nai (Quản lý Nhà nước)
+                            </span>
+                            <span className="text-[10px] text-purple-600">Thẩm định cự ly quy hoạch viễn thông tỉnh (Mốc 400m)</span>
+                          </div>
+                        </div>
+                        {selectedProject.skhcn_status === 'Chấp thuận xây dựng mới' ? (
+                          <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
+                            <CheckCircle2 className="h-3 w-3 text-emerald-600" /> SỞ CHẤP THUẬN XÂY MỚI
+                          </span>
+                        ) : selectedProject.skhcn_status === 'Đề nghị dùng chung CSHT' ? (
+                          <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1">
+                            <AlertTriangle className="h-3 w-3 text-amber-600" /> SỞ ÉP DÙNG CHUNG (&lt;400m)
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-300">
+                            ⏳ ĐANG THẨM ĐỊNH / CHỜ NỘP
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 text-xs">
+                        <div className="bg-white/80 rounded-lg p-2.5 border border-purple-100/80">
+                          <span className="text-slate-400 block text-[10px] font-bold uppercase mb-0.5">Quyết định thẩm định của Sở:</span>
+                          <span className="font-bold text-purple-900 text-xs">
+                            {selectedProject.skhcn_status || 'Chưa cập nhật ý kiến Sở'}
+                          </span>
+                        </div>
+                        <div className="bg-white/80 rounded-lg p-2.5 border border-purple-100/80">
+                          <span className="text-slate-400 block text-[10px] font-bold uppercase mb-0.5">Số văn bản Sở chấp thuận:</span>
+                          <span className="font-bold text-slate-800 text-xs">
+                            {selectedProject.skhcn_confirmed || selectedProject.notes?.split('|')[0]?.trim() || 'Chưa cập nhật số văn bản'}
+                          </span>
+                        </div>
+                        <div className="bg-white/80 rounded-lg p-2.5 border border-purple-100/80">
+                          <span className="text-slate-400 block text-[10px] font-bold uppercase mb-0.5">Tọa độ Sở chấp thuận:</span>
+                          <span className="font-semibold text-purple-800">
+                            {selectedProject.latitude_skhcn && selectedProject.longitude_skhcn 
+                              ? `${selectedProject.latitude_skhcn}, ${selectedProject.longitude_skhcn}` 
+                              : (selectedProject.latitude_survey ? `${selectedProject.latitude_survey}, ${selectedProject.longitude_survey} (Theo KS)` : 'Chưa cập nhật')}
+                          </span>
+                        </div>
+                        <div className="bg-white/80 rounded-lg p-2.5 border border-purple-100/80">
+                          <span className="text-slate-400 block text-[10px] font-bold uppercase mb-0.5">Sai lệch Khảo sát - Sở duyệt:</span>
+                          <span className="font-bold text-slate-700">
+                            {selectedProject.latitude_survey && selectedProject.longitude_survey && selectedProject.latitude_skhcn && selectedProject.longitude_skhcn ? (() => {
+                              const d = haversine(selectedProject.latitude_survey, selectedProject.longitude_survey, selectedProject.latitude_skhcn, selectedProject.longitude_skhcn) * 1000;
+                              return d < 1000 ? `${Math.round(d)} mét (Khớp vị trí)` : `${(d / 1000).toFixed(2)} km`;
+                            })() : 'Trùng khớp tọa độ khảo sát'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* CARD 2: CHỦ TRƯƠNG & GIAO CHỈ TIÊU TỔNG CÔNG TY */}
+                    <div className="col-span-2 border border-blue-200 bg-blue-50/30 rounded-xl p-4 space-y-3 shadow-xs">
+                      <div className="flex items-center justify-between border-b border-blue-100 pb-2.5">
+                        <div className="flex items-center gap-2">
+                          <div className="p-1.5 rounded-lg bg-blue-100 text-blue-700">
+                            <Building2 className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <span className="text-xs font-bold text-blue-950 uppercase tracking-wide block">
+                              2. Chủ Trương &amp; Giao Chỉ Tiêu Tổng Công Ty (TCT MobiFone)
+                            </span>
+                            <span className="text-[10px] text-blue-600">Quyết định đầu tư, nguồn vốn và phân bổ gói thầu</span>
+                          </div>
+                        </div>
+                        {(selectedProject.approval_batch?.includes('Đợt 1') || selectedProject.approval_batch?.includes('7203') || selectedProject.deployment_package) ? (
+                          <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-100 text-blue-800 border border-blue-300 flex items-center gap-1">
+                            <CheckCircle2 className="h-3 w-3 text-blue-600" /> TCT ĐÃ DUYỆT CHỦ TRƯƠNG
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1">
+                            <Clock className="h-3 w-3 text-amber-600" /> CHỜ TCT DUYỆT BỔ SUNG
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 text-xs">
+                        <div className="bg-white/80 rounded-lg p-2.5 border border-blue-100/80">
+                          <span className="text-slate-400 block text-[10px] font-bold uppercase mb-0.5">Đợt phê duyệt TCT:</span>
+                          <span className="font-bold text-blue-900 text-xs">
+                            {selectedProject.approval_batch || 'Chưa phê duyệt'}
+                          </span>
+                        </div>
+                        <div className="bg-white/80 rounded-lg p-2.5 border border-blue-100/80">
+                          <span className="text-slate-400 block text-[10px] font-bold uppercase mb-0.5">Gói thầu triển khai:</span>
+                          <span className="font-bold text-emerald-700 text-xs">
+                            {selectedProject.deployment_package || 'Chưa đưa vào gói'}
+                          </span>
+                        </div>
+                        <div className="bg-white/80 rounded-lg p-2.5 border border-blue-100/80 col-span-2 flex items-center justify-between">
+                          <div>
+                            <span className="text-slate-400 block text-[10px] font-bold uppercase mb-0.5">Định hướng bước tiếp theo:</span>
+                            <span className="font-semibold text-slate-800">
+                              {selectedProject.skhcn_status === 'Chấp thuận xây dựng mới' && (selectedProject.approval_batch?.includes('Đợt 1') || selectedProject.approval_batch?.includes('7203')) ? (
+                                <span className="text-emerald-700 font-bold">📝 Cả Sở và TCT đã duyệt: Khảo sát thu thập hồ sơ chủ đất để TRÌNH KÝ HỢP ĐỒNG</span>
+                              ) : selectedProject.skhcn_status === 'Đề nghị dùng chung CSHT' ? (
+                                <span className="text-amber-700 font-bold">⚠️ Vướng cự ly Sở: Tái trình dịch tọa độ mới hoặc đàm phán thuê CSHT đối tác</span>
+                              ) : (
+                                <span className="text-blue-700 font-bold">💎 Quỹ điểm sạch đã qua Sở: Sẵn sàng xuất phụ lục trình TCT phê duyệt bổ sung</span>
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
