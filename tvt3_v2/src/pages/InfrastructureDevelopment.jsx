@@ -24,18 +24,24 @@ const STAGES = [
 export const SITES_4_PACKAGES = [
   // Gói 2 (5 trạm)
   '26DNa242', '26DNa244', '26DNa175', '26DNa187', '26DNa250',
-  // Gói 3 (8 trạm)
-  '26DNa162', '26DNa245', '26DNa247', '26DNa246', '26DNa164', '26DNa166', '26DNa258', '26DNa168',
+  // Gói 3 (7 trạm MBF đầu tư - 26DNa246 đã chuyển Dùng chung CSHT do không có sổ đỏ)
+  '26DNa162', '26DNa245', '26DNa247', '26DNa164', '26DNa166', '26DNa258', '26DNa168',
   // Gói 4 (8 trạm dự kiến trình HĐ: STT 21 -> 28)
   '26DNa165', '26DNa167', '26DNa163', '26DNa158', '26DNa255', '26DNa185', '26DNa181', '26DNa129'
 ];
 
 export const SITES_TCT_OK_SO_HTCS = [
-  '26DNa186', '26DNa184', '26DNa155', '26DNa156', '26DNa157', '26DNa170', 
-  '26DNa052', '26DNa159', '26DNa053', '26DNa070',
-  '26DNa131', '26DNa076', '26DNa080', 'DNTNL1', 
+  '26DNa186', '26DNa184', '26DNa155', '26DNa156', '26DNa157',
+  '26DNa159', '26DNa131', '26DNa076', '26DNa080', 'DNTNL1', 
   'DNTNL2', 'DNXL10', '26DNa311', '26DNa316', '26DNa318', 
-  '26DNa330', '26DNa290', '26DNa291', '26DNa295'
+  '26DNa330', '26DNa290', '26DNa291', '26DNa295',
+  '26DNa246' // Trạm không có sổ đỏ chuyển sang phương án Dùng chung CSHT
+];
+
+// Danh sách trạm Trụ sở Công An Lưỡng Dụng TSCA (Áp dụng MBF đầu tư mới, không dùng chung CSHT)
+export const SITES_TSCA_LUONG_DUNG = [
+  '26DNa072', '26DNa170', '26DNa053', '26DNa070', '26DNa069', 
+  '26DNa160', '26DNa052', '26DNa034', '26DNa071', '26DNa060'
 ];
 
 // Trạm Sở duyệt - Chờ TCT duyệt (Đã loại trừ 5 trạm TCT vừa phê duyệt bổ sung theo CV 7203 ngày 05/10/2026)
@@ -512,6 +518,7 @@ export default function InfrastructureDevelopment() {
   const countSoOkTctPending = tvt3ScopeProjects.filter(p => SITES_SO_OK_TCT_PENDING.includes(p.planning_id_new) || SITES_SO_OK_TCT_PENDING.includes(p.planning_id_old)).length;
   const countTctBoSung = tvt3ScopeProjects.filter(p => SITES_TCT_BO_SUNG_7203.includes(p.planning_id_new) || SITES_TCT_BO_SUNG_7203.includes(p.planning_id_old)).length;
   const countTctHuyHoan = tvt3ScopeProjects.filter(p => SITES_TCT_HUY_HOAN_7203.includes(p.planning_id_new) || SITES_TCT_HUY_HOAN_7203.includes(p.planning_id_old)).length;
+  const countTscaLuongDung = tvt3ScopeProjects.filter(p => SITES_TSCA_LUONG_DUNG.includes(p.planning_id_new) || SITES_TSCA_LUONG_DUNG.includes(p.planning_id_old)).length;
 
   // Thống kê số lượng trạm theo từng Gói triển khai
   const packageCounts = useMemo(() => {
@@ -641,6 +648,8 @@ export default function InfrastructureDevelopment() {
       matchesReviewGroup = SITES_TCT_BO_SUNG_7203.includes(proj.planning_id_new) || SITES_TCT_BO_SUNG_7203.includes(proj.planning_id_old);
     } else if (filterReviewGroup === 'TCT_HUY_HOAN_7203') {
       matchesReviewGroup = SITES_TCT_HUY_HOAN_7203.includes(proj.planning_id_new) || SITES_TCT_HUY_HOAN_7203.includes(proj.planning_id_old);
+    } else if (filterReviewGroup === 'TSCA_LUONG_DUNG') {
+      matchesReviewGroup = SITES_TSCA_LUONG_DUNG.includes(proj.planning_id_new) || SITES_TSCA_LUONG_DUNG.includes(proj.planning_id_old);
     }
 
     return matchesSearch && matchesDistrict && matchesStage && matchesStatus && matchesPackage && matchesContractReady && matchesImplType && matchesReviewGroup;
@@ -2733,6 +2742,7 @@ export default function InfrastructureDevelopment() {
                   <option value="">🎯 Tất cả Nhóm Rà Soát</option>
                   <option value="4_PACKAGES">🎯 4 Gói MBF Đầu Tư ({count4Packages})</option>
                   <option value="TCT_OK_SO_HTCS">⚠️ TCT Duyệt - Sở Dùng Chung ({countTctOkSoHtcs})</option>
+                  <option value="TSCA_LUONG_DUNG">🛡️ Trụ sở CA Lưỡng Dụng ({countTscaLuongDung})</option>
                   <option value="SO_OK_TCT_PENDING">⏳ Sở Duyệt - Chờ TCT ({countSoOkTctPending})</option>
                   <option value="TCT_BO_SUNG_7203">✨ TCT Bổ Sung CV 7203 ({countTctBoSung})</option>
                   <option value="TCT_HUY_HOAN_7203">❌ TCT Hủy/Hoãn CV 7203 ({countTctHuyHoan})</option>
@@ -2809,6 +2819,7 @@ export default function InfrastructureDevelopment() {
                       Nhóm: {
                         filterReviewGroup === '4_PACKAGES' ? '4 Gói MBF' :
                         filterReviewGroup === 'TCT_OK_SO_HTCS' ? 'TCT Duyệt - Sở Dùng Chung' :
+                        filterReviewGroup === 'TSCA_LUONG_DUNG' ? 'Trụ sở CA Lưỡng Dụng TSCA' :
                         filterReviewGroup === 'SO_OK_TCT_PENDING' ? 'Sở Duyệt - Chờ TCT' :
                         filterReviewGroup === 'TCT_BO_SUNG_7203' ? 'CV 7203 Bổ sung' : 'CV 7203 Hủy/Hoãn'
                       }
@@ -3020,9 +3031,19 @@ export default function InfrastructureDevelopment() {
                                   ⏳ Chờ bổ sung
                                 </span>
                               )}
-                              <span className="block text-[9px] text-slate-400 mt-0.5">
-                                {proj.implementation_type || 'MBF đầu tư'}
-                              </span>
+                              {proj.planning_id_new === '26DNa246' ? (
+                                <span className="inline-block mt-0.5 px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-100 text-amber-900 border border-amber-300" title="Không có sổ đỏ - Chuyển sang Dùng chung CSHT">
+                                  ⚠️ Dùng chung (K.sổ đỏ)
+                                </span>
+                              ) : SITES_TSCA_LUONG_DUNG.includes(proj.planning_id_new) ? (
+                                <span className="inline-block mt-0.5 px-1.5 py-0.2 rounded text-[9px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200" title="Trụ sở Công an áp dụng MBF đầu tư mới cho Lưỡng dụng">
+                                  🛡️ MBF ĐT (Lưỡng dụng)
+                                </span>
+                              ) : (
+                                <span className="block text-[9px] text-slate-400 mt-0.5">
+                                  {proj.implementation_type || 'MBF đầu tư'}
+                                </span>
+                              )}
                             </td>
                             <td className="py-3 px-3 text-slate-500">
                               {proj.antenna_type ? `${proj.antenna_type} ${proj.height ? `(${proj.height}m)` : ''}` : '-'}
