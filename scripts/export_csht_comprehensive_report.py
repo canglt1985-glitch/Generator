@@ -66,26 +66,28 @@ def build_report():
     align_left = Alignment(horizontal="left", vertical="center", wrap_text=True)
     align_right = Alignment(horizontal="right", vertical="center")
 
+    desktop_8_sites = ['26DNa165', '26DNa167', '26DNa163', '26DNa158', '26DNa255', '26DNa185', '26DNa181', '26DNa129']
+
     # ==========================================
-    # SHEET 1: 4 GÓI MBF TỰ ĐẦU TƯ (15 TRẠM)
+    # SHEET 1: CÁC GÓI MBF TỰ ĐẦU TƯ (GÓI 2, 3, 4)
     # ==========================================
     ws1 = wb.create_sheet(title="4_Goi_MBF_Dau_Tu")
     ws1.views.sheetView[0].showGridLines = True
 
-    ws1.merge_cells("A1:N1")
-    ws1["A1"] = "DANH SÁCH 15 TRẠM THUỘC 4 GÓI MOBIFONE TỰ ĐẦU TƯ XÂY MỚI (TVT3 - 2026)"
+    ws1.merge_cells("A1:O1")
+    ws1["A1"] = "DANH SÁCH 21 TRẠM THUỘC CÁC GÓI MOBIFONE TỰ ĐẦU TƯ XÂY MỚI (TVT3 - 2026)"
     ws1["A1"].font = font_title
     ws1["A1"].alignment = align_center
 
-    ws1.merge_cells("A2:N2")
+    ws1.merge_cells("A2:O2")
     ws1["A2"] = "Đối soát dữ liệu quy hoạch, tình trạng khảo sát thực địa & Điều kiện xuất hồ sơ ký hợp đồng mặt bằng"
     ws1["A2"].font = font_italic
     ws1["A2"].alignment = align_center
 
     headers_1 = [
         "STT", "Gói", "Mã QH Mới", "Mã QH Cũ", "Huyện", "Xã / Phường", 
-        "Tọa độ KS (Vĩ độ)", "Tọa độ KS (Kinh độ)", "Điều Kiện HĐ", 
-        "Họ Tên Chủ Đất", "SĐT", "Số Thửa", "Tờ Bản Đồ", "Giá Thuê (đ/tháng)"
+        "Tọa độ KS (Vĩ độ)", "Tọa độ KS (Kinh độ)", "Điều Kiện Trình HĐ", 
+        "Họ Tên Chủ Đất", "SĐT", "Số CCCD", "Số Thửa", "Tờ Bản Đồ", "Giá Thuê (đ/tháng)"
     ]
     ws1.append([])
     ws1.append(headers_1)
@@ -96,41 +98,64 @@ def build_report():
         cell.font = font_header
         cell.alignment = align_center
 
-    four_pkgs_data = [r for r in rows_tvt3 if any(k in str(r.get('Đề xuất loại hình PTM')) for k in ['Gói 1', 'Gói 2', 'Gói 3', 'Gói 4'])]
-    # Sắp xếp theo gói
-    four_pkgs_data.sort(key=lambda x: str(x.get('Đề xuất loại hình PTM')))
+    # Danh sách chuẩn hóa Gói 4 gồm 8 trạm dự kiến trình hợp đồng (STT 21 -> 28)
+    goi_4_ordered = [
+        (21, '26DNa165'), (22, '26DNa167'), (23, '26DNa163'), (24, '26DNa158'),
+        (25, '26DNa255'), (26, '26DNa185'), (27, '26DNa181'), (28, '26DNa129')
+    ]
+    goi_4_codes = [c[1] for c in goi_4_ordered]
 
-    desktop_8_sites = ['26DNa165', '26DNa167', '26DNa163', '26DNa158', '26DNa255', '26DNa185', '26DNa181', '26DNa129']
+    # Thu thập tất cả các trạm thuộc Gói 2, Gói 3 và Gói 4
+    four_pkgs_list = []
+    
+    # Gói 2
+    for sid, p in sb_projects.items():
+        if p.get('deployment_package') == 'Gói 2':
+            four_pkgs_list.append(('Gói 2', sid, p))
+            
+    # Gói 3
+    for sid, p in sb_projects.items():
+        if p.get('deployment_package') == 'Gói 3':
+            four_pkgs_list.append(('Gói 3', sid, p))
+            
+    # Gói 4 theo đúng thứ tự 21-28
+    for stt_num, sid in goi_4_ordered:
+        p = sb_projects.get(sid, {})
+        four_pkgs_list.append(('Gói 4', sid, p))
 
-    for idx, r in enumerate(four_pkgs_data):
-        sid = str(r.get('MÃ QH mới')).strip()
-        old_id = str(r.get('Mã QH cũ') or '').strip()
-        huyen = str(r.get('Huyện') or '').strip()
-        ptm = str(r.get('Đề xuất loại hình PTM')).strip()
-        pkg_name = "Gói 2" if "Gói 2" in ptm else ("Gói 3" if "Gói 3" in ptm else ("Gói 4" if "Gói 4" in ptm else "Gói 1"))
-
-        sb_p = sb_projects.get(sid, {})
+    for idx, (pkg_name, sid, sb_p) in enumerate(four_pkgs_list):
+        old_id = sb_p.get('planning_id_old') or ''
+        huyen = sb_p.get('district') or ''
         ward = sb_p.get('ward') or ''
-        lat_ks = sb_p.get('latitude_survey') or ''
-        lng_ks = sb_p.get('longitude_survey') or ''
+        lat_ks = sb_p.get('latitude_survey') or sb_p.get('latitude_plan') or ''
+        lng_ks = sb_p.get('longitude_survey') or sb_p.get('longitude_plan') or ''
         landowner = sb_p.get('landowner_name') or ''
         phone = sb_p.get('landlord_phone') or ''
+        cccd = sb_p.get('landlord_cccd') or ''
         plot = sb_p.get('plot_number') or ''
         sheet = sb_p.get('map_sheet') or ''
         rent = sb_p.get('proposed_rent') or 3000000
 
-        # Trạng thái điều kiện HĐ
-        if landowner and plot and sheet:
-            hd_status = "ĐỦ ĐIỀU KIỆN"
-        elif sid in desktop_8_sites:
-            hd_status = "ĐÃ CÓ FILE WORD (30/09)"
+        # Kiểm tra điều kiện trình HĐ
+        if landowner and plot and sheet and phone and cccd:
+            hd_status = "ĐỦ ĐIỀU KIỆN TRÌNH HĐ"
+        elif landowner and plot and sheet:
+            hd_status = "ĐÃ CÓ CHỦ ĐẤT / THỬA ĐẤT"
         else:
-            hd_status = "THIẾU HỒ SƠ"
+            hd_status = "THIẾU CHỦ ĐẤT / CCCD"
+
+        # Nếu thuộc Gói 4, đánh số STT từ 21 trở đi nếu là trạm gói 4
+        stt_val = idx + 1
+        if pkg_name == 'Gói 4':
+            for stt_n, c_code in goi_4_ordered:
+                if c_code == sid:
+                    stt_val = stt_n
+                    break
 
         row_vals = [
-            idx + 1, pkg_name, sid, old_id, huyen, ward,
+            stt_val, pkg_name, sid, old_id, huyen, ward,
             lat_ks, lng_ks, hd_status,
-            landowner or "---", phone or "---", plot or "---", sheet or "---",
+            landowner or "---", phone or "---", cccd or "---", plot or "---", sheet or "---",
             f"{int(rent):,}" if rent else "---"
         ]
         ws1.append(row_vals)
@@ -139,24 +164,25 @@ def build_report():
             cell = ws1.cell(row=curr_row, column=c_idx)
             cell.font = font_normal
             cell.border = thin_border
-            if c_idx in [1, 2, 3, 4, 7, 8, 9, 11, 12, 13]:
+            if c_idx in [1, 2, 3, 4, 7, 8, 9, 11, 12, 13, 14]:
                 cell.alignment = align_center
-            elif c_idx == 14:
+            elif c_idx == 15:
                 cell.alignment = align_right
             else:
                 cell.alignment = align_left
-            
-            # Tô màu trạng thái
+
+            # Highlight trạng thái điều kiện HĐ
             if c_idx == 9:
-                if hd_status == "ĐỦ ĐIỀU KIỆN":
-                    cell.fill = PatternFill(start_color="D1FAE5", end_color="D1FAE5", fill_type="solid")
-                    cell.font = Font(name="Arial", size=10, bold=True, color="065F46")
-                elif hd_status == "ĐÃ CÓ FILE WORD (30/09)":
-                    cell.fill = PatternFill(start_color="FEF3C7", end_color="FEF3C7", fill_type="solid")
-                    cell.font = Font(name="Arial", size=10, bold=True, color="92400E")
+                if "ĐỦ ĐIỀU KIỆN" in hd_status:
+                    cell.fill = PatternFill(start_color="DCFCE7", end_color="DCFCE7", fill_type="solid")
+                    cell.font = Font(name="Times New Roman", size=10, bold=True, color="166534")
+                elif "ĐÃ CÓ" in hd_status:
+                    cell.fill = PatternFill(start_color="FEF9C3", end_color="FEF9C3", fill_type="solid")
+                    cell.font = Font(name="Times New Roman", size=10, bold=True, color="854D0E")
                 else:
                     cell.fill = PatternFill(start_color="FEE2E2", end_color="FEE2E2", fill_type="solid")
-                    cell.font = Font(name="Arial", size=10, bold=True, color="991B1B")
+                    cell.font = Font(name="Times New Roman", size=10, bold=True, color="991B1B")
+
 
     # ==========================================
     # SHEET 2: TCT DUYỆT - SỞ DÙNG CHUNG (29 TRẠM)
