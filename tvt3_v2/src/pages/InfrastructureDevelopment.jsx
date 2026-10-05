@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../supabaseClient';
 import { useCurrentUser } from '../utils/useCurrentUser';
 
@@ -9,7 +9,8 @@ import {
   MapPin, User, ChevronRight, Calendar, Info, RefreshCw,
   TrendingUp, Activity, Server, FileText, ArrowRight, ChevronLeft,
   X, HelpCircle, Check, Play, Edit3, Download, Upload,
-  Building2, Send, History, Sparkles, Share2, CheckSquare, FileSpreadsheet, Landmark
+  Building2, Send, History, Sparkles, Share2, CheckSquare, FileSpreadsheet, Landmark,
+  RotateCcw
 } from 'lucide-react';
 
 const STAGES = [
@@ -512,6 +513,47 @@ export default function InfrastructureDevelopment() {
   const countTctBoSung = tvt3ScopeProjects.filter(p => SITES_TCT_BO_SUNG_7203.includes(p.planning_id_new) || SITES_TCT_BO_SUNG_7203.includes(p.planning_id_old)).length;
   const countTctHuyHoan = tvt3ScopeProjects.filter(p => SITES_TCT_HUY_HOAN_7203.includes(p.planning_id_new) || SITES_TCT_HUY_HOAN_7203.includes(p.planning_id_old)).length;
 
+  // Thống kê số lượng trạm theo từng Gói triển khai
+  const packageCounts = useMemo(() => {
+    const counts = { ALL: tvt3ScopeProjects.length, UNASSIGNED: 0 };
+    packages.forEach(pkg => { counts[pkg] = 0; });
+    tvt3ScopeProjects.forEach(p => {
+      if (p.deployment_package) {
+        counts[p.deployment_package] = (counts[p.deployment_package] || 0) + 1;
+      } else {
+        counts.UNASSIGNED = (counts.UNASSIGNED || 0) + 1;
+      }
+    });
+    return counts;
+  }, [tvt3ScopeProjects, packages]);
+
+  // Kiểm tra có bất kỳ bộ lọc/tìm kiếm nào đang kích hoạt
+  const isFiltered = Boolean(
+    searchQuery.trim() ||
+    filterPackage ||
+    filterDistrict ||
+    filterStage ||
+    filterStatus ||
+    filterContractReady ||
+    filterImplementationType ||
+    filterReviewGroup
+  );
+
+  // Hàm xóa toàn bộ bộ lọc và từ khóa tìm kiếm
+  const handleResetAllFilters = () => {
+    setSearchQuery('');
+    setFilterPackage('');
+    setFilterDistrict('');
+    setFilterStage('');
+    setFilterStatus('');
+    setFilterContractReady('');
+    setFilterImplementationType('');
+    setFilterReviewGroup('');
+  };
+
+  // Tùy chọn tự động bỏ filter sau khi lưu trạm
+  const [autoResetFilterOnSave, setAutoResetFilterOnSave] = useState(true);
+
   // Gap analysis / density
   const getDensityData = () => {
     const data = districts.map(dist => {
@@ -560,16 +602,17 @@ export default function InfrastructureDevelopment() {
 
     if (!isTv3Site) return false;
 
-    const matchesSearch = 
-      proj.planning_id_new?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      proj.planning_id_old?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      proj.ward?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      proj.district?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      proj.address?.toLowerCase().includes(searchQuery.toLowerCase());
+    const q = searchQuery.trim().toLowerCase();
+    const matchesSearch = !q ||
+      proj.planning_id_new?.toLowerCase().includes(q) ||
+      proj.planning_id_old?.toLowerCase().includes(q) ||
+      proj.ward?.toLowerCase().includes(q) ||
+      proj.district?.toLowerCase().includes(q) ||
+      proj.address?.toLowerCase().includes(q);
     const matchesDistrict = !filterDistrict || proj.district === filterDistrict;
     const matchesStage = !filterStage || proj.current_stage === filterStage;
     const matchesStatus = !filterStatus || proj.overall_status === filterStatus;
-    const matchesPackage = !filterPackage || proj.deployment_package === filterPackage;
+    const matchesPackage = !filterPackage || (filterPackage === '__UNASSIGNED__' ? !proj.deployment_package : proj.deployment_package === filterPackage);
     
     let matchesContractReady = true;
     if (filterContractReady) {
@@ -822,6 +865,16 @@ export default function InfrastructureDevelopment() {
       setProjects(prev => prev.map(p => p.project_id === selectedProject.project_id ? { ...p, ...updates } : p));
       setSelectedProject(prev => prev && prev.project_id === selectedProject.project_id ? { ...prev, ...updates } : prev);
       setIsEditing(false);
+
+      // Nếu bật tùy chọn autoResetFilterOnSave hoặc đang tìm kiếm mã trạm này, tự động bỏ filter để quay ra danh sách đầy đủ
+      if (autoResetFilterOnSave) {
+        const sQueryLower = searchQuery.trim().toLowerCase();
+        const pNewLower = (selectedProject?.planning_id_new || '').toLowerCase();
+        const pOldLower = (selectedProject?.planning_id_old || '').toLowerCase();
+        if (sQueryLower && (sQueryLower === pNewLower || sQueryLower === pOldLower || pNewLower.includes(sQueryLower))) {
+          setSearchQuery('');
+        }
+      }
     } catch (err) {
       console.error("Lỗi khi lưu chi tiết trạm:", err);
       alert("Không thể lưu thay đổi: " + err.message);
@@ -2526,118 +2579,293 @@ export default function InfrastructureDevelopment() {
 
           {activeTab === 'list' && (
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden space-y-4 p-4">
-              {/* Table Filter Actions */}
-              <div className="flex flex-col md:flex-row md:items-center gap-3 justify-between">
-                <div className="flex items-center gap-2 flex-1">
-                  <div className="text-xs px-3 py-2 font-bold rounded-lg border bg-blue-600 text-white border-blue-600 shadow-sm flex items-center gap-1.5 whitespace-nowrap shadow-blue-500/20">
-                    🎯 Danh sách TVT3 ({filteredProjects.length} trạm)
+              {/* Table Filter Actions - Redesigned into Multi-Tier Layout */}
+              {/* Tầng 1: Search trung tâm + Nút Bỏ lọc (Clear filter) + Xuất báo cáo */}
+              <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+                <div className="flex flex-1 items-center gap-2.5">
+                  {/* Badge tổng số trạm */}
+                  <div className="text-xs px-3.5 py-2 font-bold rounded-xl border bg-blue-600 text-white border-blue-600 shadow-sm flex items-center gap-1.5 whitespace-nowrap shadow-blue-500/20">
+                    🎯 TVT3 ({filteredProjects.length}/{totalProjects} trạm)
                   </div>
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+
+                  {/* Thanh Search to, rõ ràng, trực quan, không bị co ép */}
+                  <div className="relative flex-1 min-w-[260px] max-w-xl">
+                    <Search className="absolute left-3.5 top-2.5 h-4 w-4 text-blue-500 pointer-events-none" />
                     <input
                       type="text"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Tìm theo mã QH mới/cũ, xã hoặc địa bàn TVT3..."
-                      className="block w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg leading-5 bg-slate-50/50 text-slate-700 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-xs transition-all"
+                      placeholder="🔍 Tìm nhanh mã QH mới (26DNa...), mã cũ, tên xã, huyện, địa chỉ..."
+                      className="w-full pl-10 pr-9 py-2 bg-slate-50 hover:bg-slate-100/60 focus:bg-white border border-slate-200 focus:border-blue-500 rounded-xl text-xs font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all shadow-xs"
                     />
+                    {searchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchQuery('')}
+                        title="Xóa từ khóa tìm kiếm"
+                        className="absolute right-2.5 top-2 p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-200 rounded-full transition-colors cursor-pointer"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    )}
                   </div>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <select
-                    value={filterReviewGroup}
-                    onChange={(e) => setFilterReviewGroup(e.target.value)}
-                    className="text-xs bg-amber-50 hover:bg-amber-100 border border-amber-300 rounded-lg px-2.5 py-1.5 font-bold text-amber-900 focus:outline-none"
-                  >
-                    <option value="">🎯 Tất cả Nhóm Rà Soát</option>
-                    <option value="4_PACKAGES">🎯 4 Gói MBF Đầu Tư ({count4Packages})</option>
-                    <option value="TCT_OK_SO_HTCS">⚠️ TCT Duyệt - Sở Dùng Chung ({countTctOkSoHtcs})</option>
-                    <option value="SO_OK_TCT_PENDING">⏳ Sở Duyệt - Chờ TCT ({countSoOkTctPending})</option>
-                    <option value="TCT_BO_SUNG_7203">✨ TCT Bổ Sung CV 7203 ({countTctBoSung})</option>
-                    <option value="TCT_HUY_HOAN_7203">❌ TCT Hủy/Hoãn CV 7203 ({countTctHuyHoan})</option>
-                  </select>
-                  <select
-                    value={filterImplementationType}
-                    onChange={(e) => setFilterImplementationType(e.target.value)}
-                    className="text-xs bg-blue-50/80 hover:bg-blue-100 border border-blue-200 rounded-lg px-2.5 py-1.5 font-bold text-blue-700 focus:outline-none"
-                  >
-                    <option value="">Tất cả Nhánh dự án</option>
-                    <option value="MBF_INVEST">🔷 MobiFone đầu tư mới</option>
-                    <option value="SHARED">🤝 Dùng chung CSHT (Thuê lại)</option>
-                  </select>
-                  <select
-                    value={filterDistrict}
-                    onChange={(e) => setFilterDistrict(e.target.value)}
-                    className="text-xs bg-slate-50/80 hover:bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1.5 font-semibold text-slate-600 focus:outline-none"
-                  >
-                    <option value="">Tất cả Quận/Huyện</option>
-                    {districts.map(d => <option key={d} value={d}>{d}</option>)}
-                  </select>
-                  <select
-                    value={filterStage}
-                    onChange={(e) => setFilterStage(e.target.value)}
-                    className="text-xs bg-slate-50/80 hover:bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1.5 font-semibold text-slate-600 focus:outline-none"
-                  >
-                    <option value="">Tất cả Giai đoạn</option>
-                    {STAGES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
-                  </select>
-                   <select
-                    value={filterStatus}
-                    onChange={(e) => setFilterStatus(e.target.value)}
-                    className="text-xs bg-slate-50/80 hover:bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1.5 font-semibold text-slate-600 focus:outline-none"
-                  >
-                    <option value="">Tất cả Trạng thái</option>
-                    <option value="PLANNING">Planning</option>
-                    <option value="IN_PROGRESS">In Progress</option>
-                    <option value="COMPLETED">Completed</option>
-                  </select>
-                   <select
-                    value={filterPackage}
-                    onChange={(e) => setFilterPackage(e.target.value)}
-                    className="text-xs bg-slate-50/80 hover:bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1.5 font-semibold text-slate-600 focus:outline-none"
-                  >
-                    <option value="">Tất cả Gói triển khai</option>
-                    {packages.map(pkg => <option key={pkg} value={pkg}>{pkg}</option>)}
-                  </select>
-                  <select
-                    value={filterContractReady}
-                    onChange={(e) => setFilterContractReady(e.target.value)}
-                    className="text-xs bg-slate-50/80 hover:bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1.5 font-semibold text-slate-600 focus:outline-none"
-                  >
-                    <option value="">Điều kiện trình ký (Tất cả)</option>
-                    <option value="ELIGIBLE">Đủ ĐK trình ký</option>
-                    <option value="INCOMPLETE">Chưa đủ thông tin</option>
-                    <option value="NOK">Trạm không khả thi (NOK)</option>
-                  </select>
 
-                  <div className="flex items-center gap-1.5 ml-auto">
-                    <a 
-                      href="/reports/Bao_Cao_Ra_Soat_CSHT_TVT3_2026.xlsx"
-                      download="Bao_Cao_Ra_Soat_CSHT_TVT3_2026.xlsx"
-                      className="text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold px-3 py-1.5 rounded-lg shadow-2xs flex items-center gap-1.5 transition-colors cursor-pointer"
-                      title="Tải trọn bộ Báo Cáo Rà Soát CSHT TVT3 định dạng Excel 4 Sheet chuyên nghiệp"
+                  {/* Nút BỎ BỘ LỌC CỰC KỲ NỔI BẬT khi có filter active */}
+                  {isFiltered && (
+                    <button
+                      type="button"
+                      onClick={handleResetAllFilters}
+                      className="text-xs bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 font-bold px-3 py-2 rounded-xl flex items-center gap-1.5 shadow-xs transition-all whitespace-nowrap cursor-pointer animate-pulse hover:animate-none"
+                      title="Xóa tất cả các bộ lọc và tìm kiếm để xem toàn bộ danh sách 101 trạm"
                     >
-                      <Download className="h-3.5 w-3.5 text-emerald-600" /> Báo Cáo 4 Sheet
-                    </a>
-                    <button 
-                      onClick={handleExportProposalExcel}
-                      disabled={isExportingProposal}
-                      className="text-xs bg-purple-700 hover:bg-purple-800 text-white font-bold px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
-                      title="Xuất phụ lục Quỹ điểm sạch đã được Sở duyệt đề nghị TCT phê duyệt bổ sung quy hoạch (Format CV 7203)"
-                    >
-                      <FileSpreadsheet className="h-3.5 w-3.5 text-purple-200" /> 
-                      {isExportingProposal ? 'Đang xuất...' : `PL Trình TCT (${countSoOkTctPending})`}
+                      <RotateCcw className="h-3.5 w-3.5 text-rose-600" />
+                      <span>Bỏ lọc (Xem {totalProjects} trạm)</span>
                     </button>
-                    <button 
-                      onClick={handleExportExcel}
-                      className="text-xs bg-slate-700 hover:bg-slate-800 text-white font-bold px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer"
-                      title="Xuất danh sách đang lọc ra Excel"
-                    >
-                      <Download className="h-3.5 w-3.5" /> Xuất Excel ({filteredProjects.length})
-                    </button>
-                  </div>
+                  )}
+                </div>
+
+                {/* Nhóm nút xuất báo cáo */}
+                <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                  <a 
+                    href="/reports/Bao_Cao_Ra_Soat_CSHT_TVT3_2026.xlsx"
+                    download="Bao_Cao_Ra_Soat_CSHT_TVT3_2026.xlsx"
+                    className="text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold px-3 py-2 rounded-xl shadow-2xs flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap"
+                    title="Tải trọn bộ Báo Cáo Rà Soát CSHT TVT3 định dạng Excel 4 Sheet chuyên nghiệp"
+                  >
+                    <Download className="h-3.5 w-3.5 text-emerald-600" /> Báo Cáo 4 Sheet
+                  </a>
+                  <button 
+                    onClick={handleExportProposalExcel}
+                    disabled={isExportingProposal}
+                    className="text-xs bg-purple-700 hover:bg-purple-800 text-white font-bold px-3 py-2 rounded-xl shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50 whitespace-nowrap"
+                    title="Xuất phụ lục Quỹ điểm sạch đã được Sở duyệt đề nghị TCT phê duyệt bổ sung quy hoạch (Format CV 7203)"
+                  >
+                    <FileSpreadsheet className="h-3.5 w-3.5 text-purple-200" /> 
+                    {isExportingProposal ? 'Đang xuất...' : `PL Trình TCT (${countSoOkTctPending})`}
+                  </button>
+                  <button 
+                    onClick={handleExportExcel}
+                    className="text-xs bg-slate-800 hover:bg-slate-900 text-white font-bold px-3 py-2 rounded-xl shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap"
+                    title="Xuất danh sách đang lọc ra Excel"
+                  >
+                    <Download className="h-3.5 w-3.5 text-slate-300" /> Xuất Excel ({filteredProjects.length})
+                  </button>
                 </div>
               </div>
+
+              {/* Tầng 2: Thanh duyệt theo từng Gói triển khai (1-chạm cực nhanh để rà soát dữ liệu) */}
+              <div className="p-2.5 bg-slate-50/80 rounded-xl border border-slate-200/70 flex flex-col md:flex-row md:items-center gap-2">
+                <div className="text-[11px] font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap flex items-center gap-1.5 pl-1">
+                  <span className="text-sm">📦</span>
+                  <span>Rà soát theo Gói:</span>
+                </div>
+                <div className="flex items-center gap-1.5 flex-wrap overflow-x-auto pb-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setFilterPackage('')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+                      filterPackage === ''
+                        ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/30 ring-2 ring-blue-400/40'
+                        : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200'
+                    }`}
+                  >
+                    <span>Tất cả các gói</span>
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                      filterPackage === '' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
+                    }`}>
+                      {packageCounts['ALL'] || totalProjects}
+                    </span>
+                  </button>
+
+                  {packages.map(pkg => {
+                    const isPkgActive = filterPackage === pkg;
+                    const count = packageCounts[pkg] || 0;
+                    return (
+                      <button
+                        key={pkg}
+                        type="button"
+                        onClick={() => setFilterPackage(isPkgActive ? '' : pkg)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+                          isPkgActive
+                            ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-500/30 ring-2 ring-indigo-400/40'
+                            : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200'
+                        }`}
+                      >
+                        <span>{pkg}</span>
+                        <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                          isPkgActive ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
+                        }`}>
+                          {count}
+                        </span>
+                      </button>
+                    );
+                  })}
+
+                  {(packageCounts['UNASSIGNED'] || 0) > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setFilterPackage(filterPackage === '__UNASSIGNED__' ? '' : '__UNASSIGNED__')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+                        filterPackage === '__UNASSIGNED__'
+                          ? 'bg-amber-600 text-white shadow-sm shadow-amber-500/30 ring-2 ring-amber-400/40'
+                          : 'bg-amber-50 hover:bg-amber-100/80 text-amber-800 border border-amber-200'
+                      }`}
+                    >
+                      <span>Chưa phân gói</span>
+                      <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                        filterPackage === '__UNASSIGNED__' ? 'bg-white/20 text-white' : 'bg-amber-200/80 text-amber-900'
+                      }`}>
+                        {packageCounts['UNASSIGNED']}
+                      </span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Tầng 3: Các Dropdown lọc chuyên sâu */}
+              <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-100">
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mr-1">Bộ lọc khác:</span>
+                <select
+                  value={filterReviewGroup}
+                  onChange={(e) => setFilterReviewGroup(e.target.value)}
+                  className="text-xs bg-amber-50 hover:bg-amber-100 border border-amber-300 rounded-lg px-2.5 py-1.5 font-bold text-amber-900 focus:outline-none"
+                >
+                  <option value="">🎯 Tất cả Nhóm Rà Soát</option>
+                  <option value="4_PACKAGES">🎯 4 Gói MBF Đầu Tư ({count4Packages})</option>
+                  <option value="TCT_OK_SO_HTCS">⚠️ TCT Duyệt - Sở Dùng Chung ({countTctOkSoHtcs})</option>
+                  <option value="SO_OK_TCT_PENDING">⏳ Sở Duyệt - Chờ TCT ({countSoOkTctPending})</option>
+                  <option value="TCT_BO_SUNG_7203">✨ TCT Bổ Sung CV 7203 ({countTctBoSung})</option>
+                  <option value="TCT_HUY_HOAN_7203">❌ TCT Hủy/Hoãn CV 7203 ({countTctHuyHoan})</option>
+                </select>
+                <select
+                  value={filterImplementationType}
+                  onChange={(e) => setFilterImplementationType(e.target.value)}
+                  className="text-xs bg-blue-50/80 hover:bg-blue-100 border border-blue-200 rounded-lg px-2.5 py-1.5 font-bold text-blue-700 focus:outline-none"
+                >
+                  <option value="">Tất cả Nhánh dự án</option>
+                  <option value="MBF_INVEST">🔷 MobiFone đầu tư mới</option>
+                  <option value="SHARED">🤝 Dùng chung CSHT (Thuê lại)</option>
+                </select>
+                <select
+                  value={filterDistrict}
+                  onChange={(e) => setFilterDistrict(e.target.value)}
+                  className="text-xs bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1.5 font-semibold text-slate-600 focus:outline-none"
+                >
+                  <option value="">Tất cả Quận/Huyện</option>
+                  {districts.map(d => <option key={d} value={d}>{d}</option>)}
+                </select>
+                <select
+                  value={filterStage}
+                  onChange={(e) => setFilterStage(e.target.value)}
+                  className="text-xs bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1.5 font-semibold text-slate-600 focus:outline-none"
+                >
+                  <option value="">Tất cả Giai đoạn</option>
+                  {STAGES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+                </select>
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  className="text-xs bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1.5 font-semibold text-slate-600 focus:outline-none"
+                >
+                  <option value="">Tất cả Trạng thái</option>
+                  <option value="PLANNING">Planning</option>
+                  <option value="IN_PROGRESS">In Progress</option>
+                  <option value="COMPLETED">Completed</option>
+                </select>
+                <select
+                  value={filterContractReady}
+                  onChange={(e) => setFilterContractReady(e.target.value)}
+                  className="text-xs bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1.5 font-semibold text-slate-600 focus:outline-none"
+                >
+                  <option value="">Điều kiện trình ký (Tất cả)</option>
+                  <option value="ELIGIBLE">Đủ ĐK trình ký</option>
+                  <option value="INCOMPLETE">Chưa đủ thông tin</option>
+                  <option value="NOK">Trạm không khả thi (NOK)</option>
+                </select>
+              </div>
+
+              {/* Tầng 4: Active Filter Tags (khi có bộ lọc kích hoạt) */}
+              {isFiltered && (
+                <div className="flex flex-wrap items-center gap-1.5 pt-1 text-xs text-slate-500">
+                  <span className="font-semibold text-slate-400 text-[11px]">Đang lọc:</span>
+                  {searchQuery.trim() && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 border border-blue-200 text-blue-700 font-medium">
+                      Từ khóa: "{searchQuery}"
+                      <button type="button" onClick={() => setSearchQuery('')} className="hover:text-blue-900 cursor-pointer">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  )}
+                  {filterPackage && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-50 border border-indigo-200 text-indigo-700 font-medium">
+                      Gói: {filterPackage === '__UNASSIGNED__' ? 'Chưa phân gói' : filterPackage}
+                      <button type="button" onClick={() => setFilterPackage('')} className="hover:text-indigo-900 cursor-pointer">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  )}
+                  {filterReviewGroup && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 border border-amber-200 text-amber-800 font-medium">
+                      Nhóm: {
+                        filterReviewGroup === '4_PACKAGES' ? '4 Gói MBF' :
+                        filterReviewGroup === 'TCT_OK_SO_HTCS' ? 'TCT Duyệt - Sở Dùng Chung' :
+                        filterReviewGroup === 'SO_OK_TCT_PENDING' ? 'Sở Duyệt - Chờ TCT' :
+                        filterReviewGroup === 'TCT_BO_SUNG_7203' ? 'CV 7203 Bổ sung' : 'CV 7203 Hủy/Hoãn'
+                      }
+                      <button type="button" onClick={() => setFilterReviewGroup('')} className="hover:text-amber-950 cursor-pointer">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  )}
+                  {filterDistrict && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 border border-slate-300 text-slate-700 font-medium">
+                      Huyện: {filterDistrict}
+                      <button type="button" onClick={() => setFilterDistrict('')} className="hover:text-slate-900 cursor-pointer">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  )}
+                  {filterImplementationType && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-sky-50 border border-sky-200 text-sky-700 font-medium">
+                      Nhánh: {filterImplementationType === 'MBF_INVEST' ? 'MBF đầu tư' : 'Dùng chung CSHT'}
+                      <button type="button" onClick={() => setFilterImplementationType('')} className="hover:text-sky-900 cursor-pointer">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  )}
+                  {filterStage && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 border border-slate-300 text-slate-700 font-medium">
+                      Giai đoạn: {STAGES.find(s => s.id === filterStage)?.label || filterStage}
+                      <button type="button" onClick={() => setFilterStage('')} className="hover:text-slate-900 cursor-pointer">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  )}
+                  {filterStatus && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 border border-slate-300 text-slate-700 font-medium">
+                      Trạng thái: {filterStatus}
+                      <button type="button" onClick={() => setFilterStatus('')} className="hover:text-slate-900 cursor-pointer">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  )}
+                  {filterContractReady && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-700 font-medium">
+                      Trình ký: {filterContractReady === 'ELIGIBLE' ? 'Đủ ĐK' : filterContractReady === 'INCOMPLETE' ? 'Chưa đủ' : 'NOK'}
+                      <button type="button" onClick={() => setFilterContractReady('')} className="hover:text-emerald-900 cursor-pointer">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleResetAllFilters}
+                    className="text-[11px] text-rose-600 hover:text-rose-800 underline font-bold ml-1 cursor-pointer"
+                  >
+                    ✕ Xóa tất cả bộ lọc
+                  </button>
+                </div>
+              )}
 
               {/* Table */}
               <div className="overflow-x-auto">
@@ -2856,13 +3084,42 @@ export default function InfrastructureDevelopment() {
                   {isEditing ? `Chỉnh sửa Trạm ${selectedProject.planning_id_new}` : `Chi tiết Trạm ${selectedProject.planning_id_new}`}
                 </h2>
               </div>
-              <button 
-                onClick={() => { if (!isSaving) setSelectedProject(null); }}
-                className="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-50 transition-all"
-                disabled={isSaving}
-              >
-                <X className="h-5 w-5" />
-              </button>
+              <div className="flex items-center gap-2">
+                {isFiltered && (
+                  <button 
+                    onClick={() => {
+                      if (!isSaving) {
+                        handleResetAllFilters();
+                        setSelectedProject(null);
+                      }
+                    }}
+                    className="text-xs bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    title="Đóng chi tiết và bỏ toàn bộ bộ lọc để xem toàn bộ danh sách 101 trạm"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5 text-rose-600" />
+                    <span>Đóng & Bỏ lọc (Xem {totalProjects} trạm)</span>
+                  </button>
+                )}
+                <button 
+                  onClick={() => { 
+                    if (!isSaving) {
+                      // Nếu đang tìm kiếm mã trạm của chính trạm này, tự động xóa tìm kiếm để ra ngoài thấy đầy đủ
+                      const sQueryLower = searchQuery.trim().toLowerCase();
+                      const pNewLower = (selectedProject?.planning_id_new || '').toLowerCase();
+                      const pOldLower = (selectedProject?.planning_id_old || '').toLowerCase();
+                      if (sQueryLower && (sQueryLower === pNewLower || sQueryLower === pOldLower || pNewLower.includes(sQueryLower))) {
+                        setSearchQuery('');
+                      }
+                      setSelectedProject(null);
+                    }
+                  }}
+                  className="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-50 transition-all cursor-pointer"
+                  disabled={isSaving}
+                  title="Đóng modal"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
             </div>
 
             {/* Modal Scrollable Body */}
@@ -4355,74 +4612,107 @@ export default function InfrastructureDevelopment() {
             {/* Modal Footer */}
             <div className="p-4 border-t border-slate-100 flex items-center justify-end gap-2 bg-slate-50">
               {isEditing ? (
-                <>
-                  <button 
-                    onClick={() => setIsEditing(false)}
-                    className="px-4 py-2 border border-slate-200 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-100 transition-colors"
-                    disabled={isSaving}
-                  >
-                    Hủy bỏ
-                  </button>
-                  <button 
-                    onClick={handleSaveDetails}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-1.5"
-                    disabled={isSaving}
-                  >
-                    {isSaving ? (
-                      <>
-                        <RefreshCw className="h-3 w-3 animate-spin" />
-                        Đang lưu...
-                      </>
-                    ) : 'Lưu thay đổi'}
-                  </button>
-                </>
+                <div className="flex flex-col sm:flex-row items-center justify-between w-full gap-3">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-600 select-none mr-auto">
+                    <input
+                      type="checkbox"
+                      checked={autoResetFilterOnSave}
+                      onChange={(e) => setAutoResetFilterOnSave(e.target.checked)}
+                      className="rounded text-blue-600 focus:ring-blue-500 h-4 w-4"
+                    />
+                    <span>Tự động bỏ tìm kiếm sau khi lưu (xem lại toàn bộ danh sách trạm)</span>
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={() => setIsEditing(false)}
+                      className="px-4 py-2 border border-slate-200 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-100 transition-colors cursor-pointer"
+                      disabled={isSaving}
+                    >
+                      Hủy bỏ
+                    </button>
+                    <button 
+                      onClick={handleSaveDetails}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-1.5 cursor-pointer"
+                      disabled={isSaving}
+                    >
+                      {isSaving ? (
+                        <>
+                          <RefreshCw className="h-3 w-3 animate-spin" />
+                          Đang lưu...
+                        </>
+                      ) : 'Lưu thay đổi'}
+                    </button>
+                  </div>
+                </div>
               ) : (
-                <>
-                  <button 
-                    onClick={() => handleExportDoc('contract')}
-                    disabled={isExportingDoc}
-                    className="px-3.5 py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-sm"
-                    title="Xuất file Hợp đồng Ký mới (.docx)"
-                  >
-                    <FileText className="h-3.5 w-3.5" /> HĐ Ký Mới (.docx)
-                  </button>
-                  <button 
-                    onClick={() => handleExportDoc('mou')}
-                    disabled={isExportingDoc}
-                    className="px-3 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-50 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                    title="Xuất Biên bản làm việc / Ghi nhớ (.docx)"
-                  >
-                    <FileText className="h-3.5 w-3.5 text-blue-600" /> BB Làm Việc
-                  </button>
-                  <button 
-                    onClick={() => handleExportDoc('phu_luc_chu_the')}
-                    disabled={isExportingDoc}
-                    className="px-3 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-50 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                    title="Xuất Phụ lục chuyển đổi chủ thể (.docx)"
-                  >
-                    <FileText className="h-3.5 w-3.5 text-purple-600" /> PL Chủ Thể
-                  </button>
-                  <button 
-                    onClick={() => handleExportDoc('phu_luc_giam_gia')}
-                    disabled={isExportingDoc}
-                    className="px-3 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-50 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                    title="Xuất Phụ lục giảm giá hợp đồng (.docx)"
-                  >
-                    <FileText className="h-3.5 w-3.5 text-amber-600" /> PL Giảm Giá
-                  </button>
-                  <button 
-                    onClick={() => setIsEditing(true)}
-                    className="px-3 py-2 border border-slate-200 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-50 transition-colors flex items-center gap-1 cursor-pointer"
-                  >
-                    <Edit3 className="h-3.5 w-3.5 text-slate-500" /> Chỉnh sửa
-                  </button>
-                  <button 
-                    onClick={() => setSelectedProject(null)}
-                    className="px-4 py-2 bg-slate-800 text-white rounded-lg text-xs font-bold hover:bg-slate-700 transition-colors shadow-sm cursor-pointer"
-                  >
-                    Đóng
-                  </button>
-                </>
+                <div className="flex items-center justify-between w-full">
+                  {isFiltered && (
+                    <button
+                      onClick={() => {
+                        handleResetAllFilters();
+                        setSelectedProject(null);
+                      }}
+                      className="text-xs text-rose-600 hover:text-rose-700 font-bold flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 rounded-lg transition-colors border border-rose-200 cursor-pointer"
+                      title="Đóng modal và xóa sạch các bộ lọc để xem toàn bộ 101 trạm"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" /> Đóng & Bỏ lọc (Xem {totalProjects} trạm)
+                    </button>
+                  )}
+                  <div className="flex items-center gap-2 ml-auto flex-wrap">
+                    <button 
+                      onClick={() => handleExportDoc('contract')}
+                      disabled={isExportingDoc}
+                      className="px-3.5 py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-sm"
+                      title="Xuất file Hợp đồng Ký mới (.docx)"
+                    >
+                      <FileText className="h-3.5 w-3.5" /> HĐ Ký Mới (.docx)
+                    </button>
+                    <button 
+                      onClick={() => handleExportDoc('mou')}
+                      disabled={isExportingDoc}
+                      className="px-3 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-50 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      title="Xuất Biên bản làm việc / Ghi nhớ (.docx)"
+                    >
+                      <FileText className="h-3.5 w-3.5 text-blue-600" /> BB Làm Việc
+                    </button>
+                    <button 
+                      onClick={() => handleExportDoc('phu_luc_chu_the')}
+                      disabled={isExportingDoc}
+                      className="px-3 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-50 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      title="Xuất Phụ lục chuyển đổi chủ thể (.docx)"
+                    >
+                      <FileText className="h-3.5 w-3.5 text-purple-600" /> PL Chủ Thể
+                    </button>
+                    <button 
+                      onClick={() => handleExportDoc('phu_luc_giam_gia')}
+                      disabled={isExportingDoc}
+                      className="px-3 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-50 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      title="Xuất Phụ lục giảm giá hợp đồng (.docx)"
+                    >
+                      <FileText className="h-3.5 w-3.5 text-amber-600" /> PL Giảm Giá
+                    </button>
+                    <button 
+                      onClick={() => setIsEditing(true)}
+                      className="px-3 py-2 border border-slate-200 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-50 transition-colors flex items-center gap-1 cursor-pointer"
+                    >
+                      <Edit3 className="h-3.5 w-3.5 text-slate-500" /> Chỉnh sửa
+                    </button>
+                    <button 
+                      onClick={() => {
+                        const sQueryLower = searchQuery.trim().toLowerCase();
+                        const pNewLower = (selectedProject?.planning_id_new || '').toLowerCase();
+                        const pOldLower = (selectedProject?.planning_id_old || '').toLowerCase();
+                        if (sQueryLower && (sQueryLower === pNewLower || sQueryLower === pOldLower || pNewLower.includes(sQueryLower))) {
+                          setSearchQuery('');
+                        }
+                        setSelectedProject(null);
+                      }}
+                      className="px-4 py-2 bg-slate-800 text-white rounded-lg text-xs font-bold hover:bg-slate-700 transition-colors shadow-sm cursor-pointer"
+                    >
+                      Đóng
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
           </div>
