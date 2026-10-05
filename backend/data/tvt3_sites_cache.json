@@ -2949,7 +2949,73 @@
     "qlt": "Trần Như Vinh",
     "to_ql": "VT3",
     "huyen": "Xuân Lộc",
-    "xa": "Xã Xuân Hòa"
+    "xa": "Xã Xuân Hòa",
+    "technical_info": {
+      "rf_summary": {
+        "sectors": [
+          {
+            "sector": "A",
+            "azimuth": 50,
+            "height": 44,
+            "has_3g": true,
+            "has_4g": true,
+            "has_5g_l1": true,
+            "has_5g_l2": false,
+            "tilt_mech": 0,
+            "tilt_elec": 4,
+            "tilt_total": 4,
+            "has_4g_1800_1": true,
+            "has_4g_1800_2": false,
+            "has_4g_2100": false
+          },
+          {
+            "sector": "B",
+            "azimuth": 150,
+            "height": 43,
+            "has_3g": false,
+            "has_4g": true,
+            "has_5g_l1": false,
+            "has_5g_l2": false,
+            "tilt_mech": 0,
+            "tilt_elec": 4,
+            "tilt_total": 4,
+            "has_4g_1800_1": true,
+            "has_4g_1800_2": false,
+            "has_4g_2100": false
+          },
+          {
+            "sector": "C",
+            "azimuth": 240,
+            "height": 43,
+            "has_3g": true,
+            "has_4g": true,
+            "has_5g_l1": true,
+            "has_5g_l2": false,
+            "tilt_mech": 0,
+            "tilt_elec": 4,
+            "tilt_total": 4,
+            "has_4g_1800_1": true,
+            "has_4g_1800_2": true,
+            "has_4g_2100": false
+          },
+          {
+            "sector": "E",
+            "azimuth": 320,
+            "height": 43,
+            "has_3g": false,
+            "has_4g": true,
+            "has_5g_l1": true,
+            "has_5g_l2": false,
+            "tilt_mech": 0,
+            "tilt_elec": 6,
+            "tilt_total": 6,
+            "has_4g_1800_1": true,
+            "has_4g_1800_2": true,
+            "has_4g_2100": false
+          }
+        ]
+      }
+    }
   },
   "DNXL06": {
     "site_id": "DNIXHO01",
@@ -2958,7 +3024,73 @@
     "qlt": "Trần Như Vinh",
     "to_ql": "VT3",
     "huyen": "Xuân Lộc",
-    "xa": "Xã Xuân Hòa"
+    "xa": "Xã Xuân Hòa",
+    "technical_info": {
+      "rf_summary": {
+        "sectors": [
+          {
+            "sector": "A",
+            "azimuth": 50,
+            "height": 44,
+            "has_3g": true,
+            "has_4g": true,
+            "has_5g_l1": true,
+            "has_5g_l2": false,
+            "tilt_mech": 0,
+            "tilt_elec": 4,
+            "tilt_total": 4,
+            "has_4g_1800_1": true,
+            "has_4g_1800_2": false,
+            "has_4g_2100": false
+          },
+          {
+            "sector": "B",
+            "azimuth": 150,
+            "height": 43,
+            "has_3g": false,
+            "has_4g": true,
+            "has_5g_l1": false,
+            "has_5g_l2": false,
+            "tilt_mech": 0,
+            "tilt_elec": 4,
+            "tilt_total": 4,
+            "has_4g_1800_1": true,
+            "has_4g_1800_2": false,
+            "has_4g_2100": false
+          },
+          {
+            "sector": "C",
+            "azimuth": 240,
+            "height": 43,
+            "has_3g": true,
+            "has_4g": true,
+            "has_5g_l1": true,
+            "has_5g_l2": false,
+            "tilt_mech": 0,
+            "tilt_elec": 4,
+            "tilt_total": 4,
+            "has_4g_1800_1": true,
+            "has_4g_1800_2": true,
+            "has_4g_2100": false
+          },
+          {
+            "sector": "E",
+            "azimuth": 320,
+            "height": 43,
+            "has_3g": false,
+            "has_4g": true,
+            "has_5g_l1": true,
+            "has_5g_l2": false,
+            "tilt_mech": 0,
+            "tilt_elec": 6,
+            "tilt_total": 6,
+            "has_4g_1800_1": true,
+            "has_4g_1800_2": true,
+            "has_4g_2100": false
+          }
+        ]
+      }
+    }
   },
   "DNIBVI07": {
     "site_id": "DNIBVI07",

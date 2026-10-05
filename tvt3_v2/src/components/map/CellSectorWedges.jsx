@@ -161,7 +161,7 @@ export default function CellSectorWedges({
           if (oIdx !== secIdx) {
             let diff = Math.abs(azimuth - otherAz) % 360;
             if (diff > 180) diff = 360 - diff;
-            if (diff < minDiff) minDiff = diff;
+            if (diff > 0 && diff < minDiff) minDiff = diff;
           }
         });
 

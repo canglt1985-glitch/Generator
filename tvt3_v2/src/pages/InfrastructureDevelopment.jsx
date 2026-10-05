@@ -8,7 +8,8 @@ import {
   Search, Filter, Plus, CheckCircle2, Clock, AlertTriangle, AlertCircle, 
   MapPin, User, ChevronRight, Calendar, Info, RefreshCw,
   TrendingUp, Activity, Server, FileText, ArrowRight, ChevronLeft,
-  X, HelpCircle, Check, Play, Edit3, Download, Upload
+  X, HelpCircle, Check, Play, Edit3, Download, Upload,
+  Building2, Send, History, Sparkles, Share2, CheckSquare, FileSpreadsheet
 } from 'lucide-react';
 
 const STAGES = [
@@ -36,14 +37,26 @@ export const SITES_TCT_OK_SO_HTCS = [
   '26DNa330', '26DNa290', '26DNa291', '26DNa295'
 ];
 
+// Trạm Sở duyệt - Chờ TCT duyệt (Đã loại trừ 5 trạm TCT vừa phê duyệt bổ sung theo CV 7203 ngày 05/10/2026)
 export const SITES_SO_OK_TCT_PENDING = [
   '26DNa301', '26DNa303', '26DNa305', '26DNa315', '26DNa321', 
   '26DNa322', '26DNa327', '26DNa328', '26DNa331', '26DNa332', 
-  '26DNa340', '26DNa342', '26DNa281', '26DNa288', '26DNa289', 
-  '26DNa292', '26DNa293', 'DNIXTC00', '26DNa294', '26DNa296', 
+  '26DNa340', '26DNa342',
+  '26DNa292', '26DNa293', 'DNIXTC00', 
   'TVT3_19', 'QLCL_10', 'TVT3_27', 'TVT3_29', 'VKD4_02', 
   'VKD4_33', 'TVT3_43', 'VKD3_01', 'VKD3_06', 'VKD3_07', 
   'TVT3_26', 'TVT3_11', 'TVT3_38', 'VKD3_20'
+];
+
+// Danh sách trạm TVT3 TCT phê duyệt bổ sung quy hoạch (CV 7203/D01-B4-B5 ngày 05/10/2026)
+export const SITES_TCT_BO_SUNG_7203 = [
+  '26DNa281', '26DNa296', '26DNa351', '26DNa289', '26DNa288', 
+  '26DNa294', '26DNa356', '26DNa353', '26DNa354', '26DNa348', '26DNa352'
+];
+
+// Danh sách trạm TVT3 TCT phê duyệt hủy / hoãn quy hoạch (CV 7203/D01-B4-B5 ngày 05/10/2026)
+export const SITES_TCT_HUY_HOAN_7203 = [
+  '26DNa034', '26DNa069', '26DNa160', '26DNa060'
 ];
 
 export default function InfrastructureDevelopment() {
@@ -104,6 +117,39 @@ export default function InfrastructureDevelopment() {
     legal_cert_date: '',
     legal_lease_contract: ''
   });
+
+  // SKHCN Resubmit Modal State
+  const [showResubmitModal, setShowResubmitModal] = useState(false);
+  const [isSavingResubmit, setIsSavingResubmit] = useState(false);
+  const [resubmitForm, setResubmitForm] = useState({
+    coords_input: '',
+    latitude: '',
+    longitude: '',
+    reason: 'Khảo sát di dời tọa độ mới cách trạm hiện hữu ≥ 400m',
+    custom_reason: '',
+    doc_number: '',
+    date: new Date().toISOString().slice(0, 10),
+    antenna_type: 'Monopole',
+    height: '36m',
+    notes: ''
+  });
+
+  // SKHCN Record Feedback Modal State
+  const [showRecordFeedbackModal, setShowRecordFeedbackModal] = useState(false);
+  const [isSavingFeedback, setIsSavingFeedback] = useState(false);
+  const [feedbackForm, setFeedbackForm] = useState({
+    decision: 'XAY_MOI', // XAY_MOI or DUNG_CHUNG
+    doc_number: '',
+    date: new Date().toISOString().slice(0, 10),
+    approved_antenna_type: 'Monopole',
+    approved_height: '36m',
+    shared_partner: 'Vinaphone',
+    shared_site_id: '',
+    notes: ''
+  });
+
+  // Proposal Export State
+  const [isExportingProposal, setIsExportingProposal] = useState(false);
 
   const selectProject = (proj) => {
     setSelectedProject(proj);
@@ -236,6 +282,38 @@ export default function InfrastructureDevelopment() {
           }
         } catch (e) {
           // Ignore parse errors
+        }
+      }
+    });
+
+    return nearest;
+  };
+
+  // Find nearest site given explicit coordinates
+  const findNearestSiteByCoords = (lat, lon) => {
+    if (!lat || !lon || !activeSites || activeSites.length === 0) return null;
+    let minDistance = Infinity;
+    let nearest = null;
+
+    activeSites.forEach(site => {
+      const sLat = site.location_info?.vi_do;
+      const sLon = site.location_info?.kinh_do;
+      if (sLat && sLon) {
+        try {
+          const distKm = haversine(Number(lat), Number(lon), Number(sLat), Number(sLon));
+          const distM = distKm * 1000;
+          if (distM < minDistance) {
+            minDistance = distM;
+            nearest = {
+              site_id_old: site.site_id_old,
+              site_id: site.site_id,
+              name: site.name,
+              distanceKm: distKm,
+              distanceM: Math.round(distM)
+            };
+          }
+        } catch (e) {
+          // Ignore
         }
       }
     });
@@ -417,10 +495,14 @@ export default function InfrastructureDevelopment() {
   };
 
   // 7. Nhóm rà soát đặc thù TVT3 (4 Gói MBF & Phê duyệt TCT/Sở)
-  const count4Packages = tvt3ScopeProjects.filter(p => SITES_4_PACKAGES.includes(p.planning_id_new)).length;
-  const countTctOkSoHtcs = tvt3ScopeProjects.filter(p => SITES_TCT_OK_SO_HTCS.includes(p.planning_id_new)).length;
-  const countTctOkSoHtcsSurveyed = tvt3ScopeProjects.filter(p => SITES_TCT_OK_SO_HTCS.includes(p.planning_id_new) && p.latitude_survey && p.longitude_survey).length;
-  const countSoOkTctPending = tvt3ScopeProjects.filter(p => SITES_SO_OK_TCT_PENDING.includes(p.planning_id_new)).length;
+  const count4Packages = tvt3ScopeProjects.filter(p => SITES_4_PACKAGES.includes(p.planning_id_new) || SITES_4_PACKAGES.includes(p.planning_id_old)).length;
+  const countTctOkSoHtcs = tvt3ScopeProjects.filter(p => SITES_TCT_OK_SO_HTCS.includes(p.planning_id_new) || SITES_TCT_OK_SO_HTCS.includes(p.planning_id_old)).length;
+  const countTctOkSoHtcsSurveyed = tvt3ScopeProjects.filter(p => (SITES_TCT_OK_SO_HTCS.includes(p.planning_id_new) || SITES_TCT_OK_SO_HTCS.includes(p.planning_id_old)) && p.latitude_survey && p.longitude_survey).length;
+  const countTctOkSoHtcsWaiting = tvt3ScopeProjects.filter(p => (SITES_TCT_OK_SO_HTCS.includes(p.planning_id_new) || SITES_TCT_OK_SO_HTCS.includes(p.planning_id_old)) && (p.skhcn_resubmit_status === 'WAITING_SO_FEEDBACK' || p.skhcn_resubmit_status === 'RESUBMIT_PENDING')).length;
+  const countTctOkSoHtcsResolved = tvt3ScopeProjects.filter(p => (SITES_TCT_OK_SO_HTCS.includes(p.planning_id_new) || SITES_TCT_OK_SO_HTCS.includes(p.planning_id_old)) && (p.skhcn_resubmit_status === 'RESUBMIT_APPROVED_BUILD' || p.skhcn_resubmit_status === 'RESOLVED_NEW_BUILD')).length;
+  const countSoOkTctPending = tvt3ScopeProjects.filter(p => SITES_SO_OK_TCT_PENDING.includes(p.planning_id_new) || SITES_SO_OK_TCT_PENDING.includes(p.planning_id_old)).length;
+  const countTctBoSung = tvt3ScopeProjects.filter(p => SITES_TCT_BO_SUNG_7203.includes(p.planning_id_new) || SITES_TCT_BO_SUNG_7203.includes(p.planning_id_old)).length;
+  const countTctHuyHoan = tvt3ScopeProjects.filter(p => SITES_TCT_HUY_HOAN_7203.includes(p.planning_id_new) || SITES_TCT_HUY_HOAN_7203.includes(p.planning_id_old)).length;
 
   // Gap analysis / density
   const getDensityData = () => {
@@ -499,11 +581,15 @@ export default function InfrastructureDevelopment() {
 
     let matchesReviewGroup = true;
     if (filterReviewGroup === '4_PACKAGES') {
-      matchesReviewGroup = SITES_4_PACKAGES.includes(proj.planning_id_new);
+      matchesReviewGroup = SITES_4_PACKAGES.includes(proj.planning_id_new) || SITES_4_PACKAGES.includes(proj.planning_id_old);
     } else if (filterReviewGroup === 'TCT_OK_SO_HTCS') {
-      matchesReviewGroup = SITES_TCT_OK_SO_HTCS.includes(proj.planning_id_new);
+      matchesReviewGroup = SITES_TCT_OK_SO_HTCS.includes(proj.planning_id_new) || SITES_TCT_OK_SO_HTCS.includes(proj.planning_id_old);
     } else if (filterReviewGroup === 'SO_OK_TCT_PENDING') {
-      matchesReviewGroup = SITES_SO_OK_TCT_PENDING.includes(proj.planning_id_new);
+      matchesReviewGroup = SITES_SO_OK_TCT_PENDING.includes(proj.planning_id_new) || SITES_SO_OK_TCT_PENDING.includes(proj.planning_id_old);
+    } else if (filterReviewGroup === 'TCT_BO_SUNG_7203') {
+      matchesReviewGroup = SITES_TCT_BO_SUNG_7203.includes(proj.planning_id_new) || SITES_TCT_BO_SUNG_7203.includes(proj.planning_id_old);
+    } else if (filterReviewGroup === 'TCT_HUY_HOAN_7203') {
+      matchesReviewGroup = SITES_TCT_HUY_HOAN_7203.includes(proj.planning_id_new) || SITES_TCT_HUY_HOAN_7203.includes(proj.planning_id_old);
     }
 
     return matchesSearch && matchesDistrict && matchesStage && matchesStatus && matchesPackage && matchesContractReady && matchesImplType && matchesReviewGroup;
@@ -787,6 +873,347 @@ export default function InfrastructureDevelopment() {
     } catch (e) {
       console.error("Lỗi giải mã tọa độ:", e);
       return null;
+    }
+  };
+
+  // Open SKHCN Resubmit modal
+  const handleOpenResubmitModal = (proj) => {
+    const lat = proj.resubmit_latitude || proj.latitude_survey || proj.latitude_plan || '';
+    const lng = proj.resubmit_longitude || proj.longitude_survey || proj.longitude_plan || '';
+    setResubmitForm({
+      coords_input: lat && lng ? `${lat}, ${lng}` : '',
+      latitude: lat ? String(lat) : '',
+      longitude: lng ? String(lng) : '',
+      reason: proj.resubmit_reason || 'Khảo sát di dời tọa độ mới cách trạm hiện hữu ≥ 400m',
+      custom_reason: '',
+      doc_number: proj.resubmit_doc_number || '',
+      date: proj.resubmit_date || new Date().toISOString().slice(0, 10),
+      antenna_type: proj.antenna_type || 'Monopole',
+      height: proj.height ? `${proj.height}m` : '36m',
+      notes: ''
+    });
+    setShowResubmitModal(true);
+  };
+
+  // Auto-parse coordinates input
+  const handleCoordsInputChange = (val) => {
+    setResubmitForm(prev => {
+      const next = { ...prev, coords_input: val };
+      const parts = val.split(/[,\s;/]+/).map(p => parseFloat(p.trim())).filter(n => !isNaN(n));
+      if (parts.length >= 2) {
+        let lat = parts[0];
+        let lng = parts[1];
+        if (lat > 50 && lng < 30) {
+          const temp = lat; lat = lng; lng = temp;
+        }
+        next.latitude = String(lat);
+        next.longitude = String(lng);
+      }
+      return next;
+    });
+  };
+
+  // Submit Resubmit form to Supabase & update local state
+  const handleSaveResubmit = async () => {
+    if (!selectedProject) return;
+    if (!resubmitForm.latitude || !resubmitForm.longitude) {
+      alert('Vui lòng nhập đầy đủ tọa độ đề xuất mới!');
+      return;
+    }
+    if (!resubmitForm.doc_number.trim()) {
+      alert('Vui lòng nhập số văn bản / công văn MBF trình Sở!');
+      return;
+    }
+
+    const latNum = parseFloat(resubmitForm.latitude);
+    const lngNum = parseFloat(resubmitForm.longitude);
+    const reasonText = resubmitForm.reason === 'Khác' 
+      ? (resubmitForm.custom_reason || 'Khác') 
+      : resubmitForm.reason;
+
+    setIsSavingResubmit(true);
+    try {
+      const roundNum = (selectedProject.skhcn_history?.length || 0) + 1;
+      const newHistoryEntry = {
+        round: roundNum,
+        doc_out: resubmitForm.doc_number.trim(),
+        date_out: resubmitForm.date,
+        submitted_lat: latNum,
+        submitted_lng: lngNum,
+        resubmit_reason: reasonText,
+        proposed_antenna_type: resubmitForm.antenna_type,
+        proposed_height: parseInt(resubmitForm.height) || 36,
+        status: 'WAITING_SO_FEEDBACK',
+        notes: resubmitForm.notes || ''
+      };
+
+      const updatedHistory = [...(selectedProject.skhcn_history || []), newHistoryEntry];
+
+      const updates = {
+        skhcn_resubmit_status: 'WAITING_SO_FEEDBACK',
+        resubmit_doc_number: resubmitForm.doc_number.trim(),
+        resubmit_date: resubmitForm.date,
+        resubmit_latitude: latNum,
+        resubmit_longitude: lngNum,
+        resubmit_reason: reasonText,
+        latitude_survey: latNum,
+        longitude_survey: lngNum,
+        skhcn_status: `Đã gửi văn bản tái trình Sở (Đợt ${roundNum})`,
+        skhcn_history: updatedHistory,
+        updated_at: new Date().toISOString()
+      };
+
+      const { data, error } = await supabase
+        .from('infrastructure_projects')
+        .update(updates)
+        .eq('project_id', selectedProject.project_id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setProjects(prev => prev.map(p => p.project_id === selectedProject.project_id ? { ...p, ...updates } : p));
+      setSelectedProject(prev => ({ ...prev, ...updates }));
+      setShowResubmitModal(false);
+      alert('Đã lưu hồ sơ tái trình Sở KH&CN thành công! Trạng thái chuyển sang: Đang chờ Sở thẩm định đợt mới.');
+    } catch (err) {
+      console.error('Lỗi khi lưu tái trình:', err);
+      alert('Có lỗi xảy ra: ' + (err.message || 'Không thể lưu dữ liệu'));
+    } finally {
+      setIsSavingResubmit(false);
+    }
+  };
+
+  // Open Record SKHCN Feedback Modal
+  const handleOpenRecordFeedbackModal = (proj) => {
+    setFeedbackForm({
+      decision: 'XAY_MOI',
+      doc_number: '',
+      date: new Date().toISOString().slice(0, 10),
+      approved_antenna_type: proj.antenna_type || 'Monopole',
+      approved_height: proj.height ? `${proj.height}m` : '36m',
+      shared_partner: proj.sharing_partner || 'Vinaphone',
+      shared_site_id: proj.shared_site_id || '',
+      notes: ''
+    });
+    setShowRecordFeedbackModal(true);
+  };
+
+  // Submit Record Feedback
+  const handleSaveFeedback = async () => {
+    if (!selectedProject) return;
+    if (!feedbackForm.doc_number.trim()) {
+      alert('Vui lòng nhập số văn bản Sở KH&CN phản hồi!');
+      return;
+    }
+
+    setIsSavingFeedback(true);
+    try {
+      const isApprovedBuild = feedbackForm.decision === 'XAY_MOI';
+      const historyList = [...(selectedProject.skhcn_history || [])];
+      
+      const lastIndex = historyList.length - 1;
+      const targetRound = lastIndex >= 0 ? historyList[lastIndex] : {};
+      
+      const updatedEntry = {
+        ...targetRound,
+        round: targetRound.round || historyList.length || 1,
+        doc_in: feedbackForm.doc_number.trim(),
+        date_in: feedbackForm.date,
+        decision: isApprovedBuild ? 'XAY_MOI' : 'DUNG_CHUNG',
+        decision_label: isApprovedBuild ? 'Chấp thuận xây dựng mới' : 'Đề nghị dùng chung CSHT',
+        approved_lat: selectedProject.resubmit_latitude || selectedProject.latitude_survey || selectedProject.latitude_plan,
+        approved_lng: selectedProject.resubmit_longitude || selectedProject.longitude_survey || selectedProject.longitude_plan,
+        approved_height: parseInt(feedbackForm.approved_height) || 36,
+        approved_antenna_type: feedbackForm.approved_antenna_type || 'Monopole',
+        shared_partner: !isApprovedBuild ? feedbackForm.shared_partner : null,
+        shared_site_id: !isApprovedBuild ? feedbackForm.shared_site_id : null,
+        notes: feedbackForm.notes || ''
+      };
+
+      if (lastIndex >= 0 && targetRound.status === 'WAITING_SO_FEEDBACK') {
+        historyList[lastIndex] = updatedEntry;
+      } else {
+        historyList.push(updatedEntry);
+      }
+
+      let updates = {};
+      if (isApprovedBuild) {
+        updates = {
+          skhcn_resubmit_status: 'RESUBMIT_APPROVED_BUILD',
+          implementation_type: 'MBF đầu tư',
+          skhcn_status: 'Chấp thuận xây dựng mới',
+          skhcn_confirmed: `Sở chấp thuận xây mới (${feedbackForm.doc_number.trim()} - ${feedbackForm.approved_height})`,
+          latitude_skhcn: selectedProject.resubmit_latitude || selectedProject.latitude_survey,
+          longitude_skhcn: selectedProject.resubmit_longitude || selectedProject.longitude_survey,
+          height: parseInt(feedbackForm.approved_height) || selectedProject.height,
+          antenna_type: feedbackForm.approved_antenna_type || selectedProject.antenna_type,
+          skhcn_history: historyList,
+          updated_at: new Date().toISOString()
+        };
+      } else {
+        updates = {
+          skhcn_resubmit_status: 'RESUBMIT_REJECTED_SHARE',
+          implementation_type: 'Thuê CSHT có sẵn',
+          skhcn_status: 'Đề nghị dùng chung CSHT',
+          skhcn_confirmed: `Sở đề nghị dùng chung (${feedbackForm.doc_number.trim()} - trạm ${feedbackForm.shared_site_id || feedbackForm.shared_partner})`,
+          sharing_partner: feedbackForm.shared_partner,
+          shared_site_id: feedbackForm.shared_site_id,
+          skhcn_history: historyList,
+          updated_at: new Date().toISOString()
+        };
+      }
+
+      const { data, error } = await supabase
+        .from('infrastructure_projects')
+        .update(updates)
+        .eq('project_id', selectedProject.project_id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setProjects(prev => prev.map(p => p.project_id === selectedProject.project_id ? { ...p, ...updates } : p));
+      setSelectedProject(prev => ({ ...prev, ...updates }));
+      setShowRecordFeedbackModal(false);
+      alert(isApprovedBuild 
+        ? '🎉 Tuyệt vời! Trạm đã được Sở KH&CN chấp thuận xây mới. Dự án tự động chuyển sang luồng MBF Đầu Tư!' 
+        : 'Đã ghi nhận kết quả Sở KH&CN: Duy trì dùng chung CSHT.'
+      );
+    } catch (err) {
+      console.error('Lỗi khi ghi nhận phản hồi Sở:', err);
+      alert('Có lỗi xảy ra: ' + (err.message || 'Không thể lưu dữ liệu'));
+    } finally {
+      setIsSavingFeedback(false);
+    }
+  };
+
+  // Keep sharing CSHT handler
+  const handleKeepSharingCsht = async (proj) => {
+    if (!window.confirm(`Xác nhận giữ nguyên phương án dùng chung CSHT cho trạm ${proj.planning_id_new}? Hệ thống sẽ chuyển hình thức thành "Thuê CSHT có sẵn".`)) {
+      return;
+    }
+    try {
+      const updates = {
+        skhcn_resubmit_status: 'RESUBMIT_REJECTED_SHARE',
+        implementation_type: 'Thuê CSHT có sẵn',
+        updated_at: new Date().toISOString()
+      };
+      const { error } = await supabase
+        .from('infrastructure_projects')
+        .update(updates)
+        .eq('project_id', proj.project_id);
+      if (error) throw error;
+      setProjects(prev => prev.map(p => p.project_id === proj.project_id ? { ...p, ...updates } : p));
+      setSelectedProject(prev => ({ ...prev, ...updates }));
+      alert('Đã cập nhật phương án trạm thành "Thuê CSHT có sẵn"!');
+    } catch (e) {
+      alert('Lỗi: ' + e.message);
+    }
+  };
+
+  // Export proposal appendix for TCT supplementary approval (Format CV 7203)
+  const handleExportProposalExcel = async () => {
+    const XLSX = await import('xlsx');
+    setIsExportingProposal(true);
+    try {
+      const targetList = projects.filter(p => 
+        SITES_SO_OK_TCT_PENDING.includes(p.planning_id_new) || 
+        SITES_SO_OK_TCT_PENDING.includes(p.planning_id_old) ||
+        p.skhcn_resubmit_status === 'RESUBMIT_APPROVED_BUILD' ||
+        (p.skhcn_confirmed && !p.approval_batch && p.skhcn_status?.includes('Chấp thuận'))
+      );
+
+      if (targetList.length === 0) {
+        alert('Không tìm thấy trạm nào thuộc Quỹ điểm Sở duyệt chờ TCT phê duyệt bổ sung!');
+        return;
+      }
+
+      const rows = targetList.map((proj, idx) => {
+        let oldLoc = '';
+        try {
+          oldLoc = proj.district || getOldLocation(proj);
+        } catch (e) {
+          oldLoc = proj.district || '';
+        }
+
+        const latVal = proj.latitude_skhcn || proj.latitude_survey || proj.latitude_plan || '';
+        const lngVal = proj.longitude_skhcn || proj.longitude_survey || proj.longitude_plan || '';
+        
+        let nearestInfo = '-';
+        let nearestDist = '-';
+        if (latVal && lngVal) {
+          const nearest = findNearestSiteByCoords(latVal, lngVal);
+          if (nearest) {
+            nearestInfo = `${nearest.site_id_old || nearest.site_id} (${nearest.name || ''})`;
+            nearestDist = nearest.distanceM < 1000 ? `${nearest.distanceM}m` : `${(nearest.distanceM / 1000).toFixed(2)}km`;
+          }
+        }
+
+        let vbSo = '';
+        let ngaySo = '';
+        if (Array.isArray(proj.skhcn_history) && proj.skhcn_history.length > 0) {
+          const lastRound = proj.skhcn_history[proj.skhcn_history.length - 1];
+          vbSo = lastRound.doc_in || '';
+          ngaySo = lastRound.date_in || '';
+        }
+        if (!vbSo) {
+          vbSo = proj.skhcn_confirmed || proj.skhcn_status || 'Đã chấp thuận';
+        }
+
+        return {
+          'STT': idx + 1,
+          'Mã QH Đề Xuất': getDisplayPlanningId(proj.planning_id_new, proj.planning_id_old),
+          'Mã QH Cũ': proj.planning_id_old || '',
+          'Địa Bàn Xã/Phường': proj.ward || '',
+          'Huyện/TP Cũ': oldLoc,
+          'Địa Chỉ Mặt Bằng': proj.address || '',
+          'Vĩ Độ Chấp Thuận (Lat)': latVal ? Number(latVal).toFixed(6) : '',
+          'Kinh Độ Chấp Thuận (Lng)': lngVal ? Number(lngVal).toFixed(6) : '',
+          'Loại Cột Đề Xuất': proj.antenna_type || 'Monopole',
+          'Độ Cao (m)': proj.height || '36',
+          'Trạm MBF Gần Nhất': nearestInfo,
+          'Khoảng Cách Trạm Gần Nhất': nearestDist,
+          'Văn Bản Sở KH&CN': vbSo,
+          'Ngày Văn Bản Sở': ngaySo,
+          'Hình Thức Đầu Tư': proj.implementation_type || 'MBF đầu tư',
+          'Tình Trạng Mặt Bằng': proj.landowner_name ? `Đã tiếp xúc chủ đất (${proj.landowner_name})` : 'Đã khảo sát tọa độ',
+          'Ghi Chú Đề Xuất Bổ Sung': proj.resubmit_reason || proj.notes || 'Quỹ điểm sạch đã chấp thuận tọa độ, đề nghị TCT bổ sung danh mục triển khai'
+        };
+      });
+
+      const worksheet = XLSX.utils.json_to_sheet(rows);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'PL_Trinh_TCT_Bo_Sung');
+
+      const maxLens = {};
+      rows.forEach(row => {
+        Object.keys(row).forEach(key => {
+          const valStr = String(row[key] ?? '');
+          maxLens[key] = Math.max(maxLens[key] || key.length, valStr.length);
+        });
+      });
+      worksheet['!cols'] = Object.keys(maxLens).map(key => ({
+        wch: Math.min(Math.max(maxLens[key] + 3, 10), 45)
+      }));
+
+      const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Phu_Luc_Trinh_TCT_Bo_Sung_Quy_Hoach_TVT3_${new Date().toISOString().slice(0,10)}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(() => {
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      }, 100);
+    } catch (err) {
+      console.error('Lỗi xuất phụ lục trình TCT:', err);
+      alert('Lỗi xuất file: ' + err.message);
+    } finally {
+      setIsExportingProposal(false);
     }
   };
 
@@ -1613,31 +2040,31 @@ export default function InfrastructureDevelopment() {
                   </a>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
                   {/* Khối 1: 4 Gói MBF Đầu Tư */}
                   <div 
                     onClick={() => { setFilterReviewGroup('4_PACKAGES'); setActiveTab('list'); }}
-                    className={`bg-slate-800/80 hover:bg-slate-700/80 border ${filterReviewGroup === '4_PACKAGES' ? 'border-blue-400 ring-2 ring-blue-500/50' : 'border-blue-500/40 hover:border-blue-400'} rounded-xl p-4 cursor-pointer transition-all group`}
+                    className={`bg-slate-800/80 hover:bg-slate-700/80 border ${filterReviewGroup === '4_PACKAGES' ? 'border-blue-400 ring-2 ring-blue-500/50' : 'border-blue-500/40 hover:border-blue-400'} rounded-xl p-3.5 cursor-pointer transition-all group`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-blue-300 uppercase tracking-wide">🎯 4 Gói MBF Tự Đầu Tư</span>
-                      <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-500/20 text-blue-300 border border-blue-400/30">
+                      <span className="text-[11px] font-bold text-blue-300 uppercase tracking-wide">🎯 4 Gói MBF Tự ĐT</span>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-400/30">
                         {count4Packages} Trạm
                       </span>
                     </div>
-                    <div className="mt-2.5 flex items-baseline gap-2">
-                      <span className="text-2xl font-black text-white">{count4Packages}</span>
-                      <span className="text-xs text-slate-300">trạm (Gói 2, 3, 4)</span>
+                    <div className="mt-2 flex items-baseline gap-1.5">
+                      <span className="text-xl font-black text-white">{count4Packages}</span>
+                      <span className="text-[11px] text-slate-300">trạm (Gói 2, 3, 4)</span>
                     </div>
-                    <div className="mt-3 pt-2.5 border-t border-slate-700/50 flex flex-wrap gap-1.5 text-[10px]">
-                      <span className="bg-emerald-950/80 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-md font-semibold">
+                    <div className="mt-2.5 pt-2 border-t border-slate-700/50 flex flex-wrap gap-1 text-[9px]">
+                      <span className="bg-emerald-950/80 text-emerald-300 border border-emerald-500/30 px-1.5 py-0.5 rounded font-semibold">
                         7 Đủ ĐK HĐ
                       </span>
-                      <span className="bg-amber-950/80 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-md font-semibold">
-                        2 Có file Word
+                      <span className="bg-amber-950/80 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded font-semibold">
+                        2 Có Word
                       </span>
-                      <span className="bg-rose-950/80 text-rose-300 border border-rose-500/30 px-2 py-0.5 rounded-md font-semibold">
-                        6 Thiếu hồ sơ
+                      <span className="bg-rose-950/80 text-rose-300 border border-rose-500/30 px-1.5 py-0.5 rounded font-semibold">
+                        6 Thiếu HS
                       </span>
                     </div>
                   </div>
@@ -1645,49 +2072,114 @@ export default function InfrastructureDevelopment() {
                   {/* Khối 2: TCT Duyệt - Sở Dùng Chung */}
                   <div 
                     onClick={() => { setFilterReviewGroup('TCT_OK_SO_HTCS'); setActiveTab('list'); }}
-                    className={`bg-slate-800/80 hover:bg-slate-700/80 border ${filterReviewGroup === 'TCT_OK_SO_HTCS' ? 'border-amber-400 ring-2 ring-amber-500/50' : 'border-amber-500/40 hover:border-amber-400'} rounded-xl p-4 cursor-pointer transition-all group`}
+                    className={`bg-slate-800/80 hover:bg-slate-700/80 border ${filterReviewGroup === 'TCT_OK_SO_HTCS' ? 'border-amber-400 ring-2 ring-amber-500/50' : 'border-amber-500/40 hover:border-amber-400'} rounded-xl p-3.5 cursor-pointer transition-all group`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-amber-300 uppercase tracking-wide">⚠️ TCT Duyệt - Sở Dùng Chung</span>
-                      <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-400/30">
+                      <span className="text-[11px] font-bold text-amber-300 uppercase tracking-wide">⚠️ TCT OK - Sở Dùng Chung</span>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-400/30">
                         {countTctOkSoHtcs} Trạm
                       </span>
                     </div>
-                    <div className="mt-2.5 flex items-baseline gap-2">
-                      <span className="text-2xl font-black text-white">{countTctOkSoHtcs}</span>
-                      <span className="text-xs text-slate-300">trạm Sở bắt dùng chung</span>
+                    <div className="mt-2 flex items-baseline gap-1.5">
+                      <span className="text-xl font-black text-white">{countTctOkSoHtcs}</span>
+                      <span className="text-[11px] text-slate-300">trạm dùng chung</span>
                     </div>
-                    <div className="mt-3 pt-2.5 border-t border-slate-700/50 flex flex-wrap gap-1.5 text-[10px]">
-                      <span className="bg-emerald-950/80 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-md font-semibold">
-                        {countTctOkSoHtcsSurveyed} Đã Khảo Sát
+                    <div className="mt-2.5 pt-2 border-t border-slate-700/50 flex flex-wrap gap-1 text-[9px]">
+                      <span className="bg-emerald-950/80 text-emerald-300 border border-emerald-500/30 px-1.5 py-0.5 rounded font-semibold">
+                        {countTctOkSoHtcsSurveyed} Đã KS
                       </span>
-                      <span className="bg-slate-700/60 text-slate-300 border border-slate-600 px-2 py-0.5 rounded-md font-semibold">
-                        {countTctOkSoHtcs - countTctOkSoHtcsSurveyed} Chưa Khảo Sát
-                      </span>
+                      {countTctOkSoHtcsWaiting > 0 && (
+                        <span className="bg-amber-950/80 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded font-semibold animate-pulse">
+                          {countTctOkSoHtcsWaiting} Chờ Sở
+                        </span>
+                      )}
+                      {countTctOkSoHtcsResolved > 0 && (
+                        <span className="bg-teal-950/80 text-teal-300 border border-teal-500/30 px-1.5 py-0.5 rounded font-semibold">
+                          {countTctOkSoHtcsResolved} Sở Duyệt XM
+                        </span>
+                      )}
                     </div>
                   </div>
 
                   {/* Khối 3: Sở Duyệt - Chờ TCT */}
                   <div 
                     onClick={() => { setFilterReviewGroup('SO_OK_TCT_PENDING'); setActiveTab('list'); }}
-                    className={`bg-slate-800/80 hover:bg-slate-700/80 border ${filterReviewGroup === 'SO_OK_TCT_PENDING' ? 'border-purple-400 ring-2 ring-purple-500/50' : 'border-purple-500/40 hover:border-purple-400'} rounded-xl p-4 cursor-pointer transition-all group`}
+                    className={`bg-slate-800/80 hover:bg-slate-700/80 border ${filterReviewGroup === 'SO_OK_TCT_PENDING' ? 'border-purple-400 ring-2 ring-purple-500/50' : 'border-purple-500/40 hover:border-purple-400'} rounded-xl p-3.5 cursor-pointer transition-all group`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-purple-300 uppercase tracking-wide">⏳ Sở Duyệt - Chờ TCT QĐĐT</span>
-                      <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-purple-500/20 text-purple-300 border border-purple-400/30">
+                      <span className="text-[11px] font-bold text-purple-300 uppercase tracking-wide">⏳ Sở OK - Chờ TCT QĐĐT</span>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/20 text-purple-300 border border-purple-400/30">
                         {countSoOkTctPending} Trạm
                       </span>
                     </div>
-                    <div className="mt-2.5 flex items-baseline gap-2">
-                      <span className="text-2xl font-black text-white">{countSoOkTctPending}</span>
-                      <span className="text-xs text-slate-300">trạm Sở duyệt xây mới</span>
+                    <div className="mt-2 flex items-baseline gap-1.5">
+                      <span className="text-xl font-black text-white">{countSoOkTctPending}</span>
+                      <span className="text-[11px] text-slate-300">trạm chờ TCT duyệt</span>
                     </div>
-                    <div className="mt-3 pt-2.5 border-t border-slate-700/50 flex flex-wrap gap-1.5 text-[10px]">
-                      <span className="bg-purple-950/80 text-purple-200 border border-purple-400/30 px-2 py-0.5 rounded-md font-semibold">
-                        🎯 100% Đã Có Tọa Độ KS
+                    <div className="mt-2.5 pt-2 border-t border-slate-700/50 flex flex-wrap items-center justify-between gap-1 text-[9px]">
+                      <span className="bg-purple-950/80 text-purple-200 border border-purple-400/30 px-1.5 py-0.5 rounded font-semibold">
+                        🎯 100% Đã Có TĐ KS
                       </span>
-                      <span className="bg-slate-700/60 text-slate-300 px-2 py-0.5 rounded-md font-semibold">
-                        Chờ phân bổ gói
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleExportProposalExcel();
+                        }}
+                        disabled={isExportingProposal}
+                        className="px-2 py-0.5 rounded bg-purple-600 hover:bg-purple-500 text-white font-bold transition-colors shadow-2xs flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                        title="Xuất phụ lục trình TCT phê duyệt bổ sung quy hoạch (Format CV 7203)"
+                      >
+                        <FileSpreadsheet className="h-3 w-3" /> Xuất PL
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Khối 4: TCT Bổ Sung CV 7203 */}
+                  <div 
+                    onClick={() => { setFilterReviewGroup('TCT_BO_SUNG_7203'); setActiveTab('list'); }}
+                    className={`bg-slate-800/80 hover:bg-slate-700/80 border ${filterReviewGroup === 'TCT_BO_SUNG_7203' ? 'border-emerald-400 ring-2 ring-emerald-500/50' : 'border-emerald-500/40 hover:border-emerald-400'} rounded-xl p-3.5 cursor-pointer transition-all group`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-emerald-300 uppercase tracking-wide">✨ TCT Bổ Sung (CV 7203)</span>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+                        {countTctBoSung} Trạm
+                      </span>
+                    </div>
+                    <div className="mt-2 flex items-baseline gap-1.5">
+                      <span className="text-xl font-black text-white">{countTctBoSung}</span>
+                      <span className="text-[11px] text-slate-300">trạm TCT bổ sung TVT3</span>
+                    </div>
+                    <div className="mt-2.5 pt-2 border-t border-slate-700/50 flex flex-wrap gap-1 text-[9px]">
+                      <span className="bg-emerald-950/80 text-emerald-200 border border-emerald-400/30 px-1.5 py-0.5 rounded font-semibold">
+                        5 trạm cập nhật TĐ
+                      </span>
+                      <span className="bg-teal-950/80 text-teal-200 border border-teal-400/30 px-1.5 py-0.5 rounded font-semibold">
+                        6 trạm thêm mới
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Khối 5: TCT Hủy / Hoãn CV 7203 */}
+                  <div 
+                    onClick={() => { setFilterReviewGroup('TCT_HUY_HOAN_7203'); setActiveTab('list'); }}
+                    className={`bg-slate-800/80 hover:bg-slate-700/80 border ${filterReviewGroup === 'TCT_HUY_HOAN_7203' ? 'border-rose-400 ring-2 ring-rose-500/50' : 'border-rose-500/40 hover:border-rose-400'} rounded-xl p-3.5 cursor-pointer transition-all group`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-rose-300 uppercase tracking-wide">❌ TCT Hủy / Hoãn (7203)</span>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-400/30">
+                        {countTctHuyHoan} Trạm
+                      </span>
+                    </div>
+                    <div className="mt-2 flex items-baseline gap-1.5">
+                      <span className="text-xl font-black text-white">{countTctHuyHoan}</span>
+                      <span className="text-[11px] text-slate-300">trạm dừng / hoãn QH</span>
+                    </div>
+                    <div className="mt-2.5 pt-2 border-t border-slate-700/50 flex flex-wrap gap-1 text-[9px]">
+                      <span className="bg-rose-950/80 text-rose-200 border border-rose-400/30 px-1.5 py-0.5 rounded font-semibold">
+                        3 Hủy (MORAN)
+                      </span>
+                      <span className="bg-amber-950/80 text-amber-200 border border-amber-400/30 px-1.5 py-0.5 rounded font-semibold">
+                        1 Hoãn 2027
                       </span>
                     </div>
                   </div>
@@ -1917,7 +2409,21 @@ export default function InfrastructureDevelopment() {
                                       </span>
                                     );
                                   }
-                                  return displayId;
+                                  return (
+                                    <span className="inline-flex items-center gap-1">
+                                      {displayId}
+                                      {(proj.skhcn_resubmit_status === 'RESUBMIT_APPROVED_BUILD' || proj.skhcn_resubmit_status === 'RESOLVED_NEW_BUILD') && (
+                                        <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 whitespace-nowrap" title="Sở KH&CN đã chấp thuận xây mới sau tái trình">
+                                          Sở OK XM
+                                        </span>
+                                      )}
+                                      {(proj.skhcn_resubmit_status === 'WAITING_SO_FEEDBACK' || proj.skhcn_resubmit_status === 'RESUBMIT_PENDING') && (
+                                        <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-100 text-amber-800 border border-amber-300 whitespace-nowrap animate-pulse" title="Đang chờ Sở KH&CN thẩm định tái trình">
+                                          Chờ Sở
+                                        </span>
+                                      )}
+                                    </span>
+                                  );
                                 })()}
                               </span>
                               {proj.priority === '1' && (
@@ -2036,6 +2542,8 @@ export default function InfrastructureDevelopment() {
                     <option value="4_PACKAGES">🎯 4 Gói MBF Đầu Tư ({count4Packages})</option>
                     <option value="TCT_OK_SO_HTCS">⚠️ TCT Duyệt - Sở Dùng Chung ({countTctOkSoHtcs})</option>
                     <option value="SO_OK_TCT_PENDING">⏳ Sở Duyệt - Chờ TCT ({countSoOkTctPending})</option>
+                    <option value="TCT_BO_SUNG_7203">✨ TCT Bổ Sung CV 7203 ({countTctBoSung})</option>
+                    <option value="TCT_HUY_HOAN_7203">❌ TCT Hủy/Hoãn CV 7203 ({countTctHuyHoan})</option>
                   </select>
                   <select
                     value={filterImplementationType}
@@ -2101,6 +2609,15 @@ export default function InfrastructureDevelopment() {
                       <Download className="h-3.5 w-3.5 text-emerald-600" /> Báo Cáo 4 Sheet
                     </a>
                     <button 
+                      onClick={handleExportProposalExcel}
+                      disabled={isExportingProposal}
+                      className="text-xs bg-purple-700 hover:bg-purple-800 text-white font-bold px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                      title="Xuất phụ lục Quỹ điểm sạch đã được Sở duyệt đề nghị TCT phê duyệt bổ sung quy hoạch (Format CV 7203)"
+                    >
+                      <FileSpreadsheet className="h-3.5 w-3.5 text-purple-200" /> 
+                      {isExportingProposal ? 'Đang xuất...' : `PL Trình TCT (${countSoOkTctPending})`}
+                    </button>
+                    <button 
                       onClick={handleExportExcel}
                       className="text-xs bg-slate-700 hover:bg-slate-800 text-white font-bold px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer"
                       title="Xuất danh sách đang lọc ra Excel"
@@ -2161,7 +2678,21 @@ export default function InfrastructureDevelopment() {
                                      </span>
                                    );
                                  }
-                                 return displayId;
+                                 return (
+                                    <span className="inline-flex items-center gap-1">
+                                      {displayId}
+                                      {(proj.skhcn_resubmit_status === 'RESUBMIT_APPROVED_BUILD' || proj.skhcn_resubmit_status === 'RESOLVED_NEW_BUILD') && (
+                                        <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 whitespace-nowrap" title="Sở KH&CN đã chấp thuận xây mới sau tái trình">
+                                          Sở OK XM
+                                        </span>
+                                      )}
+                                      {(proj.skhcn_resubmit_status === 'WAITING_SO_FEEDBACK' || proj.skhcn_resubmit_status === 'RESUBMIT_PENDING') && (
+                                        <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-100 text-amber-800 border border-amber-300 whitespace-nowrap animate-pulse" title="Đang chờ Sở KH&CN thẩm định tái trình">
+                                          Chờ Sở
+                                        </span>
+                                      )}
+                                    </span>
+                                  );
                                })()}
                              </td>
                             <td className="py-3 px-3 text-slate-400 font-medium">{proj.planning_id_old || '-'}</td>
@@ -2372,6 +2903,209 @@ export default function InfrastructureDevelopment() {
                   )}
                 </div>
               </div>
+
+              {/* Strategic Decision Card for SKHCN Approval & Investment Direction */}
+              {(() => {
+                const isTctOkSoHtcs = SITES_TCT_OK_SO_HTCS.includes(selectedProject.planning_id_new) || SITES_TCT_OK_SO_HTCS.includes(selectedProject.planning_id_old);
+                const hasResubmit = Boolean(selectedProject.skhcn_resubmit_status);
+                const hasSkhcnHistory = Array.isArray(selectedProject.skhcn_history) && selectedProject.skhcn_history.length > 0;
+                const isSoDungChung = (selectedProject.skhcn_confirmed || '').toLowerCase().includes('dùng chung') || 
+                                      (selectedProject.skhcn_status || '').toLowerCase().includes('dùng chung');
+                const showStrategicBanner = isTctOkSoHtcs || hasResubmit || hasSkhcnHistory || isSoDungChung;
+
+                if (!showStrategicBanner) return null;
+
+                const isResolvedBuild = selectedProject.skhcn_resubmit_status === 'RESUBMIT_APPROVED_BUILD' || selectedProject.skhcn_resubmit_status === 'RESOLVED_NEW_BUILD';
+                const isWaitingFeedback = selectedProject.skhcn_resubmit_status === 'WAITING_SO_FEEDBACK' || selectedProject.skhcn_resubmit_status === 'RESUBMIT_PENDING';
+                const isResolvedShare = selectedProject.skhcn_resubmit_status === 'RESUBMIT_REJECTED_SHARE' || selectedProject.skhcn_resubmit_status === 'RESOLVED_KEEP_SHARING';
+
+                return (
+                  <div className={`rounded-2xl border p-4.5 space-y-4 shadow-sm transition-all ${
+                    isResolvedBuild ? 'bg-gradient-to-br from-emerald-50/90 via-teal-50/50 to-white border-emerald-300' :
+                    isWaitingFeedback ? 'bg-gradient-to-br from-amber-50/90 via-orange-50/40 to-white border-amber-300' :
+                    isResolvedShare ? 'bg-gradient-to-br from-blue-50/90 via-indigo-50/40 to-white border-blue-300' :
+                    'bg-gradient-to-br from-rose-50/90 via-amber-50/40 to-white border-amber-300'
+                  }`}>
+                    {/* Header */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-3 border-slate-100">
+                      <div className="flex items-center gap-2.5">
+                        <div className={`p-2.5 rounded-xl shadow-xs ${
+                          isResolvedBuild ? 'bg-emerald-600 text-white' :
+                          isWaitingFeedback ? 'bg-amber-600 text-white' :
+                          isResolvedShare ? 'bg-blue-600 text-white' :
+                          'bg-amber-600 text-white'
+                        }`}>
+                          <Building2 className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Tình trạng Pháp lý Sở KH&amp;CN &amp; Chiến lược triển khai</span>
+                          <h4 className="text-sm font-bold text-slate-800">Điều phối Tái trình / Dùng chung Hạ tầng CSHT</h4>
+                        </div>
+                      </div>
+
+                      <div>
+                        {isResolvedBuild && (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-600 text-white shadow-2xs">
+                            <CheckCircle2 className="h-3.5 w-3.5" /> Sở Đã Chấp Thuận Xây Mới
+                          </span>
+                        )}
+                        {isWaitingFeedback && (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500 text-white shadow-2xs animate-pulse">
+                            <Clock className="h-3.5 w-3.5" /> Đang Chờ Phản Hồi Sở Đợt Mới
+                          </span>
+                        )}
+                        {isResolvedShare && (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-600 text-white shadow-2xs">
+                            <Share2 className="h-3.5 w-3.5" /> Duy Trì Dùng Chung CSHT
+                          </span>
+                        )}
+                        {!isResolvedBuild && !isWaitingFeedback && !isResolvedShare && (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-600 text-white shadow-2xs">
+                            <AlertTriangle className="h-3.5 w-3.5" /> Vướng Cự Ly &lt; 400m (Sở Ép Dùng Chung)
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* History Timeline if any */}
+                    {Array.isArray(selectedProject.skhcn_history) && selectedProject.skhcn_history.length > 0 && (
+                      <div className="space-y-2 bg-white/80 p-3.5 rounded-xl border border-slate-200/80">
+                        <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
+                          <History className="h-4 w-4 text-indigo-600" />
+                          Lịch sử các đợt thẩm định Sở KH&amp;CN ({selectedProject.skhcn_history.length} đợt)
+                        </div>
+                        <div className="space-y-2.5 pt-1">
+                          {selectedProject.skhcn_history.map((hist, hIdx) => {
+                            const isBuild = hist.decision === 'XAY_MOI';
+                            return (
+                              <div key={hIdx} className="flex items-start gap-2.5 text-xs relative pl-2 border-l-2 border-slate-200">
+                                <div className={`w-2.5 h-2.5 rounded-full -left-[6px] top-1 absolute ${isBuild ? 'bg-emerald-500 ring-2 ring-emerald-200' : 'bg-amber-500 ring-2 ring-amber-200'}`} />
+                                <div className="flex-1 space-y-0.5">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span className="font-bold text-slate-800">
+                                      {hist.round ? `Đợt ${hist.round}` : `Đợt ${hIdx + 1}`}:
+                                    </span>
+                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                      isBuild ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                                    }`}>
+                                      {hist.decision_label || (isBuild ? 'Chấp thuận xây mới' : 'Đề nghị dùng chung CSHT')}
+                                    </span>
+                                    {hist.date_in && <span className="text-[11px] text-slate-400">({hist.date_in})</span>}
+                                  </div>
+                                  {hist.doc_out && (
+                                    <p className="text-[11px] text-slate-500">
+                                      📤 MBF trình CV số <strong className="text-slate-700">{hist.doc_out}</strong> {hist.date_out ? `ngày ${hist.date_out}` : ''} 
+                                      {hist.resubmit_reason ? ` — Lý do: ${hist.resubmit_reason}` : ''}
+                                    </p>
+                                  )}
+                                  {hist.doc_in && (
+                                    <p className="text-[11px] text-slate-700 font-medium">
+                                      📥 Sở phản hồi VB số <strong className="text-slate-900">{hist.doc_in}</strong>: {hist.reason || hist.notes || (isBuild ? `Cho phép xây mới cột ${hist.approved_antenna_type || 'Monopole'} ${hist.approved_height ? `${hist.approved_height}m` : ''} tại (${hist.approved_lat}, ${hist.approved_lng})` : `Yêu cầu dùng chung CSHT trạm ${hist.shared_site_id || hist.shared_partner || ''}`)}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Action & Status Panels */}
+                    {isResolvedBuild ? (
+                      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-emerald-500/10 p-3.5 rounded-xl border border-emerald-300">
+                        <div className="text-xs text-emerald-900 space-y-0.5">
+                          <span className="font-bold block text-sm">🎉 Vị trí đã sạch pháp lý Sở KH&amp;CN (MobiFone tự đầu tư)</span>
+                          <p>Vướng mắc cự ly &lt; 400m đã được giải quyết qua hồ sơ tái trình. Trạm đã mở toàn bộ hồ sơ ký HĐ thuê mặt bằng tự đầu tư!</p>
+                        </div>
+                        <button
+                          onClick={() => handleOpenResubmitModal(selectedProject)}
+                          className="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-white text-emerald-800 border border-emerald-300 hover:bg-emerald-50 transition-colors shrink-0 shadow-2xs cursor-pointer flex items-center gap-1.5"
+                        >
+                          <RefreshCw className="h-3.5 w-3.5 text-emerald-600" /> Cập nhật đợt mới
+                        </button>
+                      </div>
+                    ) : isWaitingFeedback ? (
+                      <div className="space-y-3 bg-amber-500/10 p-3.5 rounded-xl border border-amber-300">
+                        <div className="text-xs text-amber-950 space-y-1">
+                          <span className="font-bold block text-sm">⏳ Đã lập hồ sơ tái trình Sở — Đang chờ văn bản trả lời</span>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] bg-white/70 p-2.5 rounded-lg border border-amber-200">
+                            <div>
+                              <span className="text-slate-500">Số công văn gửi đi:</span>{' '}
+                              <strong className="text-slate-800">{selectedProject.resubmit_doc_number || '-'}</strong>
+                              {selectedProject.resubmit_date && <span className="text-slate-400"> ({selectedProject.resubmit_date})</span>}
+                            </div>
+                            <div>
+                              <span className="text-slate-500">Tọa độ đề xuất mới:</span>{' '}
+                              <strong className="text-blue-700">{selectedProject.resubmit_latitude ? `${selectedProject.resubmit_latitude}, ${selectedProject.resubmit_longitude}` : '-'}</strong>
+                            </div>
+                            <div className="sm:col-span-2">
+                              <span className="text-slate-500">Lý do tái trình:</span>{' '}
+                              <strong className="text-slate-800">{selectedProject.resubmit_reason || 'Khảo sát dời tọa độ cách xa trạm hiện hữu ≥ 400m'}</strong>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 pt-1">
+                          <button
+                            onClick={() => handleOpenRecordFeedbackModal(selectedProject)}
+                            className="px-4 py-2 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <CheckSquare className="h-4 w-4" /> Ghi nhận phản hồi của Sở đợt mới
+                          </button>
+                          <button
+                            onClick={() => handleOpenResubmitModal(selectedProject)}
+                            className="px-3 py-2 rounded-lg text-xs font-bold bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 transition-all flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <Edit3 className="h-3.5 w-3.5 text-slate-500" /> Sửa tờ trình tái trình
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <p className="text-xs text-slate-600 leading-relaxed">
+                          Trạm này thuộc nhóm <strong>TCT duyệt tự đầu tư nhưng Sở KH&amp;CN yêu cầu dùng chung</strong> do cự ly cách trạm đối tác &lt; 400m. 
+                          Để không bị bế tắc tiến độ, vui lòng chọn hướng xử lý:
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                          <div className="p-3 bg-white rounded-xl border border-indigo-200 shadow-2xs space-y-2 flex flex-col justify-between hover:border-indigo-300 transition-all">
+                            <div className="space-y-1">
+                              <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wide flex items-center gap-1">
+                                <Sparkles className="h-3 w-3 text-indigo-500" /> Hướng 1: Tái trình xin xây mới
+                              </span>
+                              <p className="text-[11px] text-slate-600 leading-snug">
+                                Khảo sát dời vị trí ra ngoài bán kính 400m hoặc giải trình đàm phán bất thành để lập công văn trình Sở thẩm định đợt mới.
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => handleOpenResubmitModal(selectedProject)}
+                              className="w-full py-2 px-3 rounded-lg text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                            >
+                              <Send className="h-3.5 w-3.5" /> Lập Hồ Sơ Tái Trình Sở (Đợt 2)
+                            </button>
+                          </div>
+
+                          <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs space-y-2 flex flex-col justify-between hover:border-blue-300 transition-all">
+                            <div className="space-y-1">
+                              <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wide flex items-center gap-1">
+                                <Share2 className="h-3 w-3 text-blue-500" /> Hướng 2: Đàm phán Dùng chung CSHT
+                              </span>
+                              <p className="text-[11px] text-slate-600 leading-snug">
+                                Chấp thuận phương án Sở yêu cầu. Chuyển hồ sơ sang hình thức thuê lại cột của Viettel / VNPT / VCC theo quy định.
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => handleKeepSharingCsht(selectedProject)}
+                              className="w-full py-2 px-3 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                            >
+                              <Share2 className="h-3.5 w-3.5 text-slate-500" /> Giữ Dùng Chung CSHT
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               {isEditing ? (
                 /* Edit Mode Form */
@@ -3627,6 +4361,505 @@ export default function InfrastructureDevelopment() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Lập Hồ Sơ Tái Trình Sở KH&CN */}
+      {showResubmitModal && selectedProject && (() => {
+        const currentLat = parseFloat(resubmitForm.latitude);
+        const currentLng = parseFloat(resubmitForm.longitude);
+        const hasCoords = !isNaN(currentLat) && !isNaN(currentLng) && currentLat > 0 && currentLng > 0;
+        
+        let nearestSite = null;
+        let distToOriginal = null;
+        if (hasCoords) {
+          nearestSite = findNearestSiteByCoords(currentLat, currentLng);
+          const origLat = selectedProject.latitude_plan || selectedProject.latitude_survey;
+          const origLng = selectedProject.longitude_plan || selectedProject.longitude_survey;
+          if (origLat && origLng) {
+            distToOriginal = Math.round(haversine(origLat, origLng, currentLat, currentLng) * 1000);
+          }
+        }
+
+        const isCompliant = nearestSite && nearestSite.distanceM >= 400;
+
+        return (
+          <div className="fixed inset-0 z-60 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+            <div className="bg-white rounded-2xl max-w-xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+              {/* Header */}
+              <div className="p-4 md:p-5 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-indigo-50 to-white">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 bg-indigo-600 text-white rounded-xl shadow-xs">
+                    <Send className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-slate-800">Lập Hồ Sơ Tái Trình Sở KH&amp;CN</h3>
+                    <p className="text-xs text-slate-500 font-medium">
+                      Trạm {selectedProject.planning_id_new} {selectedProject.planning_id_old ? `(Cũ: ${selectedProject.planning_id_old})` : ''} — {selectedProject.ward || ''}, {selectedProject.district || ''}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowResubmitModal(false)}
+                  className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="p-4 md:p-6 overflow-y-auto space-y-4 text-xs">
+                {/* Tọa độ đề xuất & Dán nhanh */}
+                <div className="space-y-3 p-3.5 bg-slate-50 rounded-xl border border-slate-200">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wide">
+                      1. Tọa độ đề xuất mới (Khảo sát đợt 2)
+                    </label>
+                    <div className="flex items-center gap-1">
+                      {selectedProject.latitude_survey && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setResubmitForm(prev => ({
+                              ...prev,
+                              latitude: String(selectedProject.latitude_survey),
+                              longitude: String(selectedProject.longitude_survey),
+                              coords_input: `${selectedProject.latitude_survey}, ${selectedProject.longitude_survey}`
+                            }));
+                          }}
+                          className="text-[10px] text-blue-600 hover:text-blue-800 font-semibold px-2 py-0.5 rounded bg-blue-50 border border-blue-200 hover:bg-blue-100 transition-colors cursor-pointer"
+                        >
+                          Lấy TĐ Khảo sát
+                        </button>
+                      )}
+                      {selectedProject.latitude_plan && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setResubmitForm(prev => ({
+                              ...prev,
+                              latitude: String(selectedProject.latitude_plan),
+                              longitude: String(selectedProject.longitude_plan),
+                              coords_input: `${selectedProject.latitude_plan}, ${selectedProject.longitude_plan}`
+                            }));
+                          }}
+                          className="text-[10px] text-slate-600 hover:text-slate-800 font-semibold px-2 py-0.5 rounded bg-slate-100 border border-slate-200 hover:bg-slate-200 transition-colors cursor-pointer"
+                        >
+                          Lấy TĐ Quy hoạch
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <input
+                      type="text"
+                      value={resubmitForm.coords_input}
+                      onChange={(e) => handleCoordsInputChange(e.target.value)}
+                      placeholder="Dán nhanh tọa độ (Ví dụ: 11.0182, 107.4384)..."
+                      className="w-full text-xs border border-indigo-200 focus:border-indigo-500 rounded-lg px-3 py-2 bg-white outline-none font-mono"
+                    />
+                    <span className="text-[10px] text-slate-400 mt-1 block">Tự động nhận diện Vĩ độ và Kinh độ khi dán từ Google Maps hoặc file Excel</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-500">Vĩ độ (Latitude)</span>
+                      <input
+                        type="number"
+                        step="any"
+                        value={resubmitForm.latitude}
+                        onChange={(e) => setResubmitForm(prev => ({ ...prev, latitude: e.target.value }))}
+                        placeholder="11.0182"
+                        className="w-full text-xs border border-slate-200 rounded-lg px-2.5 py-1.5 bg-white outline-none font-mono"
+                      />
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-500">Kinh độ (Longitude)</span>
+                      <input
+                        type="number"
+                        step="any"
+                        value={resubmitForm.longitude}
+                        onChange={(e) => setResubmitForm(prev => ({ ...prev, longitude: e.target.value }))}
+                        placeholder="107.4384"
+                        className="w-full text-xs border border-slate-200 rounded-lg px-2.5 py-1.5 bg-white outline-none font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Realtime Distance Meter */}
+                  {hasCoords ? (
+                    <div className={`p-3 rounded-xl border space-y-1 transition-all ${
+                      isCompliant 
+                        ? 'bg-emerald-50 border-emerald-200 text-emerald-900' 
+                        : 'bg-amber-50 border-amber-200 text-amber-900'
+                    }`}>
+                      <div className="flex items-center gap-1.5 font-bold text-xs">
+                        {isCompliant ? (
+                          <>
+                            <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                            <span>✅ Cự ly đạt chuẩn quy định (≥ 400m)</span>
+                          </>
+                        ) : (
+                          <>
+                            <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+                            <span>⚠️ Cự ly gần trạm hiện hữu (&lt; 400m)</span>
+                          </>
+                        )}
+                      </div>
+                      <p className="text-[11px] leading-relaxed">
+                        {nearestSite ? (
+                          <>
+                            Cách trạm gần nhất <strong>{nearestSite.site_id_old || nearestSite.site_id} ({nearestSite.name})</strong>: <strong>{nearestSite.distanceM} mét</strong> {nearestSite.distanceM >= 400 ? '(Đủ chuẩn xin xây mới theo quy định tỉnh)' : '(Sở KH&CN có thể tiếp tục ép dùng chung trừ khi có văn bản đối tác từ chối)'}.
+                          </>
+                        ) : 'Không phát hiện trạm hoạt động nào lân cận.'}
+                      </p>
+                      {distToOriginal !== null && (
+                        <p className="text-[10px] text-slate-500 pt-0.5">
+                          📍 Độ lệch so với vị trí quy hoạch ban đầu: {distToOriginal} mét
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="p-2.5 bg-slate-100 rounded-lg text-[10px] text-slate-500 italic">
+                      💡 Nhập tọa độ để hệ thống tự động kiểm tra cự ly tới các trạm lân cận và đánh giá mốc 400m.
+                    </div>
+                  )}
+                </div>
+
+                {/* Lý do tái trình */}
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wide">
+                    2. Lý do tái trình Sở KH&amp;CN
+                  </label>
+                  <select
+                    value={resubmitForm.reason}
+                    onChange={(e) => setResubmitForm(prev => ({ ...prev, reason: e.target.value }))}
+                    className="w-full text-xs border border-slate-200 rounded-lg px-3 py-2 bg-white outline-none focus:border-indigo-500 font-medium"
+                  >
+                    <option value="Khảo sát di dời tọa độ mới cách trạm hiện hữu ≥ 400m">
+                      1. Khảo sát di dời tọa độ mới cách trạm hiện hữu ≥ 400m (Khuyến nghị)
+                    </option>
+                    <option value="Đã đàm phán với chủ trạm đối tác nhưng bất thành (hết tải trọng / giá cao)">
+                      2. Đã đàm phán với chủ trạm đối tác nhưng bất thành (hết tải trọng / giá cao)
+                    </option>
+                    <option value="Trạm đối tác không đảm bảo độ cao hoặc góc phủ sóng theo yêu cầu kỹ thuật">
+                      3. Trạm đối tác không đảm bảo độ cao hoặc góc phủ sóng theo yêu cầu kỹ thuật
+                    </option>
+                    <option value="Địa hình ngăn cách tự nhiên (sông, đồi, đường cao tốc) không thể dùng chung">
+                      4. Địa hình ngăn cách tự nhiên (sông, đồi, đường cao tốc) không thể dùng chung
+                    </option>
+                    <option value="Khác">5. Khác (nhập thêm mô tả cụ thể)...</option>
+                  </select>
+                </div>
+
+                {resubmitForm.reason === 'Khác' && (
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-bold text-slate-500">Mô tả lý do khác:</span>
+                    <input
+                      type="text"
+                      value={resubmitForm.custom_reason}
+                      onChange={(e) => setResubmitForm(prev => ({ ...prev, custom_reason: e.target.value }))}
+                      placeholder="Nhập chi tiết lý do giải trình với Sở..."
+                      className="w-full text-xs border border-slate-200 rounded-lg px-3 py-2 bg-white outline-none"
+                    />
+                  </div>
+                )}
+
+                {/* Hồ sơ văn bản MBF gửi đi */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wide">
+                      3. Số công văn MBF trình Sở *
+                    </label>
+                    <input
+                      type="text"
+                      value={resubmitForm.doc_number}
+                      onChange={(e) => setResubmitForm(prev => ({ ...prev, doc_number: e.target.value }))}
+                      placeholder="Ví dụ: 1230/MBF.ĐNa-VT"
+                      className="w-full text-xs border border-slate-200 rounded-lg px-3 py-2 bg-white outline-none font-semibold text-indigo-700"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wide">
+                      4. Ngày gửi văn bản
+                    </label>
+                    <input
+                      type="date"
+                      value={resubmitForm.date}
+                      onChange={(e) => setResubmitForm(prev => ({ ...prev, date: e.target.value }))}
+                      className="w-full text-xs border border-slate-200 rounded-lg px-3 py-2 bg-white outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Thông số cột đề xuất */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold text-slate-500 uppercase">Loại cột đề xuất</label>
+                    <select
+                      value={resubmitForm.antenna_type}
+                      onChange={(e) => setResubmitForm(prev => ({ ...prev, antenna_type: e.target.value }))}
+                      className="w-full text-xs border border-slate-200 rounded-lg px-3 py-2 bg-white outline-none"
+                    >
+                      <option value="Monopole">Monopole</option>
+                      <option value="Dây co">Dây co</option>
+                      <option value="Tự đứng">Tự đứng</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold text-slate-500 uppercase">Chiều cao đề xuất</label>
+                    <select
+                      value={resubmitForm.height}
+                      onChange={(e) => setResubmitForm(prev => ({ ...prev, height: e.target.value }))}
+                      className="w-full text-xs border border-slate-200 rounded-lg px-3 py-2 bg-white outline-none"
+                    >
+                      <option value="30m">30m</option>
+                      <option value="36m">36m</option>
+                      <option value="39m">39m</option>
+                      <option value="42m">42m</option>
+                      <option value="45m">45m</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-slate-500 uppercase">Ghi chú bổ sung</label>
+                  <textarea
+                    value={resubmitForm.notes}
+                    onChange={(e) => setResubmitForm(prev => ({ ...prev, notes: e.target.value }))}
+                    placeholder="Ghi chú thêm về hồ sơ, liên hệ đơn vị phối hợp..."
+                    rows={2}
+                    className="w-full text-xs border border-slate-200 rounded-lg px-3 py-2 bg-white outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="p-4 border-t border-slate-100 flex items-center justify-end gap-2 bg-slate-50">
+                <button
+                  type="button"
+                  onClick={() => setShowResubmitModal(false)}
+                  className="px-4 py-2 border border-slate-200 hover:bg-slate-100 rounded-lg text-xs font-bold text-slate-600 transition-colors cursor-pointer"
+                  disabled={isSavingResubmit}
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveResubmit}
+                  disabled={isSavingResubmit}
+                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  {isSavingResubmit ? (
+                    <>
+                      <RefreshCw className="h-3.5 w-3.5 animate-spin" /> Đang lưu hồ sơ...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-3.5 w-3.5" /> Lưu Hồ Sơ &amp; Chuyển Chờ Sở Duyệt
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Modal Ghi Nhận Phản Hồi Của Sở KH&CN */}
+      {showRecordFeedbackModal && selectedProject && (
+        <div className="fixed inset-0 z-60 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="p-4 md:p-5 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-emerald-50 to-white">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-emerald-600 text-white rounded-xl shadow-xs">
+                  <CheckSquare className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-800">Ghi Nhận Phản Hồi Của Sở KH&amp;CN</h3>
+                  <p className="text-xs text-slate-500 font-medium">
+                    Trạm {selectedProject.planning_id_new} — Cập nhật kết quả thẩm định đợt mới
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowRecordFeedbackModal(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-4 md:p-6 overflow-y-auto space-y-4 text-xs">
+              {/* Kết quả Sở quyết định */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wide">
+                  1. Quyết định thẩm định của Sở KH&amp;CN *
+                </label>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div
+                    onClick={() => setFeedbackForm(prev => ({ ...prev, decision: 'XAY_MOI' }))}
+                    className={`p-3 rounded-xl border cursor-pointer transition-all flex flex-col justify-between ${
+                      feedbackForm.decision === 'XAY_MOI'
+                        ? 'bg-emerald-50 border-emerald-400 ring-2 ring-emerald-500/30'
+                        : 'bg-white border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    <div>
+                      <span className="font-bold text-emerald-800 text-xs block">✅ Chấp Thuận Xây Mới</span>
+                      <p className="text-[10px] text-emerald-700 mt-1">
+                        Sở đồng ý phương án MobiFone tự đầu tư xây cột mới. Dự án sẽ chuyển sang luồng MBF Đầu Tư.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div
+                    onClick={() => setFeedbackForm(prev => ({ ...prev, decision: 'DUNG_CHUNG' }))}
+                    className={`p-3 rounded-xl border cursor-pointer transition-all flex flex-col justify-between ${
+                      feedbackForm.decision === 'DUNG_CHUNG'
+                        ? 'bg-amber-50 border-amber-400 ring-2 ring-amber-500/30'
+                        : 'bg-white border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    <div>
+                      <span className="font-bold text-amber-800 text-xs block">❌ Đề Nghị Dùng Chung</span>
+                      <p className="text-[10px] text-amber-700 mt-1">
+                        Sở bác phương án xây mới và tiếp tục đề nghị liên hệ dùng chung trạm lân cận.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Thông tin văn bản Sở */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wide">
+                    2. Số văn bản Sở phản hồi *
+                  </label>
+                  <input
+                    type="text"
+                    value={feedbackForm.doc_number}
+                    onChange={(e) => setFeedbackForm(prev => ({ ...prev, doc_number: e.target.value }))}
+                    placeholder="Ví dụ: 4370/SKHCN-CĐS"
+                    className="w-full text-xs border border-slate-200 rounded-lg px-3 py-2 bg-white outline-none font-semibold text-emerald-700"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wide">
+                    3. Ngày ký văn bản Sở
+                  </label>
+                  <input
+                    type="date"
+                    value={feedbackForm.date}
+                    onChange={(e) => setFeedbackForm(prev => ({ ...prev, date: e.target.value }))}
+                    className="w-full text-xs border border-slate-200 rounded-lg px-3 py-2 bg-white outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Chi tiết phụ thuộc quyết định */}
+              {feedbackForm.decision === 'XAY_MOI' ? (
+                <div className="grid grid-cols-2 gap-3 p-3 bg-emerald-50/50 rounded-xl border border-emerald-100">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-emerald-800 uppercase">Chiều cao cột Sở duyệt</label>
+                    <select
+                      value={feedbackForm.approved_height}
+                      onChange={(e) => setFeedbackForm(prev => ({ ...prev, approved_height: e.target.value }))}
+                      className="w-full text-xs border border-emerald-200 rounded-lg px-3 py-2 bg-white outline-none"
+                    >
+                      <option value="30m">30m</option>
+                      <option value="36m">36m</option>
+                      <option value="39m">39m</option>
+                      <option value="42m">42m</option>
+                      <option value="45m">45m</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-emerald-800 uppercase">Loại cột Sở duyệt</label>
+                    <select
+                      value={feedbackForm.approved_antenna_type}
+                      onChange={(e) => setFeedbackForm(prev => ({ ...prev, approved_antenna_type: e.target.value }))}
+                      className="w-full text-xs border border-emerald-200 rounded-lg px-3 py-2 bg-white outline-none"
+                    >
+                      <option value="Monopole">Monopole</option>
+                      <option value="Dây co">Dây co</option>
+                      <option value="Tự đứng">Tự đứng</option>
+                    </select>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-3 p-3 bg-amber-50/50 rounded-xl border border-amber-100">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-amber-800 uppercase">Đối tác cho thuê</label>
+                    <select
+                      value={feedbackForm.shared_partner}
+                      onChange={(e) => setFeedbackForm(prev => ({ ...prev, shared_partner: e.target.value }))}
+                      className="w-full text-xs border border-amber-200 rounded-lg px-3 py-2 bg-white outline-none"
+                    >
+                      <option value="Vinaphone">Vinaphone</option>
+                      <option value="Viettel">Viettel</option>
+                      <option value="VCC">VCC</option>
+                      <option value="VNPT">VNPT</option>
+                      <option value="Khác">Khác</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-amber-800 uppercase">Mã trạm đối tác</label>
+                    <input
+                      type="text"
+                      value={feedbackForm.shared_site_id}
+                      onChange={(e) => setFeedbackForm(prev => ({ ...prev, shared_site_id: e.target.value }))}
+                      placeholder="Ví dụ: DNI_0572"
+                      className="w-full text-xs border border-amber-200 rounded-lg px-3 py-2 bg-white outline-none"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-1">
+                <label className="text-[11px] font-bold text-slate-500 uppercase">Trích yếu nội dung văn bản Sở</label>
+                <textarea
+                  value={feedbackForm.notes}
+                  onChange={(e) => setFeedbackForm(prev => ({ ...prev, notes: e.target.value }))}
+                  placeholder="Ghi nhận trích yếu nội dung văn bản Sở phản hồi..."
+                  rows={2}
+                  className="w-full text-xs border border-slate-200 rounded-lg px-3 py-2 bg-white outline-none"
+                />
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-slate-100 flex items-center justify-end gap-2 bg-slate-50">
+              <button
+                type="button"
+                onClick={() => setShowRecordFeedbackModal(false)}
+                className="px-4 py-2 border border-slate-200 hover:bg-slate-100 rounded-lg text-xs font-bold text-slate-600 transition-colors cursor-pointer"
+                disabled={isSavingFeedback}
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveFeedback}
+                disabled={isSavingFeedback}
+                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                {isSavingFeedback ? (
+                  <>
+                    <RefreshCw className="h-3.5 w-3.5 animate-spin" /> Đang cập nhật...
+                  </>
+                ) : (
+                  <>
+                    <Check className="h-3.5 w-3.5" /> Lưu Kết Quả &amp; Chuyển Luồng
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
