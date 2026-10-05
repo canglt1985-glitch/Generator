@@ -68,6 +68,30 @@ export const STATION_ERP_MAPPINGS = {
   'DNXL77': { book_site: 'DNLK42', erp_code: '00021049', ma_vt: '00021049100001', ma_tscd_moi: '2027B1500000977' }
 };
 
+// Cấu hình lựa chọn mua mới Ắc quy đề MPD
+export const BATTERY_CAPACITY_OPTIONS = [
+  { value: '12V - 45Ah', label: '12V - 45Ah (MPĐ xăng di động / máy nhỏ)' },
+  { value: '12V - 70Ah', label: '12V - 70Ah (MPĐ diesel 5kVA - 7.5kVA - Phổ biến)' },
+  { value: '12V - 100Ah', label: '12V - 100Ah (MPĐ diesel 10kVA - 15kVA)' },
+  { value: '12V - 120Ah', label: '12V - 120Ah (MPĐ diesel 15kVA - 20kVA)' },
+  { value: '12V - 150Ah', label: '12V - 150Ah (MPĐ diesel 25kVA - 30kVA)' },
+  { value: '12V - 200Ah', label: '12V - 200Ah (MPĐ công suất lớn >= 45kVA)' },
+];
+
+export const BATTERY_STATUS_OPTIONS = [
+  'Bình bị phù / Sụt áp không đề được máy',
+  'Bình bị chai / Không ngậm điện sạc',
+  'Bình quá hạn sử dụng (> 2 năm)',
+  'Hỏng cọc bình / Rò rỉ dung dịch axit',
+  'Bình yếu, phải kích bình ngoài mới nổ máy'
+];
+
+export const BATTERY_POLE_OPTIONS = [
+  'Cọc nổi (Top Post - phổ biến)',
+  'Cọc chìm (DIN)',
+  'Cọc bắt bulong / ốc vít'
+];
+
 /**
  * Xuất file Excel Biểu Mẫu B4 Đề Nghị Sửa Chữa (Chuẩn Mobifone).
  * @param {Array} items Danh sách tồn tại / sự cố cần sửa chữa
@@ -77,8 +101,12 @@ export const STATION_ERP_MAPPINGS = {
  */
 export async function exportB4RepairProposal({ items = [], datasites = [], targetCategory = 'MPD_CO_DINH', customFileName = '' }) {
   const XLSX = await import('xlsx');
-  if (!items || items.length === 0) {
-    alert('Vui lòng chọn ít nhất 1 tồn tại / thiết bị để xuất Biểu mẫu B4!');
+  
+  // Tuyệt đối loại trừ các mục Đề xuất mua ắc quy ra khỏi Biểu mẫu Sửa chữa Ban 4
+  const validItems = items.filter(it => it.proposal_type !== 'BATTERY_PURCHASE');
+  
+  if (!validItems || validItems.length === 0) {
+    alert('Không có hạng mục sửa chữa nào phù hợp để xuất Biểu mẫu Ban 4 (Các đề xuất mua ắc quy đã được lọc riêng ra bảng mua sắm vật tư)!');
     return;
   }
 
@@ -374,3 +402,107 @@ export async function exportB4RepairProposal({ items = [], datasites = [], targe
   const finalFileName = customFileName || `TVT3_B4_De_Xuat_Sua_Chua_${targetCategory}_${todayStr}.xlsx`;
   XLSX.writeFile(wb, finalFileName);
 }
+
+/**
+ * Xuất file Excel Bảng Kê Tổng Hợp Đề Xuất Mua Mới Ắc Quy Đề MPD
+ * Phục vụ trình Phòng Kỹ thuật / Hậu cần làm thủ tục mua sắm tập trung theo lô.
+ */
+export async function exportBatteryPurchaseList({ items = [], datasites = [], customFileName = '' }) {
+  const XLSX = await import('xlsx');
+  const batteryItems = items.filter(it => 
+    it.proposal_type === 'BATTERY_PURCHASE' || 
+    (it.category === 'Máy phát điện' && String(it.description || '').toLowerCase().includes('ắc quy')) ||
+    (it.category === 'Máy phát điện' && String(it.description || '').toLowerCase().includes('accu'))
+  );
+  
+  if (!batteryItems || batteryItems.length === 0) {
+    alert('Không có đề xuất mua sắm ắc quy nào để xuất file!');
+    return;
+  }
+
+  const siteMap = {};
+  datasites.forEach(s => {
+    const sId = String(s.site_id || '').trim().toUpperCase();
+    const sOld = String(s.site_id_old || '').trim().toUpperCase();
+    if (sId) siteMap[sId] = s;
+    if (sOld) siteMap[sOld] = s;
+  });
+
+  const wb = XLSX.utils.book_new();
+
+  // Tiêu đề & Header
+  const titleRow = ['TỔNG HỢP NHU CẦU ĐỀ XUẤT MUA SẮM ẮC QUY KHỞI ĐỘNG MÁY PHÁT ĐIỆN - TỔ VIỄN THÔNG 3'];
+  const subTitleRow = [`Thời điểm xuất: ${new Date().toLocaleDateString('vi-VN')} | Đơn vị đề xuất: Tổ Viễn Thông 3 - Phòng Kỹ thuật Viễn thông`];
+  const emptyRow = [];
+  
+  const headers = [
+    'STT', 'Mã trạm mới', 'Mã trạm cũ', 'Tên trạm', 'Huyện / Thị xã', 'Địa bàn xã/phường',
+    'Loại MPĐ', 'Mã máy / Nhãn hiệu', 'Công suất MPĐ (kVA)',
+    'Dung lượng Ắc quy đề xuất', 'Điện áp (V)', 'Số lượng (Bình)', 'Loại cọc bình',
+    'Hiện trạng bình cũ / Lý do thay thế', 'Mô tả chi tiết', 'Ngày phát hiện', 'Người đề xuất', 'Ghi chú'
+  ];
+
+  const rows = batteryItems.map((item, idx) => {
+    const sObj = siteMap[String(item.site_id || '').trim().toUpperCase()] || {};
+    const loc = sObj.location_info || {};
+    const bDetail = item.battery_details || {};
+
+    return [
+      idx + 1,
+      sObj.site_id || item.site_id,
+      sObj.site_id_old || '-',
+      sObj.name || sObj.site_name || item.site_id,
+      loc.district || sObj.district || '-',
+      loc.ward || sObj.ward || '-',
+      item.device_type === 'MPD_DI_DONG' ? 'MPĐ Di động' : 'MPĐ Cố định',
+      bDetail.generator_code || '-',
+      bDetail.generator_capacity || sObj.generator_capacity || '-',
+      bDetail.capacity || '12V - 70Ah',
+      bDetail.voltage || '12V',
+      bDetail.quantity || 1,
+      bDetail.pole_type || 'Cọc nổi (Top Post)',
+      bDetail.old_battery_status || 'Sụt áp, không đề được máy',
+      item.description || '',
+      item.date || '',
+      item.reporter || '',
+      'Đề xuất mua sắm mới (Nội bộ Tỉnh)'
+    ];
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet([
+    titleRow,
+    subTitleRow,
+    emptyRow,
+    headers,
+    ...rows
+  ]);
+
+  // Set độ rộng cột
+  ws['!cols'] = [
+    { wch: 6 },  // STT
+    { wch: 14 }, // Mã trạm mới
+    { wch: 14 }, // Mã trạm cũ
+    { wch: 24 }, // Tên trạm
+    { wch: 18 }, // Huyện
+    { wch: 18 }, // Xã
+    { wch: 16 }, // Loại MPĐ
+    { wch: 20 }, // Mã máy
+    { wch: 16 }, // Công suất
+    { wch: 24 }, // Dung lượng Ah
+    { wch: 12 }, // Điện áp
+    { wch: 14 }, // Số lượng
+    { wch: 18 }, // Loại cọc
+    { wch: 32 }, // Hiện trạng bình cũ
+    { wch: 35 }, // Mô tả
+    { wch: 14 }, // Ngày
+    { wch: 18 }, // Người đề xuất
+    { wch: 24 }, // Ghi chú
+  ];
+
+  XLSX.utils.book_append_sheet(wb, ws, 'De_Xuat_Mua_Accu_MPD');
+
+  const todayStr = new Date().toISOString().substring(0, 10).replace(/-/g, '');
+  const finalFileName = customFileName || `TVT3_De_Xuat_Mua_Sam_Accu_MPD_${todayStr}.xlsx`;
+  XLSX.writeFile(wb, finalFileName);
+}
+

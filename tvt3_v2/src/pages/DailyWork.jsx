@@ -3,11 +3,18 @@ import { supabase } from '../supabaseClient';
 import { 
   ClipboardList, Calendar, AlertTriangle, Search, Plus, Edit, Trash, 
   MapPin, User, Clock, CheckCircle2, AlertCircle, Eye, X, Filter, ExternalLink,
-  Zap, Download, Copy, Check, FileText
+  Zap, Download, Copy, Check, FileText, BatteryCharging
 } from 'lucide-react';
 import DatasiteDetailFullscreen from '../components/datasites/DatasiteDetailFullscreen';
 import { useCurrentUser } from '../utils/useCurrentUser';
-import { exportB4RepairProposal, B4_REPAIR_CATEGORIES } from '../utils/b4RepairExporter';
+import { 
+  exportB4RepairProposal, 
+  exportBatteryPurchaseList,
+  BATTERY_CAPACITY_OPTIONS, 
+  BATTERY_STATUS_OPTIONS, 
+  BATTERY_POLE_OPTIONS,
+  B4_REPAIR_CATEGORIES 
+} from '../utils/b4RepairExporter';
 import { exportMobileEquipmentToExcel } from '../utils/excel';
 import b4ReferenceCatalog from '../data/b4ReferenceCatalog.json';
 
@@ -48,7 +55,7 @@ const parseDateFromDMY = (dmyStr) => {
 // Ma trận Sự Cố Nhanh 1-Chạm 30 Giây (Chuẩn hóa tự động Biểu Mẫu B4 & Danh Mục)
 const QUICK_DEFECT_TAGS = {
   'Máy phát điện': [
-    { label: '🔋 Bình yếu / Hỏng sạc', desc: 'Bình ắc quy yếu / Hỏng bộ nạp DC tự động', b4Idx: 2, deviceType: 'MPD_CO_DINH' },
+    { label: '🔋 Mua mới ắc quy đề', desc: 'Bình ắc quy yếu đề không nổ / Cần mua sắm thay thế bình ắc quy đề', isBattery: true, deviceType: 'MPD_CO_DINH' },
     { label: '💧 Xì két nước / Nóng máy', desc: 'Rò rỉ két nước giải nhiệt / Động cơ quá nhiệt', b4Idx: 4, deviceType: 'MPD_CO_DINH' },
     { label: '🕹️ Hư ATS / Không đề tự động', desc: 'Tủ ATS không tự khởi động / Không chuyển nguồn', b4Idx: 5, deviceType: 'MPD_CO_DINH' },
     { label: '⚡ Cháy AVR / Mất điện áp', desc: 'Hỏng bo điều áp AVR / Mất kích từ / Mất điện áp ra', b4Idx: 1, deviceType: 'MPD_CO_DINH' },
@@ -166,12 +173,20 @@ export default function DailyWork() {
   const [issueB4CategoryIdx, setIssueB4CategoryIdx] = useState(0);
   const [selectedIssueIds, setSelectedIssueIds] = useState([]);
   const [showB4ExportDropdown, setShowB4ExportDropdown] = useState(false);
+
+  // Battery Proposal States (Tách riêng mua ắc quy đề MPĐ khỏi gói B4)
+  const [issueProposalType, setIssueProposalType] = useState('B4_REPAIR'); // 'B4_REPAIR' | 'BATTERY_PURCHASE'
+  const [batteryCapacity, setBatteryCapacity] = useState('12V - 70Ah');
+  const [batteryVoltage, setBatteryVoltage] = useState('12V');
+  const [batteryQuantity, setBatteryQuantity] = useState(1);
+  const [batteryPoleType, setBatteryPoleType] = useState('Cọc nổi (Top Post - phổ biến)');
+  const [batteryOldStatus, setBatteryOldStatus] = useState('Bình bị phù / Sụt áp không đề được máy');
   
   // Edit issue states
   const [editingIssue, setEditingIssue] = useState(null);
   const [issueStatus, setIssueStatus] = useState('Chưa XL');
   const [issueResolvedAt, setIssueResolvedAt] = useState('');
-  const [issueB4Filter, setIssueB4Filter] = useState('ALL'); // 'ALL' | 'APPROVED' | 'NEW_PROPOSED'
+  const [issueB4Filter, setIssueB4Filter] = useState('ALL'); // 'ALL' | 'APPROVED' | 'NEW_PROPOSED' | 'BATTERY_ONLY'
 
   // Tra cứu trạm hiện tại đang nhập trong form báo hỏng để lấy thiết bị phụ trợ (MPĐ, Máy lạnh)
   const currentMatchedStation = useMemo(() => {
@@ -368,7 +383,15 @@ export default function DailyWork() {
       result = result.filter(def => {
         const issues = def.existing_issues || {};
         const isMpdOrAc = issues.category === 'Máy phát điện' || issues.category === 'Máy lạnh';
-        return isMpdOrAc && !issues.b4_approved;
+        const isBattery = issues.proposal_type === 'BATTERY_PURCHASE' || 
+          (issues.category === 'Máy phát điện' && (issues.description || '').toLowerCase().includes('ắc quy') && !issues.proposal_type);
+        return isMpdOrAc && !issues.b4_approved && !isBattery;
+      });
+    } else if (issueB4Filter === 'BATTERY_ONLY') {
+      result = result.filter(def => {
+        const issues = def.existing_issues || {};
+        return issues.proposal_type === 'BATTERY_PURCHASE' || 
+          (issues.category === 'Máy phát điện' && (issues.description || '').toLowerCase().includes('ắc quy'));
       });
     }
 
@@ -393,7 +416,17 @@ export default function DailyWork() {
     return defectsLogs.filter(d => {
       const issues = d.existing_issues || {};
       const isMpdOrAc = issues.category === 'Máy phát điện' || issues.category === 'Máy lạnh';
-      return isMpdOrAc && !issues.b4_approved;
+      const isBattery = issues.proposal_type === 'BATTERY_PURCHASE' || 
+        (issues.category === 'Máy phát điện' && (issues.description || '').toLowerCase().includes('ắc quy') && !issues.proposal_type);
+      return isMpdOrAc && !issues.b4_approved && !isBattery;
+    }).length;
+  }, [defectsLogs]);
+
+  const batteryPurchaseCount = useMemo(() => {
+    return defectsLogs.filter(d => {
+      const issues = d.existing_issues || {};
+      return issues.proposal_type === 'BATTERY_PURCHASE' || 
+        (issues.category === 'Máy phát điện' && (issues.description || '').toLowerCase().includes('ắc quy'));
     }).length;
   }, [defectsLogs]);
 
@@ -560,7 +593,25 @@ export default function DailyWork() {
 
     try {
       const isB4Applicable = issueCategory === 'Máy phát điện' || issueCategory === 'Máy lạnh';
-      const b4Fields = isB4Applicable ? {
+      const isBatteryPurchase = issueCategory === 'Máy phát điện' && issueProposalType === 'BATTERY_PURCHASE';
+
+      const mpdGen = matchingSite?.infrastructure_info?.may_phat_dien?.mpd?.[0];
+      const batteryDetails = isBatteryPurchase ? {
+        capacity: batteryCapacity,
+        voltage: batteryVoltage,
+        quantity: Number(batteryQuantity) || 1,
+        pole_type: batteryPoleType,
+        old_battery_status: batteryOldStatus,
+        generator_code: mpdGen?.ma_vat_tu || '',
+        generator_capacity: mpdGen?.cong_suat || ''
+      } : null;
+
+      const proposalFields = isBatteryPurchase ? {
+        proposal_type: 'BATTERY_PURCHASE',
+        battery_details: batteryDetails,
+        device_type: issueDeviceType
+      } : isB4Applicable ? {
+        proposal_type: 'B4_REPAIR',
         device_type: issueDeviceType,
         b4_category_idx: parseInt(issueB4CategoryIdx) || 0
       } : {};
@@ -572,7 +623,7 @@ export default function DailyWork() {
           description: issueDescription.trim(),
           status: issueStatus,
           reporter: issueReporter.trim(),
-          ...b4Fields
+          ...proposalFields
         };
         const updatedSolutions = issueStatus === "Đã XL" 
           ? { resolved_at: issueResolvedAt || new Date().toISOString().split('T')[0] }
@@ -601,7 +652,7 @@ export default function DailyWork() {
             description: issueDescription.trim(),
             status: "Chưa XL",
             reporter: issueReporter.trim(),
-            ...b4Fields
+            ...proposalFields
           },
           proposed_solutions: {}
         };
@@ -666,11 +717,18 @@ export default function DailyWork() {
     setIssueResolvedAt('');
     setIssueDeviceType('MPD_CO_DINH');
     setIssueB4CategoryIdx(0);
+    setIssueProposalType('B4_REPAIR');
+    setBatteryCapacity('12V - 70Ah');
+    setBatteryVoltage('12V');
+    setBatteryQuantity(1);
+    setBatteryPoleType('Cọc nổi (Top Post - phổ biến)');
+    setBatteryOldStatus('Bình bị phù / Sụt áp không đề được máy');
   }
 
   function handleStartEditIssue(issue) {
     const dataDetail = issue.existing_issues || {};
     const solutions = issue.proposed_solutions || {};
+    const bDetails = dataDetail.battery_details || {};
     
     setEditingIssue(issue);
     setIssueSiteId(issue.site_id || '');
@@ -682,6 +740,19 @@ export default function DailyWork() {
     setIssueResolvedAt(solutions.resolved_at || '');
     setIssueDeviceType(dataDetail.device_type || 'MPD_CO_DINH');
     setIssueB4CategoryIdx(dataDetail.b4_category_idx !== undefined ? dataDetail.b4_category_idx : 0);
+    
+    // Tách bạch proposal_type
+    const isBattery = dataDetail.proposal_type === 'BATTERY_PURCHASE' || 
+      (dataDetail.category === 'Máy phát điện' && (dataDetail.description || '').toLowerCase().includes('ắc quy'));
+    setIssueProposalType(isBattery ? 'BATTERY_PURCHASE' : (dataDetail.proposal_type || 'B4_REPAIR'));
+    
+    if (bDetails) {
+      setBatteryCapacity(bDetails.capacity || '12V - 70Ah');
+      setBatteryVoltage(bDetails.voltage || '12V');
+      setBatteryQuantity(bDetails.quantity || 1);
+      setBatteryPoleType(bDetails.pole_type || 'Cọc nổi (Top Post - phổ biến)');
+      setBatteryOldStatus(bDetails.old_battery_status || 'Bình bị phù / Sụt áp không đề được máy');
+    }
     
     setShowAddIssueModal(true);
   }
@@ -707,8 +778,16 @@ export default function DailyWork() {
       }
     }
 
+    // Tuyệt đối loại trừ đề xuất mua ắc quy đề khỏi gói B4
+    targetLogs = targetLogs.filter(l => {
+      const dataDetail = l.existing_issues || {};
+      const isBattery = dataDetail.proposal_type === 'BATTERY_PURCHASE' || 
+        (dataDetail.category === 'Máy phát điện' && (dataDetail.description || '').toLowerCase().includes('ắc quy') && !dataDetail.proposal_type);
+      return !isBattery;
+    });
+
     if (targetLogs.length === 0) {
-      alert("Không có tồn tại nào phù hợp với biểu mẫu được chọn để xuất file B4!");
+      alert("Không có tồn tại sửa chữa nào phù hợp với biểu mẫu được chọn để xuất file B4! (Hư hỏng ắc quy đề đã được chuyển sang danh mục Mua sắm riêng)");
       return;
     }
 
@@ -719,6 +798,7 @@ export default function DailyWork() {
         description: dataDetail.description || 'Hư hỏng cần sửa chữa',
         category: dataDetail.category,
         reporter: dataDetail.reporter,
+        proposal_type: 'B4_REPAIR',
         b4_category_idx: dataDetail.b4_category_idx !== undefined ? dataDetail.b4_category_idx : 0,
         device_type: dataDetail.device_type || deviceType
       };
@@ -729,6 +809,49 @@ export default function DailyWork() {
       datasites: stations,
       targetCategory: deviceType,
       customFileName: `TVT3_De_Nghi_Sua_Chua_B4_${deviceType}_${new Date().toISOString().substring(0, 10).replace(/-/g, '')}.xlsx`
+    });
+    setShowB4ExportDropdown(false);
+  }
+
+  function handleExportBatteryPurchase() {
+    let targetLogs = filteredDefectsLogs;
+    if (selectedIssueIds.length > 0) {
+      targetLogs = filteredDefectsLogs.filter(issue => selectedIssueIds.includes(issue.log_id));
+    } else {
+      targetLogs = defectsLogs.filter(l => {
+        const dataDetail = l.existing_issues || {};
+        return dataDetail.proposal_type === 'BATTERY_PURCHASE' || 
+          (dataDetail.category === 'Máy phát điện' && (dataDetail.description || '').toLowerCase().includes('ắc quy'));
+      });
+    }
+
+    if (targetLogs.length === 0) {
+      alert("Không có đề xuất mua sắm ắc quy đề nào để xuất file!");
+      return;
+    }
+
+    const exportItems = targetLogs.map(log => {
+      const dataDetail = log.existing_issues || {};
+      return {
+        site_id: log.site_id,
+        date: log.date,
+        description: dataDetail.description || 'Ắc quy đề MPĐ hư hỏng cần mua sắm thay thế',
+        proposal_type: 'BATTERY_PURCHASE',
+        reporter: dataDetail.reporter,
+        battery_details: dataDetail.battery_details || {
+          capacity: '12V - 70Ah',
+          voltage: '12V',
+          quantity: 1,
+          pole_type: 'Cọc thuận (R)',
+          old_battery_status: 'Hỏng đề không nổ'
+        }
+      };
+    });
+
+    exportBatteryPurchaseList({
+      items: exportItems,
+      datasites: stations,
+      customFileName: `TVT3_Bang_Ke_De_Xuat_Mua_Ac_Quy_De_MPD_${new Date().toISOString().substring(0, 10).replace(/-/g, '')}.xlsx`
     });
     setShowB4ExportDropdown(false);
   }
@@ -1099,28 +1222,42 @@ export default function DailyWork() {
                 </button>
 
                 {showB4ExportDropdown && (
-                  <div className="absolute right-0 mt-1.5 w-64 bg-white border border-slate-200 rounded-xl shadow-xl z-50 p-2 space-y-1 text-left">
+                  <div className="absolute right-0 mt-1.5 w-72 bg-white border border-slate-200 rounded-xl shadow-xl z-50 p-2 space-y-1 text-left">
                     <div className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100">
-                      Chọn loại biểu mẫu B4:
+                      Sửa chữa MPĐ / ĐHKK Ban 4:
                     </div>
                     <button
                       onClick={() => handleExportB4Repair('MPD_CO_DINH')}
                       className="w-full text-left px-3 py-2 text-xs font-bold text-slate-700 hover:bg-emerald-50 hover:text-emerald-800 rounded-lg flex items-center gap-2 cursor-pointer"
                     >
-                      ⚡ 1. MPĐ Cố Định (B4)
+                      ⚡ 1. MPĐ Cố Định (B4 Ban 4)
                     </button>
                     <button
                       onClick={() => handleExportB4Repair('MPD_DI_DONG')}
                       className="w-full text-left px-3 py-2 text-xs font-bold text-slate-700 hover:bg-amber-50 hover:text-amber-800 rounded-lg flex items-center gap-2 cursor-pointer"
                     >
-                      🚗 2. MPĐ Di Động / Nổ Xăng (B4)
+                      🚗 2. MPĐ Di Động / Nổ Xăng (B4 Ban 4)
                     </button>
                     <button
                       onClick={() => handleExportB4Repair('DHKK')}
                       className="w-full text-left px-3 py-2 text-xs font-bold text-slate-700 hover:bg-cyan-50 hover:text-cyan-800 rounded-lg flex items-center gap-2 cursor-pointer"
                     >
-                      ❄️ 3. Điều Hòa Thông Gió (B4)
+                      ❄️ 3. Điều Hòa Thông Gió (B4 Ban 4)
                     </button>
+
+                    <div className="border-t border-slate-100 my-1 pt-1">
+                      <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-teal-600">
+                        Vật tư tiêu hao nội bộ (Tách riêng):
+                      </div>
+                      <button
+                        onClick={handleExportBatteryPurchase}
+                        className="w-full text-left px-3 py-2 text-xs font-bold text-teal-900 bg-teal-50 hover:bg-teal-100/90 rounded-lg flex items-center gap-2 cursor-pointer border border-teal-200/80 transition-all"
+                        title="Xuất danh sách ắc quy đề MPĐ hư hỏng cần mua sắm thay thế (không đưa vào Ban 4)"
+                      >
+                        <BatteryCharging size={16} className="text-teal-600 shrink-0" />
+                        <span>🔋 4. Bảng kê Mua sắm Ắc quy đề MPĐ</span>
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -1302,8 +1439,21 @@ export default function DailyWork() {
                   : 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100'
               }`}
             >
-              <span>🔥 Phát sinh cần đề xuất</span>
+              <span>🔥 B4 Cần đề xuất</span>
               <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold ${issueB4Filter === 'NEW_PROPOSED' ? 'bg-white/25 text-white' : 'bg-amber-200 text-amber-900'}`}>{newProposedB4Count}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setIssueB4Filter('BATTERY_ONLY')}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                issueB4Filter === 'BATTERY_ONLY'
+                  ? 'bg-teal-600 text-white shadow-xs'
+                  : 'bg-teal-50 text-teal-800 border border-teal-200 hover:bg-teal-100'
+              }`}
+              title="Lọc riêng danh sách tồn tại hư hỏng ắc quy đề MPĐ để mua sắm vật tư"
+            >
+              <span>🔋 Đề xuất Mua Ắc quy riêng</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold ${issueB4Filter === 'BATTERY_ONLY' ? 'bg-white/25 text-white' : 'bg-teal-200 text-teal-900'}`}>{batteryPurchaseCount}</span>
             </button>
           </div>
         )}
@@ -1644,22 +1794,34 @@ export default function DailyWork() {
                                   </td>
                                   <td className="px-4 py-3 whitespace-nowrap font-semibold text-slate-600">
                                     <div className="flex flex-col gap-1">
-                                      <div className="flex items-center gap-1.5">
+                                      <div className="flex items-center gap-1.5 flex-wrap">
                                         <span>{dataDetail.category || '—'}</span>
-                                        {dataDetail.device_type === 'MPD_CO_DINH' && (
-                                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800" title="Đã cấu hình B4 MPĐ Cố định">
-                                            ⚡ B4 MPĐ
+                                        {dataDetail.proposal_type === 'BATTERY_PURCHASE' ? (
+                                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-teal-100 text-teal-800 border border-teal-200" title="Đề xuất Mua sắm ắc quy đề riêng (không đưa vào Ban 4)">
+                                            🔋 Mua ắc quy {dataDetail.battery_details?.capacity || ''}
                                           </span>
-                                        )}
-                                        {dataDetail.device_type === 'DHKK' && (
-                                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-cyan-100 text-cyan-800" title="Đã cấu hình B4 ĐHKK">
-                                            ❄️ B4 ĐHKK
-                                          </span>
+                                        ) : (
+                                          <>
+                                            {dataDetail.device_type === 'MPD_CO_DINH' && (
+                                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800" title="Đã cấu hình B4 MPĐ Cố định">
+                                                ⚡ B4 MPĐ
+                                              </span>
+                                            )}
+                                            {dataDetail.device_type === 'DHKK' && (
+                                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-cyan-100 text-cyan-800" title="Đã cấu hình B4 ĐHKK">
+                                                ❄️ B4 ĐHKK
+                                              </span>
+                                            )}
+                                          </>
                                         )}
                                       </div>
                                       {dataDetail.b4_approved ? (
                                         <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 w-fit" title={`Đã được TCT/Đài phê duyệt chi phí sửa chữa (STT #${dataDetail.b4_stt || ''})`}>
                                           ✅ Đã duyệt B4 #{dataDetail.b4_stt || ''}
+                                        </span>
+                                      ) : dataDetail.proposal_type === 'BATTERY_PURCHASE' ? (
+                                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-teal-50 text-teal-700 border border-teal-200 w-fit" title="Vật tư tiêu hao chờ duyệt mua riêng nội bộ tỉnh">
+                                          🛒 Chờ duyệt mua nội bộ
                                         </span>
                                       ) : (dataDetail.category === 'Máy phát điện' || dataDetail.category === 'Máy lạnh') ? (
                                         <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 w-fit" title="Tồn tại phát sinh mới, chờ lập danh sách đề xuất đợt tiếp theo">
@@ -1770,8 +1932,41 @@ export default function DailyWork() {
                                 </div>
 
                                 <div className="space-y-2">
-                                  <div className="text-[13px] text-slate-400 uppercase tracking-wider font-bold">
-                                    {dataDetail.category || 'Chưa phân loại'}
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="text-[13px] text-slate-500 uppercase tracking-wider font-bold">
+                                      {dataDetail.category || 'Chưa phân loại'}
+                                    </span>
+                                    {dataDetail.proposal_type === 'BATTERY_PURCHASE' ? (
+                                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-teal-100 text-teal-800 border border-teal-200">
+                                        🔋 Mua ắc quy {dataDetail.battery_details?.capacity || ''}
+                                      </span>
+                                    ) : (
+                                      <>
+                                        {dataDetail.device_type === 'MPD_CO_DINH' && (
+                                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">
+                                            ⚡ B4 MPĐ
+                                          </span>
+                                        )}
+                                        {dataDetail.device_type === 'DHKK' && (
+                                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-cyan-100 text-cyan-800">
+                                            ❄️ B4 ĐHKK
+                                          </span>
+                                        )}
+                                      </>
+                                    )}
+                                    {dataDetail.b4_approved ? (
+                                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                        ✅ Đã duyệt B4 #{dataDetail.b4_stt || ''}
+                                      </span>
+                                    ) : dataDetail.proposal_type === 'BATTERY_PURCHASE' ? (
+                                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-teal-50 text-teal-700 border border-teal-200">
+                                        🛒 Chờ duyệt mua
+                                      </span>
+                                    ) : (dataDetail.category === 'Máy phát điện' || dataDetail.category === 'Máy lạnh') ? (
+                                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
+                                        ⏳ Chờ đề xuất B4
+                                      </span>
+                                    ) : null}
                                   </div>
                                   <p className="text-sm font-semibold text-slate-800 leading-snug line-clamp-3" title={dataDetail.description}>
                                     {dataDetail.description}
@@ -2590,6 +2785,11 @@ export default function DailyWork() {
                           key={tIdx}
                           type="button"
                           onClick={() => {
+                            if (tag.isBattery) {
+                              setIssueProposalType('BATTERY_PURCHASE');
+                            } else if (issueCategory === 'Máy phát điện') {
+                              setIssueProposalType('B4_REPAIR');
+                            }
                             if (tag.deviceType) setIssueDeviceType(tag.deviceType);
                             if (tag.b4Idx !== null && tag.b4Idx !== undefined) setIssueB4CategoryIdx(tag.b4Idx);
                             setIssueDescription(prev => {
@@ -2607,8 +2807,155 @@ export default function DailyWork() {
                   </div>
                 )}
 
-                {/* B4 Repair Proposal Category Selector (CHỈ HIỆN KHI LÀ MPĐ HOẶC MÁY LẠNH!) */}
-                {isB4Applicable && (
+                {/* Khối chọn Loại hình Đề xuất cho MPĐ (Phân luồng Ắc quy vs Sửa chữa Ban 4) */}
+                {issueCategory === 'Máy phát điện' && (
+                  <div className="p-3 bg-slate-50/90 border border-slate-200 rounded-xl space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                        <Zap size={13} className="text-amber-500" />
+                        Phân luồng đề xuất Máy phát điện <span className="text-red-500">*</span>
+                      </label>
+                      <span className="text-[10px] text-slate-500 font-semibold">Tách riêng mua sắm vật tư</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      {/* Option 1: B4 Repair */}
+                      <label 
+                        className={`p-2.5 rounded-lg border text-left cursor-pointer transition-all flex items-start gap-2.5 ${
+                          issueProposalType === 'B4_REPAIR'
+                            ? 'bg-amber-50/90 border-amber-400 ring-2 ring-amber-400/30 shadow-xs'
+                            : 'bg-white border-slate-200 hover:border-amber-200'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="mpdProposalType"
+                          value="B4_REPAIR"
+                          checked={issueProposalType === 'B4_REPAIR'}
+                          onChange={() => setIssueProposalType('B4_REPAIR')}
+                          className="mt-0.5 text-amber-600 focus:ring-amber-500 cursor-pointer"
+                        />
+                        <div className="flex-1">
+                          <div className="text-xs font-bold text-slate-800 flex items-center gap-1">
+                            🛠️ Sửa chữa MPĐ (Gói Ban 4)
+                          </div>
+                          <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">
+                            Đại tu máy nổ, két nước, củ đề, củ phát, ATS, AVR...
+                          </p>
+                        </div>
+                      </label>
+
+                      {/* Option 2: Battery Purchase */}
+                      <label 
+                        className={`p-2.5 rounded-lg border text-left cursor-pointer transition-all flex items-start gap-2.5 ${
+                          issueProposalType === 'BATTERY_PURCHASE'
+                            ? 'bg-teal-50/90 border-teal-400 ring-2 ring-teal-400/30 shadow-xs'
+                            : 'bg-white border-slate-200 hover:border-teal-200'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="mpdProposalType"
+                          value="BATTERY_PURCHASE"
+                          checked={issueProposalType === 'BATTERY_PURCHASE'}
+                          onChange={() => {
+                            setIssueProposalType('BATTERY_PURCHASE');
+                            if (!issueDescription || issueDescription.trim() === '') {
+                              setIssueDescription('Bình ắc quy đề yếu đề không nổ / Cần mua sắm thay thế bình ắc quy đề');
+                            }
+                          }}
+                          className="mt-0.5 text-teal-600 focus:ring-teal-500 cursor-pointer"
+                        />
+                        <div className="flex-1">
+                          <div className="text-xs font-bold text-teal-900 flex items-center gap-1">
+                            🔋 Mua mới Ắc quy đề (Mua riêng)
+                          </div>
+                          <p className="text-[11px] text-teal-700/80 mt-0.5 leading-snug">
+                            Vật tư tiêu hao nội bộ duyệt mua riêng tỉnh, không đưa vào Ban 4.
+                          </p>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+                )}
+
+                {/* Form thông số chuyên dụng khi Mua mới Ắc quy đề */}
+                {issueCategory === 'Máy phát điện' && issueProposalType === 'BATTERY_PURCHASE' && (
+                  <div className="p-3.5 bg-teal-50/80 border border-teal-200 rounded-xl space-y-3 animate-in fade-in duration-200">
+                    <div className="text-xs font-bold text-teal-900 uppercase tracking-wider flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
+                        <BatteryCharging className="h-4 w-4 text-teal-600" />
+                        Thông số Ắc quy đề xuất Mua mới (Chuẩn theo chủng loại bình)
+                      </span>
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-teal-200 text-teal-900">
+                        Vật tư tiêu hao
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-bold text-teal-800 mb-1">Dung lượng bình (Ah)</label>
+                        <select
+                          className="w-full px-2.5 py-1.5 border border-teal-200 rounded-lg text-xs font-bold bg-white text-teal-950 focus:ring-1 focus:ring-teal-500"
+                          value={batteryCapacity}
+                          onChange={(e) => setBatteryCapacity(e.target.value)}
+                        >
+                          {BATTERY_CAPACITY_OPTIONS.map(opt => (
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-teal-800 mb-1">Số lượng bình (Cái)</label>
+                        <input
+                          type="number"
+                          min="1"
+                          max="10"
+                          className="w-full px-2.5 py-1.5 border border-teal-200 rounded-lg text-xs font-bold bg-white text-teal-950 focus:ring-1 focus:ring-teal-500"
+                          value={batteryQuantity}
+                          onChange={(e) => setBatteryQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-teal-800 mb-1">Kiểu cọc bình</label>
+                        <select
+                          className="w-full px-2.5 py-1.5 border border-teal-200 rounded-lg text-xs font-medium bg-white text-slate-800 focus:ring-1 focus:ring-teal-500"
+                          value={batteryPoleType}
+                          onChange={(e) => setBatteryPoleType(e.target.value)}
+                        >
+                          {BATTERY_POLE_OPTIONS.map(opt => (
+                            <option key={opt} value={opt}>{opt}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-teal-800 mb-1">Hiện trạng bình cũ tại trạm</label>
+                      <select
+                        className="w-full px-2.5 py-1.5 border border-teal-200 rounded-lg text-xs font-medium bg-white text-slate-800 focus:ring-1 focus:ring-teal-500"
+                        value={batteryOldStatus}
+                        onChange={(e) => setBatteryOldStatus(e.target.value)}
+                      >
+                        {BATTERY_STATUS_OPTIONS.map(opt => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="p-2.5 bg-teal-100/60 border border-teal-200 rounded-lg text-[11px] text-teal-900 flex items-start gap-2">
+                      <span className="shrink-0 text-sm">💡</span>
+                      <p className="leading-relaxed">
+                        Bản ghi này sẽ tự động được đưa vào <strong>Bảng kê Mua sắm Ắc quy đề MPĐ</strong> riêng biệt của Tỉnh, và <strong>tuyệt đối không bị lẫn vào file Biểu mẫu Ban 4</strong>.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* B4 Repair Proposal Category Selector (CHỈ HIỆN KHI LÀ MÁY LẠNH HOẶC MPĐ THUỘC GÓI SỬA CHỮA BAN 4!) */}
+                {isB4Applicable && (issueCategory !== 'Máy phát điện' || issueProposalType === 'B4_REPAIR') && (
                   <div className="p-3.5 bg-amber-50/80 border border-amber-200 rounded-xl space-y-3 animate-in fade-in duration-200">
                     <div className="text-xs font-bold text-amber-900 uppercase tracking-wider flex items-center justify-between">
                       <span className="flex items-center gap-1.5">
