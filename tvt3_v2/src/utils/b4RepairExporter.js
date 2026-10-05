@@ -92,6 +92,24 @@ export const BATTERY_POLE_OPTIONS = [
   'Cọc bắt bulong / ốc vít'
 ];
 
+// Hàm nhận diện chuẩn xác đề xuất mua ắc quy đề MPĐ (bao gồm cả từ khóa accu, acquy, bình đề...)
+export function isBatteryProposal(item) {
+  if (!item) return false;
+  const issues = item.existing_issues || item;
+  if (issues.proposal_type === 'BATTERY_PURCHASE') return true;
+  if (issues.proposal_type === 'B4_REPAIR') return false;
+  const category = issues.category || '';
+  if (category && category !== 'Máy phát điện') return false;
+  const desc = String(issues.description || '').toLowerCase();
+  return desc.includes('ắc quy') || 
+         desc.includes('accu') || 
+         desc.includes('acquy') || 
+         desc.includes('ắc qui') || 
+         desc.includes('bình đề') || 
+         desc.includes('binh de') ||
+         desc.includes('bình ắc');
+}
+
 /**
  * Xuất file Excel Biểu Mẫu B4 Đề Nghị Sửa Chữa (Chuẩn Mobifone).
  * @param {Array} items Danh sách tồn tại / sự cố cần sửa chữa
@@ -103,7 +121,7 @@ export async function exportB4RepairProposal({ items = [], datasites = [], targe
   const XLSX = await import('xlsx');
   
   // Tuyệt đối loại trừ các mục Đề xuất mua ắc quy ra khỏi Biểu mẫu Sửa chữa Ban 4
-  const validItems = items.filter(it => it.proposal_type !== 'BATTERY_PURCHASE');
+  const validItems = items.filter(it => !isBatteryProposal(it));
   
   if (!validItems || validItems.length === 0) {
     alert('Không có hạng mục sửa chữa nào phù hợp để xuất Biểu mẫu Ban 4 (Các đề xuất mua ắc quy đã được lọc riêng ra bảng mua sắm vật tư)!');
@@ -150,7 +168,7 @@ export async function exportB4RepairProposal({ items = [], datasites = [], targe
 
     const rows = [headerRow1, headerRow2];
 
-    items.forEach((item, idx) => {
+    validItems.forEach((item, idx) => {
       const rawSiteId = String(item.site_id || item.site_code || item.tram || '').trim().toUpperCase();
       const erpMap = STATION_ERP_MAPPINGS[rawSiteId];
       const displaySiteId = erpMap ? erpMap.book_site : rawSiteId;
@@ -280,7 +298,7 @@ export async function exportB4RepairProposal({ items = [], datasites = [], targe
 
     const rows = [headerRow1, headerRow2];
 
-    items.forEach((item, idx) => {
+    validItems.forEach((item, idx) => {
       const rawSiteId = String(item.site_id || item.site_code || item.tram || '').trim().toUpperCase();
       const siteObj = siteMap[rawSiteId] || {};
       const infra = siteObj.infrastructure_info || {};

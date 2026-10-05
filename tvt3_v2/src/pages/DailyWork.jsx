@@ -10,6 +10,7 @@ import { useCurrentUser } from '../utils/useCurrentUser';
 import { 
   exportB4RepairProposal, 
   exportBatteryPurchaseList,
+  isBatteryProposal,
   BATTERY_CAPACITY_OPTIONS, 
   BATTERY_STATUS_OPTIONS, 
   BATTERY_POLE_OPTIONS,
@@ -383,16 +384,10 @@ export default function DailyWork() {
       result = result.filter(def => {
         const issues = def.existing_issues || {};
         const isMpdOrAc = issues.category === 'Máy phát điện' || issues.category === 'Máy lạnh';
-        const isBattery = issues.proposal_type === 'BATTERY_PURCHASE' || 
-          (issues.category === 'Máy phát điện' && (issues.description || '').toLowerCase().includes('ắc quy') && !issues.proposal_type);
-        return isMpdOrAc && !issues.b4_approved && !isBattery;
+        return isMpdOrAc && !issues.b4_approved && !isBatteryProposal(def);
       });
     } else if (issueB4Filter === 'BATTERY_ONLY') {
-      result = result.filter(def => {
-        const issues = def.existing_issues || {};
-        return issues.proposal_type === 'BATTERY_PURCHASE' || 
-          (issues.category === 'Máy phát điện' && (issues.description || '').toLowerCase().includes('ắc quy'));
-      });
+      result = result.filter(def => isBatteryProposal(def));
     }
 
     if (!searchQuery.trim()) return result;
@@ -416,18 +411,12 @@ export default function DailyWork() {
     return defectsLogs.filter(d => {
       const issues = d.existing_issues || {};
       const isMpdOrAc = issues.category === 'Máy phát điện' || issues.category === 'Máy lạnh';
-      const isBattery = issues.proposal_type === 'BATTERY_PURCHASE' || 
-        (issues.category === 'Máy phát điện' && (issues.description || '').toLowerCase().includes('ắc quy') && !issues.proposal_type);
-      return isMpdOrAc && !issues.b4_approved && !isBattery;
+      return isMpdOrAc && !issues.b4_approved && !isBatteryProposal(d);
     }).length;
   }, [defectsLogs]);
 
   const batteryPurchaseCount = useMemo(() => {
-    return defectsLogs.filter(d => {
-      const issues = d.existing_issues || {};
-      return issues.proposal_type === 'BATTERY_PURCHASE' || 
-        (issues.category === 'Máy phát điện' && (issues.description || '').toLowerCase().includes('ắc quy'));
-    }).length;
+    return defectsLogs.filter(d => isBatteryProposal(d)).length;
   }, [defectsLogs]);
 
   // Autocomplete site suggestions for Daily Log form
@@ -779,12 +768,7 @@ export default function DailyWork() {
     }
 
     // Tuyệt đối loại trừ đề xuất mua ắc quy đề khỏi gói B4
-    targetLogs = targetLogs.filter(l => {
-      const dataDetail = l.existing_issues || {};
-      const isBattery = dataDetail.proposal_type === 'BATTERY_PURCHASE' || 
-        (dataDetail.category === 'Máy phát điện' && (dataDetail.description || '').toLowerCase().includes('ắc quy') && !dataDetail.proposal_type);
-      return !isBattery;
-    });
+    targetLogs = targetLogs.filter(l => !isBatteryProposal(l));
 
     if (targetLogs.length === 0) {
       alert("Không có tồn tại sửa chữa nào phù hợp với biểu mẫu được chọn để xuất file B4! (Hư hỏng ắc quy đề đã được chuyển sang danh mục Mua sắm riêng)");
@@ -818,11 +802,7 @@ export default function DailyWork() {
     if (selectedIssueIds.length > 0) {
       targetLogs = filteredDefectsLogs.filter(issue => selectedIssueIds.includes(issue.log_id));
     } else {
-      targetLogs = defectsLogs.filter(l => {
-        const dataDetail = l.existing_issues || {};
-        return dataDetail.proposal_type === 'BATTERY_PURCHASE' || 
-          (dataDetail.category === 'Máy phát điện' && (dataDetail.description || '').toLowerCase().includes('ắc quy'));
-      });
+      targetLogs = defectsLogs.filter(l => isBatteryProposal(l));
     }
 
     if (targetLogs.length === 0) {
