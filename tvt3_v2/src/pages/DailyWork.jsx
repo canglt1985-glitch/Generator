@@ -2195,12 +2195,12 @@ export default function DailyWork() {
                     <div className="text-center py-20 text-slate-400">Không tìm thấy tồn tại nào.</div>
                   ) : (
                     <>
-                      {/* Desktop View Table */}
-                      <div className="hidden lg:block w-full overflow-x-auto border border-slate-100 rounded-xl">
-                        <table className="min-w-full divide-y divide-gray-200 text-left">
-                          <thead className="bg-slate-50 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      {/* Desktop View Table: 100% Fit-to-Screen, Zero Horizontal Scroll */}
+                      <div className="hidden lg:block w-full overflow-hidden border border-slate-200/80 rounded-xl bg-white shadow-2xs">
+                        <table className="w-full text-left border-collapse table-fixed">
+                          <thead className="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider select-none">
                             <tr>
-                              <th scope="col" className="px-3 py-3 w-12 text-center">
+                              <th scope="col" className="w-12 px-3 py-3 text-center">
                                 <input 
                                   type="checkbox"
                                   className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer h-4 w-4"
@@ -2214,19 +2214,15 @@ export default function DailyWork() {
                                   }}
                                 />
                               </th>
-                              <th scope="col" className="px-3 py-3 whitespace-nowrap">Ngày</th>
-                              <th scope="col" className="px-3 py-3 whitespace-nowrap">Site ID cũ</th>
-                              <th scope="col" className="px-3 py-3 whitespace-nowrap">Site ID mới</th>
-                              <th scope="col" className="px-4 py-3 whitespace-nowrap">Hạng mục</th>
-                              <th scope="col" className="px-4 py-3 whitespace-nowrap text-center">Đợt B4 / Phân loại</th>
+                              <th scope="col" className="w-28 px-3 py-3">Trạm</th>
+                              <th scope="col" className="w-44 px-3 py-3">Chuyên môn / Đợt</th>
                               <th scope="col" className="px-4 py-3">Mô tả tồn tại</th>
-                              <th scope="col" className="px-3 py-3 whitespace-nowrap">Người báo</th>
-                              <th scope="col" className="px-3 py-3 whitespace-nowrap text-center">Trạng thái</th>
-                              <th scope="col" className="px-3 py-3 whitespace-nowrap">Ngày xong</th>
-                              {user && <th scope="col" className="px-3 py-3 text-right whitespace-nowrap">Hành động</th>}
+                              <th scope="col" className="w-36 px-3 py-3">Thời gian</th>
+                              <th scope="col" className="w-24 px-3 py-3 text-center">Trạng thái</th>
+                              {user && <th scope="col" className="w-20 px-3 py-3 text-right">Thao tác</th>}
                             </tr>
                           </thead>
-                          <tbody className="bg-white divide-y divide-gray-100 text-[13px] text-gray-700">
+                          <tbody className="divide-y divide-slate-100 text-[13px] text-slate-700">
                             {filteredDefectsLogs.map((issue) => {
                               const dataDetail = issue.existing_issues || {};
                               const solutions = issue.proposed_solutions || {};
@@ -2240,9 +2236,9 @@ export default function DailyWork() {
                               return (
                                 <tr 
                                   key={issue.log_id} 
-                                  className={`hover:bg-blue-50/30 transition-colors ${isSelected ? 'bg-blue-50/60' : isResolved ? 'bg-emerald-50/10' : ''}`}
+                                  className={`hover:bg-blue-50/40 transition-colors ${isSelected ? 'bg-blue-50/60' : isResolved ? 'bg-slate-50/40 opacity-75' : ''}`}
                                 >
-                                  <td className="px-3 py-2.5 text-center">
+                                  <td className="w-12 px-3 py-2.5 text-center align-top pt-3">
                                     <div className="flex items-center justify-center gap-1">
                                       <input 
                                         type="checkbox"
@@ -2263,109 +2259,133 @@ export default function DailyWork() {
                                       )}
                                     </div>
                                   </td>
-                                  <td className="px-3 py-2.5 whitespace-nowrap text-slate-500 font-mono text-xs">{issue.date}</td>
-                                  <td className="px-3 py-2.5 whitespace-nowrap font-bold text-slate-900">{siteIds.oldId}</td>
-                                  <td className="px-3 py-2.5 whitespace-nowrap">
+
+                                  {/* CỘT TRẠM: HIỂN THỊ MÃ CŨ QUEN THUỘC (KHÔNG BADGE ĐỎ) */}
+                                  <td className="w-28 px-3 py-2.5 align-top pt-3">
                                     <button
+                                      type="button"
                                       onClick={() => handleOpenSiteDetail(issue.site_id, 'infrastructure')}
-                                      className="bg-red-50 hover:bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded border border-red-100 text-xs hover:text-red-800 transition-colors cursor-pointer flex items-center gap-1"
-                                      title="Xem và cập nhật thiết bị phụ trợ trạm này"
+                                      className="font-bold text-slate-900 hover:text-blue-600 transition-colors cursor-pointer text-left text-sm flex items-center gap-1 group"
+                                      title="Xem chi tiết hạ tầng trạm"
                                     >
-                                      {siteIds.newId}
-                                      <ExternalLink size={10} className="opacity-60" />
+                                      <span>{siteIds.oldId || issue.site_id}</span>
+                                      <ExternalLink size={11} className="opacity-0 group-hover:opacity-70 text-blue-500 transition-opacity shrink-0" />
                                     </button>
                                   </td>
 
-                                  {/* HẠNG MỤC: GỌN GÀNG 1 DÒNG DUY NHẤT, KHÔNG CÓ BADGE RÁC */}
-                                  <td className="px-4 py-2.5 whitespace-nowrap font-medium text-slate-700">
-                                    <div className="flex items-center gap-1.5">
-                                      {dataDetail.category === 'Máy phát điện' && <span className="text-amber-500">⚡</span>}
-                                      {dataDetail.category === 'Máy lạnh' && <span className="text-cyan-500">❄️</span>}
-                                      {dataDetail.category === 'Cột anten' && <span className="text-indigo-500">🗼</span>}
-                                      {dataDetail.category === 'Nhà trạm' && <span className="text-emerald-500">🏠</span>}
-                                      {dataDetail.category === 'Hệ thống điện' && <span className="text-yellow-500">🔌</span>}
-                                      {dataDetail.category === 'Hệ thống tiếp đất' && <span className="text-green-500">⚡</span>}
-                                      {dataDetail.category === 'Hệ thống PCCC' && <span className="text-red-500">🧯</span>}
-                                      <span>{dataDetail.category || '—'}</span>
+                                  {/* CHUYÊN MÔN & ĐỢT B4: TỐI GIẢN KHÔNG BADGE KHUNG HỘP */}
+                                  <td className="w-44 px-3 py-2.5 align-top pt-3">
+                                    <div className="space-y-0.5">
+                                      <div className="font-semibold text-slate-800 text-xs flex items-center gap-1">
+                                        {dataDetail.category === 'Máy phát điện' && <span className="text-amber-500 text-xs">⚡</span>}
+                                        {dataDetail.category === 'Máy lạnh' && <span className="text-cyan-500 text-xs">❄️</span>}
+                                        {dataDetail.category === 'Cột anten' && <span className="text-indigo-500 text-xs">🗼</span>}
+                                        {dataDetail.category === 'Nhà trạm' && <span className="text-emerald-500 text-xs">🏠</span>}
+                                        {dataDetail.category === 'Hệ thống điện' && <span className="text-yellow-500 text-xs">🔌</span>}
+                                        {dataDetail.category === 'Hệ thống tiếp đất' && <span className="text-green-500 text-xs">⚡</span>}
+                                        {dataDetail.category === 'Hệ thống PCCC' && <span className="text-red-500 text-xs">🧯</span>}
+                                        <span className="truncate">{dataDetail.category || 'Khác'}</span>
+                                      </div>
+
+                                      <div className="text-[11px]">
+                                        {isBattery ? (
+                                          <span className="font-semibold text-teal-700 flex items-center gap-1">
+                                            🔋 Mua ắc quy {dataDetail.battery_details?.capacity ? `(${dataDetail.battery_details.capacity})` : ''}
+                                          </span>
+                                        ) : isB4Cat ? (
+                                          dataDetail.b4_approved ? (
+                                            <span className="font-semibold text-emerald-700 flex items-center gap-1" title="Ban 4 đã phê duyệt">
+                                              <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
+                                              <span>{dataDetail.b4_batch || 'Đợt 1'} {dataDetail.b4_order ? `#${dataDetail.b4_order}` : ''}</span>
+                                            </span>
+                                          ) : dataDetail.b4_batch ? (
+                                            <span className="font-semibold text-blue-600 flex items-center gap-1" title="Đang trình Ban 4">
+                                              <span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></span>
+                                              <span>{dataDetail.b4_batch} {dataDetail.b4_order ? `#${dataDetail.b4_order}` : ''}</span>
+                                            </span>
+                                          ) : (
+                                            <span className="text-slate-400 font-mono">—</span>
+                                          )
+                                        ) : (
+                                          <span className="font-medium text-amber-700 flex items-center gap-1">
+                                            🏗️ Địa bàn
+                                          </span>
+                                        )}
+                                      </div>
                                     </div>
                                   </td>
 
-                                  {/* CỘT PHÂN ĐỢT B4 / PHÂN LOẠI RIÊNG BIỆT */}
-                                  <td className="px-4 py-2.5 whitespace-nowrap text-center">
-                                    {isBattery ? (
-                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-teal-50 text-teal-700 border border-teal-200" title="Vật tư tiêu hao - Mua sắm riêng">
-                                        🔋 Mua ắc quy {dataDetail.battery_details?.capacity ? `(${dataDetail.battery_details.capacity})` : ''}
-                                      </span>
-                                    ) : isB4Cat ? (
-                                      dataDetail.b4_approved ? (
-                                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-300" title={`Ban 4 đã phê duyệt chi phí sửa chữa ${dataDetail.b4_batch || 'Đợt 1'}`}>
-                                          🟢 {dataDetail.b4_batch || 'Đợt 1'} {dataDetail.b4_order ? `#${dataDetail.b4_order}` : ''} (Đã duyệt)
-                                        </span>
-                                      ) : dataDetail.b4_batch ? (
-                                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-xs font-bold bg-blue-50 text-blue-800 border border-blue-200" title="Đang đề xuất Ban 4 thẩm định phê duyệt">
-                                          🔵 {dataDetail.b4_batch} {dataDetail.b4_order ? `#${dataDetail.b4_order}` : ''} (Chờ duyệt)
-                                        </span>
-                                      ) : (
-                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium text-slate-400 bg-slate-50 border border-slate-200">
-                                          ⚪ Chưa phân đợt
-                                        </span>
-                                      )
+                                  {/* MÔ TẢ TỒN TẠI: TỰ ĐỘNG CO GIÃN 40-50% MÀN HÌNH */}
+                                  <td className="px-4 py-2.5 align-top pt-3" title={dataDetail.description}>
+                                    <div className="text-xs text-slate-800 font-normal leading-relaxed break-words line-clamp-3">
+                                      {dataDetail.description || '—'}
+                                    </div>
+                                  </td>
+
+                                  {/* THỜI GIAN: NGÀY BÁO • NGƯỜI BÁO & NGÀY XONG */}
+                                  <td className="w-36 px-3 py-2.5 align-top pt-3">
+                                    <div className="space-y-0.5 text-xs text-slate-600">
+                                      <div className="font-mono text-[11px] text-slate-700">
+                                        {issue.date}
+                                      </div>
+                                      <div className="text-[11px] text-slate-500 truncate" title={dataDetail.reporter}>
+                                        {dataDetail.reporter || '—'}
+                                      </div>
+                                      {isResolved && solutions.resolved_at && (
+                                        <div className="text-[10px] font-mono text-emerald-600 font-semibold">
+                                          ✓ Xong: {solutions.resolved_at}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </td>
+
+                                  {/* TRẠNG THÁI: TỐI GIẢN NÚT BẤM CHỮ VÀ CHẤM MÀU */}
+                                  <td className="w-24 px-3 py-2.5 text-center align-top pt-3">
+                                    {user ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleToggleIssueStatus(issue)}
+                                        className={`text-xs font-bold px-2 py-1 rounded-lg cursor-pointer inline-flex items-center gap-1.5 transition-colors ${
+                                          isResolved 
+                                            ? 'text-emerald-700 hover:bg-emerald-50' 
+                                            : 'text-amber-700 hover:bg-amber-50'
+                                        }`}
+                                        title="Bấm để đổi trạng thái"
+                                      >
+                                        <span className={`w-2 h-2 rounded-full shrink-0 ${isResolved ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
+                                        <span>{isResolved ? 'Đã XL' : 'Chưa XL'}</span>
+                                      </button>
                                     ) : (
-                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium text-amber-800 bg-amber-50 border border-amber-200" title="Tồn tại hạ tầng xử lý tại địa bàn">
-                                        🏗️ Hạ tầng địa bàn
+                                      <span
+                                        className={`text-xs font-bold inline-flex items-center gap-1.5 ${
+                                          isResolved ? 'text-emerald-700' : 'text-amber-700'
+                                        }`}
+                                      >
+                                        <span className={`w-2 h-2 rounded-full shrink-0 ${isResolved ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
+                                        <span>{isResolved ? 'Đã XL' : 'Chưa XL'}</span>
                                       </span>
                                     )}
                                   </td>
 
-                                  <td className="px-4 py-2.5 max-w-md truncate font-medium text-slate-800" title={dataDetail.description}>
-                                    {dataDetail.description}
-                                  </td>
-                                  <td className="px-3 py-2.5 whitespace-nowrap text-slate-500 text-xs">{dataDetail.reporter || '—'}</td>
-                                  <td className="px-3 py-2.5 whitespace-nowrap text-center">
-                                    {user ? (
-                                      <button
-                                        onClick={() => handleToggleIssueStatus(issue)}
-                                        className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full cursor-pointer inline-flex items-center gap-1 transition-all ${
-                                          isResolved 
-                                            ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' 
-                                            : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
-                                        }`}
-                                      >
-                                        {isResolved ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
-                                        {dataDetail.status || 'Chưa XL'}
-                                      </button>
-                                    ) : (
-                                      <span
-                                        className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full inline-flex items-center gap-1 ${
-                                          isResolved 
-                                            ? 'bg-emerald-100 text-emerald-700' 
-                                            : 'bg-amber-100 text-amber-800'
-                                        }`}
-                                      >
-                                        {isResolved ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
-                                        {dataDetail.status || 'Chưa XL'}
-                                      </span>
-                                    )}
-                                  </td>
-                                  <td className="px-3 py-2.5 whitespace-nowrap text-xs text-slate-500 font-mono">
-                                    {isResolved && solutions.resolved_at ? `✅ ${solutions.resolved_at}` : '—'}
-                                  </td>
+                                  {/* THAO TÁC: SỬA & XÓA ICON GỌN GÀNG */}
                                   {user && (
-                                    <td className="px-3 py-2.5 whitespace-nowrap text-right text-xs">
-                                      <div className="flex items-center justify-end gap-1.5">
+                                    <td className="w-20 px-3 py-2.5 text-right align-top pt-3">
+                                      <div className="flex items-center justify-end gap-1">
                                         <button
+                                          type="button"
                                           onClick={() => handleStartEditIssue(issue)}
-                                          className="text-blue-600 hover:text-blue-800 font-semibold inline-flex items-center gap-1 cursor-pointer px-2 py-1 rounded hover:bg-blue-50 transition-colors"
+                                          className="p-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
                                           title="Chỉnh sửa chi tiết tồn tại"
                                         >
-                                          <Edit size={13} /> Sửa
+                                          <Edit size={14} />
                                         </button>
                                         <button
+                                          type="button"
                                           onClick={() => handleDeleteIssue(issue)}
-                                          className="text-red-500 hover:text-red-700 font-semibold inline-flex items-center gap-1 cursor-pointer px-2 py-1 rounded hover:bg-red-50 transition-colors"
+                                          className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                                           title="Xóa tồn tại (Không hư / Tự khắc phục)"
                                         >
-                                          <Trash size={13} /> Xóa
+                                          <Trash size={14} />
                                         </button>
                                       </div>
                                     </td>
@@ -2421,12 +2441,13 @@ export default function DailyWork() {
                                       </span>
                                     )}
                                     <button
+                                      type="button"
                                       onClick={() => handleOpenSiteDetail(issue.site_id, 'infrastructure')}
-                                      className="bg-red-50 hover:bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded text-xs transition-colors cursor-pointer flex items-center gap-1"
-                                      title="Xem và cập nhật thiết bị phụ trợ trạm này"
+                                      className="font-bold text-slate-900 hover:text-blue-600 text-xs transition-colors cursor-pointer flex items-center gap-1 group py-0.5"
+                                      title="Xem chi tiết hạ tầng trạm"
                                     >
-                                      {siteIds.oldId} &rarr; {siteIds.newId}
-                                      <ExternalLink size={10} className="opacity-60" />
+                                      <span>{siteIds.oldId || issue.site_id}</span>
+                                      <ExternalLink size={10} className="text-slate-400 group-hover:text-blue-500" />
                                     </button>
                                   </div>
 
