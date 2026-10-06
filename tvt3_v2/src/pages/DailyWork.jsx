@@ -748,6 +748,53 @@ export default function DailyWork() {
     }
   }
 
+  // Handle Delete Defect/Issue (khi không hư hoặc tự sửa chữa xong)
+  async function handleDeleteIssue(issue) {
+    const siteName = issue.site_id || 'chưa rõ';
+    const desc = issue.existing_issues?.description || '';
+    const confirmMsg = `Bạn có chắc muốn XÓA tồn tại trạm ${siteName}?\n\nNội dung: "${desc.slice(0, 80)}${desc.length > 80 ? '...' : ''}"\n\n💡 Áp dụng khi phát hiện thiết bị không thực sự hư hỏng hoặc nhân viên đã tự sửa chữa/khắc phục tại chỗ.`;
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      const { error } = await supabase
+        .from('operation_defects_logs')
+        .delete()
+        .eq('log_id', issue.log_id);
+
+      if (error) throw error;
+      setSelectedIssueIds(prev => prev.filter(id => id !== issue.log_id));
+      fetchData();
+    } catch (err) {
+      console.error(err);
+      alert("Lỗi khi xóa tồn tại: " + err.message);
+    }
+  }
+
+  // Handle Bulk Delete Issues
+  async function handleBulkDeleteIssues() {
+    if (selectedIssueIds.length === 0) {
+      alert("Vui lòng tick chọn ít nhất 1 ca để xóa!");
+      return;
+    }
+    const confirmMsg = `XÁC NHẬN XÓA ${selectedIssueIds.length} ca tồn tại đã chọn?\n\n💡 Thao tác này dùng khi các ca trên được kiểm tra không hư hỏng hoặc nhân viên đã tự sửa chữa tại chỗ. Dữ liệu sẽ được xóa hoàn toàn khỏi danh sách tồn tại.`;
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      const { error } = await supabase
+        .from('operation_defects_logs')
+        .delete()
+        .in('log_id', selectedIssueIds);
+
+      if (error) throw error;
+      alert(`Đã xóa thành công ${selectedIssueIds.length} ca tồn tại!`);
+      setSelectedIssueIds([]);
+      fetchData();
+    } catch (err) {
+      console.error(err);
+      alert("Lỗi khi xóa hàng loạt: " + err.message);
+    }
+  }
+
   function resetIssueForm() {
     setIssueSiteId('');
     setIssueDate(new Date().toISOString().split('T')[0]);
@@ -938,35 +985,6 @@ export default function DailyWork() {
     }
   }
 
-  async function handleBulkUnapproveB4() {
-    if (selectedIssueIds.length === 0) {
-      alert("Vui lòng tick chọn ít nhất 1 ca để hủy duyệt!");
-      return;
-    }
-    if (!window.confirm(`Hủy duyệt B4 cho ${selectedIssueIds.length} ca được chọn?`)) return;
-
-    try {
-      for (const logId of selectedIssueIds) {
-        const item = defectsLogs.find(d => d.log_id === logId);
-        if (!item) continue;
-        const updatedIssues = {
-          ...(item.existing_issues || {}),
-          b4_approved: false
-        };
-        await supabase
-          .from('operation_defects_logs')
-          .update({ existing_issues: updatedIssues })
-          .eq('log_id', logId);
-      }
-      alert(`Đã hủy duyệt B4 cho ${selectedIssueIds.length} ca!`);
-      setSelectedIssueIds([]);
-      fetchDefectsLogs();
-    } catch (err) {
-      console.error(err);
-      alert("Lỗi khi hủy duyệt: " + err.message);
-    }
-  }
-
   function handleExportLocalInfrastructure() {
     let targetLogs = filteredDefectsLogs;
     if (selectedIssueIds.length > 0) {
@@ -1067,7 +1085,7 @@ export default function DailyWork() {
       wch: Math.min(Math.max(maxLens[key] + 3, 10), 50)
     }));
 
-    const dateStr = new Date().toISOString().split('T')[0];
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
     XLSX.writeFile(workbook, `Quan_Ly_Ton_Tai_${dateStr}.xlsx`);
   }
 
@@ -1383,7 +1401,7 @@ export default function DailyWork() {
           )}
 
           {activeTab === 'issues' && (
-            <div className="flex items-center gap-2">
+            <div className="hidden md:flex items-center gap-2">
               {issueWorkstream === 'B4_REPAIR' && (
                 <div className="relative inline-flex items-center rounded-lg shadow-sm">
                   <button 
@@ -1821,66 +1839,86 @@ export default function DailyWork() {
               </div>
             )}
 
-            {/* Upgraded Bulk Action Bar when items are selected */}
+            {/* Upgraded Mobile-Optimized Bulk Action Bar */}
             {selectedIssueIds.length > 0 && (
-              <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white rounded-xl shadow-md border border-blue-800">
-                <div className="flex items-center gap-2">
-                  <span className="bg-blue-500/30 text-blue-200 border border-blue-400/40 px-2.5 py-1 rounded-lg text-xs font-bold font-mono">
-                    ✓ Đã chọn {selectedIssueIds.length} ca
-                  </span>
-                  <span className="text-xs text-slate-300 hidden md:inline">
-                    (theo đúng thứ tự đã tick chọn)
-                  </span>
-                </div>
+              <div className="fixed sm:relative bottom-3 sm:bottom-auto inset-x-3 sm:inset-x-auto z-40 p-3 sm:p-3.5 bg-slate-900/95 backdrop-blur-md text-white rounded-2xl sm:rounded-xl shadow-2xl border border-slate-700/80 animate-in slide-in-from-bottom duration-200">
+                <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="bg-blue-500/30 text-blue-200 border border-blue-400/40 px-2.5 py-1 rounded-lg text-xs font-bold font-mono">
+                        ✓ Đã chọn {selectedIssueIds.length} ca
+                      </span>
+                      <span className="text-[11px] text-slate-300 hidden md:inline">
+                        (theo đúng thứ tự đã tick chọn)
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedIssueIds([])}
+                      className="text-slate-400 hover:text-white text-xs font-medium cursor-pointer px-2 py-1"
+                    >
+                      Bỏ chọn
+                    </button>
+                  </div>
 
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-xs text-slate-300 font-medium">Chọn đợt:</span>
-                  <select
-                    value={bulkBatchChoice}
-                    onChange={(e) => setBulkBatchChoice(e.target.value)}
-                    className="bg-slate-800 border border-slate-600 text-white text-xs rounded-lg px-2.5 py-1.5 font-bold focus:ring-1 focus:ring-blue-400 cursor-pointer"
-                  >
-                    <option value="Đợt 2">Đợt 2</option>
-                    <option value="Đợt 1">Đợt 1</option>
-                    <option value="Đợt 3">Đợt 3</option>
-                    <option value="Đợt 4">Đợt 4</option>
-                  </select>
+                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                    {issueWorkstream === 'B4_REPAIR' && (
+                      <>
+                        <div className="flex items-center gap-1 bg-slate-800/80 px-2 py-1 rounded-lg border border-slate-700">
+                          <span className="text-[11px] text-slate-300 font-medium">Đợt:</span>
+                          <select
+                            value={bulkBatchChoice}
+                            onChange={(e) => setBulkBatchChoice(e.target.value)}
+                            className="bg-slate-700 border-0 text-white text-xs rounded px-1.5 py-0.5 font-bold focus:ring-1 focus:ring-blue-400 cursor-pointer"
+                          >
+                            <option value="Đợt 2">Đợt 2</option>
+                            <option value="Đợt 1">Đợt 1</option>
+                            <option value="Đợt 3">Đợt 3</option>
+                            <option value="Đợt 4">Đợt 4</option>
+                          </select>
+                        </div>
 
-                  <button
-                    type="button"
-                    onClick={() => handleBulkAssignBatch(bulkBatchChoice, false)}
-                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition-all cursor-pointer shadow-xs flex items-center gap-1.5"
-                    title="Gán các ca đã chọn vào đợt với trạng thái Chờ duyệt (để trình Ban 4)"
-                  >
-                    <span>🔵 Gán vào {bulkBatchChoice} (Chờ duyệt)</span>
-                  </button>
+                        <button
+                          type="button"
+                          onClick={() => handleBulkAssignBatch(bulkBatchChoice, false)}
+                          className="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition-all cursor-pointer shadow-xs flex items-center gap-1"
+                          title="Gán các ca đã chọn vào đợt với trạng thái Chờ duyệt (để trình Ban 4)"
+                        >
+                          <span>🔵 Gán {bulkBatchChoice}</span>
+                        </button>
 
-                  <button
-                    type="button"
-                    onClick={() => handleBulkAssignBatch(bulkBatchChoice, true)}
-                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition-all cursor-pointer shadow-xs flex items-center gap-1.5"
-                    title="Đánh dấu các ca đã chọn là ĐÃ DUYỆT thuộc đợt này"
-                  >
-                    <CheckCircle2 size={13} />
-                    <span>✅ Đã duyệt {bulkBatchChoice}</span>
-                  </button>
+                        <button
+                          type="button"
+                          onClick={() => handleBulkAssignBatch(bulkBatchChoice, true)}
+                          className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition-all cursor-pointer shadow-xs flex items-center gap-1"
+                          title="Đánh dấu các ca đã chọn là ĐÃ DUYỆT thuộc đợt này"
+                        >
+                          <CheckCircle2 size={13} />
+                          <span>✅ Duyệt {bulkBatchChoice}</span>
+                        </button>
 
-                  <button
-                    type="button"
-                    onClick={handleBulkRemoveBatch}
-                    className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
-                    title="Hủy gán đợt cho các ca đã chọn"
-                  >
-                    Hủy đợt
-                  </button>
+                        <button
+                          type="button"
+                          onClick={handleBulkRemoveBatch}
+                          className="px-2 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                          title="Hủy gán đợt cho các ca đã chọn"
+                        >
+                          Hủy đợt
+                        </button>
+                      </>
+                    )}
 
-                  <button
-                    type="button"
-                    onClick={() => setSelectedIssueIds([])}
-                    className="px-2 py-1.5 text-slate-400 hover:text-white text-xs font-medium cursor-pointer"
-                  >
-                    Bỏ chọn
-                  </button>
+                    {/* Nút Xóa Hàng Loạt (Không hư hoặc đã tự khắc phục) */}
+                    <button
+                      type="button"
+                      onClick={handleBulkDeleteIssues}
+                      className="px-2.5 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-lg text-xs font-bold transition-all cursor-pointer shadow-xs flex items-center gap-1 ml-auto sm:ml-0"
+                      title="Xóa các ca đã chọn nếu phát hiện không hư hỏng hoặc nhân viên đã tự sửa chữa xong"
+                    >
+                      <Trash size={13} />
+                      <span>Xóa ({selectedIssueIds.length})</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -2314,13 +2352,22 @@ export default function DailyWork() {
                                   </td>
                                   {user && (
                                     <td className="px-3 py-2.5 whitespace-nowrap text-right text-xs">
-                                      <button
-                                        onClick={() => handleStartEditIssue(issue)}
-                                        className="text-blue-600 hover:text-blue-800 font-semibold inline-flex items-center gap-1 cursor-pointer ml-auto"
-                                        title="Chỉnh sửa chi tiết tồn tại"
-                                      >
-                                        <Edit size={14} /> Chỉnh sửa
-                                      </button>
+                                      <div className="flex items-center justify-end gap-1.5">
+                                        <button
+                                          onClick={() => handleStartEditIssue(issue)}
+                                          className="text-blue-600 hover:text-blue-800 font-semibold inline-flex items-center gap-1 cursor-pointer px-2 py-1 rounded hover:bg-blue-50 transition-colors"
+                                          title="Chỉnh sửa chi tiết tồn tại"
+                                        >
+                                          <Edit size={13} /> Sửa
+                                        </button>
+                                        <button
+                                          onClick={() => handleDeleteIssue(issue)}
+                                          className="text-red-500 hover:text-red-700 font-semibold inline-flex items-center gap-1 cursor-pointer px-2 py-1 rounded hover:bg-red-50 transition-colors"
+                                          title="Xóa tồn tại (Không hư / Tự khắc phục)"
+                                        >
+                                          <Trash size={13} /> Xóa
+                                        </button>
+                                      </div>
                                     </td>
                                   )}
                                 </tr>
@@ -2386,7 +2433,7 @@ export default function DailyWork() {
                                   {user ? (
                                     <button
                                       onClick={() => handleToggleIssueStatus(issue)}
-                                      className={`text-[11px] font-bold px-2 py-0.5 rounded-full cursor-pointer flex items-center gap-1 transition-all ${
+                                      className={`text-[11px] font-bold px-2.5 py-1 rounded-full cursor-pointer flex items-center gap-1 transition-all ${
                                         isResolved 
                                           ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' 
                                           : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
@@ -2397,7 +2444,7 @@ export default function DailyWork() {
                                     </button>
                                   ) : (
                                     <span
-                                      className={`text-[11px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 inline-flex ${
+                                      className={`text-[11px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 inline-flex ${
                                         isResolved 
                                           ? 'bg-emerald-100 text-emerald-700' 
                                           : 'bg-amber-100 text-amber-800'
@@ -2444,26 +2491,57 @@ export default function DailyWork() {
                                     )}
                                   </div>
 
-                                  <p className="text-xs text-slate-800 font-medium line-clamp-2" title={dataDetail.description}>
+                                  {/* Hiển thị chi tiết ắc quy hoặc danh mục B4 trên mobile */}
+                                  {isBattery && dataDetail.battery_details && (
+                                    <div className="text-[11px] bg-teal-50/70 text-teal-900 border border-teal-200/70 rounded-md px-2 py-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                                      <span>🔋 Dung lượng: <strong>{dataDetail.battery_details.capacity || '12V - 70Ah'}</strong></span>
+                                      <span>• SL: <strong>{dataDetail.battery_details.quantity || 1}</strong></span>
+                                      {dataDetail.battery_details.pole_type && <span>• {dataDetail.battery_details.pole_type}</span>}
+                                    </div>
+                                  )}
+
+                                  {!isBattery && isB4Cat && dataDetail.device_type && dataDetail.b4_category_idx !== undefined && (
+                                    <div className="text-[11px] bg-blue-50/70 text-blue-900 border border-blue-100 rounded-md px-2 py-0.5 inline-flex items-center gap-1 font-medium">
+                                      <span>🛠️ Chuẩn B4:</span>
+                                      <span className="font-semibold">{(B4_REPAIR_CATEGORIES[dataDetail.device_type] || [])[dataDetail.b4_category_idx]?.label || 'Sửa chữa thông thường'}</span>
+                                    </div>
+                                  )}
+
+                                  <p className="text-xs text-slate-800 font-medium line-clamp-3 leading-relaxed" title={dataDetail.description}>
                                     {dataDetail.description || 'Không có mô tả chi tiết'}
                                   </p>
                                 </div>
                               </div>
 
                               <div className="flex justify-between items-center pt-2.5 mt-2.5 border-t border-slate-100 text-[11px] text-slate-500">
-                                <div>
-                                  <span>Báo cáo: </span>
+                                <div className="flex items-center gap-1.5 flex-wrap">
                                   <span className="font-medium text-slate-700">{dataDetail.reporter || '—'}</span>
-                                  <span className="mx-1 text-slate-300">•</span>
+                                  <span className="text-slate-300">•</span>
                                   <span className="font-mono">{issue.date}</span>
+                                  {isResolved && solutions.resolved_at && (
+                                    <>
+                                      <span className="text-slate-300">•</span>
+                                      <span className="text-emerald-700 font-bold">Xong {solutions.resolved_at}</span>
+                                    </>
+                                  )}
                                 </div>
                                 {user && (
-                                  <button
-                                    onClick={() => handleStartEditIssue(issue)}
-                                    className="text-blue-600 hover:text-blue-800 font-semibold inline-flex items-center gap-1 cursor-pointer"
-                                  >
-                                    <Edit size={12} /> Sửa
-                                  </button>
+                                  <div className="flex items-center gap-1.5">
+                                    <button
+                                      onClick={() => handleStartEditIssue(issue)}
+                                      className="text-blue-600 hover:text-blue-800 font-semibold inline-flex items-center gap-1 cursor-pointer py-1 px-2 rounded-lg bg-blue-50/80 hover:bg-blue-100 transition-colors"
+                                      title="Chỉnh sửa chi tiết tồn tại"
+                                    >
+                                      <Edit size={12} /> Sửa
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteIssue(issue)}
+                                      className="text-red-600 hover:text-red-800 font-semibold inline-flex items-center gap-1 cursor-pointer py-1 px-2 rounded-lg bg-red-50/80 hover:bg-red-100 transition-colors"
+                                      title="Xóa tồn tại nếu không hư hoặc đã tự khắc phục"
+                                    >
+                                      <Trash size={12} /> Xóa
+                                    </button>
+                                  </div>
                                 )}
                               </div>
                             </div>
@@ -3570,20 +3648,37 @@ export default function DailyWork() {
                 )}
 
                 {/* Footer Buttons */}
-                <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
-                  <button 
-                    type="button"
-                    onClick={() => { resetIssueForm(); setShowAddIssueModal(false); }}
-                    className="px-4 py-2 border border-slate-200 text-sm font-semibold rounded-lg text-slate-600 hover:bg-slate-50 cursor-pointer"
-                  >
-                    Hủy
-                  </button>
-                  <button 
-                    type="submit"
-                    className="px-5 py-2 bg-gradient-to-r from-red-600 to-rose-600 text-white text-sm font-bold rounded-lg hover:from-red-700 hover:to-rose-700 shadow-md transition-all cursor-pointer"
-                  >
-                    {editingIssue ? "Cập Nhật" : "Báo Cáo Sự Cố"}
-                  </button>
+                <div className="flex items-center justify-between gap-3 pt-3 border-t border-slate-100">
+                  {editingIssue ? (
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        handleDeleteIssue(editingIssue);
+                        setShowAddIssueModal(false);
+                      }}
+                      className="px-3 py-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
+                      title="Xóa tồn tại nếu phát hiện không hư hỏng hoặc nhân viên đã tự khắc phục xong"
+                    >
+                      <Trash size={13} />
+                      <span>Xóa tồn tại (Không hư / Tự sửa)</span>
+                    </button>
+                  ) : <div />}
+
+                  <div className="flex items-center gap-2">
+                    <button 
+                      type="button"
+                      onClick={() => { resetIssueForm(); setShowAddIssueModal(false); }}
+                      className="px-4 py-2 border border-slate-200 text-sm font-semibold rounded-lg text-slate-600 hover:bg-slate-50 cursor-pointer"
+                    >
+                      Hủy
+                    </button>
+                    <button 
+                      type="submit"
+                      className="px-5 py-2 bg-gradient-to-r from-red-600 to-rose-600 text-white text-sm font-bold rounded-lg hover:from-red-700 hover:to-rose-700 shadow-md transition-all cursor-pointer"
+                    >
+                      {editingIssue ? "Cập Nhật" : "Báo Cáo Sự Cố"}
+                    </button>
+                  </div>
                 </div>
               </form>
             </div>

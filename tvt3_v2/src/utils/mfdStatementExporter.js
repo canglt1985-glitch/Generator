@@ -1145,7 +1145,8 @@ export async function exportOfficialMFDReport({
     }
 
     const mStr = month ? String(month).padStart(2, '0') : '08';
-    const fileName = `Ho_So_Thanh_Toan_Chuan_Mau_${mStr}_${year}.xlsx`;
+    const todayStr = new Date().toISOString().substring(0, 10).replace(/-/g, '');
+    const fileName = `TVT3_Ho_So_Thanh_Toan_02A_TTNB_T${mStr}_${year}_${todayStr}.xlsx`;
 
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
@@ -1183,7 +1184,8 @@ export async function exportOfficialMFDReport({
     addHDSheet(workbook, 'HD', invoices, month, year, groupLabel);
 
     const mStr = month ? String(month).padStart(2, '0') : '08';
-    const fileName = `Ho_So_Thanh_Toan_Chuan_Mau_${mStr}_${year}${groupLabel ? `_${selectedGroupFilter}` : ''}.xlsx`;
+    const todayStr = new Date().toISOString().substring(0, 10).replace(/-/g, '');
+    const fileName = `TVT3_Ho_So_Thanh_Toan_02A_TTNB_T${mStr}_${year}${groupLabel ? `_${selectedGroupFilter}` : ''}_${todayStr}.xlsx`;
 
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
@@ -1329,7 +1331,8 @@ export async function exportSiteInvoiceMapReport({ logs, stations, invoices, mon
   });
 
   const mStr = month ? String(month).padStart(2, '0') : '08';
-  const fileName = `Bao_Cao_Phan_Bo_HD_Theo_Tram_Nhom1_T${mStr}_${year}.xlsx`;
+  const todayStr = new Date().toISOString().substring(0, 10).replace(/-/g, '');
+  const fileName = `TVT3_Bao_Cao_Phan_Bo_HD_Theo_Tram_Nhom1_T${mStr}_${year}_${todayStr}.xlsx`;
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   saveAs(blob, fileName);
@@ -1561,7 +1564,8 @@ export async function exportSeathGroupReport({ logs = [], stations = [], month =
   addSeathGroupSheet(workbook, 'Seath_Group', logs, stations, month, year);
 
   const mStr = month ? String(month).padStart(2, '0') : '08';
-  const fileName = `Bang_Ke_Chay_May_Phat_Dien_Seath_Group_T${mStr}_${year}.xlsx`;
+  const todayStr = new Date().toISOString().substring(0, 10).replace(/-/g, '');
+  const fileName = `TVT3_Bang_Ke_Chay_May_Phat_Dien_Seath_Group_T${mStr}_${year}_${todayStr}.xlsx`;
 
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });

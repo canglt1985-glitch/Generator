@@ -583,7 +583,8 @@ export async function exportB4RepairProposal({ items = [], datasites = [], targe
     // Sheet 4: Diễn giải DM hỏng tham chiếu
     buildReferenceSheet(workbook);
 
-    const finalFileName = customFileName || `TVT3-B4. Bieu mau chuyen mon sua DHKK & MPD.xlsx`;
+    const todayStr = new Date().toISOString().substring(0, 10).replace(/-/g, '');
+    const finalFileName = customFileName || `TVT3_Bieu_Mau_B4_DHKK_MPD_${todayStr}.xlsx`;
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     saveAs(blob, finalFileName);

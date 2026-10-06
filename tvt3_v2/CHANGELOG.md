@@ -1,6 +1,23 @@
 # Changelog
 
-## [2026-05-19] - UI/UX Polish & Branding MobiFone 5G
+## [2026-10-05] - Tối Ưu Phân Luồng Tồn Tại, Chuẩn Hóa Mã VT/TS B4 & Dọn Rác Toàn Diện
+
+### Added
+- **Xuất File B4 Chuyên Môn Bằng ExcelJS (`b4RepairExporter.js`):** Nâng cấp sang thư viện ExcelJS với định dạng font Times New Roman 11pt, header phối màu chuẩn nhận diện, badge đợt vàng đỏ nổi bật, row height chuẩn hóa (68pt header, 22pt dữ liệu, 30pt footer).
+- **Thanh Điều Khiển Phân Đợt Hàng Loạt (`DailyWork.jsx`):** Cho phép chọn nhiều ca tồn tại cùng lúc để duyệt gán Đợt (1, 2, 3...) hoặc Hủy duyệt đợt chỉ với 1 click.
+- **Phân Luồng 3 Luồng Tồn Tại Rõ Ràng:** Tách biệt thành các tab chuyên môn: Sửa chữa B4 (ĐHKK & MPĐ), Vật tư UCTT (Accu đề, dây nguồn...), Hạ tầng CSHT địa bàn và Tất cả.
+
+### Changed
+- **Giao Diện DailyWork:** Đơn giản hóa hiển thị, loại bỏ các badge trạng thái rườm rà; thay thế bằng badge `Đợt X (MPĐ)` / `Đợt X (ĐHKK)` trang nhã, trực quan.
+- **Cấu hình ESLint (`eslint.config.js`):** Bổ sung `.vercel` vào `globalIgnores` tránh quét sâu vào thư mục build bundle tĩnh.
+- **Bộ lọc Git (`.gitignore`):** Bổ sung `backend/data/smartw/*.lock`, `.vercel/`, `tvt3_v2/.vercel/`.
+
+### Removed
+- **Dead Code:** Xóa file chết nguyên mẫu [`Dashboard.jsx`](file:///Users/cang_it/Antigravity/TVT3/tvt3_v2/src/pages/Dashboard.jsx) (-363 dòng) không còn sử dụng.
+- **Dead Function:** Xóa hàm cũ `handleBulkUnapproveB4` (-29 dòng) trong `DailyWork.jsx`.
+
+---
+
 
 ### Added
 - Logo avatar tròn 5G MobiFone Đồng Nai (`public/logo-mobifone-5g.png`) - generated, stored locally

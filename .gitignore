@@ -69,6 +69,9 @@ backend/__pycache__/
 # ── Debug screenshots & Temp data ──
 backend/data/smartw/*.png
 backend/data/smartw/*.json
+backend/data/smartw/*.lock
+.vercel/
+tvt3_v2/.vercel/
 scratch/
 backup_tvt3_v2_before_refactor.zip
 *.bak

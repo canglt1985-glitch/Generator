@@ -1253,7 +1253,7 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, on
 
           <button 
             onClick={() => onExportExcel && onExportExcel(site)}
-            className="inline-flex items-center justify-center px-3.5 py-2 border border-slate-200 text-xs font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 shadow-sm transition-colors cursor-pointer"
+            className="hidden md:inline-flex items-center justify-center px-3.5 py-2 border border-slate-200 text-xs font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 shadow-sm transition-colors cursor-pointer"
           >
             <FileDown className="h-4 w-4 mr-1.5" />
             Xuất Excel

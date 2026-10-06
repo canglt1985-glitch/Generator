@@ -914,7 +914,8 @@ export default function Generator() {
     addHDSheet(wb, 'HD', filteredInvoices, filterMonth, filterYear, groupLabel);
     const buffer = await wb.xlsx.writeBuffer();
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    saveAs(blob, `Bang_Ke_Hoa_Don_Mau_HD_${monthStr}_${filterYear}.xlsx`);
+    const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    saveAs(blob, `Bang_Ke_Hoa_Don_Mau_HD_${monthStr}_${filterYear}_${todayStr}.xlsx`);
   };
 
   const exportInvoicesZip = async (targetGroup = 'current') => {
@@ -1204,7 +1205,8 @@ export default function Generator() {
     const worksheet = XLSX.utils.json_to_sheet(dataForExcel);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'BatThuongChayMay');
-    XLSX.writeFile(workbook, `Bao_cao_bat_thuong_chay_may_${new Date().toISOString().split('T')[0]}.xlsx`);
+    const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    XLSX.writeFile(workbook, `Bao_cao_bat_thuong_chay_may_${todayStr}.xlsx`);
   };
 
   const handleExportMobileEquipment = async () => {
@@ -2217,7 +2219,7 @@ export default function Generator() {
               {selectedGroupFilter === 'group3' ? (
                 <button
                   onClick={exportToExcel}
-                  className="inline-flex items-center justify-center px-2.5 py-1.5 text-xs font-bold rounded-lg text-white bg-purple-600 hover:bg-purple-700 shadow-xs transition-colors cursor-pointer gap-1"
+                  className="hidden md:inline-flex items-center justify-center px-2.5 py-1.5 text-xs font-bold rounded-lg text-white bg-purple-600 hover:bg-purple-700 shadow-xs transition-colors cursor-pointer gap-1"
                   title="Xuất Bảng kê chạy máy phát điện đối tác Seath Group"
                 >
                   <Download className="h-3.5 w-3.5" /> Xuất Bảng Kê Seath
@@ -2225,7 +2227,7 @@ export default function Generator() {
               ) : (
                 <button
                   onClick={exportToExcel}
-                  className="inline-flex items-center justify-center px-2.5 py-1.5 text-xs font-bold rounded-lg text-blue-700 border border-blue-200 bg-blue-50/70 hover:bg-blue-100 shadow-2xs transition-colors cursor-pointer gap-1"
+                  className="hidden md:inline-flex items-center justify-center px-2.5 py-1.5 text-xs font-bold rounded-lg text-blue-700 border border-blue-200 bg-blue-50/70 hover:bg-blue-100 shadow-2xs transition-colors cursor-pointer gap-1"
                   title="Xuất trọn bộ hồ sơ đối soát chạy máy & hóa đơn theo mẫu chuẩn 02A-TTNB"
                 >
                   <ExternalLink className="h-3.5 w-3.5" /> Hồ Sơ 02A ({filterMonth ? `T${filterMonth}` : `${filterYear}`})
@@ -2240,7 +2242,7 @@ export default function Generator() {
                     month: filterMonth,
                     year: filterYear
                   })}
-                  className="inline-flex items-center justify-center px-2.5 py-1.5 text-xs font-bold rounded-lg text-purple-700 border border-purple-300 bg-purple-50 hover:bg-purple-100 shadow-2xs transition-colors cursor-pointer gap-1"
+                  className="hidden md:inline-flex items-center justify-center px-2.5 py-1.5 text-xs font-bold rounded-lg text-purple-700 border border-purple-300 bg-purple-50 hover:bg-purple-100 shadow-2xs transition-colors cursor-pointer gap-1"
                   title="Xuất riêng Bảng kê chạy máy phát điện cho Seath Group"
                 >
                   <Download className="h-3.5 w-3.5" /> Seath ({stats.g3.records})
@@ -2258,7 +2260,7 @@ export default function Generator() {
           )}
 
           {activeTab === 'invoices' && (
-            <div className="flex flex-wrap items-center gap-1.5">
+            <div className="hidden md:flex flex-wrap items-center gap-1.5">
               <button
                 onClick={handleDownloadEgovPdf}
                 className="inline-flex items-center justify-center px-2.5 py-1.5 text-xs font-bold rounded-lg text-rose-800 border border-rose-300 bg-rose-50 hover:bg-rose-100 shadow-2xs transition-colors cursor-pointer gap-1"
@@ -2312,7 +2314,7 @@ export default function Generator() {
           {activeTab === 'anomalies' && (
             <button
               onClick={exportAnomaliesToExcel}
-              className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg text-emerald-700 border border-emerald-200 bg-white hover:bg-emerald-50 shadow-2xs transition-colors cursor-pointer gap-1"
+              className="hidden md:inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg text-emerald-700 border border-emerald-200 bg-white hover:bg-emerald-50 shadow-2xs transition-colors cursor-pointer gap-1"
             >
               <ExternalLink className="h-3.5 w-3.5" /> Xuất Excel
             </button>
@@ -2321,7 +2323,7 @@ export default function Generator() {
           {activeTab === 'transfer' && (
             <button
               onClick={handleExportMobileEquipment}
-              className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg text-emerald-700 border border-emerald-300 bg-white hover:bg-emerald-50 shadow-2xs transition-colors cursor-pointer gap-1"
+              className="hidden md:inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg text-emerald-700 border border-emerald-300 bg-white hover:bg-emerald-50 shadow-2xs transition-colors cursor-pointer gap-1"
             >
               <Download className="h-3.5 w-3.5" /> Xuất Excel Thiết Bị Lưu Động
             </button>

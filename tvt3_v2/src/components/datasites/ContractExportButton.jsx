@@ -470,7 +470,8 @@ export default function ContractExportButton({ site, contract, overridePrice }) 
             const path = `/templates/${selectedTemplate.file}`;
             const prefix = site.site_id_old || site.site_id;
             const cleanLabel = selectedTemplate.label.replace(/[^\w\sàáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđĐ]/g, '').trim().replace(/\s+/g, '_');
-            const outName = `${prefix}_${cleanLabel}.docx`;
+            const todayStr = new Date().toISOString().substring(0, 10).replace(/-/g, '');
+            const outName = `${prefix}_${cleanLabel}_${todayStr}.docx`;
             const result = await generateWordDocument(path, masterData, outName);
             if (!result.success) {
                 alert('Có lỗi xảy ra khi xuất tài liệu:\n' + result.error);
@@ -488,7 +489,8 @@ export default function ContractExportButton({ site, contract, overridePrice }) 
         try {
             const path = '/templates/BBLV.docx';
             const prefix = site.site_id_old || site.site_id;
-            const outName = `${prefix}_Bien_Ban_Lam_Viec.docx`;
+            const todayStr = new Date().toISOString().substring(0, 10).replace(/-/g, '');
+            const outName = `${prefix}_Bien_Ban_Lam_Viec_${todayStr}.docx`;
             const result = await generateWordDocument(path, masterData, outName);
             if (!result.success) {
                 alert('Có lỗi xảy ra khi xuất Biên bản làm việc:\n' + result.error);

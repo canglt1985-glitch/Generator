@@ -1345,7 +1345,8 @@ export default function InfrastructureDevelopment() {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `Phu_Luc_Trinh_TCT_Bo_Sung_Quy_Hoach_TVT3_${new Date().toISOString().slice(0,10)}.xlsx`;
+      const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      link.download = `Phu_Luc_Trinh_TCT_Bo_Sung_Quy_Hoach_TVT3_${todayStr}.xlsx`;
       document.body.appendChild(link);
       link.click();
       setTimeout(() => {
@@ -1438,7 +1439,8 @@ export default function InfrastructureDevelopment() {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `Danh_Sach_Quy_Hoach_CSHT_${new Date().toISOString().slice(0,10)}.xlsx`;
+      const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      link.download = `Danh_Sach_Quy_Hoach_CSHT_${todayStr}.xlsx`;
       document.body.appendChild(link);
       link.click();
       setTimeout(() => {
@@ -1962,7 +1964,7 @@ export default function InfrastructureDevelopment() {
           
           <button 
             onClick={handleExportExcel}
-            className="inline-flex items-center justify-center px-3.5 py-2 text-xs font-bold rounded-lg text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 shadow-sm transition-colors cursor-pointer"
+            className="hidden md:inline-flex items-center justify-center px-3.5 py-2 text-xs font-bold rounded-lg text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 shadow-sm transition-colors cursor-pointer"
           >
             <Download className="h-4 w-4 mr-1.5 text-slate-500" /> Xuất Excel
           </button>
@@ -1970,7 +1972,7 @@ export default function InfrastructureDevelopment() {
           <a 
             href="/reports/Bao_Cao_Ra_Soat_CSHT_TVT3_2026.xlsx"
             download="Bao_Cao_Ra_Soat_CSHT_TVT3_2026.xlsx"
-            className="inline-flex items-center justify-center px-3.5 py-2 text-xs font-bold rounded-lg text-emerald-800 bg-emerald-50 border border-emerald-300 hover:bg-emerald-100 shadow-sm transition-colors cursor-pointer"
+            className="hidden md:inline-flex items-center justify-center px-3.5 py-2 text-xs font-bold rounded-lg text-emerald-800 bg-emerald-50 border border-emerald-300 hover:bg-emerald-100 shadow-sm transition-colors cursor-pointer"
             title="Tải Báo cáo Excel 4 Sheet chuyên nghiệp: 4 Gói MBF Đầu Tư, TCT Duyệt Sở HTCS, Sở Duyệt Chờ TCT, Tổng hợp 86 trạm"
           >
             <Download className="h-4 w-4 mr-1.5 text-emerald-600" /> Báo Cáo Rà Soát CSHT
@@ -2176,7 +2178,7 @@ export default function InfrastructureDevelopment() {
                   <a 
                     href="/reports/Bao_Cao_Ra_Soat_CSHT_TVT3_2026.xlsx"
                     download="Bao_Cao_Ra_Soat_CSHT_TVT3_2026.xlsx"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer shadow-xs"
+                    className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer shadow-xs"
                     title="Tải trọn bộ Báo Cáo Rà Soát CSHT TVT3 định dạng Excel 4 Sheet"
                   >
                     <Download className="h-3.5 w-3.5" /> Báo Cáo Excel 4 Sheet
@@ -2269,7 +2271,7 @@ export default function InfrastructureDevelopment() {
                           handleExportProposalExcel();
                         }}
                         disabled={isExportingProposal}
-                        className="px-2 py-0.5 rounded bg-purple-600 hover:bg-purple-500 text-white font-bold transition-colors shadow-2xs flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                        className="hidden md:flex px-2 py-0.5 rounded bg-purple-600 hover:bg-purple-500 text-white font-bold transition-colors shadow-2xs items-center gap-1 cursor-pointer disabled:opacity-50"
                         title="Xuất phụ lục trình TCT phê duyệt bổ sung quy hoạch (Format CV 7203)"
                       >
                         <FileSpreadsheet className="h-3 w-3" /> Xuất PL
@@ -2708,7 +2710,7 @@ export default function InfrastructureDevelopment() {
                   <a 
                     href="/reports/Bao_Cao_Ra_Soat_CSHT_TVT3_2026.xlsx"
                     download="Bao_Cao_Ra_Soat_CSHT_TVT3_2026.xlsx"
-                    className="text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold px-3 py-2 rounded-xl shadow-2xs flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap"
+                    className="hidden md:flex text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold px-3 py-2 rounded-xl shadow-2xs items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap"
                     title="Tải trọn bộ Báo Cáo Rà Soát CSHT TVT3 định dạng Excel 4 Sheet chuyên nghiệp"
                   >
                     <Download className="h-3.5 w-3.5 text-emerald-600" /> Báo Cáo 4 Sheet
@@ -2716,7 +2718,7 @@ export default function InfrastructureDevelopment() {
                   <button 
                     onClick={handleExportProposalExcel}
                     disabled={isExportingProposal}
-                    className="text-xs bg-purple-700 hover:bg-purple-800 text-white font-bold px-3 py-2 rounded-xl shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50 whitespace-nowrap"
+                    className="hidden md:flex text-xs bg-purple-700 hover:bg-purple-800 text-white font-bold px-3 py-2 rounded-xl shadow-sm items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50 whitespace-nowrap"
                     title="Xuất phụ lục Quỹ điểm sạch đã được Sở duyệt đề nghị TCT phê duyệt bổ sung quy hoạch (Format CV 7203)"
                   >
                     <FileSpreadsheet className="h-3.5 w-3.5 text-purple-200" /> 
@@ -2724,7 +2726,7 @@ export default function InfrastructureDevelopment() {
                   </button>
                   <button 
                     onClick={handleExportExcel}
-                    className="text-xs bg-slate-800 hover:bg-slate-900 text-white font-bold px-3 py-2 rounded-xl shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap"
+                    className="hidden md:flex text-xs bg-slate-800 hover:bg-slate-900 text-white font-bold px-3 py-2 rounded-xl shadow-sm items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap"
                     title="Xuất danh sách đang lọc ra Excel"
                   >
                     <Download className="h-3.5 w-3.5 text-slate-300" /> Xuất Excel ({filteredProjects.length})

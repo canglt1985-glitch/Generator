@@ -577,9 +577,10 @@ export default function Datasites() {
       return;
     }
     
+    const todayStr = new Date().toISOString().substring(0, 10).replace(/-/g, '');
     const fileName = exportScope === 'single' 
-      ? `Datasite_${exportSiteObj.site_id}_Detail.xlsx` 
-      : `Datasites_Export_${new Date().toISOString().slice(0,10)}.xlsx`;
+      ? `Datasite_${exportSiteObj.site_id}_Detail_${todayStr}.xlsx` 
+      : `Datasites_Export_${todayStr}.xlsx`;
       
     XLSX.writeFile(wb, fileName);
     setShowExportModal(false);

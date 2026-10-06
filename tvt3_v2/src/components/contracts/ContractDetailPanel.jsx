@@ -648,7 +648,7 @@ export default function ContractDetailPanel({ contract, onClose, onUpdate }) {
               />
               <span className="text-emerald-600 font-bold text-sm">đ</span>
             </div>
-            <div className="scale-90 origin-right">
+            <div className="hidden md:block scale-90 origin-right">
                 <ContractExportButton site={exportSite} contract={contract} overridePrice={negotiatedPrice} />
             </div>
             {user && (
