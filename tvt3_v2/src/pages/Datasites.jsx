@@ -1435,7 +1435,7 @@ export default function Datasites() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
         <div>
-          <h1 className="text-lg md:text-xl font-bold text-slate-800">Quản lý Danh sách Trạm</h1>
+          <h1 className="text-lg md:text-xl font-bold text-slate-800">Datasite</h1>
           <p className="text-[13px] text-slate-500">
             Hiển thị {filteredData.length} / {data.length} trạm
           </p>

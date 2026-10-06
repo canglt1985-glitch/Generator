@@ -41,7 +41,7 @@ export default function Home() {
     },
     {
       id: 'daily-work',
-      title: 'Lịch công việc',
+      title: 'Nhật ký công việc',
       desc: 'Việc hàng ngày & nhật ký',
       path: '/daily-work',
       icon: Briefcase,
@@ -53,7 +53,7 @@ export default function Home() {
     },
     {
       id: 'datasites',
-      title: 'Hồ sơ trạm',
+      title: 'Datasite',
       desc: 'Thông tin kỹ thuật trạm',
       path: '/datasites',
       icon: Server,
@@ -67,7 +67,7 @@ export default function Home() {
     ...(user ? [
       {
         id: 'expenses',
-        title: 'Quản lý Chi phí',
+        title: 'Thống kê chi phí',
         desc: 'Chi phí trạm & nhiên liệu',
         path: '/expenses',
         icon: DollarSign,

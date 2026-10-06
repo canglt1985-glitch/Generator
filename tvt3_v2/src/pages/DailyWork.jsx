@@ -1364,7 +1364,7 @@ export default function DailyWork() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
         <div>
-          <h1 className="text-lg md:text-xl font-bold text-slate-800">Công việc hàng ngày</h1>
+          <h1 className="text-lg md:text-xl font-bold text-slate-800">Nhật ký công việc</h1>
           <p className="text-[13px] text-slate-500">
             {activeTab === 'daily' && `Hiển thị ${filteredDailyLogs.length} dòng nhật ký`}
             {activeTab === 'power' && `Hiển thị ${filteredPowerSchedules.length} lịch cúp điện`}

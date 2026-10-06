@@ -979,7 +979,7 @@ export default function Expenses() {
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
         <div>
           <h1 className="text-xl md:text-2xl font-bold text-slate-800 flex items-center gap-2">
-            <Coins className="text-amber-500 w-6 h-6" /> Chi Phí
+            <Coins className="text-amber-500 w-6 h-6" /> Thống Kê Chi Phí
           </h1>
           <p className="text-[13px] text-slate-500">
             Quản lý nhiên liệu, chi phí khác và tổng hợp thanh toán.
