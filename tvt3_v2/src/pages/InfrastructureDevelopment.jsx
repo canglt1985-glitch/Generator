@@ -2209,7 +2209,7 @@ export default function InfrastructureDevelopment() {
                         2 Có Word
                       </span>
                       <span className="bg-rose-950/80 text-rose-300 border border-rose-500/30 px-1.5 py-0.5 rounded font-semibold">
-                        6 Thiếu HS
+                        5 Thiếu HS
                       </span>
                     </div>
                   </div>

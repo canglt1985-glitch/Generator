@@ -25,9 +25,9 @@
 Theo kế hoạch triển khai của MobiFone tỉnh Đồng Nai, 4 gói đầu tư ngoài TSCA tại TVT3 được phân bổ như sau:
 *   **Gói 1** (Toàn tỉnh 4 trạm): TVT3 có **0 trạm** (Gói 1 bố trí tại TVT1: 1 trạm, TVT4: 3 trạm).
 *   **Gói 2** (Toàn tỉnh 8 trạm): TVT3 có **5 trạm**.
-*   **Gói 3** (Toàn tỉnh 10 trạm): TVT3 có **8 trạm**.
-*   **Gói 4** (Toàn tỉnh 22 trạm chọn 15): TVT3 có **2 trạm**.
-👉 **Tổng số trạm thuộc 4 gói tại TVT3 = 15 trạm**.
+*   **Gói 3** (Toàn tỉnh 10 trạm): TVT3 có **7 trạm** (Trạm `26DNa246` không có sổ đỏ đã chính thức chuyển sang danh mục Dùng chung CSHT - HTCS).
+*   **Gói 4** (Toàn tỉnh 22 trạm chọn 15): TVT3 có **2 trạm** (TVT3 mở rộng 8 trạm dự kiến trình HĐ).
+👉 **Tổng số trạm thuộc 4 gói MBF đầu tư tại TVT3 = 14 trạm** (theo danh mục tỉnh) / **20 trạm** (theo danh sách dự kiến trình HĐ).
 
 ### Bảng rà soát dữ liệu & Điều kiện Xuất file Ký Hợp đồng (12 tiêu chí pháp lý):
 
@@ -37,25 +37,24 @@ Theo kế hoạch triển khai của MobiFone tỉnh Đồng Nai, 4 gói đầu 
 | 2 | **Gói 2** | `26DNa244` | `26DNI425` | Định Quán (Xã Phú Vinh) | Có | 🟢 **ĐỦ ĐIỀU KIỆN** | Chủ: Nguyễn Văn Dũng Em - Giá: 3tr |
 | 3 | **Gói 2** | `26DNa175` | `21DNTP200` | Tân Phú (P. Tân Phú) | Có | 🟢 **ĐỦ ĐIỀU KIỆN** | Chủ: Lê Đình Huynh - Giá: 3tr |
 | 4 | **Gói 2** | `26DNa187` | `25DNTP002` | Tân Phú (P. Tân Phú) | Có | 🟢 **ĐỦ ĐIỀU KIỆN** | Chủ: Huỳnh Hữu Hiệp - Giá: 3tr |
-| 5 | **Gói 2** | `26DNa250` | `0` | Chưa rõ xã | Có | 🔴 **THIẾU** | Thiếu tên chủ, SĐT, số thửa, tờ BĐ, STK |
+| 5 | **Gói 2** | `26DNa250` | `0` | Cẩm Mỹ | Có | 🔴 **THIẾU** | Thiếu tên chủ, SĐT, số thửa, tờ BĐ, STK |
 | 6 | **Gói 3** | `26DNa245` | `22DNI307` | Định Quán (Xã Phú Vinh) | Có | 🟢 **ĐỦ ĐIỀU KIỆN** | Chủ: Hoàng Cá Tống - Giá: 3tr |
 | 7 | **Gói 3** | `26DNa247` | `26DNI415` | Định Quán (Xã Phú Vinh) | Có | 🟢 **ĐỦ ĐIỀU KIỆN** | Chủ: Hồ Thị Thu - Giá: 3tr |
 | 8 | **Gói 3** | `26DNa258` | `26DNI603` | Tân Phú (P. Tân Phú) | Có | 🟢 **ĐỦ ĐIỀU KIỆN** | Chủ: Pham Anh Khoa - Giá: 3tr |
-| 9 | **Gói 3** | `26DNa162` | `26DNI527` | Cẩm Mỹ | Có | 🔴 **THIẾU** | Thiếu thông tin chủ đất, thửa đất, STK |
-| 10 | **Gói 3** | `26DNa246` | `26DNI442` | Định Quán | Có | 🔴 **THIẾU** | Thiếu thông tin chủ đất, thửa đất, STK |
-| 11 | **Gói 3** | `26DNa164` | `21DNLK105` | Long Khánh | Có | 🔴 **THIẾU** | Thiếu thông tin chủ đất, thửa đất, STK |
-| 12 | **Gói 3** | `26DNa166` | `25DNXL004` | Xuân Lộc | Có | 🔴 **THIẾU** | Thiếu thông tin chủ đất, thửa đất, STK |
-| 13 | **Gói 3** | `26DNa168` | `26DNI605` | Long Khánh | Có | 🔴 **THIẾU** | Thiếu thông tin chủ đất, thửa đất, STK |
-| 14 | **Gói 4** | `26DNa163` | `DNI21031_3` | Cẩm Mỹ (Sông Ray) | Có | 🟡 **ĐÃ CÓ FILE WORD** | Đã xuất ngày 30/09, cần sync vào DB |
-| 15 | **Gói 4** | `26DNa167` | `26DNI399` | Xuân Lộc (Xuân Hiệp) | Có | 🟡 **ĐÃ CÓ FILE WORD** | Đã xuất ngày 30/09, cần sync vào DB |
+| 9 | **Gói 3** | `26DNa162` | `26DNI527` | Cẩm Mỹ (Sông Ray) | Có | 🟡 **THIẾU STK** | Đã có chủ Phạm Văn Lương, thiếu STK |
+| 10 | **Gói 3** | `26DNa164` | `21DNLK105` | Long Khánh (Bảo Vinh) | Có | 🟡 **THIẾU STK** | Đã có chủ Nguyễn Thị Chiểu, thiếu STK, DT |
+| 11 | **Gói 3** | `26DNa166` | `25DNXL004` | Xuân Lộc (Xuân Hòa) | Có | 🟡 **THIẾU STK** | Đã có chủ Trần Thành Thân, thiếu STK, DT |
+| 12 | **Gói 3** | `26DNa168` | `26DNI605` | Long Khánh (Bảo Vinh) | Có | 🟡 **THIẾU STK** | Đã có chủ Đinh Thị Gấm, thiếu STK |
+| - | **Dùng chung** | `26DNa246` | `26DNI442` | Định Quán (Thanh Sơn) | Có | 🔄 **CHUYỂN HTCS** | Không có sổ đỏ - Đã rút khỏi Gói 3 sang Dùng chung CSHT |
+| 13 | **Gói 4** | `26DNa163` | `DNI21031_3` | Cẩm Mỹ (Sông Ray) | Có | 🟡 **ĐÃ CÓ FILE WORD** | Đã xuất ngày 30/09, cần bổ sung STK |
+| 14 | **Gói 4** | `26DNa167` | `26DNI399` | Xuân Lộc (Xuân Hiệp) | Có | 🟡 **ĐÃ CÓ FILE WORD** | Đã xuất ngày 30/09, cần bổ sung STK |
 
-### 📌 Nhận xét đánh giá 4 gói:
-1. **Về danh sách quy hoạch:** Đã có đầy đủ **15/15 trạm** trên hệ thống và đều đã có tọa độ khảo sát thực địa.
-2. **Về nhãn gói trên Supabase:** 5 trạm Gói 2 hiện đang bị lưu nhãn `08 trạm` (do tên gói tỉnh là 8 trạm). Cần chuẩn hóa lại thành `Gói 2`.
-3. **Về điều kiện xuất hợp đồng:**
+### 📌 Nhận xét đánh giá:
+1. **Về danh sách quy hoạch:** Đã loại trừ `26DNa246` khỏi Gói 3 đưa vào danh mục Dùng chung CSHT (HTCS). Gói 3 hiện còn chuẩn **7 trạm**.
+2. **Về điều kiện xuất hợp đồng:**
    - **7 trạm** đã có đầy đủ 100% dữ liệu pháp lý trên Supabase và xuất hợp đồng ngay được.
-   - **2 trạm Gói 4** (`26DNa163`, `26DNa167`) đã được lập hợp đồng qua file Word trên Desktop đợt 30/09, nhưng chưa đồng bộ các trường vào bảng `infrastructure_projects`.
-   - **6 trạm còn lại** (`26DNa250`, `26DNa162`, `26DNa246`, `26DNa164`, `26DNa166`, `26DNa168`) đang thiếu thông tin chủ hộ, số thửa, tờ bản đồ và tài khoản ngân hàng.
+   - **2 trạm Gói 4** (`26DNa163`, `26DNa167`) đã được lập hợp đồng qua file Word trên Desktop đợt 30/09, cần bổ sung STK.
+   - **5 trạm còn lại** (`26DNa250`, `26DNa162`, `26DNa164`, `26DNa166`, `26DNa168`) đang thiếu STK hoặc thông tin chủ đất.
 
 ---
 
