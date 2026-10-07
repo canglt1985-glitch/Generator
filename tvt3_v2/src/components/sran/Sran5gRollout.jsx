@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { 
   Cpu, CheckCircle2, Clock, AlertTriangle, 
-  MapPin, Search, ArrowUpRight, Filter
+  MapPin, Search, ArrowUpRight
 } from 'lucide-react';
 import { 
   TVT3_DISTRICTS,

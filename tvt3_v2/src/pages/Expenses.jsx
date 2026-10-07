@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../supabaseClient';
 import { 
-  Coins, FileText, ClipboardList, Search, Plus, Trash, 
-  TrendingUp, TrendingDown, DollarSign, Calendar, User, 
-  MapPin, Clock, Edit, X, RefreshCw
+  Coins, FileText, Search, Plus, Trash, 
+  TrendingUp, Calendar, 
+  Clock, Edit, X
 } from 'lucide-react';
 import { useCurrentUser } from '../utils/useCurrentUser';
 
@@ -95,7 +95,7 @@ export default function Expenses() {
   const [employeeRecordId, setEmployeeRecordId] = useState(null);
 
   // Form states - Fuel Transaction
-  const [fuelDate, setFuelDate] = useState(new Date().toISOString().split('T')[0]);
+  const [_fuelDate, setFuelDate] = useState(new Date().toISOString().split('T')[0]);
   const [fuelDateDMY, setFuelDateDMY] = useState(getTodayDMY());
   const [fuelType, setFuelType] = useState('STOCK_IN'); // STOCK_IN, STATION_OUT, DIRECT_BUY, ADJUSTMENT
   const [fuelSiteId, setFuelSiteId] = useState('');
@@ -243,7 +243,7 @@ export default function Expenses() {
   }, [transactions]);
 
   // Helper label trạm
-  const getSiteLabel = (siteId) => {
+  const _getSiteLabel = (siteId) => {
     if (!siteId) return 'Kho chung (Tổ)';
     const sId = siteId.trim().toUpperCase();
     const st = stations.find(s => s.site_id === sId || (s.site_id_old && s.site_id_old.trim().toUpperCase() === sId));
@@ -268,7 +268,7 @@ export default function Expenses() {
   };
 
   // Tính toán tồn kho dầu & xăng hiện tại
-  const stockBalance = useMemo(() => {
+  const _stockBalance = useMemo(() => {
     let dau = 0;
     let xang = 0;
     
@@ -304,7 +304,7 @@ export default function Expenses() {
   }, [fuelTransactions]);
 
   // Tính toán dòng tiền Quỹ nội bộ (Tạm ứng & Chi tiêu)
-  const fundSummary = useMemo(() => {
+  const _fundSummary = useMemo(() => {
     // 1. Tổng tạm ứng
     const totalAdvance = advances.reduce((sum, t) => sum + (parseFloat(t.other_expenses.amount) || 0), 0);
 
@@ -1035,7 +1035,7 @@ export default function Expenses() {
               emerald: 'border-l-emerald-600',
             };
             
-            const textColors = {
+            const _textColors = {
               teal: 'text-teal-700',
               pink: 'text-pink-700',
               emerald: 'text-emerald-700',

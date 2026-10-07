@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { FILTER_OPTIONS } from '../../utils/contractConstants';
 import { getContractFlags } from '../../utils/contractChecks';

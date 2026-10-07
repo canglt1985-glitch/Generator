@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { Eye, Edit, Trash2 } from 'lucide-react';
+import { useMemo } from 'react';
+import { Eye } from 'lucide-react';
 import { getContractFlags, checkPriceFrame } from '../../utils/contractChecks';
 import { supabase } from '../../supabaseClient';
 import { CONTRACT_STATUSES } from '../../utils/contractConstants';

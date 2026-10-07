@@ -413,7 +413,6 @@ export function getSectorContiguousLayers(
       fillOpacity: 0.52,
       zIndex: SECTOR_LAYER_CONFIG['5G_3800'].zIndex
     });
-    currentR = rOuter;
   }
 
   return layers;

@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { FileDown, Loader2, X, CheckCircle2, Server, FileText, Wallet, CreditCard, ChevronRight, TrendingDown, RefreshCw, Plus, UserCheck, AlertCircle } from 'lucide-react';
+import { FileDown, Loader2, X, CheckCircle2, Server, FileText, Wallet, CreditCard, AlertCircle } from 'lucide-react';
 import { generateWordDocument } from '../../utils/wordGenerator';
 import { generatePaymentSchedule, convertNumberToVietnameseWords } from '../../utils/contractCalculations';
 

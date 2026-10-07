@@ -1,4 +1,4 @@
-import { parse, addMonths, addDays, subDays, isAfter, format, isValid, endOfMonth } from 'date-fns';
+import { addMonths, addDays, subDays, isAfter, format, isValid } from 'date-fns';
 
 /**
  * Phân tích chu kỳ thanh toán từ chuỗi (vd: "6 tháng", "1 năm", "3 tháng")
@@ -24,8 +24,8 @@ function parseDateRobust(dateStr) {
   const str = String(dateStr).trim();
   
   // DD/MM/YYYY hoặc DD-MM-YYYY
-  if (/^\d{1,2}[\/-]\d{1,2}[\/-]\d{4}$/.test(str)) {
-    const parts = str.split(/[\/-]/);
+  if (/^\d{1,2}[/-]\d{1,2}[/-]\d{4}$/.test(str)) {
+    const parts = str.split(/[/-]/);
     const date = new Date(parts[2], parts[1] - 1, parts[0]);
     if (isValid(date)) return date;
   }
@@ -75,7 +75,7 @@ export function generatePaymentCycles(paidUntilDate, contractEndDate, cycleStrin
       isTruncated = true;
     }
     
-    let expectedAmount = 0;
+    let expectedAmount;
     if (!isTruncated) {
       // Chu kỳ trọn vẹn: Số tháng * Giá 1 tháng
       expectedAmount = pricePerMonth * cycleMonths;

@@ -1,14 +1,15 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../supabaseClient';
+import * as XLSX from 'xlsx';
 import { useCurrentUser } from '../utils/useCurrentUser';
 
 import { generateWordDocument } from '../utils/wordGenerator';
 import { convertNumberToVietnameseWords } from '../utils/contractCalculations';
 import { 
-  Search, Filter, Plus, CheckCircle2, Clock, AlertTriangle, AlertCircle, 
-  MapPin, User, ChevronRight, Calendar, Info, RefreshCw,
-  TrendingUp, Activity, Server, FileText, ArrowRight, ChevronLeft,
-  X, HelpCircle, Check, Play, Edit3, Download, Upload,
+  Search, Plus, CheckCircle2, Clock, AlertTriangle, AlertCircle, 
+  MapPin, ChevronRight, RefreshCw,
+  TrendingUp, Activity, Server, FileText, ChevronLeft,
+  X, Check, Edit3, Download, Upload,
   Building2, Send, History, Sparkles, Share2, CheckSquare, FileSpreadsheet, Landmark,
   RotateCcw, SlidersHorizontal
 } from 'lucide-react';
@@ -84,7 +85,7 @@ export const SITES_TCT_HUY_HOAN_7203 = [
 ];
 
 export default function InfrastructureDevelopment() {
-  const { user } = useCurrentUser();
+  const { user: _user } = useCurrentUser();
   const [projects, setProjects] = useState([]);
   const [activeSites, setActiveSites] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -233,13 +234,12 @@ export default function InfrastructureDevelopment() {
       legal_lease_contract: proj.legal_lease_contract || '',
       skhcn_status: proj.skhcn_status || '',
       skhcn_confirmed: proj.skhcn_confirmed || '',
-      approval_batch: proj.approval_batch || '',
-      deployment_package: proj.deployment_package || ''
+      approval_batch: proj.approval_batch || ''
     });
     setIsEditing(false);
   };
   
-  const [filterTv3Only, setFilterTv3Only] = useState(true);
+  const [_filterTv3Only, _setFilterTv3Only] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterDistrict, setFilterDistrict] = useState('');
   const [filterStage, setFilterStage] = useState('');
@@ -537,9 +537,9 @@ export default function InfrastructureDevelopment() {
   });
 
   const totalProjects = tvt3ScopeProjects.length;
-  const inProgressProjects = tvt3ScopeProjects.filter(p => p.overall_status === 'IN_PROGRESS').length;
-  const completedProjects = tvt3ScopeProjects.filter(p => p.overall_status === 'COMPLETED' || p.current_stage === 'on_air').length;
-  const planningProjects = tvt3ScopeProjects.filter(p => p.overall_status === 'PLANNING' || p.current_stage === 'design').length;
+  const _inProgressProjects = tvt3ScopeProjects.filter(p => p.overall_status === 'IN_PROGRESS').length;
+  const _completedProjects = tvt3ScopeProjects.filter(p => p.overall_status === 'COMPLETED' || p.current_stage === 'on_air').length;
+  const _planningProjects = tvt3ScopeProjects.filter(p => p.overall_status === 'PLANNING' || p.current_stage === 'design').length;
 
   // 1. Khảo sát thực địa
   const surveyedCount = tvt3ScopeProjects.filter(p => p.latitude_survey && p.longitude_survey).length;
@@ -551,7 +551,7 @@ export default function InfrastructureDevelopment() {
   const skhcnPendingCount = totalProjects - skhcnApprovedCount;
 
   // 3. TCT phê duyệt & Đợt quy hoạch
-  const tctApprovedCount = tvt3ScopeProjects.filter(p => p.approval_batch || p.priority).length;
+  const _tctApprovedCount = tvt3ScopeProjects.filter(p => p.approval_batch || p.priority).length;
 
   // 4. Phân loại đầu tư (MobiFone đầu tư vs Dùng chung CSHT)
   const mbfApprovedInvestCount = tvt3ScopeProjects.filter(p => (p.implementation_type === 'MBF đầu tư' || !p.implementation_type) && (p.skhcn_status === 'Chấp thuận xây dựng mới' || p.skhcn_confirmed)).length;
@@ -632,7 +632,7 @@ export default function InfrastructureDevelopment() {
   const [autoResetFilterOnSave, setAutoResetFilterOnSave] = useState(true);
 
   // Gap analysis / density
-  const getDensityData = () => {
+  const _getDensityData = () => {
     const data = districts.map(dist => {
       const activeCount = activeSites.filter(s => s.location_info?.huyen_cu === dist || s.location_info?.district === dist).length;
       const plannedCount = projects.filter(p => p.district === dist).length;
@@ -735,7 +735,7 @@ export default function InfrastructureDevelopment() {
         updated_at: new Date().toISOString()
       };
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('infrastructure_projects')
         .update(updates)
         .eq('project_id', project.project_id)
@@ -839,7 +839,7 @@ export default function InfrastructureDevelopment() {
         overall_status: 'PLANNING'
       };
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('infrastructure_projects')
         .insert([payload])
         .select();
@@ -1106,7 +1106,7 @@ export default function InfrastructureDevelopment() {
         updated_at: new Date().toISOString()
       };
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('infrastructure_projects')
         .update(updates)
         .eq('project_id', selectedProject.project_id)
@@ -1207,7 +1207,7 @@ export default function InfrastructureDevelopment() {
         };
       }
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('infrastructure_projects')
         .update(updates)
         .eq('project_id', selectedProject.project_id)
@@ -1273,7 +1273,7 @@ export default function InfrastructureDevelopment() {
       }
 
       const rows = targetList.map((proj, idx) => {
-        let oldLoc = '';
+        let oldLoc;
         try {
           oldLoc = proj.district || getOldLocation(proj);
         } catch (e) {
@@ -1371,7 +1371,7 @@ export default function InfrastructureDevelopment() {
       }
 
       const dataToExport = targetProjects.map((proj, idx) => {
-        let oldLoc = '';
+        let oldLoc;
         try {
           oldLoc = proj.district || getOldLocation(proj);
         } catch (e) {
@@ -1703,6 +1703,7 @@ export default function InfrastructureDevelopment() {
         (selectedProject.address && selectedProject.address.includes('Xã Cẩm Mỹ')) ||
         (selectedProject.ward && selectedProject.ward.toLowerCase().includes(xa_moi.toLowerCase()) && !detailAddress.toLowerCase().includes('huyện'));
 
+      const addressNewText = `thửa đất số ${selectedProject.plot_number || '............'}, tờ bản đồ số ${selectedProject.map_sheet || '............'}${detailAddress ? `, ${detailAddress}` : ''}, ${xa_moi || selectedProject.ward || '............'}, tỉnh Đồng Nai`;
       let fullAddress = '';
       let addressOldText = '';
       if (isAlreadyUpdated) {
@@ -1888,7 +1889,6 @@ export default function InfrastructureDevelopment() {
         LANDLORD_PHONE: selectedProject.landlord_phone || '................',
         LANDLORD_CCCD: selectedProject.landlord_cccd || '................',
         BANK_ACCOUNT: bankAccountText,
-        ADDRESS_NEW: addressNewText,
         CLASSIFICATION_TYPE: selectedProject.implementation_type || '................',
         OFFSET_DISTANCE: offsetDist > 0 ? `${offsetDist}m` : '0m',
         HEIGHT_PLAN: selectedProject.height ? `${selectedProject.height}m` : '........',
@@ -3101,7 +3101,7 @@ export default function InfrastructureDevelopment() {
                       </tr>
                     ) : (
                       filteredProjects.map((proj) => {
-                        const currentStageObj = STAGES.find(s => s.id === proj.current_stage);
+                        const _currentStageObj = STAGES.find(s => s.id === proj.current_stage);
                         const oldLoc = proj.district || getOldLocation(proj);
                         const nearestSite = findNearestActiveSite(proj);
                         return (
@@ -3418,8 +3418,8 @@ export default function InfrastructureDevelopment() {
 
               {/* Hướng dẫn nghiệp vụ theo từng giai đoạn */}
               {(() => {
-                let instruction = '';
-                let bgColor = '';
+                let instruction;
+                let bgColor;
                 if (selectedProject.current_stage === 'survey') {
                   instruction = '📍 Giai đoạn Khảo sát: Vui lòng cập nhật tọa độ khảo sát thực tế và thông tin sơ bộ để xuất Biên bản ghi nhớ / Biên bản làm việc (MOU) thương lượng.';
                   bgColor = 'bg-blue-50/70 border-blue-100 text-blue-800';

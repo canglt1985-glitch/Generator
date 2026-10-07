@@ -1,12 +1,12 @@
-import React, { Fragment, useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { useCurrentUser } from '../utils/useCurrentUser';
 import { 
   MapPin, Search, Server, Compass, AlertCircle, Radio, 
   Layers, Copy, Check, Maximize2, Minimize2,
-  ChevronLeft, ChevronRight, ChevronDown, X, Zap, RefreshCw,
-  Phone, Navigation, ExternalLink
+  ChevronLeft, ChevronRight, ChevronDown, X, 
+  Phone, Navigation
 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, Circle, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -545,6 +545,10 @@ export default function NetworkMap() {
   const [infraFilter] = useState('all'); // 'all' | 'so_ok_dau_tu' | 'dung_chung' | 'da_khao_sat' | 'quy_hoach'
   const [useGPS, setUseGPS] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(''), 3500);
+  };
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [customTargetSearch, setCustomTargetSearch] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -577,7 +581,7 @@ export default function NetworkMap() {
   const [searchSuggestions, setSearchSuggestions] = useState([]);
 
   // Thống kê nhanh công nghệ trạm hiện hữu từ dữ liệu Vô tuyến
-  const activeSiteRadioCounts = useMemo(() => {
+  const _activeSiteRadioCounts = useMemo(() => {
     const counts = {
       '5g_a': 0,
       '5g_l1': 0,
@@ -988,11 +992,6 @@ export default function NetworkMap() {
     };
   }, [useGPS]);
 
-  const showToast = (msg) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(''), 3500);
-  };
-
   const handleCopyCoords = (lat, lng, label = 'Tọa độ') => {
     if (!lat || !lng) return;
     const coordStr = `${parseFloat(lat).toFixed(6)}, ${parseFloat(lng).toFixed(6)}`;
@@ -1392,7 +1391,7 @@ export default function NetworkMap() {
 
           {customTargetSearch.trim().length >= 2 && (
             <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-slate-900/95 backdrop-blur-md border border-purple-500/40 rounded-xl shadow-2xl overflow-hidden divide-y divide-slate-800 max-h-52 overflow-y-auto font-sans">
-              {categorizedActiveSites
+              {activeSites
                 .filter(s => {
                   const q = customTargetSearch.toLowerCase();
                   const oldId = (s.site_id_old || '').toLowerCase();

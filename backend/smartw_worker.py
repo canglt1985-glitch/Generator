@@ -32,6 +32,21 @@ logger = logging.getLogger("smartw_worker")
 DATA_DIR = os.path.join(current_dir, 'data', 'smartw')
 STATUS_FILE = os.path.join(DATA_DIR, 'scrape_status.json')
 
+# Alarm Finite State Machine singleton
+_fsm_instance = None
+def _get_alarm_fsm():
+    global _fsm_instance
+    if _fsm_instance is None:
+        from smartw.alarm_fsm import AlarmStateMachine
+        state_file = os.path.join(DATA_DIR, 'alarm_state_machine.json')
+        _fsm_instance = AlarmStateMachine(
+            state_file=state_file,
+            flap_threshold=2,
+            flap_window_seconds=7200,   # 2 giờ
+            stabilize_cycles=2          # 2 chu kỳ sạch (30 phút) để khôi phục
+        )
+    return _fsm_instance
+
 # Track if a scrape is currently running (simple lock)
 _is_running = False
 LOCK_FILE = os.path.join(DATA_DIR, 'worker.lock')
@@ -2277,295 +2292,180 @@ def run_alarm_poll():
                 if e.get('source') == 'vhkt'  # keep only vhkt errors
             ]
 
-            # ── Collect new alarms & cleared for new Viber format ──
-            all_new = {}   # table_type -> list of new alarms
-            all_cleared = []  # list of (table_type, alarm)
-
+            # ── 1. Cập nhật danh sách cleared vào cache {table_type}_cleared.json ──
             for table_type in ['md', 'mpd', 'mll', 'mll_cell']:
-                cleared = _detect_cleared(table_type)
-                if cleared:
-                    _update_cleared_list(table_type, cleared)
-                    logger.info(f'SmartW Worker: {len(cleared)} {table_type.upper()} alarm(s) cleared')
-                    for alarm in cleared:
-                        all_cleared.append((table_type, alarm))
+                cleared_raw = _detect_cleared(table_type)
+                if cleared_raw:
+                    _update_cleared_list(table_type, cleared_raw)
 
-                new_alarms = _detect_new(table_type)
-                if new_alarms:
-                    logger.info(f'SmartW Worker: {len(new_alarms)} {table_type.upper()} alarm(s) newly detected')
-                    all_new[table_type] = new_alarms
-
-            # Real-time flapping alerts disabled (replaced by morning daily report based on VHKT summary)
-            # if all_new:
-            #     check_and_alert_flapping(all_new)
-
-            if all_new or all_cleared:
-                # Filter for real-time reporting (skip mll_cell)
-                new_md = [a for a in all_new.get('md', []) if _is_managed_site(_site_key(a))]
-                new_mpd = [a for a in all_new.get('mpd', []) if _is_managed_site(_site_key(a))]
-                new_mll = [a for a in all_new.get('mll', []) if _is_managed_site(_site_key(a))]
-                
-                cl_md = [a for (t, a) in all_cleared if t == 'md' and _is_managed_site(_site_key(a))]
-                cl_mpd = [a for (t, a) in all_cleared if t == 'mpd' and _is_managed_site(_site_key(a))]
-                cl_mll = [a for (t, a) in all_cleared if t == 'mll' and _is_managed_site(_site_key(a))]
-
-
-                if not (new_md or new_mpd or new_mll or cl_md or cl_mpd or cl_mll):
-                    # No real-time updates to report (only celloff changes)
-                    status['last_alarm_poll'] = datetime.now().isoformat()
-                    return
-
-                # --- Load Sent Tech State Caches ---
-                active_tech_file = os.path.join(DATA_DIR, 'sent_active_techs.json')
-                cleared_tech_file = os.path.join(DATA_DIR, 'sent_cleared_techs.json')
-                
-                sent_active_techs = {}
-                if os.path.exists(active_tech_file):
-                    try:
-                        with open(active_tech_file, 'r', encoding='utf-8') as sf:
-                            sent_active_techs = json.load(sf)
-                    except Exception:
-                        sent_active_techs = {}
-                        
-                sent_cleared_techs = {}
-                if os.path.exists(cleared_tech_file):
-                    try:
-                        with open(cleared_tech_file, 'r', encoding='utf-8') as sf:
-                            sent_cleared_techs = json.load(sf)
-                    except Exception:
-                        sent_cleared_techs = {}
-
-                now_ts = datetime.now().timestamp()
-                # Purge entries older than 12 hours (43,200s)
-                sent_active_techs = {k: v for k, v in sent_active_techs.items() if isinstance(v, dict) and (now_ts - v.get('ts', 0)) < 43200}
-                sent_cleared_techs = {k: v for k, v in sent_cleared_techs.items() if isinstance(v, dict) and (now_ts - v.get('ts', 0)) < 43200}
-
-                # --- 1. ACTIVE SECTION ---
-                active_sent_count = 0
-                if new_md or new_mpd or new_mll:
-                    lines_active = ["🚨 *ACTIVE*"]
+            # ── 2. Chuẩn bị active items cho AlarmStateMachine (FSM Chống Rung Lắc) ──
+            active_items_by_key = {}
+            for table_type in ['md', 'mpd', 'mll']:
+                for alarm in result.get(table_type, []):
+                    raw_site = _site_key(alarm)
+                    if not _is_managed_site(raw_site):
+                        continue
+                    base_new_id, base_old_id, tech = _resolve_base_site_and_tech(raw_site, alarm.get('network') or '')
+                    target_id = base_new_id or base_old_id or raw_site
+                    tech_key = tech if tech else 'ALL'
+                    key = f"{table_type}_{target_id}_{tech_key}"
+                    sdate_raw = alarm.get('sdateStr') or alarm.get('sdate_str') or alarm.get('sdate') or ''
+                    t = _fmt_sdate(sdate_raw, full=False)
+                    label = _get_site_label(target_id)
                     
-                    if new_md:
-                        mac_groups = {}
-                        for alarm in new_md:
-                            raw_site = _site_key(alarm)
-                            base_id, old_id, tech = _resolve_base_site_and_tech(raw_site, alarm.get('network') or '')
-                            sdate_raw = alarm.get('sdateStr') or alarm.get('sdate_str') or alarm.get('sdate') or ''
-                            t = _fmt_sdate(sdate_raw, full=False)
-                            inc_key = f"md_{base_id}_{sdate_raw}"
-                            already_sent = sent_active_techs.get(inc_key, {}).get('techs', [])
-                            if tech and tech in already_sent:
-                                continue  # Skip tech already reported ACTIVE for this incident
-                            if base_id not in mac_groups:
-                                mac_groups[base_id] = {'label': _get_site_label(base_id), 'nets': [], 't': t, 'inc_keys': {}}
-                            if tech and tech not in mac_groups[base_id]['nets']:
-                                mac_groups[base_id]['nets'].append(tech)
-                                mac_groups[base_id]['inc_keys'].setdefault(inc_key, []).append(tech)
-                        if mac_groups:
-                            lines_active.append("*MAC:*")
-                            for site, grp in mac_groups.items():
-                                net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
-                                lines_active.append(f"• {grp['label']}{net_part} - {grp['t']}")
-                                active_sent_count += 1
-                                for ikey, techs in grp['inc_keys'].items():
-                                    existing = sent_active_techs.setdefault(ikey, {'techs': [], 'ts': now_ts})['techs']
-                                    for tech_item in techs:
-                                        if tech_item not in existing:
-                                            existing.append(tech_item)
+                    active_items_by_key[key] = {
+                        "table_type": table_type,
+                        "base_id": target_id,
+                        "old_id": base_old_id,
+                        "tech": tech,
+                        "alarm": alarm,
+                        "label": label,
+                        "sdate": t,
+                        "sdate_raw": sdate_raw,
+                        "topology_tag": _get_mll_topology_tag(target_id),
+                        "outage_tag": _get_site_outage_tag(target_id)
+                    }
 
-                    if new_mpd:
-                        mpd_groups = {}
-                        for alarm in new_mpd:
-                            raw_site = _site_key(alarm)
-                            base_id, old_id, tech = _resolve_base_site_and_tech(raw_site, alarm.get('network') or '')
-                            sdate_raw = alarm.get('sdateStr') or alarm.get('sdate_str') or alarm.get('sdate') or ''
-                            t = _fmt_sdate(sdate_raw, full=False)
-                            inc_key = f"mpd_{base_id}_{sdate_raw}"
-                            already_sent = sent_active_techs.get(inc_key, {}).get('techs', [])
-                            if tech and tech in already_sent:
-                                continue
-                            if base_id not in mpd_groups:
-                                mpd_groups[base_id] = {'label': _get_site_label(base_id), 'nets': [], 't': t, 'inc_keys': {}}
-                            if tech and tech not in mpd_groups[base_id]['nets']:
-                                mpd_groups[base_id]['nets'].append(tech)
-                                mpd_groups[base_id]['inc_keys'].setdefault(inc_key, []).append(tech)
-                        if mpd_groups:
-                            lines_active.append("*GEN:*")
-                            for site, grp in mpd_groups.items():
-                                net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
-                                lines_active.append(f"• {grp['label']}{net_part} - {grp['t']}")
-                                active_sent_count += 1
-                                for ikey, techs in grp['inc_keys'].items():
-                                    existing = sent_active_techs.setdefault(ikey, {'techs': [], 'ts': now_ts})['techs']
-                                    for tech_item in techs:
-                                        if tech_item not in existing:
-                                            existing.append(tech_item)
+            # ── 3. Xử lý FSM: Phân loại Active, Chập chờn, Cleared ──
+            fsm = _get_alarm_fsm()
+            fsm_events = fsm.process_cycle(active_items_by_key)
+            new_active_events = fsm_events.get("new_active", [])
+            new_flapping_events = fsm_events.get("new_flapping", [])
+            new_cleared_events = fsm_events.get("new_cleared", [])
 
-                    if new_mll:
-                        mll_groups = {}
-                        for alarm in new_mll:
-                            raw_site = _site_key(alarm)
-                            base_id, old_id, tech = _resolve_base_site_and_tech(raw_site, alarm.get('network') or '')
-                            sdate_raw = alarm.get('sdateStr') or alarm.get('sdate_str') or alarm.get('sdate') or ''
-                            t = _fmt_sdate(sdate_raw, full=False)
-                            inc_key = f"mll_{base_id}_{sdate_raw}"
-                            already_sent = sent_active_techs.get(inc_key, {}).get('techs', [])
-                            if tech and tech in already_sent:
-                                continue
-                            if base_id not in mll_groups:
-                                mll_groups[base_id] = {'label': _get_site_label(base_id), 'nets': [], 't': t, 'inc_keys': {}}
-                            if tech and tech not in mll_groups[base_id]['nets']:
-                                mll_groups[base_id]['nets'].append(tech)
-                                mll_groups[base_id]['inc_keys'].setdefault(inc_key, []).append(tech)
-                        if mll_groups:
-                            lines_active.append("*MLL:*")
-                            for site, grp in mll_groups.items():
-                                lines_active.extend(_format_mll_station_lines(site, grp))
-                                active_sent_count += 1
-                                for ikey, techs in grp['inc_keys'].items():
-                                    existing = sent_active_techs.setdefault(ikey, {'techs': [], 'ts': now_ts})['techs']
-                                    for tech_item in techs:
-                                        if tech_item not in existing:
-                                            existing.append(tech_item)
+            # ── 4. Phát thông báo theo từng phân hệ ──
+            # (A) CẢNH BÁO ACTIVE (Lỗi mới xuất hiện)
+            if new_active_events:
+                lines_active = ["🚨 *ACTIVE*"]
+                act_md = [e for e in new_active_events if e.get("table_type") == 'md']
+                act_mpd = [e for e in new_active_events if e.get("table_type") == 'mpd']
+                act_mll = [e for e in new_active_events if e.get("table_type") == 'mll']
 
-                    if active_sent_count > 0:
-                        _send_viber_report(lines_active)
-                        try:
-                            with open(active_tech_file, 'w', encoding='utf-8') as sf:
-                                json.dump(sent_active_techs, sf, ensure_ascii=False, indent=2)
-                        except Exception as fe:
-                            logger.warning(f"Failed to save sent_active_techs.json: {fe}")
+                if act_md:
+                    lines_active.append("*MAC:*")
+                    mac_groups = {}
+                    for item in act_md:
+                        info = item.get("active_info") or {}
+                        b_id = item["base_id"]
+                        t_item = item.get("tech")
+                        if b_id not in mac_groups:
+                            mac_groups[b_id] = {'label': info.get('label') or _get_site_label(b_id), 'nets': [], 't': info.get('sdate') or ''}
+                        if t_item and t_item not in mac_groups[b_id]['nets']:
+                            mac_groups[b_id]['nets'].append(t_item)
+                    for _, grp in mac_groups.items():
+                        net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
+                        lines_active.append(f"• {grp['label']}{net_part} - {grp['t']}")
 
-                # --- 2. CLEARED SECTION (with state-file & tech deduplication) ---
-                cleared_state_file = os.path.join(DATA_DIR, 'sent_cleared_alarms.json')
-                sent_cleared = {}
-                if os.path.exists(cleared_state_file):
-                    try:
-                        with open(cleared_state_file, 'r', encoding='utf-8') as sf:
-                            sent_cleared = json.load(sf)
-                    except Exception:
-                        sent_cleared = {}
+                if act_mpd:
+                    lines_active.append("*GEN:*")
+                    mpd_groups = {}
+                    for item in act_mpd:
+                        info = item.get("active_info") or {}
+                        b_id = item["base_id"]
+                        t_item = item.get("tech")
+                        if b_id not in mpd_groups:
+                            mpd_groups[b_id] = {'label': info.get('label') or _get_site_label(b_id), 'nets': [], 't': info.get('sdate') or ''}
+                        if t_item and t_item not in mpd_groups[b_id]['nets']:
+                            mpd_groups[b_id]['nets'].append(t_item)
+                    for _, grp in mpd_groups.items():
+                        net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
+                        lines_active.append(f"• {grp['label']}{net_part} - {grp['t']}")
 
-                sent_cleared = {k: v for k, v in sent_cleared.items() if isinstance(v, (int, float)) and (now_ts - v) < 21600}
+                if act_mll:
+                    lines_active.append("*MLL:*")
+                    mll_groups = {}
+                    for item in act_mll:
+                        info = item.get("active_info") or {}
+                        b_id = item["base_id"]
+                        t_item = item.get("tech")
+                        if b_id not in mll_groups:
+                            mll_groups[b_id] = {'label': info.get('label') or _get_site_label(b_id), 'nets': [], 't': info.get('sdate') or ''}
+                        if t_item and t_item not in mll_groups[b_id]['nets']:
+                            mll_groups[b_id]['nets'].append(t_item)
+                    for b_id, grp in mll_groups.items():
+                        lines_active.extend(_format_mll_station_lines(b_id, grp))
 
-                def _filter_unsent(alarm_list, table_type):
-                    unsent = []
-                    for a in alarm_list:
-                        site = _site_key(a)
-                        sdate = str(a.get('sdateStr') or a.get('sdate_str') or a.get('sdate') or '')
-                        clear_t = str(a.get('clear_time') or a.get('edateStr') or a.get('edate') or '')
-                        alarm_id = str(a.get('id') or a.get('ukAlarmKey') or '')
-                        ckey = f"{table_type}_{site}_{sdate}_{clear_t}_{alarm_id}"
-                        if ckey not in sent_cleared:
-                            unsent.append((a, ckey))
-                    return unsent
+                _send_viber_report(lines_active)
+                logger.info(f"SmartW Worker: Đã gửi cảnh báo ACTIVE ({len(new_active_events)} mục)")
 
-                unsent_cl_md = _filter_unsent(cl_md, 'md')
-                unsent_cl_mpd = _filter_cl_mpd = _filter_unsent(cl_mpd, 'mpd')
-                unsent_cl_mll = _filter_unsent(cl_mll, 'mll')
+            # (B) CẢNH BÁO CHẬP CHỜN (Định dạng micro-syntax theo yêu cầu: ⚠️ *Chập chờn*)
+            if new_flapping_events:
+                lines_flapping = ["⚠️ *Chập chờn*"]
+                flap_groups = {}
+                for item in new_flapping_events:
+                    b_id = item["base_id"]
+                    t_item = item.get("tech")
+                    flaps = item.get("flaps_count", 2)
+                    info = item.get("active_info") or {}
+                    lbl = info.get("label") or item.get("label") or _get_site_label(b_id)
+                    if b_id not in flap_groups:
+                        flap_groups[b_id] = {"label": lbl, "nets": [], "flaps": flaps}
+                    if t_item and t_item not in flap_groups[b_id]["nets"]:
+                        flap_groups[b_id]["nets"].append(t_item)
+                    flap_groups[b_id]["flaps"] = max(flap_groups[b_id]["flaps"], flaps)
 
-                cleared_sent_count = 0
-                if unsent_cl_md or unsent_cl_mpd or unsent_cl_mll:
-                    lines_cleared = ["✅ *CLEARED*"]
+                for b_id, grp in flap_groups.items():
+                    net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
+                    flaps = grp["flaps"]
+                    lines_flapping.append(f"• {grp['label']}{net_part} - Chập chờn {flaps} lần/2h")
 
-                    if unsent_cl_md:
-                        cl_mac_groups = {}
-                        for alarm, _ in unsent_cl_md:
-                            raw_site = _site_key(alarm)
-                            base_id, old_id, tech = _resolve_base_site_and_tech(raw_site, alarm.get('network') or '')
-                            sdate_raw = alarm.get('sdateStr') or alarm.get('sdate_str') or alarm.get('sdate') or ''
-                            clear_t = _fmt_sdate(alarm.get('clear_time') or alarm.get('edateStr') or '', full=False)
-                            inc_key = f"md_{base_id}_{sdate_raw}"
-                            already_cleared = sent_cleared_techs.get(inc_key, {}).get('techs', [])
-                            if tech and tech in already_cleared:
-                                continue  # Skip tech already reported CLEARED for this incident
-                            if base_id not in cl_mac_groups:
-                                cl_mac_groups[base_id] = {'label': _get_site_label(base_id), 'nets': [], 't': clear_t, 'inc_keys': {}}
-                            if tech and tech not in cl_mac_groups[base_id]['nets']:
-                                cl_mac_groups[base_id]['nets'].append(tech)
-                                cl_mac_groups[base_id]['inc_keys'].setdefault(inc_key, []).append(tech)
-                        if cl_mac_groups:
-                            lines_cleared.append("*MAC:*")
-                            for site, grp in cl_mac_groups.items():
-                                net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
-                                lines_cleared.append(f"• {grp['label']}{net_part}")
-                                cleared_sent_count += 1
-                                for ikey, techs in grp['inc_keys'].items():
-                                    existing = sent_cleared_techs.setdefault(ikey, {'techs': [], 'ts': now_ts})['techs']
-                                    for tech_item in techs:
-                                        if tech_item not in existing:
-                                            existing.append(tech_item)
+                _send_viber_report(lines_flapping)
+                logger.info(f"SmartW Worker: Đã gửi cảnh báo Chập chờn ({len(flap_groups)} trạm)")
 
-                    if unsent_cl_mpd:
-                        cl_mpd_groups = {}
-                        for alarm, _ in unsent_cl_mpd:
-                            raw_site = _site_key(alarm)
-                            base_id, old_id, tech = _resolve_base_site_and_tech(raw_site, alarm.get('network') or '')
-                            sdate_raw = alarm.get('sdateStr') or alarm.get('sdate_str') or alarm.get('sdate') or ''
-                            clear_t = _fmt_sdate(alarm.get('clear_time') or alarm.get('edateStr') or '', full=False)
-                            inc_key = f"mpd_{base_id}_{sdate_raw}"
-                            already_cleared = sent_cleared_techs.get(inc_key, {}).get('techs', [])
-                            if tech and tech in already_cleared:
-                                continue
-                            if base_id not in cl_mpd_groups:
-                                cl_mpd_groups[base_id] = {'label': _get_site_label(base_id), 'nets': [], 't': clear_t, 'inc_keys': {}}
-                            if tech and tech not in cl_mpd_groups[base_id]['nets']:
-                                cl_mpd_groups[base_id]['nets'].append(tech)
-                                cl_mpd_groups[base_id]['inc_keys'].setdefault(inc_key, []).append(tech)
-                        if cl_mpd_groups:
-                            lines_cleared.append("*GEN:*")
-                            for site, grp in cl_mpd_groups.items():
-                                net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
-                                lines_cleared.append(f"• {grp['label']}{net_part}")
-                                cleared_sent_count += 1
-                                for ikey, techs in grp['inc_keys'].items():
-                                    existing = sent_cleared_techs.setdefault(ikey, {'techs': [], 'ts': now_ts})['techs']
-                                    for tech_item in techs:
-                                        if tech_item not in existing:
-                                            existing.append(tech_item)
+            # (C) CẢNH BÁO CLEARED (Đã xác minh sạch liên tục >= 2 chu kỳ)
+            if new_cleared_events:
+                lines_cleared = ["✅ *CLEARED*"]
+                cl_md = [e for e in new_cleared_events if e.get("table_type") == 'md']
+                cl_mpd = [e for e in new_cleared_events if e.get("table_type") == 'mpd']
+                cl_mll = [e for e in new_cleared_events if e.get("table_type") == 'mll']
 
-                    if unsent_cl_mll:
-                        mll_cl_groups = {}
-                        for alarm, _ in unsent_cl_mll:
-                            raw_site = _site_key(alarm)
-                            base_id, old_id, tech = _resolve_base_site_and_tech(raw_site, alarm.get('network') or '')
-                            sdate_raw = alarm.get('sdateStr') or alarm.get('sdate_str') or alarm.get('sdate') or ''
-                            clear_t = _fmt_sdate(alarm.get('clear_time') or alarm.get('edateStr') or '', full=False)
-                            inc_key = f"mll_{base_id}_{sdate_raw}"
-                            already_cleared = sent_cleared_techs.get(inc_key, {}).get('techs', [])
-                            if tech and tech in already_cleared:
-                                continue
-                            if base_id not in mll_cl_groups:
-                                mll_cl_groups[base_id] = {'label': _get_site_label(base_id), 'nets': [], 't': clear_t, 'inc_keys': {}}
-                            if tech and tech not in mll_cl_groups[base_id]['nets']:
-                                mll_cl_groups[base_id]['nets'].append(tech)
-                                mll_cl_groups[base_id]['inc_keys'].setdefault(inc_key, []).append(tech)
-                        if mll_cl_groups:
-                            lines_cleared.append("*MLL:*")
-                            for site, grp in mll_cl_groups.items():
-                                net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
-                                lines_cleared.append(f"• {grp['label']}{net_part}")
-                                cleared_sent_count += 1
-                                for ikey, techs in grp['inc_keys'].items():
-                                    existing = sent_cleared_techs.setdefault(ikey, {'techs': [], 'ts': now_ts})['techs']
-                                    for tech_item in techs:
-                                        if tech_item not in existing:
-                                            existing.append(tech_item)
+                if cl_md:
+                    lines_cleared.append("*MAC:*")
+                    cl_mac_groups = {}
+                    for item in cl_md:
+                        b_id = item["base_id"]
+                        t_item = item.get("tech")
+                        info = item.get("active_info") or {}
+                        if b_id not in cl_mac_groups:
+                            cl_mac_groups[b_id] = {'label': info.get('label') or _get_site_label(b_id), 'nets': []}
+                        if t_item and t_item not in cl_mac_groups[b_id]['nets']:
+                            cl_mac_groups[b_id]['nets'].append(t_item)
+                    for _, grp in cl_mac_groups.items():
+                        net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
+                        lines_cleared.append(f"• {grp['label']}{net_part}")
 
-                    if cleared_sent_count > 0:
-                        _send_viber_report(lines_cleared)
+                if cl_mpd:
+                    lines_cleared.append("*GEN:*")
+                    cl_mpd_groups = {}
+                    for item in cl_mpd:
+                        b_id = item["base_id"]
+                        t_item = item.get("tech")
+                        info = item.get("active_info") or {}
+                        if b_id not in cl_mpd_groups:
+                            cl_mpd_groups[b_id] = {'label': info.get('label') or _get_site_label(b_id), 'nets': []}
+                        if t_item and t_item not in cl_mpd_groups[b_id]['nets']:
+                            cl_mpd_groups[b_id]['nets'].append(t_item)
+                    for _, grp in cl_mpd_groups.items():
+                        net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
+                        lines_cleared.append(f"• {grp['label']}{net_part}")
 
-                    # Mark keys as sent in state file
-                    for _, ckey in unsent_cl_md + unsent_cl_mpd + unsent_cl_mll:
-                        sent_cleared[ckey] = now_ts
+                if cl_mll:
+                    lines_cleared.append("*MLL:*")
+                    cl_mll_groups = {}
+                    for item in cl_mll:
+                        b_id = item["base_id"]
+                        t_item = item.get("tech")
+                        info = item.get("active_info") or {}
+                        if b_id not in cl_mll_groups:
+                            cl_mll_groups[b_id] = {'label': info.get('label') or _get_site_label(b_id), 'nets': []}
+                        if t_item and t_item not in cl_mll_groups[b_id]['nets']:
+                            cl_mll_groups[b_id]['nets'].append(t_item)
+                    for _, grp in cl_mll_groups.items():
+                        net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
+                        lines_cleared.append(f"• {grp['label']}{net_part}")
 
-                    try:
-                        os.makedirs(DATA_DIR, exist_ok=True)
-                        with open(cleared_state_file, 'w', encoding='utf-8') as sf:
-                            json.dump(sent_cleared, sf, ensure_ascii=False, indent=2)
-                        with open(cleared_tech_file, 'w', encoding='utf-8') as sf:
-                            json.dump(sent_cleared_techs, sf, ensure_ascii=False, indent=2)
-                    except Exception as fe:
-                        logger.warning(f"Failed to save sent_cleared_alarms.json: {fe}")
+                _send_viber_report(lines_cleared)
+                logger.info(f"SmartW Worker: Đã gửi thông báo CLEARED ({len(new_cleared_events)} mục)")
 
         status['last_alarm_poll'] = datetime.now().isoformat()
 

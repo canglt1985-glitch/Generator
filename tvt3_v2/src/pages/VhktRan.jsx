@@ -404,7 +404,7 @@ export default function VhktRan() {
     const sectorGroups = new Map();
     unique.forEach(a => {
       const { baseSite, newId, oldId, fullSite } = getSiteDetails(a.site);
-      const siteKey = (baseSite || newId || fullSite || '').toUpperCase();
+      const _siteKey = (baseSite || newId || fullSite || '').toUpperCase();
       const label = oldId || newId || a.site;
 
       let cellCode = String(a.cellid || '').toUpperCase().trim();
@@ -473,7 +473,7 @@ export default function VhktRan() {
     }
   });
 
-  const isMpdRunningOnSite = (site) => {
+  const _isMpdRunningOnSite = (site) => {
     if (!site) return false;
     const { fullSite, baseSite, oldId } = getSiteDetails(site);
     return activeMpdSites.has(fullSite) || (baseSite && activeMpdSites.has(baseSite)) || (oldId && activeMpdSites.has(oldId));
@@ -558,11 +558,7 @@ export default function VhktRan() {
   }, [groupedMll, rawGroupedCell]);
 
   // Card counts (memoized)
-  const { mdCount, mpdCount, mllCount, cellCount, totalActiveCount } = useMemo(() => ({
-    mdCount: groupedMd.length,
-    mpdCount: groupedMpd.length,
-    mllCount: groupedMll.length,
-    cellCount: groupedCell.length,
+  const { totalActiveCount } = useMemo(() => ({
     totalActiveCount: groupedMd.length + groupedMpd.length + groupedMll.length + groupedCell.length,
   }), [groupedMd, groupedMpd, groupedMll, groupedCell]);
 
@@ -712,7 +708,7 @@ export default function VhktRan() {
     copyToClipboard(text, 'pakh_detail');
   };
 
-  const handleCopyPakh = () => {
+  const _handleCopyPakh = () => {
     const text = generatePakhMessageText();
     copyToClipboard(text, 'pakh');
   };
@@ -762,7 +758,7 @@ export default function VhktRan() {
     const { newId, oldId } = getSiteDetails(a.site);
     const net = getAlarmNetwork(a);
     const dateStr = formatMessageDate(a.sdate);
-    const cellStr = a.cellid ? ` (${a.cellid})` : '';
+    const _cellStr = a.cellid ? ` (${a.cellid})` : '';
 
     if (isCellOff) {
       const siteCode = a._grouped ? a._label : (oldId || newId || a.site);

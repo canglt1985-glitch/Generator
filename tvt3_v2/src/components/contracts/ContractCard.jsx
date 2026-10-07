@@ -1,4 +1,3 @@
-import React from 'react';
 import { MapPin, Calendar, CreditCard, User, MoreVertical } from 'lucide-react';
 
 export default function ContractCard({ contract, onSelect }) {

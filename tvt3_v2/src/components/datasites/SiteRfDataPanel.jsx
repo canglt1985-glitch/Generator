@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../../supabaseClient';
 import { 
-  Radio, Compass, Layers, Zap, CheckCircle2, 
-  ArrowUpRight, RefreshCw, Filter, Info, ShieldCheck, Activity
+  Radio, Compass, Layers, 
+  RefreshCw, Info, Activity
 } from 'lucide-react';
 import { SECTOR_LAYER_CONFIG, getSiteCoverageType } from '../../utils/cellSectorGeometry';
 

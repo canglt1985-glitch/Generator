@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { getContractFlags } from '../../utils/contractChecks';
 
 export default function ContractAlertCards({ contracts, activeFilter, onFilterSelect }) {

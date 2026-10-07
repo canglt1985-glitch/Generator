@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { generatePaymentSchedule } from '../../utils/contractCalculations';
-import { CalendarDays, ArrowRight, DollarSign, Calculator } from 'lucide-react';
+import { CalendarDays, Calculator } from 'lucide-react';
 import { format } from 'date-fns';
 
 export default function PaymentSchedulePanel({ contract, overridePrice }) {

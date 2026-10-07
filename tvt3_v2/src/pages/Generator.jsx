@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../supabaseClient';
 import { 
-  Zap, Calendar, AlertTriangle, FileText, Search, Plus, Trash, 
-  Edit, Edit2, MapPin, Eye, Clock, CheckCircle2, CheckCircle, CheckCheck, AlertCircle, X, ExternalLink, Filter, RefreshCw, Download,
-  Copy, Check, MessageSquare, CreditCard
+  Zap, AlertTriangle, FileText, Search, Plus, Trash, 
+  Eye, Clock, CheckCircle2, CheckCircle, CheckCheck, X, ExternalLink, Download,
+  CreditCard
 } from 'lucide-react';
 
 // XLSX loaded dynamically on first export
@@ -14,7 +14,7 @@ import JSZip from 'jszip';
 import { 
   GROUP_1_BUYER_INFO, 
   GROUP_2_BUYER_INFO, 
-  SEATH_GROUP_BUYER_INFO,
+  
   isSpecial67Site,
   isOriginalSpecial67Site,
   isSeathGroupSite
@@ -22,8 +22,8 @@ import {
 import { getFuelPriceForDate } from '../utils/fuelPrice';
 import { 
   exportOfficialMFDReport, 
-  buildHDWorksheet, 
-  build02AWorksheet, 
+  
+  
   exportSiteInvoiceMapReport, 
   getExcelJS, 
   addHDSheet,
@@ -224,7 +224,7 @@ export default function Generator() {
   };
 
   // Helper lấy thông tin trạm
-  const getSiteName = (siteId) => {
+  const _getSiteName = (siteId) => {
     if (!siteId) return '';
     const sId = String(siteId).trim().toUpperCase();
     const st = stations.find(s => s.site_id === sId || (s.site_id_old && String(s.site_id_old).trim().toUpperCase() === sId));
@@ -274,7 +274,7 @@ export default function Generator() {
     if (st && st.infrastructure_info?.may_phat_dien?.mpd) {
       const mpds = st.infrastructure_info.may_phat_dien.mpd;
       if (mpds.length > 0) {
-        let match = null;
+        let match;
         if (logDate) {
           match = mpds.find(m => {
             const start = m.ngay_bat_dau;
@@ -438,7 +438,7 @@ export default function Generator() {
       }
 
       // Group breakdown (g1: Dong Nai, g2: Toan Cau, g3: Seath Group)
-      let targetG = g2;
+      let targetG;
       const isAug2026Exact = Number(filterYear) === 2026 && Number(filterMonth) === 8;
       if (isAug2026Exact) {
         const isOrigG1 = isOriginalSpecial67Site(log.site_id, siteIdOld, stations);
@@ -821,7 +821,6 @@ export default function Generator() {
 
   // Export to Official Statement Excel (Mẫu 02A-TTNB_NLMPD & HD)
   const exportToExcel = async () => {
-    const XLSX = await getXLSX();
     const targetMonth = Number(filterMonth);
     const targetYear = Number(filterYear);
 
@@ -1598,7 +1597,7 @@ export default function Generator() {
   }
 
   // Handle Approve Invoice
-  async function handleApproveInvoice(id, nextStatus) {
+  async function _handleApproveInvoice(id, nextStatus) {
     const confirmed = confirm(`Bạn có chắc chắn muốn duyệt hóa đơn này sang [${nextStatus}]?`);
     if (!confirmed) return;
 
@@ -1812,14 +1811,6 @@ export default function Generator() {
                   <Download className="h-3.5 w-3.5" /> Seath ({stats.g3.records})
                 </button>
               )}
-
-              <button
-                onClick={handleExportMobileEquipment}
-                className="hidden lg:inline-flex items-center justify-center px-2.5 py-1.5 text-xs font-bold rounded-lg text-emerald-700 border border-emerald-300 bg-emerald-50/60 hover:bg-emerald-100 shadow-2xs transition-colors cursor-pointer gap-1"
-                title="Xuất trọn bộ file Excel Quản lý & Điều chuyển thiết bị lưu động"
-              >
-                <Download className="h-3.5 w-3.5" /> MPĐ Lưu Động
-              </button>
             </>
           )}
 

@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, Filter, Download, Upload, Plus, Loader2 } from 'lucide-react';
+import { Search, Download, Upload, Plus, Loader2 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import ContractCard from '../components/contracts/ContractCard';
 import ContractTable from '../components/contracts/ContractTable';
@@ -29,11 +29,6 @@ export default function ContractDashboard() {
     khauHao: [],
     lechTaiKhoan: []
   });
-
-  // Fetch data from Supabase on mount
-  useEffect(() => {
-    fetchContracts();
-  }, []);
 
   const fetchContracts = async () => {
     setIsLoading(true);
@@ -78,6 +73,11 @@ export default function ContractDashboard() {
       setIsLoading(false);
     }
   };
+
+  // Fetch data from Supabase on mount
+  useEffect(() => {
+    fetchContracts();
+  }, []);
 
   const handleContractUpdate = async (updatedSiteId) => {
     await fetchContracts();

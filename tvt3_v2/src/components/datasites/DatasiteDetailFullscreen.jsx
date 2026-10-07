@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { 
   X, Edit, FileDown, Trash2, Info, Server, Radio, 
-  FileText, Clock, MapPin, Building2, Navigation,
+  FileText, Clock, 
   FileSignature, Building, Wallet, CreditCard, Calculator, ExternalLink, Zap, Compass
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
@@ -20,7 +20,6 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, on
   const [allSites, setAllSites] = useState([]);
   const [savingTrans, setSavingTrans] = useState(false);
   const [sranInfo, setSranInfo] = useState(null);
-  const [showB4Dropdown, setShowB4Dropdown] = useState(false);
   
   // States cho modal Thêm vào Danh sách Báo Hỏng B4
   const [showAddB4Modal, setShowAddB4Modal] = useState(false);
@@ -83,12 +82,13 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, on
   }, [site]);
 
   // States cho gợi ý trạm nguồn autocomplete
+  const [currentTrans, setCurrentTrans] = useState(site?.technical_info || {});
   const [primarySearch, setPrimarySearch] = useState('');
   const [primarySuggestions, setPrimarySuggestions] = useState([]);
   const [backupSearch, setBackupSearch] = useState('');
   const [backupSuggestions, setBackupSuggestions] = useState([]);
 
-  const handleExportB4SingleSite = (targetCategory = 'MPD_CO_DINH') => {
+  const _handleExportB4SingleSite = (targetCategory = 'MPD_CO_DINH') => {
     if (!site?.site_id) return;
     const infra = site.infrastructure_info || {};
     const mpdList = infra.may_phat_dien?.mpd || [];
@@ -130,6 +130,7 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, on
 
   // Khởi tạo form khi sửa
   useEffect(() => {
+    setCurrentTrans(site?.technical_info || {});
     if (site?.technical_info) {
       setEditedTrans(site.technical_info);
       setPrimarySearch(site.technical_info.last_mile_primary || site.technical_info.huong_ket_noi || '');
@@ -188,7 +189,7 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, on
       if (error) throw error;
       
       // Update local state trạm chi tiết
-      site.technical_info = finalTrans;
+      setCurrentTrans(finalTrans);
       
       // Bắn event để danh sách và bản đồ update lại
       window.dispatchEvent(new CustomEvent('datasite-updated', { 
@@ -261,7 +262,7 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, on
 
   const renderTabContent = () => {
     switch (activeTab) {
-      case 'general':
+      case 'general': {
         const InfoRowGeneral = ({ label, value }) => value && String(value).trim() !== '' && String(value) !== 'KHÔNG CÓ' ? (
           <div className="flex justify-between items-start py-2 border-b border-slate-100 last:border-0 gap-4">
             <span className="text-slate-500 text-[13px] shrink-0">{label}</span>
@@ -317,8 +318,9 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, on
             </div>
           </div>
         );
-      case 'transmission':
-        const trans = site.technical_info || {};
+      }
+      case 'transmission': {
+        const trans = currentTrans || site?.technical_info || {};
         
         const InfoRowTrans = ({ label, value }) => value && String(value).trim() !== '' && String(value) !== 'KHÔNG CÓ' ? (
           <div className="flex justify-between items-start py-2 border-b border-slate-100 last:border-0 gap-4">
@@ -640,7 +642,8 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, on
             )}
           </div>
         );
-      case 'infrastructure':
+      }
+      case 'infrastructure': {
         const infra = site.infrastructure_info || {};
         const mpd = infra.may_phat_dien || {};
         const mpdList = mpd.mpd || [];
@@ -949,8 +952,9 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, on
             )}
           </div>
         );
+      }
 
-      case 'legal':
+      case 'legal': {
         if (contracts.length === 0) {
           return (
             <div className="space-y-6 animate-in fade-in duration-300 flex flex-col items-center justify-center py-12 text-center">
@@ -1126,6 +1130,7 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, on
             ))}
           </div>
         );
+      }
       case 'sran5g':
         return (
           <div className="space-y-6 animate-in fade-in duration-300">

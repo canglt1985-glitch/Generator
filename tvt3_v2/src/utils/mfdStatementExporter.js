@@ -2,7 +2,7 @@
 let _ExcelJS = null;
 export const getExcelJS = async () => { if (!_ExcelJS) { const m = await import('exceljs'); _ExcelJS = m.default || m; } return _ExcelJS; };
 import { saveAs } from 'file-saver';
-import { isSeathGroupSite, isSpecial67Site, isOriginalSpecial67Site } from './siteGroups';
+import { isSeathGroupSite, isOriginalSpecial67Site } from './siteGroups';
 
 /**
  * Helper to determine fuel type from log or equipment
@@ -53,7 +53,7 @@ export function add02ASheet(workbook, sheetTitle, logs = [], stations = [], mont
   });
 
   const monthStr = month ? String(month).padStart(2, '0') : '08';
-  const lastDay = new Date(year, month || 8, 0).getDate();
+  const _lastDay = new Date(year, month || 8, 0).getDate();
 
   // Separate logs into Xăng and Dầu
   const xangLogs = [];
@@ -1051,12 +1051,10 @@ export async function exportOfficialMFDReport({
       return !(mst.includes('0100686209-129') || bname.includes('ĐỒNG NAI') || bname.includes('DONG NAI') || bname.includes('KHU VỰC 8'));
     });
 
-    const isAug2026Exact = Number(year) === 2026 && Number(month) === 8;
-
-    let g1ActiveInvs = [];
-    let g1SurplusInvs = [];
-    let g2ActiveInvs = [];
-    let g2SurplusInvs = [];
+    let g1ActiveInvs;
+    let g1SurplusInvs;
+    let g2ActiveInvs;
+    let g2SurplusInvs;
 
     if (isAug2026Exact) {
       // Group 1: 27 Active Invoices (18 Oil + 9 Gas) - 345.40L Gas EXACT MATCH for August 2026

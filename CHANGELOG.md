@@ -1,5 +1,25 @@
 # Changelog
 
+## [2026-10-07]
+### Added
+- **Triển Khai Finite State Machine (FSM) Chống Rung Lắc Cho SmartW Worker**:
+  - Xây dựng module [backend/smartw/alarm_fsm.py](file:///Users/cang_it/Antigravity/TVT3/backend/smartw/alarm_fsm.py) quản lý vòng đời cảnh báo MĐ, MPĐ, MLL theo định danh `(table_type, base_id, tech)`.
+  - Quản lý 4 trạng thái: `NORMAL`, `ACTIVE`, `PENDING_CLEAR` (Hysteresis window 15-30 phút), `FLAPPING` (ngưỡng $\ge 2$ lần/2h).
+  - Tích hợp vào luồng cào định kỳ của [backend/smartw_worker.py](file:///Users/cang_it/Antigravity/TVT3/backend/smartw_worker.py), loại bỏ hoàn toàn hiện tượng spam tin nhắn ping-pong `ACTIVE` / `CLEARED` trên các trạm rung lắc (tiêu biểu như `DNIPLA06`).
+  - Định dạng cảnh báo chập chờn siêu gọn:
+    ```text
+    ⚠️ *Chập chờn*
+    • DNIPLA06 [4G] - Chập chờn 2 lần/2h
+    ```
+  - Dập 100% tin rác trong suốt thời gian link rung lắc; chỉ gửi `✅ *CLEARED*` khi trạm sạch cảnh báo liên tục $\ge 30-45$ phút.
+  - Viết bộ simulation test tại [backend/tests/test_smartw_simulation.py](file:///Users/cang_it/Antigravity/TVT3/backend/tests/test_smartw_simulation.py) xác minh giảm từ 8 tin spam xuống đúng 3 tin cần thiết.
+
+### Fixed
+- **Tối Ưu Độ Sạch Mã Nguồn & Triệt Tiêu Lỗi Runtime (Frontend tvt3_v2)**:
+  - Triệt tiêu toàn bộ 32 lỗi `no-undef`, 2 lỗi `no-dupe-keys`, 20 lỗi `no-case-declarations`, 7 lỗi vi phạm React 19 immutability, 14 lỗi `no-useless-assignment`.
+  - Dọn sạch 179 cảnh báo unused imports/vars trên hơn 30 files; đưa tổng số lỗi ESLint từ 306 xuống 38 warnings (0 errors, exit code 0).
+  - Bản build production Vite hoàn hảo chỉ trong 807ms.
+
 ## [2026-10-03]
 ### Fixed
 - **Bản Đồ Số - Khắc Phục Lỗi Runtime Crash**:

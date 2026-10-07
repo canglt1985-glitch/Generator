@@ -3,7 +3,7 @@ import { supabase } from '../supabaseClient';
 import { useCurrentUser } from '../utils/useCurrentUser';
 import { 
   UserPlus, Trash2, Edit2, Save, Key, Settings as SettingsIcon, 
-  Mail, MessageSquare, Eye, EyeOff, UserCheck, RefreshCw, 
+  Mail, Eye, EyeOff, RefreshCw, 
   AlertCircle, CheckCircle2, Shield, Phone, User as UserIcon
 } from 'lucide-react';
 
@@ -183,7 +183,7 @@ export default function Settings() {
 
     try {
       if (modalMode === 'create') {
-        const { data, error } = await supabase.rpc('admin_create_user', {
+        const { error } = await supabase.rpc('admin_create_user', {
           user_email: email,
           user_password: password,
           user_metadata: metadata,

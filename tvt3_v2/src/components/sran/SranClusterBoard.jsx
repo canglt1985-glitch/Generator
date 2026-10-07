@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { 
-  Filter, ChevronRight, CheckCircle2, Clock, 
+  Filter, ChevronRight, CheckCircle2, 
   MapPin, Radio, Cpu, ArrowUpRight, X, AlertTriangle, Check
 } from 'lucide-react';
 import { 
@@ -441,7 +441,7 @@ export default function SranClusterBoard({ sites = [], onSelectSite }) {
                     const is5gOa = isSite5GOnair(s);
                     const oa5gDate = raw.Onair_Actual_Date || raw.Onair_NR26_Actual_Date || raw.Onair_NR38_Actual_Date;
                     const rawSwapSol = String(s.swap_solution || raw.Swap_Solution || '').toUpperCase();
-                    const rawScope5g = String(s.scope_5g || raw['5G_Scope'] || '').toUpperCase();
+                    const _rawScope5g = String(s.scope_5g || raw['5G_Scope'] || '').toUpperCase();
                     // CHỈ trạm nào có swap_solution chứa 3G4G mới là SRAN (Dùng chung phần cứng BBU/RRU SRAN)
                     // Còn lại (SWAP:4G, 4G Only...) là 4G độc lập với 3G
                     const isSranSwap = rawSwapSol.includes('3G4G') || rawSwapSol.includes('3G/4G');

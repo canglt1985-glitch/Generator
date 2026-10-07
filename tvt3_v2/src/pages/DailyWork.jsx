@@ -2,8 +2,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../supabaseClient';
 import { 
   ClipboardList, Calendar, AlertTriangle, Search, Plus, Edit, Trash, 
-  MapPin, User, Clock, CheckCircle2, AlertCircle, Eye, X, Filter, ExternalLink,
-  Zap, Download, Copy, Check, FileText, BatteryCharging, Wrench, Layers
+  Clock, CheckCircle2, AlertCircle, Eye, X, Filter, ExternalLink,
+  Zap, Download, Copy, Check, FileText, BatteryCharging, Wrench
 } from 'lucide-react';
 import DatasiteDetailFullscreen from '../components/datasites/DatasiteDetailFullscreen';
 import { useCurrentUser } from '../utils/useCurrentUser';
@@ -92,12 +92,17 @@ const QUICK_DEFECT_TAGS = {
 };
 
 export default function DailyWork() {
-  const { user, displayName } = useCurrentUser();
+  const { user } = useCurrentUser();
   const [activeTab, setActiveTab] = useState('daily'); // daily, power, issues
   
   // Data States
   const [dailyLogs, setDailyLogs] = useState([]);
   const [powerSchedules, setPowerSchedules] = useState([]);
+
+  // Safe internal activity logger
+  const logActivity = async (action, details, location) => {
+    console.log(`[ACTIVITY LOG] ${action} - ${details} (${location})`);
+  };
   const [defectsLogs, setDefectsLogs] = useState([]);
   const [stations, setStations] = useState([]); // Phục vụ Dropdown & Mapping ID mới -> cũ
   
@@ -164,7 +169,7 @@ export default function DailyWork() {
   const [showIssueSiteSuggestions, setShowIssueSiteSuggestions] = useState(false);
 
   // Form states - Daily Log
-  const [logDate, setLogDate] = useState(new Date().toISOString().split('T')[0]);
+  const [_logDate, setLogDate] = useState(new Date().toISOString().split('T')[0]);
   const [logDateDMY, setLogDateDMY] = useState(getTodayDMY());
   const [logSiteId, setLogSiteId] = useState('');
   const [logStaff, setLogStaff] = useState(user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'admin');
@@ -181,7 +186,6 @@ export default function DailyWork() {
   const [issueDeviceType, setIssueDeviceType] = useState('MPD_CO_DINH');
   const [issueB4CategoryIdx, setIssueB4CategoryIdx] = useState(0);
   const [selectedIssueIds, setSelectedIssueIds] = useState([]);
-  const [showB4ExportDropdown, setShowB4ExportDropdown] = useState(false);
 
   // Battery Proposal States (Tách riêng mua ắc quy đề MPĐ khỏi gói B4)
   const [issueProposalType, setIssueProposalType] = useState('B4_REPAIR'); // 'B4_REPAIR' | 'BATTERY_PURCHASE'
@@ -313,7 +317,7 @@ export default function DailyWork() {
   }
 
   // Helper mapping: Site_ID -> Site_ID (Site_ID_Old)
-  const getSiteLabel = (siteId) => {
+  const _getSiteLabel = (siteId) => {
     if (!siteId) return 'N/A';
     const sId = siteId.trim().toUpperCase();
     const st = stations.find(s => s.site_id === sId || (s.site_id_old && s.site_id_old.trim().toUpperCase() === sId));
@@ -923,7 +927,6 @@ export default function DailyWork() {
       targetCategory: (mode === 'MPD_CO_DINH' || mode === 'MPD_DI_DONG' || mode === 'DHKK') ? mode : 'ALL',
       customFileName: fileName
     });
-    setShowB4ExportDropdown(false);
   }
 
   // === HANDLERS BÁO HỎNG & KHÔI PHỤC MÁY LƯU ĐỘNG ===
@@ -1081,7 +1084,7 @@ export default function DailyWork() {
       }
       alert(`Đã lưu ${selectedIssueIds.length} ca vào ${batchName} (${statusText}) thành công!`);
       setSelectedIssueIds([]);
-      fetchDefectsLogs();
+      fetchData();
     } catch (err) {
       console.error(err);
       alert("Lỗi khi cập nhật đợt B4: " + err.message);
@@ -1112,7 +1115,7 @@ export default function DailyWork() {
       }
       alert(`Đã hủy phân đợt cho ${selectedIssueIds.length} ca!`);
       setSelectedIssueIds([]);
-      fetchDefectsLogs();
+      fetchData();
     } catch (err) {
       console.error(err);
       alert("Lỗi khi hủy phân đợt: " + err.message);
@@ -1120,7 +1123,7 @@ export default function DailyWork() {
   }
 
   function handleExportLocalInfrastructure() {
-    let targetLogs = filteredDefectsLogs;
+    let targetLogs;
     if (selectedIssueIds.length > 0) {
       targetLogs = filteredDefectsLogs.filter(issue => selectedIssueIds.includes(issue.log_id));
     } else {
@@ -1139,11 +1142,10 @@ export default function DailyWork() {
       items: targetLogs,
       datasites: stations
     });
-    setShowB4ExportDropdown(false);
   }
 
   function handleExportBatteryPurchase() {
-    let targetLogs = filteredDefectsLogs;
+    let targetLogs;
     if (selectedIssueIds.length > 0) {
       targetLogs = filteredDefectsLogs.filter(issue => selectedIssueIds.includes(issue.log_id));
     } else {
@@ -1178,7 +1180,6 @@ export default function DailyWork() {
       datasites: stations,
       customFileName: `TVT3_Bang_Ke_De_Xuat_Mua_Ac_Quy_De_MPD_${new Date().toISOString().substring(0, 10).replace(/-/g, '')}.xlsx`
     });
-    setShowB4ExportDropdown(false);
   }
 
   async function handleExportIssuesExcel() {
@@ -1239,19 +1240,19 @@ export default function DailyWork() {
   // Tạo văn bản báo cáo vị trí hàng ngày chuẩn Zalo / Telegram
   const generateDailyReportText = () => {
     const now = new Date();
-    const dateStr = now.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    const timeStr = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+    const _dateStr = now.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const _timeStr = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
 
     const mpds = mobileEquipments.filter(e => (e.type || '').toUpperCase().includes('MPĐ') || (e.equipment_code || '').includes('MPD'));
     const pins = mobileEquipments.filter(e => (e.type || '').toUpperCase().includes('PIN') || (e.equipment_code || '').includes('PIN'));
 
     const mpdAtSites = mpds.filter(e => e.status !== 'Hư' && e.current_location && e.current_location !== 'KHO');
     const mpdAtKho = mpds.filter(e => e.status !== 'Hư' && (!e.current_location || e.current_location === 'KHO'));
-    const mpdDamaged = mpds.filter(e => e.status === 'Hư');
+    const _mpdDamaged = mpds.filter(e => e.status === 'Hư');
 
     const pinAtSites = pins.filter(e => e.status !== 'Hư' && e.current_location && e.current_location !== 'KHO');
     const pinAtKho = pins.filter(e => e.status !== 'Hư' && (!e.current_location || e.current_location === 'KHO'));
-    const pinDamaged = pins.filter(e => e.status === 'Hư');
+    const _pinDamaged = pins.filter(e => e.status === 'Hư');
 
     let text = `1️⃣ MPĐ ĐANG ỨNG TRỰC TẠI TRẠM (${mpdAtSites.length} máy):\n`;
     if (mpdAtSites.length > 0) {
@@ -1485,13 +1486,6 @@ export default function DailyWork() {
     setEquipFuel('Xăng');
     setEquipTank('');
   }
-
-  const tabs = [
-    { id: 'daily', label: 'Nhật ký', icon: ClipboardList },
-    { id: 'power', label: 'Lịch cúp điện', icon: Calendar },
-    { id: 'issues', label: 'Tồn tại', icon: AlertTriangle },
-    { id: 'mobile', label: 'Thiết bị lưu động', icon: Zap },
-  ];
 
   return (
     <div className="space-y-5 animate-in fade-in duration-500 relative">

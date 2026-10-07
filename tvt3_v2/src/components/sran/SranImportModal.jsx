@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { 
   X, UploadCloud, FileSpreadsheet, CheckCircle2, AlertCircle, 
   RefreshCw, Sparkles

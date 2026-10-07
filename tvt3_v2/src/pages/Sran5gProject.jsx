@@ -1,12 +1,12 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   Radio, Cpu, Layers, RefreshCw, Upload, AlertTriangle, 
-  MapPin, Database, ChevronRight, Zap
+  MapPin, Database, ChevronRight
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { 
-  SRAN_TVT3_CLUSTERS, 
-  TVT3_DISTRICTS, 
+  
+  
   isTvt3District,
   isSite5G,
   isSite5GOnair,

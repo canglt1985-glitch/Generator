@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, {  } from 'react';
 import { 
   X, Radio, Zap, Calendar, MapPin, CheckCircle2, Clock, 
   AlertTriangle, Copy, Check, Layers, Cpu
@@ -33,9 +33,10 @@ export default function SranSiteModal({ site, onClose }) {
   const has5g = isSite5G(site);
   const is5gOa = isSite5GOnair(site);
   const is4gOa = isSite4GOnair(site);
-  const oa5gDate = raw.Onair_Actual_Date || raw.Onair_NR26_Actual_Date || raw.Onair_NR38_Actual_Date;
+  const _oa5gDate = raw.Onair_Actual_Date || raw.Onair_NR26_Actual_Date || raw.Onair_NR38_Actual_Date;
 
   // CHỈ trạm nào có swap_solution chứa 3G4G mới là SRAN
+  const rawSwapSol = String(site.swap_solution || raw.swap_solution || '');
   const isSranSwap = rawSwapSol.includes('3G4G') || rawSwapSol.includes('3G/4G');
   const swapTypeLabel = isSranSwap ? 'Swap SRAN' : 'Swap 4G';
   const cleanConfig3g4g = site.config_3g4g ? String(site.config_3g4g).replace(/\s*\(Tháo dỡ 4G Only\)/gi, '').trim() : 'Chưa rõ';

@@ -1,7 +1,7 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import { X, User, Calendar, Clock, CreditCard, CheckCircle2, Building2, Download, FileText, AlertCircle, RefreshCw, Calculator, MapPin, Edit, Save, Undo, Loader2 } from 'lucide-react';
+import { useMemo, useState, useEffect } from 'react';
+import { X, CreditCard, CheckCircle2, FileText, AlertCircle, RefreshCw, Calculator, Edit, Save, Undo, Loader2 } from 'lucide-react';
 import { generatePaymentCycles } from '../../utils/contractLogic';
-import { getContractFlags, checkPriceFrame, checkExpiry, checkPaymentStatus, checkAccountMatch } from '../../utils/contractChecks';
+import { checkPriceFrame, checkExpiry, checkPaymentStatus, checkAccountMatch } from '../../utils/contractChecks';
 import { CONTRACT_STATUSES } from '../../utils/contractConstants';
 import { supabase } from '../../supabaseClient';
 import ContractExportButton from '../datasites/ContractExportButton';
@@ -31,10 +31,12 @@ export default function ContractDetailPanel({ contract, onClose, onUpdate }) {
   const [bankOwnerInput, setBankOwnerInput] = useState('');
   const [costDetailsState, setCostDetailsState] = useState({});
   const [chuaHetKhauHao, setChuaHetKhauHao] = useState(false);
+  const [currentStatus, setCurrentStatus] = useState(contract?.status || '');
 
   // Sync form states with contract data when it changes
   useEffect(() => {
     if (contract) {
+      setCurrentStatus(contract.status || '');
       setContractNum(contract.contract_number || '');
       setLandlord(contract.contractor_info?.chu_the_hop_dong || '');
       setLandlordPhone(contract.contractor_info?.sdt_chu_nha || '');
@@ -143,12 +145,6 @@ export default function ContractDetailPanel({ contract, onClose, onUpdate }) {
 
       if (error) throw error;
 
-      // Update local object representation
-      contract.chua_het_khau_hao = chuaHetKhauHao;
-      if (contract._raw_contract_info) {
-        contract._raw_contract_info.chua_het_khau_hao = chuaHetKhauHao;
-      }
-
       alert("Cập nhật thông tin hợp đồng thành công!");
       setIsEditing(false);
       if (onUpdate) onUpdate(contract.site_id);
@@ -180,8 +176,8 @@ export default function ContractDetailPanel({ contract, onClose, onUpdate }) {
   const contractNumber = contract?.contract_number || 'Chưa có số HĐ';
   
   const originalPrice = contract?.financials?.gia_thue_co_vat || 0;
-  const originalPriceWithoutVat = contract?.financials?.gia_thue_khong_vat || 0;
-  const originalPriceStr = new Intl.NumberFormat('vi-VN').format(originalPrice) + ' đ';
+  const _originalPriceWithoutVat = contract?.financials?.gia_thue_khong_vat || 0;
+  const _originalPriceStr = new Intl.NumberFormat('vi-VN').format(originalPrice) + ' đ';
   
   // Health Checks
   const expiryCheck = contract ? checkExpiry(contract) : {};
@@ -202,11 +198,7 @@ export default function ContractDetailPanel({ contract, onClose, onUpdate }) {
         
       if (error) throw error;
       
-      // Mutate local state for immediate feedback
-      contract.status = newStatus || null;
-      if (contract._raw_contract_info) {
-        contract._raw_contract_info.status = newStatus || null;
-      }
+      setCurrentStatus(newStatus || '');
       if (onUpdate) onUpdate(contract.site_id);
     } catch (err) {
       console.error("Error updating status:", err);
@@ -280,10 +272,10 @@ export default function ContractDetailPanel({ contract, onClose, onUpdate }) {
 
   // Giá mục tiêu đã bao gồm VAT (làm tròn xuống số lẻ < 10.000đ để tránh vượt khung)
   const targetPriceWithVat = Math.floor(targetPriceSum / 10000) * 10000;
-  const targetPriceStr = new Intl.NumberFormat('vi-VN').format(targetPriceWithVat) + ' đ';
+  const _targetPriceStr = new Intl.NumberFormat('vi-VN').format(targetPriceWithVat) + ' đ';
 
   const negotiatedPrice = customPriceStr ? Number(customPriceStr.replace(/\D/g, '')) : (originalPrice > 0 ? targetPriceWithVat : 0);
-  const negotiatedPriceStr = new Intl.NumberFormat('vi-VN').format(negotiatedPrice) + ' đ';
+  const _negotiatedPriceStr = new Intl.NumberFormat('vi-VN').format(negotiatedPrice) + ' đ';
 
   const exportSite = useMemo(() => {
     return {
@@ -311,7 +303,7 @@ export default function ContractDetailPanel({ contract, onClose, onUpdate }) {
   const bankOwner = contract.bank_info?.chu_tai_khoan || 'Chưa cập nhật';
 
   // Tính toán danh sách chu kỳ tự động
-  const paymentCycles = useMemo(() => {
+  const _paymentCycles = useMemo(() => {
     if (!paidUntilDate || !endDate) return [];
     return generatePaymentCycles(paidUntilDate, endDate, cycleString, negotiatedPrice || originalPrice);
   }, [paidUntilDate, endDate, cycleString, negotiatedPrice, originalPrice]);
@@ -615,7 +607,7 @@ export default function ContractDetailPanel({ contract, onClose, onUpdate }) {
                 
                 {/* Trạng thái đàm phán */}
                 <select
-                  value={contract.status || ''}
+                  value={currentStatus || contract?.status || ''}
                   onChange={handleStatusChange}
                   disabled={isUpdatingStatus}
                   className="text-xs font-bold bg-white border border-slate-300 rounded px-2 py-0.5 text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer shadow-sm"
@@ -685,7 +677,7 @@ export default function ContractDetailPanel({ contract, onClose, onUpdate }) {
             </div>
           </div>
 
-          {(contract.chua_het_khau_hao || contract._raw_contract_info?.chua_het_khau_hao) && (
+          {(chuaHetKhauHao || contract?.chua_het_khau_hao || contract?._raw_contract_info?.chua_het_khau_hao) && (
             <div className="shrink-0 snap-start px-4 py-3 min-w-[200px] rounded-lg border bg-blue-50/55 border-blue-200 flex items-center gap-3">
               <AlertCircle size={20} className="text-blue-500"/>
               <div className="text-sm leading-tight">

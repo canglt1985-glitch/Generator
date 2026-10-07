@@ -1,4 +1,4 @@
-import { Bell, Search, User, Menu, Home, Database, FileText, Settings, Activity, Zap, Coins, Radio, X, LogOut, Server, Map, Wifi } from 'lucide-react';
+import { Bell, User, Menu, Home, Database, FileText, Settings, Activity, Zap, Coins, Radio, X, LogOut, Server, Map, Wifi } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useState } from 'react';
 import { useCurrentUser } from '../utils/useCurrentUser';
