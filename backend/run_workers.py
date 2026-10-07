@@ -157,6 +157,36 @@ def maintain_bot_mll():
         except Exception as e:
             logger.error(f"❌ Failed to start Bot MLL process: {e}")
 
+bot_site_contract_process = None
+
+def maintain_site_contract_bot():
+    """Monitor and maintain the long-running TVT3 Site & Contract Telegram Bot process."""
+    global bot_site_contract_process
+    if bot_site_contract_process is None or bot_site_contract_process.poll() is not None:
+        if bot_site_contract_process is not None:
+            exit_code = bot_site_contract_process.poll()
+            logger.warning(f"⚠️ Site Contract Bot process stopped with exit code {exit_code}. Restarting in 5s...")
+            time.sleep(5)
+        else:
+            logger.info("🤖 Starting TVT3 Site & Contract Telegram Bot long-running process...")
+            
+        log_file_path = os.path.join(logs_dir, "site_contract_bot.log")
+        try:
+            log_file = open(log_file_path, "a", encoding="utf-8")
+            log_file.write(f"\n--- SITE CONTRACT BOT LAUNCH: {datetime.now().isoformat()} ---\n")
+            log_file.flush()
+            
+            python_exe = sys.executable
+            bot_site_contract_process = subprocess.Popen(
+                [python_exe, os.path.join(current_dir, "bots", "site_contract_bot.py")],
+                stdout=log_file,
+                stderr=log_file,
+                cwd=current_dir
+            )
+            logger.info(f"✅ Site Contract Bot process spawned with PID {bot_site_contract_process.pid}")
+        except Exception as e:
+            logger.error(f"❌ Failed to start Site Contract Bot process: {e}")
+
 def run_job(job_name, cmd):
     """Run a periodic job asynchronously as a subprocess, piping output to its own log file."""
     log_file_path = os.path.join(logs_dir, f"{job_name}.log")
@@ -203,6 +233,7 @@ def main():
             # 1. Maintain Telegram Bots
             maintain_telegram_bot()
             maintain_bot_mll()
+            maintain_site_contract_bot()
             
             # --- STAGGERED STARTUP SEQUENCE ---
             time_since_start = (now - startup_time).total_seconds()
@@ -345,7 +376,7 @@ def main():
 
         except KeyboardInterrupt:
             logger.info(" Stopping daemon manager...")
-            global bot_process, bot_mll_process
+            global bot_process, bot_mll_process, bot_site_contract_process
             if bot_process and bot_process.poll() is None:
                 logger.info(f"Terminating Telegram Bot process (PID {bot_process.pid})...")
                 bot_process.terminate()
@@ -360,6 +391,13 @@ def main():
                     bot_mll_process.wait(timeout=5)
                 except subprocess.TimeoutExpired:
                     bot_mll_process.kill()
+            if bot_site_contract_process and bot_site_contract_process.poll() is None:
+                logger.info(f"Terminating Site Contract Bot process (PID {bot_site_contract_process.pid})...")
+                bot_site_contract_process.terminate()
+                try:
+                    bot_site_contract_process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    bot_site_contract_process.kill()
             logger.info("Daemon manager stopped.")
             sys.exit(0)
         except Exception as main_err:

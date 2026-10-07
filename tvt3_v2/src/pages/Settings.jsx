@@ -4,8 +4,9 @@ import { useCurrentUser } from '../utils/useCurrentUser';
 import { 
   UserPlus, Trash2, Edit2, Save, Key, Settings as SettingsIcon, 
   Mail, Eye, EyeOff, RefreshCw, 
-  AlertCircle, CheckCircle2, Shield, Phone, User as UserIcon
+  AlertCircle, CheckCircle2, Shield, Phone, User as UserIcon, Bot
 } from 'lucide-react';
+import BotManagementPanel from '../components/settings/BotManagementPanel';
 
 export default function Settings() {
   const { user } = useCurrentUser();
@@ -313,6 +314,21 @@ export default function Settings() {
             >
               <SettingsIcon className="h-4 w-4" />
               CẤU HÌNH HỆ THỐNG
+            </button>
+            <button
+              onClick={() => setActiveTab('bot_management')}
+              className={`hidden lg:flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold tracking-wide transition-all ${
+                activeTab === 'bot_management'
+                  ? 'bg-white text-indigo-700 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700'
+              }`}
+              title="Chỉ hiển thị trên máy tính (Laptop/PC)"
+            >
+              <Bot className="h-4 w-4 text-indigo-600" />
+              QUẢN TRỊ BOT TELEGRAM
+              <span className="text-[9px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-black tracking-wider">
+                PC
+              </span>
             </button>
           </div>
         </div>
@@ -644,6 +660,13 @@ export default function Settings() {
               </div>
             )}
           </form>
+        )}
+
+        {/* ================================================================= */}
+        {/* TAB 3: TELEGRAM BOT MANAGEMENT (DESKTOP ONLY) */}
+        {/* ================================================================= */}
+        {activeTab === 'bot_management' && (
+          <BotManagementPanel currentUser={user} />
         )}
 
       </div>
