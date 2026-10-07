@@ -48,11 +48,7 @@ class AuthManager:
         if user_id in self.admin_users or user_id in self.allowed_users:
             return True
 
-        # If neither env whitelist nor DB whitelist has any records, default open for team
-        whitelist = bot_config_manager.get_whitelist()
-        if not self.allowed_users and not whitelist:
-            return True
-
+        # Default secure: Deny access if user is not in admin, allowed, or active whitelist
         return False
 
     def is_admin(self, user_id: int) -> bool:

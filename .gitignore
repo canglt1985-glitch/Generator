@@ -46,6 +46,8 @@ logs/
 .env
 .env.*
 !.env.example
+backend/data/system_config.json
+!backend/data/system_config.example.json
 
 # ── Playwright Browsers ──
 playwright-browsers/

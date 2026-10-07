@@ -29,6 +29,23 @@ if not os.getenv("VITE_SUPABASE_URL") and not os.getenv("SUPABASE_URL"):
     load_dotenv(os.path.join(PROJECT_ROOT, "tvt3_v2", ".env"))
 
 
+def get_supabase_client() -> Optional[Client]:
+    """Initialize and return Supabase Client."""
+    url = os.getenv("VITE_SUPABASE_URL") or os.getenv("SUPABASE_URL")
+    key = os.getenv("VITE_SUPABASE_ANON_KEY") or os.getenv("SUPABASE_ANON_KEY") or os.getenv("SUPABASE_KEY")
+
+    if not url or not key:
+        logger.error("Supabase credentials missing in environment variables.")
+        return None
+
+    try:
+        client = create_client(url, key)
+        return client
+    except Exception as e:
+        logger.error(f"Failed to initialize Supabase client: {e}")
+        return None
+
+
 def get_telegram_token() -> str:
     """Retrieve Telegram Bot Token with graceful fallbacks."""
     # Priority 1: Specific env variable for this bot
@@ -48,25 +65,20 @@ def get_telegram_token() -> str:
         except Exception as e:
             logger.warning(f"Error reading system_config.json: {e}")
 
-    # Fallback to hardcoded VHKT bot token if available
-    return "7899414034:AAGjV9Hvm2z36HirN1swnGeqPLQiimR_hrw"
+    # Priority 3: Supabase system_config table
+    sb = get_supabase_client()
+    if sb:
+        try:
+            res = sb.table("system_config").select("value").eq("key", "telegram_bot_token").maybe_single().execute()
+            if res.data and res.data.get("value"):
+                token = str(res.data.get("value")).strip()
+                if token:
+                    return token
+        except Exception as e:
+            logger.debug(f"Could not load token from Supabase system_config: {e}")
 
-
-def get_supabase_client() -> Optional[Client]:
-    """Initialize and return Supabase Client."""
-    url = os.getenv("VITE_SUPABASE_URL") or os.getenv("SUPABASE_URL")
-    key = os.getenv("VITE_SUPABASE_ANON_KEY") or os.getenv("SUPABASE_ANON_KEY") or os.getenv("SUPABASE_KEY")
-
-    if not url or not key:
-        logger.error("Supabase credentials missing in environment variables.")
-        return None
-
-    try:
-        client = create_client(url, key)
-        return client
-    except Exception as e:
-        logger.error(f"Failed to initialize Supabase client: {e}")
-        return None
+    logger.warning("No Telegram Bot token configured in environment or database.")
+    return ""
 
 
 def get_allowed_user_ids() -> Set[int]:

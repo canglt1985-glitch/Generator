@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../supabaseClient';
 import { 
   Bot, RefreshCw, Zap, Shield, Sliders, CheckCircle2, AlertCircle, 
@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 
 export default function BotManagementPanel({ currentUser }) {
+  const noticeTimerRef = useRef(null);
+
   // Loading & Notification states
   const [loading, setLoading] = useState(true);
   const [savingFeatures, setSavingFeatures] = useState(false);
@@ -46,6 +48,9 @@ export default function BotManagementPanel({ currentUser }) {
   // Load configs from Supabase system_config
   useEffect(() => {
     fetchBotConfigs();
+    return () => {
+      if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
+    };
   }, []);
 
   async function fetchBotConfigs() {
@@ -77,8 +82,9 @@ export default function BotManagementPanel({ currentUser }) {
   }
 
   function showNotice(type, message) {
+    if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
     setNotification({ type, message });
-    setTimeout(() => setNotification({ type: '', message: '' }), 5000);
+    noticeTimerRef.current = setTimeout(() => setNotification({ type: '', message: '' }), 5000);
   }
 
   // Toggle single switch
@@ -155,7 +161,14 @@ export default function BotManagementPanel({ currentUser }) {
         .eq('key', 'telegram_bot_token')
         .maybeSingle();
 
-      const token = data?.value || '8874474590:AAFNwa2CZc6Mm6wI2oS76VxvF3EXBWsZa1o';
+      const token = data?.value;
+      if (!token) {
+        setPingResult({ ok: false, error: 'Chưa cấu hình Telegram Bot Token trong bảng system_config.' });
+        showNotice('error', 'Chưa tìm thấy Token trong system_config. Vui lòng cấu hình key "telegram_bot_token" trên Supabase trước.');
+        setTestingPing(false);
+        return;
+      }
+
       const res = await fetch(`https://api.telegram.org/bot${token}/getMe`);
       const json = await res.json();
       const latency = Math.round(performance.now() - t0);

@@ -1,0 +1,15 @@
+{
+  "telegram_report_chat_id": "YOUR_TELEGRAM_CHAT_ID",
+  "telegram_bot_token": "YOUR_TELEGRAM_BOT_TOKEN",
+  "viber_bot_token": "YOUR_VIBER_BOT_TOKEN",
+  "gmail_user": "your_email@gmail.com",
+  "gmail_app_password": "your_gmail_app_password",
+  "viber_bot_token_outages": "",
+  "viber_bot_token_alarms": "",
+  "viber_bot_token_pakh": "",
+  "viber_sender_id_pakh": "",
+  "datasite_username": "your_username",
+  "datasite_password": "your_password",
+  "smartw_username": "your_username",
+  "smartw_password": "your_password"
+}
