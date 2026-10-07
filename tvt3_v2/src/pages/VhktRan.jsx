@@ -862,13 +862,13 @@ export default function VhktRan() {
     );
   }
 
-  // Reusable Mobile Message Card for individual tabs
-  function MobileMessageCard({ title, icon, alarms, sectionKey }) {
+  // Reusable Mobile Message Card helper for individual tabs
+  const renderMobileMessageCard = (title, icon, alarms, sectionKey) => {
     const isCopied = copiedSection === sectionKey;
     const isCellOff = sectionKey === 'mll_cell';
 
     return (
-      <div className="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
+      <div key={sectionKey} className="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-1.5 bg-slate-50 border-b border-slate-100">
           <div className="flex items-center gap-1.5 font-mono font-bold text-slate-800 text-xs sm:text-sm">
@@ -913,7 +913,7 @@ export default function VhktRan() {
         </div>
       </div>
     );
-  }
+  };
 
   // Definition of tabs (simplified: removed individual alarm tabs)
   const row1Tabs = [
@@ -1213,10 +1213,10 @@ export default function VhktRan() {
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                      <MobileMessageCard title="MAC" icon="⚡" alarms={groupedMd} sectionKey="md" />
-                      <MobileMessageCard title="GEN" icon="🔋" alarms={groupedMpd} sectionKey="mpd" />
-                      <MobileMessageCard title="MLL" icon="📵" alarms={groupedMll} sectionKey="mll" />
-                      <MobileMessageCard title="CELL OFF" icon="📡" alarms={groupedCell} sectionKey="mll_cell" />
+                      {renderMobileMessageCard("MAC", "⚡", groupedMd, "md")}
+                      {renderMobileMessageCard("GEN", "🔋", groupedMpd, "mpd")}
+                      {renderMobileMessageCard("MLL", "📵", groupedMll, "mll")}
+                      {renderMobileMessageCard("CELL OFF", "📡", groupedCell, "mll_cell")}
                     </div>
                   )}
                 </div>

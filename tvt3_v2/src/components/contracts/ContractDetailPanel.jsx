@@ -174,22 +174,20 @@ export default function ContractDetailPanel({ contract, onClose, onUpdate }) {
     }
   };
 
-  if (!contract) return null;
-
-  const siteId = contract.site_id || 'N/A';
-  const siteIdOld = contract.datasites?.site_id_old || 'N/A';
-  const landlordName = contract.contractor_info?.chu_the_hop_dong || 'Chưa cập nhật';
-  const contractNumber = contract.contract_number || 'Chưa có số HĐ';
+  const siteId = contract?.site_id || 'N/A';
+  const siteIdOld = contract?.datasites?.site_id_old || 'N/A';
+  const landlordName = contract?.contractor_info?.chu_the_hop_dong || 'Chưa cập nhật';
+  const contractNumber = contract?.contract_number || 'Chưa có số HĐ';
   
-  const originalPrice = contract.financials?.gia_thue_co_vat || 0;
-  const originalPriceWithoutVat = contract.financials?.gia_thue_khong_vat || 0;
+  const originalPrice = contract?.financials?.gia_thue_co_vat || 0;
+  const originalPriceWithoutVat = contract?.financials?.gia_thue_khong_vat || 0;
   const originalPriceStr = new Intl.NumberFormat('vi-VN').format(originalPrice) + ' đ';
   
   // Health Checks
-  const expiryCheck = checkExpiry(contract);
-  const priceCheck = checkPriceFrame(contract);
-  const accountCheck = checkAccountMatch(contract);
-  const paymentCheck = checkPaymentStatus(contract);
+  const expiryCheck = contract ? checkExpiry(contract) : {};
+  const priceCheck = contract ? checkPriceFrame(contract) : {};
+  const accountCheck = contract ? checkAccountMatch(contract) : {};
+  const paymentCheck = contract ? checkPaymentStatus(contract) : {};
 
   const handleStatusChange = async (e) => {
     const newStatus = e.target.value;
@@ -317,6 +315,8 @@ export default function ContractDetailPanel({ contract, onClose, onUpdate }) {
     if (!paidUntilDate || !endDate) return [];
     return generatePaymentCycles(paidUntilDate, endDate, cycleString, negotiatedPrice || originalPrice);
   }, [paidUntilDate, endDate, cycleString, negotiatedPrice, originalPrice]);
+
+  if (!contract) return null;
 
   if (isEditing) {
     return (

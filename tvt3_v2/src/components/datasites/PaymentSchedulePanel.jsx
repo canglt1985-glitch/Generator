@@ -4,14 +4,14 @@ import { CalendarDays, ArrowRight, DollarSign, Calculator } from 'lucide-react';
 import { format } from 'date-fns';
 
 export default function PaymentSchedulePanel({ contract, overridePrice }) {
-    if (!contract || !contract.financials) return null;
-
     const formatCurrency = (val) => {
         if (val === undefined || val === null || isNaN(val)) return '0';
         return new Intl.NumberFormat('vi-VN').format(val);
     };
 
     const scheduleData = useMemo(() => {
+        if (!contract || !contract.financials) return null;
+
         // Lấy oldPrice từ financials (giá trước đàm phán)
         const oldPrice = Number(contract.financials.gia_thue_co_vat) || 0;
         
@@ -39,7 +39,9 @@ export default function PaymentSchedulePanel({ contract, overridePrice }) {
         return { ...generatePaymentSchedule(paidUntilDateStr, endContractStr, oldPrice, newPrice), newPrice };
     }, [contract, overridePrice]);
 
-    const { periods, totalAmount, deductionVal, paidUntilDate, newPrice } = scheduleData;
+    if (!contract || !contract.financials || !scheduleData) return null;
+
+    const { periods = [], totalAmount = 0, deductionVal, paidUntilDate, newPrice } = scheduleData;
     
     // Check if new price is 0
     if (totalAmount === 0 && periods.length === 0) {
