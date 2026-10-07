@@ -82,7 +82,11 @@ export const STATION_ERP_MAPPINGS = {
   'DNXL49': { book_site: 'DNLK27', erp_code: '00021048', ma_vt: '00021048100001', ma_tscd_moi: '2027B1500000949' },
   'DNXL65': { book_site: 'DNTP03', erp_code: '00020811', ma_vt: '00020811100001', ma_tscd_moi: '2027B1500000965' },
   'DNXL75': { book_site: 'DNXL45', erp_code: '00020599', ma_vt: '00020599100001', ma_tscd_moi: '2027B1500000975' },
-  'DNXL77': { book_site: 'DNLK42', erp_code: '00021049', ma_vt: '00021049100001', ma_tscd_moi: '2027B1500000977' }
+  'DNXL77': { book_site: 'DNLK42', erp_code: '00021049', ma_vt: '00021049100001', ma_tscd_moi: '2027B1500000977' },
+  'DNIXLO04': { book_site: 'DNXL12', erp_code: '00021364', ma_vt: '00021364100001', ma_tscd_moi: '2027B1500000951' },
+  'DNXL12': { book_site: 'DNXL12', erp_code: '00021364', ma_vt: '00021364100001', ma_tscd_moi: '2027B1500000951' },
+  'DNIBLC09': { book_site: 'DNLK43', erp_code: '00021050', ma_vt: '00021050100001', ma_tscd_moi: '2027B1500000004' },
+  'DNLK43': { book_site: 'DNLK43', erp_code: '00021050', ma_vt: '00021050100001', ma_tscd_moi: '2027B1500000004' }
 };
 
 // Cấu hình lựa chọn mua mới Ắc quy đề MPD
@@ -114,9 +118,10 @@ export function isBatteryProposal(item) {
   if (!item) return false;
   const issues = item.existing_issues || item;
   if (issues.proposal_type === 'BATTERY_PURCHASE') return true;
-  if (issues.proposal_type === 'B4_REPAIR') return false;
   const category = issues.category || '';
-  if (category && category !== 'Máy phát điện') return false;
+  if (category && category !== 'Máy phát điện' && !category.includes('ắc quy') && !category.includes('accu')) {
+    return false;
+  }
   const desc = String(issues.description || '').toLowerCase();
   return desc.includes('ắc quy') || 
          desc.includes('accu') || 
@@ -213,7 +218,8 @@ function buildFixedGeneratorSheet(workbook, sheetName, items, siteMap) {
     const maVT = item.ma_vat_tu || erpMap?.ma_vt || equip.ma_vat_tu || '';
     const maTSCD = item.ma_tscd_moi || erpMap?.ma_tscd_moi || equip.ma_tai_san_moi || '';
     const serial = item.serial || erpMap?.serial || equip.serial || '';
-    const ngayDuaVaoSD = item.ngay_su_dung || equip.ngay_dua_vao_su_dung || '2010-01-01';
+    const rawYear = item.nam_su_dung || equip.nam_su_dung || item.ngay_su_dung || equip.ngay_dua_vao_su_dung || '2010';
+    const ngayDuaVaoSD = String(rawYear).substring(0, 4);
     const hangSX = item.nhan_hieu || equip.nhan_hieu || 'KIBII';
     const congSuat = item.cong_suat || equip.cong_suat || '12.5';
     const congCuQL = equip.cong_cu_quan_ly || 'Datasite';
@@ -309,6 +315,196 @@ function buildFixedGeneratorSheet(workbook, sheetName, items, siteMap) {
 }
 
 /**
+ * Xây dựng Sheet Máy phát điện Di động (27 Cột chuẩn Ban 4) bằng ExcelJS
+ */
+function buildMobileGeneratorSheet(workbook, sheetName, items, siteMap, mobileEquipments = []) {
+  const ws = workbook.addWorksheet(sheetName, {
+    views: [{ showGridLines: true }],
+    properties: { tabColor: { argb: 'FFFFC000' } }
+  });
+
+  const headerRow1 = [
+    'STT',
+    'Tỉnh',
+    'Mã ERP trạm đặt thiết bị',
+    'Phân loại',
+    'Tên thiết bị/vật tư',
+    'Mã tài sản/ mã CCDC',
+    'Serial (CÓ THÌ GHI, KHÔNG THÌ ĐỂ TRỐNG)',
+    'Thời gian bắt đầu đưa vào khai thác sử dụng (GHI NGÀY THÁNG HOẶC NĂM)',
+    'Hãng sản xuất',
+    'Công suất (kVA)',
+    'Công cụ theo dõi/quản lý',
+    'Lịch sửa sửa chữa từ 01/01/2025 đến nay ( số lần sửa)',
+    'Mô tả hiện trạng, tình trạng hỏng',
+    'Chi phí sửa chữa dự kiến - Trước VAT = tổng chi phí các hạng mục dề xuất sửa',
+    '1.Sửa chữa động cơ máy phát (Diesel/Gasoline Engine)',
+    '2.Sửa chữa đầu phát điện (Alternator AC)',
+    '3.Sửa chữa hệ thống khởi động & nguồn DC',
+    '4.Sửa chữa hệ thống nhiên liệu',
+    '5.Sửa chữa hệ thống làm mát',
+    '6.Sửa chữa hệ thống điều khiển & hiển thị',
+    '7.Sửa chữa khung vỏ – cách âm – cơ khí phụ trợ',
+    '8.Sửa chữa hệ thống điện đầu ra / điện công suất',
+    '9.Sửa chữa hệ thống hòa khí / nạp khí (áp dụng theo chủng loại máy)',
+    '10.Bảo dưỡng tổng thể máy phát điện di động',
+    '11. Thay thế,  sửa chữa hệ thống điện',
+    '12. Thay thế Bình xăng con',
+    'Giá trị vật tư thay thế'
+  ];
+
+  const headerRow2 = [
+    '(1)', '(2)', '(3)', '(4)', '(5)', '(6)', '(7)', '(8)', '(9)', '(10)',
+    '(11)', '(12)', '(13)', '(14)= Sum((15);(26))',
+    '(15)', '(16)', '(17)', '(18)', '(19)', '(20)', '(21)', '(22)', '(23)', '(24)', '(25)', '(26)', '(27)'
+  ];
+
+  const r1 = ws.addRow(headerRow1);
+  r1.height = 42;
+  r1.eachCell((cell, colNumber) => {
+    cell.font = FONT_HEADER;
+    cell.fill = colNumber <= 14 ? FILL_HEADER_INFO : FILL_HEADER_CAT;
+    cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+    cell.border = THIN_BORDER;
+  });
+
+  const r2 = ws.addRow(headerRow2);
+  r2.height = 22;
+  r2.eachCell((cell, colNumber) => {
+    cell.font = FONT_HEADER2;
+    cell.fill = colNumber <= 14 ? FILL_HEADER_INFO : FILL_HEADER_CAT;
+    cell.alignment = ALIGN_CENTER;
+    cell.border = THIN_BORDER;
+  });
+
+  let dataList = items && items.length > 0 ? [...items] : [];
+  if (dataList.length === 0 && Array.isArray(mobileEquipments) && mobileEquipments.length > 0) {
+    dataList = mobileEquipments
+      .filter(e => e.status === 'Hư' && ((e.type || '').toUpperCase().includes('MPĐ') || (e.equipment_code || '').includes('MPD')))
+      .map(eq => ({
+        site_id: eq.current_location || 'KHO',
+        category: 'Máy phát điện',
+        device_type: 'MPD_DI_DONG',
+        equipment_code: eq.equipment_code,
+        nhan_hieu: eq.brand || (eq.specifications ? eq.specifications.split(' ')[0] : 'KYO POWER'),
+        cong_suat: eq.power_kva || '5.5',
+        serial: eq.serial_number || '',
+        ma_vat_tu: eq.eam_oid || '',
+        nam_su_dung: eq.commissioning_date || '2020',
+        description: eq.notes || 'Máy hư hỏng cần bảo dưỡng/sửa chữa',
+        b4_category_idx: 0
+      }));
+  }
+
+  dataList.forEach((d, idx) => {
+    const item = d.existing_issues || d;
+    const rawLoc = String(d.site_id || item.site_id || d.current_location || '').trim().toUpperCase();
+    const siteObj = siteMap[rawLoc] || {};
+    const displayLocation = (!rawLoc || rawLoc === 'KHO') 
+      ? 'VP tổ VT3 long khánh, Đồng Nai' 
+      : (siteObj.site_id_old || rawLoc);
+
+    const phanLoai = item.phan_loai || 'Hiện vật';
+    const tenThietBi = 'Máy nổ xăng lưu động';
+    const maTSCD = item.ma_vat_tu || item.eam_oid || '';
+    const serial = item.serial || item.serial_number || '';
+    const rawYear = item.nam_su_dung || item.commissioning_date || '2020';
+    const ngayDuaVaoSD = String(rawYear).length > 4 ? String(rawYear).slice(-4) : String(rawYear);
+    const hangSX = item.nhan_hieu || item.brand || 'KYO POWER';
+    const congSuat = item.cong_suat || item.power_kva || '5.5';
+    const congCuQL = 'Công cụ quản trị nội bộ';
+    const soLanSua = item.so_lan_sua_2025 !== undefined ? item.so_lan_sua_2025 : 0;
+    const moTaHuHong = item.description || item.notes || 'Máy không nổ được, cần sửa chữa bảo dưỡng';
+    const chiPhiDuKien = item.proposed_cost || null;
+
+    const selectedCats = new Set();
+    if (Array.isArray(item.b4_categories)) {
+      item.b4_categories.forEach(c => selectedCats.add(Number(c)));
+    } else if (item.b4_category_idx !== undefined && item.b4_category_idx !== null && item.b4_category_idx >= 0) {
+      selectedCats.add(Number(item.b4_category_idx));
+    }
+
+    if (selectedCats.size === 0) {
+      const descLower = moTaHuHong.toLowerCase();
+      if (/động cơ|piston|bơm nhớt|bạc|khói/.test(descLower)) selectedCats.add(0);
+      if (/đầu phát|avr|cuộn dây|chổi than/.test(descLower)) selectedCats.add(1);
+      if (/đề|giật|củ đề|acquy|ắc quy/.test(descLower)) selectedCats.add(2);
+      if (/bơm xăng|lọc xăng|đường ống/.test(descLower)) selectedCats.add(3);
+      if (/làm mát|quạt|két nước/.test(descLower)) selectedCats.add(4);
+      if (/đồng hồ|bộ điều khiển/.test(descLower)) selectedCats.add(5);
+      if (/khung|vỏ|bánh xe|chân đế/.test(descLower)) selectedCats.add(6);
+      if (/ổ cắm|cb|tải|công suất/.test(descLower)) selectedCats.add(7);
+      if (/hòa khí|nạp khí|lọc gió/.test(descLower)) selectedCats.add(8);
+      if (/bảo dưỡng tổng thể/.test(descLower)) selectedCats.add(9);
+      if (/hệ thống điện/.test(descLower)) selectedCats.add(10);
+      if (/bình xăng con|chế hòa khí|chế/.test(descLower)) selectedCats.add(11);
+    }
+
+    const catCols = [];
+    for (let i = 0; i < 12; i++) {
+      catCols.push(selectedCats.has(i) ? 'X' : null);
+    }
+
+    const rowData = [
+      idx + 1,
+      'Đồng Nai',
+      displayLocation,
+      phanLoai,
+      tenThietBi,
+      maTSCD ? String(maTSCD) : '',
+      serial ? String(serial) : '',
+      ngayDuaVaoSD,
+      hangSX,
+      congSuat,
+      congCuQL,
+      soLanSua,
+      moTaHuHong,
+      chiPhiDuKien,
+      ...catCols,
+      null
+    ];
+
+    const row = ws.addRow(rowData);
+    row.height = 30;
+
+    row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+      cell.border = THIN_BORDER;
+
+      if (colNumber === 3) {
+        cell.font = FONT_BOLD_SITE;
+        cell.alignment = ALIGN_CENTER;
+      } else if (colNumber === 13) {
+        cell.font = FONT_REGULAR;
+        cell.alignment = ALIGN_LEFT_WRAP;
+      } else if (colNumber === 14 || colNumber === 27) {
+        cell.font = FONT_REGULAR;
+        cell.alignment = ALIGN_RIGHT;
+        if (cell.value) cell.numFmt = '#,##0';
+      } else if (colNumber >= 15 && colNumber <= 26) {
+        if (cell.value === 'X') {
+          cell.font = FONT_DEFECT_X;
+          cell.fill = FILL_DEFECT_BADGE;
+        } else {
+          cell.font = FONT_REGULAR;
+        }
+        cell.alignment = ALIGN_CENTER;
+      } else {
+        cell.font = FONT_REGULAR;
+        cell.alignment = ALIGN_CENTER;
+        if (colNumber === 6) cell.numFmt = '@';
+      }
+    });
+  });
+
+  const widths = [6, 12, 28, 12, 20, 18, 18, 16, 16, 14, 22, 12, 38, 22, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 18];
+  widths.forEach((w, i) => {
+    ws.getColumn(i + 1).width = w;
+  });
+
+  return ws;
+}
+
+/**
  * Xây dựng Sheet Điều Hòa (25 Cột) bằng ExcelJS
  */
 function buildDhkkSheet(workbook, sheetName, items, siteMap) {
@@ -364,19 +560,38 @@ function buildDhkkSheet(workbook, sheetName, items, siteMap) {
     const displaySiteId = erpMap ? erpMap.book_site : (siteObj.site_id_old || rawSiteId);
     const infra = siteObj.infrastructure_info || {};
     const mlList = infra.may_lanh || [];
-    const equip = mlList[0] || {};
     const item = d.existing_issues || d;
+    const moTaHuHong = item.description || item.mo_ta_hu_hong || 'Điều hòa hư hỏng cần bảo dưỡng/sửa chữa';
+    
+    let mlIdx = 0;
+    const moTaLower = String(moTaHuHong).toLowerCase();
+    if (/ml2|máy lạnh 2|máy 2/.test(moTaLower)) mlIdx = 1;
+    else if (/ml3|máy lạnh 3|máy 3/.test(moTaLower)) mlIdx = 2;
+    else if (/ml1|máy lạnh 1|máy 1/.test(moTaLower)) mlIdx = 0;
+
+    const equip = (mlList[mlIdx] && typeof mlList[mlIdx] === 'object') ? mlList[mlIdx] : ((mlList[0] && typeof mlList[0] === 'object') ? mlList[0] : {});
 
     const phanLoai = item.phan_loai || equip.phan_loai || 'CCDC';
     const tenThietBi = 'Điều hòa nhiệt độ';
-    const maTSCD = item.ma_tscd_moi || equip.ma_tai_san_moi || equip.ma_vat_tu || '';
+    let maTSCD = item.ma_tscd_moi || equip.ma_tai_san_moi || equip.ma_vat_tu || '';
+    if (!maTSCD) {
+      const mpdList = infra.may_phat_dien?.mpd || [];
+      const mpdEquip = mpdList[0] || {};
+      const maErpSite = mpdEquip.ma_erp_tram || 
+                        (mpdEquip.ma_vat_tu ? mpdEquip.ma_vat_tu.substring(0, 8) : '') ||
+                        siteObj.management_info?.ma_csht ||
+                        erpMap?.erp_code;
+      if (maErpSite) {
+        maTSCD = `${maErpSite}11100${mlIdx + 1}`;
+      }
+    }
     const serial = item.serial || equip.serial || '';
-    const ngayDuaVaoSD = item.ngay_su_dung || equip.ngay_dua_vao_su_dung || '2020-01-01';
+    const rawYear = item.nam_su_dung || equip.nam_su_dung || item.ngay_su_dung || equip.ngay_dua_vao_su_dung || '2020';
+    const ngayDuaVaoSD = String(rawYear).substring(0, 4);
     const hangSX = item.nhan_hieu || equip.nhan_hieu || 'DAIKIN-INVERTER';
     const congSuat = item.cong_suat || equip.cong_suat || '12.000';
     const congCuQL = 'Datasite';
     const soLanSua = item.so_lan_sua_2025 !== undefined ? item.so_lan_sua_2025 : 0;
-    const moTaHuHong = item.description || item.mo_ta_hu_hong || 'Điều hòa hư hỏng cần bảo dưỡng/sửa chữa';
     const chiPhiDuKien = item.proposed_cost || null;
 
     const selectedCats = new Set();
@@ -537,7 +752,7 @@ function buildReferenceSheet(workbook) {
  * Xuất file Excel Biểu Mẫu B4 Đề Nghị Sửa Chữa (Chuẩn Mobifone).
  * Hỗ trợ xuất CHUNG 1 FILE DUY NHẤT gồm toàn bộ các Sheet bằng ExcelJS Executive Template
  */
-export async function exportB4RepairProposal({ items = [], datasites = [], targetCategory = 'ALL', customFileName = '' }) {
+export async function exportB4RepairProposal({ items = [], datasites = [], mobileEquipments = [], targetCategory = 'ALL', customFileName = '' }) {
   const ExcelJS = await getExcelJS();
   
   // B4 Ban 4 CHỈ duyệt MPĐ và ĐHKK. Tuyệt đối loại trừ Hạ tầng địa bàn và Ắc quy đề
@@ -569,9 +784,10 @@ export async function exportB4RepairProposal({ items = [], datasites = [], targe
   const isMpd = it => (it.category === 'Máy phát điện' || it.existing_issues?.category === 'Máy phát điện');
   const isDhkk = it => (it.category === 'Máy lạnh' || it.existing_issues?.category === 'Máy lạnh');
 
-  const mpdItems = validItems.filter(it => isMpd(it) && it.device_type !== 'MPD_DI_DONG');
+  const isMobileMpd = it => (it.device_type === 'MPD_DI_DONG' || it.existing_issues?.device_type === 'MPD_DI_DONG');
+  const mpdItems = validItems.filter(it => isMpd(it) && !isMobileMpd(it));
   const dhkkItems = validItems.filter(it => isDhkk(it));
-  const mobileMpdItems = validItems.filter(it => isMpd(it) && it.device_type === 'MPD_DI_DONG');
+  const mobileMpdItems = validItems.filter(it => isMpd(it) && isMobileMpd(it));
 
   if (targetCategory === 'ALL') {
     // Sheet 1: Điều hòa
@@ -579,12 +795,11 @@ export async function exportB4RepairProposal({ items = [], datasites = [], targe
     // Sheet 2: Máy phát điện_Cố định
     buildFixedGeneratorSheet(workbook, 'Máy phát điện_Cố định', mpdItems, siteMap);
     // Sheet 3: Máy phát điện_Di động
-    buildFixedGeneratorSheet(workbook, 'Máy phát điện_Di động', mobileMpdItems, siteMap);
+    buildMobileGeneratorSheet(workbook, 'Máy phát điện_Di động', mobileMpdItems, siteMap, mobileEquipments);
     // Sheet 4: Diễn giải DM hỏng tham chiếu
     buildReferenceSheet(workbook);
 
-    const todayStr = new Date().toISOString().substring(0, 10).replace(/-/g, '');
-    const finalFileName = customFileName || `TVT3_Bieu_Mau_B4_DHKK_MPD_${todayStr}.xlsx`;
+    const finalFileName = customFileName || 'TVT3-B4. Bieu mau chuyen mon sua DHKK & MPD.xlsx';
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     saveAs(blob, finalFileName);
@@ -597,7 +812,7 @@ export async function exportB4RepairProposal({ items = [], datasites = [], targe
   } else if (targetCategory === 'DHKK') {
     buildDhkkSheet(workbook, 'Điều hòa', dhkkItems.length > 0 ? dhkkItems : validItems, siteMap);
   } else if (targetCategory === 'MPD_DI_DONG') {
-    buildFixedGeneratorSheet(workbook, 'Máy phát điện_Di động', mobileMpdItems.length > 0 ? mobileMpdItems : validItems, siteMap);
+    buildMobileGeneratorSheet(workbook, 'Máy phát điện_Di động', mobileMpdItems.length > 0 ? mobileMpdItems : validItems, siteMap, mobileEquipments);
   }
 
   buildReferenceSheet(workbook);

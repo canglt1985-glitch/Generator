@@ -121,11 +121,18 @@ export default function DailyWork() {
   const [selectedEquip, setSelectedEquip] = useState(null);
   const [editingEquip, setEditingEquip] = useState(null);
 
-  // Daily Report & Quick Filter & Detail States for Mobile Equipment
   const [showDailyReportModal, setShowDailyReportModal] = useState(false);
   const [copiedDailyReport, setCopiedDailyReport] = useState(false);
   const [equipFilterStatus, setEquipFilterStatus] = useState('ALL'); // 'ALL' | 'AT_SITES' | 'AT_KHO' | 'DAMAGED' | 'MPD' | 'PIN'
   const [selectedEquipDetail, setSelectedEquipDetail] = useState(null);
+
+  // Mobile Defect Reporting States
+  const [showMobileDefectModal, setShowMobileDefectModal] = useState(false);
+  const [selectedEquipForDefect, setSelectedEquipForDefect] = useState(null);
+  const [mobileDefectEquipCode, setMobileDefectEquipCode] = useState('');
+  const [mobileDefectCatIdx, setMobileDefectCatIdx] = useState(0);
+  const [mobileDefectNotes, setMobileDefectNotes] = useState('');
+  const [savingMobileDefect, setSavingMobileDefect] = useState(false);
 
   // Form states - Add / Edit Equipment (Full Asset & EAM fields)
   const [equipCode, setEquipCode] = useState('');
@@ -912,11 +919,138 @@ export default function DailyWork() {
     exportB4RepairProposal({
       items: exportItems,
       datasites: stations,
+      mobileEquipments,
       targetCategory: (mode === 'MPD_CO_DINH' || mode === 'MPD_DI_DONG' || mode === 'DHKK') ? mode : 'ALL',
       customFileName: fileName
     });
     setShowB4ExportDropdown(false);
   }
+
+  // === HANDLERS BÁO HỎNG & KHÔI PHỤC MÁY LƯU ĐỘNG ===
+  const handleOpenMobileDefectModal = (equip = null) => {
+    setSelectedEquipForDefect(equip);
+    setMobileDefectEquipCode(equip?.equipment_code || '');
+    setMobileDefectCatIdx(0);
+    setMobileDefectNotes(equip?.notes || '');
+    setShowMobileDefectModal(true);
+  };
+
+  const handleSubmitMobileDefect = async (e) => {
+    if (e) e.preventDefault();
+    const targetEquip = selectedEquipForDefect || mobileEquipments.find(eq => eq.equipment_code === mobileDefectEquipCode);
+    if (!targetEquip) {
+      alert("Vui lòng chọn thiết bị lưu động cần báo hỏng!");
+      return;
+    }
+    setSavingMobileDefect(true);
+    try {
+      const selectedCat = (B4_REPAIR_CATEGORIES.MPD_DI_DONG || [])[mobileDefectCatIdx];
+      const desc = mobileDefectNotes.trim() || selectedCat?.label || 'Hư hỏng máy phát điện di động';
+
+      // 1. Cập nhật bảng mobile_equipment
+      const { error: equipErr } = await supabase
+        .from('mobile_equipment')
+        .update({
+          status: 'Hư',
+          notes: desc,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', targetEquip.id);
+      if (equipErr) throw equipErr;
+
+      // 2. Ghi bản ghi sự cố vào operation_defects_logs (phục vụ đồng bộ Sheet 3 B4)
+      const payload = {
+        site_id: targetEquip.current_location || 'KHO',
+        date: new Date().toISOString().split('T')[0],
+        existing_issues: {
+          category: 'Máy phát điện',
+          device_type: 'MPD_DI_DONG',
+          equipment_code: targetEquip.equipment_code,
+          workstream: 'B4_REPAIR',
+          b4_category_idx: mobileDefectCatIdx,
+          description: desc,
+          status: 'Chưa XL',
+          reporter: user?.email || 'Kỹ thuật viên',
+          b4_approved: false
+        },
+        proposed_solutions: {}
+      };
+
+      const { error: logErr } = await supabase
+        .from('operation_defects_logs')
+        .insert([payload]);
+      if (logErr) throw logErr;
+
+      // 3. Ghi activity log
+      await logActivity(
+        'BÁO HỎNG MPĐ LƯU ĐỘNG',
+        `Báo hỏng máy ${targetEquip.equipment_code}: ${desc}`,
+        targetEquip.current_location || 'KHO'
+      );
+
+      setShowMobileDefectModal(false);
+      alert(`✅ Đã báo hỏng máy ${targetEquip.equipment_code} thành công và đồng bộ vào danh sách sửa chữa B4!`);
+      await fetchData();
+    } catch (err) {
+      console.error(err);
+      alert("Lỗi khi báo hỏng máy: " + err.message);
+    } finally {
+      setSavingMobileDefect(false);
+    }
+  };
+
+  const handleResolveMobileDefect = async (equip) => {
+    if (!window.confirm(`Xác nhận máy ${equip.equipment_code} (${equip.specifications || equip.brand || ''}) đã hoàn thành sửa chữa xong và đưa trở lại trạng thái sẵn sàng (TỐT)?`)) {
+      return;
+    }
+    try {
+      const { error: upErr } = await supabase
+        .from('mobile_equipment')
+        .update({
+          status: 'Tốt',
+          notes: 'Đã hoàn thành sửa chữa - Sẵn sàng hoạt động',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', equip.id);
+      if (upErr) throw upErr;
+
+      // Đồng bộ các log tồn tại chưa xử lý của máy này
+      const relatedLogs = defectsLogs.filter(l => 
+        l.existing_issues?.device_type === 'MPD_DI_DONG' &&
+        (l.existing_issues?.equipment_code === equip.equipment_code || l.site_id === equip.current_location) &&
+        l.existing_issues?.status !== 'Đã XL'
+      );
+
+      for (const rLog of relatedLogs) {
+        await supabase
+          .from('operation_defects_logs')
+          .update({
+            existing_issues: {
+              ...rLog.existing_issues,
+              status: 'Đã XL'
+            },
+            proposed_solutions: {
+              ...(rLog.proposed_solutions || {}),
+              resolved_at: new Date().toISOString().split('T')[0]
+            },
+            updated_at: new Date().toISOString()
+          })
+          .eq('log_id', rLog.log_id);
+      }
+
+      await logActivity(
+        'SỬA XONG MPĐ LƯU ĐỘNG',
+        `Hoàn tất sửa chữa máy ${equip.equipment_code}, khôi phục trạng thái TỐT`,
+        equip.current_location || 'KHO'
+      );
+
+      alert(`✅ Đã xác nhận máy ${equip.equipment_code} sửa xong thành công, trạng thái chuyển về TỐT!`);
+      await fetchData();
+    } catch (err) {
+      console.error(err);
+      alert("Lỗi khi cập nhật trạng thái sửa xong: " + err.message);
+    }
+  };
 
   async function handleBulkAssignBatch(batchName = 'Đợt 2', isApproved = false) {
     if (selectedIssueIds.length === 0) {
@@ -1403,82 +1537,14 @@ export default function DailyWork() {
           {activeTab === 'issues' && (
             <div className="hidden md:flex items-center gap-2">
               {issueWorkstream === 'B4_REPAIR' && (
-                <div className="relative inline-flex items-center rounded-lg shadow-sm">
-                  <button 
-                    onClick={() => handleExportB4Repair(b4BatchFilter === 'DOT_1' ? 'DOT_1' : 'DOT_2')}
-                    className="inline-flex items-center justify-center px-3.5 py-1.5 text-[13px] font-bold rounded-l-lg text-emerald-800 bg-emerald-50 border border-emerald-300 hover:bg-emerald-100 transition-colors cursor-pointer h-[34px] gap-1.5"
-                    title="Xuất file B4 (ExcelJS Executive Styling chuẩn TCT & Ban 4)"
-                  >
-                    <ClipboardList className="h-4 w-4 text-emerald-600" />
-                    <span>📄 {b4BatchFilter === 'DOT_1' ? `Xuất B4 Đợt 1 (${b4ApprovedCount})` : `Xuất B4 Đợt 2 (${b4ProposedDot2Count})`}</span>
-                  </button>
-                  <button
-                    onClick={() => setShowB4ExportDropdown(!showB4ExportDropdown)}
-                    className="px-2 py-1.5 text-emerald-800 bg-emerald-50 border-t border-b border-r border-emerald-300 hover:bg-emerald-100 rounded-r-lg transition-colors cursor-pointer h-[34px]"
-                    title="Tùy chọn xuất file B4"
-                  >
-                    <span className="text-[10px]">▼</span>
-                  </button>
-
-                  {showB4ExportDropdown && (
-                    <div className="absolute right-0 top-full mt-1.5 w-80 bg-white border border-slate-200 rounded-xl shadow-xl z-50 p-2 space-y-1 text-left">
-                      <div className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100">
-                        Biểu mẫu B4 Ban 4 (Lấy theo tên cũ):
-                      </div>
-                      <button
-                        onClick={() => handleExportB4Repair('DOT_2')}
-                        className="w-full text-left px-3 py-2 text-xs font-bold text-emerald-900 bg-emerald-50/80 hover:bg-emerald-100 rounded-lg flex items-center gap-2 cursor-pointer border border-emerald-200 transition-all"
-                      >
-                        <ClipboardList className="h-4 w-4 text-emerald-600 shrink-0" />
-                        <div>
-                          <div>📄 Xuất B4 Đợt 2 - Để trình duyệt (Khuyên dùng)</div>
-                          <div className="text-[10px] font-normal text-emerald-700">{b4ProposedDot2Count} ca MPĐ &amp; ĐHKK chưa duyệt</div>
-                        </div>
-                      </button>
-                      <button
-                        onClick={() => handleExportB4Repair('DOT_1')}
-                        className="w-full text-left px-3 py-2 text-xs font-bold text-teal-900 bg-teal-50/80 hover:bg-teal-100 rounded-lg flex items-center gap-2 cursor-pointer border border-teal-200 transition-all"
-                      >
-                        <CheckCircle2 className="h-4 w-4 text-teal-600 shrink-0" />
-                        <div>
-                          <div>🟢 Xuất B4 Đợt 1 - Đã phê duyệt</div>
-                          <div className="text-[10px] font-normal text-teal-700">{b4ApprovedCount} ca MPĐ đã duyệt đợt trước</div>
-                        </div>
-                      </button>
-                      <button
-                        onClick={() => handleExportB4Repair('ALL')}
-                        className="w-full text-left px-3 py-2 text-xs font-bold text-slate-800 bg-slate-50 hover:bg-slate-100 rounded-lg flex items-center gap-2 cursor-pointer border border-slate-200 transition-all"
-                      >
-                        <Layers className="h-4 w-4 text-slate-600 shrink-0" />
-                        <div>
-                          <div>📋 Xuất Tất Cả 49 ca B4 (Cả Đợt 1 &amp; Đợt 2)</div>
-                        </div>
-                      </button>
-
-                      <div className="px-3 pt-2 pb-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                        Hoặc chỉ xuất riêng từng sheet:
-                      </div>
-                      <button
-                        onClick={() => handleExportB4Repair('MPD_CO_DINH')}
-                        className="w-full text-left px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 rounded-md flex items-center gap-2 cursor-pointer"
-                      >
-                        ⚡ Chỉ xuất Sheet MPĐ Cố Định
-                      </button>
-                      <button
-                        onClick={() => handleExportB4Repair('DHKK')}
-                        className="w-full text-left px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 rounded-md flex items-center gap-2 cursor-pointer"
-                      >
-                        ❄️ Chỉ xuất Sheet Điều Hòa
-                      </button>
-                      <button
-                        onClick={() => handleExportB4Repair('MPD_DI_DONG')}
-                        className="w-full text-left px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 rounded-md flex items-center gap-2 cursor-pointer"
-                      >
-                        🚗 Chỉ xuất Sheet MPĐ Di Động
-                      </button>
-                    </div>
-                  )}
-                </div>
+                <button 
+                  onClick={() => handleExportB4Repair('ALL')}
+                  className="inline-flex items-center justify-center px-4 py-1.5 text-[13px] font-bold rounded-lg text-white bg-emerald-600 hover:bg-emerald-700 shadow-sm transition-all cursor-pointer h-[34px] gap-1.5"
+                  title="Xuất file Excel Chuyên Môn Sửa Chữa (Gộp chung 3 Sheet: Điều Hòa + MPĐ Cố Định + MPĐ Di Động)"
+                >
+                  <Download className="h-4 w-4" />
+                  <span>📥 Xuất File Sửa Chữa (Gộp ĐHKK & MPĐ)</span>
+                </button>
               )}
 
               {issueWorkstream === 'BATTERY_UCTT' && (
@@ -1610,7 +1676,7 @@ export default function DailyWork() {
         {[
           { id: 'daily', label: 'Nhật ký', color: 'blue', icon: ClipboardList },
           { id: 'power', label: 'Lịch cúp điện', color: 'amber', icon: Calendar },
-          { id: 'issues', label: 'Quản lý tồn tại', color: 'red', icon: AlertTriangle },
+          { id: 'issues', label: 'Tồn tại & Sự cố', color: 'red', icon: AlertTriangle },
           { id: 'mobile', label: 'Thiết bị lưu động', color: 'purple', icon: Zap },
         ].map(tab => {
           const Icon = tab.icon;
@@ -1694,7 +1760,7 @@ export default function DailyWork() {
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
-                    <span>⚡</span> Sửa chữa B4
+                    <span>⚡</span> Sửa chữa MPĐ &amp; ĐHKK
                   </span>
                   <span className={`px-2 py-0.5 rounded-full text-xs font-bold font-mono ${
                     issueWorkstream === 'B4_REPAIR' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700'
@@ -1703,7 +1769,7 @@ export default function DailyWork() {
                   </span>
                 </div>
                 <div className="text-[11px] text-slate-500 mt-1">
-                  Máy phát điện &amp; Điều hòa (Ban 4)
+                  Máy phát điện &amp; Điều hòa không khí
                 </div>
               </button>
 
@@ -2706,6 +2772,15 @@ export default function DailyWork() {
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
+                        onClick={() => handleOpenMobileDefectModal(null)}
+                        className="inline-flex items-center justify-center px-3.5 py-1.5 text-xs font-bold rounded-lg text-white bg-rose-600 hover:bg-rose-700 shadow-sm transition-all cursor-pointer h-[32px] gap-1.5"
+                        title="Báo hỏng máy phát điện / pin lưu động đưa vào danh mục đề xuất sửa chữa Ban 4"
+                      >
+                        <AlertTriangle size={14} />
+                        <span>⚠️ Báo Hỏng Máy</span>
+                      </button>
+                      <button
+                        type="button"
                         onClick={handleExportMobileEquipment}
                         className="hidden md:inline-flex items-center justify-center px-4 py-1.5 text-xs font-bold rounded-lg text-white bg-emerald-600 hover:bg-emerald-700 shadow-sm transition-all cursor-pointer h-[32px] gap-1.5"
                         title="Xuất file Excel đầy đủ 2 Sheet: Danh mục thiết bị lưu động & Lịch sử điều chuyển"
@@ -2831,6 +2906,27 @@ export default function DailyWork() {
                                         <Eye size={15} />
                                       </button>
 
+                                      {/* Báo hỏng / Xác nhận đã sửa xong */}
+                                      {isGood ? (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleOpenMobileDefectModal(eq)}
+                                          className="text-[11px] font-bold px-2 py-1 rounded-lg text-rose-600 border border-rose-200 bg-rose-50/50 hover:bg-rose-100 cursor-pointer shadow-sm transition-colors flex items-center gap-1"
+                                          title="Báo hỏng máy này để đưa vào danh mục sửa chữa B4"
+                                        >
+                                          <AlertTriangle size={11} /> Báo hỏng
+                                        </button>
+                                      ) : (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleResolveMobileDefect(eq)}
+                                          className="text-[11px] font-bold px-2 py-1 rounded-lg text-emerald-700 border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 cursor-pointer shadow-sm transition-colors flex items-center gap-1"
+                                          title="Xác nhận máy đã sửa xong, khôi phục trạng thái Tốt"
+                                        >
+                                          <CheckCircle2 size={11} /> Đã sửa xong
+                                        </button>
+                                      )}
+
                                       {user && (
                                         <>
                                           <button
@@ -2925,24 +3021,44 @@ export default function DailyWork() {
                                   <Eye size={13} /> Hồ sơ tài sản
                                 </button>
 
-                                {user && (
-                                  <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1.5">
+                                  {isGood ? (
                                     <button
                                       type="button"
-                                      onClick={() => handleEditEquip(eq)}
-                                      className="text-[11px] font-bold px-2.5 py-1 rounded-lg text-blue-600 border border-blue-200 bg-white hover:bg-slate-50 cursor-pointer shadow-sm transition-colors flex items-center gap-1"
+                                      onClick={() => handleOpenMobileDefectModal(eq)}
+                                      className="text-[11px] font-bold px-2 py-1 rounded-lg text-rose-600 border border-rose-200 bg-rose-50 hover:bg-rose-100 cursor-pointer shadow-sm transition-colors flex items-center gap-1"
                                     >
-                                      <Edit size={11} /> Sửa
+                                      <AlertTriangle size={11} /> Báo hỏng
                                     </button>
+                                  ) : (
                                     <button
                                       type="button"
-                                      onClick={() => handleStartTransfer(eq)}
-                                      className="text-[11px] font-bold px-2.5 py-1 rounded-lg text-white bg-blue-600 hover:bg-blue-700 cursor-pointer shadow-sm transition-colors"
+                                      onClick={() => handleResolveMobileDefect(eq)}
+                                      className="text-[11px] font-bold px-2 py-1 rounded-lg text-emerald-700 border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 cursor-pointer shadow-sm transition-colors flex items-center gap-1"
                                     >
-                                      Điều chuyển
+                                      <CheckCircle2 size={11} /> Sửa xong
                                     </button>
-                                  </div>
-                                )}
+                                  )}
+
+                                  {user && (
+                                    <>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleEditEquip(eq)}
+                                        className="text-[11px] font-bold px-2 py-1 rounded-lg text-blue-600 border border-blue-200 bg-white hover:bg-slate-50 cursor-pointer shadow-sm transition-colors flex items-center gap-1"
+                                      >
+                                        <Edit size={11} /> Sửa
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleStartTransfer(eq)}
+                                        className="text-[11px] font-bold px-2 py-1 rounded-lg text-white bg-blue-600 hover:bg-blue-700 cursor-pointer shadow-sm transition-colors"
+                                      >
+                                        Điều chuyển
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           );
@@ -4377,6 +4493,170 @@ export default function DailyWork() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL BÁO HỎNG THIẾT BỊ LƯU ĐỘNG (ĐỒNG BỘ BAN 4 SHEET 3) */}
+      {showMobileDefectModal && (
+        <div className="fixed inset-0 z-[120] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-xl overflow-hidden animate-in fade-in zoom-in duration-200">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-rose-600 via-rose-500 to-amber-600 px-6 py-4 flex items-center justify-between text-white">
+              <div className="flex items-center gap-2.5">
+                <span className="p-2 bg-white/20 rounded-xl">
+                  <AlertTriangle size={20} className="text-white" />
+                </span>
+                <div>
+                  <h2 className="font-bold text-base leading-tight">
+                    Báo Hỏng Máy Phát Điện / Pin Lưu Động
+                  </h2>
+                  <p className="text-xs text-rose-100">
+                    Cập nhật trạng thái máy & Tự động đề xuất vào danh mục sửa chữa Ban 4 (Sheet 3)
+                  </p>
+                </div>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setShowMobileDefectModal(false)}
+                className="p-1 hover:bg-white/10 rounded-full transition-colors text-white/80 hover:text-white cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Form Body */}
+            <form onSubmit={handleSubmitMobileDefect} className="p-6 space-y-4 text-xs text-slate-700">
+              {/* Chọn thiết bị */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                  <span>Thiết bị lưu động báo hỏng <span className="text-red-500">*</span></span>
+                  {selectedEquipForDefect && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedEquipForDefect(null)}
+                      className="text-[11px] font-bold text-blue-600 hover:text-blue-800 underline cursor-pointer"
+                    >
+                      Chọn máy khác
+                    </button>
+                  )}
+                </label>
+
+                {selectedEquipForDefect ? (
+                  <div className="p-3 bg-rose-50/70 border border-rose-200 rounded-xl flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-black text-rose-700 bg-white px-2 py-0.5 rounded border border-rose-300 text-sm">
+                          {selectedEquipForDefect.equipment_code}
+                        </span>
+                        <span className="font-bold text-slate-800">
+                          {selectedEquipForDefect.type} - {selectedEquipForDefect.brand || selectedEquipForDefect.specifications || 'Máy phát điện lưu động'}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-slate-600 mt-1 flex items-center gap-2">
+                        <span>📍 Vị trí: <strong>{getEquipLocationLabel(selectedEquipForDefect.current_location)}</strong></span>
+                        {selectedEquipForDefect.serial_number && (
+                          <span>• Serial: <strong className="font-mono">{selectedEquipForDefect.serial_number}</strong></span>
+                        )}
+                      </div>
+                    </div>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                      Chờ báo hỏng
+                    </span>
+                  </div>
+                ) : (
+                  <select
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-bold bg-white text-slate-800 focus:ring-2 focus:ring-rose-500 focus:outline-none"
+                    value={mobileDefectEquipCode}
+                    onChange={(e) => {
+                      setMobileDefectEquipCode(e.target.value);
+                      const eq = mobileEquipments.find(item => item.equipment_code === e.target.value);
+                      if (eq?.notes) setMobileDefectNotes(eq.notes);
+                    }}
+                    required
+                  >
+                    <option value="">-- Chọn máy phát điện / Pin lưu động cần báo hỏng --</option>
+                    {mobileEquipments.map((eq) => (
+                      <option key={eq.id} value={eq.equipment_code}>
+                        {eq.equipment_code} - {eq.brand || eq.specifications || eq.type} ({getEquipLocationLabel(eq.current_location)}) [{eq.status}]
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              {/* Hạng mục sửa chữa chuẩn hóa Ban 4 */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                  Hạng mục sửa chữa chuẩn hóa Ban 4 <span className="text-red-500">*</span>
+                </label>
+                <select
+                  className="w-full px-3 py-2 border border-amber-300 rounded-xl text-xs font-bold bg-amber-50/50 text-slate-800 focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                  value={mobileDefectCatIdx}
+                  onChange={(e) => setMobileDefectCatIdx(Number(e.target.value))}
+                >
+                  {(B4_REPAIR_CATEGORIES.MPD_DI_DONG || []).map((cat, idx) => (
+                    <option key={cat.id} value={idx}>
+                      {idx + 1}. {cat.label}
+                    </option>
+                  ))}
+                </select>
+
+                {/* Diễn giải chi tiết tham chiếu Ban 4 */}
+                {(() => {
+                  const list = b4ReferenceCatalog.MPD_DI_DONG || [];
+                  const item = list[mobileDefectCatIdx] || list[0];
+                  if (!item?.dien_giai_chi_tiet) return null;
+                  return (
+                    <div className="p-2.5 bg-amber-50/80 border border-amber-200 rounded-lg text-[11px] text-amber-900 space-y-1">
+                      <div className="font-bold flex items-center gap-1.5 text-amber-950">
+                        <span>🔍 Diễn giải nội dung hỏng / sửa chuẩn Ban 4:</span>
+                      </div>
+                      <p className="text-slate-700 leading-relaxed italic">
+                        {item.dien_giai_chi_tiet}
+                      </p>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Mô tả hiện tượng hư hỏng cụ thể */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  Mô tả hiện trạng hư hỏng thực tế <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white text-slate-800 focus:ring-2 focus:ring-rose-500 focus:outline-none min-h-[85px] leading-relaxed"
+                  placeholder="Ghi rõ hiện tượng hư hỏng thực tế của máy (VD: Kẹt buly kéo nổ, chảy nhớt lốc máy, không phát ra điện 220V, bình ắc quy đề sụt áp, hỏng chế hòa khí...)"
+                  value={mobileDefectNotes}
+                  onChange={(e) => setMobileDefectNotes(e.target.value)}
+                  required
+                />
+                <div className="text-[11px] text-slate-400 mt-1">
+                  💡 Ghi chú này sẽ được lưu vào hồ sơ máy và tự động điền vào cột "Mô tả hiện trạng" trong file Excel gửi Ban 4.
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="pt-3 flex items-center justify-end gap-2.5 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowMobileDefectModal(false)}
+                  disabled={savingMobileDefect}
+                  className="px-4 py-2 border border-slate-200 text-xs font-semibold rounded-lg text-slate-600 bg-white hover:bg-slate-50 cursor-pointer"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingMobileDefect}
+                  className="px-4 py-2 bg-rose-600 text-white text-xs font-bold rounded-lg hover:bg-rose-700 shadow-sm transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  <AlertTriangle size={13} />
+                  <span>{savingMobileDefect ? 'Đang lưu...' : 'Xác nhận báo hỏng'}</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

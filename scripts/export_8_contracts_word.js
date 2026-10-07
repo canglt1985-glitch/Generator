@@ -37,7 +37,7 @@ const TARGET_SITES = [
   '26DNa255',
   '26DNa185',
   '26DNa181',
-  '26DNa129'
+  '26DNa179'
 ];
 
 function haversine(lat1, lon1, lat2, lon2) {
@@ -105,22 +105,22 @@ const SITE_ADDRESS_MAPPING = {
   '26DNa165': {
     oldDetail: 'Tổ 10, Ấp 1, Xã Bình Lộc, Thị xã Long Khánh',
     wardNew: 'Phường Bình Lộc',
-    plotNo: '............',
-    mapSheet: '............',
+    plotNo: '163',
+    mapSheet: '24',
     contactAddr: 'Tổ 10, Ấp 1, Phường Bình Lộc, Đồng Nai'
   },
   '26DNa167': {
     oldDetail: 'Ấp 4, Xã Xuân Hòa, Huyện Xuân Lộc',
     wardNew: 'Xã Xuân Hòa',
-    plotNo: '............',
-    mapSheet: '............',
+    plotNo: '73',
+    mapSheet: '63',
     contactAddr: 'Ấp 4, Xã Xuân Hòa, Đồng Nai'
   },
   '26DNa163': {
     oldDetail: 'Ấp 1, Xã Xuân Đường, Huyện Cẩm Mỹ',
     wardNew: 'Xã Xuân Đường',
-    plotNo: '............',
-    mapSheet: '............',
+    plotNo: '05',
+    mapSheet: '22',
     contactAddr: 'Ấp 1, Xã Xuân Đường, Đồng Nai'
   },
   '26DNa158': {
@@ -141,8 +141,8 @@ const SITE_ADDRESS_MAPPING = {
   '26DNa185': {
     oldDetail: 'Ấp Xuân Quế, Xã Xuân Quế, Huyện Cẩm Mỹ',
     wardNew: 'Xã Xuân Quế',
-    plotNo: '............',
-    mapSheet: '............',
+    plotNo: '838',
+    mapSheet: '22',
     contactAddr: 'Ấp Xuân Quế, Xã Xuân Quế, Đồng Nai'
   },
   '26DNa181': {
@@ -152,12 +152,12 @@ const SITE_ADDRESS_MAPPING = {
     mapSheet: '3',
     contactAddr: 'Xã Định Quán, Đồng Nai'
   },
-  '26DNa129': {
+  '26DNa179': {
     oldDetail: 'Xã Gia Kiệm, Huyện Thống Nhất',
     wardNew: 'Xã Gia Kiệm',
     plotNo: '1338',
     mapSheet: '17',
-    contactAddr: 'Xã Gia Kiệm, Đồng Nai'
+    contactAddr: '259/T Phúc Nhạc 2, Gia Tân 3, Thống Nhất, Đồng Nai'
   }
 };
 

@@ -66,7 +66,7 @@ def build_report():
     align_left = Alignment(horizontal="left", vertical="center", wrap_text=True)
     align_right = Alignment(horizontal="right", vertical="center")
 
-    desktop_8_sites = ['26DNa165', '26DNa167', '26DNa163', '26DNa158', '26DNa255', '26DNa185', '26DNa181', '26DNa129']
+    desktop_8_sites = ['26DNa165', '26DNa167', '26DNa163', '26DNa158', '26DNa255', '26DNa185', '26DNa181', '26DNa179']
 
     # ==========================================
     # SHEET 1: CÁC GÓI MBF TỰ ĐẦU TƯ (GÓI 2, 3, 4)
@@ -101,7 +101,7 @@ def build_report():
     # Danh sách chuẩn hóa Gói 4 gồm 8 trạm dự kiến trình hợp đồng (STT 21 -> 28)
     goi_4_ordered = [
         (21, '26DNa165'), (22, '26DNa167'), (23, '26DNa163'), (24, '26DNa158'),
-        (25, '26DNa255'), (26, '26DNa185'), (27, '26DNa181'), (28, '26DNa129')
+        (25, '26DNa255'), (26, '26DNa185'), (27, '26DNa181'), (28, '26DNa179')
     ]
     goi_4_codes = [c[1] for c in goi_4_ordered]
 

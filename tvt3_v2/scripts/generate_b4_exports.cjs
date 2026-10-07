@@ -33,16 +33,32 @@ const STATION_ERP_MAPPINGS = {
   'DNXL49': { book_site: 'DNLK27', erp_code: '00021048', ma_vt: '00021048100001', ma_tscd_moi: '2027B1500000949' },
   'DNXL65': { book_site: 'DNTP03', erp_code: '00020811', ma_vt: '00020811100001', ma_tscd_moi: '2027B1500000965' },
   'DNXL75': { book_site: 'DNXL45', erp_code: '00020599', ma_vt: '00020599100001', ma_tscd_moi: '2027B1500000975' },
-  'DNXL77': { book_site: 'DNLK42', erp_code: '00021049', ma_vt: '00021049100001', ma_tscd_moi: '2027B1500000977' }
+  'DNXL77': { book_site: 'DNLK42', erp_code: '00021049', ma_vt: '00021049100001', ma_tscd_moi: '2027B1500000977' },
+  'DNIXLO04': { book_site: 'DNXL12', erp_code: '00021364', ma_vt: '00021364100001', ma_tscd_moi: '2027B1500000951' },
+  'DNXL12': { book_site: 'DNXL12', erp_code: '00021364', ma_vt: '00021364100001', ma_tscd_moi: '2027B1500000951' },
+  'DNIBLC09': { book_site: 'DNLK43', erp_code: '00021050', ma_vt: '00021050100001', ma_tscd_moi: '2027B1500000004' },
+  'DNLK43': { book_site: 'DNLK43', erp_code: '00021050', ma_vt: '00021050100001', ma_tscd_moi: '2027B1500000004' }
 };
+
+function isPureBatteryIssue(item) {
+  if (!item) return false;
+  const issues = item.existing_issues || item;
+  if (issues.proposal_type === 'BATTERY_PURCHASE') return true;
+  const desc = String(issues.description || '').toLowerCase();
+  const hasBattery = /ắc quy|accu|acquy|ắc qui|bình đề|binh de|bình ắc/.test(desc);
+  if (!hasBattery) return false;
+  const hasRealRepair = /đại tu|piston|bạc|trục cơ|xì nhớt|thổi gioăng|avr|đầu phát|kích từ|két nước|turbo|cb|contactor|ats|chuột cắn|bảng điều khiển|đứt dây|củ đề|solenoid|bơm dầu|béc|bộ xạc|bộ sạc|mạch sạc|dinamo|tiết chế|xăng chảy/.test(desc);
+  return !hasRealRepair;
+}
 
 function isBatteryProposal(item) {
   if (!item) return false;
   const issues = item.existing_issues || item;
   if (issues.proposal_type === 'BATTERY_PURCHASE') return true;
-  if (issues.proposal_type === 'B4_REPAIR') return false;
   const category = issues.category || '';
-  if (category && category !== 'Máy phát điện') return false;
+  if (category && category !== 'Máy phát điện' && !category.includes('ắc quy') && !category.includes('accu')) {
+    return false;
+  }
   const desc = String(issues.description || '').toLowerCase();
   return desc.includes('ắc quy') || 
          desc.includes('accu') || 
@@ -51,6 +67,12 @@ function isBatteryProposal(item) {
          desc.includes('bình đề') || 
          desc.includes('binh de') ||
          desc.includes('bình ắc');
+}
+
+function isCivilInfrastructure(item) {
+  const issues = item.existing_issues || item;
+  const desc = String(issues.description || '').toLowerCase();
+  return /cửa phòng|bản lề|khung lưới|lưới b40/.test(desc);
 }
 
 async function run() {
@@ -85,15 +107,25 @@ async function run() {
 
   // =========================================================================
   // FILE 1: BIỂU MẪU B4 - ĐỀ NGHỊ SỬA CHỮA MÁY PHÁT ĐIỆN CỐ ĐỊNH (26 CỘT)
-  // Tuyệt đối loại trừ các bản ghi ắc quy!
+  // Tuyệt đối loại trừ các bản ghi ắc quy & hạ tầng xây dựng!
   // =========================================================================
-  const mpdB4Items = defects.filter(d => {
+  const seenMpd = new Set();
+  const mpdB4Items = [];
+  defects.forEach(d => {
     const issues = d.existing_issues || {};
     const isMpd = issues.category === 'Máy phát điện' || (issues.device_type && issues.device_type.includes('MPD'));
-    return isMpd && !issues.b4_approved && !isBatteryProposal(d);
+    if (isMpd && !issues.b4_approved && !isPureBatteryIssue(d) && !isCivilInfrastructure(d)) {
+      const siteId = String(d.site_id || '').trim().toUpperCase();
+      const descL = String(issues.description || '').toLowerCase();
+      const key = `${siteId}_${descL}`;
+      if (!seenMpd.has(key)) {
+        seenMpd.add(key);
+        mpdB4Items.push(d);
+      }
+    }
   });
 
-  console.log(`Số lượng tồn tại MPĐ đủ điều kiện đề xuất Ban 4 (đã loại trừ ắc quy): ${mpdB4Items.length}`);
+  console.log(`Số lượng tồn tại MPĐ đủ điều kiện đề xuất Ban 4 (đã loại trừ ắc quy & hạ tầng): ${mpdB4Items.length}`);
 
   const headerRow1 = [
     'STT', 'Tỉnh', 'Mã ERP trạm đặt thiết bị', 'Phân loại', 'Tên thiết bị/vật tư',
@@ -133,7 +165,8 @@ async function run() {
     const maVT = item.ma_vat_tu || erpMap?.ma_vt || equip.ma_vat_tu || '';
     const maTSCD = item.ma_tscd_moi || erpMap?.ma_tscd_moi || equip.ma_tai_san_moi || '';
     const serial = item.serial || erpMap?.serial || equip.serial || '';
-    const ngayDuaVaoSD = item.ngay_su_dung || equip.ngay_dua_vao_su_dung || '2010-01-01';
+    const rawYear = item.nam_su_dung || equip.nam_su_dung || item.ngay_su_dung || equip.ngay_dua_vao_su_dung || '2010';
+    const ngayDuaVaoSD = String(rawYear).substring(0, 4);
     const hangSX = item.nhan_hieu || equip.nhan_hieu || 'KIBII';
     const congSuat = item.cong_suat || equip.cong_suat || '12.5';
     const congCuQL = equip.cong_cu_quan_ly || 'Datasite';
@@ -245,9 +278,18 @@ async function run() {
 
     const phanLoai = item.phan_loai || equip.phan_loai || 'CCDC';
     const tenThietBi = 'Điều hòa nhiệt độ';
-    const maTSCD = item.ma_tscd_moi || equip.ma_tai_san_moi || equip.ma_vat_tu || '';
+    let maTSCD = item.ma_tscd_moi || equip.ma_tai_san_moi || equip.ma_vat_tu || '';
+    if (!maTSCD) {
+      const mpdList = infra.may_phat_dien?.mpd || [];
+      const mpdEquip = mpdList[0] || {};
+      const maErpSite = mpdEquip.ma_erp_tram || (mpdEquip.ma_vat_tu ? mpdEquip.ma_vat_tu.substring(0, 8) : '');
+      if (maErpSite) {
+        maTSCD = `${maErpSite}111001`;
+      }
+    }
     const serial = item.serial || equip.serial || '';
-    const ngayDuaVaoSD = item.ngay_su_dung || equip.ngay_dua_vao_su_dung || '2020-01-01';
+    const rawYear = item.nam_su_dung || equip.nam_su_dung || item.ngay_su_dung || equip.ngay_dua_vao_su_dung || '2020';
+    const ngayDuaVaoSD = String(rawYear).substring(0, 4);
     const hangSX = item.nhan_hieu || equip.nhan_hieu || 'DAIKIN-INVERTER';
     const congSuat = item.cong_suat || equip.cong_suat || '12.000';
     const congCuQL = 'Datasite';
@@ -318,9 +360,19 @@ async function run() {
 
   // =========================================================================
   // FILE 3: BẢNG KÊ ĐỀ NGHỊ MUA SẮM ẮC QUY ĐỀ MPĐ (18 CỘT CHUẨN MUA RIÊNG TỈNH)
-  // Gom toàn bộ 22 bản ghi ắc quy hư hỏng
+  // Gom danh sách trạm có nhu cầu thay thế bình ắc quy đề
   // =========================================================================
-  const batteryItems = defects.filter(d => isBatteryProposal(d));
+  const seenBat = new Set();
+  const batteryItems = [];
+  defects.forEach(d => {
+    if (isBatteryProposal(d)) {
+      const siteId = String(d.site_id || '').trim().toUpperCase();
+      if (!seenBat.has(siteId)) {
+        seenBat.add(siteId);
+        batteryItems.push(d);
+      }
+    }
+  });
   console.log(`Số lượng trạm đề xuất Mua mới Ắc quy đề: ${batteryItems.length}`);
 
   const batteryHeaders = [

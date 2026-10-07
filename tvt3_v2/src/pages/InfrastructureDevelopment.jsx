@@ -44,7 +44,7 @@ export const SITES_4_PACKAGES = [
   // Gói 3 (7 trạm MBF đầu tư - 26DNa246 đã chuyển Dùng chung CSHT do không có sổ đỏ)
   '26DNa162', '26DNa245', '26DNa247', '26DNa164', '26DNa166', '26DNa258', '26DNa168',
   // Gói 4 (8 trạm dự kiến trình HĐ: STT 21 -> 28)
-  '26DNa165', '26DNa167', '26DNa163', '26DNa158', '26DNa255', '26DNa185', '26DNa181', '26DNa129'
+  '26DNa165', '26DNa167', '26DNa163', '26DNa158', '26DNa255', '26DNa185', '26DNa181', '26DNa179'
 ];
 
 export const SITES_TCT_OK_SO_HTCS = [
