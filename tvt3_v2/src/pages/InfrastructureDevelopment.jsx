@@ -182,6 +182,7 @@ export default function InfrastructureDevelopment() {
 
   const selectProject = (proj) => {
     setSelectedProject(proj);
+    setActiveModalTab('planning');
     setEditForm({
       proposed_rent: proj.proposed_rent || '',
       landowner_name: proj.landowner_name || '',
@@ -249,6 +250,10 @@ export default function InfrastructureDevelopment() {
   const [filterImplementationType, setFilterImplementationType] = useState('');
   const [filterReviewGroup, setFilterReviewGroup] = useState('');
   
+  // Quản lý Modal Sub-Tabs và Dropdown báo cáo
+  const [activeModalTab, setActiveModalTab] = useState('planning'); // 'planning' | 'technical' | 'contract'
+  const [showReportDropdown, setShowReportDropdown] = useState(false);
+
   // Quản lý hiển thị các cột linh hoạt (Flexible Columns Visibility)
   const [visibleColumns, setVisibleColumns] = useState(() => {
     try {
@@ -441,6 +446,31 @@ export default function InfrastructureDevelopment() {
     return {
       isEligible: missingFields.length === 0,
       missingFields
+    };
+  };
+
+  // Tính toán nhanh 5 tiêu chí trình ký hợp đồng CSHT (Checklist trực quan)
+  const getContractReadiness = (proj) => {
+    if (!proj) return { readyCount: 0, total: 5, isFullyReady: false, items: [] };
+    const hasCoord = Boolean(proj.latitude_survey && proj.longitude_survey);
+    const hasMou = Boolean(proj.mou_date || proj.survey_status === 'OK' || proj.current_stage !== 'survey');
+    const hasOwner = Boolean(proj.landowner_name || proj.sharing_partner);
+    const hasContact = Boolean(proj.landlord_cccd && proj.landlord_phone);
+    const hasRent = Boolean(Number(proj.proposed_rent) > 0);
+
+    const items = [
+      { id: 'coord', tab: 'planning', label: 'Tọa độ KS', ok: hasCoord, detail: hasCoord ? `${proj.latitude_survey}, ${proj.longitude_survey}` : 'Chưa có tọa độ khảo sát' },
+      { id: 'mou', tab: 'contract', label: 'BB Ghi nhớ', ok: hasMou, detail: hasMou ? 'Đã thống nhất MOU' : 'Chưa lập Biên bản ghi nhớ' },
+      { id: 'owner', tab: 'contract', label: 'Chủ đất', ok: hasOwner, detail: hasOwner ? (proj.landowner_name || proj.sharing_partner) : 'Chưa có thông tin chủ đất/đối tác' },
+      { id: 'contact', tab: 'contract', label: 'CCCD & SĐT', ok: hasContact, detail: hasContact ? `CCCD: ${proj.landlord_cccd}` : 'Thiếu CCCD hoặc SĐT' },
+      { id: 'rent', tab: 'contract', label: 'Giá thuê', ok: hasRent, detail: hasRent ? `${Number(proj.proposed_rent).toLocaleString('vi-VN')} đ` : 'Chưa cập nhật giá thuê' },
+    ];
+    const readyCount = items.filter(i => i.ok).length;
+    return {
+      readyCount,
+      total: items.length,
+      isFullyReady: readyCount === items.length,
+      items
     };
   };
 
@@ -1589,13 +1619,7 @@ export default function InfrastructureDevelopment() {
 
       if (templateType === 'mou') {
         templatePath = '/templates/BBLV.docx';
-        outputFileName = `Bien_Ban_Lam_Viec_${selectedProject.planning_id_new}.docx`;
-      } else if (templateType === 'phu_luc_chu_the') {
-        templatePath = '/templates/PHU_LUC_CHUYEN_CHU_THE.docx';
-        outputFileName = `Phu_Luc_Chuyen_Chu_The_${selectedProject.planning_id_new}.docx`;
-      } else if (templateType === 'phu_luc_giam_gia') {
-        templatePath = selectedProject.implementation_type === 'MBF đầu tư' ? '/templates/PHU_LUC_GIAM_GIA_MAT_BANG.docx' : '/templates/PHU_LUC_GIAM_GIA_CSHT.docx';
-        outputFileName = `Phu_Luc_Giam_Gia_${selectedProject.planning_id_new}.docx`;
+        outputFileName = `Bien_Ban_Ghi_Nho_${selectedProject.planning_id_new}.docx`;
       } else {
         if (selectedProject.implementation_type === 'MBF đầu tư') {
           templatePath = '/templates/HOP_DONG_MOI_MAT_BANG.docx';
@@ -2705,32 +2729,64 @@ export default function InfrastructureDevelopment() {
                   )}
                 </div>
 
-                {/* Nhóm nút xuất báo cáo */}
+                {/* Nhóm nút xuất báo cáo gom nhóm thành Dropdown */}
                 <div className="flex items-center gap-1.5 flex-wrap justify-end">
-                  <a 
-                    href="/reports/Bao_Cao_Ra_Soat_CSHT_TVT3_2026.xlsx"
-                    download="Bao_Cao_Ra_Soat_CSHT_TVT3_2026.xlsx"
-                    className="hidden md:flex text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold px-3 py-2 rounded-xl shadow-2xs items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap"
-                    title="Tải trọn bộ Báo Cáo Rà Soát CSHT TVT3 định dạng Excel 4 Sheet chuyên nghiệp"
-                  >
-                    <Download className="h-3.5 w-3.5 text-emerald-600" /> Báo Cáo 4 Sheet
-                  </a>
-                  <button 
-                    onClick={handleExportProposalExcel}
-                    disabled={isExportingProposal}
-                    className="hidden md:flex text-xs bg-purple-700 hover:bg-purple-800 text-white font-bold px-3 py-2 rounded-xl shadow-sm items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50 whitespace-nowrap"
-                    title="Xuất phụ lục Quỹ điểm sạch đã được Sở duyệt đề nghị TCT phê duyệt bổ sung quy hoạch (Format CV 7203)"
-                  >
-                    <FileSpreadsheet className="h-3.5 w-3.5 text-purple-200" /> 
-                    {isExportingProposal ? 'Đang xuất...' : `PL Trình TCT (${countSoOkTctPending})`}
-                  </button>
-                  <button 
-                    onClick={handleExportExcel}
-                    className="hidden md:flex text-xs bg-slate-800 hover:bg-slate-900 text-white font-bold px-3 py-2 rounded-xl shadow-sm items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap"
-                    title="Xuất danh sách đang lọc ra Excel"
-                  >
-                    <Download className="h-3.5 w-3.5 text-slate-300" /> Xuất Excel ({filteredProjects.length})
-                  </button>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setShowReportDropdown(prev => !prev)}
+                      className="text-xs bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-3.5 py-2 rounded-xl shadow-xs flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap"
+                      title="Xuất các định dạng báo cáo Excel CSHT"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      <span>Xuất báo cáo ▾</span>
+                    </button>
+                    {showReportDropdown && (
+                      <>
+                        <div 
+                          className="fixed inset-0 z-30" 
+                          onClick={() => setShowReportDropdown(false)} 
+                        />
+                        <div className="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-2xl border border-slate-200 p-2 z-40 animate-in fade-in-50 zoom-in-95 duration-150 space-y-1">
+                          <a 
+                            href="/reports/Bao_Cao_Ra_Soat_CSHT_TVT3_2026.xlsx"
+                            download="Bao_Cao_Ra_Soat_CSHT_TVT3_2026.xlsx"
+                            onClick={() => setShowReportDropdown(false)}
+                            className="flex items-start gap-2.5 p-2.5 rounded-xl hover:bg-emerald-50 transition-colors cursor-pointer text-left text-xs font-semibold text-slate-800"
+                          >
+                            <FileSpreadsheet className="h-4 w-4 text-emerald-600 mt-0.5 shrink-0" />
+                            <div>
+                              <span className="font-bold text-emerald-950 block">Báo Cáo Rà Soát CSHT</span>
+                              <span className="text-[11px] text-slate-500 font-normal">File Excel 4 Sheet chuẩn Ban 4 (86 trạm)</span>
+                            </div>
+                          </a>
+                          <button 
+                            type="button"
+                            onClick={() => { setShowReportDropdown(false); handleExportProposalExcel(); }}
+                            disabled={isExportingProposal}
+                            className="w-full flex items-start gap-2.5 p-2.5 rounded-xl hover:bg-purple-50 transition-colors cursor-pointer text-left text-xs font-semibold text-slate-800 disabled:opacity-50"
+                          >
+                            <FileSpreadsheet className="h-4 w-4 text-purple-600 mt-0.5 shrink-0" />
+                            <div>
+                              <span className="font-bold text-purple-950 block">Phụ lục Quỹ Điểm Sạch ({countSoOkTctPending})</span>
+                              <span className="text-[11px] text-slate-500 font-normal">Trình TCT phê duyệt bổ sung (CV 7203)</span>
+                            </div>
+                          </button>
+                          <button 
+                            type="button"
+                            onClick={() => { setShowReportDropdown(false); handleExportExcel(); }}
+                            className="w-full flex items-start gap-2.5 p-2.5 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer text-left text-xs font-semibold text-slate-800"
+                          >
+                            <Download className="h-4 w-4 text-slate-600 mt-0.5 shrink-0" />
+                            <div>
+                              <span className="font-bold text-slate-900 block">Danh Sách Đang Lọc ({filteredProjects.length})</span>
+                              <span className="text-[11px] text-slate-500 font-normal">Xuất trọn bộ bảng dữ liệu đang hiển thị</span>
+                            </div>
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
 
                   {/* Nút Tùy chỉnh cột hiển thị */}
                   <div className="relative">
@@ -3341,18 +3397,68 @@ export default function InfrastructureDevelopment() {
         </>
       )}
 
-      {/* Project Detail Full-Screen Modal */}
+      {/* Streamlined Project Detail Modal */}
       {selectedProject && (
-        <div className="fixed inset-0 z-50 bg-white flex flex-col">
-          <div className="relative w-full h-full flex flex-col">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4">
+          <div className="relative w-full max-w-5xl h-[92vh] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-slate-200">
             {/* Modal Header */}
-            <div className="p-4 md:p-6 border-b border-slate-100 flex items-center justify-between">
+            <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white">
               <div>
-                <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">Dự án Phát triển CSHT</span>
-                <h2 className="text-lg font-bold text-slate-800 mt-0.5 flex items-center gap-1.5">
-                  {isEditing ? `Chỉnh sửa Trạm ${selectedProject.planning_id_new}` : `Chi tiết Trạm ${selectedProject.planning_id_new}`}
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                    Dự án Phát triển CSHT
+                  </span>
+                  <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                    {selectedProject.district || 'Đồng Nai'}
+                  </span>
+                  {selectedProject.ward && (
+                    <span className="text-[10px] font-medium text-slate-600 hidden sm:inline-block">
+                      {selectedProject.ward}
+                    </span>
+                  )}
+                </div>
+                <h2 className="text-base sm:text-lg font-bold text-slate-800 mt-1 flex items-center gap-2">
+                  <span>{isEditing ? `Chỉnh sửa Trạm ${selectedProject.planning_id_new}` : `Trạm ${selectedProject.planning_id_new}`}</span>
+                  {selectedProject.planning_id_old && (
+                    <span className="text-xs font-normal text-slate-400">
+                      (Cũ: {selectedProject.planning_id_old})
+                    </span>
+                  )}
                 </h2>
               </div>
+              
+              {/* Quick Readiness Checklist */}
+              <div className="hidden lg:flex items-center gap-1.5">
+                {(() => {
+                  const readiness = getContractReadiness(selectedProject);
+                  return (
+                    <div className="flex items-center gap-1.5 bg-slate-50 p-1.5 rounded-xl border border-slate-200">
+                      {readiness.items.map((it, idx) => (
+                        <span
+                          key={idx}
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold border transition-all ${
+                            it.ready 
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                              : 'bg-white text-slate-400 border-slate-200 opacity-60'
+                          }`}
+                          title={it.ready ? `${it.label}: Đã có dữ liệu` : `${it.label}: Chưa có dữ liệu`}
+                        >
+                          {it.ready ? <CheckCircle2 className="h-3 w-3 text-emerald-600" /> : <Clock className="h-3 w-3 text-slate-400" />}
+                          <span>{it.label}</span>
+                        </span>
+                      ))}
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                        readiness.score === 5 
+                          ? 'bg-emerald-600 text-white border-emerald-600' 
+                          : 'bg-amber-100 text-amber-800 border-amber-200'
+                      }`}>
+                        {readiness.score}/5 Đạt
+                      </span>
+                    </div>
+                  );
+                })()}
+              </div>
+
               <div className="flex items-center gap-2">
                 {isFiltered && (
                   <button 
@@ -3366,13 +3472,12 @@ export default function InfrastructureDevelopment() {
                     title="Đóng chi tiết và bỏ toàn bộ bộ lọc để xem toàn bộ danh sách 101 trạm"
                   >
                     <RotateCcw className="h-3.5 w-3.5 text-rose-600" />
-                    <span>Đóng & Bỏ lọc (Xem {totalProjects} trạm)</span>
+                    <span className="hidden sm:inline">Bỏ lọc</span>
                   </button>
                 )}
                 <button 
                   onClick={() => { 
                     if (!isSaving) {
-                      // Nếu đang tìm kiếm mã trạm của chính trạm này, tự động xóa tìm kiếm để ra ngoài thấy đầy đủ
                       const sQueryLower = searchQuery.trim().toLowerCase();
                       const pNewLower = (selectedProject?.planning_id_new || '').toLowerCase();
                       const pOldLower = (selectedProject?.planning_id_old || '').toLowerCase();
@@ -3382,12 +3487,70 @@ export default function InfrastructureDevelopment() {
                       setSelectedProject(null);
                     }
                   }}
-                  className="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-50 transition-all cursor-pointer"
+                  className="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-all cursor-pointer"
                   disabled={isSaving}
                   title="Đóng modal"
                 >
                   <X className="h-5 w-5" />
                 </button>
+              </div>
+            </div>
+
+            {/* Pinned 3-Tab Sub-Navigation */}
+            <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50/90 px-5 pt-2 shrink-0 gap-2">
+              <div className="flex items-center gap-1 sm:gap-2">
+                <button
+                  type="button"
+                  onClick={() => setActiveModalTab('planning')}
+                  className={`pb-2.5 px-3 text-xs sm:text-sm font-bold flex items-center gap-1.5 border-b-2 transition-all cursor-pointer ${
+                    activeModalTab === 'planning'
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  <MapPin className="h-3.5 w-3.5" />
+                  <span>📍 Quy hoạch &amp; Pháp lý</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveModalTab('technical')}
+                  className={`pb-2.5 px-3 text-xs sm:text-sm font-bold flex items-center gap-1.5 border-b-2 transition-all cursor-pointer ${
+                    activeModalTab === 'technical'
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  <Building2 className="h-3.5 w-3.5" />
+                  <span>🏗️ Kỹ thuật hạ tầng</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveModalTab('contract')}
+                  className={`pb-2.5 px-3 text-xs sm:text-sm font-bold flex items-center gap-1.5 border-b-2 transition-all cursor-pointer ${
+                    activeModalTab === 'contract'
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  <FileText className="h-3.5 w-3.5" />
+                  <span>💰 Chủ đất &amp; Hợp đồng</span>
+                </button>
+              </div>
+
+              {/* Mobile / Compact Readiness Score */}
+              <div className="lg:hidden pb-2.5">
+                {(() => {
+                  const readiness = getContractReadiness(selectedProject);
+                  return (
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                      readiness.score === 5 ? 'bg-emerald-600 text-white' : 'bg-amber-100 text-amber-800 border-amber-200'
+                    }`}>
+                      {readiness.score}/5 Đạt
+                    </span>
+                  );
+                })()}
               </div>
             </div>
 
@@ -3496,7 +3659,7 @@ export default function InfrastructureDevelopment() {
                                       (selectedProject.skhcn_status || '').toLowerCase().includes('dùng chung');
                 const showStrategicBanner = isTctOkSoHtcs || hasResubmit || hasSkhcnHistory || isSoDungChung;
 
-                if (!showStrategicBanner) return null;
+                if (!showStrategicBanner || activeModalTab !== 'planning') return null;
 
                 const isResolvedBuild = selectedProject.skhcn_resubmit_status === 'RESUBMIT_APPROVED_BUILD' || selectedProject.skhcn_resubmit_status === 'RESOLVED_NEW_BUILD';
                 const isWaitingFeedback = selectedProject.skhcn_resubmit_status === 'WAITING_SO_FEEDBACK' || selectedProject.skhcn_resubmit_status === 'RESUBMIT_PENDING';
@@ -3693,58 +3856,52 @@ export default function InfrastructureDevelopment() {
               {isEditing ? (
                 /* Edit Mode Form */
                 <div className="space-y-4">
-                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2">Chỉnh sửa thông tin dự án</h4>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    {/* THÔNG TIN THIẾT KẾ / QUY HOẠCH */}
-                    <div className="space-y-1 col-span-2 border-t border-slate-100 pt-3">
-                      <span className="text-[11px] font-bold text-blue-600 uppercase">Thông tin Thiết kế / Quy hoạch ban đầu</span>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[11px] font-bold text-slate-500 uppercase">Loại cột quy hoạch/thiết kế</label>
-                      <input 
-                        type="text"
-                        value={editForm.antenna_type || ''}
-                        onChange={(e) => setEditForm(prev => ({ ...prev, antenna_type: e.target.value }))}
-                        className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
-                        placeholder="Ví dụ: Monopole"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[11px] font-bold text-slate-500 uppercase">Chiều cao cột quy hoạch (m)</label>
-                      <input 
-                        type="number" step="any"
-                        value={editForm.height || ''}
-                        onChange={(e) => setEditForm(prev => ({ ...prev, height: e.target.value }))}
-                        className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
-                        placeholder="Ví dụ: 42"
-                      />
-                    </div>
-
-                    {/* KHẢO SÁT THỰC ĐỊA */}
-                    <div className="space-y-1 col-span-2 border-t border-slate-100 pt-3">
-                      <span className="text-[11px] font-bold text-blue-600 uppercase">Khảo sát &amp; Định vị thực tế</span>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[11px] font-bold text-slate-500 uppercase">Vĩ độ Khảo sát (Lat)</label>
-                      <input 
-                        type="number" step="any"
-                        value={editForm.latitude_survey}
-                        onChange={(e) => setEditForm(prev => ({ ...prev, latitude_survey: e.target.value }))}
-                        className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
-                        placeholder="Ví dụ: 10.92321"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[11px] font-bold text-slate-500 uppercase">Kinh độ Khảo sát (Long)</label>
-                      <input 
-                        type="number" step="any"
-                        value={editForm.longitude_survey}
-                        onChange={(e) => setEditForm(prev => ({ ...prev, longitude_survey: e.target.value }))}
-                        className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
-                        placeholder="Ví dụ: 107.25296"
-                      />
-                    </div>
+                  {/* TAB 1: QUY HOẠCH & PHÁP LÝ (EDIT) */}
+                  {activeModalTab === 'planning' && (
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* KHẢO SÁT THỰC ĐỊA */}
+                      <div className="space-y-1 col-span-2 border-b border-slate-100 pb-2">
+                        <span className="text-[11px] font-bold text-blue-600 uppercase flex items-center gap-1.5">
+                          <MapPin className="h-3.5 w-3.5" /> Khảo sát &amp; Định vị thực tế
+                        </span>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-slate-500 uppercase">Vĩ độ Khảo sát (Lat)</label>
+                        <input 
+                          type="number" step="any"
+                          value={editForm.latitude_survey}
+                          onChange={(e) => setEditForm(prev => ({ ...prev, latitude_survey: e.target.value }))}
+                          className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
+                          placeholder="Ví dụ: 10.92321"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-slate-500 uppercase">Kinh độ Khảo sát (Long)</label>
+                        <input 
+                          type="number" step="any"
+                          value={editForm.longitude_survey}
+                          onChange={(e) => setEditForm(prev => ({ ...prev, longitude_survey: e.target.value }))}
+                          className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
+                          placeholder="Ví dụ: 107.25296"
+                        />
+                      </div>
+                      {/* Live Haversine Offset Calculator */}
+                      {editForm.latitude_survey && editForm.longitude_survey && selectedProject.latitude_plan && selectedProject.longitude_plan && (
+                        <div className="col-span-2 text-xs bg-blue-50/80 p-2.5 rounded-lg border border-blue-200 text-blue-900 flex items-center justify-between">
+                          <span className="font-medium">📏 Sai lệch so với Tọa độ quy hoạch ({selectedProject.latitude_plan}, {selectedProject.longitude_plan}):</span>
+                          <strong className="font-bold text-blue-700 bg-white px-2.5 py-0.5 rounded border border-blue-200">
+                            {(() => {
+                              const d = haversine(
+                                Number(editForm.latitude_survey),
+                                Number(editForm.longitude_survey),
+                                Number(selectedProject.latitude_plan),
+                                Number(selectedProject.longitude_plan)
+                              ) * 1000;
+                              return d < 1000 ? `${Math.round(d)} mét` : `${(d / 1000).toFixed(2)} km`;
+                            })()}
+                          </strong>
+                        </div>
+                      )}
                     {/* KHỐI 1: PHÊ DUYỆT SỞ KH&CN ĐỒNG NAI */}
                     <div className="col-span-2 border border-purple-200/80 bg-purple-50/30 rounded-xl p-3.5 space-y-3">
                       <div className="flex items-center justify-between border-b border-purple-100 pb-2">
@@ -3896,6 +4053,47 @@ export default function InfrastructureDevelopment() {
                           </select>
                         </div>
                       </div>
+                    </div>
+
+                    <div className="space-y-1 col-span-2 border-t border-slate-100 pt-3">
+                      <label className="text-[11px] font-bold text-slate-500 uppercase">Ghi chú dự án</label>
+                      <textarea 
+                        value={editForm.notes}
+                        onChange={(e) => setEditForm(prev => ({ ...prev, notes: e.target.value }))}
+                        className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 h-20"
+                        placeholder="Nhập ghi chú thêm..."
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 2: KỸ THUẬT HẠ TẦNG (EDIT) */}
+                {activeModalTab === 'technical' && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1 col-span-2 border-b border-slate-100 pb-2">
+                      <span className="text-[11px] font-bold text-blue-600 uppercase flex items-center gap-1.5">
+                        <Building2 className="h-3.5 w-3.5" /> Thông số Kỹ thuật &amp; Hiện trường Khảo sát
+                      </span>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-500 uppercase">Loại cột quy hoạch ban đầu</label>
+                      <input 
+                        type="text"
+                        value={editForm.antenna_type || ''}
+                        onChange={(e) => setEditForm(prev => ({ ...prev, antenna_type: e.target.value }))}
+                        className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
+                        placeholder="Ví dụ: Monopole"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-500 uppercase">Chiều cao cột quy hoạch (m)</label>
+                      <input 
+                        type="number" step="any"
+                        value={editForm.height || ''}
+                        onChange={(e) => setEditForm(prev => ({ ...prev, height: e.target.value }))}
+                        className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
+                        placeholder="Ví dụ: 42"
+                      />
                     </div>
                     <div className="space-y-1 col-span-2">
                       <label className="text-[11px] font-bold text-slate-500 uppercase">Địa chỉ khảo sát thực tế</label>
@@ -4099,20 +4297,32 @@ export default function InfrastructureDevelopment() {
                       />
                     </div>
 
-                    {/* GIÁ THUÊ & THÔNG TIN CHỦ ĐẤT / TÀI KHOẢN */}
-                    <div className="space-y-1 col-span-2 border-t border-slate-100 pt-3">
-                      <span className="text-[11px] font-bold text-blue-600 uppercase">Tài chính &amp; Thông tin Bên Cho Thuê</span>
+                  </div>
+                )}
+
+                {/* TAB 3: CHỦ ĐẤT & HỢP ĐỒNG (EDIT) */}
+                {activeModalTab === 'contract' && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1 col-span-2 border-b border-slate-100 pb-2">
+                      <span className="text-[11px] font-bold text-blue-600 uppercase flex items-center gap-1.5">
+                        <FileText className="h-3.5 w-3.5" /> Tài chính, Thông tin Bên Cho Thuê &amp; Hợp đồng
+                      </span>
                     </div>
 
                     <div className="space-y-1 col-span-2">
                       <label className="text-[11px] font-bold text-slate-500 uppercase">Giá thuê đề xuất (VNĐ/tháng)</label>
                       <input 
                         type="number"
-                        value={editForm.proposed_rent}
+                        value={editForm.proposed_rent || ''}
                         onChange={(e) => setEditForm(prev => ({ ...prev, proposed_rent: e.target.value }))}
-                        className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
+                        className="w-full text-sm font-bold border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 text-blue-700"
                         placeholder="Ví dụ: 5000000"
                       />
+                      {editForm.proposed_rent > 0 && (
+                        <p className="text-[11px] text-emerald-800 font-semibold bg-emerald-50 px-2.5 py-1.5 rounded-lg border border-emerald-200">
+                          📝 Bằng chữ: {convertNumberToVietnameseWords(Number(editForm.proposed_rent))} đồng / tháng
+                        </p>
+                      )}
                     </div>
 
                     {/* Chọn hình thức triển khai - xác định SAU khi khảo sát */}
@@ -4421,74 +4631,17 @@ export default function InfrastructureDevelopment() {
                         </div>
                       </>
                     )}
-
-                    <div className="space-y-1 col-span-2 border-t border-slate-100 pt-3">
-                      <label className="text-[11px] font-bold text-slate-500 uppercase">Gói triển khai</label>
-                      <input 
-                        type="text"
-                        value={editForm.deployment_package}
-                        onChange={(e) => setEditForm(prev => ({ ...prev, deployment_package: e.target.value }))}
-                        className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 mb-2"
-                        placeholder="Ví dụ: Gói 1 CATP, Gói Long Khánh 2026..."
-                      />
-                    </div>
-                    <div className="space-y-1 col-span-2">
-                      <label className="text-[11px] font-bold text-slate-500 uppercase">Ghi chú dự án</label>
-                      <textarea 
-                        value={editForm.notes}
-                        onChange={(e) => setEditForm(prev => ({ ...prev, notes: e.target.value }))}
-                        className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 h-20"
-                        placeholder="Nhập ghi chú thêm..."
-                      />
-                    </div>
                   </div>
-                </div>
+                )}
+              </div>
               ) : (
                 /* Read Mode details */
-                <div className="space-y-6">
-                  {(() => {
-                    const { isEligible, missingFields } = checkContractEligibility(selectedProject);
-                    if (selectedProject.survey_status === 'NOK') {
-                      return (
-                        <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-red-700 text-xs flex items-start gap-2">
-                          <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-red-600" />
-                          <div>
-                            <span className="font-bold">Trạm không khả thi (NOK):</span> Khảo sát thực tế không đạt, không thực hiện quy trình trình ký hợp đồng.
-                          </div>
-                        </div>
-                      );
-                    }
-                    if (isEligible) {
-                      return (
-                        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3.5 text-emerald-800 text-xs flex items-start gap-2 shadow-sm">
-                          <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0 text-emerald-600" />
-                          <div>
-                            <span className="font-bold block text-[13px] mb-0.5 text-emerald-950">✅ ĐỦ ĐIỀU KIỆN TRÌNH KÝ</span>
-                            Đã nhập đầy đủ 11 trường thông tin bắt buộc để xuất tờ trình và dự thảo hợp đồng thuê mặt bằng.
-                          </div>
-                        </div>
-                      );
-                    }
-                    return (
-                      <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5 text-amber-800 text-xs space-y-1.5 shadow-sm">
-                        <div className="flex items-start gap-2">
-                          <AlertCircle className="h-4 w-4 mt-0.5 shrink-0 text-amber-600" />
-                          <div>
-                            <span className="font-bold block text-[13px] text-amber-950">⚠️ CHƯA ĐỦ ĐIỀU KIỆN TRÌNH KÝ</span>
-                            Vui lòng click nút <strong className="text-amber-900">Chỉnh sửa</strong> phía dưới và bổ sung các thông tin còn thiếu để xuất tờ trình.
-                          </div>
-                        </div>
-                        <div className="bg-white/60 rounded-lg p-2 border border-amber-100 text-[11px] text-amber-900 font-medium">
-                          <strong>Các trường còn thiếu ({missingFields.length}):</strong>
-                          <ul className="list-disc pl-4 mt-1 space-y-0.5">
-                            {missingFields.map((f, i) => <li key={i}>{f}</li>)}
-                          </ul>
-                        </div>
-                      </div>
-                    );
-                  })()}
-                  {/* Detailed Grid Info */}
-                  <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-5">
+                  {/* TAB 1: QUY HOẠCH & PHÁP LÝ (READ) */}
+                  {activeModalTab === 'planning' && (
+                    <div className="space-y-4">
+                      {/* Detailed Grid Info */}
+                      <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <span className="text-[10px] font-bold text-slate-400 uppercase">Mã Quy Hoạch mới</span>
                       <span className="text-sm font-semibold text-slate-700 block">
@@ -4705,136 +4858,6 @@ export default function InfrastructureDevelopment() {
                     </div>
                   </div>
 
-                  {/* Contract Signing Parameters Section */}
-                  {selectedProject.implementation_type === 'MBF đầu tư' ? (
-                    <div className="p-4 bg-blue-50/30 border border-blue-100 rounded-xl space-y-3">
-                      <h4 className="text-xs font-bold text-blue-800 uppercase tracking-wide">Thông tin Chủ Đất &amp; Thuê mặt bằng ký Hợp đồng:</h4>
-                      <div className="grid grid-cols-2 gap-3 text-xs">
-                        <div>
-                          <span className="text-slate-400 block">Họ tên chủ nhà:</span>
-                          <span className="font-semibold text-slate-700">{selectedProject.landowner_name || 'Chưa cập nhật'}</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-400 block">Số điện thoại liên hệ:</span>
-                          <span className="font-semibold text-slate-700">{selectedProject.landlord_phone || 'Chưa cập nhật'}</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-400 block">Số CMND/CCCD:</span>
-                          <span className="font-semibold text-slate-700">{selectedProject.landlord_cccd || 'Chưa cập nhật'}</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-400 block">Số tài khoản:</span>
-                          <span className="font-semibold text-slate-700 text-blue-700">{selectedProject.bank_account || 'Chưa cập nhật'}</span>
-                        </div>
-                        <div className="col-span-2">
-                          <span className="text-slate-400 block">Ngân hàng thụ hưởng:</span>
-                          <span className="font-semibold text-slate-700">{selectedProject.bank_name || 'Chưa cập nhật'}</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-400 block">Số thửa đất:</span>
-                          <span className="font-semibold text-slate-700">{selectedProject.plot_number || 'Chưa cập nhật'}</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-400 block">Tờ bản đồ:</span>
-                          <span className="font-semibold text-slate-700">{selectedProject.map_sheet || 'Chưa cập nhật'}</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-400 block">Diện tích thuê:</span>
-                          <span className="font-semibold text-slate-700">{selectedProject.leased_area ? `${selectedProject.leased_area} m²` : 'Chưa cập nhật'}</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-400 block">Thời hạn thuê:</span>
-                          <span className="font-semibold text-slate-700">{selectedProject.lease_term || 'Chưa cập nhật'}</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-400 block">Chu kỳ thanh toán:</span>
-                          <span className="font-semibold text-slate-700">{selectedProject.payment_cycle || 'Chưa cập nhật'}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="p-4 bg-emerald-50/30 border border-emerald-100 rounded-xl space-y-3">
-                      <h4 className="text-xs font-bold text-emerald-800 uppercase tracking-wide">Thông tin Đối Tác &amp; Thuê cơ sở hạ tầng (Dùng chung):</h4>
-                      <div className="grid grid-cols-2 gap-3 text-xs">
-                        <div>
-                          <span className="text-slate-400 block">Đối tác cho thuê:</span>
-                          <span className="font-semibold text-slate-700">{selectedProject.sharing_partner || 'Chưa cập nhật'}</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-400 block">Mã trạm dùng chung:</span>
-                          <span className="font-semibold text-slate-700">{selectedProject.shared_site_id || 'Chưa cập nhật'}</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-400 block">Chiều cao treo anten:</span>
-                          <span className="font-semibold text-slate-700">{selectedProject.antenna_height ? `${selectedProject.antenna_height} m` : 'Chưa cập nhật'}</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-400 block">Công suất điện tiêu thụ:</span>
-                          <span className="font-semibold text-slate-700">{selectedProject.power_consumption ? `${selectedProject.power_consumption} W` : 'Chưa cập nhật'}</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Chi tiết Kỹ thuật Khảo sát thực địa */}
-                  <div className="p-4 bg-amber-50/20 border border-amber-100 rounded-xl space-y-3">
-                    <h4 className="text-xs font-bold text-amber-800 uppercase tracking-wide">Chi tiết Kỹ thuật Khảo sát thực địa:</h4>
-                    <div className="grid grid-cols-2 gap-3 text-xs">
-                      <div>
-                        <span className="text-slate-400 block">Người khảo sát / Người kiểm tra:</span>
-                        <span className="font-semibold text-slate-700">{selectedProject.surveyor || 'Chưa cập nhật'} / {selectedProject.checker || 'Chưa cập nhật'}</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-400 block">Vị trí dựng cột:</span>
-                        <span className="font-semibold text-slate-700">
-                          {selectedProject.antenna_location || 'Chưa cập nhật'}
-                          {selectedProject.antenna_location === 'Mái nhà' && ` (${selectedProject.roof_sheets || '0'} tấm, cao ${selectedProject.roof_height || '0'}m)`}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-slate-400 block">Kích thước đất / Kích thước thuê:</span>
-                        <span className="font-semibold text-slate-700">{selectedProject.land_dimensions || 'Chưa cập nhật'} / {selectedProject.leased_dimensions || 'Chưa cập nhật'}</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-400 block">Đường vào / Nguồn điện:</span>
-                        <span className="font-semibold text-slate-700">{selectedProject.access_road || 'Chưa cập nhật'} / {selectedProject.power_source || 'Chưa cập nhật'}</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-400 block">Khoảng cách nguồn điện / Cáp quang:</span>
-                        <span className="font-semibold text-slate-700">{selectedProject.power_distance ? `${selectedProject.power_distance} m` : 'Chưa cập nhật'} / {selectedProject.fiber_capability || 'Chưa cập nhật'}</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-400 block">Pháp lý đất đai:</span>
-                        <span className="font-semibold text-slate-700">
-                          {selectedProject.legal_status || 'Chưa cập nhật'}
-                          {selectedProject.legal_status === 'Khác' && ` (${selectedProject.legal_other_desc || ''})`}
-                          {selectedProject.legal_cert_no && `, Số GCN: ${selectedProject.legal_cert_no}`}
-                          {selectedProject.legal_cert_issuer && `, Cấp bởi: ${selectedProject.legal_cert_issuer}`}
-                          {selectedProject.legal_cert_date && `, Ngày: ${selectedProject.legal_cert_date}`}
-                          {selectedProject.legal_lease_contract && ` (HĐ liên kết: ${selectedProject.legal_lease_contract})`}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-slate-400 block">Dạng cột / Chiều cao đề xuất:</span>
-                        <span className="font-semibold text-slate-700">
-                          {selectedProject.antenna_type_survey || 'Chưa cập nhật'} 
-                          {selectedProject.antenna_height_survey ? ` (${selectedProject.antenna_height_survey})` : ''}
-                          {selectedProject.antenna_height_survey === 'Khác' && ` (${selectedProject.antenna_height_other_desc || ''})`}
-                        </span>
-                      </div>
-                      {selectedProject.antenna_type_survey === 'Dây co mặt đất' && (
-                        <div>
-                          <span className="text-slate-400 block">Loại móng dây co:</span>
-                          <span className="font-semibold text-slate-700">{selectedProject.foundation_type || 'Chưa cập nhật'}</span>
-                        </div>
-                      )}
-                      <div className="col-span-2">
-                        <span className="text-slate-400 block">Công trình xung đột:</span>
-                        <span className="font-semibold text-slate-750 text-red-600 font-bold">{selectedProject.conflict_notes || 'Không phát sinh'}</span>
-                      </div>
-                    </div>
-                  </div>
-
                   {/* Status details */}
                   <div className="p-4 bg-slate-50 border border-slate-100 rounded-xl space-y-3">
                     <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wide">Trạng thái Pháp lý &amp; Hồ sơ:</h4>
@@ -4872,6 +4895,234 @@ export default function InfrastructureDevelopment() {
                       <p className="text-xs text-slate-600 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-100 font-medium">
                         {selectedProject.notes}
                       </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+                  {/* TAB 2: KỸ THUẬT HẠ TẦNG (READ) */}
+                  {activeModalTab === 'technical' && (
+                    <div className="space-y-4">
+                      {/* Chi tiết Kỹ thuật Khảo sát thực địa */}
+                      <div className="p-4 bg-amber-50/20 border border-amber-100 rounded-xl space-y-3">
+                        <h4 className="text-xs font-bold text-amber-800 uppercase tracking-wide">Chi tiết Kỹ thuật Khảo sát thực địa:</h4>
+                        <div className="grid grid-cols-2 gap-3 text-xs">
+                          <div>
+                            <span className="text-slate-400 block">Người khảo sát / Người kiểm tra:</span>
+                            <span className="font-semibold text-slate-700">{selectedProject.surveyor || 'Chưa cập nhật'} / {selectedProject.checker || 'Chưa cập nhật'}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 block">Vị trí dựng cột:</span>
+                            <span className="font-semibold text-slate-700">
+                              {selectedProject.antenna_location || 'Chưa cập nhật'}
+                              {selectedProject.antenna_location === 'Mái nhà' && ` (${selectedProject.roof_sheets || '0'} tấm, cao ${selectedProject.roof_height || '0'}m)`}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 block">Kích thước đất / Kích thước thuê:</span>
+                            <span className="font-semibold text-slate-700">{selectedProject.land_dimensions || 'Chưa cập nhật'} / {selectedProject.leased_dimensions || 'Chưa cập nhật'}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 block">Đường vào / Nguồn điện:</span>
+                            <span className="font-semibold text-slate-700">{selectedProject.access_road || 'Chưa cập nhật'} / {selectedProject.power_source || 'Chưa cập nhật'}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 block">Khoảng cách nguồn điện / Cáp quang:</span>
+                            <span className="font-semibold text-slate-700">{selectedProject.power_distance ? `${selectedProject.power_distance} m` : 'Chưa cập nhật'} / {selectedProject.fiber_capability || 'Chưa cập nhật'}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 block">Pháp lý đất đai:</span>
+                            <span className="font-semibold text-slate-700">
+                              {selectedProject.legal_status || 'Chưa cập nhật'}
+                              {selectedProject.legal_status === 'Khác' && ` (${selectedProject.legal_other_desc || ''})`}
+                              {selectedProject.legal_cert_no && `, Số GCN: ${selectedProject.legal_cert_no}`}
+                              {selectedProject.legal_cert_issuer && `, Cấp bởi: ${selectedProject.legal_cert_issuer}`}
+                              {selectedProject.legal_cert_date && `, Ngày: ${selectedProject.legal_cert_date}`}
+                              {selectedProject.legal_lease_contract && ` (HĐ liên kết: ${selectedProject.legal_lease_contract})`}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 block">Dạng cột / Chiều cao đề xuất:</span>
+                            <span className="font-semibold text-slate-700">
+                              {selectedProject.antenna_type_survey || 'Chưa cập nhật'} 
+                              {selectedProject.antenna_height_survey ? ` (${selectedProject.antenna_height_survey})` : ''}
+                              {selectedProject.antenna_height_survey === 'Khác' && ` (${selectedProject.antenna_height_other_desc || ''})`}
+                            </span>
+                          </div>
+                          {selectedProject.antenna_type_survey === 'Dây co mặt đất' && (
+                            <div>
+                              <span className="text-slate-400 block">Loại móng dây co:</span>
+                              <span className="font-semibold text-slate-700">{selectedProject.foundation_type || 'Chưa cập nhật'}</span>
+                            </div>
+                          )}
+                          <div className="col-span-2">
+                            <span className="text-slate-400 block">Công trình xung đột:</span>
+                            <span className="font-semibold text-slate-750 text-red-600 font-bold">{selectedProject.conflict_notes || 'Không phát sinh'}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* TAB 3: CHỦ ĐẤT & HỢP ĐỒNG (READ) */}
+                  {activeModalTab === 'contract' && (
+                    <div className="space-y-4">
+                      {/* Contract Eligibility Banner */}
+                      {(() => {
+                        const { isEligible, missingFields } = checkContractEligibility(selectedProject);
+                        if (selectedProject.survey_status === 'NOK') {
+                          return (
+                            <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-red-700 text-xs flex items-start gap-2">
+                              <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-red-600" />
+                              <div>
+                                <span className="font-bold">Trạm không khả thi (NOK):</span> Khảo sát thực tế không đạt, không thực hiện quy trình trình ký hợp đồng.
+                              </div>
+                            </div>
+                          );
+                        }
+                        if (isEligible) {
+                          return (
+                            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3.5 text-emerald-800 text-xs flex items-start gap-2 shadow-sm">
+                              <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0 text-emerald-600" />
+                              <div>
+                                <span className="font-bold block text-[13px] mb-0.5 text-emerald-950">✅ ĐỦ ĐIỀU KIỆN TRÌNH KÝ</span>
+                                Đã nhập đầy đủ 11 trường thông tin bắt buộc để xuất tờ trình và dự thảo hợp đồng thuê mặt bằng.
+                              </div>
+                            </div>
+                          );
+                        }
+                        return (
+                          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5 text-amber-800 text-xs space-y-1.5 shadow-sm">
+                            <div className="flex items-start gap-2">
+                              <AlertCircle className="h-4 w-4 mt-0.5 shrink-0 text-amber-600" />
+                              <div>
+                                <span className="font-bold block text-[13px] text-amber-950">⚠️ CHƯA ĐỦ ĐIỀU KIỆN TRÌNH KÝ</span>
+                                Vui lòng click nút <strong className="text-amber-900">Chỉnh sửa</strong> và bổ sung các thông tin còn thiếu để xuất hợp đồng.
+                              </div>
+                            </div>
+                            <div className="bg-white/60 rounded-lg p-2 border border-amber-100 text-[11px] text-amber-900 font-medium">
+                              <strong>Các trường còn thiếu ({missingFields.length}):</strong>
+                              <ul className="list-disc pl-4 mt-1 space-y-0.5">
+                                {missingFields.map((f, i) => <li key={i}>{f}</li>)}
+                              </ul>
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* Quick Export Action Card */}
+                      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3.5 bg-gradient-to-r from-emerald-500/10 via-blue-500/10 to-transparent border border-emerald-200 rounded-xl">
+                        <div>
+                          <span className="text-xs font-bold text-slate-800 uppercase block flex items-center gap-1.5">
+                            <FileText className="h-4 w-4 text-emerald-600" /> Xuất Hồ Sơ &amp; Hợp Đồng Pháp Lý
+                          </span>
+                          <span className="text-[11px] text-slate-500">Kết xuất văn bản Word (.docx) chuẩn hóa tự động lấy đúng biểu mẫu</span>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button 
+                            onClick={() => handleExportDoc('contract')}
+                            disabled={isExportingDoc}
+                            className="px-3.5 py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-sm"
+                            title="Xuất file Hợp đồng (.docx)"
+                          >
+                            <FileText className="h-3.5 w-3.5" /> Hợp đồng (.docx)
+                          </button>
+                          <button 
+                            onClick={() => handleExportDoc('mou')}
+                            disabled={isExportingDoc}
+                            className="px-3.5 py-2 bg-white border border-blue-200 text-blue-700 rounded-lg text-xs font-bold hover:bg-blue-50 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                            title="Xuất Biên bản ghi nhớ (.docx)"
+                          >
+                            <FileText className="h-3.5 w-3.5 text-blue-600" /> BB Ghi Nhớ (.docx)
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Financial Overview Card */}
+                      {selectedProject.proposed_rent > 0 && (
+                        <div className="p-3 bg-emerald-50/50 border border-emerald-200 rounded-xl flex items-center justify-between text-xs">
+                          <div>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase block">Giá thuê đề xuất:</span>
+                            <span className="text-base font-extrabold text-emerald-800">
+                              {Number(selectedProject.proposed_rent).toLocaleString()} đ/tháng
+                            </span>
+                          </div>
+                          <span className="text-xs font-semibold text-emerald-700 bg-white px-2.5 py-1 rounded-lg border border-emerald-200">
+                            📝 Bằng chữ: {convertNumberToVietnameseWords(Number(selectedProject.proposed_rent))} đồng / tháng
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Contract Signing Parameters Section */}
+                      {selectedProject.implementation_type === 'MBF đầu tư' ? (
+                        <div className="p-4 bg-blue-50/30 border border-blue-100 rounded-xl space-y-3">
+                          <h4 className="text-xs font-bold text-blue-800 uppercase tracking-wide">Thông tin Chủ Đất &amp; Thuê mặt bằng ký Hợp đồng:</h4>
+                          <div className="grid grid-cols-2 gap-3 text-xs">
+                            <div>
+                              <span className="text-slate-400 block">Họ tên chủ nhà:</span>
+                              <span className="font-semibold text-slate-700">{selectedProject.landowner_name || 'Chưa cập nhật'}</span>
+                            </div>
+                            <div>
+                              <span className="text-slate-400 block">Số điện thoại liên hệ:</span>
+                              <span className="font-semibold text-slate-700">{selectedProject.landlord_phone || 'Chưa cập nhật'}</span>
+                            </div>
+                            <div>
+                              <span className="text-slate-400 block">Số CMND/CCCD:</span>
+                              <span className="font-semibold text-slate-700">{selectedProject.landlord_cccd || 'Chưa cập nhật'}</span>
+                            </div>
+                            <div>
+                              <span className="text-slate-400 block">Số tài khoản:</span>
+                              <span className="font-semibold text-slate-700 text-blue-700">{selectedProject.bank_account || 'Chưa cập nhật'}</span>
+                            </div>
+                            <div className="col-span-2">
+                              <span className="text-slate-400 block">Ngân hàng thụ hưởng:</span>
+                              <span className="font-semibold text-slate-700">{selectedProject.bank_name || 'Chưa cập nhật'}</span>
+                            </div>
+                            <div>
+                              <span className="text-slate-400 block">Số thửa đất:</span>
+                              <span className="font-semibold text-slate-700">{selectedProject.plot_number || 'Chưa cập nhật'}</span>
+                            </div>
+                            <div>
+                              <span className="text-slate-400 block">Tờ bản đồ:</span>
+                              <span className="font-semibold text-slate-700">{selectedProject.map_sheet || 'Chưa cập nhật'}</span>
+                            </div>
+                            <div>
+                              <span className="text-slate-400 block">Diện tích thuê:</span>
+                              <span className="font-semibold text-slate-700">{selectedProject.leased_area ? `${selectedProject.leased_area} m²` : 'Chưa cập nhật'}</span>
+                            </div>
+                            <div>
+                              <span className="text-slate-400 block">Thời hạn thuê:</span>
+                              <span className="font-semibold text-slate-700">{selectedProject.lease_term || 'Chưa cập nhật'}</span>
+                            </div>
+                            <div>
+                              <span className="text-slate-400 block">Chu kỳ thanh toán:</span>
+                              <span className="font-semibold text-slate-700">{selectedProject.payment_cycle || 'Chưa cập nhật'}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="p-4 bg-emerald-50/30 border border-emerald-100 rounded-xl space-y-3">
+                          <h4 className="text-xs font-bold text-emerald-800 uppercase tracking-wide">Thông tin Đối Tác &amp; Thuê cơ sở hạ tầng (Dùng chung):</h4>
+                          <div className="grid grid-cols-2 gap-3 text-xs">
+                            <div>
+                              <span className="text-slate-400 block">Đối tác cho thuê:</span>
+                              <span className="font-semibold text-slate-700">{selectedProject.sharing_partner || 'Chưa cập nhật'}</span>
+                            </div>
+                            <div>
+                              <span className="text-slate-400 block">Mã trạm dùng chung:</span>
+                              <span className="font-semibold text-slate-700">{selectedProject.shared_site_id || 'Chưa cập nhật'}</span>
+                            </div>
+                            <div>
+                              <span className="text-slate-400 block">Chiều cao treo anten:</span>
+                              <span className="font-semibold text-slate-700">{selectedProject.antenna_height ? `${selectedProject.antenna_height} m` : 'Chưa cập nhật'}</span>
+                            </div>
+                            <div>
+                              <span className="text-slate-400 block">Công suất điện tiêu thụ:</span>
+                              <span className="font-semibold text-slate-700">{selectedProject.power_consumption ? `${selectedProject.power_consumption} W` : 'Chưa cập nhật'}</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -4932,33 +5183,17 @@ export default function InfrastructureDevelopment() {
                       onClick={() => handleExportDoc('contract')}
                       disabled={isExportingDoc}
                       className="px-3.5 py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-sm"
-                      title="Xuất file Hợp đồng Ký mới (.docx)"
+                      title="Xuất file Hợp đồng (.docx)"
                     >
-                      <FileText className="h-3.5 w-3.5" /> HĐ Ký Mới (.docx)
+                      <FileText className="h-3.5 w-3.5" /> Hợp đồng (.docx)
                     </button>
                     <button 
                       onClick={() => handleExportDoc('mou')}
                       disabled={isExportingDoc}
                       className="px-3 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-50 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                      title="Xuất Biên bản làm việc / Ghi nhớ (.docx)"
+                      title="Xuất Biên bản ghi nhớ (.docx)"
                     >
-                      <FileText className="h-3.5 w-3.5 text-blue-600" /> BB Làm Việc
-                    </button>
-                    <button 
-                      onClick={() => handleExportDoc('phu_luc_chu_the')}
-                      disabled={isExportingDoc}
-                      className="px-3 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-50 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                      title="Xuất Phụ lục chuyển đổi chủ thể (.docx)"
-                    >
-                      <FileText className="h-3.5 w-3.5 text-purple-600" /> PL Chủ Thể
-                    </button>
-                    <button 
-                      onClick={() => handleExportDoc('phu_luc_giam_gia')}
-                      disabled={isExportingDoc}
-                      className="px-3 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-50 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                      title="Xuất Phụ lục giảm giá hợp đồng (.docx)"
-                    >
-                      <FileText className="h-3.5 w-3.5 text-amber-600" /> PL Giảm Giá
+                      <FileText className="h-3.5 w-3.5 text-blue-600" /> BB Ghi Nhớ (.docx)
                     </button>
                     <button 
                       onClick={() => setIsEditing(true)}
