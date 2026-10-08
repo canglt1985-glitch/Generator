@@ -335,6 +335,13 @@ def main():
                     if is_dual_5g:
                         s_data['has_5g_l2'] = True
 
+            # Quy tắc: Khi 4G có nhiều cell/sector hơn 5G (len(sec_map) > số sector 5G và trạm có 5G):
+            # 3G phải hướng theo 5G (gán has_3g=True cho các sector có 5G, các sector 4G phụ has_3g=False)
+            sec_with_5g = [s for s in sec_map.values() if s.get('has_5g_l1') or s.get('has_5g_l2')]
+            if has_5g and len(sec_with_5g) > 0 and len(sec_map) > len(sec_with_5g) and len(cells_3g) > 0:
+                for s in sec_map.values():
+                    s['has_3g'] = bool(s.get('has_5g_l1') or s.get('has_5g_l2'))
+
         rf_summary = {
             **rf_cur,
             'total_cells': len(c_list) if c_list else (3 if has_5g else 0),

@@ -140,6 +140,11 @@ export default function CellSectorWedges({
   const isSranSwap = Boolean(rfSummary?.is_sran_swap);
   const hasSite3g = cells3g > 0 || sectors.some(s => s.has_3g);
 
+  // Quy tắc chuẩn hóa: Trường hợp 4G nhiều cell/sector quá thì 3G hướng theo 5G
+  const sectorsWith5g = sectors.filter(s => Boolean(s.has_5g_l1 || s.has_5g_l2 || s.has_5g));
+  const has5gSectors = has5g && sectorsWith5g.length > 0;
+  const isMulti4gSite = sectors.length > sectorsWith5g.length;
+
   // Tính góc hướng chuẩn cho tất cả các sector để quét khoảng cách góc tới sector lân cận
   const resolvedAzimuths = sectors.map((sec, idx) => {
     const secName = sec.sector || String.fromCharCode(65 + idx);
@@ -155,6 +160,18 @@ export default function CellSectorWedges({
         const isEstimated = isMissingRf || sec.azimuth == null || isNaN(sec.azimuth);
         const azimuth = resolvedAzimuths[secIdx];
 
+        // Khi 4G có nhiều cell/sector hơn 5G: 3G luôn hướng theo các sector có 5G
+        let secHas3g = Boolean(sec.has_3g);
+        if (has5gSectors && isMulti4gSite && hasSite3g) {
+          const isSectorWith5g = Boolean(sec.has_5g_l1 || sec.has_5g_l2 || sec.has_5g);
+          secHas3g = isSectorWith5g;
+        }
+
+        const effectiveSec = {
+          ...sec,
+          has_3g: secHas3g
+        };
+
         // Tìm góc lệch nhỏ nhất tới các sector khác của cùng trạm
         let minDiff = 360;
         resolvedAzimuths.forEach((otherAz, oIdx) => {
@@ -169,7 +186,7 @@ export default function CellSectorWedges({
         const tiltStr = getSectorTiltDisplay(sec, site);
 
         // Lấy danh sách các tầng cánh sóng LIỀN KỀ NHAU (Phương án 4: Phân tầng tần số, khuyết 3G để trống vòng trong)
-        const contiguousLayers = getSectorContiguousLayers(sec, isDual5g, has5g, isSranSwap, scale, hasSite3g, minDiff);
+        const contiguousLayers = getSectorContiguousLayers(effectiveSec, isDual5g, has5g, isSranSwap, scale, hasSite3g, minDiff);
 
         return (
           <React.Fragment key={`sec-${site.site_id}-${secName}-${azimuth}`}>

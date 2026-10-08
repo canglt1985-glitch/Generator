@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, Circle, useMap } from 'react-leaflet';
 import L from 'leaflet';
+import CellSectorWedges from '../components/map/CellSectorWedges';
 
 // Google Maps & OSM Tile Layer Definitions
 const TILE_LAYERS = {
@@ -534,8 +535,9 @@ export default function NetworkMap() {
     }
   }, [searchParams, activeSites]);
   
-  // Layer Toggles - Hệ thống phân lớp bản đồ tinh gọn: Trạm hiện hữu, CSHT Quy hoạch, Lastmile
+  // Layer Toggles - Hệ thống phân lớp bản đồ: Trạm hiện hữu, Cánh sóng vô tuyến, CSHT Quy hoạch, Lastmile
   const [layerActiveSites, setLayerActiveSites] = useState(true); // Trạm MobiFone hiện hữu (chấm tròn + text ID)
+  const [layerCellSectors, setLayerCellSectors] = useState(true); // Cánh sóng vô tuyến (3G / 4G / 4G SRAN / 5G-A)
   const [layerPlanningInfra, setLayerPlanningInfra] = useState(false); // Trạm CSHT Quy hoạch (95 vị trí)
   const [layerLastmile, setLayerLastmile] = useState(false); // Tuyến truyền dẫn Lastmile
   const [showCoverageCircle, setShowCoverageCircle] = useState(false); // Vòng tròn bán kính 500m
@@ -1955,6 +1957,24 @@ export default function NetworkMap() {
               <span className="text-[9px] px-1 rounded-full bg-blue-100 text-blue-800 font-black">{activeSites.length}</span>
             </button>
 
+            {/* Cánh sóng Vô tuyến 3G/4G/5G (Chỉ hiển thị cho Cán bộ Tổ) */}
+            {!isGuest && (
+              <button
+                type="button"
+                onClick={() => {
+                  setLayerCellSectors(!layerCellSectors);
+                  showToast(!layerCellSectors ? 'Đã bật cánh sóng vô tuyến' : 'Đã ẩn cánh sóng vô tuyến');
+                }}
+                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10.5px] font-bold backdrop-blur-md border active:scale-95 transition-all shadow-sm shrink-0 cursor-pointer ${
+                  layerCellSectors 
+                    ? 'bg-rose-50 border-rose-400 text-rose-800 ring-1 ring-rose-300' 
+                    : 'bg-white/80 border-slate-200 text-slate-400 opacity-70'
+                }`}
+                title="Búp sóng vô tuyến đa tầng: 3G (xanh lá), 4G (cyan), 4G SRAN, 5G L1 (đỏ), 5G-A (tím)"
+              >
+                <span>📡 Cánh sóng</span>
+              </button>
+            )}
 
             {/* CSHT Quy hoạch */}
             <button
@@ -2082,6 +2102,7 @@ export default function NetworkMap() {
                         type="button"
                         onClick={() => {
                           setLayerActiveSites(true);
+                          setLayerCellSectors(true);
                           setLayerPlanningInfra(true);
                           setLayerLastmile(true);
                           setShowCoverageCircle(true);
@@ -2096,6 +2117,7 @@ export default function NetworkMap() {
                         type="button"
                         onClick={() => {
                           setLayerActiveSites(false);
+                          setLayerCellSectors(false);
                           setLayerPlanningInfra(false);
                           setLayerLastmile(false);
                           setShowCoverageCircle(false);
@@ -2130,6 +2152,30 @@ export default function NetworkMap() {
                         {activeSites.length}
                       </span>
                     </label>
+
+                    {/* Layer 2: Cánh sóng Vô tuyến 3G/4G/5G (Chỉ cho nội bộ) */}
+                    {!isGuest && (
+                      <label className="flex items-center justify-between p-2 rounded-xl bg-slate-50/80 hover:bg-slate-100/80 border border-slate-200/80 cursor-pointer transition-colors">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <input
+                            type="checkbox"
+                            checked={layerCellSectors}
+                            onChange={(e) => setLayerCellSectors(e.target.checked)}
+                            className="rounded border-slate-300 text-rose-500 focus:ring-rose-500 h-4 w-4 bg-white cursor-pointer"
+                          />
+                          <div className="min-w-0">
+                            <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                              <span className="h-2 w-2 rounded-full bg-rose-500 shrink-0"></span>
+                              <span>Cánh sóng Vô tuyến (3G/4G/5G)</span>
+                            </div>
+                            <div className="text-[10px] text-slate-500 truncate">Búp sóng 4 tầng: 3G (xanh), 4G (cyan), 4G SRAN, 5G L1 (đỏ), 5G-A (tím)</div>
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 shrink-0">
+                          360°
+                        </span>
+                      </label>
+                    )}
 
 
                     {/* Layer 3: Trạm quy hoạch CSHT */}
@@ -2441,6 +2487,21 @@ export default function NetworkMap() {
                 </>
               )}
 
+
+              {/* Render Cánh sóng vô tuyến đa tầng (3G / 4G / 4G SRAN / 5G-A) - Chỉ hiển thị cho Cán bộ Tổ */}
+              {!isGuest && layerCellSectors && activeSites.map(site => (
+                <CellSectorWedges 
+                  key={`sec-${site.site_id}`}
+                  site={site}
+                  zoom={currentZoom}
+                  isSelected={selectedMobileStation?.site?.site_id === site.site_id}
+                  visible={layerCellSectors}
+                  onSelectSector={(info) => {
+                    const tiltPart = info.tiltStr ? ` | Tilt: ${info.tiltStr}` : '';
+                    showToast(`📡 ${info.site.site_id_old || info.site.site_id} Sector ${info.sector}: ${info.tech} (Az: ${info.azimuth}${tiltPart})`);
+                  }}
+                />
+              ))}
 
               {/* Render danh sách Trạm hoạt động: Chấm tròn & Text ID trạm */}
               {layerActiveSites && activeSites.map(site => {
@@ -2962,6 +3023,7 @@ export default function NetworkMap() {
                     type="button"
                     onClick={() => {
                       setLayerActiveSites(true);
+                      setLayerCellSectors(true);
                       setLayerPlanningInfra(true);
                       setLayerLastmile(true);
                       setShowCoverageCircle(true);
@@ -2976,6 +3038,7 @@ export default function NetworkMap() {
                     type="button"
                     onClick={() => {
                       setLayerActiveSites(false);
+                      setLayerCellSectors(false);
                       setLayerPlanningInfra(false);
                       setLayerLastmile(false);
                       setShowCoverageCircle(false);
@@ -3010,6 +3073,30 @@ export default function NetworkMap() {
                     {activeSites.length}
                   </span>
                 </label>
+
+                {/* Cánh sóng Vô tuyến 3G/4G/5G (Chỉ cho nội bộ) */}
+                {!isGuest && (
+                  <label className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50/80 hover:bg-slate-100/80 border border-slate-200/80 cursor-pointer active:scale-[0.99] transition-all">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <input
+                        type="checkbox"
+                        checked={layerCellSectors}
+                        onChange={(e) => setLayerCellSectors(e.target.checked)}
+                        className="rounded border-slate-300 text-rose-500 focus:ring-rose-500 h-5 w-5 bg-white cursor-pointer"
+                      />
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                          <span className="h-2 w-2 rounded-full bg-rose-500 shrink-0"></span>
+                          <span>Cánh sóng Vô tuyến (3G/4G/5G)</span>
+                        </div>
+                        <div className="text-[10px] text-slate-500 truncate">Búp sóng 4 tầng: 3G, 4G, 4G SRAN, 5G L1, 5G-A (tím)</div>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 shrink-0">
+                      360°
+                    </span>
+                  </label>
+                )}
 
 
                 {/* Trạm CSHT Quy hoạch */}
