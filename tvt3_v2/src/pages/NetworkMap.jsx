@@ -10,8 +10,6 @@ import {
 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, Circle, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import CellSectorWedges from '../components/map/CellSectorWedges';
-import { getFallbackAzimuth, getSectorTiltDisplay } from '../utils/cellSectorGeometry';
 
 // Google Maps & OSM Tile Layer Definitions
 const TILE_LAYERS = {
@@ -536,9 +534,8 @@ export default function NetworkMap() {
     }
   }, [searchParams, activeSites]);
   
-  // Layer Toggles - Hệ thống phân lớp bản đồ tinh gọn: 5 lớp trực quan
+  // Layer Toggles - Hệ thống phân lớp bản đồ tinh gọn: Trạm hiện hữu, CSHT Quy hoạch, Lastmile
   const [layerActiveSites, setLayerActiveSites] = useState(true); // Trạm MobiFone hiện hữu (chấm tròn + text ID)
-  const [layerCellSectors, setLayerCellSectors] = useState(true); // Cánh sóng vô tuyến (3G / 4G / 4G SRAN / 5G-A)
   const [layerPlanningInfra, setLayerPlanningInfra] = useState(false); // Trạm CSHT Quy hoạch (95 vị trí)
   const [layerLastmile, setLayerLastmile] = useState(false); // Tuyến truyền dẫn Lastmile
   const [showCoverageCircle, setShowCoverageCircle] = useState(false); // Vòng tròn bán kính 500m
@@ -1958,24 +1955,6 @@ export default function NetworkMap() {
               <span className="text-[9px] px-1 rounded-full bg-blue-100 text-blue-800 font-black">{activeSites.length}</span>
             </button>
 
-            {/* Cánh sóng Vô tuyến 3G/4G/5G (Chỉ hiển thị cho Cán bộ Tổ) */}
-            {!isGuest && (
-              <button
-                type="button"
-                onClick={() => {
-                  setLayerCellSectors(!layerCellSectors);
-                  showToast(!layerCellSectors ? 'Đã bật cánh sóng vô tuyến' : 'Đã ẩn cánh sóng vô tuyến');
-                }}
-                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10.5px] font-bold backdrop-blur-md border active:scale-95 transition-all shadow-sm shrink-0 cursor-pointer ${
-                  layerCellSectors 
-                    ? 'bg-rose-50 border-rose-400 text-rose-800 ring-1 ring-rose-300' 
-                    : 'bg-white/80 border-slate-200 text-slate-400 opacity-70'
-                }`}
-                title="Búp sóng vô tuyến đa tầng: 3G (xanh lá), 4G (cyan), 4G SRAN, 5G L1 (đỏ), 5G-A (tím)"
-              >
-                <span>📡 Cánh sóng</span>
-              </button>
-            )}
 
             {/* CSHT Quy hoạch */}
             <button
@@ -2103,7 +2082,6 @@ export default function NetworkMap() {
                         type="button"
                         onClick={() => {
                           setLayerActiveSites(true);
-                          setLayerCellSectors(true);
                           setLayerPlanningInfra(true);
                           setLayerLastmile(true);
                           setShowCoverageCircle(true);
@@ -2118,7 +2096,6 @@ export default function NetworkMap() {
                         type="button"
                         onClick={() => {
                           setLayerActiveSites(false);
-                          setLayerCellSectors(false);
                           setLayerPlanningInfra(false);
                           setLayerLastmile(false);
                           setShowCoverageCircle(false);
@@ -2154,29 +2131,6 @@ export default function NetworkMap() {
                       </span>
                     </label>
 
-                    {/* Layer 2: Cánh sóng Vô tuyến 3G/4G/5G (Chỉ cho nội bộ) */}
-                    {!isGuest && (
-                      <label className="flex items-center justify-between p-2 rounded-xl bg-slate-50/80 hover:bg-slate-100/80 border border-slate-200/80 cursor-pointer transition-colors">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <input
-                            type="checkbox"
-                            checked={layerCellSectors}
-                            onChange={(e) => setLayerCellSectors(e.target.checked)}
-                            className="rounded border-slate-300 text-rose-500 focus:ring-rose-500 h-4 w-4 bg-white cursor-pointer"
-                          />
-                          <div className="min-w-0">
-                            <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                              <span className="h-2 w-2 rounded-full bg-rose-500 shrink-0"></span>
-                              <span>Cánh sóng Vô tuyến (3G/4G/5G)</span>
-                            </div>
-                            <div className="text-[10px] text-slate-500 truncate">Búp sóng 4 tầng: 3G (xanh), 4G (cyan), 4G SRAN, 5G L1 (đỏ), 5G-A (tím)</div>
-                          </div>
-                        </div>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 shrink-0">
-                          360°
-                        </span>
-                      </label>
-                    )}
 
                     {/* Layer 3: Trạm quy hoạch CSHT */}
                     <label className="flex items-center justify-between p-2 rounded-xl bg-slate-50/80 hover:bg-slate-100/80 border border-slate-200/80 cursor-pointer transition-colors">
@@ -2487,20 +2441,6 @@ export default function NetworkMap() {
                 </>
               )}
 
-              {/* Render Cánh sóng vô tuyến đa tầng (3G / 4G / 4G SRAN / 5G-A) - Chỉ hiển thị cho Cán bộ Tổ */}
-              {!isGuest && layerCellSectors && activeSites.map(site => (
-                <CellSectorWedges 
-                  key={`sec-${site.site_id}`}
-                  site={site}
-                  zoom={currentZoom}
-                  isSelected={selectedMobileStation?.site?.site_id === site.site_id}
-                  visible={layerCellSectors}
-                  onSelectSector={(info) => {
-                    const tiltPart = info.tiltStr ? ` | Tilt: ${info.tiltStr}` : '';
-                    showToast(`📡 ${info.site.site_id_old || info.site.site_id} Sector ${info.sector}: ${info.tech} (Az: ${info.azimuth}${tiltPart})`);
-                  }}
-                />
-              ))}
 
               {/* Render danh sách Trạm hoạt động: Chấm tròn & Text ID trạm */}
               {layerActiveSites && activeSites.map(site => {
@@ -2551,393 +2491,166 @@ export default function NetworkMap() {
                           }
                         }}
                       >
-                        {isGuest ? (
-                          <div className="font-sans text-[11px] flex flex-col gap-2 p-1 min-w-[245px] max-w-[275px]">
-                            {/* Header trạm dành cho khách */}
-                            <div className="flex items-center justify-between border-b border-slate-200/80 pb-1.5">
-                              <div>
-                                <div className="text-[13px] font-bold text-slate-800 flex items-center gap-1.5">
-                                  <span>Trạm:</span>
-                                  <span className="text-cyan-700">{displayName}</span>
-                                  <span className={`px-1.5 py-0.2 rounded text-[8.5px] font-extrabold ${radio.badgeClass}`}>
-                                    {radio.tech}
-                                  </span>
-                                  {radio.hasAggNode && !radio.isAgg && (
-                                    <span className="px-1.5 py-0.2 rounded text-[8px] font-bold bg-slate-100 text-slate-700 border border-slate-300">
-                                      Node AGG
-                                    </span>
-                                  )}
-                                </div>
-                                {site.name && (
-                                  <div className="text-[10px] text-slate-500 font-medium">{site.name}</div>
-                                )}
+                        <div className="font-sans text-[11px] flex flex-col gap-2 p-1 min-w-[245px] max-w-[275px]">
+                          {/* 1. Header trạm: Mã trạm, Tên trạm, Nút sao chép */}
+                          <div className="flex items-center justify-between border-b border-slate-200/80 pb-1.5">
+                            <div className="min-w-0 pr-1">
+                              <div className="text-[13px] font-bold text-slate-800 flex items-center gap-1.5 flex-wrap">
+                                <span className={radio.textColor || 'text-cyan-700'}>{oldId}</span>
+                                {newId && <span className="text-[10px] text-slate-500 font-mono font-medium">({newId})</span>}
                               </div>
-                              <button 
-                                onClick={() => handleCopyStationInfo(site, lat, lng, displayName)}
-                                className="px-2 py-0.5 rounded text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold border border-slate-200 flex items-center gap-1 cursor-pointer shrink-0 transition-all"
-                                title="Sao chép thông tin trạm"
-                              >
-                                <Copy className="h-2.5 w-2.5 text-cyan-600" /> Copy
-                              </button>
-                            </div>
-
-                            {/* 4 thông tin: Trạm, Người QLT, Tọa độ, Chỉ đường */}
-                            <div className="bg-slate-50 rounded-lg p-2 border border-slate-200/80 space-y-1.5 text-[11px]">
-                              <div className="flex items-center justify-between">
-                                <span className="text-slate-500 font-medium">👤 Người QLT:</span>
-                                <span className="font-bold text-slate-800">{site.management_info?.qlt || 'Chưa cập nhật'}</span>
-                              </div>
-                              {site.management_info?.sdt_qlt && (
-                                <div className="flex items-center justify-between pt-1 border-t border-slate-200/60">
-                                  <span className="text-slate-500 font-medium">📞 Liên hệ:</span>
-                                  <a 
-                                    href={`tel:${site.management_info.sdt_qlt}`}
-                                    className="inline-flex items-center gap-1 text-emerald-700 font-bold hover:underline"
-                                    title="Bấm để gọi điện"
-                                  >
-                                    <Phone className="h-3 w-3" />
-                                    <span>{site.management_info.sdt_qlt}</span>
-                                  </a>
+                              {site.name && site.name !== oldId && (
+                                <div className="text-[10px] text-slate-500 font-medium truncate max-w-[190px]" title={site.name}>
+                                  {site.name}
                                 </div>
                               )}
-                              <div 
-                                onClick={() => handleCopyCoords(lat, lng, `tọa độ trạm ${name}`)}
-                                className="flex items-center justify-between pt-1 border-t border-slate-200/60 cursor-pointer text-slate-600 hover:text-slate-900"
-                                title="Nhấp để copy tọa độ"
-                              >
-                                <span className="text-slate-500 font-medium">📍 Tọa độ:</span>
-                                <span className="font-mono font-semibold text-cyan-800 flex items-center gap-1">
-                                  {lat.toFixed(6)}, {lng.toFixed(6)}
-                                  <Copy className="h-2.5 w-2.5 text-slate-400" />
+                            </div>
+                            <button 
+                              type="button"
+                              onClick={() => handleCopyStationInfo(site, lat, lng, displayName)}
+                              className="px-2 py-0.5 rounded text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold border border-slate-200 flex items-center gap-1 cursor-pointer shrink-0 transition-all active:scale-95"
+                              title="Sao chép thông tin trạm"
+                            >
+                              <Copy className="h-2.5 w-2.5 text-cyan-600" /> Copy
+                            </button>
+                          </div>
+
+                          {/* 2. Khối Thông tin Quản lý & Vận hành trạm (Bảo mật: KHÔNG hiển thị cấu hình vô tuyến / datacell) */}
+                          <div className="bg-slate-50 rounded-lg p-2 border border-slate-200/80 space-y-1.5 text-[11px]">
+                            {/* Người QLT */}
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-500 font-medium flex items-center gap-1">👤 Người QLT:</span>
+                              <span className="font-bold text-slate-800">{site.management_info?.qlt || 'Chưa cập nhật'}</span>
+                            </div>
+
+                            {/* Số điện thoại QLT */}
+                            {site.management_info?.sdt_qlt && (
+                              <div className="flex items-center justify-between pt-1 border-t border-slate-200/60">
+                                <span className="text-slate-500 font-medium flex items-center gap-1">📞 Liên hệ:</span>
+                                <a 
+                                  href={`tel:${site.management_info.sdt_qlt}`}
+                                  className="inline-flex items-center gap-1 text-emerald-700 font-bold hover:underline font-mono"
+                                  title="Bấm để gọi điện"
+                                >
+                                  <Phone className="h-3 w-3" />
+                                  <span>{site.management_info.sdt_qlt}</span>
+                                </a>
+                              </div>
+                            )}
+
+                            {/* Đội / Tổ quản lý */}
+                            {(site.management_info?.to_ql || site.management_info?.doi_ql) && (
+                              <div className="flex items-center justify-between pt-1 border-t border-slate-200/60">
+                                <span className="text-slate-500 font-medium">🏢 Quản lý:</span>
+                                <span className="font-semibold text-slate-700 text-right truncate max-w-[150px]">
+                                  {formatManagementUnit(site.management_info?.to_ql || site.management_info?.doi_ql)}
                                 </span>
                               </div>
-                            </div>
+                            )}
 
-                            {/* Thông số Vô tuyến (Tilt / Azimuth) cho trạm */}
-                            {site.technical_info?.rf_summary && (() => {
-                              const rf = site.technical_info.rf_summary;
-                              const cells3g = rf.cells_3g ?? rf.tech_counts?.['3G'] ?? 0;
-                              const cells4g = rf.cells_4g ?? rf.tech_counts?.['4G'] ?? 0;
-                              const cells5g = rf.cells_5g ?? rf.tech_counts?.['5G'] ?? 0;
-                              const totalCells = rf.total_cells ?? (cells3g + cells4g + cells5g);
-                              const has5g = cells5g > 0;
-                              const is5gA = Boolean(rf.is_dual_5g || rf.cells_5g_l2 > 0);
-                              const sectors = Array.isArray(rf.sectors) ? rf.sectors : [];
-
-                              if (radio.isAgg || (totalCells === 0 && cells3g === 0 && cells4g === 0 && !has5g)) {
-                                return (
-                                  <div className="bg-slate-50 border border-slate-200/80 rounded-lg p-2 text-[10px] space-y-1 text-slate-600">
-                                    <div className="font-bold text-slate-700 flex items-center justify-between">
-                                      <span className="flex items-center gap-1">📡 {radio.isAgg ? 'Trạm truyền dẫn AGG / CSG' : 'Trạm Hub / Chưa có Cell Vô tuyến'}</span>
-                                      <span className="px-1.5 py-0.2 rounded text-[8.5px] font-bold bg-slate-200 text-slate-700">0 Cell</span>
-                                    </div>
-                                    <p className="text-[9.5px] text-slate-500 leading-relaxed">
-                                      {radio.isAgg 
-                                        ? 'Trạm đóng vai trò node truyền dẫn cáp quang / BBU tập trung, không phát sóng cell vô tuyến di động.'
-                                        : 'Trạm hiện chưa có dữ liệu cell vô tuyến phát sóng di động trực tiếp.'}
-                                    </p>
-                                  </div>
-                                );
-                              }
-
-                              return (
-                                <div className="bg-slate-50 border border-slate-200/80 rounded-lg p-1.5 text-[10px] space-y-1">
-                                  <div className="flex items-center justify-between pb-1 border-b border-slate-200/60">
-                                    <span className="font-bold text-slate-700 flex items-center gap-1">
-                                      📡 Cấu hình ({rf.total_cells || 0} cell)
-                                    </span>
-                                    <div className="flex items-center gap-1 font-mono font-bold text-[9px]">
-                                      {cells3g > 0 && <span className="px-1 py-0.2 bg-emerald-100 text-emerald-800 rounded border border-emerald-200">3G: {cells3g}</span>}
-                                      {cells4g > 0 && <span className="px-1 py-0.2 bg-blue-100 text-blue-800 rounded border border-blue-200">4G: {cells4g}</span>}
-                                      {has5g && (
-                                        <span className="px-1 py-0.2 bg-purple-100 text-purple-900 rounded border border-purple-200 font-black">
-                                          {is5gA ? '5G-A' : '5G'}: {cells5g}
-                                        </span>
-                                      )}
-                                    </div>
-                                  </div>
-
-                                  {sectors.length > 0 && (
-                                    <div className="space-y-0.5 max-h-[110px] overflow-y-auto pr-0.5">
-                                      {sectors.map((sec, sIdx) => {
-                                        const secName = sec.sector || String.fromCharCode(65 + sIdx);
-                                        const hasDesignAz = sec.azimuth != null;
-                                        const azVal = hasDesignAz 
-                                          ? sec.azimuth 
-                                          : getFallbackAzimuth(secName, sIdx, sectors.length);
-                                        const secTilt = getSectorTiltDisplay(sec, site);
-                                        const isSectorDual = sec.has_5g_l2 || (is5gA && (sec.has_5g_l1 || sec.has_5g));
-
-                                        return (
-                                          <div key={sIdx} className="flex items-center justify-between bg-white rounded px-1.5 py-0.5 border border-slate-200 text-[9.5px]">
-                                            <div className="font-mono text-slate-700 flex items-center gap-1.5 flex-wrap">
-                                              <span className="font-bold">Az: {azVal}</span>
-                                              {secTilt && (
-                                                <span className="text-indigo-700 font-semibold bg-indigo-50 px-1 py-0.2 rounded border border-indigo-200 text-[8.5px]">
-                                                  Tilt: {secTilt}
-                                                </span>
-                                              )}
-                                            </div>
-                                            <div className="flex items-center gap-1">
-                                              {sec.has_3g && (
-                                                <span className="px-1 py-0.1 rounded text-[8px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                                                  3G
-                                                </span>
-                                              )}
-                                              {sec.has_4g && (
-                                                <span className="px-1 py-0.1 rounded text-[8px] font-bold bg-blue-100 text-blue-800 border border-blue-300">
-                                                  4G
-                                                </span>
-                                              )}
-                                              {isSectorDual ? (
-                                                <span className="px-1 py-0.1 rounded text-[8px] font-extrabold bg-purple-100 text-purple-900 border border-purple-300">
-                                                  5G-A
-                                                </span>
-                                              ) : (sec.has_5g_l1 || sec.has_5g) ? (
-                                                <span className="px-1 py-0.1 rounded text-[8px] font-bold bg-rose-100 text-rose-800 border border-rose-300">
-                                                  5G
-                                                </span>
-                                              ) : null}
-                                            </div>
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })()}
-
-                            {/* Nút Dẫn đường Google Maps & Sao chép tin nhắn Zalo */}
-                            <div className="flex flex-col gap-1.5 pt-0.5">
-                              <a 
-                                href={`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`}
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="w-full inline-flex items-center justify-center gap-1.5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 !text-white rounded-lg text-xs font-bold text-center cursor-pointer shadow-xs active:scale-95 transition-all"
-                              >
-                                <Navigation className="h-3.5 w-3.5" />
-                                <span>🚗 Dẫn đường Google Maps</span>
-                              </a>
-                              <button
-                                type="button"
-                                onClick={() => handleCopyStationInfo(site, lat, lng, displayName)}
-                                className="w-full inline-flex items-center justify-center gap-1.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-lg text-[10.5px] font-semibold text-center cursor-pointer shadow-2xs active:scale-95 transition-all"
-                              >
-                                <Copy className="h-3 w-3 text-cyan-600" />
-                                <span>📋 Sao chép thông tin</span>
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="font-sans text-[11px] flex flex-col gap-1.5 max-w-[275px]">
-                            {/* 1. Header trạm tinh gọn */}
-                            <div className="flex items-center justify-between border-b border-slate-200/80 pb-1">
-                              <div className="min-w-0 pr-1">
-                                <div className="flex items-center gap-1.5 flex-wrap">
-                                  <strong className={`text-[13px] font-bold ${radio.textColor}`}>{oldId}</strong>
-                                  {newId && <span className="text-[10px] text-slate-500 font-mono font-medium">({newId})</span>}
-                                  <span className={`px-1.5 py-0.2 rounded text-[8.5px] font-extrabold ${radio.badgeClass}`}>
-                                    {radio.tech}
-                                  </span>
-                                  {radio.hasAggNode && !radio.isAgg && (
-                                    <span className="px-1.5 py-0.2 rounded text-[8px] font-bold bg-slate-100 text-slate-700 border border-slate-300">
-                                      Node AGG
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                              <button 
-                                onClick={() => handleCopyStationInfo(site, lat, lng, displayName)}
-                                className="px-1.5 py-0.5 rounded text-[9.5px] bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold border border-slate-200 flex items-center gap-1 transition-all cursor-pointer shrink-0"
-                                title="Sao chép Tên trạm, Người QLT, SĐT, Tọa độ & Link chỉ đường"
-                              >
-                                <Copy className="h-2.5 w-2.5 text-cyan-600" /> Copy
-                              </button>
-                            </div>
-
-                            {/* 2. Cấu hình Vô tuyến & Danh sách Sector (Gộp thành 1 khối tinh gọn) */}
-                            {site.technical_info?.rf_summary && (() => {
-                              const rf = site.technical_info.rf_summary;
-                              const cells3g = rf.cells_3g ?? rf.tech_counts?.['3G'] ?? 0;
-                              const cells4g = rf.cells_4g ?? rf.tech_counts?.['4G'] ?? 0;
-                              const cells5g = rf.cells_5g ?? rf.tech_counts?.['5G'] ?? 0;
-                              const totalCells = rf.total_cells ?? (cells3g + cells4g + cells5g);
-                              const has5g = cells5g > 0;
-                              const is5gA = Boolean(rf.is_dual_5g || rf.cells_5g_l2 > 0);
-                              const sectors = Array.isArray(rf.sectors) ? rf.sectors : [];
-
-                              if (radio.isAgg || (totalCells === 0 && cells3g === 0 && cells4g === 0 && !has5g)) {
-                                return (
-                                  <div className="bg-slate-50 border border-slate-200/80 rounded-lg p-2 text-[10px] space-y-1 text-slate-600">
-                                    <div className="font-bold text-slate-700 flex items-center justify-between">
-                                      <span className="flex items-center gap-1">📡 {radio.isAgg ? 'Trạm truyền dẫn AGG / CSG' : 'Trạm Hub / Chưa có Cell Vô tuyến'}</span>
-                                      <span className="px-1.5 py-0.2 rounded text-[8.5px] font-bold bg-slate-200 text-slate-700">0 Cell</span>
-                                    </div>
-                                    <p className="text-[9.5px] text-slate-500 leading-relaxed">
-                                      {radio.isAgg 
-                                        ? 'Trạm đóng vai trò node truyền dẫn cáp quang / BBU tập trung, không phát sóng cell vô tuyến di động.'
-                                        : 'Trạm hiện chưa có dữ liệu cell vô tuyến phát sóng di động trực tiếp.'}
-                                    </p>
-                                  </div>
-                                );
-                              }
-
-                              return (
-                                <div className="bg-slate-50 border border-slate-200/80 rounded-lg p-1.5 text-[10px] space-y-1">
-                                  {/* Hàng tóm tắt số cell */}
-                                  <div className="flex items-center justify-between pb-1 border-b border-slate-200/60">
-                                    <span className="font-bold text-slate-700 flex items-center gap-1">
-                                      📡 Cấu hình ({rf.total_cells || 0} cell)
-                                    </span>
-                                    <div className="flex items-center gap-1 font-mono font-bold text-[9px]">
-                                      {cells3g > 0 && <span className="px-1 py-0.2 bg-emerald-100 text-emerald-800 rounded border border-emerald-200">3G: {cells3g}</span>}
-                                      {cells4g > 0 && <span className="px-1 py-0.2 bg-blue-100 text-blue-800 rounded border border-blue-200">4G: {cells4g}</span>}
-                                      {has5g && (
-                                        <span className="px-1 py-0.2 bg-purple-100 text-purple-900 rounded border border-purple-200 font-black">
-                                          {is5gA ? '5G-A' : '5G'}: {cells5g}
-                                        </span>
-                                      )}
-                                    </div>
-                                  </div>
-
-                                  {/* Danh sách Cell theo góc hướng (có tự tính góc mặc định nếu chưa có quy hoạch) */}
-                                  {sectors.length > 0 && (
-                                    <div className="space-y-0.5 max-h-[110px] overflow-y-auto pr-0.5">
-                                      {sectors.map((sec, sIdx) => {
-                                        const secName = sec.sector || String.fromCharCode(65 + sIdx);
-                                        const hasDesignAz = sec.azimuth != null;
-                                        const azVal = hasDesignAz 
-                                          ? sec.azimuth 
-                                          : getFallbackAzimuth(secName, sIdx, sectors.length);
-                                        const secTilt = getSectorTiltDisplay(sec, site);
-                                        const isSectorDual = sec.has_5g_l2 || (is5gA && (sec.has_5g_l1 || sec.has_5g));
-
-                                        return (
-                                          <div key={sIdx} className="flex items-center justify-between bg-white rounded px-1.5 py-0.5 border border-slate-200 text-[9.5px]">
-                                            <div className="font-mono text-slate-700 flex items-center gap-1.5 flex-wrap">
-                                              <span className="font-bold">Az: {azVal}</span>
-                                              {secTilt && (
-                                                <span className="text-indigo-700 font-semibold bg-indigo-50 px-1 py-0.2 rounded border border-indigo-200 text-[8.5px]">
-                                                  Tilt: {secTilt}
-                                                </span>
-                                              )}
-                                              {!hasDesignAz && <span className="text-[8px] text-amber-600 font-sans font-normal">(ước tính)</span>}
-                                            </div>
-                                            <div className="flex items-center gap-1">
-                                              {sec.has_3g && (
-                                                <span className="px-1 py-0.1 rounded text-[8px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                                                  3G
-                                                </span>
-                                              )}
-                                              {sec.has_4g && (
-                                                <span className="px-1 py-0.1 rounded text-[8px] font-bold bg-blue-100 text-blue-800 border border-blue-300">
-                                                  {(radio.isSranScope && sec.has_3g) ? '4G SRAN' : '4G'}
-                                                </span>
-                                              )}
-                                              {isSectorDual ? (
-                                                <span className="px-1 py-0.1 rounded text-[8px] font-extrabold bg-purple-100 text-purple-900 border border-purple-300">
-                                                  5G-A
-                                                </span>
-                                              ) : (sec.has_5g_l1 || sec.has_5g) ? (
-                                                <span className="px-1 py-0.1 rounded text-[8px] font-bold bg-rose-100 text-rose-800 border border-rose-300">
-                                                  5G
-                                                </span>
-                                              ) : null}
-                                            </div>
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })()}
-
-                            {/* 3. Khối Vận hành & Quản lý gọn gàng */}
-                            <div className="bg-slate-50/90 rounded-lg p-1.5 border border-slate-200/70 text-[10px] space-y-0.5 text-slate-600">
-                              <div className="flex items-center justify-between">
-                                <span>🌐 Vùng phủ: <b className="text-slate-800">{site.management_info?.vung_phu || 'Chưa rõ'}</b></span>
+                            {/* Vùng phủ & Trạm Main */}
+                            <div className="flex items-center justify-between pt-1 border-t border-slate-200/60">
+                              <span className="text-slate-500 font-medium">🌐 Vùng phủ:</span>
+                              <div className="flex items-center gap-1">
+                                <span className="font-semibold text-slate-800">{site.management_info?.vung_phu || 'Chưa rõ'}</span>
                                 {site.management_info?.tram_main && site.management_info.tram_main !== 'KHÔNG' && (
-                                  <span className="font-mono text-cyan-800 bg-cyan-50 px-1 rounded font-bold text-[8.5px] border border-cyan-200">
+                                  <span className="font-mono text-cyan-800 bg-cyan-50 px-1 py-0.2 rounded font-bold text-[8.5px] border border-cyan-200">
                                     Main: {site.management_info.tram_main}
                                   </span>
                                 )}
                               </div>
-                              {site.management_info?.qlt && (
-                                <div className="flex items-center justify-between pt-0.5 border-t border-slate-200/50">
-                                  <span>👤 QLT: <b className="text-slate-800">{site.management_info.qlt}</b></span>
-                                  {site.management_info.sdt_qlt && (
-                                    <a 
-                                      href={`tel:${site.management_info.sdt_qlt}`}
-                                      className="text-cyan-700 hover:underline font-mono font-bold text-[9.5px]"
-                                      title="Gọi điện cho QLT"
-                                    >
-                                      {site.management_info.sdt_qlt}
-                                    </a>
-                                  )}
-                                </div>
-                              )}
-                              <div 
-                                onClick={() => handleCopyCoords(lat, lng, `tọa độ trạm ${name}`)}
-                                className="text-[9px] font-mono text-slate-400 hover:text-slate-700 cursor-pointer pt-0.5 border-t border-slate-200/50 flex items-center justify-between"
-                                title="Nhấp để chỉ sao chép tọa độ"
-                              >
-                                <span>📍 {lat.toFixed(6)}, {lng.toFixed(6)}</span>
-                                <span className="text-[8.5px] text-cyan-600 font-sans font-medium">Copy</span>
-                              </div>
                             </div>
-                            
-                            {/* 4. Action buttons */}
-                            <div className="flex gap-1.5 pt-0.5 font-sans">
-                              {customerLocation && (
-                                <button
-                                  onClick={() => {
-                                    handleManualCableRoute({ code: name, name: site.name, lat, lng });
-                                    setNearestSites(prev => {
-                                      if (prev.some(p => p.code === name || p.id === site.site_id)) return prev;
-                                      const dist = haversineMeters(customerLocation.lat, customerLocation.lng, lat, lng);
-                                      return [{
-                                        id: site.site_id,
-                                        code: name,
-                                        displayCode: displayName,
-                                        name: site.name,
-                                        lat,
-                                        lng,
-                                        type: 'Hoạt động',
-                                        techType: radio.tech,
-                                        radioInfo: radio,
-                                        district: formatLocationName(site.location_info?.xa_moi, site.location_info?.huyen_cu),
-                                        toVT: formatManagementUnit(site.management_info?.to_ql),
-                                        distance: dist
-                                      }, ...prev].sort((a, b) => a.distance - b.distance);
-                                    });
-                                  }}
-                                  className="flex-1 inline-flex items-center justify-center gap-1 py-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 !text-white rounded text-[10px] font-bold shadow-xs cursor-pointer"
-                                  title="Kéo cáp quang từ điểm khảo sát đến trạm này"
+
+                            {/* Tọa độ GPS */}
+                            <div 
+                              onClick={() => handleCopyCoords(lat, lng, `tọa độ trạm ${displayName}`)}
+                              className="flex items-center justify-between pt-1 border-t border-slate-200/60 cursor-pointer text-slate-600 hover:text-slate-900"
+                              title="Nhấp để copy tọa độ"
+                            >
+                              <span className="text-slate-500 font-medium flex items-center gap-1">📍 Tọa độ:</span>
+                              <span className="font-mono font-semibold text-cyan-800 flex items-center gap-1">
+                                {lat.toFixed(6)}, {lng.toFixed(6)}
+                                <Copy className="h-2.5 w-2.5 text-slate-400" />
+                              </span>
+                            </div>
+
+                            {/* Địa bàn / Địa chỉ */}
+                            {(site.location_info?.dia_chi || site.location_info?.xa_moi || site.location_info?.huyen_cu) && (
+                              <div className="pt-1 border-t border-slate-200/60 text-[10px] text-slate-500 leading-snug">
+                                <span className="text-slate-400 font-medium">🏠 Địa bàn: </span>
+                                <span className="text-slate-700">
+                                  {site.location_info?.dia_chi || formatLocationName(site.location_info?.xa_moi, site.location_info?.huyen_cu)}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* 3. Nút Dẫn đường, Kéo cáp & Thao tác */}
+                          <div className="flex flex-col gap-1.5 pt-0.5 font-sans">
+                            {customerLocation && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  handleManualCableRoute({ code: name, name: site.name, lat, lng });
+                                  setNearestSites(prev => {
+                                    if (prev.some(p => p.code === name || p.id === site.site_id)) return prev;
+                                    const dist = haversineMeters(customerLocation.lat, customerLocation.lng, lat, lng);
+                                    return [{
+                                      id: site.site_id,
+                                      code: name,
+                                      displayCode: displayName,
+                                      name: site.name,
+                                      lat,
+                                      lng,
+                                      type: 'Hoạt động',
+                                      techType: radio.tech,
+                                      radioInfo: radio,
+                                      district: formatLocationName(site.location_info?.xa_moi, site.location_info?.huyen_cu),
+                                      toVT: formatManagementUnit(site.management_info?.to_ql),
+                                      distance: dist
+                                    }, ...prev].sort((a, b) => a.distance - b.distance);
+                                  });
+                                }}
+                                className="w-full inline-flex items-center justify-center gap-1.5 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 !text-white rounded-lg text-[10.5px] font-bold shadow-xs cursor-pointer active:scale-95 transition-all"
+                                title="Kéo cáp quang từ điểm khảo sát đến trạm này"
+                              >
+                                <span>🔌 Kéo cáp đến trạm này</span>
+                              </button>
+                            )}
+
+                            <a 
+                              href={`https://www.google.com/maps/dir/?api=1&${customerLocation ? `origin=${customerLocation.lat},${customerLocation.lng}&` : ''}destination=${lat},${lng}&travelmode=driving`}
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="w-full inline-flex items-center justify-center gap-1.5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 !text-white rounded-lg text-xs font-bold text-center cursor-pointer shadow-xs active:scale-95 transition-all"
+                            >
+                              <Navigation className="h-3.5 w-3.5" />
+                              <span>🚗 Dẫn đường Google Maps</span>
+                            </a>
+
+                            <div className="flex gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => handleCopyStationInfo(site, lat, lng, displayName)}
+                                className="flex-1 inline-flex items-center justify-center gap-1 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-lg text-[10.5px] font-semibold text-center cursor-pointer shadow-2xs active:scale-95 transition-all"
+                              >
+                                <Copy className="h-3 w-3 text-cyan-600" />
+                                <span>📋 Sao chép</span>
+                              </button>
+
+                              {!isGuest && (
+                                <a 
+                                  href={`/datasites?search=${name}`}
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="flex-1 inline-flex items-center justify-center gap-1 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-lg text-[10.5px] font-bold shadow-2xs text-center cursor-pointer active:scale-95 transition-all"
                                 >
-                                  🔌 Kéo cáp
-                                </button>
+                                  <span>📊 Hồ sơ trạm</span>
+                                </a>
                               )}
-                              <a 
-                                href={`https://www.google.com/maps/dir/?api=1&${customerLocation ? `origin=${customerLocation.lat},${customerLocation.lng}&` : ''}destination=${lat},${lng}&travelmode=driving`}
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="flex-1 inline-flex items-center justify-center gap-1 py-1.5 bg-cyan-600 hover:bg-cyan-500 !text-white rounded-lg text-[10.5px] font-bold shadow-xs text-center cursor-pointer active:scale-95 transition-all"
-                              >
-                                🚗 Dẫn đường
-                              </a>
-                              <a 
-                                href={`/datasites?search=${name}`}
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="flex-1 inline-flex items-center justify-center gap-1 py-1.5 bg-blue-600 hover:bg-blue-500 !text-white rounded-lg text-[10.5px] font-bold shadow-xs text-center cursor-pointer active:scale-95 transition-all"
-                              >
-                                📊 Datasite
-                              </a>
                             </div>
                           </div>
-                        )}
+                        </div>
                       </Popup>
                     </Marker>
 
@@ -3249,7 +2962,6 @@ export default function NetworkMap() {
                     type="button"
                     onClick={() => {
                       setLayerActiveSites(true);
-                      setLayerCellSectors(true);
                       setLayerPlanningInfra(true);
                       setLayerLastmile(true);
                       setShowCoverageCircle(true);
@@ -3264,7 +2976,6 @@ export default function NetworkMap() {
                     type="button"
                     onClick={() => {
                       setLayerActiveSites(false);
-                      setLayerCellSectors(false);
                       setLayerPlanningInfra(false);
                       setLayerLastmile(false);
                       setShowCoverageCircle(false);
@@ -3300,29 +3011,6 @@ export default function NetworkMap() {
                   </span>
                 </label>
 
-                {/* Cánh sóng Vô tuyến 3G/4G/5G (Chỉ cho nội bộ) */}
-                {!isGuest && (
-                  <label className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50/80 hover:bg-slate-100/80 border border-slate-200/80 cursor-pointer active:scale-[0.99] transition-all">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <input
-                        type="checkbox"
-                        checked={layerCellSectors}
-                        onChange={(e) => setLayerCellSectors(e.target.checked)}
-                        className="rounded border-slate-300 text-rose-500 focus:ring-rose-500 h-5 w-5 bg-white cursor-pointer"
-                      />
-                      <div className="min-w-0">
-                        <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                          <span className="h-2 w-2 rounded-full bg-rose-500 shrink-0"></span>
-                          <span>Cánh sóng Vô tuyến (3G/4G/5G)</span>
-                        </div>
-                        <div className="text-[10px] text-slate-500 truncate">Búp sóng 4 tầng: 3G, 4G, 4G SRAN, 5G L1, 5G-A (tím)</div>
-                      </div>
-                    </div>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 shrink-0">
-                      360°
-                    </span>
-                  </label>
-                )}
 
                 {/* Trạm CSHT Quy hoạch */}
                 <label className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50/80 hover:bg-slate-100/80 border border-slate-200/80 cursor-pointer active:scale-[0.99] transition-all">
