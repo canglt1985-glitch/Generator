@@ -4,6 +4,7 @@ import os
 import sys
 from dotenv import load_dotenv
 from supabase import create_client, Client
+from smartw.site_resolver import resolve_smartw_site
 
 logger = logging.getLogger("smartw_mfd_import")
 
@@ -164,39 +165,16 @@ def get_station_info(site_id: str, date_str: str = None) -> dict | None:
         res = supabase.table("datasites").select("*").execute()
         station = None
         datasites = res.data or []
-        # 1. Exact match
+        # Resolve site using 8-character BTS deterministic resolver
+        base_new, base_old, _ = resolve_smartw_site(site_upper, datasites=datasites)
         for st in datasites:
-            if (st.get("site_id") or "").upper() == site_upper or (st.get("site_id_old") or "").upper() == site_upper:
+            s_id = (st.get("site_id") or "").upper()
+            s_old = (st.get("site_id_old") or "").upper()
+            if (base_new and (s_id == base_new or s_old == base_new)) or \
+               (base_old and (s_old == base_old or s_id == base_old)):
                 station = st
                 break
-                
-        # 2. Prefix match for ERA suffixes (e.g. DNIXLO10L, DNIXLO00UL, DNIXLO16N, DNXL01L...)
-        if not station:
-            for st in datasites:
-                s_id = (st.get("site_id") or "").upper()
-                s_old = (st.get("site_id_old") or "").upper()
-                if s_id and site_upper.startswith(s_id):
-                    station = st
-                    break
-                if s_old and site_upper.startswith(s_old):
-                    station = st
-                    break
 
-        # 3. Fallback: 8 chars new id / 6 chars old id
-        if not station:
-            if len(site_upper) >= 8 and (site_upper.startswith("DN") or site_upper.startswith("26")):
-                cand = site_upper[:8]
-                for st in datasites:
-                    if (st.get("site_id") or "").upper() == cand:
-                        station = st
-                        break
-            elif len(site_upper) >= 6 and site_upper.startswith("DN"):
-                cand = site_upper[:6]
-                for st in datasites:
-                    if (st.get("site_id_old") or "").upper() == cand:
-                        station = st
-                        break
-                
         if not station:
             return None
             

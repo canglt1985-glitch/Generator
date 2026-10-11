@@ -1,6 +1,16 @@
 # Changelog
 
 ## [2026-10-11]
+### Fixed & Standardized
+- **Chuẩn Hóa Logic Bóc Tách & Nhận Diện Mã Trạm SmartW (8-Char BTS Rule)**:
+  - Khắc phục triệt để lỗi xung đột mã trạm SmartW (tiêu biểu: `DNILKH11L` bị nhận diện nhầm thành node truyền dẫn AGG `DNILKH1`, gán sai QLT từ Trần Ngọc Khuân sang Lê Trần Vĩnh và làm mất công nghệ 4G).
+  - Xây dựng module tập trung [backend/smartw/site_resolver.py](file:///Users/cang_it/Antigravity/TVT3/backend/smartw/site_resolver.py):
+    - **Quy tắc 8 ký tự neo (New BTS):** Bóc tách chính xác 8 ký tự đầu `DNI[A-Z]{3}[0-9]{2}` và phân rã hậu tố công nghệ từ ký tự thứ 9 (`L` -> 4G, `UL` -> 4G SRAN, `N` -> 5G).
+    - **Quy tắc 6 ký tự neo (Old BTS):** Bóc tách chính xác 6 ký tự đầu `DN[A-Z]{2}[0-9]{2}`.
+    - **Cô lập trạm đặc thù (Exact Match Only):** Ngăn chặn các node truyền dẫn AGG (`DNILKH1`, `DNIDQN1`, `ILA-DNIXLC`) nuốt chửng các trạm di động có số thứ tự liền sau (`DNILKH10` - `DNILKH15`).
+  - Tích hợp đồng bộ vào [backend/smartw_worker.py](file:///Users/cang_it/Antigravity/TVT3/backend/smartw_worker.py), [backend/bot_mll_tvt3.py](file:///Users/cang_it/Antigravity/TVT3/backend/bot_mll_tvt3.py), [backend/smartw/mfd_import.py](file:///Users/cang_it/Antigravity/TVT3/backend/smartw/mfd_import.py) và [backend/report_helpers.py](file:///Users/cang_it/Antigravity/TVT3/backend/report_helpers.py).
+  - Viết bộ unit test tự động tại [backend/tests/test_site_resolver.py](file:///Users/cang_it/Antigravity/TVT3/backend/tests/test_site_resolver.py) (14/14 tests passed 100%).
+
 ### Fixed & Security
 - **Bảo Vệ Log & Ngăn Chặn Xung Đột Telegram 409 Conflict**:
   - Khắc phục ổ bão hòa log 33MB trong [backend/logs/site_contract_bot.log](file:///Users/cang_it/Antigravity/TVT3/backend/logs/site_contract_bot.log).

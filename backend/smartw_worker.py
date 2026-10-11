@@ -27,6 +27,12 @@ supabase = create_client(os.getenv("VITE_SUPABASE_URL"), os.getenv("VITE_SUPABAS
 
 from datetime import datetime, timedelta
 
+from smartw.site_resolver import (
+    resolve_smartw_site,
+    get_site_qlt_short as _resolve_qlt_short,
+    is_managed_site as _check_is_managed
+)
+
 logger = logging.getLogger("smartw_worker")
 
 DATA_DIR = os.path.join(current_dir, 'data', 'smartw')
@@ -370,73 +376,11 @@ def _format_mll_station_lines(site: str, grp: dict) -> list[str]:
 def _resolve_base_site_and_tech(raw_input: str, raw_network: str = '') -> tuple[str, str, str]:
     """
     Parse a raw site ID from SmartW into:
-    1. base_new_id (8 chars, e.g. 'DNIDGI28')
-    2. base_old_id (6 chars, e.g. 'DNTN55')
+    1. base_new_id (8 chars for active BTS, e.g. 'DNIDGI28')
+    2. base_old_id (6 chars for active BTS, e.g. 'DNTN55')
     3. detected_tech (e.g. '4G SRAN', '4G', '5G', '3G', '2G')
     """
-    if not raw_input:
-        return "", "", _norm_net(raw_network)
-    
-    s = str(raw_input).strip().upper()
-    base_part, sep_suffix = _split_site_id(s)
-    s_clean = base_part.strip().upper()
-    
-    data = _get_datasites_list()
-    matched_new = ""
-    matched_old = ""
-    suffix = ""
-    
-    for item in data:
-        s_id = (item.get("site_id") or "").upper()
-        s_old = (item.get("site_id_old") or "").upper()
-        if s_clean == s_id or s_clean == s_old:
-            matched_new = s_id
-            matched_old = s_old
-            break
-            
-    if not matched_new:
-        for item in data:
-            s_id = (item.get("site_id") or "").upper()
-            s_old = (item.get("site_id_old") or "").upper()
-            if s_id and s_clean.startswith(s_id):
-                matched_new = s_id
-                matched_old = s_old
-                suffix = s_clean[len(s_id):]
-                break
-            if s_old and s_clean.startswith(s_old):
-                matched_new = s_id
-                matched_old = s_old
-                suffix = s_clean[len(s_old):]
-                break
-                
-    if not matched_new:
-        if len(s_clean) >= 8 and (s_clean.startswith("DN") or s_clean.startswith("26")):
-            matched_new = s_clean[:8]
-            suffix = s_clean[8:]
-        elif len(s_clean) >= 6 and s_clean.startswith("DN"):
-            matched_old = s_clean[:6]
-            suffix = s_clean[6:]
-        else:
-            matched_new = s_clean
-            
-    tech = ""
-    if suffix == "UL":
-        tech = "4G SRAN"
-    elif suffix == "L":
-        tech = "4G"
-    elif suffix == "N":
-        tech = "5G"
-    elif suffix == "GL":
-        tech = "2G/4G"
-    elif suffix == "U":
-        tech = "3G"
-    elif suffix == "G":
-        tech = "2G"
-        
-    if not tech and raw_network:
-        tech = _norm_net(raw_network)
-        
-    return matched_new or matched_old or s, matched_old, tech
+    return resolve_smartw_site(raw_input, raw_network, datasites=_get_datasites_list())
 
 
 def _get_site_label(site_id) -> str:
@@ -455,37 +399,8 @@ def _get_site_label(site_id) -> str:
 
 def _is_managed_site(site_id) -> bool:
     """Check if the site exists in datasites table (i.e. managed by Telecom Team 3)."""
-    if not site_id:
-        return False
-    site_str = str(site_id).strip().upper()
-    try:
-        data = _get_datasites_list()
-        if not data:
-            # Fallback if datasites list cannot be fetched: assume managed to avoid missing alerts
-            return True
-            
-        base_id, _ = _split_site_id(site_str)
-        site_upper = base_id.strip().upper()
-        
-        # Sort by site_id length desc to match the most specific prefix first
-        sorted_data = sorted(data, key=lambda x: len(x.get('site_id') or ''), reverse=True)
-        for s in sorted_data:
-            s_id = (s.get("site_id") or "").upper()
-            s_old = (s.get("site_id_old") or "").upper()
-            
-            # Exact matches (after delimiter split)
-            if site_upper == s_id or site_upper == s_old:
-                return True
-                
-            # Prefix matches (to support cell IDs or site IDs with tech suffixes, e.g. DNIBLC12CM4CC)
-            if s_id and site_str.startswith(s_id):
-                return True
-            if s_old and site_str.startswith(s_old):
-                return True
-    except Exception as e:
-        logger.error(f'Error checking managed site {site_id}: {e}')
-        return True
-    return False
+    return _check_is_managed(site_id, datasites=_get_datasites_list())
+
 
 
 def _site_key(alarm: dict) -> str:
@@ -3284,41 +3199,8 @@ def _get_site_qlt_short(site_raw: str) -> str:
     Extracts the last word of full name (e.g. 'Lê Thành Thái' -> 'Thái').
     Returns short name, or 'Khác' if not found.
     """
-    if not site_raw:
-        return 'Khác'
-    
-    s = str(site_raw).strip().upper()
-    base_part, _ = _split_site_id(s)
-    s_clean = base_part.strip().upper()
-    
-    data = _get_datasites_list()
-    
-    # 1. Exact match with site_id or site_id_old (check both raw s and cleaned s_clean)
-    for item in data:
-        s_id = (item.get("site_id") or "").strip().upper()
-        s_old = (item.get("site_id_old") or "").strip().upper()
-        if s == s_id or s == s_old or s_clean == s_id or s_clean == s_old:
-            mgt = item.get("management_info") or {}
-            full_name = (mgt.get("qlt") or "").strip()
-            if full_name:
-                parts = full_name.split()
-                return parts[-1] if parts else full_name
-            return 'Khác'
-            
-    # 2. Prefix match (e.g. DNTN55_4G or DNIDGI28_L or DNTN55L)
-    for item in data:
-        s_id = (item.get("site_id") or "").strip().upper()
-        s_old = (item.get("site_id_old") or "").strip().upper()
-        if (s_id and (s.startswith(s_id) or s_clean.startswith(s_id))) or \
-           (s_old and (s.startswith(s_old) or s_clean.startswith(s_old))):
-            mgt = item.get("management_info") or {}
-            full_name = (mgt.get("qlt") or "").strip()
-            if full_name:
-                parts = full_name.split()
-                return parts[-1] if parts else full_name
-            return 'Khác'
-            
-    return 'Khác'
+    return _resolve_qlt_short(site_raw, datasites=_get_datasites_list())
+
 
 
 def _send_mll_cause_viber_report(audit_result: dict):

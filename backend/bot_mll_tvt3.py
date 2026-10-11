@@ -28,6 +28,7 @@ import socket
 import logging
 import requests
 from collections import defaultdict
+from smartw.site_resolver import resolve_smartw_site
 
 # Đường dẫn thư mục và file logs
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -201,13 +202,8 @@ def parse_and_assign_mll(text: str) -> str:
     tvt3_by_qlt = defaultdict(list)
 
     for s_u in ordered_sites:
-        # Chuẩn hóa mã trạm cơ sở
-        base = s_u.replace("_4G", "").replace("_3G", "").replace("_2G", "")
-        for suff in ["UL", "L", "N"]:
-            if base.endswith(suff) and len(base) > len(suff) + 3:
-                base = base[:-len(suff)]
-
-        info = SITE_CACHE.get(s_u) or SITE_CACHE.get(base)
+        new_id, old_id, _ = resolve_smartw_site(s_u)
+        info = SITE_CACHE.get(new_id) or (old_id and SITE_CACHE.get(old_id)) or SITE_CACHE.get(s_u)
         if not info:
             continue
 
@@ -249,13 +245,8 @@ def parse_and_assign_mll(text: str) -> str:
 def lookup_single_site(site_query: str) -> str:
     """Tra cứu nhanh 1 trạm đơn lẻ."""
     s_u = site_query.strip().upper()
-    info = SITE_CACHE.get(s_u)
-    if not info:
-        # Thử tìm gần đúng
-        for k, v in SITE_CACHE.items():
-            if k == s_u or k.startswith(s_u) or s_u.startswith(k):
-                info = v
-                break
+    new_id, old_id, _ = resolve_smartw_site(s_u)
+    info = SITE_CACHE.get(new_id) or (old_id and SITE_CACHE.get(old_id)) or SITE_CACHE.get(s_u)
 
     if not info:
         return f"❌ Không tìm thấy thông tin trạm `{s_u}` trong cơ sở dữ liệu TVT3."
@@ -267,6 +258,7 @@ def lookup_single_site(site_query: str) -> str:
         f"📍 Khu vực: {info.get('xa') or '--'}, {info.get('huyen') or '--'}\n"
         f"📡 Đơn vị: {info.get('to_ql') or 'TVT3'}"
     )
+
 
 
 def handle_telegram_message(message: dict):

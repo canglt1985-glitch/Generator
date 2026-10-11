@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from collections import defaultdict
 from dotenv import load_dotenv
 from supabase import create_client, Client
+from smartw.site_resolver import resolve_smartw_site
 
 # Environment & Supabase Client configuration
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -100,14 +101,13 @@ def get_missing_logs_recommendations(start_date=None, end_date=None, grace_days=
             return ""
         if c in map_id_to_site_id:
             return map_id_to_site_id[c]
-        for s in datasites:
-            s_id = (s.get("site_id") or "").strip().upper()
-            s_old = (s.get("site_id_old") or "").strip().upper()
-            if s_id and c.startswith(s_id):
-                return s_id
-            if s_old and c.startswith(s_old):
-                return s_id
-        return c
+        base_new, base_old, _ = resolve_smartw_site(c, datasites=datasites)
+        if base_new and base_new in map_id_to_site_id:
+            return map_id_to_site_id[base_new]
+        if base_old and base_old in map_id_to_site_id:
+            return map_id_to_site_id[base_old]
+        return base_new or base_old or c
+
 
     # Group logs by resolved site_id
     logs_by_station = defaultdict(list)

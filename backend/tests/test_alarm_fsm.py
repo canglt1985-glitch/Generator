@@ -1,6 +1,12 @@
 import os
+import sys
 import tempfile
 import unittest
+
+BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if BACKEND_DIR not in sys.path:
+    sys.path.insert(0, BACKEND_DIR)
+
 from smartw.alarm_fsm import AlarmStateMachine, AlarmState
 
 class TestAlarmStateMachine(unittest.TestCase):
