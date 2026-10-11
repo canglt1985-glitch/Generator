@@ -115,6 +115,7 @@ def create_styled_workbook(month=8, year=2026, output_path=None):
     header_fill_green = PatternFill(start_color='047857', end_color='047857', fill_type='solid')
     light_blue = PatternFill(start_color='EFF6FF', end_color='EFF6FF', fill_type='solid')
     light_amber = PatternFill(start_color='FFFBEB', end_color='FFFBEB', fill_type='solid')
+    light_red = PatternFill(start_color='FEE2E2', end_color='FEE2E2', fill_type='solid')
     sum_fill = PatternFill(start_color='F1F5F9', end_color='F1F5F9', fill_type='solid')
 
     def add_02a_sheet(sheet_title, target_logs, group_name):
@@ -226,11 +227,18 @@ def create_styled_workbook(month=8, year=2026, output_path=None):
             ws.cell(cur_row, 12, float(rd.get('don_gia') or 0)).number_format = '#,##0'
             ws.cell(cur_row, 13, float(rd.get('thanh_tien') or 0)).number_format = '#,##0'
             ws.cell(cur_row, 14, rd.get('ghi_chu') or '')
-            ws.cell(cur_row, 15, rd.get('ket_qua_doi_soat') or 'OK')
+            kq_ds = rd.get('ket_qua_doi_soat') or 'OK'
+            cell_ds = ws.cell(cur_row, 15, kq_ds)
 
             for c in range(1, 16):
                 ws.cell(cur_row, c).font = Font(name='Arial', size=9)
                 ws.cell(cur_row, c).border = thin_border
+            if kq_ds == 'NOK':
+                cell_ds.font = Font(name='Arial', size=9, bold=True, color='DC2626')
+                cell_ds.fill = light_red
+                cell_ds.alignment = Alignment(horizontal='center', vertical='center')
+            else:
+                cell_ds.alignment = Alignment(horizontal='center', vertical='center')
             stt += 1
             cur_row += 1
         end_xang = cur_row - 1
@@ -276,11 +284,18 @@ def create_styled_workbook(month=8, year=2026, output_path=None):
             ws.cell(cur_row, 12, float(rd.get('don_gia') or 0)).number_format = '#,##0'
             ws.cell(cur_row, 13, float(rd.get('thanh_tien') or 0)).number_format = '#,##0'
             ws.cell(cur_row, 14, rd.get('ghi_chu') or '')
-            ws.cell(cur_row, 15, rd.get('ket_qua_doi_soat') or 'OK')
+            kq_ds = rd.get('ket_qua_doi_soat') or 'OK'
+            cell_ds = ws.cell(cur_row, 15, kq_ds)
 
             for c in range(1, 16):
                 ws.cell(cur_row, c).font = Font(name='Arial', size=9)
                 ws.cell(cur_row, c).border = thin_border
+            if kq_ds == 'NOK':
+                cell_ds.font = Font(name='Arial', size=9, bold=True, color='DC2626')
+                cell_ds.fill = light_red
+                cell_ds.alignment = Alignment(horizontal='center', vertical='center')
+            else:
+                cell_ds.alignment = Alignment(horizontal='center', vertical='center')
             stt += 1
             cur_row += 1
         end_dau = cur_row - 1

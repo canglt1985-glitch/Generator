@@ -6,6 +6,10 @@ import logging
 from typing import Any, Dict, List, Optional
 import httpx
 
+# Suppress noisy HTTP request logging that leaks bot tokens in URLs
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+
 logger = logging.getLogger("tvt3_bot.client")
 
 
@@ -57,6 +61,14 @@ class TelegramClient:
                     logger.warning(f"Rate limited by Telegram API. Retrying after {retry_after}s...")
                     await asyncio.sleep(retry_after)
                     continue
+
+                # Handle conflicting bot instances (HTTP 409)
+                if response.status_code == 409:
+                    logger.warning(
+                        f"Telegram API {method} error: 409 Conflict (another bot instance is active). Backing off for 15s..."
+                    )
+                    await asyncio.sleep(15.0)
+                    return None
 
                 logger.warning(f"Telegram API {method} error: {desc} (code {response.status_code})")
                 return None

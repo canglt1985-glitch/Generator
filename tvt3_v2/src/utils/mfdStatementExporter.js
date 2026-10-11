@@ -38,6 +38,7 @@ const fillHeaderAmber = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'C
 const fillHeaderGreen = { type: 'pattern', pattern: 'solid', fgColor: { argb: '047857' } };
 const fillLightBlue = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'DCE6F1' } };
 const fillLightAmber = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FCE4D6' } };
+const fillLightRed = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FEE2E2' } };
 const fillGrand = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'D9D9D9' } };
 
 /**
@@ -207,8 +208,16 @@ export function add02ASheet(workbook, sheetTitle, logs = [], stations = [], mont
       const cell = row.getCell(c);
       cell.font = { name: 'Arial', size: 9 };
       cell.border = thinBorder;
-      if (c === 1 || c === 3 || c === 7 || c === 8 || c === 9 || c === 15) {
+      if (c === 1 || c === 3 || c === 7 || c === 8 || c === 9) {
         cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      } else if (c === 15) {
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        if (!isOk) {
+          cell.font = { name: 'Arial', size: 9, bold: true, color: { argb: 'DC2626' } };
+          cell.fill = fillLightRed;
+        } else {
+          cell.font = { name: 'Arial', size: 9, bold: true, color: { argb: '166534' } };
+        }
       } else if (c === 4 || c === 6 || c === 10 || c === 11) {
         cell.alignment = { horizontal: 'right', vertical: 'middle' };
         cell.numFmt = '0.00';
@@ -294,8 +303,16 @@ export function add02ASheet(workbook, sheetTitle, logs = [], stations = [], mont
       const cell = row.getCell(c);
       cell.font = { name: 'Arial', size: 9 };
       cell.border = thinBorder;
-      if (c === 1 || c === 3 || c === 7 || c === 8 || c === 9 || c === 15) {
+      if (c === 1 || c === 3 || c === 7 || c === 8 || c === 9) {
         cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      } else if (c === 15) {
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        if (!isOk) {
+          cell.font = { name: 'Arial', size: 9, bold: true, color: { argb: 'DC2626' } };
+          cell.fill = fillLightRed;
+        } else {
+          cell.font = { name: 'Arial', size: 9, bold: true, color: { argb: '166534' } };
+        }
       } else if (c === 4 || c === 6 || c === 10 || c === 11) {
         cell.alignment = { horizontal: 'right', vertical: 'middle' };
         cell.numFmt = '0.00';

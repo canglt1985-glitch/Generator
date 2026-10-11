@@ -70,6 +70,37 @@ startup_triggered = {
 bot_process = None
 last_bot_token = None
 
+def open_rotating_log(file_path: str, max_bytes: int = 5 * 1024 * 1024, backup_count: int = 2):
+    """Safely check and rotate log file if it exceeds max_bytes, then return an append file handle."""
+    try:
+        if os.path.exists(file_path) and os.path.getsize(file_path) >= max_bytes:
+            for i in range(backup_count - 1, 0, -1):
+                src = f"{file_path}.{i}"
+                dst = f"{file_path}.{i + 1}"
+                if os.path.exists(src):
+                    if os.path.exists(dst):
+                        try:
+                            os.remove(dst)
+                        except Exception:
+                            pass
+                    try:
+                        os.rename(src, dst)
+                    except Exception:
+                        pass
+            dst1 = f"{file_path}.1"
+            if os.path.exists(dst1):
+                try:
+                    os.remove(dst1)
+                except Exception:
+                    pass
+            try:
+                os.rename(file_path, dst1)
+            except Exception:
+                pass
+    except Exception as e:
+        logger.warning(f"Log rotation check failed for {file_path}: {e}")
+    return open(file_path, "a", encoding="utf-8")
+
 def maintain_telegram_bot():
     """Monitor and maintain the long-running Telegram bot process."""
     global bot_process, last_bot_token
@@ -111,7 +142,7 @@ def maintain_telegram_bot():
             
         log_file_path = os.path.join(logs_dir, "telegram_bot.log")
         try:
-            log_file = open(log_file_path, "a", encoding="utf-8")
+            log_file = open_rotating_log(log_file_path)
             log_file.write(f"\n--- BOT LAUNCH: {datetime.now().isoformat()} ---\n")
             log_file.flush()
             
@@ -142,7 +173,7 @@ def maintain_bot_mll():
             
         log_file_path = os.path.join(logs_dir, "bot_mll.log")
         try:
-            log_file = open(log_file_path, "a", encoding="utf-8")
+            log_file = open_rotating_log(log_file_path)
             log_file.write(f"\n--- BOT MLL LAUNCH: {datetime.now().isoformat()} ---\n")
             log_file.flush()
             
@@ -172,7 +203,7 @@ def maintain_site_contract_bot():
             
         log_file_path = os.path.join(logs_dir, "site_contract_bot.log")
         try:
-            log_file = open(log_file_path, "a", encoding="utf-8")
+            log_file = open_rotating_log(log_file_path)
             log_file.write(f"\n--- SITE CONTRACT BOT LAUNCH: {datetime.now().isoformat()} ---\n")
             log_file.flush()
             
@@ -192,7 +223,7 @@ def run_job(job_name, cmd):
     log_file_path = os.path.join(logs_dir, f"{job_name}.log")
     logger.info(f"⏳ Triggering scheduled job: {job_name}...")
     try:
-        log_file = open(log_file_path, "a", encoding="utf-8")
+        log_file = open_rotating_log(log_file_path)
         log_file.write(f"\n--- JOB START: {datetime.now().isoformat()} ---\n")
         log_file.flush()
         

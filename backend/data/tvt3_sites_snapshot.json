@@ -4539,7 +4539,7 @@
         "mpd": [
           {
             "ten": "MÁY PHÁT ĐIỆN (1)",
-            "nl_ton": 0,
+            "nl_ton": 34.17,
             "dinh_muc": 3.44,
             "cong_suat": "6",
             "dung_tich": 30,
@@ -17139,6 +17139,7 @@
         "mpd": [
           {
             "ten": "MÁY PHÁT ĐIỆN VIETGEN 8.5KVA",
+            "nl_ton": 25,
             "serial": "120272",
             "xuat_xu": "Việt Nam",
             "dinh_muc": 3.05,
@@ -39089,7 +39090,7 @@
         "has_5g": true,
         "sectors": [
           {
-            "has_3g": true,
+            "has_3g": false,
             "has_4g": true,
             "height": 50,
             "sector": "A",
@@ -39149,7 +39150,7 @@
             "has_4g_1800_2": false
           },
           {
-            "has_3g": false,
+            "has_3g": true,
             "has_4g": true,
             "height": 50,
             "sector": "E",
@@ -70088,7 +70089,7 @@
         "mpd": [
           {
             "ten": "MÁY PHÁT ĐIỆN (1)",
-            "nl_ton": 5,
+            "nl_ton": 35,
             "serial": "984-76884-1308160",
             "ghi_chu": "Tiếp nhận máy từ La Ngà 1 (DNDQ05) ngày 2025-09-17",
             "xuat_xu": "Việt Nam",
@@ -70957,7 +70958,7 @@
         "mpd": [
           {
             "ten": "MÁY PHÁT ĐIỆN FG WILSON 6KVA",
-            "nl_ton": 0,
+            "nl_ton": 5,
             "serial": "FGWPEP43KMWN02140",
             "xuat_xu": "Anh",
             "dinh_muc": 1.85,
@@ -79528,12 +79529,12 @@
             "has_4g_1800_2": false
           },
           {
-            "has_3g": true,
+            "has_3g": false,
             "has_4g": true,
             "height": 41,
             "sector": "C",
-            "azimuth": 340,
-            "has_5g_l1": true,
+            "azimuth": 280,
+            "has_5g_l1": false,
             "has_5g_l2": false,
             "tilt_elec": 5,
             "tilt_mech": 0,
@@ -79543,7 +79544,7 @@
             "has_4g_1800_2": true
           },
           {
-            "has_3g": false,
+            "has_3g": true,
             "has_4g": true,
             "height": 41,
             "sector": "D",
@@ -90148,7 +90149,7 @@
             "has_4g_1800_2": true
           },
           {
-            "has_3g": false,
+            "has_3g": true,
             "has_4g": true,
             "height": 43,
             "sector": "E",

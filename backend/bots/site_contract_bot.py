@@ -30,14 +30,12 @@ from bots.handlers.text_search_handlers import handle_text_query
 from bots.handlers.location_handlers import handle_location_query
 from bots.handlers.callback_handlers import handle_callback_query
 
-# Configure file & stream logging
-log_file = os.path.join(LOGS_DIR, "site_contract_bot.log")
+# Configure stream logging (stdout is piped to log file by runner)
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     handlers=[
-        logging.StreamHandler(sys.stdout),
-        logging.FileHandler(log_file, encoding="utf-8")
+        logging.StreamHandler(sys.stdout)
     ]
 )
 logger = logging.getLogger("site_contract_bot")
