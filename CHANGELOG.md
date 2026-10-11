@@ -1,6 +1,38 @@
 # Changelog
 
-## [2026-10-07]
+## [2026-10-11]
+### Fixed & Security
+- **Bảo Vệ Log & Ngăn Chặn Xung Đột Telegram 409 Conflict**:
+  - Khắc phục ổ bão hòa log 33MB trong [backend/logs/site_contract_bot.log](file:///Users/cang_it/Antigravity/TVT3/backend/logs/site_contract_bot.log).
+  - Tích hợp hàm `open_rotating_log()` trong [backend/run_workers.py](file:///Users/cang_it/Antigravity/TVT3/backend/run_workers.py) với `RotatingFileHandler` tự động xoay vòng log (max 5MB, giữ 3 backup).
+  - Loại bỏ hiện tượng Double Logging (ghi trùng lặp 2 lần mỗi dòng) giữa `stdout` pipe và `FileHandler` trong [backend/bots/site_contract_bot.py](file:///Users/cang_it/Antigravity/TVT3/backend/bots/site_contract_bot.py).
+  - Sửa [backend/bots/core/telegram_client.py](file:///Users/cang_it/Antigravity/TVT3/backend/bots/core/telegram_client.py): Giảm mức log httpx, che giấu URL chứa bot token tránh lộ credential, bổ sung exponential backoff 15s khi gặp mã lỗi 409 Conflict.
+- **Hợp Nhất Môi Trường Ảo Python (Virtualenv Consolidation)**:
+  - Cài đặt bổ sung `pillow` và `python-docx` vào `backend/.venv`.
+  - Xóa bỏ thư mục virtualenv gốc `.venv/` (343 MB), tạo symlink `.venv -> backend/.venv` để thống nhất môi trường Python cho toàn bộ IDE và CLI.
+  - Giải phóng ~385MB dung lượng SSD (bao gồm log, venv gốc và cache rác).
+
+### Removed & Cleaned
+- **Dọn Rác Hệ Thống & Lưu Trữ Dữ Liệu Cũ**:
+  - Dọn sạch 15 file `.DS_Store`, các thư mục `__pycache__`, file PID cũ `bot_mll_tvt3.pid` và log rỗng trong `backend/logs/`.
+  - Nén toàn bộ 15 file JSON backup tháng 9 cũ từ `scratch/` thành `scratch/backups_sep2026_archive.tar.gz` (863 KB), thu hồi 7.1 MB.
+  - Lập báo cáo kiểm toán chi tiết tại [docs/reports/audit_2026_10_11.md](file:///Users/cang_it/Antigravity/TVT3/docs/reports/audit_2026_10_11.md).
+- **Thanh Lọc Kho Plans & Specs (/brainstorm)**:
+  - Rà soát và xóa bỏ hơn 140 file plan/spec đã hoàn thành hoặc lỗi thời thuộc các giai đoạn cũ trên `plans/`, `docs/plans/`, `tvt3_v2/docs/plans/`, `docs/specs/` (-5,771 dòng).
+  - Tinh gọn repository chỉ giữ lại 2 plan đang hoạt động: `plans/261007-1400-site-contract-telegram-bot` và `plans/261007-1051-csht-streamlined-ui`.
+  - Chuyển `datasite_headers.md` vào [docs/datasite_headers.md](file:///Users/cang_it/Antigravity/TVT3/docs/datasite_headers.md).
+  - Giữ nguyên 105 script vận hành trong `scripts/` theo yêu cầu người dùng.
+
+### Added
+- **Khởi Tạo Tài Liệu Dự Án Toàn Diện [README.md](file:///Users/cang_it/Antigravity/TVT3/README.md)**:
+  - Tổng hợp kiến trúc hệ thống TVT3, cấu trúc thư mục, danh mục daemon workers, bảng dữ liệu Supabase cốt lõi, quy trình cài đặt môi trường và kịch bản deploy.
+
+### Deployment & Operation
+- **Deploy Production Vercel**:
+  - Re-link và deploy bản build mới nhất lên production Vercel (`https://tvt3.vercel.app`, HTTP 200).
+- **Chính Sách Vận Hành Local**:
+  - Tạm dừng toàn bộ các tiến trình backend daemon chạy trên máy local (`run_backend_locally: false`) theo chỉ đạo người dùng (dành máy cho việc code).
+
 ### Added
 - **Triển Khai Finite State Machine (FSM) Chống Rung Lắc Cho SmartW Worker**:
   - Xây dựng module [backend/smartw/alarm_fsm.py](file:///Users/cang_it/Antigravity/TVT3/backend/smartw/alarm_fsm.py) quản lý vòng đời cảnh báo MĐ, MPĐ, MLL theo định danh `(table_type, base_id, tech)`.
