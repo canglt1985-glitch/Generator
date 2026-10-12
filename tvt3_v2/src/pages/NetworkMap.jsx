@@ -819,7 +819,7 @@ export default function NetworkMap() {
       const distance = haversineMeters(lat, lng, pLat, pLng);
       return {
         id: proj.planning_id_new,
-        code: proj.planning_id_old || proj.planning_id_new,
+        code: proj.planning_id_new || proj.planning_id_old,
         name: proj.notes || 'Dự án CSHT',
         lat: pLat,
         lng: pLng,
@@ -1149,7 +1149,7 @@ export default function NetworkMap() {
       )
       .map(p => ({
         id: p.planning_id_new,
-        code: p.planning_id_old || p.planning_id_new,
+        code: p.planning_id_new || p.planning_id_old,
         name: `${p.category.icon} ${p.category.shortLabel}${p.ward ? ` • ${p.ward}` : ''}`,
         lat: parseFloat(p.latitude_survey || p.latitude_plan),
         lng: parseFloat(p.longitude_survey || p.longitude_plan),
@@ -1284,16 +1284,17 @@ export default function NetworkMap() {
 
       if (!layerPlanningInfra) setLayerPlanningInfra(true);
 
+      const displayCode = matchedProject.planning_id_new || matchedProject.planning_id_old;
       setSelectedMobileStation({
         type: 'planning',
         proj: matchedProject,
-        code: matchedProject.planning_id_old || matchedProject.planning_id_new,
+        code: displayCode,
         cat: matchedProject.category,
         lat,
         lng
       });
 
-      showToast(`Đã tìm thấy dự án ${matchedProject.planning_id_old || matchedProject.planning_id_new} (${matchedProject.category.label})`);
+      showToast(`Đã tìm thấy dự án ${displayCode} (${matchedProject.category.label})`);
       return;
     }
 
@@ -2916,7 +2917,7 @@ export default function NetworkMap() {
                 .map(proj => {
                   const lat = parseFloat(proj.latitude_survey || proj.latitude_plan);
                   const lng = parseFloat(proj.longitude_survey || proj.longitude_plan);
-                  const code = proj.planning_id_old || proj.planning_id_new;
+                  const code = proj.planning_id_new || proj.planning_id_old;
                   const cat = proj.category;
 
                   return (
@@ -2947,7 +2948,14 @@ export default function NetworkMap() {
                         <Popup autoPan={true} autoPanPadding={[20, 80]} maxWidth={300} keepInView={true}>
                           <div className="font-sans text-xs flex flex-col gap-1.5 max-w-[280px]">
                             <div className="flex items-center justify-between border-b border-slate-200 pb-1">
-                              <strong className={`block text-sm font-bold ${cat.textColor}`}>{code}</strong>
+                              <div>
+                                <strong className={`block text-sm font-bold ${cat.textColor}`}>{code}</strong>
+                                {proj.planning_id_old && proj.planning_id_old !== code && (
+                                  <span className="text-[9.5px] text-slate-400 font-mono font-normal block leading-tight">
+                                    (cũ: {proj.planning_id_old})
+                                  </span>
+                                )}
+                              </div>
                               <div className="flex items-center gap-1">
                                 <span className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold ${cat.badgeClass}`}>
                                   {cat.icon} {cat.shortLabel}

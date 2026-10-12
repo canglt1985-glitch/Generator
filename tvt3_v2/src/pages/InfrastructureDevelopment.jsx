@@ -62,15 +62,14 @@ export const SITES_TSCA_LUONG_DUNG = [
   '26DNa160', '26DNa052', '26DNa034', '26DNa071', '26DNa060'
 ];
 
-// Trạm Sở duyệt - Chờ TCT duyệt (Đã loại trừ 5 trạm TCT vừa phê duyệt bổ sung theo CV 7203 ngày 05/10/2026)
+// Trạm Sở duyệt - Chờ TCT duyệt (Đã loại trừ 11 trạm TCT đã phê duyệt bổ sung theo CV 7203 ngày 05/10/2026)
 export const SITES_SO_OK_TCT_PENDING = [
   '26DNa301', '26DNa303', '26DNa305', '26DNa315', '26DNa321', 
   '26DNa322', '26DNa327', '26DNa328', '26DNa331', '26DNa332', 
   '26DNa340', '26DNa342',
   '26DNa292', '26DNa293', 'DNIXTC00', 
-  'TVT3_19', 'QLCL_10', 'TVT3_27', 'TVT3_29', 'VKD4_02', 
-  'VKD4_33', 'TVT3_43', 'VKD3_01', 'VKD3_06', 'VKD3_07', 
-  'TVT3_26', 'TVT3_11', 'TVT3_38', 'VKD3_20'
+  'QLCL_10', 'TVT3_29', 'VKD4_02', 'VKD3_01', 'VKD3_07', 
+  'TVT3_11', 'TVT3_38'
 ];
 
 // Danh sách trạm TVT3 TCT phê duyệt bổ sung quy hoạch (CV 7203/D01-B4-B5 ngày 05/10/2026)
