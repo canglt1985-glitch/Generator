@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Radio, RefreshCw, Copy, Check } from 'lucide-react';
 import { supabase } from '../supabaseClient';
+import siteSectorsData from '../data/site_sectors.json';
 
 export default function VhktRan() {
   const [activeTab, setActiveTab] = useState('all');
@@ -14,6 +15,8 @@ export default function VhktRan() {
   const [vhktScrapedAt, setVhktScrapedAt] = useState('');
   const [lastFetchTime, setLastFetchTime] = useState('');
   const [copiedSection, setCopiedSection] = useState('');
+  const [manualMllSites, setManualMllSites] = useState(() => new Set());
+  const [todayDropCounts, setTodayDropCounts] = useState({});
 
   // Fetch site id mapping dynamically along with management_info (QLT, SĐT)
   async function fetchSiteMap() {
@@ -44,17 +47,75 @@ export default function VhktRan() {
     }
   }
 
-  // Fetch only ACTIVE alarms from Supabase (cleared alarms removed)
+  // Fetch only ACTIVE alarms from Supabase (cleared alarms removed) and today's MLL drop count
   async function fetchAlarms() {
     try {
-      const { data } = await supabase
-        .from('smartw_alarms')
-        .select('*')
-        .eq('status', 'ACTIVE');
-      if (data) {
-        setAlarms(data);
-      }
       const now = new Date();
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+      const todayIso = todayStart.toISOString();
+
+      const [activeRes, todayMllRes] = await Promise.all([
+        supabase.from('smartw_alarms').select('*').eq('status', 'ACTIVE'),
+        supabase
+          .from('smartw_alarms')
+          .select('site, network, alarm_type, sdate')
+          .gte('sdate', todayIso)
+          .or('alarm_type.eq.mll,alarm_type.eq.mll_cell')
+      ]);
+
+      if (activeRes.data) {
+        setAlarms(activeRes.data);
+      }
+
+      // Calculate distinct MLL drop occurrences for each (site, network) today
+      if (todayMllRes.data) {
+        const siteTimestamps = {};
+        const siteAliases = {};
+
+        todayMllRes.data.forEach(item => {
+          const rawSite = String(item.site || '').trim().toUpperCase();
+          const { fullSite, baseSite, newId, oldId } = getSiteDetails(rawSite);
+          const canonicalSite = (baseSite || newId || fullSite || rawSite).toUpperCase();
+          const net = (getAlarmNetwork(item) || item.network || '4G').toUpperCase();
+          const key = `${canonicalSite}_${net}`;
+
+          if (!siteTimestamps[key]) {
+            siteTimestamps[key] = [];
+            siteAliases[key] = new Set();
+          }
+          [canonicalSite, baseSite, newId, oldId, rawSite].forEach(s => {
+            if (s) siteAliases[key].add(s.toUpperCase());
+          });
+
+          if (item.sdate) {
+            siteTimestamps[key].push(new Date(item.sdate).getTime());
+          }
+        });
+
+        const counts = {};
+        Object.entries(siteTimestamps).forEach(([key, times]) => {
+          times.sort((a, b) => a - b);
+          let dropEvents = 0;
+          let lastTs = 0;
+          times.forEach(ts => {
+            // Group alarms within 10 minutes into 1 single outage event
+            if (ts - lastTs > 10 * 60 * 1000) {
+              dropEvents += 1;
+              lastTs = ts;
+            }
+          });
+          const count = Math.max(1, dropEvents);
+          counts[key] = count;
+          const net = key.split('_')[1] || '4G';
+          if (siteAliases[key]) {
+            siteAliases[key].forEach(alias => {
+              counts[`${alias}_${net}`] = count;
+            });
+          }
+        });
+        setTodayDropCounts(counts);
+      }
+
       setLastFetchTime(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`);
     } catch (err) {
       console.error('Error fetching alarms:', err);
@@ -161,10 +222,43 @@ export default function VhktRan() {
     return false;
   };
 
+  // Helper to extract sector letter from cellid
+  function extractCellSector(cellid, site) {
+    if (!cellid) return '';
+    let cid = String(cellid).trim().toUpperCase();
+    const { fullSite, baseSite, newId, oldId } = getSiteDetails(site);
+    for (const prefix of [fullSite, baseSite, newId, oldId]) {
+      if (prefix && prefix.length >= 4 && cid.startsWith(prefix.toUpperCase())) {
+        cid = cid.slice(prefix.length);
+        break;
+      }
+    }
+    cid = cid.replace(/^[_-]+/, '');
+    if (cid && /[A-H]/.test(cid.slice(-1))) {
+      return cid.slice(-1);
+    }
+    return '';
+  }
+
+  function toggleManualMll(alarm) {
+    const { baseSite, newId, fullSite } = getSiteDetails(alarm.site);
+    const net = (getAlarmNetwork(alarm) || alarm.network || '4G').toUpperCase();
+    const key = `${(baseSite || newId || fullSite).toUpperCase()}_${net}`;
+    setManualMllSites(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  }
+
   const mdActive = filteredAlarms.filter(a => a.alarm_type === 'md');
   const mpdActive = filteredAlarms.filter(a => a.alarm_type === 'mpd');
-  const mllActive = filteredAlarms.filter(a => a.alarm_type === 'mll' && !isCellLevelAlarm(a));
-  const cellActive = filteredAlarms
+  const rawMllActive = filteredAlarms.filter(a => a.alarm_type === 'mll' && !isCellLevelAlarm(a));
+  const rawCellActive = filteredAlarms
     .filter(a => isCellLevelAlarm(a))
     .map(a => {
       if (a.alarm_type === 'mll' && !a.cellid) {
@@ -173,6 +267,81 @@ export default function VhktRan() {
       }
       return a;
     });
+
+  // Sector-based grouping & auto-promotion to MLL
+  const siteNetCellGroups = new Map();
+  rawCellActive.forEach(a => {
+    const { baseSite, newId, fullSite, oldId } = getSiteDetails(a.site);
+    const siteKey = (baseSite || newId || fullSite || '').toUpperCase();
+    const net = (getAlarmNetwork(a) || a.network || '4G').toUpperCase();
+    const groupKey = `${siteKey}_${net}`;
+
+    if (!siteNetCellGroups.has(groupKey)) {
+      siteNetCellGroups.set(groupKey, {
+        siteKey,
+        baseSite,
+        oldId,
+        newId,
+        fullSite,
+        site: a.site,
+        net,
+        alarms: [],
+        offSectors: new Set(),
+        earliestSdate: a.sdate,
+      });
+    }
+    const grp = siteNetCellGroups.get(groupKey);
+    grp.alarms.push(a);
+    const sec = extractCellSector(a.cellid, a.site);
+    if (sec) grp.offSectors.add(sec);
+    if (a.sdate && (!grp.earliestSdate || new Date(a.sdate) < new Date(grp.earliestSdate))) {
+      grp.earliestSdate = a.sdate;
+    }
+  });
+
+  const promotedMllAlarms = [];
+  const promotedCellIdSet = new Set();
+
+  siteNetCellGroups.forEach((grp, groupKey) => {
+    const configuredSectorsList = (
+      siteSectorsData[grp.baseSite]?.[grp.net] ||
+      siteSectorsData[grp.newId]?.[grp.net] ||
+      siteSectorsData[grp.oldId]?.[grp.net] ||
+      siteSectorsData[grp.fullSite]?.[grp.net] ||
+      []
+    );
+    const configuredSectors = new Set(configuredSectorsList);
+    if (configuredSectors.size === 0) {
+      configuredSectors.add('A');
+      configuredSectors.add('B');
+      configuredSectors.add('C');
+    }
+
+    const isManualPromoted = manualMllSites.has(groupKey);
+    const isAllSectorsDown = (
+      isManualPromoted ||
+      (configuredSectors.size > 0 && Array.from(configuredSectors).every(s => grp.offSectors.has(s))) ||
+      grp.offSectors.size >= 3
+    );
+
+    if (isAllSectorsDown) {
+      promotedMllAlarms.push({
+        id: `promoted_mll_${groupKey}`,
+        site: grp.site,
+        network: grp.net,
+        alarm_type: 'mll',
+        alarm_name: 'Mất liên lạc toàn trạm',
+        sdate: grp.earliestSdate,
+        status: 'ACTIVE',
+        _isPromoted: true,
+        _isManual: isManualPromoted,
+      });
+      grp.alarms.forEach(c => promotedCellIdSet.add(c.id));
+    }
+  });
+
+  const mllActive = [...rawMllActive, ...promotedMllAlarms];
+  const cellActive = rawCellActive.filter(a => !promotedCellIdSet.has(a.id));
 
   // Filter out closed/processed tickets
   const activePakhList = pakhList.filter(p => {
@@ -317,15 +486,39 @@ export default function VhktRan() {
     return `${day}/${month} ${hours}:${minutes}`;
   }
 
-  // Format line for MAC, GEN, MLL: • DNIDQU02 (DNDQ11) [4G] - 26/09 08:17
-  function formatAlarmLine(alarm) {
+  // Format line for MAC, GEN, MLL: • DNIDQU02 (DNDQ11) [4G] - 26/09 08:17 (Lần 2)
+  function formatAlarmLine(alarm, isMll = null) {
     if (!alarm) return '';
-    const { newId, oldId } = getSiteDetails(alarm.site);
+    const { newId, oldId, baseSite, fullSite } = getSiteDetails(alarm.site);
     const net = getAlarmNetwork(alarm);
     const dateStr = formatMessageDate(alarm.sdate);
     const oldStr = oldId && oldId !== newId ? ` (${oldId})` : '';
     const netStr = net ? ` [${net}]` : '';
-    return `• ${newId}${oldStr}${netStr} - ${dateStr}`;
+
+    const checkMll = isMll !== null ? isMll : ((alarm.alarm_type || '').toLowerCase() === 'mll');
+    let countSuffix = '';
+    if (checkMll) {
+      const netKey = (net || alarm.network || '4G').toUpperCase();
+      const possibleKeys = [
+        baseSite && `${baseSite.toUpperCase()}_${netKey}`,
+        newId && `${newId.toUpperCase()}_${netKey}`,
+        oldId && `${oldId.toUpperCase()}_${netKey}`,
+        fullSite && `${fullSite.toUpperCase()}_${netKey}`,
+        alarm.site && `${String(alarm.site).trim().toUpperCase()}_${netKey}`,
+      ].filter(Boolean);
+
+      let dropCount = alarm._dropCount || 1;
+      for (const k of possibleKeys) {
+        if (todayDropCounts[k] && todayDropCounts[k] > dropCount) {
+          dropCount = todayDropCounts[k];
+        }
+      }
+      if (dropCount >= 2) {
+        countSuffix = ` (Lần ${dropCount})`;
+      }
+    }
+
+    return `• ${newId}${oldStr}${netStr} - ${dateStr}${countSuffix}`;
   }
 
   // Format line for Cell Off
@@ -591,7 +784,7 @@ export default function VhktRan() {
       if (groupedMll.length === 0) {
         lines.push('  • (Không có)');
       } else {
-        groupedMll.forEach(a => lines.push(`  ${formatAlarmLine(a)}`));
+        groupedMll.forEach(a => lines.push(`  ${formatAlarmLine(a, true)}`));
       }
       lines.push('');
     }
@@ -755,7 +948,7 @@ export default function VhktRan() {
 
   // Render single alarm row (Guaranteed 1 single row on mobile with zero line breaks)
   function renderAlarmRow(a, idx, isCellOff) {
-    const { newId, oldId } = getSiteDetails(a.site);
+    const { newId, oldId, baseSite, fullSite } = getSiteDetails(a.site);
     const net = getAlarmNetwork(a);
     const dateStr = formatMessageDate(a.sdate);
     const _cellStr = a.cellid ? ` (${a.cellid})` : '';
@@ -775,6 +968,17 @@ export default function VhktRan() {
               <span className="font-bold text-slate-900 shrink-0">{siteCode}:</span>
               <span className="font-semibold text-purple-600 shrink-0">sector {a._sector}</span>
               <span className={`font-bold shrink-0 ${a._techTag === 'SRAN' ? 'text-orange-600' : 'text-emerald-600'}`}>[{a._techTag}]</span>
+              <button
+                type="button"
+                title="Báo MLL cả trạm (Chuyển lên MLL)"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleManualMll(a);
+                }}
+                className="ml-1 px-1.5 py-0.2 text-[9px] font-mono font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded transition-all cursor-pointer select-none shrink-0"
+              >
+                +MLL
+              </button>
             </div>
             <div className="shrink-0 text-slate-500 text-[11px] sm:text-xs font-medium pl-1 whitespace-nowrap">
               <span className="text-slate-300 mr-1">-</span>
@@ -820,6 +1024,17 @@ export default function VhktRan() {
             {net && (
               <span className="font-bold text-emerald-600 shrink-0">[{net}]</span>
             )}
+            <button
+              type="button"
+              title="Báo MLL cả trạm (Chuyển lên MLL)"
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleManualMll(a);
+              }}
+              className="ml-1 px-1.5 py-0.2 text-[9px] font-mono font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded transition-all cursor-pointer select-none shrink-0"
+            >
+              +MLL
+            </button>
           </div>
 
           {/* Right side: Date & Time (Strictly on same row, pinned right) */}
@@ -832,6 +1047,24 @@ export default function VhktRan() {
     }
 
     // Standard: MAC, GEN, MLL
+    const isMllAlarm = (a.alarm_type || '').toLowerCase() === 'mll';
+    let dropCount = a._dropCount || 1;
+    if (isMllAlarm) {
+      const netKey = (net || a.network || '4G').toUpperCase();
+      const possibleKeys = [
+        baseSite && `${baseSite.toUpperCase()}_${netKey}`,
+        newId && `${newId.toUpperCase()}_${netKey}`,
+        oldId && `${oldId.toUpperCase()}_${netKey}`,
+        fullSite && `${fullSite.toUpperCase()}_${netKey}`,
+        a.site && `${String(a.site).trim().toUpperCase()}_${netKey}`,
+      ].filter(Boolean);
+      for (const k of possibleKeys) {
+        if (todayDropCounts[k] && todayDropCounts[k] > dropCount) {
+          dropCount = todayDropCounts[k];
+        }
+      }
+    }
+
     return (
       <div
         key={idx}
@@ -847,12 +1080,30 @@ export default function VhktRan() {
           {net && (
             <span className="font-bold text-emerald-600 shrink-0">[{net}]</span>
           )}
+          {a._isManual && (
+            <button
+              type="button"
+              title="Hủy báo MLL thủ công (chuyển lại về Cell Off)"
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleManualMll(a);
+              }}
+              className="ml-1 px-1 py-0.2 text-[9px] font-mono text-slate-500 hover:text-red-600 bg-slate-100 hover:bg-red-50 border border-slate-200 rounded transition-all cursor-pointer select-none shrink-0"
+            >
+              ✕
+            </button>
+          )}
         </div>
 
         {/* Right side: Date & Time (Strictly on same row, pinned right) */}
-        <div className="shrink-0 text-slate-500 text-[11px] sm:text-xs font-medium pl-1 whitespace-nowrap">
+        <div className="shrink-0 text-slate-500 text-[11px] sm:text-xs font-medium pl-1 whitespace-nowrap flex items-center">
           <span className="text-slate-300 mr-1">-</span>
           <span>{dateStr}</span>
+          {isMllAlarm && dropCount >= 2 && (
+            <span className="ml-1.5 px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 select-none">
+              Lần {dropCount}
+            </span>
+          )}
         </div>
       </div>
     );

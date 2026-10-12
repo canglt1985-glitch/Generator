@@ -49,7 +49,7 @@ def _get_alarm_fsm():
             state_file=state_file,
             flap_threshold=2,
             flap_window_seconds=7200,   # 2 giờ
-            stabilize_cycles=2          # 2 chu kỳ sạch (30 phút) để khôi phục
+            stabilize_cycles=1          # 1 chu kỳ sạch để khôi phục ngay (không giữ lại làm hiểu lầm)
         )
     return _fsm_instance
 
@@ -1076,13 +1076,18 @@ def sync_alarms_to_supabase(result: dict):
             cellid = (alarm.get('cellid') or '').strip()
             ne_type = str(alarm.get('neType') or '').strip().upper()
             obj_ref = str(alarm.get('objectReference') or '').strip()
-            if not cellid and obj_ref:
+            is_promoted = bool(alarm.get('is_promoted_tram'))
+
+            if not is_promoted and not cellid and obj_ref:
                 m_cell = re.search(r'(?:EUtranCellFDD|UtranCell|GsmCell|Cell)=([A-Za-z0-9_]+)', obj_ref, re.IGNORECASE)
                 if m_cell:
                     cellid = m_cell.group(1).strip()
             
-            if t == 'mll' and (ne_type == 'CELL' or bool(cellid)):
+            if not is_promoted and t == 'mll' and (ne_type == 'CELL' or bool(cellid)):
                 actual_t = 'mll_cell'
+            elif is_promoted:
+                actual_t = 'mll'
+                cellid = ''
 
             # Construct a unique, deterministic ID using UUIDv5 with original sdate_str
             # Note: sdate_str must be preserved because all existing database records use sdate_str

@@ -36,7 +36,7 @@ class AlarmStateMachine:
         state_file: str,
         flap_threshold: int = 2,
         flap_window_seconds: int = 7200,          # 2 giờ
-        stabilize_cycles: int = 2,                # 2 chu kỳ sạch liên tiếp (30 phút) để khôi phục
+        stabilize_cycles: int = 1,                # 1 chu kỳ sạch để khôi phục ngay (không giữ lại gây hiểu lầm)
         purge_after_seconds: int = 86400          # Tự động dọn dẹp key sau 24h không hoạt động
     ):
         self.state_file = state_file
@@ -261,12 +261,23 @@ class AlarmStateMachine:
                     pass
 
                 elif state == AlarmState.ACTIVE:
-                    # Mới mất alarm lần đầu tiên!
-                    # QUAN TRỌNG: KHÔNG BẮN CLEARED NGAY! Đưa vào PENDING_CLEAR chờ xác minh
-                    entry["state"] = AlarmState.PENDING_CLEAR
-                    entry["clean_cycles"] = 1
-                    entry["last_state_change"] = current_ts
-                    logger.info(f"AlarmFSM: ⏳ {key} mất alarm, chuyển sang PENDING_CLEAR (Chu kỳ sạch 1/{self.stabilize_cycles})")
+                    if self.stabilize_cycles <= 1:
+                        # Chu kỳ sạch đầu tiên lập tức khôi phục trạm (không giữ lại gây hiểu lầm)
+                        entry["state"] = AlarmState.NORMAL
+                        entry["clean_cycles"] = 1
+                        entry["last_state_change"] = current_ts
+                        entry["flapping_alert_sent"] = False
+                        events["new_cleared"].append({
+                            **entry,
+                            "active_info": entry.get("last_active_info")
+                        })
+                        logger.info(f"AlarmFSM: ✅ {key} sạch alarm, chuyển sang NORMAL và phát CLEARED ngay")
+                    else:
+                        # QUAN TRỌNG: Đưa vào PENDING_CLEAR chờ xác minh
+                        entry["state"] = AlarmState.PENDING_CLEAR
+                        entry["clean_cycles"] = 1
+                        entry["last_state_change"] = current_ts
+                        logger.info(f"AlarmFSM: ⏳ {key} mất alarm, chuyển sang PENDING_CLEAR (Chu kỳ sạch 1/{self.stabilize_cycles})")
 
                 elif state == AlarmState.PENDING_CLEAR:
                     # Chu kỳ tiếp theo vẫn sạch alarm

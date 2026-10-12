@@ -847,7 +847,28 @@ class SmartWScraper:
             'pagenum': '0', 'pagesize': '300',
             'recordstartindex': '0', 'recordendindex': '300',
         }
-        return f'{BASE_URL}/smartw/alarm/site/data.htm?' + urlencode(params)
+def extract_cell_sector(cell_id: str, site_code: str = "") -> str:
+    """Extract sector letter (A, B, C, D, E...) from a cell ID."""
+    if not cell_id:
+        return ""
+    cid = str(cell_id).strip().upper()
+    if site_code:
+        clean_site = site_code.strip().upper()
+        candidates = [clean_site]
+        for sfx in ['UL', 'L', 'N']:
+            if clean_site.endswith(sfx):
+                candidates.append(clean_site[:-len(sfx)])
+        for pfx in candidates:
+            if pfx and len(pfx) >= 4 and cid.startswith(pfx):
+                cid = cid[len(pfx):]
+                break
+    import re
+    cid = re.sub(r'^[_\-.]+', '', cid)
+    cid = re.sub(r'(_UL|UL|_L|L|N)$', '', cid, flags=re.IGNORECASE).strip('_-. ')
+    if cid and cid[-1] in 'ABCDEFGH':
+        return cid[-1]
+    return ""
+
 
     async def scrape_mll_all(self) -> tuple[list[dict], list[dict]]:
         """Scrape ALL MLL — single fetch, smart-classify into Trạm + Cell.
@@ -863,16 +884,33 @@ class SmartWScraper:
 
         all_data = await self._fetch_alarm_data(url, MLL_COLUMNS)
 
-        # Load site cell counts reference
+        # Load site sector and cell counts reference
         import json as _json
         import re
-        cell_count_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'site_cell_count.json')
-        site_cell_ref = {}
+        sector_ref_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'site_sectors.json')
+        site_sectors_ref = {}
         try:
-            with open(cell_count_path, 'r', encoding='utf-8') as f:
-                site_cell_ref = _json.load(f)
+            with open(sector_ref_path, 'r', encoding='utf-8') as f:
+                site_sectors_ref = _json.load(f)
         except Exception as e:
-            logger.warning(f'Cannot load site_cell_count.json: {e}')
+            logger.warning(f'Cannot load site_sectors.json: {e}')
+
+        def _get_base_site_code(site_str: str) -> str:
+            if not site_str:
+                return ""
+            s = site_str.strip().upper()
+            if s in site_sectors_ref:
+                return s
+            for suffix in ['UL', 'L', 'N']:
+                if s.endswith(suffix):
+                    cand = s[:-len(suffix)]
+                    if cand in site_sectors_ref:
+                        return cand
+            if s.endswith('UL'):
+                return s[:-2]
+            if s.endswith('L') or s.endswith('N'):
+                return s[:-1]
+            return s
 
         def _extract_cellid_from_ref(obj_ref: str) -> str:
             if not obj_ref:
@@ -881,6 +919,9 @@ class SmartWScraper:
             if match:
                 return match.group(1)
             return ""
+
+        def _extract_sector(cell_id: str, site_code: str) -> str:
+            return extract_cell_sector(cell_id, site_code)
 
         mll_tram = []
         cell_candidates = []
@@ -898,6 +939,7 @@ class SmartWScraper:
             if not cellid or cellid == site:
                 mll_tram.append(r)
             else:
+                r['_sector'] = _extract_sector(cellid, site)
                 cell_candidates.append(r)
 
         # Step 2: Group cell alarms by site + network_key
@@ -915,23 +957,40 @@ class SmartWScraper:
                 net_key = 'other'
             site_net_cells[(r.get('site', ''), net_key)].append(r)
 
-        # Step 3: Compare cell-off count with total cell count per site+network
+        # Step 3: Compare distinct off sectors with configured sectors per site+network
         promoted_sites = set()  # set of (site, net_key) promoted to Trạm
         for (site, net_key), cells in site_net_cells.items():
-            ref = site_cell_ref.get(site, {})
-            total_cells = ref.get(net_key, 0) if net_key != 'other' else 0
+            base_site = _get_base_site_code(site)
+            configured_sectors_list = (
+                site_sectors_ref.get(base_site, {}).get(net_key) or
+                site_sectors_ref.get(site, {}).get(net_key) or
+                []
+            )
+            configured_sectors = set(configured_sectors_list)
+            # Default fallback: 3 sectors A, B, C for standard sites
+            if not configured_sectors and net_key != 'other':
+                configured_sectors = {'A', 'B', 'C'}
 
-            # Count unique cellids that are off
+            # Collect unique off sectors
+            off_sectors = set(c['_sector'] for c in cells if c.get('_sector'))
             off_cellids = set(c.get('cellid', '') for c in cells)
-            off_count = len(off_cellids)
 
-            # Promote to MLL Trạm if ALL cells of this network are down
-            if total_cells > 0 and off_count >= total_cells:
+            # Promote to MLL Trạm if ALL configured sectors are down (or >=3 if unknown site)
+            if configured_sectors:
+                is_all_sectors_down = configured_sectors.issubset(off_sectors)
+            else:
+                is_all_sectors_down = len(off_sectors) >= 3
+
+            if is_all_sectors_down:
                 promoted_sites.add((site, net_key))
+                promoted_sites.add((base_site, net_key))
                 # Create a single MLL Trạm entry from first cell record
                 tram_entry = dict(cells[0])
                 tram_entry['cellid'] = None
                 tram_entry['cellName'] = None
+                tram_entry['objectReference'] = None
+                tram_entry['neType'] = 'ENODEB' if net_key == '4G' else ('NODEB' if net_key == '3G' else ('GNODEB' if net_key == '5G' else 'BASE_STATION'))
+                tram_entry['is_promoted_tram'] = True
                 # Use earliest sdate
                 earliest = min(c.get('sdate') or float('inf') for c in cells)
                 if earliest != float('inf'):
@@ -941,26 +1000,13 @@ class SmartWScraper:
                 tram_entry['duaration'] = max_dur
                 tram_entry['minute'] = max_dur
                 mll_tram.append(tram_entry)
-                logger.info(f'MLL promote {site} {net_key}: {off_count}/{total_cells} cells off → Trạm')
-            elif total_cells == 0 and off_count >= 3:
-                # Fallback: site not in reference, use old rule (≥3 cells = Trạm)
-                promoted_sites.add((site, net_key))
-                tram_entry = dict(cells[0])
-                tram_entry['cellid'] = None
-                tram_entry['cellName'] = None
-                earliest = min(c.get('sdate') or float('inf') for c in cells)
-                if earliest != float('inf'):
-                    tram_entry['sdate'] = earliest
-                max_dur = max(c.get('duaration') or c.get('minute') or 0 for c in cells)
-                tram_entry['duaration'] = max_dur
-                tram_entry['minute'] = max_dur
-                mll_tram.append(tram_entry)
-                logger.info(f'MLL promote {site} {net_key}: {off_count} cells (no ref) → Trạm')
+                logger.info(f'MLL promote {site} ({base_site}) {net_key}: sectors {off_sectors} covers {configured_sectors} → Trạm')
 
         # CellOff = cell_candidates minus promoted
         mll_cell = []
         for r in cell_candidates:
             site = r.get('site', '')
+            base_site = _get_base_site_code(site)
             network = (r.get('network') or '').upper()
             if '4G' in network or 'RAN_4G' in network:
                 nk = '4G'
@@ -970,8 +1016,9 @@ class SmartWScraper:
                 nk = '5G'
             else:
                 nk = 'other'
-            if (site, nk) not in promoted_sites:
+            if (site, nk) not in promoted_sites and (base_site, nk) not in promoted_sites:
                 mll_cell.append(r)
+
 
         logger.info(f'SmartW Scrape MLL: {len(all_data)} total → '
                     f'{len(mll_tram)} trạm + {len(mll_cell)} cell')
