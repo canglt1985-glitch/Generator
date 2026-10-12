@@ -11,6 +11,7 @@ import {
 import { MapContainer, TileLayer, Marker, Popup, Polyline, Circle, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import CellSectorWedges from '../components/map/CellSectorWedges';
+import { getSectorTiltDisplay, getFallbackAzimuth } from '../utils/cellSectorGeometry';
 
 // Google Maps & OSM Tile Layer Definitions
 const TILE_LAYERS = {
@@ -481,7 +482,8 @@ function MapClickListener({ onDoubleClick }) {
 export default function NetworkMap() {
   const [searchParams] = useSearchParams();
   const { user } = useCurrentUser();
-  const isGuest = !user || searchParams.get('guest') === '1';
+  const hasLocalUser = typeof window !== 'undefined' && Boolean(localStorage.getItem('username'));
+  const isGuest = (!user && !hasLocalUser) || searchParams.get('guest') === '1';
 
   const [coordinateInput, setCoordinateInput] = useState('');
   const [activeSites, setActiveSites] = useState([]);
@@ -2576,7 +2578,127 @@ export default function NetworkMap() {
                             </button>
                           </div>
 
-                          {/* 2. Khối Thông tin Quản lý & Vận hành trạm (Bảo mật: KHÔNG hiển thị cấu hình vô tuyến / datacell) */}
+                          {/* 2. Cấu hình Vô tuyến, Góc hướng (Azimuth) & Độ nghiêng (Tilt) - Chỉ hiển thị cho Cán bộ Tổ khi đã đăng nhập */}
+                          {!isGuest && site.technical_info?.rf_summary && (() => {
+                            const rf = site.technical_info.rf_summary;
+                            const cells3g = rf.cells_3g ?? rf.tech_counts?.['3G'] ?? 0;
+                            const cells4g = rf.cells_4g ?? rf.tech_counts?.['4G'] ?? 0;
+                            const cells5g = rf.cells_5g ?? rf.tech_counts?.['5G'] ?? 0;
+                            const totalCells = rf.total_cells ?? (cells3g + cells4g + cells5g);
+                            const has5g = Boolean(rf.has_5g || cells5g > 0);
+                            const is5gA = Boolean(rf.is_dual_5g || rf.cells_5g_l2 > 0);
+                            const sectors = Array.isArray(rf.sectors) ? rf.sectors : [];
+
+                            if (radio.isAgg || (totalCells === 0 && cells3g === 0 && cells4g === 0 && !has5g)) {
+                              return (
+                                <div className="bg-slate-50 border border-slate-200/80 rounded-lg p-2 text-[10px] space-y-1 text-slate-600">
+                                  <div className="font-bold text-slate-700 flex items-center justify-between">
+                                    <span className="flex items-center gap-1">📡 {radio.isAgg ? 'Trạm truyền dẫn AGG / CSG' : 'Trạm Hub / Chưa có Cell Vô tuyến'}</span>
+                                    <span className="px-1.5 py-0.2 rounded text-[8.5px] font-bold bg-slate-200 text-slate-700">0 Cell</span>
+                                  </div>
+                                  <p className="text-[9.5px] text-slate-500 leading-relaxed">
+                                    {radio.isAgg 
+                                      ? 'Trạm đóng vai trò node truyền dẫn cáp quang / BBU tập trung, không phát sóng cell vô tuyến di động.'
+                                      : 'Trạm hiện chưa có dữ liệu cell vô tuyến phát sóng di động trực tiếp.'}
+                                  </p>
+                                </div>
+                              );
+                            }
+
+                            return (
+                              <div className="bg-gradient-to-b from-indigo-50/70 to-slate-50 border border-indigo-200/80 rounded-lg p-2 text-[10.5px] space-y-1.5 shadow-2xs">
+                                {/* Hàng tóm tắt số cell & công nghệ */}
+                                <div className="flex items-center justify-between pb-1 border-b border-indigo-200/60">
+                                  <span className="font-bold text-slate-800 flex items-center gap-1">
+                                    📡 Cấu hình ({totalCells} cell)
+                                  </span>
+                                  <div className="flex items-center gap-1 font-mono font-bold text-[9px]">
+                                    {cells3g > 0 && <span className="px-1.5 py-0.2 bg-emerald-100 text-emerald-800 rounded border border-emerald-300 font-bold">3G: {cells3g}</span>}
+                                    {cells4g > 0 && <span className="px-1.5 py-0.2 bg-blue-100 text-blue-800 rounded border border-blue-300 font-bold">4G: {cells4g}</span>}
+                                    {has5g && (
+                                      <span className="px-1.5 py-0.2 bg-purple-100 text-purple-900 rounded border border-purple-300 font-black">
+                                        {is5gA ? '5G-A' : '5G'}: {cells5g}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Danh sách Sector: Góc hướng (Azimuth), Tilt tổng (cơ/điện), Độ cao */}
+                                {sectors.length > 0 && (
+                                  <div className="space-y-1 max-h-[140px] overflow-y-auto pr-0.5">
+                                    {sectors.map((sec, sIdx) => {
+                                      const secName = sec.sector || String.fromCharCode(65 + sIdx);
+                                      const hasDesignAz = sec.azimuth != null && !isNaN(sec.azimuth);
+                                      const azVal = hasDesignAz 
+                                        ? Number(sec.azimuth) 
+                                        : getFallbackAzimuth(secName, sIdx, sectors.length);
+                                      const secTilt = getSectorTiltDisplay(sec, site);
+                                      const isSectorDual = sec.has_5g_l2 || (is5gA && (sec.has_5g_l1 || sec.has_5g));
+                                      const secHeight = sec.height ? `${sec.height}m` : null;
+
+                                      return (
+                                        <div key={sIdx} className="flex items-center justify-between bg-white rounded-md px-2 py-1 border border-slate-200 text-[10px] shadow-2xs">
+                                          {/* Cột trái: Sector, Azimuth, Tilt */}
+                                          <div className="flex items-center gap-1.5 flex-wrap">
+                                            <span className="font-bold text-slate-800 font-mono">Sec {secName}:</span>
+                                            <span className="font-mono font-semibold text-slate-700 bg-slate-100 px-1 py-0.2 rounded border border-slate-200">
+                                              Az: {azVal}° {!hasDesignAz && <span className="text-[8px] text-amber-600 font-sans font-normal">(ước tính)</span>}
+                                            </span>
+                                            {secTilt ? (
+                                              <span className="text-indigo-800 font-bold bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-200 font-mono text-[9px]" title="Độ nghiêng Tilt (Tổng hoặc Cơ/Điện)">
+                                                Tilt: {secTilt}
+                                              </span>
+                                            ) : (
+                                              <span className="text-slate-400 italic text-[9px]">Tilt: -</span>
+                                            )}
+                                            {secHeight && (
+                                              <span className="text-slate-500 font-mono text-[9px]" title="Độ cao anten">
+                                                {secHeight}
+                                              </span>
+                                            )}
+                                          </div>
+
+                                          {/* Cột phải: Badges 3G, 4G, 5G */}
+                                          <div className="flex items-center gap-1 shrink-0">
+                                            {sec.has_3g && (
+                                              <span className="px-1.5 py-0.2 rounded text-[8.5px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                                3G
+                                              </span>
+                                            )}
+                                            {sec.has_4g && (
+                                              <span className="px-1.5 py-0.2 rounded text-[8.5px] font-bold bg-blue-100 text-blue-800 border border-blue-300">
+                                                {(radio.isSranScope && sec.has_3g) ? '4G SRAN' : '4G'}
+                                              </span>
+                                            )}
+                                            {isSectorDual ? (
+                                              <span className="px-1.5 py-0.2 rounded text-[8.5px] font-extrabold bg-purple-100 text-purple-900 border border-purple-300">
+                                                5G-A
+                                              </span>
+                                            ) : (sec.has_5g_l1 || sec.has_5g) ? (
+                                              <span className="px-1.5 py-0.2 rounded text-[8.5px] font-bold bg-rose-100 text-rose-800 border border-rose-300">
+                                                5G
+                                              </span>
+                                            ) : null}
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
+
+                          {isGuest && (
+                            <div className="bg-amber-50/80 border border-amber-200/90 rounded-lg p-1.5 text-[10px] text-amber-800 flex items-center justify-between">
+                              <span className="flex items-center gap-1 font-medium">
+                                🔒 Đăng nhập để xem Tilt / Góc hướng & Cánh sóng
+                              </span>
+                              <a href="/login" className="font-bold underline text-amber-900 hover:text-amber-700">Đăng nhập</a>
+                            </div>
+                          )}
+
+                          {/* 3. Khối Thông tin Quản lý & Vận hành trạm */}
                           <div className="bg-slate-50 rounded-lg p-2 border border-slate-200/80 space-y-1.5 text-[11px]">
                             {/* Người QLT */}
                             <div className="flex items-center justify-between">

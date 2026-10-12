@@ -33,8 +33,8 @@ export default function CellSectorWedges({
   onSelectSector
 }) {
   if (!visible) return null;
-  // Khi zoom xa (<14) chỉ hiển thị nếu trạm đang được chọn (Focus Mode)
-  if (zoom < 14 && !isSelected) return null;
+  // Khi zoom quá xa (<11) chỉ hiển thị nếu trạm đang được chọn (Focus Mode)
+  if (zoom < 11 && !isSelected) return null;
 
   const lat = parseFloat(site?.location_info?.vi_do);
   const lng = parseFloat(site?.location_info?.kinh_do);
@@ -235,7 +235,7 @@ export default function CellSectorWedges({
                       <div className="text-slate-600 flex justify-between">
                         <span>Góc hướng:</span>
                         <b className="font-mono text-slate-800">
-                          {azimuth} {isMissingRf ? '(ước tính - chờ RF)' : isEstimated ? '(ước tính)' : ''}
+                          {azimuth}° {isMissingRf ? '(ước tính - chờ RF)' : isEstimated ? '(ước tính)' : ''}
                         </b>
                       </div>
                       <div className="text-slate-600 flex justify-between">

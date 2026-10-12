@@ -103,7 +103,11 @@ export function getFallbackAzimuth(sectorName, index = 0, total = 3) {
  * Hệ số này giúp bung rộng búp sóng ở zoom thấp để người dùng nhìn rõ góc hướng và phân lớp.
  */
 export function getZoomAdaptiveScale(zoom = 15) {
-  if (zoom <= 14) return 1.4;
+  if (zoom <= 10) return 3.2;
+  if (zoom === 11) return 2.6;
+  if (zoom === 12) return 2.0;
+  if (zoom === 13) return 1.6;
+  if (zoom === 14) return 1.4;
   if (zoom === 15) return 1.2;
   if (zoom === 16) return 1.05;
   return 1.0;
@@ -240,23 +244,23 @@ export function getSectorTiltDisplay(sec, site = null) {
     const numTotal = Number(total);
     const totalStr = !isNaN(numTotal) ? `${numTotal}` : `${total}`;
     
-    // Nếu tilt cơ khác 0 thì hiển thị chi tiết (M:cơ/E:điện) bỏ dấu °
+    // Nếu tilt cơ khác 0 thì hiển thị chi tiết (M:cơ/E:điện)
     if (hasNonZeroMech) {
       const numElec = elec != null && elec !== '' ? Number(elec) : (!isNaN(numTotal) ? numTotal - numMech : 0);
       const eStr = !isNaN(numElec) ? `${numElec}` : `${elec}`;
-      return `${totalStr} (M:${numMech}/E:${eStr})`;
+      return `${totalStr}° (M:${numMech}°/E:${eStr}°)`;
     }
-    // Nếu tilt cơ = 0 hoặc không có tilt cơ, chỉ ghi tilt tổng gọn gàng bỏ dấu °
-    return totalStr;
+    // Nếu tilt cơ = 0 hoặc không có tilt cơ, chỉ ghi tilt tổng kèm ký hiệu độ °
+    return `${totalStr}°`;
   }
 
   if (mech != null || elec != null) {
     if (hasNonZeroMech) {
       const eStr = elec != null && elec !== '' ? `${elec}` : '0';
-      return `M:${numMech}/E:${eStr}`;
+      return `M:${numMech}°/E:${eStr}°`;
     }
     if (elec != null && elec !== '') {
-      return `${elec}`;
+      return `${elec}°`;
     }
   }
 
