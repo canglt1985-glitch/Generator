@@ -28,38 +28,43 @@ class TestCellOffRatioAndTag(unittest.TestCase):
         self.assertEqual(self.cell_counts.get("DNICMYAP", {}).get("3G"), 2)
 
     def test_cell_off_format_cach_a(self):
-        """Kiểm tra định dạng tin nhắn sao chép CELL OFF theo chuẩn Cách A:
-        • {newId}{oldStr} [{techTag}] ({x}/{y}) - {dateStr}
-        Hoàn toàn bỏ 'sector C', bỏ dấu hai chấm, đồng bộ form MLL.
+        """Kiểm tra định dạng tin nhắn sao chép CELL OFF:
+        • {oldId || site} [{techTag}][{sectors}] ({x}/{y}) - {dateStr}
+        Ưu tiên mã trạm cũ, kẹp sector gọn [A], [C], [A,B].
         """
-        def format_celloff(site, old_id, tech_tag, off_count, total_count, date_str):
-            old_str = f" ({old_id})" if old_id and old_id != site else ""
+        def format_celloff(site, old_id, tech_tag, sectors_str, off_count, total_count, date_str):
+            site_label = old_id if old_id else site
+            sec_part = f"[{sectors_str}]" if sectors_str else ""
             ratio_str = f" ({off_count}/{total_count})" if total_count else f" ({off_count}/)"
-            return f"• {site}{old_str} [{tech_tag}]{ratio_str} - {date_str}"
+            return f"• {site_label} [{tech_tag}]{sec_part}{ratio_str} - {date_str}"
 
-        # 1. Trạm CAX 2 cell (rớt 1/2)
-        line1 = format_celloff("DNICMYAP", "", "3G", 1, 2, "08/10 09:49")
-        self.assertEqual(line1, "• DNICMYAP [3G] (1/2) - 08/10 09:49")
+        # 1. Trạm CAX 2 cell (rớt 1/2 sector A)
+        line1 = format_celloff("DNICMYAP", "", "3G", "A", 1, 2, "08/10 09:49")
+        self.assertEqual(line1, "• DNICMYAP [3G][A] (1/2) - 08/10 09:49")
 
-        # 2. Trạm 1 carrier (rớt 1/3)
-        line2 = format_celloff("DNTN34", "", "4G", 1, 3, "12/10 12:41")
-        self.assertEqual(line2, "• DNTN34 [4G] (1/3) - 12/10 12:41")
+        # 2. Trạm 1 carrier (rớt 1/3 sector C)
+        line2 = format_celloff("DNTN34", "", "4G", "C", 1, 3, "12/10 12:41")
+        self.assertEqual(line2, "• DNTN34 [4G][C] (1/3) - 12/10 12:41")
 
-        # 3. Trạm có mã cũ
-        line3 = format_celloff("DNIDQU02", "DNDQ11", "4G", 1, 3, "12/10 17:23")
-        self.assertEqual(line3, "• DNIDQU02 (DNDQ11) [4G] (1/3) - 12/10 17:23")
+        # 3. Trạm có mã cũ -> ưu tiên mã cũ DNDQ11
+        line3 = format_celloff("DNIDQU02", "DNDQ11", "4G", "C", 1, 3, "12/10 17:23")
+        self.assertEqual(line3, "• DNDQ11 [4G][C] (1/3) - 12/10 17:23")
 
-        # 4. Trạm 2 carrier rớt 2 cell (2/6)
-        line4 = format_celloff("DNIXDI10", "", "3G", 2, 6, "13/10 07:58")
-        self.assertEqual(line4, "• DNIXDI10 [3G] (2/6) - 13/10 07:58")
+        # 4. Trạm 2 carrier rớt 2 cell cùng sector A (2/6)
+        line4 = format_celloff("DNIXDI10", "", "3G", "A", 2, 6, "13/10 07:58")
+        self.assertEqual(line4, "• DNIXDI10 [3G][A] (2/6) - 13/10 07:58")
 
-        # 5. Trạm SRAN gom cả 3G và 4G -> nhãn [3G4G] và tỉ lệ 2/6
-        line5 = format_celloff("DNTN34", "", "3G4G", 2, 6, "12/10 12:41")
-        self.assertEqual(line5, "• DNTN34 [3G4G] (2/6) - 12/10 12:41")
+        # 5. Trạm SRAN gom cả 3G và 4G (cùng sector C) -> nhãn [3G4G][C] và tỉ lệ 2/6
+        line5 = format_celloff("DNTN34", "", "3G4G", "C", 2, 6, "12/10 12:41")
+        self.assertEqual(line5, "• DNTN34 [3G4G][C] (2/6) - 12/10 12:41")
 
-        # 6. Trạm khuyết tổng cell -> hiển thị (3/)
-        line6 = format_celloff("DNIXLO17L", "", "4G", 3, None, "13/10 07:59")
-        self.assertEqual(line6, "• DNIXLO17L [4G] (3/) - 13/10 07:59")
+        # 6. Trạm rớt 2 sector khác nhau -> [A,B]
+        line6 = format_celloff("DNTN34", "", "4G", "A,B", 2, 3, "12/10 12:41")
+        self.assertEqual(line6, "• DNTN34 [4G][A,B] (2/3) - 12/10 12:41")
+
+        # 7. Trạm khuyết tổng cell -> hiển thị (3/)
+        line7 = format_celloff("DNIXLO17L", "", "4G", "C", 3, None, "13/10 07:59")
+        self.assertEqual(line7, "• DNIXLO17L [4G][C] (3/) - 13/10 07:59")
 
     def test_promotion_when_x_equals_y(self):
         """Khi rớt x >= y (toàn bộ cell), hệ thống tự thăng hạng thành MLL Trạm."""

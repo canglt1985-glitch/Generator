@@ -532,16 +532,17 @@ export default function VhktRan() {
     return `• ${newId}${oldStr}${netStr} - ${dateStr}${countSuffix}`;
   }
 
-  // Format line for Cell Off (Cách A: • {newId}{oldStr} [{techTag}] ({x}/{y}) - {dateStr})
+  // Format line for Cell Off (• {oldId || newId} [{techTag}][{sectors}] ({x}/{y}) - {dateStr})
   function formatCellOffLine(alarm) {
     if (!alarm) return '';
     const { newId, oldId } = getSiteDetails(alarm.site);
-    const oldStr = oldId && oldId !== newId ? ` (${oldId})` : '';
+    const siteLabel = oldId || newId || alarm.site;
     const dateStr = formatMessageDate(alarm.sdate);
     const techTag = alarm._techTag || getAlarmNetwork(alarm) || alarm.network || '4G';
+    const sectorPart = alarm._sectorsStr ? `[${alarm._sectorsStr}]` : '';
     const ratioPart = alarm._ratioStr ? ` (${alarm._ratioStr})` : '';
 
-    return `• ${newId}${oldStr} [${techTag}]${ratioPart} - ${dateStr}`;
+    return `• ${siteLabel} [${techTag}]${sectorPart}${ratioPart} - ${dateStr}`;
   }
 
   // Group alarms by unique station (keep earliest start time)
@@ -643,18 +644,25 @@ export default function VhktRan() {
         });
 
         const cellCodes = sg.alarms.map(a => a.cellid).filter(Boolean);
+        const secSet = new Set();
+        sg.alarms.forEach(a => {
+          const s = extractCellSector(a.cellid, a.site);
+          if (s) secSet.add(s);
+        });
+        const sectorsStr = Array.from(secSet).sort().join(',');
 
         result.push({
           ...earliest,
           site: sg.site,
           _grouped: true,
           _techTag: '3G4G',
+          _sectorsStr: sectorsStr,
           _offCount: offCount,
           _totalCount: total,
           _ratioStr: ratioStr,
           _cellCodes: cellCodes,
           _cellCount: offCount,
-          _label: sg.label,
+          _label: sg.oldId || sg.newId || sg.site,
         });
       } else {
         // Group by individual network (4G, 3G, 5G)
@@ -678,18 +686,25 @@ export default function VhktRan() {
           });
 
           const cellCodes = alarmsOfNet.map(a => a.cellid).filter(Boolean);
+          const secSet = new Set();
+          alarmsOfNet.forEach(a => {
+            const s = extractCellSector(a.cellid, a.site);
+            if (s) secSet.add(s);
+          });
+          const sectorsStr = Array.from(secSet).sort().join(',');
 
           result.push({
             ...earliest,
             site: sg.site,
             _grouped: true,
             _techTag: net,
+            _sectorsStr: sectorsStr,
             _offCount: offCount,
             _totalCount: total,
             _ratioStr: ratioStr,
             _cellCodes: cellCodes,
             _cellCount: offCount,
-            _label: sg.label,
+            _label: sg.oldId || sg.newId || sg.site,
           });
         });
       }
@@ -1002,8 +1017,9 @@ export default function VhktRan() {
     const _cellStr = a.cellid ? ` (${a.cellid})` : '';
 
     if (isCellOff) {
-      const siteLabel = newId || oldId || a.site;
+      const siteLabel = oldId || newId || a.site;
       const techTag = a._techTag || net || '4G';
+      const sectorsStr = a._sectorsStr || '';
       const ratioStr = a._ratioStr || '';
       const cellCodesStr = a._cellCodes && a._cellCodes.length > 0 ? a._cellCodes.join(', ') : (a.cellid || '');
 
@@ -1013,16 +1029,18 @@ export default function VhktRan() {
           className="flex items-center justify-between gap-1 py-1 px-1 border-b border-slate-100 last:border-b-0 hover:bg-slate-50 transition-colors font-mono"
           title={cellCodesStr ? `Cell off: ${cellCodesStr}` : undefined}
         >
-          {/* Left side: Bullet + Site + Net + Quick Action */}
+          {/* Left side: Bullet + Site + Net + Sector + Quick Action */}
           <div className="flex items-center gap-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-xs sm:text-[13px]">
             <span className="text-slate-400 select-none shrink-0">•</span>
             <span className="font-bold text-slate-900 shrink-0">{siteLabel}</span>
-            {oldId && oldId !== newId && (
-              <span className="font-black text-slate-800 shrink-0">({oldId})</span>
-            )}
             <span className={`font-bold shrink-0 ${techTag === '3G4G' ? 'text-orange-600' : 'text-emerald-600'}`}>
               [{techTag}]
             </span>
+            {sectorsStr && (
+              <span className="font-bold text-purple-600 shrink-0">
+                [{sectorsStr}]
+              </span>
+            )}
             <button
               type="button"
               title="Báo MLL cả trạm (Chuyển lên MLL)"

@@ -40,14 +40,15 @@ Folder: `plans/261013-0845-celloff-ratio-and-3g4g-tag/`
 
 ### 📡 CELL OFF:
 ```text
-  • DNICMYAP [3G] (1/2) - 08/10 09:49
-  • DNTN34 [4G] (1/3) - 12/10 12:41
-  • DNDQ11 [4G] (1/3) - 12/10 17:23
-  • DNIXDI10 [3G] (2/6) - 13/10 07:58
-  • DNTN34 [3G4G] (2/6) - 12/10 12:41
-  • DNIXLO17L [4G] (3/) - 13/10 07:59
+  • DNICMYAP [3G][A] (1/2) - 08/10 09:49
+  • DNTN34 [4G][C] (1/3) - 12/10 12:41
+  • DNDQ11 [4G][C] (1/3) - 12/10 17:23
+  • DNIXDI10 [3G][A] (2/6) - 13/10 07:58
+  • DNTN34 [3G4G][C] (2/6) - 12/10 12:41
+  • DNTN34 [4G][A,B] (2/3) - 12/10 12:41
+  • DNIXLO17L [4G][C] (3/) - 13/10 07:59
 ```
-*Quy tắc:* `• {newId}{oldStr} [{techTag}] ({x}/{y}) - {dateStr}` (hoàn toàn bỏ chữ `"sector"`, bỏ dấu hai chấm, đồng nhất cấu trúc với MLL Trạm).
+*Quy tắc:* `• {oldId || site} [{techTag}][{sectors}] ({x}/{y}) - {dateStr}` (ưu tiên Site ID cũ 6 ký tự, kẹp sector liền sau mạng dạng `[4G][C]`, `[4G][A,B]`).
 
 ### 📵 MLL (Khi rớt toàn bộ cell $x = y$):
 ```text

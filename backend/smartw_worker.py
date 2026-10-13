@@ -3089,18 +3089,32 @@ def send_periodic_full_report():
                 t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '', full=False)
 
                 matched_new, matched_old, _ = _resolve_base_site_and_tech(site)
+                has_old_id = bool(matched_old and matched_old.upper() != (matched_new or '').upper() and not matched_old.upper().startswith('DNI'))
+                # User preference: Cell off thì ghi site id cũ
+                label = matched_old if has_old_id else (matched_new if matched_new else site)
                 site_key = (matched_new or site).upper()
+
+                # Extract sector letter from cellid (e.g. CM4CA -> A)
+                raw_cid = str(alarm.get('cellid') or alarm.get('cell_id') or cid).strip().upper()
+                cell_code = raw_cid
+                for prefix in (site, matched_new, matched_old):
+                    if prefix and len(prefix) >= 4 and cell_code.startswith(prefix.upper()):
+                        cell_code = cell_code[len(prefix):]
+                        break
+                cell_code = cell_code.lstrip('_-') or raw_cid
+                sector = cell_code[-1] if cell_code and cell_code[-1].isalpha() else ''
 
                 if site_key not in site_groups:
                     site_groups[site_key] = {
                         'site_key': site_key,
                         'site': site,
-                        'label': _get_site_label(site),
+                        'label': label,
                         'alarms': [],
                     }
                 site_groups[site_key]['alarms'].append({
                     'cid': cid,
                     'net': net,
+                    'sector': sector,
                     't': t,
                     'alarm': alarm,
                 })
@@ -3131,7 +3145,9 @@ def send_periodic_full_report():
                     c4g = c_ref.get('4G') or 3
                     total_c = c3g + c4g
                     ratio_part = f" ({off_c}/{total_c})"
-                    lines.append(f"• {sg['label']} [{tech_tag}]{ratio_part} - {earliest_t}")
+                    sec_set = sorted(set(a['sector'] for a in sg['alarms'] if a.get('sector')))
+                    sec_part = f"[{','.join(sec_set)}]" if sec_set else ""
+                    lines.append(f"• {sg['label']} [{tech_tag}]{sec_part}{ratio_part} - {earliest_t}")
                     total_active += 1
                 else:
                     # Group by individual net
@@ -3147,7 +3163,9 @@ def send_periodic_full_report():
                         c_ref = site_cell_count_ref.get(sg['site_key'], {}) or site_cell_count_ref.get(sg['site'], {})
                         total_c = c_ref.get(tech_tag)
                         ratio_part = f" ({off_c}/{total_c})" if total_c else f" ({off_c}/)"
-                        lines.append(f"• {sg['label']} [{tech_tag}]{ratio_part} - {earliest_t}")
+                        sec_set = sorted(set(a['sector'] for a in alarms_net if a.get('sector')))
+                        sec_part = f"[{','.join(sec_set)}]" if sec_set else ""
+                        lines.append(f"• {sg['label']} [{tech_tag}]{sec_part}{ratio_part} - {earliest_t}")
                         total_active += 1
 
     if total_active > 0:
