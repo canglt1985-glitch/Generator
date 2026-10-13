@@ -3108,6 +3108,8 @@ def send_periodic_full_report():
                     site_groups[site_key] = {
                         'site_key': site_key,
                         'site': site,
+                        'base_id': matched_new,
+                        'old_id': matched_old,
                         'label': label,
                         'alarms': [],
                     }
@@ -3123,14 +3125,31 @@ def send_periodic_full_report():
             lines.append("")
             lines.append("📡 *CELLOFF* (" + str(total_cells) + " cell):")
 
-            cell_count_path = os.path.join(DATA_DIR, 'site_cell_count.json')
+            cell_count_path = os.path.join(current_dir, 'data', 'site_cell_count.json')
+            if not os.path.exists(cell_count_path):
+                cell_count_path = os.path.join(DATA_DIR, 'site_cell_count.json')
             site_cell_count_ref = {}
             if os.path.exists(cell_count_path):
                 try:
                     with open(cell_count_path, 'r', encoding='utf-8') as f:
                         site_cell_count_ref = json.load(f)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning(f"Cannot load site_cell_count.json: {e}")
+
+            def _get_site_total_cells(sg_dict, tech):
+                candidates = [
+                    sg_dict.get('old_id'),
+                    sg_dict.get('base_id'),
+                    sg_dict.get('site_key'),
+                    sg_dict.get('site'),
+                    sg_dict.get('label')
+                ]
+                for c in candidates:
+                    if c and str(c).upper() in site_cell_count_ref:
+                        cnt = site_cell_count_ref[str(c).upper()].get(tech)
+                        if cnt:
+                            return cnt
+                return None
 
             for skey, sg in site_groups.items():
                 nets = set(a['net'] for a in sg['alarms'] if a.get('net'))
@@ -3140,9 +3159,8 @@ def send_periodic_full_report():
                     tech_tag = "3G4G"
                     off_c = len(sg['alarms'])
                     earliest_t = min(a['t'] for a in sg['alarms'] if a.get('t'))
-                    c_ref = site_cell_count_ref.get(sg['site_key'], {}) or site_cell_count_ref.get(sg['site'], {})
-                    c3g = c_ref.get('3G') or 3
-                    c4g = c_ref.get('4G') or 3
+                    c3g = _get_site_total_cells(sg, '3G') or 3
+                    c4g = _get_site_total_cells(sg, '4G') or 3
                     total_c = c3g + c4g
                     ratio_part = f" ({off_c}/{total_c})"
                     sec_set = sorted(set(a['sector'] for a in sg['alarms'] if a.get('sector')))
@@ -3160,8 +3178,7 @@ def send_periodic_full_report():
                         tech_tag = net
                         off_c = len(alarms_net)
                         earliest_t = min(a['t'] for a in alarms_net if a.get('t'))
-                        c_ref = site_cell_count_ref.get(sg['site_key'], {}) or site_cell_count_ref.get(sg['site'], {})
-                        total_c = c_ref.get(tech_tag)
+                        total_c = _get_site_total_cells(sg, tech_tag)
                         ratio_part = f" ({off_c}/{total_c})" if total_c else f" ({off_c}/)"
                         sec_set = sorted(set(a['sector'] for a in alarms_net if a.get('sector')))
                         sec_part = f"[{','.join(sec_set)}]" if sec_set else ""
