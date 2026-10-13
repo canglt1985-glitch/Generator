@@ -1,0 +1,24 @@
+[
+  {
+    "site_id": "LDGDLT01",
+    "site_id_old": "LDDL01",
+    "name": "Đà Lạt 1 - Chợ Đà Lạt",
+    "qlt": "Nguyễn Văn A",
+    "sdt_qlt": "0901234567",
+    "huyen": "Thành phố Đà Lạt",
+    "xa": "Phường 1",
+    "tram_main": "LDDL01",
+    "vung_phu": "MACRO"
+  },
+  {
+    "site_id": "LDGDLT02",
+    "site_id_old": "LDDL02",
+    "name": "Đà Lạt 2 - Hồ Xuân Hương",
+    "qlt": "Trần Văn B",
+    "sdt_qlt": "0907654321",
+    "huyen": "Thành phố Đà Lạt",
+    "xa": "Phường 2",
+    "tram_main": "LDDL02",
+    "vung_phu": "MACRO"
+  }
+]
