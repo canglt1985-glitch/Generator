@@ -3081,66 +3081,74 @@ def send_periodic_full_report():
             filtered_cells[cid] = alarm
 
         if filtered_cells:
-            # Group cells by site + sector for compact display
-            site_sector_groups = {}
+            # Group cells by site for compact display
+            site_groups = {}
             for cid, alarm in filtered_cells.items():
                 site = _site_key(alarm)
-                base_id, old_id, _ = _resolve_base_site_and_tech(site, '')
-                has_old_id = bool(old_id and old_id.upper() != (base_id or '').upper() and not old_id.upper().startswith('DNI'))
-                label = old_id if has_old_id else (base_id if base_id else site)
-
-                raw_cid = str(alarm.get('cellid') or alarm.get('cell_id') or cid).strip().upper()
-                cell_code = raw_cid
-                for prefix in (site, base_id, old_id):
-                    if prefix and len(prefix) >= 4 and cell_code.startswith(prefix.upper()):
-                        cell_code = cell_code[len(prefix):]
-                        break
-                cell_code = cell_code.lstrip('_-') or raw_cid
-
-                # Extract sector from last char of cell code (e.g. CM3GC → sector C)
-                sector = cell_code[-1] if cell_code and cell_code[-1].isalpha() else '?'
-
                 net = _norm_net(alarm.get('network') or '')
                 t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '', full=False)
 
-                group_key = f"{label}_{sector}"
-                if group_key not in site_sector_groups:
-                    site_sector_groups[group_key] = {
-                        'label': label, 'sector': sector, 'nets': [],
-                        'cells': [], 't': t, 'cell_codes': [], 'raw_cids': [],
-                        'has_old_id': has_old_id
-                    }
-                if net and net not in site_sector_groups[group_key]['nets']:
-                    site_sector_groups[group_key]['nets'].append(net)
-                site_sector_groups[group_key]['cells'].append(cid)
-                site_sector_groups[group_key]['cell_codes'].append(cell_code)
-                site_sector_groups[group_key]['raw_cids'].append(raw_cid)
-                # Keep earliest time
-                if t < site_sector_groups[group_key]['t']:
-                    site_sector_groups[group_key]['t'] = t
+                matched_new, matched_old, _ = _resolve_base_site_and_tech(site)
+                site_key = (matched_new or site).upper()
 
-            total_cells = sum(len(g['cells']) for g in site_sector_groups.values())
+                if site_key not in site_groups:
+                    site_groups[site_key] = {
+                        'site_key': site_key,
+                        'site': site,
+                        'label': _get_site_label(site),
+                        'alarms': [],
+                    }
+                site_groups[site_key]['alarms'].append({
+                    'cid': cid,
+                    'net': net,
+                    't': t,
+                    'alarm': alarm,
+                })
+
+            total_cells = len(filtered_cells)
             lines.append("")
             lines.append("📡 *CELLOFF* (" + str(total_cells) + " cell):")
-            for gkey, grp in site_sector_groups.items():
-                net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
-                if len(grp['cells']) == 1:
-                    # Single cell:
-                    # Nếu có mã trạm cũ: • DNTN07: CM5LB [5G] - 08:15
-                    # Nếu không có mã trạm cũ: • DNICMYAPDM3GC [3G] - 12/09 (giữ nguyên mã cell đầy đủ, không tách dấu hai chấm)
-                    if grp.get('has_old_id'):
-                        lines.append(f"• {grp['label']}: {grp['cell_codes'][0]}{net_part} - {grp['t']}")
-                    else:
-                        full_cell = grp['raw_cids'][0] if grp.get('raw_cids') else grp['cells'][0]
-                        lines.append(f"• {full_cell}{net_part} - {grp['t']}")
+
+            cell_count_path = os.path.join(DATA_DIR, 'site_cell_count.json')
+            site_cell_count_ref = {}
+            if os.path.exists(cell_count_path):
+                try:
+                    with open(cell_count_path, 'r', encoding='utf-8') as f:
+                        site_cell_count_ref = json.load(f)
+                except Exception:
+                    pass
+
+            for skey, sg in site_groups.items():
+                nets = set(a['net'] for a in sg['alarms'] if a.get('net'))
+
+                # If site has both 3G and 4G off cells -> group as [3G4G]
+                if '3G' in nets and '4G' in nets:
+                    tech_tag = "3G4G"
+                    off_c = len(sg['alarms'])
+                    earliest_t = min(a['t'] for a in sg['alarms'] if a.get('t'))
+                    c_ref = site_cell_count_ref.get(sg['site_key'], {}) or site_cell_count_ref.get(sg['site'], {})
+                    c3g = c_ref.get('3G') or 3
+                    c4g = c_ref.get('4G') or 3
+                    total_c = c3g + c4g
+                    ratio_part = f" ({off_c}/{total_c})"
+                    lines.append(f"• {sg['label']} [{tech_tag}]{ratio_part} - {earliest_t}")
+                    total_active += 1
                 else:
-                    # Multiple cells same sector → check if SRAN (multi-tech) or same tech
-                    if len(grp['nets']) > 1:
-                        tech_tag = "SRAN"
-                    else:
-                        tech_tag = grp['nets'][0] if grp['nets'] else "?"
-                    lines.append(f"• {grp['label']}: sector {grp['sector']} [{tech_tag}] - {grp['t']}")
-                total_active += 1
+                    # Group by individual net
+                    by_net = {}
+                    for a in sg['alarms']:
+                        n = a.get('net') or '4G'
+                        by_net.setdefault(n, []).append(a)
+
+                    for net, alarms_net in by_net.items():
+                        tech_tag = net
+                        off_c = len(alarms_net)
+                        earliest_t = min(a['t'] for a in alarms_net if a.get('t'))
+                        c_ref = site_cell_count_ref.get(sg['site_key'], {}) or site_cell_count_ref.get(sg['site'], {})
+                        total_c = c_ref.get(tech_tag)
+                        ratio_part = f" ({off_c}/{total_c})" if total_c else f" ({off_c}/)"
+                        lines.append(f"• {sg['label']} [{tech_tag}]{ratio_part} - {earliest_t}")
+                        total_active += 1
 
     if total_active > 0:
         _send_viber_report(lines)

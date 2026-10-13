@@ -61,8 +61,9 @@ while True:
 
 print(f"✅ Fetched {len(all_cells)} cells from datacells.")
 
-# Group by site_id, ran -> set of distinct sectors
+# Group by site_id, ran -> set of distinct sectors & set of distinct cell_ids
 site_sectors = defaultdict(lambda: defaultdict(set))
+site_cells = defaultdict(lambda: defaultdict(set))
 
 for c in all_cells:
     s_id = (c.get("site_id") or "").strip().upper()
@@ -93,12 +94,27 @@ for c in all_cells:
         if s_old:
             site_sectors[s_old][net_key].add(sector)
 
+    if cell_id:
+        if s_id:
+            site_cells[s_id][net_key].add(cell_id)
+        if s_old:
+            site_cells[s_old][net_key].add(cell_id)
+
+# Manual fallback for new/CAX stations without full datacells records
+if 'DNICMYAP' not in site_sectors or not site_sectors['DNICMYAP'].get('3G'):
+    site_sectors['DNICMYAP']['3G'] = {'A', 'B'}
+    site_sectors['DNICMYAP']['4G'] = {'A', 'B', 'C'}
+    site_cells['DNICMYAP']['3G'] = {'DNICMYAPDM3GA', 'DNICMYAPDM3GC'}
+    site_cells['DNICMYAP']['4G'] = {'DNICMYAPCM4CA', 'DNICMYAPCM4CB', 'DNICMYAPCM4CC'}
+
 # Mirror using site_mapping if one side was missing
 for nid, oid in site_mapping.items():
     if nid in site_sectors and oid not in site_sectors:
         site_sectors[oid] = site_sectors[nid]
+        site_cells[oid] = site_cells[nid]
     elif oid in site_sectors and nid not in site_sectors:
         site_sectors[nid] = site_sectors[oid]
+        site_cells[nid] = site_cells[oid]
 
 # Convert sets to sorted lists
 final_site_sectors = {}
@@ -110,7 +126,11 @@ for s_id, rans in site_sectors.items():
     for net, secs in rans.items():
         sorted_secs = sorted(list(secs))
         final_site_sectors[s_id][net] = sorted_secs
-        cell_counts_ref[s_id][net] = len(sorted_secs)
+        
+        # True cell count based on distinct cell_id
+        distinct_cids = site_cells.get(s_id, {}).get(net, set())
+        cell_count = len(distinct_cids) if len(distinct_cids) > 0 else len(sorted_secs)
+        cell_counts_ref[s_id][net] = max(cell_count, len(sorted_secs))
 
 print(f"📊 Processed {len(final_site_sectors)} unique site entries.")
 
@@ -119,16 +139,18 @@ backend_json = os.path.join(project_dir, 'backend', 'data', 'site_sectors.json')
 frontend_dir = os.path.join(project_dir, 'tvt3_v2', 'src', 'data')
 os.makedirs(frontend_dir, exist_ok=True)
 frontend_json = os.path.join(frontend_dir, 'site_sectors.json')
-cell_count_json = os.path.join(project_dir, 'backend', 'data', 'site_cell_count.json')
+cell_count_backend = os.path.join(project_dir, 'backend', 'data', 'site_cell_count.json')
+cell_count_frontend = os.path.join(frontend_dir, 'site_cell_count.json')
 
 for p in [backend_json, frontend_json]:
     with open(p, 'w', encoding='utf-8') as f:
         json.dump(final_site_sectors, f, ensure_ascii=False, indent=2)
     print(f"💾 Saved site sectors to: {p}")
 
-with open(cell_count_json, 'w', encoding='utf-8') as f:
-    json.dump(cell_counts_ref, f, ensure_ascii=False, indent=2)
-print(f"💾 Updated site cell count ref to: {cell_count_json}")
+for cp in [cell_count_backend, cell_count_frontend]:
+    with open(cp, 'w', encoding='utf-8') as f:
+        json.dump(cell_counts_ref, f, ensure_ascii=False, indent=2)
+    print(f"💾 Updated site cell count ref to: {cp}")
 
 # Print sample verification
 for test_site in ["DNICMY09", "DNCM25", "DNICMY01", "DNCM04", "DNILKH00", "DNIXDI00"]:

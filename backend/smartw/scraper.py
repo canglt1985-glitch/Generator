@@ -888,11 +888,19 @@ def extract_cell_sector(cell_id: str, site_code: str = "") -> str:
         import json as _json
         import re
         sector_ref_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'site_sectors.json')
+        cell_count_ref_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'site_cell_count.json')
         site_sectors_ref = {}
+        site_cell_count_ref = {}
         try:
             with open(sector_ref_path, 'r', encoding='utf-8') as f:
                 site_sectors_ref = _json.load(f)
         except Exception as e:
+            logger.warning(f'Cannot load site_sectors.json: {e}')
+        try:
+            with open(cell_count_ref_path, 'r', encoding='utf-8') as f:
+                site_cell_count_ref = _json.load(f)
+        except Exception as e:
+            logger.warning(f'Cannot load site_cell_count.json: {e}')
             logger.warning(f'Cannot load site_sectors.json: {e}')
 
         def _get_base_site_code(site_str: str) -> str:
@@ -975,13 +983,20 @@ def extract_cell_sector(cell_id: str, site_code: str = "") -> str:
             off_sectors = set(c['_sector'] for c in cells if c.get('_sector'))
             off_cellids = set(c.get('cellid', '') for c in cells)
 
-            # Promote to MLL Trạm if ALL configured sectors are down (or >=3 if unknown site)
+            # Promote to MLL Trạm if ALL configured sectors are down (or all configured cells down)
+            total_cells = (
+                site_cell_count_ref.get(base_site, {}).get(net_key) or
+                site_cell_count_ref.get(site, {}).get(net_key) or
+                0
+            )
+            is_all_cells_down = total_cells > 0 and len(cells) >= total_cells
+
             if configured_sectors:
                 is_all_sectors_down = configured_sectors.issubset(off_sectors)
             else:
                 is_all_sectors_down = len(off_sectors) >= 3
 
-            if is_all_sectors_down:
+            if is_all_sectors_down or is_all_cells_down:
                 promoted_sites.add((site, net_key))
                 promoted_sites.add((base_site, net_key))
                 # Create a single MLL Trạm entry from first cell record

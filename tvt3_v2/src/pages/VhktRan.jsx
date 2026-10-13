@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Radio, RefreshCw, Copy, Check } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import siteSectorsData from '../data/site_sectors.json';
+import siteCellCountData from '../data/site_cell_count.json';
 
 export default function VhktRan() {
   const [activeTab, setActiveTab] = useState('all');
@@ -317,9 +318,19 @@ export default function VhktRan() {
       configuredSectors.add('C');
     }
 
+    const totalConfiguredCells = (
+      siteCellCountData[grp.baseSite]?.[grp.net] ||
+      siteCellCountData[grp.newId]?.[grp.net] ||
+      siteCellCountData[grp.oldId]?.[grp.net] ||
+      siteCellCountData[grp.fullSite]?.[grp.net] ||
+      0
+    );
+    const isAllCellsDown = totalConfiguredCells > 0 && grp.alarms.length >= totalConfiguredCells;
+
     const isManualPromoted = manualMllSites.has(groupKey);
     const isAllSectorsDown = (
       isManualPromoted ||
+      isAllCellsDown ||
       (configuredSectors.size > 0 && Array.from(configuredSectors).every(s => grp.offSectors.has(s))) ||
       grp.offSectors.size >= 3
     );
@@ -467,7 +478,7 @@ export default function VhktRan() {
     
     // Fallback to site suffix tech
     const site = String(alarm.site || '').toUpperCase().trim();
-    if (site.endsWith('UL')) return 'SRAN';
+    if (site.endsWith('UL')) return '3G4G';
     if (site.endsWith('N')) return '5G';
     if (site.endsWith('L')) return '4G';
     
@@ -521,36 +532,16 @@ export default function VhktRan() {
     return `• ${newId}${oldStr}${netStr} - ${dateStr}${countSuffix}`;
   }
 
-  // Format line for Cell Off
+  // Format line for Cell Off (Cách A: • {newId}{oldStr} [{techTag}] ({x}/{y}) - {dateStr})
   function formatCellOffLine(alarm) {
     if (!alarm) return '';
-    const dateStr = formatMessageDate(alarm.sdate);
-
-    // Grouped entry: "• DNTN34: sector C [SRAN] - 12:41"
-    if (alarm._grouped) {
-      return `• ${alarm._label}: sector ${alarm._sector} [${alarm._techTag}] - ${dateStr}`;
-    }
-
-    // Single cell:
     const { newId, oldId } = getSiteDetails(alarm.site);
-    const hasOldId = Boolean(oldId && oldId.toUpperCase() !== (newId || '').toUpperCase() && !oldId.toUpperCase().startsWith('DNI'));
-    const net = getAlarmNetwork(alarm);
-    const netStr = net ? ` [${net}]` : '';
+    const oldStr = oldId && oldId !== newId ? ` (${oldId})` : '';
+    const dateStr = formatMessageDate(alarm.sdate);
+    const techTag = alarm._techTag || getAlarmNetwork(alarm) || alarm.network || '4G';
+    const ratioPart = alarm._ratioStr ? ` (${alarm._ratioStr})` : '';
 
-    if (hasOldId) {
-      let cellCode = String(alarm.cellid || '').toUpperCase().trim();
-      for (const prefix of [alarm.site, newId, oldId]) {
-        if (prefix && prefix.length >= 4 && cellCode.startsWith(prefix.toUpperCase())) {
-          cellCode = cellCode.slice(prefix.length);
-          break;
-        }
-      }
-      cellCode = cellCode.replace(/^[_-]+/, '') || String(alarm.cellid || '');
-      return `• ${oldId}: ${cellCode}${netStr} - ${dateStr}`;
-    } else {
-      const fullCell = String(alarm.cellid || '').toUpperCase().trim() || newId;
-      return `• ${fullCell}${netStr} - ${dateStr}`;
-    }
+    return `• ${newId}${oldStr} [${techTag}]${ratioPart} - ${dateStr}`;
   }
 
   // Group alarms by unique station (keep earliest start time)
@@ -580,70 +571,127 @@ export default function VhktRan() {
     });
   }
 
-  // Group cell alarms by site + cell
+  // Group cell alarms by site + tech with accurate (x/y) ratio
   function groupCellAlarms(alarmList) {
-    // Step 1: Dedup by site+cellid
+    // Step 1: Dedup by site + cellid
     const dedup = new Map();
     alarmList.forEach(a => {
       const { baseSite, newId, fullSite } = getSiteDetails(a.site);
-      const siteKey = (baseSite || newId || fullSite || '').toUpperCase();
+      const siteKey = (baseSite || newId || fullSite || a.site || '').toUpperCase();
       const cellKey = String(a.cellid || '').toUpperCase().trim();
       const key = `${siteKey}_${cellKey}`;
       if (!dedup.has(key)) dedup.set(key, a);
     });
     const unique = Array.from(dedup.values());
 
-    // Step 2: Group by site + sector (last char of cell code after stripping site prefix)
-    const sectorGroups = new Map();
-    unique.forEach(a => {
-      const { baseSite, newId, oldId, fullSite } = getSiteDetails(a.site);
-      const _siteKey = (baseSite || newId || fullSite || '').toUpperCase();
-      const label = oldId || newId || a.site;
-
-      let cellCode = String(a.cellid || '').toUpperCase().trim();
-      // Strip site prefix from cell code
-      for (const prefix of [fullSite, baseSite, newId, oldId]) {
-        if (prefix && prefix.length >= 4 && cellCode.startsWith(prefix.toUpperCase())) {
-          cellCode = cellCode.slice(prefix.length);
-          break;
+    // Helper to get total cell count from site_cell_count or site_sectors
+    function getTotalCount(siteKey, baseSite, newId, oldId, fullSite, net) {
+      const candidates = [baseSite, newId, oldId, fullSite, siteKey].filter(Boolean);
+      for (const c of candidates) {
+        const cUp = c.toUpperCase();
+        if (siteCellCountData[cUp]?.[net]) {
+          return siteCellCountData[cUp][net];
         }
       }
-      cellCode = cellCode.replace(/^[_-]+/, '') || String(a.cellid || '');
-
-      const sector = cellCode.length > 0 && /[A-Z]/.test(cellCode.slice(-1)) ? cellCode.slice(-1) : '?';
-      const net = getAlarmNetwork(a) || a.network || '';
-      const groupKey = `${label}_${sector}`;
-
-      if (!sectorGroups.has(groupKey)) {
-        sectorGroups.set(groupKey, { label, sector, nets: new Set(), cells: [], alarms: [], earliest: a });
+      for (const c of candidates) {
+        const cUp = c.toUpperCase();
+        if (siteSectorsData[cUp]?.[net]) {
+          return siteSectorsData[cUp][net].length;
+        }
       }
-      const grp = sectorGroups.get(groupKey);
-      if (net) grp.nets.add(net);
-      grp.cells.push(cellCode);
-      grp.alarms.push(a);
-      // Track earliest alarm time
-      if (a.sdate && (!grp.earliest.sdate || new Date(a.sdate) < new Date(grp.earliest.sdate))) {
-        grp.earliest = a;
+      return null;
+    }
+
+    // Step 2: Group by siteKey
+    const siteGroups = new Map();
+    unique.forEach(a => {
+      const { baseSite, newId, oldId, fullSite } = getSiteDetails(a.site);
+      const siteKey = (baseSite || newId || fullSite || a.site || '').toUpperCase();
+      if (!siteGroups.has(siteKey)) {
+        siteGroups.set(siteKey, {
+          siteKey,
+          baseSite,
+          newId,
+          oldId,
+          fullSite,
+          site: a.site,
+          label: oldId || newId || a.site,
+          alarms: [],
+        });
       }
+      siteGroups.get(siteKey).alarms.push(a);
     });
 
-    // Step 3: Build result - single cells stay as-is, multi-cell groups get tagged
     const result = [];
-    sectorGroups.forEach(grp => {
-      if (grp.cells.length === 1) {
-        result.push(grp.alarms[0]); // Single cell: unchanged
-      } else {
-        // Multi-cell same sector: create grouped entry
-        const techTag = grp.nets.size > 1 ? 'SRAN' : (Array.from(grp.nets)[0] || '?');
-        const grouped = {
-          ...grp.earliest,
+
+    siteGroups.forEach(sg => {
+      const nets = new Set(sg.alarms.map(a => (getAlarmNetwork(a) || a.network || '4G').toUpperCase()));
+
+      // If site has both 3G and 4G off cells -> group as 3G4G
+      if (nets.has('3G') && nets.has('4G')) {
+        const total3G = getTotalCount(sg.siteKey, sg.baseSite, sg.newId, sg.oldId, sg.fullSite, '3G');
+        const total4G = getTotalCount(sg.siteKey, sg.baseSite, sg.newId, sg.oldId, sg.fullSite, '4G');
+        const total = (total3G !== null || total4G !== null) ? ((total3G || 3) + (total4G || 3)) : null;
+        const offCount = sg.alarms.length;
+        const ratioStr = total ? `${offCount}/${total}` : `${offCount}/`;
+
+        let earliest = sg.alarms[0];
+        sg.alarms.forEach(a => {
+          if (a.sdate && (!earliest.sdate || new Date(a.sdate) < new Date(earliest.sdate))) {
+            earliest = a;
+          }
+        });
+
+        const cellCodes = sg.alarms.map(a => a.cellid).filter(Boolean);
+
+        result.push({
+          ...earliest,
+          site: sg.site,
           _grouped: true,
-          _sector: grp.sector,
-          _techTag: techTag,
-          _cellCount: grp.cells.length,
-          _label: grp.label,
-        };
-        result.push(grouped);
+          _techTag: '3G4G',
+          _offCount: offCount,
+          _totalCount: total,
+          _ratioStr: ratioStr,
+          _cellCodes: cellCodes,
+          _cellCount: offCount,
+          _label: sg.label,
+        });
+      } else {
+        // Group by individual network (4G, 3G, 5G)
+        const byNet = new Map();
+        sg.alarms.forEach(a => {
+          const net = (getAlarmNetwork(a) || a.network || '4G').toUpperCase();
+          if (!byNet.has(net)) byNet.set(net, []);
+          byNet.get(net).push(a);
+        });
+
+        byNet.forEach((alarmsOfNet, net) => {
+          const total = getTotalCount(sg.siteKey, sg.baseSite, sg.newId, sg.oldId, sg.fullSite, net);
+          const offCount = alarmsOfNet.length;
+          const ratioStr = total ? `${offCount}/${total}` : `${offCount}/`;
+
+          let earliest = alarmsOfNet[0];
+          alarmsOfNet.forEach(a => {
+            if (a.sdate && (!earliest.sdate || new Date(a.sdate) < new Date(earliest.sdate))) {
+              earliest = a;
+            }
+          });
+
+          const cellCodes = alarmsOfNet.map(a => a.cellid).filter(Boolean);
+
+          result.push({
+            ...earliest,
+            site: sg.site,
+            _grouped: true,
+            _techTag: net,
+            _offCount: offCount,
+            _totalCount: total,
+            _ratioStr: ratioStr,
+            _cellCodes: cellCodes,
+            _cellCount: offCount,
+            _label: sg.label,
+          });
+        });
       }
     });
 
@@ -954,76 +1002,27 @@ export default function VhktRan() {
     const _cellStr = a.cellid ? ` (${a.cellid})` : '';
 
     if (isCellOff) {
-      const siteCode = a._grouped ? a._label : (oldId || newId || a.site);
-
-      // Grouped entry: show "sector C [SRAN]" or "sector A [4G]"
-      if (a._grouped) {
-        return (
-          <div
-            key={idx}
-            className="flex items-center justify-between gap-1 py-1 px-1 border-b border-slate-100 last:border-b-0 hover:bg-slate-50 transition-colors font-mono"
-          >
-            <div className="flex items-center gap-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-xs sm:text-[13px]">
-              <span className="text-slate-400 select-none shrink-0">•</span>
-              <span className="font-bold text-slate-900 shrink-0">{siteCode}:</span>
-              <span className="font-semibold text-purple-600 shrink-0">sector {a._sector}</span>
-              <span className={`font-bold shrink-0 ${a._techTag === 'SRAN' ? 'text-orange-600' : 'text-emerald-600'}`}>[{a._techTag}]</span>
-              <button
-                type="button"
-                title="Báo MLL cả trạm (Chuyển lên MLL)"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleManualMll(a);
-                }}
-                className="ml-1 px-1.5 py-0.2 text-[9px] font-mono font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded transition-all cursor-pointer select-none shrink-0"
-              >
-                +MLL
-              </button>
-            </div>
-            <div className="shrink-0 text-slate-500 text-[11px] sm:text-xs font-medium pl-1 whitespace-nowrap">
-              <span className="text-slate-300 mr-1">-</span>
-              <span>{dateStr}</span>
-            </div>
-          </div>
-        );
-      }
-
-      // Single cell
-      const hasOldId = Boolean(oldId && oldId.toUpperCase() !== (newId || '').toUpperCase() && !oldId.toUpperCase().startsWith('DNI'));
-      let cellCode = String(a.cellid || '').toUpperCase().trim();
-      if (hasOldId) {
-        for (const prefix of [a.site, newId, oldId]) {
-          if (prefix && prefix.length >= 4 && cellCode.startsWith(prefix.toUpperCase())) {
-            cellCode = cellCode.slice(prefix.length);
-            break;
-          }
-        }
-        cellCode = cellCode.replace(/^[_-]+/, '') || String(a.cellid || '');
-      }
+      const siteLabel = newId || oldId || a.site;
+      const techTag = a._techTag || net || '4G';
+      const ratioStr = a._ratioStr || '';
+      const cellCodesStr = a._cellCodes && a._cellCodes.length > 0 ? a._cellCodes.join(', ') : (a.cellid || '');
 
       return (
         <div
           key={idx}
           className="flex items-center justify-between gap-1 py-1 px-1 border-b border-slate-100 last:border-b-0 hover:bg-slate-50 transition-colors font-mono"
+          title={cellCodesStr ? `Cell off: ${cellCodesStr}` : undefined}
         >
-          {/* Left side: Bullet + Site/Cell Code + Net */}
+          {/* Left side: Bullet + Site + Net + Quick Action */}
           <div className="flex items-center gap-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-xs sm:text-[13px]">
             <span className="text-slate-400 select-none shrink-0">•</span>
-            {hasOldId ? (
-              <>
-                <span className="font-bold text-slate-900 shrink-0">{oldId}:</span>
-                <span className="font-semibold text-purple-600 truncate text-[11px] sm:text-xs">
-                  {cellCode}
-                </span>
-              </>
-            ) : (
-              <span className="font-bold text-slate-900 shrink-0">
-                {String(a.cellid || '').toUpperCase().trim() || newId}
-              </span>
+            <span className="font-bold text-slate-900 shrink-0">{siteLabel}</span>
+            {oldId && oldId !== newId && (
+              <span className="font-black text-slate-800 shrink-0">({oldId})</span>
             )}
-            {net && (
-              <span className="font-bold text-emerald-600 shrink-0">[{net}]</span>
-            )}
+            <span className={`font-bold shrink-0 ${techTag === '3G4G' ? 'text-orange-600' : 'text-emerald-600'}`}>
+              [{techTag}]
+            </span>
             <button
               type="button"
               title="Báo MLL cả trạm (Chuyển lên MLL)"
@@ -1037,10 +1036,15 @@ export default function VhktRan() {
             </button>
           </div>
 
-          {/* Right side: Date & Time (Strictly on same row, pinned right) */}
-          <div className="shrink-0 text-slate-500 text-[11px] sm:text-xs font-medium pl-1 whitespace-nowrap">
+          {/* Right side: Date & Time + Ratio Badge */}
+          <div className="shrink-0 text-slate-500 text-[11px] sm:text-xs font-medium pl-1 whitespace-nowrap flex items-center">
             <span className="text-slate-300 mr-1">-</span>
             <span>{dateStr}</span>
+            {ratioStr && (
+              <span className="ml-1.5 px-1.5 py-0.2 rounded text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200 select-none">
+                {ratioStr}
+              </span>
+            )}
           </div>
         </div>
       );
