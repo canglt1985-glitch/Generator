@@ -18,6 +18,12 @@
 | **TSCA - Trụ sở Công an (HTCS)** | **OK** | Dùng chung | **6 trạm** | Dùng chung cột công an / nhà mạng khác |
 | **Tổng cộng địa bàn TVT3** | | | **86 trạm** | |
 
+> 📌 **QUY TẮC ĐẶC THÙ ĐỊA GIỚI QUẢN LÝ TVT3 (CẬP NHẬT 13/10/2026):**
+> 1. **Địa bàn Xã Phú Lý (Huyện Vĩnh Cửu):** Do **TVT3 trực tiếp quản lý**, bao gồm:
+>    - Các trạm hiện hữu: `DNVC03` (Phú Lý / DNIPLY00), `DNVC31` (Phú Lý 1 / DNIPLY01), `DNVC35` (Phú Lý 2 / DNIPLY02).
+>    - Trạm quy hoạch mới: `26DNa131` (Tọa độ: $11.33162, 107.15649$ - TCT đã duyệt theo VB `16/MBF.ĐNa-VT`, Sở KH&CN duyệt Dùng chung CSHT).
+> 2. **4 trạm mang mã Long Thành (DNLT):** `DNLT04` (`DNIXDU04` - Xuân Đường 4), `DNLT06` (`DNIXDU05` - Xuân Đường 5), `DNLT22` (`DNIXDU06` - Xuân Đường 6), `DNLT69` (`DNIXDU07` - Xuân Đường 7) đều thuộc địa bàn **Xã Xuân Đường** do **TVT3 (Tổ QL: VT3)** phụ trách quản lý vận hành.
+
 ---
 
 ## 2. RÀ SOÁT CHI TIẾT 4 GÓI MBF TỰ ĐẦU TƯ XÂY MỚI (15 TRẠM)
