@@ -327,7 +327,7 @@ export default function InfrastructureDevelopment() {
     deployment_package: ''
   });
 
-  const tvt3Districts = ['Cẩm Mỹ', 'Xuân Lộc', 'Long Khánh', 'Thống Nhất', 'Định Quán', 'Tân Phú'];
+  const tvt3Districts = ['Cẩm Mỹ', 'Xuân Lộc', 'Long Khánh', 'Thống Nhất', 'Định Quán', 'Tân Phú', 'Vĩnh Cửu'];
   const districts = tvt3Districts;
   const packages = Array.from(new Set(projects.map(p => p.deployment_package).filter(Boolean))).sort();
 
@@ -1556,7 +1556,7 @@ export default function InfrastructureDevelopment() {
             }
           }
 
-          const tvt3Districts = ['Cẩm Mỹ', 'Xuân Lộc', 'Long Khánh', 'Thống Nhất', 'Định Quán', 'Tân Phú'];
+          const tvt3Districts = ['Cẩm Mỹ', 'Xuân Lộc', 'Long Khánh', 'Thống Nhất', 'Định Quán', 'Tân Phú', 'Vĩnh Cửu'];
           if (district && !tvt3Districts.includes(district)) {
             skipCount++;
             continue;
