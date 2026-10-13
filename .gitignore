@@ -54,6 +54,8 @@ backend/data/system_config.json
 
 # ── Playwright Browsers ──
 playwright-browsers/
+**/ms-playwright
+ms-playwright
 web-app/ms-playwright/
 web-app/embedded_invoice.html
 web-app/invoice_page_details.html
