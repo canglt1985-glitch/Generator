@@ -1,5 +1,23 @@
 # Changelog
 
+## [2026-10-13]
+### Added & Standardized
+- **Tỉ Lệ Rớt Cell Off `(x/y)` & Định Dạng Mạng Liền Sector `[4G][C]` (Cách A)**:
+  - Hiển thị tỉ lệ rớt `(x/y)` chính xác trong danh sách **CELL OFF**: `x` là số cell rớt thực tế, `y` là tổng số cell cấu hình thực tế ở công nghệ đó.
+  - Hỗ trợ đầy đủ các mô hình trạm:
+    - Trạm 2 carrier (6 cell) rớt 2 cell $\rightarrow$ `(2/6)`.
+    - Trạm 1 carrier (3 cell) rớt 1 cell $\rightarrow$ `(1/3)`.
+    - Trạm CAX 2 cell (`DNICMYAP`) rớt 1 cell $\rightarrow$ `(1/2)`.
+    - Trạm chưa có dữ liệu tổng $\rightarrow$ hiển thị `(x/)` giống NOC SMS.
+  - **Chuẩn hóa nhãn `[3G4G]`**: Thay thế cho `[SRAN]` khi trạm rớt cả cell 3G và 4G (ví dụ: `[3G4G][C]`).
+  - **Cụm mạng liền sector**: Đặt mạng trước, sector sau theo thứ tự phân cấp kỹ thuật: `• {site_old} [{net}][{sector}] ({x}/{y}) - {time}`.
+  - **Ưu tiên Site ID cũ (6 ký tự)**: Trong mục CELL OFF hiển thị trực tiếp mã cũ (như `DNDQ11`, `DNTN34`, `DNXL80`) thay vì viết kèm ngoặc mã mới 8 ký tự.
+  - **Tự động thăng hạng MLL Trạm**: Khi $x \ge y$ (rớt toàn bộ cell cấu hình), trạm tự động thăng hạng lên mục **`📵 MLL Trạm`**.
+  - **Đếm số lần rớt trong ngày**: Tự động thêm hậu tố `(Lần 2)` ở cuối dòng MLL nếu trạm rớt lặp lại trong ngày.
+  - **Đồng bộ toàn diện**: Tích hợp đồng nhất trên Frontend Web UI (badge tím, tooltip hover chi tiết cell, nút +MLL), hàm "Sao chép báo cáo" và Báo cáo định kỳ Backend Worker.
+  - **Sửa đường dẫn đọc `site_cell_count.json`**: Khắc phục lỗi worker đọc nhầm `backend/data/smartw/` khiến mẫu số bị khuyết, bổ sung hàm tra cứu đa khóa (`old_id`, `base_id`, `site_key`, `site`, `label`).
+  - **Bộ Unit Tests**: Viết bộ test suite tại `backend/tests/test_celloff_ratio.py` kiểm tra toàn bộ 20/20 test cases.
+
 ## [2026-10-11]
 ### Fixed & Standardized
 - **Chuẩn Hóa Logic Bóc Tách & Nhận Diện Mã Trạm SmartW (8-Char BTS Rule)**:
