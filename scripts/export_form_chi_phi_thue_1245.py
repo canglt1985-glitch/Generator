@@ -184,26 +184,36 @@ def export_form():
         contract_no = ""
         start_date = "01/01/2027"
 
-        # Nếu đã có BBGN và đơn giá thỏa thuận (ví dụ 184, 186, 246) -> dùng đơn giá BBGN
-        if proposed_rent and has_bbgn:
-            price = int(proposed_rent)
-            calc_note = f"Đã có BBGN. Đơn giá thỏa thuận {price//1000000}tr/th. Đối tác: {partner}. {ward} ({dist})"
-        else:
-            # Chưa có HĐ/BBGN: Áp dụng định mức 1245 (giảm trừ dùng chung cột -20%, bệ outdoor -20% + MPĐ 300k)
-            if is_phuong:
-                if h > 35:
-                    price = 5456000
-                    calc_note = f"Tạm tính 1245: MB 3.5tr + Cột {int(h)}m (1.256tr) + Bệ (0.4tr) + MPĐ (0.3tr). Đối tác: {partner}"
-                else:
-                    price = 5288000
-                    calc_note = f"Tạm tính 1245: MB 3.5tr + Cột {int(h)}m (1.088tr) + Bệ (0.4tr) + MPĐ (0.3tr). Đối tác: {partner}"
+        # Tính toán theo định mức 1245 mới:
+        # Mặt bằng tăng 15%: Xã 2.4tr * 1.15 = 2.76tr; Phường 3.5tr * 1.15 = 4.025tr
+        # Cột anten (-20% dùng chung): <=35m là 1.088tr; >35m là 1.256tr
+        # Bệ outdoor (-20% dùng chung): 0.4tr
+        # Máy phát điện: 0.3tr
+        # Hệ thống tiếp đất: 0.44tr (440k)
+        tiep_dat = 440000
+        mfd = 300000
+        be_outdoor = 400000
+
+        if is_phuong:
+            mb_cost = int(round(3500000 * 1.15))  # 4,025,000 tròn
+            if h > 35:
+                cot_cost = 1256000
+                price = mb_cost + cot_cost + be_outdoor + mfd + tiep_dat  # 6,421,000
+                calc_note = f"Định mức 1245 (+15% MB + Tiếp đất): MB 4.025tr (+15%) + Cột {int(h)}m (1.256tr) + Bệ (0.4tr) + MPĐ (0.3tr) + Tiếp đất (0.44tr). Đối tác: {partner}"
             else:
-                if h > 35:
-                    price = 4356000
-                    calc_note = f"Tạm tính 1245: MB 2.4tr + Cột {int(h)}m (1.256tr) + Bệ (0.4tr) + MPĐ (0.3tr). Đối tác: {partner}"
-                else:
-                    price = 4188000
-                    calc_note = f"Tạm tính 1245: MB 2.4tr + Cột {int(h)}m (1.088tr) + Bệ (0.4tr) + MPĐ (0.3tr). Đối tác: {partner}"
+                cot_cost = 1088000
+                price = mb_cost + cot_cost + be_outdoor + mfd + tiep_dat  # 6,253,000
+                calc_note = f"Định mức 1245 (+15% MB + Tiếp đất): MB 4.025tr (+15%) + Cột {int(h)}m (1.088tr) + Bệ (0.4tr) + MPĐ (0.3tr) + Tiếp đất (0.44tr). Đối tác: {partner}"
+        else:
+            mb_cost = int(round(2400000 * 1.15))  # 2,760,000 tròn
+            if h > 35:
+                cot_cost = 1256000
+                price = mb_cost + cot_cost + be_outdoor + mfd + tiep_dat  # 5,156,000
+                calc_note = f"Định mức 1245 (+15% MB + Tiếp đất): MB 2.76tr (+15%) + Cột {int(h)}m (1.256tr) + Bệ (0.4tr) + MPĐ (0.3tr) + Tiếp đất (0.44tr). Đối tác: {partner}"
+            else:
+                cot_cost = 1088000
+                price = mb_cost + cot_cost + be_outdoor + mfd + tiep_dat  # 4,988,000
+                calc_note = f"Định mức 1245 (+15% MB + Tiếp đất): MB 2.76tr (+15%) + Cột {int(h)}m (1.088tr) + Bệ (0.4tr) + MPĐ (0.3tr) + Tiếp đất (0.44tr). Đối tác: {partner}"
 
         vals = [
             idx,
