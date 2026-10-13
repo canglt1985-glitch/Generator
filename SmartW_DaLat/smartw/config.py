@@ -73,11 +73,11 @@ def is_smartw_configured() -> bool:
     return load_smartw_config() is not None
 
 
-# ── THIẾT LẬP THAM SỐ VẬN HÀNH TỔ ĐÀ LẠT ──────────────────────────────
+# ── THIẾT LẬP THAM SỐ VẬN HÀNH TỔ ĐÀ LẠT (Khớp giao diện SmartW) ──────
 SMARTW_TEAM = os.getenv('SMARTW_TEAM', 'TVT Đà Lạt')
-SMARTW_GROUP = os.getenv('SMARTW_GROUP', 'PVT Lâm Đồng')
+SMARTW_GROUP = os.getenv('SMARTW_GROUP', 'ALL/UNALL,PVT Lâm Đồng')
 SMARTW_TRUNG_TAM = os.getenv('SMARTW_TRUNG_TAM', 'MobiFone Lâm Đồng')
-SMARTW_PROVINCE = os.getenv('SMARTW_PROVINCE', 'Tỉnh Lâm Đồng')
+SMARTW_PROVINCE = os.getenv('SMARTW_PROVINCE', '')
 SMARTW_REGION = os.getenv('SMARTW_REGION', 'MN')
 
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', '')
