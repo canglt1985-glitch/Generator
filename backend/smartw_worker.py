@@ -121,6 +121,22 @@ _main_to_crans = {}
 _site_to_main = {}
 _site_to_partner = {}
 _site_is_local_csg = {}
+_site_to_csg_hub = {}
+_id_lookup = {}
+_id_to_old = {}
+
+def _reset_topology_cache():
+    """Reset topology cache (hữu ích khi test hoặc khi datasites cập nhật)."""
+    global _topology_cache_built, _datasites_cache, _main_to_crans, _site_to_main, _site_to_partner, _site_is_local_csg, _site_to_csg_hub, _id_lookup, _id_to_old
+    _topology_cache_built = False
+    _datasites_cache = None
+    _main_to_crans = {}
+    _site_to_main = {}
+    _site_to_partner = {}
+    _site_is_local_csg = {}
+    _site_to_csg_hub = {}
+    _id_lookup = {}
+    _id_to_old = {}
 
 def _get_datasites_list():
     global _datasites_cache
@@ -138,8 +154,8 @@ def _get_datasites_list():
 
 
 def _build_topology_cache():
-    """Build in-memory topology dictionary: Main ↔ CRAN, External Cable Partner, Local CSG/LSW."""
-    global _topology_cache_built, _main_to_crans, _site_to_main, _site_to_partner, _site_is_local_csg
+    """Build in-memory topology dictionary: Main ↔ CRAN, External Cable Partner, Local CSG/LSW, Remote CSG Hub."""
+    global _topology_cache_built, _main_to_crans, _site_to_main, _site_to_partner, _site_is_local_csg, _site_to_csg_hub, _id_lookup, _id_to_old
     if _topology_cache_built:
         return
     data = _get_datasites_list()
@@ -161,24 +177,44 @@ def _build_topology_cache():
     s_to_m = {}
     s_to_p = {}
     s_is_csg = {}
+    s_to_csg_hub = {}
 
     for r in data:
         sid = (r.get('site_id') or '').strip().upper()
+        old = (r.get('site_id_old') or '').strip().upper()
         ti = r.get('technical_info') or {}
         mi = r.get('management_info') or {}
 
         tm_raw = str(mi.get('tram_main') or ti.get('tram_main_tx') or '').strip()
         dv_vh = str(ti.get('don_vi_van_hanh_cap') or ti.get('don_vi_van_hanh') or '').strip()
+        chu_dt = str(ti.get('chu_dau_tu_cap') or '').strip()
         route = str(ti.get('last_mile_primary') or '').strip().upper()
         tb_csg = str(ti.get('thiet_bi_csg') or '').strip().upper()
+        csg_raw = str(ti.get('csg') or '').strip()
+
+        # Đối tác truyền dẫn (ưu tiên don_vi_van_hanh_cap, sau đó chu_dau_tu_cap)
+        invalid_p = {'KHÔNG', 'NONE', 'NULL', '', 'CÁP LOCAL', 'LOCAL'}
+        partner = ""
+        if dv_vh and dv_vh.upper() not in invalid_p:
+            partner = dv_vh
+        elif chu_dt and chu_dt.upper() not in invalid_p:
+            partner = chu_dt
+
+        if partner:
+            s_to_p[sid] = partner
 
         # Phân loại Local CSG / LSW
         if 'LOCAL CSG' in route or ('LOCAL' in dv_vh.upper() and tb_csg == 'CSG'):
             s_is_csg[sid] = 'CSG'
-        elif 'LOCAL LSW' in route or ('LOCAL' in dv_vh.upper() and tb_csg == 'LSW'):
+        elif 'LOCAL LSW' in route or ('LOCAL' in dv_vh.upper() and tb_csg == 'LSW') or tb_csg == 'LSW':
             s_is_csg[sid] = 'LSW'
-        elif dv_vh and dv_vh.upper() not in ['KHÔNG', 'NONE', 'NULL', '', 'CÁP LOCAL', 'LOCAL']:
-            s_to_p[sid] = dv_vh
+            # Trích xuất trạm CSG đích nếu có (Cách 2: bypass LSW hiển thị trạm CSG đích)
+            if csg_raw:
+                raw_hub = re.sub(r'^(CSG|LSW)[\s\-_]*', '', csg_raw, flags=re.I).strip().upper()
+                resolved_hub = id_lookup.get(raw_hub, raw_hub)
+                hub_label = id_to_old.get(resolved_hub, resolved_hub)
+                if resolved_hub != sid and raw_hub != old and hub_label:
+                    s_to_csg_hub[sid] = hub_label
 
         # Phân loại quan hệ Trạm Main - Trạm CRAN
         if tm_raw and tm_raw.upper() not in ['KHÔNG', 'NONE', 'NULL', '']:
@@ -194,6 +230,9 @@ def _build_topology_cache():
     _site_to_main = s_to_m
     _site_to_partner = s_to_p
     _site_is_local_csg = s_is_csg
+    _site_to_csg_hub = s_to_csg_hub
+    _id_lookup = id_lookup
+    _id_to_old = id_to_old
     _topology_cache_built = True
 
 
@@ -292,12 +331,104 @@ def _get_site_outage_tag(site_key: str) -> str:
     return ""
 
 
+# ==============================================================================
+# SỐ LẦN RỚT MLL TRONG NGÀY (DAILY MLL DROP COUNTS CACHE)
+# ==============================================================================
+_today_mll_drop_counts = {}
+_today_mll_drop_date = ""
+_last_today_mll_drop_fetch = 0.0
+
+
+def _refresh_today_mll_drop_counts():
+    """Tự động làm mới số lần rớt MLL trong ngày từ bảng smartw_alarms mỗi 60 giây."""
+    global _today_mll_drop_counts, _today_mll_drop_date, _last_today_mll_drop_fetch
+    now = time.time()
+    today_dt = datetime.now()
+    today_str = today_dt.strftime("%Y-%m-%d")
+
+    # Chỉ refresh nếu quá 60 giây hoặc đã qua ngày mới
+    if (now - _last_today_mll_drop_fetch < 60) and (_today_mll_drop_date == today_str):
+        return
+
+    if not supabase:
+        return
+
+    try:
+        today_iso = datetime(today_dt.year, today_dt.month, today_dt.day, 0, 0, 0).isoformat()
+        res = supabase.table("smartw_alarms") \
+            .select("site, network, alarm_type, sdate") \
+            .gte("sdate", today_iso) \
+            .or_("alarm_type.eq.mll,alarm_type.eq.mll_cell") \
+            .execute()
+
+        alarms = res.data or []
+        site_timestamps = defaultdict(list)
+        for a in alarms:
+            raw_s = str(a.get("site") or "").strip().upper()
+            if not raw_s:
+                continue
+            base_id, old_id, _ = _resolve_base_site_and_tech(raw_s, a.get("network") or "")
+            canon = base_id or raw_s
+            sdate_str = a.get("sdate")
+            if sdate_str:
+                try:
+                    ts = datetime.fromisoformat(sdate_str.replace("Z", "+00:00")).timestamp()
+                    site_timestamps[canon].append(ts)
+                except Exception:
+                    pass
+
+        cache_map = {}
+        for canon, times in site_timestamps.items():
+            times.sort()
+            events = 0
+            last_ts = 0.0
+            for ts in times:
+                if ts - last_ts > 600:  # Gom các alarm trong vòng 10 phút thành 1 đợt rớt mạng
+                    events += 1
+                    last_ts = ts
+            if events > 0:
+                base_id, old_id, _ = _resolve_base_site_and_tech(canon)
+                for key in [canon, base_id, old_id]:
+                    if key:
+                        cache_map[key.upper()] = max(cache_map.get(key.upper(), 0), events)
+
+        _today_mll_drop_counts = cache_map
+        _today_mll_drop_date = today_str
+        _last_today_mll_drop_fetch = now
+    except Exception as e:
+        logger.warning(f"SmartW Worker: Failed to refresh today_mll_drop_counts ({e}), keeping existing cache.")
+
+
+def _get_mll_drop_count(site_key: str) -> int:
+    """
+    Trả về số lần trạm bị rớt MLL trong ngày hôm nay.
+    Nếu trạm chỉ rớt 1 lần hoặc không có dữ liệu: trả về 1.
+    """
+    _refresh_today_mll_drop_counts()
+    if not site_key or not _today_mll_drop_counts:
+        return 1
+
+    raw_s = str(site_key).strip().upper()
+    base_id, old_id, _ = _resolve_base_site_and_tech(raw_s)
+    candidates = [
+        raw_s,
+        (base_id or "").strip().upper(),
+        (old_id or "").strip().upper()
+    ]
+    max_c = 1
+    for cand in candidates:
+        if cand and cand in _today_mll_drop_counts:
+            max_c = max(max_c, _today_mll_drop_counts[cand])
+    return max_c
+
+
 def _get_mll_topology_tag(site_key: str) -> str:
     """
     Tạo tag Topology chuẩn hóa cho bản tin MLL:
     - Trạm Main: '👑[CRAN: DNCM28 - CSG]' hoặc '👑[2 CRAN: DNCM28, DNCM30 - CSG]'
     - Trạm CRAN con: '[MAIN: DNCM01 - CSG]' hoặc '[MAIN: DNCM01 - PITC]' hoặc '[MAIN: DNCM01]'
-    - Trạm thường có CSG Local / LSW: '[CSG]', '[LSW]'
+    - Trạm thường có CSG Local: '[CSG]'
+    - Trạm kết nối qua LSW (Cách 2 - bypass LSW): '[DNDQ31 - MBG]' hoặc '[MBG]'
     - Trạm thường có đối tác cáp ngoài: '[TPCOMS]'
     - Trạm thuần không tag: ''
     """
@@ -306,7 +437,7 @@ def _get_mll_topology_tag(site_key: str) -> str:
         return ""
 
     base_id, old_id, _ = _resolve_base_site_and_tech(site_key)
-    sid = base_id or str(site_key).strip().upper()
+    sid = base_id or (_id_lookup.get(str(site_key).strip().upper()) if _id_lookup else str(site_key).strip().upper())
 
     # 1. Trạm Main
     if sid in _main_to_crans and len(_main_to_crans[sid]) > 0:
@@ -319,10 +450,10 @@ def _get_mll_topology_tag(site_key: str) -> str:
         extra = ""
         if _site_is_local_csg.get(sid) == 'CSG':
             extra = " - CSG"
-        elif _site_is_local_csg.get(sid) == 'LSW':
-            extra = " - LSW"
         elif sid in _site_to_partner:
             extra = f" - {_site_to_partner[sid]}"
+        elif _site_is_local_csg.get(sid) == 'LSW':
+            extra = " - LSW"
 
         return f"👑[{cran_prefix}{extra}]"
 
@@ -332,20 +463,30 @@ def _get_mll_topology_tag(site_key: str) -> str:
         extra = ""
         if _site_is_local_csg.get(sid) == 'CSG':
             extra = " - CSG"
-        elif _site_is_local_csg.get(sid) == 'LSW':
-            extra = " - LSW"
         elif sid in _site_to_partner:
             extra = f" - {_site_to_partner[sid]}"
+        elif _site_is_local_csg.get(sid) == 'LSW':
+            extra = " - LSW"
 
         return f"[MAIN: {main_lbl}{extra}]"
 
     # 3. Trạm thường có CSG Local
     if _site_is_local_csg.get(sid) == 'CSG':
         return "[CSG]"
+
+    # 4. Trạm LSW (Bypass LSW theo Cách 2: [{csg_hub} - {partner}] hoặc [{partner}])
     if _site_is_local_csg.get(sid) == 'LSW':
+        hub = _site_to_csg_hub.get(sid)
+        partner = _site_to_partner.get(sid)
+        if hub and partner:
+            return f"[{hub} - {partner}]"
+        elif hub:
+            return f"[{hub}]"
+        elif partner:
+            return f"[{partner}]"
         return "[LSW]"
 
-    # 4. Trạm thường có đối tác cáp ngoài (trừ Local)
+    # 5. Trạm thường có đối tác cáp ngoài (trừ Local)
     if sid in _site_to_partner:
         return f"[{_site_to_partner[sid]}]"
 
@@ -355,14 +496,16 @@ def _get_mll_topology_tag(site_key: str) -> str:
 def _format_mll_station_lines(site: str, grp: dict) -> list[str]:
     """
     Format thông tin một trạm MLL thành danh sách 2 dòng:
-    Dòng 1: • {label}[{nets}] ⚡{start}-{end}
+    Dòng 1: • {label}[{nets}] (Lần X) ⚡{start}-{end}
     Dòng 2:   ↳ {t} • {topology_tag}
     """
     net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp.get('nets') else ""
+    drop_count = grp.get('drop_count') or _get_mll_drop_count(site)
+    drop_part = f" (Lần {drop_count})" if drop_count >= 2 else ""
     outage_tag = _get_site_outage_tag(site)
     top_tag = _get_mll_topology_tag(site)
 
-    line1 = f"• {grp['label']}{net_part}{outage_tag}"
+    line1 = f"• {grp['label']}{net_part}{drop_part}{outage_tag}"
     if top_tag:
         clean_tag = top_tag.strip(" -")
         line2 = f"  ↳ {grp['t']} • {clean_tag}"
