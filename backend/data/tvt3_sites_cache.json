@@ -384,7 +384,50 @@
     "qlt": "Bùi Quang Thế",
     "to_ql": "VT3",
     "huyen": "Định Quán",
-    "xa": "Xã Định Quán"
+    "xa": "Xã Định Quán",
+    "location_info": {
+      "vi_do": 11.17971,
+      "kinh_do": 107.3859
+    },
+    "technical_info": {
+      "rf_summary": {
+        "sectors": [
+          {
+            "sector": "A",
+            "azimuth": 60,
+            "height": 42,
+            "tilt_mech": 0,
+            "tilt_elec": 4,
+            "tilt_total": 4,
+            "has_3g": true,
+            "has_4g": true,
+            "has_4g_1800_1": true
+          },
+          {
+            "sector": "B",
+            "azimuth": 140,
+            "height": 42,
+            "tilt_mech": 0,
+            "tilt_elec": 4,
+            "tilt_total": 4,
+            "has_3g": true,
+            "has_4g": true,
+            "has_4g_1800_1": true
+          },
+          {
+            "sector": "C",
+            "azimuth": 300,
+            "height": 42,
+            "tilt_mech": 0,
+            "tilt_elec": 6,
+            "tilt_total": 6,
+            "has_3g": true,
+            "has_4g": true,
+            "has_4g_1800_1": true
+          }
+        ]
+      }
+    }
   },
   "DNDQ18": {
     "site_id": "DNIDQU06",
@@ -393,7 +436,50 @@
     "qlt": "Bùi Quang Thế",
     "to_ql": "VT3",
     "huyen": "Định Quán",
-    "xa": "Xã Định Quán"
+    "xa": "Xã Định Quán",
+    "location_info": {
+      "vi_do": 11.17971,
+      "kinh_do": 107.3859
+    },
+    "technical_info": {
+      "rf_summary": {
+        "sectors": [
+          {
+            "sector": "A",
+            "azimuth": 60,
+            "height": 42,
+            "tilt_mech": 0,
+            "tilt_elec": 4,
+            "tilt_total": 4,
+            "has_3g": true,
+            "has_4g": true,
+            "has_4g_1800_1": true
+          },
+          {
+            "sector": "B",
+            "azimuth": 140,
+            "height": 42,
+            "tilt_mech": 0,
+            "tilt_elec": 4,
+            "tilt_total": 4,
+            "has_3g": true,
+            "has_4g": true,
+            "has_4g_1800_1": true
+          },
+          {
+            "sector": "C",
+            "azimuth": 300,
+            "height": 42,
+            "tilt_mech": 0,
+            "tilt_elec": 6,
+            "tilt_total": 6,
+            "has_3g": true,
+            "has_4g": true,
+            "has_4g_1800_1": true
+          }
+        ]
+      }
+    }
   },
   "DNIXTC01": {
     "site_id": "DNIXTC01",
@@ -492,7 +578,59 @@
     "qlt": "Lê Trần Vĩnh",
     "to_ql": "VT3",
     "huyen": "Long Khánh",
-    "xa": "Phường Bình Lộc"
+    "xa": "Phường Bình Lộc",
+    "location_info": {
+      "vi_do": 10.93852,
+      "kinh_do": 107.2095
+    },
+    "technical_info": {
+      "rf_summary": {
+        "has_5g": true,
+        "config_5g": "NR2.6 32T",
+        "cells_5g": 3,
+        "cells_5g_l1": 3,
+        "total_cells": 10,
+        "sectors": [
+          {
+            "sector": "A",
+            "azimuth": 0,
+            "height": 30,
+            "tilt_mech": 0,
+            "tilt_elec": 4,
+            "tilt_total": 4,
+            "has_3g": true,
+            "has_4g": true,
+            "has_5g_l1": true,
+            "has_4g_1800_1": true,
+            "has_4g_1800_2": true
+          },
+          {
+            "sector": "B",
+            "azimuth": 90,
+            "height": 30,
+            "tilt_mech": 0,
+            "tilt_elec": 4,
+            "tilt_total": 4,
+            "has_3g": true,
+            "has_4g": true,
+            "has_5g_l1": true,
+            "has_4g_1800_1": true
+          },
+          {
+            "sector": "C",
+            "azimuth": 300,
+            "height": 30,
+            "tilt_mech": 0,
+            "tilt_elec": 5,
+            "tilt_total": 5,
+            "has_3g": true,
+            "has_4g": true,
+            "has_5g_l1": true,
+            "has_4g_1800_1": true
+          }
+        ]
+      }
+    }
   },
   "DNLK06": {
     "site_id": "DNIBLC01",
@@ -501,7 +639,59 @@
     "qlt": "Lê Trần Vĩnh",
     "to_ql": "VT3",
     "huyen": "Long Khánh",
-    "xa": "Phường Bình Lộc"
+    "xa": "Phường Bình Lộc",
+    "location_info": {
+      "vi_do": 10.93852,
+      "kinh_do": 107.2095
+    },
+    "technical_info": {
+      "rf_summary": {
+        "has_5g": true,
+        "config_5g": "NR2.6 32T",
+        "cells_5g": 3,
+        "cells_5g_l1": 3,
+        "total_cells": 10,
+        "sectors": [
+          {
+            "sector": "A",
+            "azimuth": 0,
+            "height": 30,
+            "tilt_mech": 0,
+            "tilt_elec": 4,
+            "tilt_total": 4,
+            "has_3g": true,
+            "has_4g": true,
+            "has_5g_l1": true,
+            "has_4g_1800_1": true,
+            "has_4g_1800_2": true
+          },
+          {
+            "sector": "B",
+            "azimuth": 90,
+            "height": 30,
+            "tilt_mech": 0,
+            "tilt_elec": 4,
+            "tilt_total": 4,
+            "has_3g": true,
+            "has_4g": true,
+            "has_5g_l1": true,
+            "has_4g_1800_1": true
+          },
+          {
+            "sector": "C",
+            "azimuth": 300,
+            "height": 30,
+            "tilt_mech": 0,
+            "tilt_elec": 5,
+            "tilt_total": 5,
+            "has_3g": true,
+            "has_4g": true,
+            "has_5g_l1": true,
+            "has_4g_1800_1": true
+          }
+        ]
+      }
+    }
   },
   "DNINCT05": {
     "site_id": "DNINCT05",
@@ -7239,7 +7429,54 @@
     "qlt": "Trần Như Vinh",
     "to_ql": "VT3",
     "huyen": "Xuân Lộc",
-    "xa": "Phường Xuân Lộc"
+    "xa": "Phường Xuân Lộc",
+    "location_info": {
+      "vi_do": 10.91377,
+      "kinh_do": 107.39784
+    },
+    "technical_info": {
+      "rf_summary": {
+        "has_5g": true,
+        "sectors": [
+          {
+            "sector": "A",
+            "azimuth": 0,
+            "height": 50,
+            "tilt_mech": 2,
+            "tilt_elec": 5,
+            "tilt_total": 7,
+            "has_3g": true,
+            "has_4g": true,
+            "has_5g_l1": true,
+            "has_4g_1800_1": true
+          },
+          {
+            "sector": "B",
+            "azimuth": 120,
+            "height": 50,
+            "tilt_mech": 0,
+            "tilt_elec": 5,
+            "tilt_total": 5,
+            "has_3g": true,
+            "has_4g": true,
+            "has_5g_l1": true,
+            "has_4g_1800_1": true
+          },
+          {
+            "sector": "C",
+            "azimuth": 240,
+            "height": 50,
+            "tilt_mech": 0,
+            "tilt_elec": 6,
+            "tilt_total": 6,
+            "has_3g": true,
+            "has_4g": true,
+            "has_5g_l1": true,
+            "has_4g_1800_1": true
+          }
+        ]
+      }
+    }
   },
   "DNXL07": {
     "site_id": "DNIXLO02",
@@ -7248,7 +7485,54 @@
     "qlt": "Trần Như Vinh",
     "to_ql": "VT3",
     "huyen": "Xuân Lộc",
-    "xa": "Phường Xuân Lộc"
+    "xa": "Phường Xuân Lộc",
+    "location_info": {
+      "vi_do": 10.91377,
+      "kinh_do": 107.39784
+    },
+    "technical_info": {
+      "rf_summary": {
+        "has_5g": true,
+        "sectors": [
+          {
+            "sector": "A",
+            "azimuth": 0,
+            "height": 50,
+            "tilt_mech": 2,
+            "tilt_elec": 5,
+            "tilt_total": 7,
+            "has_3g": true,
+            "has_4g": true,
+            "has_5g_l1": true,
+            "has_4g_1800_1": true
+          },
+          {
+            "sector": "B",
+            "azimuth": 120,
+            "height": 50,
+            "tilt_mech": 0,
+            "tilt_elec": 5,
+            "tilt_total": 5,
+            "has_3g": true,
+            "has_4g": true,
+            "has_5g_l1": true,
+            "has_4g_1800_1": true
+          },
+          {
+            "sector": "C",
+            "azimuth": 240,
+            "height": 50,
+            "tilt_mech": 0,
+            "tilt_elec": 6,
+            "tilt_total": 6,
+            "has_3g": true,
+            "has_4g": true,
+            "has_5g_l1": true,
+            "has_4g_1800_1": true
+          }
+        ]
+      }
+    }
   },
   "ILA-DNIXLC": {
     "site_id": "ILA-DNIXLC",
