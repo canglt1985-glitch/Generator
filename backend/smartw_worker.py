@@ -2411,13 +2411,22 @@ def run_alarm_poll():
                         info = item.get("active_info") or {}
                         b_id = item["base_id"]
                         t_item = item.get("tech")
+                        flaps = item.get("drop_count") or item.get("flaps_count") or 1
                         if b_id not in mac_groups:
-                            mac_groups[b_id] = {'label': info.get('label') or _get_site_label(b_id), 'nets': [], 't': info.get('sdate') or ''}
+                            mac_groups[b_id] = {
+                                'label': info.get('label') or _get_site_label(b_id),
+                                'nets': [],
+                                't': info.get('sdate') or '',
+                                'drop_count': flaps
+                            }
+                        else:
+                            mac_groups[b_id]['drop_count'] = max(mac_groups[b_id].get('drop_count', 1), flaps)
                         if t_item and t_item not in mac_groups[b_id]['nets']:
                             mac_groups[b_id]['nets'].append(t_item)
                     for _, grp in mac_groups.items():
                         net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
-                        lines_active.append(f"• {grp['label']}{net_part} - {grp['t']}")
+                        drop_part = f" (Lần {grp['drop_count']})" if grp.get('drop_count', 1) >= 2 else ""
+                        lines_active.append(f"• {grp['label']}{net_part}{drop_part} - {grp['t']}")
 
                 if act_mpd:
                     lines_active.append("*GEN:*")
@@ -2426,13 +2435,22 @@ def run_alarm_poll():
                         info = item.get("active_info") or {}
                         b_id = item["base_id"]
                         t_item = item.get("tech")
+                        flaps = item.get("drop_count") or item.get("flaps_count") or 1
                         if b_id not in mpd_groups:
-                            mpd_groups[b_id] = {'label': info.get('label') or _get_site_label(b_id), 'nets': [], 't': info.get('sdate') or ''}
+                            mpd_groups[b_id] = {
+                                'label': info.get('label') or _get_site_label(b_id),
+                                'nets': [],
+                                't': info.get('sdate') or '',
+                                'drop_count': flaps
+                            }
+                        else:
+                            mpd_groups[b_id]['drop_count'] = max(mpd_groups[b_id].get('drop_count', 1), flaps)
                         if t_item and t_item not in mpd_groups[b_id]['nets']:
                             mpd_groups[b_id]['nets'].append(t_item)
                     for _, grp in mpd_groups.items():
                         net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
-                        lines_active.append(f"• {grp['label']}{net_part} - {grp['t']}")
+                        drop_part = f" (Lần {grp['drop_count']})" if grp.get('drop_count', 1) >= 2 else ""
+                        lines_active.append(f"• {grp['label']}{net_part}{drop_part} - {grp['t']}")
 
                 if act_mll:
                     lines_active.append("*MLL:*")
@@ -2441,8 +2459,16 @@ def run_alarm_poll():
                         info = item.get("active_info") or {}
                         b_id = item["base_id"]
                         t_item = item.get("tech")
+                        flaps = item.get("drop_count") or item.get("flaps_count") or 1
                         if b_id not in mll_groups:
-                            mll_groups[b_id] = {'label': info.get('label') or _get_site_label(b_id), 'nets': [], 't': info.get('sdate') or ''}
+                            mll_groups[b_id] = {
+                                'label': info.get('label') or _get_site_label(b_id),
+                                'nets': [],
+                                't': info.get('sdate') or '',
+                                'drop_count': flaps
+                            }
+                        else:
+                            mll_groups[b_id]['drop_count'] = max(mll_groups[b_id].get('drop_count', 1), flaps)
                         if t_item and t_item not in mll_groups[b_id]['nets']:
                             mll_groups[b_id]['nets'].append(t_item)
                     for b_id, grp in mll_groups.items():
@@ -2451,29 +2477,7 @@ def run_alarm_poll():
                 _send_viber_report(lines_active)
                 logger.info(f"SmartW Worker: Đã gửi cảnh báo ACTIVE ({len(new_active_events)} mục)")
 
-            # (B) CẢNH BÁO CHẬP CHỜN (Định dạng micro-syntax theo yêu cầu: ⚠️ *Chập chờn*)
-            if new_flapping_events:
-                lines_flapping = ["⚠️ *Chập chờn*"]
-                flap_groups = {}
-                for item in new_flapping_events:
-                    b_id = item["base_id"]
-                    t_item = item.get("tech")
-                    flaps = item.get("flaps_count", 2)
-                    info = item.get("active_info") or {}
-                    lbl = info.get("label") or item.get("label") or _get_site_label(b_id)
-                    if b_id not in flap_groups:
-                        flap_groups[b_id] = {"label": lbl, "nets": [], "flaps": flaps}
-                    if t_item and t_item not in flap_groups[b_id]["nets"]:
-                        flap_groups[b_id]["nets"].append(t_item)
-                    flap_groups[b_id]["flaps"] = max(flap_groups[b_id]["flaps"], flaps)
-
-                for b_id, grp in flap_groups.items():
-                    net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
-                    flaps = grp["flaps"]
-                    lines_flapping.append(f"• {grp['label']}{net_part} - Chập chờn {flaps} lần/2h")
-
-                _send_viber_report(lines_flapping)
-                logger.info(f"SmartW Worker: Đã gửi cảnh báo Chập chờn ({len(flap_groups)} trạm)")
+            # (B) CẢNH BÁO CHẬP CHỜN (Đã bỏ theo yêu cầu người dùng: số lần rớt mạng được tích hợp vào (Lần X) trong mục ACTIVE)
 
             # (C) CẢNH BÁO CLEARED (Đã xác minh sạch liên tục >= 2 chu kỳ)
             if new_cleared_events:

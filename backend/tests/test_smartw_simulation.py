@@ -47,19 +47,20 @@ class TestSmartWSimulation(unittest.TestCase):
                 label = item.get("label", item["base_id"])
                 tech = item.get("tech", "")
                 net_part = f" [{tech}]" if tech else ""
-                lines.append(f"• {label}{net_part}")
-            self._mock_send_viber_report(lines)
-
-        # 2. Flapping dispatch (định dạng ngắn gọn: ⚠️ *Chập chờn*)
-        if events["new_flapping"]:
-            lines = ["⚠️ *Chập chờn*"]
-            for item in events["new_flapping"]:
+        # 1. Active dispatch
+        if events["new_active"]:
+            lines = ["🚨 *ACTIVE*"]
+            lines.append("*MLL:*")
+            for item in events["new_active"]:
                 label = item.get("label", item["base_id"])
                 tech = item.get("tech", "")
                 net_part = f" [{tech}]" if tech else ""
-                flaps = item.get("flaps_count", 2)
-                lines.append(f"• {label}{net_part} - Chập chờn {flaps} lần/2h")
+                flaps = item.get("drop_count", 1)
+                drop_part = f" (Lần {flaps})" if flaps >= 2 else ""
+                lines.append(f"• {label}{net_part}{drop_part}")
             self._mock_send_viber_report(lines)
+
+        # 2. Flapping dispatch (ĐÃ BỎ - KHÔNG GỬI ⚠️ *Chập chờn*)
 
         # 3. Cleared dispatch
         if events["new_cleared"]:
@@ -102,46 +103,40 @@ class TestSmartWSimulation(unittest.TestCase):
         self.assertEqual(len(self.sent_messages), 1)  # Vẫn chỉ có 1 tin
 
         # -------------------------------------------------------------
-        # Chu kỳ 3 (09:30 - T2): Link rớt lại lần 2
-        # Kỳ vọng: Phát hiện Rung lắc -> Gửi đúng tin "⚠️ *Chập chờn*"
+        # Chu kỳ 3 (09:30 - T2): Link rớt lại trong PENDING_CLEAR
+        # Kỳ vọng: Giữ nguyên ACTIVE, KHÔNG gửi tin "⚠️ *Chập chờn*"
         # -------------------------------------------------------------
         self._simulate_cycle(dnipla06_alarm, current_ts=2800)
-        self.assertEqual(len(self.sent_messages), 2)
-        self.assertIn("⚠️ *Chập chờn*", self.sent_messages[1])
-        self.assertIn("• DNIPLA06 [4G] - Chập chờn 2 lần/2h", self.sent_messages[1])
+        self.assertEqual(len(self.sent_messages), 1)  # Vẫn 1 tin (không spam)
 
         # -------------------------------------------------------------
-        # Chu kỳ 4 (09:45 - T3): Link lại tạm lên
-        # Kỳ vọng: Đang trong FLAPPING -> KHÔNG gửi CLEARED (giữ im lặng)
-        # -------------------------------------------------------------
-        self._simulate_cycle({}, current_ts=3700)
-        self.assertEqual(len(self.sent_messages), 2)
-
-        # -------------------------------------------------------------
-        # Chu kỳ 5 (10:00 - T4): Link rớt lại lần 3
-        # Kỳ vọng: Đang trong FLAPPING -> DẬP THÔNG BÁO HOÀN TOÀN (giữ im lặng)
-        # -------------------------------------------------------------
-        self._simulate_cycle(dnipla06_alarm, current_ts=4600)
-        self.assertEqual(len(self.sent_messages), 2)  # Vẫn chỉ có 2 tin! Dập thành công!
-
-        # -------------------------------------------------------------
-        # Chu kỳ 6 (10:15 - T5): Link lên lại (Chu kỳ sạch 1/2)
+        # Chu kỳ 4 (09:45 - T3): Link lên lại (Chu kỳ sạch 1/2)
         # Kỳ vọng: Đang chờ ổn định -> Giữ im lặng
         # -------------------------------------------------------------
-        self._simulate_cycle({}, current_ts=5500)
-        self.assertEqual(len(self.sent_messages), 2)
+        self._simulate_cycle({}, current_ts=3700)
+        self.assertEqual(len(self.sent_messages), 1)
 
         # -------------------------------------------------------------
-        # Chu kỳ 7 (10:30 - T6): Link tiếp tục sạch (Chu kỳ sạch 2/2 - đủ 30-45p)
+        # Chu kỳ 5 (10:00 - T4): Link tiếp tục sạch (Chu kỳ sạch 2/2)
         # Kỳ vọng: Xác nhận ổn định dứt điểm -> Gửi "✅ *CLEARED*"
         # -------------------------------------------------------------
-        self._simulate_cycle({}, current_ts=6400)
+        self._simulate_cycle({}, current_ts=4600)
+        self.assertEqual(len(self.sent_messages), 2)
+        self.assertIn("✅ *CLEARED*", self.sent_messages[1])
+
+        # -------------------------------------------------------------
+        # Chu kỳ 6 (10:30 - T5): Link rớt lại lần sau khi đã CLEARED
+        # Kỳ vọng: Gửi tin 🚨 *ACTIVE* có đính kèm (Lần 3)
+        # -------------------------------------------------------------
+        self._simulate_cycle(dnipla06_alarm, current_ts=6400)
         self.assertEqual(len(self.sent_messages), 3)
-        self.assertIn("✅ *CLEARED*", self.sent_messages[2])
-        self.assertIn("DNIPLA06 [4G]", self.sent_messages[2])
+        self.assertIn("🚨 *ACTIVE*", self.sent_messages[2])
+        self.assertIn("(Lần 3)", self.sent_messages[2])
 
         # In tóm tắt để kiểm chứng trực quan
-        print("\n=== TOÀN BỘ 3 TIN NHẮN PHÁT SINH TRONG 7 CHU KỲ (09:00 - 10:30) ===")
+        print("\n=== TOÀN BỘ 3 TIN NHẮN PHÁT SINH TRONG QUY TRÌNH MỚI ===")
+        for i, msg in enumerate(self.sent_messages, 1):
+            print(f"\n[Tin nhắn {i}]:\n{msg}")
         for i, msg in enumerate(self.sent_messages, 1):
             print(f"--- TIN NHẮN {i} ---")
             print(msg)

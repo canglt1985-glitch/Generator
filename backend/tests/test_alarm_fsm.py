@@ -86,34 +86,29 @@ class TestAlarmStateMachine(unittest.TestCase):
         self.assertEqual(len(e1["new_cleared"]), 0)
         self.assertEqual(self.fsm.states[site_key]["state"], AlarmState.PENDING_CLEAR)
 
-        # T2 (09:30): Rớt lại lần 2 trong vòng 2h -> Chuyển FLAPPING, Phát ⚠️ Chập chờn
+        # T2 (09:30): Rớt lại trong lúc PENDING_CLEAR (chưa từng phát CLEARED)
+        # -> Giữ nguyên ACTIVE, không spam tin trùng, không phát ⚠️ Chập chờn
         e2 = self.fsm.process_cycle(alarm_payload, current_ts=2800)
         self.assertEqual(len(e2["new_active"]), 0)
-        self.assertEqual(len(e2["new_flapping"]), 1)
-        self.assertEqual(e2["new_flapping"][0]["flaps_count"], 2)
-        self.assertEqual(self.fsm.states[site_key]["state"], AlarmState.FLAPPING)
+        self.assertEqual(len(e2["new_flapping"]), 0)
+        self.assertEqual(self.fsm.states[site_key]["state"], AlarmState.ACTIVE)
 
-        # T3 (09:45): Link lại chập chờn lên -> Đang FLAPPING, KHÔNG phát CLEARED
+        # T3 (09:45): Bắt đầu chu kỳ sạch 1 -> Chuyển PENDING_CLEAR
         e3 = self.fsm.process_cycle({}, current_ts=3700)
         self.assertEqual(len(e3["new_cleared"]), 0)
-        self.assertEqual(self.fsm.states[site_key]["state"], AlarmState.FLAPPING)
+        self.assertEqual(self.fsm.states[site_key]["state"], AlarmState.PENDING_CLEAR)
 
-        # T4 (10:00): Link rớt lại lần 3 -> Đang FLAPPING, DẬP 100% THÔNG BÁO (IM LẶNG)
-        e4 = self.fsm.process_cycle(alarm_payload, current_ts=4600)
-        self.assertEqual(len(e4["new_active"]), 0)
-        self.assertEqual(len(e4["new_flapping"]), 0)
-        self.assertEqual(len(e4["new_cleared"]), 0)
-        self.assertEqual(self.fsm.states[site_key]["state"], AlarmState.FLAPPING)
-
-        # T5 (10:15): Bắt đầu chu kỳ sạch 1
-        e5 = self.fsm.process_cycle({}, current_ts=5500)
-        self.assertEqual(len(e5["new_cleared"]), 0)
-
-        # T6 (10:30): Chu kỳ sạch 2 -> Link đã ổn định bền vững -> Phát ✅ CLEARED dứt điểm!
-        e6 = self.fsm.process_cycle({}, current_ts=6400)
-        self.assertEqual(len(e6["new_cleared"]), 1)
-        self.assertTrue(e6["new_cleared"][0].get("was_flapping"))
+        # T4 (10:00): Chu kỳ sạch 2 -> Link đã ổn định bền vững -> Phát ✅ CLEARED dứt điểm!
+        e4 = self.fsm.process_cycle({}, current_ts=4600)
+        self.assertEqual(len(e4["new_cleared"]), 1)
         self.assertEqual(self.fsm.states[site_key]["state"], AlarmState.NORMAL)
+
+        # T5 (10:30): Rớt lại lần 3 sau khi đã CLEARED (từ NORMAL) -> Phát 🚨 ACTIVE với drop_count = 3
+        e5 = self.fsm.process_cycle(alarm_payload, current_ts=6400)
+        self.assertEqual(len(e5["new_active"]), 1)
+        self.assertEqual(len(e5["new_flapping"]), 0)
+        self.assertEqual(e5["new_active"][0]["drop_count"], 3)
+        self.assertEqual(self.fsm.states[site_key]["state"], AlarmState.ACTIVE)
 
 if __name__ == "__main__":
     unittest.main()

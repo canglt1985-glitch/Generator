@@ -192,60 +192,33 @@ class AlarmStateMachine:
                 entry["clean_cycles"] = 0  # Đang có lỗi thì reset số chu kỳ sạch về 0
 
                 if state == AlarmState.NORMAL:
-                    # Lần đầu tiên rớt mạng (hoặc đã bình thường rất lâu)
+                    # Lần đầu rớt mạng hoặc rớt lại sau khi đã ổn định (CLEARED)
                     entry["drop_history"].append(current_ts)
                     flaps = len(entry["drop_history"])
-
-                    if flaps >= self.flap_threshold:
-                        # Vừa rớt lại đã chạm ngưỡng chập chờn
-                        entry["state"] = AlarmState.FLAPPING
-                        entry["last_state_change"] = current_ts
-                        entry["flapping_alert_sent"] = True
-                        events["new_flapping"].append({
-                            **entry,
-                            "flaps_count": flaps,
-                            "active_info": active_info
-                        })
-                        logger.info(f"AlarmFSM: ⚠️ {key} chuyển sang FLAPPING ({flaps} lần/2h)")
-                    else:
-                        # Sự cố mới bình thường
-                        entry["state"] = AlarmState.ACTIVE
-                        entry["last_state_change"] = current_ts
-                        entry["flapping_alert_sent"] = False
-                        events["new_active"].append({
-                            **entry,
-                            "active_info": active_info
-                        })
-                        logger.info(f"AlarmFSM: 🚨 {key} chuyển sang ACTIVE (Lần 1)")
+                    entry["state"] = AlarmState.ACTIVE
+                    entry["last_state_change"] = current_ts
+                    entry["flapping_alert_sent"] = False
+                    events["new_active"].append({
+                        **entry,
+                        "flaps_count": flaps,
+                        "drop_count": flaps,
+                        "active_info": active_info
+                    })
+                    logger.info(f"AlarmFSM: 🚨 {key} chuyển sang ACTIVE (Lần {flaps})")
 
                 elif state == AlarmState.PENDING_CLEAR:
                     # Đang trong thời gian chờ xác minh hết lỗi thì BỊ RỚT LẠI NGAY!
+                    # Do chưa từng gửi CLEARED cho người dùng, giữ nguyên ACTIVE mà không gửi tin trùng
                     entry["drop_history"].append(current_ts)
-                    flaps = len(entry["drop_history"])
-
-                    if flaps >= self.flap_threshold:
-                        # Xác định chính xác là trạm đang rung lắc!
-                        entry["state"] = AlarmState.FLAPPING
-                        entry["last_state_change"] = current_ts
-                        if not entry.get("flapping_alert_sent"):
-                            entry["flapping_alert_sent"] = True
-                            events["new_flapping"].append({
-                                **entry,
-                                "flaps_count": flaps,
-                                "active_info": active_info
-                            })
-                            logger.info(f"AlarmFSM: ⚠️ {key} từ PENDING_CLEAR chuyển sang FLAPPING ({flaps} lần/2h)")
-                    else:
-                        # Trở lại ACTIVE mà không spam thêm tin mới (nhóm chat đã biết trạm đang lỗi)
-                        entry["state"] = AlarmState.ACTIVE
-                        entry["last_state_change"] = current_ts
-                        logger.info(f"AlarmFSM: 🔄 {key} rớt lại trong thời gian chờ, giữ nguyên ACTIVE")
+                    entry["state"] = AlarmState.ACTIVE
+                    entry["last_state_change"] = current_ts
+                    logger.info(f"AlarmFSM: 🔄 {key} rớt lại trong thời gian chờ xác minh, giữ nguyên ACTIVE")
 
                 elif state == AlarmState.FLAPPING:
-                    # Đang trong chế độ rung lắc mà bị rớt tiếp
-                    # Ghi nhận mốc rớt, nhưng DẬP 100% THÔNG BÁO (Noise Suppression)
+                    # Tương thích ngược: chuyển thẳng sang ACTIVE
                     entry["drop_history"].append(current_ts)
-                    logger.debug(f"AlarmFSM: 🔇 {key} đang FLAPPING, dập tin cảnh báo.")
+                    entry["state"] = AlarmState.ACTIVE
+                    entry["last_state_change"] = current_ts
 
                 elif state == AlarmState.ACTIVE:
                     # Sự cố kéo dài liên tục từ chu kỳ trước
