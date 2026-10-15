@@ -13762,53 +13762,38 @@
         "has_5g": false,
         "sectors": [
           {
-            "has_3g": false,
-            "has_4g": true,
-            "height": 40,
             "sector": "A",
             "azimuth": 0,
-            "has_5g_l1": false,
-            "has_5g_l2": false,
-            "tilt_elec": 4,
+            "height": 40,
             "tilt_mech": 0,
+            "tilt_elec": 4,
             "tilt_total": 4,
-            "has_4g_2100": false,
-            "has_4g_1800_1": true,
-            "has_4g_1800_2": false
+            "has_3g": true,
+            "has_4g": true
           },
           {
-            "has_3g": false,
-            "has_4g": true,
-            "height": 40,
             "sector": "B",
             "azimuth": 120,
-            "has_5g_l1": false,
-            "has_5g_l2": false,
-            "tilt_elec": 4,
+            "height": 40,
             "tilt_mech": 0,
+            "tilt_elec": 4,
             "tilt_total": 4,
-            "has_4g_2100": false,
-            "has_4g_1800_1": true,
-            "has_4g_1800_2": false
+            "has_3g": true,
+            "has_4g": true
           },
           {
-            "has_3g": false,
-            "has_4g": true,
-            "height": 40,
             "sector": "C",
             "azimuth": 240,
-            "has_5g_l1": false,
-            "has_5g_l2": false,
-            "tilt_elec": 4,
+            "height": 40,
             "tilt_mech": 0,
+            "tilt_elec": 4,
             "tilt_total": 4,
-            "has_4g_2100": false,
-            "has_4g_1800_1": true,
-            "has_4g_1800_2": false
+            "has_3g": true,
+            "has_4g": true
           }
         ],
-        "cells_3g": 0,
-        "cells_4g": 0,
+        "cells_3g": 3,
+        "cells_4g": 3,
         "cells_5g": 0,
         "config_5g": "NR26 32T (2.6GHz)",
         "last_sync": "2026-10-03T06:34:23.554577",
@@ -13816,7 +13801,7 @@
         "cells_5g_l1": 0,
         "cells_5g_l2": 0,
         "config_3g4g": "FSMF + FXED (Tháo dỡ 4G Only)",
-        "total_cells": 0,
+        "total_cells": 6,
         "is_sran_swap": true,
         "swap_solution": "Swap SRAN 3G/4G + Lắp mới 5G NR26"
       }

@@ -102,9 +102,9 @@ for c in all_cells:
 
 # Manual fallback for new/CAX stations without full datacells records
 if 'DNICMYAP' not in site_sectors or not site_sectors['DNICMYAP'].get('3G'):
-    site_sectors['DNICMYAP']['3G'] = {'A', 'B'}
+    site_sectors['DNICMYAP']['3G'] = {'A', 'B', 'C'}
     site_sectors['DNICMYAP']['4G'] = {'A', 'B', 'C'}
-    site_cells['DNICMYAP']['3G'] = {'DNICMYAPDM3GA', 'DNICMYAPDM3GC'}
+    site_cells['DNICMYAP']['3G'] = {'DNICMYAPDM3GA', 'DNICMYAPDM3GB', 'DNICMYAPDM3GC'}
     site_cells['DNICMYAP']['4G'] = {'DNICMYAPCM4CA', 'DNICMYAPCM4CB', 'DNICMYAPCM4CC'}
 
 # Mirror using site_mapping if one side was missing

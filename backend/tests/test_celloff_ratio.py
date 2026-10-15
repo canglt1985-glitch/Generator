@@ -24,8 +24,8 @@ class TestCellOffRatioAndTag(unittest.TestCase):
         self.assertEqual(self.cell_counts.get("DNILNA04", {}).get("3G"), 3)
         self.assertEqual(self.cell_counts.get("DNILNA04", {}).get("4G"), 4)
 
-        # DNICMYAP: trạm CAX có 2 cell 3G
-        self.assertEqual(self.cell_counts.get("DNICMYAP", {}).get("3G"), 2)
+        # DNICMYAP: trạm CAX có 3 cell 3G (theo cập nhật mới từ ca trực)
+        self.assertEqual(self.cell_counts.get("DNICMYAP", {}).get("3G"), 3)
 
     def test_cell_off_format_cach_a(self):
         """Kiểm tra định dạng tin nhắn sao chép CELL OFF:
@@ -38,9 +38,9 @@ class TestCellOffRatioAndTag(unittest.TestCase):
             ratio_str = f" ({off_count}/{total_count})" if total_count else f" ({off_count}/)"
             return f"• {site_label} [{tech_tag}]{sec_part}{ratio_str} - {date_str}"
 
-        # 1. Trạm CAX 2 cell (rớt 1/2 sector A)
-        line1 = format_celloff("DNICMYAP", "", "3G", "A", 1, 2, "08/10 09:49")
-        self.assertEqual(line1, "• DNICMYAP [3G][A] (1/2) - 08/10 09:49")
+        # 1. Trạm CAX 3 cell (rớt 1/3 sector A)
+        line1 = format_celloff("DNICMYAP", "", "3G", "A", 1, 3, "08/10 09:49")
+        self.assertEqual(line1, "• DNICMYAP [3G][A] (1/3) - 08/10 09:49")
 
         # 2. Trạm 1 carrier (rớt 1/3 sector C)
         line2 = format_celloff("DNTN34", "", "4G", "C", 1, 3, "12/10 12:41")

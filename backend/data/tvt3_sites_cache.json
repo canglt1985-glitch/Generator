@@ -4522,7 +4522,46 @@
     "qlt": "Trần Như Vinh",
     "to_ql": "VT3",
     "huyen": "Cẩm Mỹ",
-    "xa": "Xuân Đông"
+    "xa": "Xuân Đông",
+    "technical_info": {
+      "rf_summary": {
+        "cells_3g": 3,
+        "cells_4g": 3,
+        "total_cells": 6,
+        "sectors": [
+          {
+            "sector": "A",
+            "azimuth": 0,
+            "height": 40,
+            "tilt_mech": 0,
+            "tilt_elec": 4,
+            "tilt_total": 4,
+            "has_3g": true,
+            "has_4g": true
+          },
+          {
+            "sector": "B",
+            "azimuth": 120,
+            "height": 40,
+            "tilt_mech": 0,
+            "tilt_elec": 4,
+            "tilt_total": 4,
+            "has_3g": true,
+            "has_4g": true
+          },
+          {
+            "sector": "C",
+            "azimuth": 240,
+            "height": 40,
+            "tilt_mech": 0,
+            "tilt_elec": 4,
+            "tilt_total": 4,
+            "has_3g": true,
+            "has_4g": true
+          }
+        ]
+      }
+    }
   },
   "DNILKH14": {
     "site_id": "DNILKH14",
