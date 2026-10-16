@@ -744,17 +744,16 @@ def _parse_sdate_dt(sdate_str: str) -> datetime:
 def _format_sorted_mll_section(mll_list: list) -> tuple[list[str], int]:
     """
     Gom nhóm và sắp xếp danh sách trạm MLL:
-    1. Giữ tách riêng từng công nghệ [4G], [3G] (để thấy rõ giờ phát sinh riêng của từng mạng).
-    2. Gom tất cả các dòng của CÙNG MỘT TRẠM (cùng base_id) đứng LIỀN KỀ NHAU (không bị trạm khác chen giữa).
-    3. Sắp xếp danh sách trạm: Mới nhất lên đầu (sdate DESC). Trong cùng 1 trạm, công nghệ mới nhất cũng xếp lên trước.
+    1. Chuẩn hóa đồng bộ 100% với tin tức thời ACTIVE: Mỗi trạm vật lý (base_key) chỉ hiển thị DUY NHẤT 1 MỤC.
+    2. Gộp tất cả công nghệ rớt của cùng trạm vào chung nhãn mạng: [3G4G], [4G, 5G], v.v. thông qua _format_net_tag.
+    3. Sắp xếp danh sách trạm: Trạm có sự cố mới nhất lên đầu (sdate DESC).
     Returns:
         (lines, total_active_sites)
     """
     if not mll_list:
         return [], 0
 
-    # Bước 1: Trích xuất các sự cố theo (base_key, net)
-    tech_items = {}
+    station_groups = {}
     for alarm in mll_list:
         raw_site = _site_key(alarm)
         raw_net = alarm.get('network') or ''
@@ -766,49 +765,36 @@ def _format_sorted_mll_section(mll_list: list) -> tuple[list[str], int]:
         t_str = _fmt_sdate(raw_sdate, full=False)
         drop_count = alarm.get('drop_count') or _get_mll_drop_count(base_key)
 
-        key = (base_key, net)
-        if key not in tech_items:
-            tech_items[key] = {
+        if base_key not in station_groups:
+            station_groups[base_key] = {
                 'base_key': base_key,
-                'net': net,
-                'nets': [net] if net else [],
                 'label': _get_site_label(base_key),
+                'nets': [net] if net else [],
                 't': t_str,
                 'dt': dt,
                 'drop_count': drop_count,
             }
         else:
-            # Nếu có nhiều alarm trùng (base_key, net), giữ mốc thời gian gần nhất
-            if dt > tech_items[key]['dt']:
-                tech_items[key]['dt'] = dt
-                tech_items[key]['t'] = t_str
-            if drop_count > tech_items[key].get('drop_count', 1):
-                tech_items[key]['drop_count'] = drop_count
+            if dt > station_groups[base_key]['dt']:
+                station_groups[base_key]['dt'] = dt
+                station_groups[base_key]['t'] = t_str
+            if drop_count > station_groups[base_key].get('drop_count', 1):
+                station_groups[base_key]['drop_count'] = drop_count
+            if net and net not in station_groups[base_key]['nets']:
+                station_groups[base_key]['nets'].append(net)
 
-    # Bước 2: Gom nhóm theo trạm vật lý (base_key)
-    station_groups = defaultdict(list)
-    for (b_key, _), item in tech_items.items():
-        station_groups[b_key].append(item)
-
-    # Bước 3: Trong mỗi trạm, sắp xếp các công nghệ theo thời gian mới nhất lên đầu
-    for b_key in station_groups:
-        station_groups[b_key].sort(key=lambda x: x['dt'], reverse=True)
-
-    # Bước 4: Sắp xếp các trạm theo thời gian sự cố mới nhất của trạm đó (DESC)
+    # Sắp xếp các trạm theo thời gian sự cố mới nhất (DESC)
     sorted_stations = sorted(
         station_groups.values(),
-        key=lambda items: items[0]['dt'],
+        key=lambda x: x['dt'],
         reverse=True
     )
 
-    # Bước 5: Tạo các dòng hiển thị
     mll_lines = []
-    unique_sites_count = len(sorted_stations)
-    for items in sorted_stations:
-        for item in items:
-            mll_lines.extend(_format_mll_station_lines(item['base_key'], item))
+    for grp in sorted_stations:
+        mll_lines.extend(_format_mll_station_lines(grp['base_key'], grp))
 
-    return mll_lines, unique_sites_count
+    return mll_lines, len(sorted_stations)
 
 
 def _send_viber_report(lines: list, token: str = None, sender: str = None):

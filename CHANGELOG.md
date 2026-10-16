@@ -2,14 +2,16 @@
 
 ## [2026-10-16]
 ### Added & Standardized
-- **Tối Ưu Sắp Xếp & Gom Nhóm Liền Kề Cho Trạm MLL**:
-  - Khắc phục lỗi các dòng công nghệ của cùng 1 trạm (như `DNDQ52` / `DNITNS04` rớt cả 3G và 4G) bị trạm khác (`DNIXLO32`) chen ngang vào giữa.
-  - Xây dựng hàm chuẩn hóa `_format_sorted_mll_section()` và `_parse_sdate_dt()` trong `backend/smartw_worker.py`:
-    + Giữ tách riêng từng công nghệ (`[4G]`, `[3G]`) để người trực ca nắm rõ giờ phát sinh riêng của từng mạng.
-    + Gom tất cả các dòng của cùng một trạm vật lý (`base_id`) đứng liền kề nhau, tuyệt đối không bị trạm khác chen ngang.
-    + Sắp xếp toàn bộ danh sách trạm theo thời gian sự cố mới nhất lên đầu (`sdate` DESC). Trong cùng một trạm, công nghệ vừa rớt mới nhất cũng xếp lên trước.
-    + Đồng bộ sắp xếp theo thời gian mới nhất cho cả mục MAC (mất điện) và GEN (chạy máy phát điện).
-  - Bổ sung unit test kiểm thử tự động tại `backend/tests/test_mll_topology_and_drop_count.py` (26/26 tests passed 100%).
+- **Đồng Bộ Hoá 100% Logic Gộp Trạm MLL (1 Trạm Vật Lý = 1 Mục Duy Nhất)**:
+  - Khắc phục sự bất nhất logic giữa tin tức thời `🚨 ACTIVE` (gộp 1 dòng `[4G, 5G]`) và tin định kỳ `📵 BÁO CÁO MLL` (bị xé lẻ thành 2 dòng lặp lại cho cùng 1 trạm `DNCM19` / `DNICMY07`).
+  - Thống nhất nguyên tắc thiết kế toàn hệ thống: **Mỗi trạm vật lý (`base_id`) chỉ xuất hiện đúng 1 mục duy nhất** trên tất cả các loại bản tin (`ACTIVE`, `BÁO CÁO MLL`, `SUMMARY`):
+    + Các công nghệ rớt của cùng trạm được gom chung vào nhãn mạng thống nhất: `[3G4G]`, `[4G, 5G]`, `[3G4G, 5G]`.
+    + Thời gian hiển thị lấy theo thời điểm sự cố mới nhất của trạm (`sdate` DESC).
+    + Tuyệt đối không lặp lại tên trạm, không lặp lại tag topology truyền dẫn `[MAIN: ...]`.
+  - Kiểm tra và xác nhận trạng thái trạm `DNIXLO33`: Hiện tại không có sự cố MLL hay Cell Off (đang phát sóng bình thường); chỉ có `DNIXLO32` có cảnh báo MLL 3G từ ngày 14/10.
+  - Bổ sung unit test kiểm thử tự động tại `backend/tests/test_mll_topology_and_drop_count.py` (`test_mll_station_grouping_dncm19_4g_5g`, 27/27 tests passed 100%).
+- **Tối Ưu Sắp Xếp Trạm MLL Theo Thứ Tự Mới Nhất**:
+  - Toàn bộ danh sách trạm MLL, MAC và GEN được sắp xếp theo thời gian sự cố mới nhất lên đầu danh sách (`sdate` DESC).
 - **Chuẩn Hóa Đơn Vị Vận Hành Cáp & Đối Tác Truyền Dẫn MLL**:
   - Phân loại rõ ràng 3 nhóm vận hành cáp quang:
     1. Cáp nội bộ Tổ VT3 tự vận hành: Nhãn chuẩn `Local` (không gắn tag đối tác ngoài trên bot).
