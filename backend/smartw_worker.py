@@ -711,6 +711,106 @@ def _fmt_sdate(sdate_str: str, full: bool = False) -> str:
     return sdate_str
 
 
+def _parse_sdate_dt(sdate_str: str) -> datetime:
+    """Parse alarm sdate string into a naive datetime object for comparison/sorting."""
+    if not sdate_str:
+        return datetime.min
+    try:
+        s = str(sdate_str).strip()
+        if 'T' in s:
+            dt = datetime.fromisoformat(s.replace('Z', '+00:00'))
+            if dt.tzinfo:
+                dt = dt.replace(tzinfo=None)
+            return dt
+        parts = s.split(' ')
+        if len(parts) >= 2:
+            if '/' in parts[0] and ':' in parts[1]:
+                dparts = [int(x) for x in parts[0].split('/')]
+                tparts = [int(x) for x in parts[1].split(':')]
+                if len(dparts) == 3 and len(tparts) >= 2:
+                    sec = tparts[2] if len(tparts) > 2 else 0
+                    return datetime(dparts[2], dparts[1], dparts[0], tparts[0], tparts[1], sec)
+            elif ':' in parts[0] and '/' in parts[1]:
+                tparts = [int(x) for x in parts[0].split(':')]
+                dparts = [int(x) for x in parts[1].split('/')]
+                if len(dparts) == 3 and len(tparts) >= 2:
+                    sec = tparts[2] if len(tparts) > 2 else 0
+                    return datetime(dparts[2], dparts[1], dparts[0], tparts[0], tparts[1], sec)
+    except Exception:
+        pass
+    return datetime.min
+
+
+def _format_sorted_mll_section(mll_list: list) -> tuple[list[str], int]:
+    """
+    Gom nhóm và sắp xếp danh sách trạm MLL:
+    1. Giữ tách riêng từng công nghệ [4G], [3G] (để thấy rõ giờ phát sinh riêng của từng mạng).
+    2. Gom tất cả các dòng của CÙNG MỘT TRẠM (cùng base_id) đứng LIỀN KỀ NHAU (không bị trạm khác chen giữa).
+    3. Sắp xếp danh sách trạm: Mới nhất lên đầu (sdate DESC). Trong cùng 1 trạm, công nghệ mới nhất cũng xếp lên trước.
+    Returns:
+        (lines, total_active_sites)
+    """
+    if not mll_list:
+        return [], 0
+
+    # Bước 1: Trích xuất các sự cố theo (base_key, net)
+    tech_items = {}
+    for alarm in mll_list:
+        raw_site = _site_key(alarm)
+        raw_net = alarm.get('network') or ''
+        base_id, _, tech = _resolve_base_site_and_tech(raw_site, raw_net)
+        base_key = (base_id or raw_site).strip().upper()
+        net = _norm_net(tech or raw_net)
+        raw_sdate = alarm.get('sdateStr') or alarm.get('sdate_str') or alarm.get('sdate') or ''
+        dt = _parse_sdate_dt(raw_sdate)
+        t_str = _fmt_sdate(raw_sdate, full=False)
+        drop_count = alarm.get('drop_count') or _get_mll_drop_count(base_key)
+
+        key = (base_key, net)
+        if key not in tech_items:
+            tech_items[key] = {
+                'base_key': base_key,
+                'net': net,
+                'nets': [net] if net else [],
+                'label': _get_site_label(base_key),
+                't': t_str,
+                'dt': dt,
+                'drop_count': drop_count,
+            }
+        else:
+            # Nếu có nhiều alarm trùng (base_key, net), giữ mốc thời gian gần nhất
+            if dt > tech_items[key]['dt']:
+                tech_items[key]['dt'] = dt
+                tech_items[key]['t'] = t_str
+            if drop_count > tech_items[key].get('drop_count', 1):
+                tech_items[key]['drop_count'] = drop_count
+
+    # Bước 2: Gom nhóm theo trạm vật lý (base_key)
+    station_groups = defaultdict(list)
+    for (b_key, _), item in tech_items.items():
+        station_groups[b_key].append(item)
+
+    # Bước 3: Trong mỗi trạm, sắp xếp các công nghệ theo thời gian mới nhất lên đầu
+    for b_key in station_groups:
+        station_groups[b_key].sort(key=lambda x: x['dt'], reverse=True)
+
+    # Bước 4: Sắp xếp các trạm theo thời gian sự cố mới nhất của trạm đó (DESC)
+    sorted_stations = sorted(
+        station_groups.values(),
+        key=lambda items: items[0]['dt'],
+        reverse=True
+    )
+
+    # Bước 5: Tạo các dòng hiển thị
+    mll_lines = []
+    unique_sites_count = len(sorted_stations)
+    for items in sorted_stations:
+        for item in items:
+            mll_lines.extend(_format_mll_station_lines(item['base_key'], item))
+
+    return mll_lines, unique_sites_count
+
+
 def _send_viber_report(lines: list, token: str = None, sender: str = None):
     """Send a formatted report to Viber Channel via pa/post."""
     if not lines:
@@ -3194,14 +3294,23 @@ def send_periodic_full_report():
         lines.append("⚡ *MAC:*")
         mac_groups = {}
         for alarm in md_list:
-            site = _site_key(alarm)
-            net = _norm_net(alarm.get('network') or '')
-            t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '', full=False)
-            if site not in mac_groups:
-                mac_groups[site] = {'label': _get_site_label(site), 'nets': [], 't': t}
-            if net and net not in mac_groups[site]['nets']:
-                mac_groups[site]['nets'].append(net)
-        for site, grp in mac_groups.items():
+            raw_site = _site_key(alarm)
+            base_id, _, tech = _resolve_base_site_and_tech(raw_site, alarm.get('network') or '')
+            b_key = (base_id or raw_site).strip().upper()
+            net = _norm_net(tech or alarm.get('network') or '')
+            raw_sdate = alarm.get('sdateStr') or alarm.get('sdate_str') or alarm.get('sdate') or ''
+            dt = _parse_sdate_dt(raw_sdate)
+            t = _fmt_sdate(raw_sdate, full=False)
+            if b_key not in mac_groups:
+                mac_groups[b_key] = {'label': _get_site_label(b_key), 'nets': [], 't': t, 'dt': dt}
+            else:
+                if dt > mac_groups[b_key]['dt']:
+                    mac_groups[b_key]['dt'] = dt
+                    mac_groups[b_key]['t'] = t
+            if net and net not in mac_groups[b_key]['nets']:
+                mac_groups[b_key]['nets'].append(net)
+        sorted_mac = sorted(mac_groups.values(), key=lambda x: x['dt'], reverse=True)
+        for grp in sorted_mac:
             net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
             lines.append(f"• {grp['label']}{net_part} - {grp['t']}")
             total_active += 1
@@ -3212,34 +3321,33 @@ def send_periodic_full_report():
         lines.append("🔋 *GEN:*")
         mpd_groups = {}
         for alarm in mpd_list:
-            site = _site_key(alarm)
-            net = _norm_net(alarm.get('network') or '')
-            t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '', full=False)
-            if site not in mpd_groups:
-                mpd_groups[site] = {'label': _get_site_label(site), 'nets': [], 't': t}
-            if net and net not in mpd_groups[site]['nets']:
-                mpd_groups[site]['nets'].append(net)
-        for site, grp in mpd_groups.items():
+            raw_site = _site_key(alarm)
+            base_id, _, tech = _resolve_base_site_and_tech(raw_site, alarm.get('network') or '')
+            b_key = (base_id or raw_site).strip().upper()
+            net = _norm_net(tech or alarm.get('network') or '')
+            raw_sdate = alarm.get('sdateStr') or alarm.get('sdate_str') or alarm.get('sdate') or ''
+            dt = _parse_sdate_dt(raw_sdate)
+            t = _fmt_sdate(raw_sdate, full=False)
+            if b_key not in mpd_groups:
+                mpd_groups[b_key] = {'label': _get_site_label(b_key), 'nets': [], 't': t, 'dt': dt}
+            else:
+                if dt > mpd_groups[b_key]['dt']:
+                    mpd_groups[b_key]['dt'] = dt
+                    mpd_groups[b_key]['t'] = t
+            if net and net not in mpd_groups[b_key]['nets']:
+                mpd_groups[b_key]['nets'].append(net)
+        sorted_mpd = sorted(mpd_groups.values(), key=lambda x: x['dt'], reverse=True)
+        for grp in sorted_mpd:
             net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp['nets'] else ""
             lines.append(f"• {grp['label']}{net_part} - {grp['t']}")
             total_active += 1
 
     # ── Section 3: MLL ──
     if mll_list:
-        mll_groups = {}
-        for alarm in mll_list:
-            site = _site_key(alarm)
-            net = _norm_net(alarm.get('network') or '')
-            t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or '', full=False)
-            if site not in mll_groups:
-                mll_groups[site] = {'label': _get_site_label(site), 'nets': [], 't': t}
-            if net and net not in mll_groups[site]['nets']:
-                mll_groups[site]['nets'].append(net)
-        
         lines.append("📵 *MLL:*")
-        for site, grp in mll_groups.items():
-            lines.extend(_format_mll_station_lines(site, grp))
-            total_active += 1
+        mll_lines, mll_count = _format_sorted_mll_section(mll_list)
+        lines.extend(mll_lines)
+        total_active += mll_count
 
     # Collect MLL site (base_id, tech) pairs to exclude matching CELLOFF
     # Only filter CELLOFF when same site AND same technology (3G MLL should NOT hide 4G CELLOFF)
@@ -3412,22 +3520,12 @@ def send_periodic_mll_report():
         logger.info("SmartW Worker: 🏠 0 active MLL alarms. Skipping periodic MLL report (Silent on zero).")
         return
 
-    mll_groups = {}
-    for alarm in mll_list:
-        raw_site = _site_key(alarm)
-        base_id, old_id, tech = _resolve_base_site_and_tech(raw_site, alarm.get('network') or '')
-        t = _fmt_sdate(alarm.get('sdateStr') or alarm.get('sdate_str') or alarm.get('sdate') or '', full=False)
-        if base_id not in mll_groups:
-            mll_groups[base_id] = {'label': _get_site_label(base_id), 'nets': [], 't': t}
-        if tech and tech not in mll_groups[base_id]['nets']:
-            mll_groups[base_id]['nets'].append(tech)
-
     lines = ["📵 *BÁO CÁO MLL*"]
-    for site, grp in mll_groups.items():
-        lines.extend(_format_mll_station_lines(site, grp))
+    mll_lines, mll_count = _format_sorted_mll_section(mll_list)
+    lines.extend(mll_lines)
 
     _send_viber_report(lines)
-    logger.info(f"SmartW Worker: ✅ Sent periodic MLL report to Viber for {len(mll_groups)} site(s).")
+    logger.info(f"SmartW Worker: ✅ Sent periodic MLL report to Viber for {mll_count} site(s).")
 
 
 def _get_site_qlt_short(site_raw: str) -> str:

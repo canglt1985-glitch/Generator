@@ -175,6 +175,63 @@ class TestMllTopologyAndDropCount(unittest.TestCase):
             self.assertEqual(lines[0], "• DNIXLO32 [3G4G]")
             self.assertEqual(lines[1], "  ↳ 14:10 • [MAIN: DNXL07 - TPC]")
 
+    def test_mll_station_adjacent_grouping_and_newest_first_sort(self):
+        """Kiểm tra: Các dòng cùng trạm DNDQ52 luôn đứng liền kề nhau và trạm mới nhất xếp lên đầu."""
+        mock_datasites = [
+            {
+                "site_id": "DNITNS04",
+                "site_id_old": "DNDQ52",
+                "technical_info": {
+                    "chu_dau_tu_cap": "VTC",
+                    "don_vi_van_hanh_cap": "VTC"
+                },
+                "management_info": {"tram_main": "KHÔNG"}
+            },
+            {
+                "site_id": "DNIXLO02",
+                "site_id_old": "DNXL07",
+                "technical_info": {},
+                "management_info": {"tram_main": "KHÔNG"}
+            },
+            {
+                "site_id": "DNIXLO32",
+                "site_id_old": "DNIXLO32",
+                "technical_info": {
+                    "tram_main_tx": "DNIXLO02 (DNXL07)",
+                    "chu_dau_tu_cap": "TPC",
+                    "don_vi_van_hanh_cap": "TPC"
+                },
+                "management_info": {}
+            }
+        ]
+
+        # Giả lập 3 cảnh báo từ SmartW theo thứ tự ngẫu nhiên (4G DNDQ52 lúc 10:15, DNIXLO32 ngày 14/10, 3G DNDQ52 lúc 10:11)
+        raw_alarms = [
+            {"site": "DNITNS04_4G", "network": "4G", "sdateStr": "16/10/2026 10:15:00"},
+            {"site": "DNIXLO32", "network": "3G", "sdateStr": "14/10/2026 08:30:00"},
+            {"site": "DNDQ52_3G", "network": "3G", "sdateStr": "16/10/2026 10:11:00"}
+        ]
+
+        with patch.object(smartw_worker, '_get_datasites_list', return_value=mock_datasites), \
+             patch.object(smartw_worker, '_get_mll_drop_count', return_value=3):
+            lines, site_count = smartw_worker._format_sorted_mll_section(raw_alarms)
+
+            # Tổng số trạm duy nhất là 2 (DNITNS04 và DNIXLO32)
+            self.assertEqual(site_count, 2)
+            self.assertEqual(len(lines), 6)  # Mỗi trạm 2 dòng (3 items = 6 lines)
+
+            # 1. Trạm DNITNS04 (DNDQ52) mới nhất (10:15) phải nằm trên đầu danh sách
+            self.assertEqual(lines[0], "• *DNITNS04* (DNDQ52) [4G] (Lần 3)")
+            self.assertEqual(lines[1], "  ↳ 10:15 • [VTC]")
+
+            # 2. Dòng 3G của DNITNS04 (DNDQ52) phải đứng LIỀN KỀ NGAY SAU dòng 4G (không bị DNIXLO32 chen giữa)
+            self.assertEqual(lines[2], "• *DNITNS04* (DNDQ52) [3G] (Lần 3)")
+            self.assertEqual(lines[3], "  ↳ 10:11 • [VTC]")
+
+            # 3. Trạm DNIXLO32 xảy ra sớm hơn (14/10) phải nằm sau toàn bộ cụm DNDQ52
+            self.assertEqual(lines[4], "• *DNIXLO32* [3G] (Lần 3)")
+            self.assertEqual(lines[5], "  ↳ 14/10 • [MAIN: DNXL07 - TPC]")
+
     def test_mll_drop_count_and_format_lines(self):
         """Kiểm tra bổ sung số lần rớt trong ngày (Lần X) vào dòng báo cáo MLL."""
         mock_datasites = [
