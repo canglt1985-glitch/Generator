@@ -140,10 +140,15 @@ def update_generator_logs():
             continue
 
         # Chỉ chuyển đổi các ca chạy máy VIKYNO của XHH
-        if 'VIKYNO' in str(old_lm).upper():
+        if 'VIKYNO' in str(old_lm).upper() or old_nl == 'Dầu':
+            import sys
+            sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'backend'))
+            from fuel_price import get_fuel_price_for_date
+            
             new_dm = conf['quota']
             new_lit = round(hours * new_dm, 2)
-            new_tien = round(new_lit * don_gia) if don_gia > 0 else old_tien
+            gas_price = get_fuel_price_for_date(date, 'Xăng')
+            new_tien = round(new_lit * gas_price)
 
             rd['loai_may'] = conf['brand']
             rd['cong_suat_may'] = conf['kva']
@@ -153,6 +158,7 @@ def update_generator_logs():
             rd['nhien_lieu_loai'] = 'XĂNG'
             rd['nhien_lieu_tieu_hao'] = new_lit
             rd['nhien_lieu_tieu_hao_thuc_te'] = new_lit
+            rd['don_gia'] = gas_price
             rd['thanh_tien'] = new_tien
             rd['ghi_chu'] = f"Chuyển đổi sang máy xăng lưu động {conf['kva']}KVA ({conf['type']})"
 

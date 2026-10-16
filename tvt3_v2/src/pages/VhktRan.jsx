@@ -217,8 +217,10 @@ export default function VhktRan() {
       if (a.cellid) return true;
       const neType = String(a.ne_type || a.neType || '').toUpperCase().trim();
       if (neType === 'CELL') return true;
+      const name = String(a.alarm_name || a.alarmName || '');
+      if (/CELL\s+(?:OUT\s+OF\s+USE|FAULTY|DOWN|UNAVAILABLE|DISABLED)/i.test(name)) return true;
       const info = String(a.alarm_info || a.alarmInfo || '');
-      if (/EUtranCellFDD|UtranCell|GsmCell|Cell=/i.test(info)) return true;
+      if (/EUtranCellFDD|UtranCell|GsmCell|Cell=|cell\s+disabled/i.test(info)) return true;
     }
     return false;
   };
@@ -325,7 +327,8 @@ export default function VhktRan() {
       siteCellCountData[grp.fullSite]?.[grp.net] ||
       0
     );
-    const isAllCellsDown = totalConfiguredCells > 0 && grp.alarms.length >= totalConfiguredCells;
+    const uniqueOffCells = new Set(grp.alarms.map(a => a.cellid).filter(Boolean));
+    const isAllCellsDown = totalConfiguredCells > 0 && uniqueOffCells.size >= totalConfiguredCells;
 
     const isManualPromoted = manualMllSites.has(groupKey);
     const isAllSectorsDown = (

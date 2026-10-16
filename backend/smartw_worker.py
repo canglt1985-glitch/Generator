@@ -493,13 +493,26 @@ def _get_mll_topology_tag(site_key: str) -> str:
     return ""
 
 
+def _format_net_tag(nets_list: list) -> str:
+    """Format network list cleanly: ['3G', '4G'] -> ' [3G4G]', ['3G'] -> ' [3G]'."""
+    if not nets_list:
+        return ""
+    nets = set(nets_list)
+    if '3G' in nets and '4G' in nets:
+        remaining = [n for n in sorted(nets) if n not in ('3G', '4G')]
+        if remaining:
+            return f" [3G4G, {', '.join(remaining)}]"
+        return " [3G4G]"
+    return f" [{', '.join(sorted(nets))}]"
+
+
 def _format_mll_station_lines(site: str, grp: dict) -> list[str]:
     """
     Format thông tin một trạm MLL thành danh sách 2 dòng:
     Dòng 1: • {label}[{nets}] (Lần X) ⚡{start}-{end}
     Dòng 2:   ↳ {t} • {topology_tag}
     """
-    net_part = f" [{', '.join(sorted(grp['nets']))}]" if grp.get('nets') else ""
+    net_part = _format_net_tag(grp.get('nets'))
     drop_count = grp.get('drop_count') or _get_mll_drop_count(site)
     drop_part = f" (Lần {drop_count})" if drop_count >= 2 else ""
     outage_tag = _get_site_outage_tag(site)

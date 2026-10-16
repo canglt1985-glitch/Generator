@@ -981,7 +981,7 @@ def extract_cell_sector(cell_id: str, site_code: str = "") -> str:
 
             # Collect unique off sectors
             off_sectors = set(c['_sector'] for c in cells if c.get('_sector'))
-            off_cellids = set(c.get('cellid', '') for c in cells)
+            off_cellids = set(c.get('cellid', '') for c in cells if c.get('cellid'))
 
             # Promote to MLL Trạm if ALL configured sectors are down (or all configured cells down)
             total_cells = (
@@ -989,7 +989,7 @@ def extract_cell_sector(cell_id: str, site_code: str = "") -> str:
                 site_cell_count_ref.get(site, {}).get(net_key) or
                 0
             )
-            is_all_cells_down = total_cells > 0 and len(cells) >= total_cells
+            is_all_cells_down = total_cells > 0 and len(off_cellids) >= total_cells
 
             if configured_sectors:
                 is_all_sectors_down = configured_sectors.issubset(off_sectors)

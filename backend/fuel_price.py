@@ -4,27 +4,30 @@ Scrapes fuel prices from webtygia.com and updates Supabase V2 fuel_and_expenses 
 """
 import os
 import json
-import requests
 import time
 from datetime import datetime
-from bs4 import BeautifulSoup
-from dotenv import load_dotenv
-from supabase import create_client, Client
 
-# 1. Environment & Supabase V2 Client Configuration
+# 1. Environment & Supabase V2 Client Configuration (Lazy/Safe)
 current_dir = os.path.dirname(os.path.abspath(__file__))
-# Load env
-load_dotenv(os.path.join(current_dir, '.env'))
-if not os.getenv("VITE_SUPABASE_URL"):
-    parent_dir = os.path.dirname(current_dir)
-    load_dotenv(os.path.join(parent_dir, 'tvt3_v2', '.env'))
+try:
+    from dotenv import load_dotenv
+    load_dotenv(os.path.join(current_dir, '.env'))
+    if not os.getenv("VITE_SUPABASE_URL"):
+        parent_dir = os.path.dirname(current_dir)
+        load_dotenv(os.path.join(parent_dir, 'tvt3_v2', '.env'))
+except Exception:
+    pass
 
 SUPABASE_URL = os.getenv("VITE_SUPABASE_URL")
 SUPABASE_KEY = os.getenv("VITE_SUPABASE_ANON_KEY")
 
-if SUPABASE_URL and SUPABASE_KEY:
-    supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-else:
+try:
+    from supabase import create_client, Client
+    if SUPABASE_URL and SUPABASE_KEY:
+        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+    else:
+        supabase = None
+except Exception:
     supabase = None
 
 DATA_DIR = os.path.join(current_dir, 'data')
@@ -82,10 +85,13 @@ def _load_price_history() -> list[dict]:
     return history
 
 def get_fuel_price_for_date(date_str: str, fuel_type: str = 'Dầu') -> int:
-    """Get the correct fuel price for a specific date using historical price table."""
+    """
+    Get the correct fuel price for a specific date using historical price table.
+    Enforces strict fuel type matching (Gasoline vs Diesel) and eliminates dead fallbacks.
+    """
     history = _load_price_history()
     if not history:
-        return 20000 if 'Xăng' not in fuel_type else 19000
+        raise ValueError(f"Không có dữ liệu lịch sử giá nhiên liệu để tra cứu ngày {date_str}!")
 
     matching = None
     for entry in history:
@@ -97,13 +103,46 @@ def get_fuel_price_for_date(date_str: str, fuel_type: str = 'Dầu') -> int:
     if not matching:
         matching = history[0]
 
-    if fuel_type and 'Xăng' in fuel_type:
-        return matching.get('xang_ron95', 21000)
+    ft_lower = (fuel_type or '').strip().lower()
+    is_xang = any(k in ft_lower for k in ['xăng', 'xang', 'gasoline', 'ron', 'e10'])
+
+    if is_xang:
+        price = matching.get('xang_ron95')
+        if not price or price <= 0:
+            raise ValueError(f"Không tìm thấy giá XĂNG hợp lệ cho ngày {date_str} (effective: {matching['effective_date']})!")
+        return int(price)
     else:
-        return matching.get('dau_do', 20000)
+        price = matching.get('dau_do')
+        if not price or price <= 0:
+            raise ValueError(f"Không tìm thấy giá DẦU DO hợp lệ cho ngày {date_str} (effective: {matching['effective_date']})!")
+        return int(price)
+
+def audit_fuel_price(date_str: str, fuel_type: str, actual_price: float) -> tuple[bool, str]:
+    """
+    Dynamic Web-Price Audit:
+    Audits whether actual_price matches the scraped web price for date_str and fuel_type.
+    Returns (is_valid, message).
+    """
+    expected_price = get_fuel_price_for_date(date_str, fuel_type)
+    if abs(actual_price - expected_price) < 1:
+        return True, "OK"
+    
+    # Check if cross-fuel mismatch occurred
+    other_type = 'Dầu' if 'xăng' in (fuel_type or '').lower() else 'Xăng'
+    try:
+        other_price = get_fuel_price_for_date(date_str, other_type)
+        if abs(actual_price - other_price) < 1:
+            return False, f"LỖI: Áp nhầm giá {other_type.upper()} ({other_price:,.0f}đ) cho ca máy {fuel_type.upper()} (giá đúng: {expected_price:,.0f}đ)"
+    except Exception:
+        pass
+        
+    return False, f"LỆCH GIÁ: Giá ca máy là {actual_price:,.0f}đ, trong khi giá chuẩn web ngày {date_str} là {expected_price:,.0f}đ (chênh {actual_price - expected_price:+,.0f}đ)"
+
 
 def scrape_pvoil_prices():
     """Scrape current fuel prices from webtygia.com with retries."""
+    import requests
+    from bs4 import BeautifulSoup
     url = 'https://webtygia.com/gia-xang-dau.html'
     max_retries = 3
     

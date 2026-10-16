@@ -1,5 +1,18 @@
 # Changelog
 
+## [2026-10-16]
+### Added & Standardized
+- **Đồng Bộ Cấu Hình Cell & RF Trạm Núi Chứa Chan (`DNIXLO32` & `DNIXLO33`)**:
+  - Khai báo cấu hình 3 sector (A, B, C) cho cả 3G và 4G của 2 trạm `DNIXLO32` (Macro) và `DNIXLO33` (CRAN) trên toàn hệ thống (`site_cell_count.json`, `site_sectors.json`, `datacells`, `datasites`).
+  - Hỗ trợ thuật toán nhận diện rớt đủ 3 sector 4G để tự động thăng cấp thành MLL Trạm thay vì bị kẹt ở bộ lọc Cell Off.
+  - Chuẩn hóa nhãn `[3G4G]` khi trạm rớt đồng thời cả 3G và 4G trong các báo cáo MLL (`_format_net_tag` trong `smartw_worker.py`).
+- **Chuẩn Hóa Đơn Giá Xăng Dầu Tháng 9 & Tháng 10/2026 (Zero Error Pricing)**:
+  - Tích hợp ma trận biến động giá nhiên liệu theo nguyên tắc 15h Next-day vào `backend/data/fuel_prices_history.json`.
+  - Sửa triệt để lỗi phân biệt hoa thường tiếng Việt (`'XĂNG'` in hoa có dấu) trong `backend/fuel_price.py`, xóa sạch các fallback giá cứng.
+  - Chuẩn hóa trực tiếp 19 ca máy xăng Tháng 10/2026 trên Supabase `generator_logs` (khớp 100% biểu giá, giảm dôi dư 1,076,895 đ).
+  - Tách bộ hồ sơ thanh toán máy phát điện độc lập cho đối tác Seath Group Tháng 9/2026 (8 ca, 53.75L Dầu, 1,587,775 đ).
+  - Cấu hình chuyển đổi 10 trạm có máy cố định Vikyno 10kVA sang máy xăng lưu động (ĐM 3.15L/h - 3.44L/h).
+
 ## [2026-10-13]
 ### Added & Standardized
 - **Tỉ Lệ Rớt Cell Off `(x/y)` & Định Dạng Mạng Liền Sector `[4G][C]` (Cách A)**:

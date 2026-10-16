@@ -83,6 +83,34 @@ class TestCellOffRatioAndTag(unittest.TestCase):
         # DNTN34 (1/3) -> Không thăng hạng, vẫn ở Cell Off
         self.assertFalse(should_promote_to_mll(1, 3))
 
+    def test_dnixlo32_and_dnixlo33_configuration_and_tag(self):
+        """Kiểm tra cấu hình 3 sector 3G4G của DNIXLO32 và DNIXLO33 cùng định dạng [3G4G]."""
+        with open('backend/data/site_cell_count.json', 'r', encoding='utf-8') as f:
+            counts = json.load(f)
+        with open('backend/data/site_sectors.json', 'r', encoding='utf-8') as f:
+            sectors = json.load(f)
+
+        # Cả 2 trạm đều có 3 cell 3G và 3 cell 4G
+        self.assertEqual(counts.get('DNIXLO32'), {'3G': 3, '4G': 3})
+        self.assertEqual(counts.get('DNIXLO33'), {'3G': 3, '4G': 3})
+
+        # Cả 2 trạm đều có đủ 3 sector A, B, C cho 3G và 4G
+        self.assertEqual(sectors.get('DNIXLO32'), {'3G': ['A', 'B', 'C'], '4G': ['A', 'B', 'C']})
+        self.assertEqual(sectors.get('DNIXLO33'), {'3G': ['A', 'B', 'C'], '4G': ['A', 'B', 'C']})
+
+        # Format [3G4G] khi trạm rớt cả 3G và 4G
+        from smartw_worker import _format_net_tag, _format_mll_station_lines
+        self.assertEqual(_format_net_tag(['3G', '4G']), " [3G4G]")
+        self.assertEqual(_format_net_tag(['3G']), " [3G]")
+        self.assertEqual(_format_net_tag(['4G']), " [4G]")
+
+        lines = _format_mll_station_lines('DNIXLO32', {
+            'label': '*DNIXLO32*',
+            'nets': ['3G', '4G'],
+            't': '14/10'
+        })
+        self.assertIn("• *DNIXLO32* [3G4G]", lines[0])
+
 
 if __name__ == "__main__":
     unittest.main()

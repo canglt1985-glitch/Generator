@@ -240,7 +240,15 @@
     "qlt": "Trần Ngọc Khuân",
     "to_ql": "VT3",
     "huyen": "Xuân Lộc",
-    "xa": "Phường Xuân Lộc"
+    "xa": "Phường Xuân Lộc",
+    "technical_info": {
+      "rf_summary": {
+        "cells_3g": 3,
+        "cells_4g": 3,
+        "total_cells": 6
+      },
+      "cau_hinh_ran": "3 cell 3G, 3 cell 4G"
+    }
   },
   "DNIBVI05": {
     "site_id": "DNIBVI05",
@@ -285,7 +293,15 @@
     "qlt": "Trần Ngọc Khuân",
     "to_ql": "VT3",
     "huyen": "Xuân Lộc",
-    "xa": "Phường Xuân Lộc"
+    "xa": "Phường Xuân Lộc",
+    "technical_info": {
+      "rf_summary": {
+        "cells_3g": 3,
+        "cells_4g": 3,
+        "total_cells": 6
+      },
+      "cau_hinh_ran": "3 cell 3G, 3 cell 4G"
+    }
   },
   "DNILKH13": {
     "site_id": "DNILKH13",

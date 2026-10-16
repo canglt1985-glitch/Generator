@@ -97,105 +97,57 @@
     "source": "petrolimex"
   },
   {
-    "effective_date": "2026-09-25",
-    "xang_ron95": 28080,
-    "dau_do": 32090,
-    "source": "pvoil"
+    "effective_date": "2026-09-01",
+    "announce_date": "2026-09-01",
+    "effective_time": "00:00",
+    "xang_ron95": 23270,
+    "dau_do": 29540,
+    "source": "petrolimex",
+    "note": "Kỳ điều hành đầu tháng 9, áp dụng từ 00h00 01/09/2026"
+  },
+  {
+    "effective_date": "2026-09-12",
+    "announce_date": "2026-09-11",
+    "effective_time": "15:00",
+    "xang_ron95": 24230,
+    "dau_do": 30280,
+    "source": "petrolimex",
+    "note": "Kỳ điều hành 15h00 11/09, áp dụng từ 00h00 ngày hôm sau (12/09/2026)"
+  },
+  {
+    "effective_date": "2026-09-19",
+    "announce_date": "2026-09-18",
+    "effective_time": "15:00",
+    "xang_ron95": 25630,
+    "dau_do": 31740,
+    "source": "petrolimex",
+    "note": "Kỳ điều hành 15h00 18/09, áp dụng từ 00h00 ngày hôm sau (19/09/2026)"
   },
   {
     "effective_date": "2026-09-26",
-    "xang_ron95": 28080,
+    "announce_date": "2026-09-25",
+    "effective_time": "15:00",
+    "xang_ron95": 27080,
     "dau_do": 32090,
-    "source": "pvoil"
-  },
-  {
-    "effective_date": "2026-09-27",
-    "xang_ron95": 28080,
-    "dau_do": 32090,
-    "source": "pvoil"
-  },
-  {
-    "effective_date": "2026-09-28",
-    "xang_ron95": 28080,
-    "dau_do": 32090,
-    "source": "pvoil"
-  },
-  {
-    "effective_date": "2026-09-29",
-    "xang_ron95": 28080,
-    "dau_do": 32090,
-    "source": "pvoil"
-  },
-  {
-    "effective_date": "2026-09-30",
-    "xang_ron95": 28080,
-    "dau_do": 32090,
-    "source": "pvoil"
-  },
-  {
-    "effective_date": "2026-10-01",
-    "xang_ron95": 28080,
-    "dau_do": 32090,
-    "source": "pvoil"
-  },
-  {
-    "effective_date": "2026-10-02",
-    "xang_ron95": 28180,
-    "dau_do": 32090,
-    "source": "pvoil"
+    "source": "petrolimex",
+    "note": "Kỳ điều hành 15h00 25/09, áp dụng từ 00h00 ngày hôm sau (26/09/2026)"
   },
   {
     "effective_date": "2026-10-03",
+    "announce_date": "2026-10-02",
+    "effective_time": "15:00",
     "xang_ron95": 28180,
     "dau_do": 32090,
-    "source": "pvoil"
-  },
-  {
-    "effective_date": "2026-10-04",
-    "xang_ron95": 28180,
-    "dau_do": 32090,
-    "source": "pvoil"
-  },
-  {
-    "effective_date": "2026-10-05",
-    "xang_ron95": 28180,
-    "dau_do": 32090,
-    "source": "pvoil"
-  },
-  {
-    "effective_date": "2026-10-06",
-    "xang_ron95": 28180,
-    "dau_do": 32090,
-    "source": "pvoil"
-  },
-  {
-    "effective_date": "2026-10-07",
-    "xang_ron95": 28180,
-    "dau_do": 32090,
-    "source": "pvoil"
-  },
-  {
-    "effective_date": "2026-10-08",
-    "xang_ron95": 28180,
-    "dau_do": 32090,
-    "source": "pvoil"
-  },
-  {
-    "effective_date": "2026-10-09",
-    "xang_ron95": 29050,
-    "dau_do": 32090,
-    "source": "pvoil"
+    "source": "pvoil",
+    "note": "Kỳ điều hành 15h00 02/10, áp dụng từ 00h00 ngày hôm sau (03/10/2026)"
   },
   {
     "effective_date": "2026-10-10",
+    "announce_date": "2026-10-09",
+    "effective_time": "15:00",
     "xang_ron95": 29050,
     "dau_do": 32090,
-    "source": "pvoil"
-  },
-  {
-    "effective_date": "2026-10-11",
-    "xang_ron95": 29050,
-    "dau_do": 32090,
-    "source": "pvoil"
+    "source": "pvoil",
+    "note": "Kỳ điều hành 15h00 09/10, áp dụng từ 00h00 ngày hôm sau (10/10/2026)"
   }
 ]

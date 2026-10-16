@@ -107250,8 +107250,8 @@
             "has_4g_1800_2": false
           }
         ],
-        "cells_3g": 0,
-        "cells_4g": 0,
+        "cells_3g": 3,
+        "cells_4g": 3,
         "cells_5g": 0,
         "config_5g": null,
         "last_sync": "2026-10-03T06:34:16.013643",
@@ -107259,11 +107259,11 @@
         "cells_5g_l1": 0,
         "cells_5g_l2": 0,
         "config_3g4g": null,
-        "total_cells": 0,
+        "total_cells": 6,
         "is_sran_swap": false,
         "swap_solution": null
       },
-      "cau_hinh_ran": "3 cell 3G/4G New",
+      "cau_hinh_ran": "3 cell 3G, 3 cell 4G",
       "loai_ket_noi": "FO",
       "thiet_bi_csg": "FO",
       "tram_main_tx": "DNIXLO02 (DNXL07)",
@@ -107367,8 +107367,8 @@
             "has_4g_1800_2": false
           }
         ],
-        "cells_3g": 0,
-        "cells_4g": 0,
+        "cells_3g": 3,
+        "cells_4g": 3,
         "cells_5g": 0,
         "config_5g": null,
         "last_sync": "2026-10-03T06:34:16.285313",
@@ -107376,11 +107376,11 @@
         "cells_5g_l1": 0,
         "cells_5g_l2": 0,
         "config_3g4g": null,
-        "total_cells": 0,
+        "total_cells": 6,
         "is_sran_swap": false,
         "swap_solution": null
       },
-      "cau_hinh_ran": "3 cell 3G/4G CRAN",
+      "cau_hinh_ran": "3 cell 3G, 3 cell 4G",
       "loai_ket_noi": "FO",
       "thiet_bi_csg": "FO",
       "tram_main_tx": "DNIXLO02 (DNXL07)",
