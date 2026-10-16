@@ -55,7 +55,7 @@ class TestMllTopologyAndDropCount(unittest.TestCase):
                 "technical_info": {
                     "csg": "LSW-DNXL36",
                     "thiet_bi_csg": "LSW",
-                    "chu_dau_tu_cap": "Mobifone",
+                    "chu_dau_tu_cap": "VTC",
                     "don_vi_van_hanh_cap": "Cáp Local",
                     "last_mile_primary": "Local LSW"
                 },
@@ -93,13 +93,13 @@ class TestMllTopologyAndDropCount(unittest.TestCase):
             tag1_old = smartw_worker._get_mll_topology_tag("DNDQ14")
             self.assertEqual(tag1_old, "[DNDQ31 - MBG]")
 
-            # 2. Trạm LSW DNLK02 kéo về DNLK46 qua TPCOMS
+            # 2. Trạm LSW DNLK02 kéo về DNLK46 qua TPCOMS (chuẩn hóa thành TPC)
             tag2 = smartw_worker._get_mll_topology_tag("DNIBVI01")
-            self.assertEqual(tag2, "[DNLK46 - TPCOMS]")
+            self.assertEqual(tag2, "[DNLK46 - TPC]")
 
-            # 3. Trạm LSW đặt tại chỗ (hub là chính nó: LSW-DNXL36) có đối tác Mobifone
+            # 3. Trạm LSW đặt tại chỗ (hub là chính nó: LSW-DNXL36) có đối tác VTC
             tag3 = smartw_worker._get_mll_topology_tag("DNIXHO10")
-            self.assertEqual(tag3, "[Mobifone]")
+            self.assertEqual(tag3, "[VTC]")
 
             # 4. Trạm Local CSG thuần
             tag4 = smartw_worker._get_mll_topology_tag("DNIDQU01")
@@ -108,6 +108,72 @@ class TestMllTopologyAndDropCount(unittest.TestCase):
             # 5. Trạm FO macro kéo cáp thông thường
             tag5 = smartw_worker._get_mll_topology_tag("DNIXLO45")
             self.assertEqual(tag5, "[VNPT]")
+
+    def test_partner_normalization_and_dnixlo32(self):
+        """Kiểm tra tag topology cho DNIXLO32 và loại bỏ hoàn toàn chữ generic 'Đối tác ngoài'."""
+        mock_datasites = [
+            {
+                "site_id": "DNIXLO02",
+                "site_id_old": "DNXL07",
+                "technical_info": {},
+                "management_info": {"tram_main": "KHÔNG"}
+            },
+            {
+                "site_id": "DNIXLO32",
+                "site_id_old": "DNIXLO32",
+                "technical_info": {
+                    "tram_main_tx": "DNIXLO02 (DNXL07)",
+                    "don_vi_van_hanh_cap": "TPC",
+                    "chu_dau_tu_cap": "TPC"
+                },
+                "management_info": {}
+            },
+            {
+                "site_id": "DNIXLO99",
+                "site_id_old": "DNXL99",
+                "technical_info": {
+                    "tram_main_tx": "DNIXLO02 (DNXL07)",
+                    "don_vi_van_hanh_cap": "Đối tác ngoài",
+                    "chu_dau_tu_cap": "TPCOMS"
+                },
+                "management_info": {}
+            },
+            {
+                "site_id": "DNIXLO88",
+                "site_id_old": "DNXL88",
+                "technical_info": {
+                    "tram_main_tx": "DNIXLO02 (DNXL07)",
+                    "don_vi_van_hanh_cap": "Local",
+                    "chu_dau_tu_cap": "MobiFone"
+                },
+                "management_info": {}
+            }
+        ]
+
+        with patch.object(smartw_worker, '_get_datasites_list', return_value=mock_datasites):
+            # 1. DNIXLO32 với TPC -> [MAIN: DNXL07 - TPC]
+            tag32 = smartw_worker._get_mll_topology_tag("DNIXLO32")
+            self.assertEqual(tag32, "[MAIN: DNXL07 - TPC]")
+
+            # 2. DNIXLO99 có 'Đối tác ngoài' -> Tự fallback sang chu_dau_tu_cap 'TPCOMS' và chuẩn hóa thành TPC
+            tag99 = smartw_worker._get_mll_topology_tag("DNIXLO99")
+            self.assertEqual(tag99, "[MAIN: DNXL07 - TPC]")
+            self.assertNotIn("Đối tác ngoài", tag99)
+
+            # 3. DNIXLO88 có 'Local' -> Trạm CRAN nội bộ TVT3, không gắn thêm tag đối tác
+            tag88 = smartw_worker._get_mll_topology_tag("DNIXLO88")
+            self.assertEqual(tag88, "[MAIN: DNXL07]")
+
+            # 4. Kiểm tra format station lines với 3G4G
+            grp = {
+                'label': 'DNIXLO32',
+                'nets': ['3G', '4G'],
+                't': '14:10',
+                'drop_count': 1
+            }
+            lines = smartw_worker._format_mll_station_lines("DNIXLO32", grp)
+            self.assertEqual(lines[0], "• DNIXLO32 [3G4G]")
+            self.assertEqual(lines[1], "  ↳ 14:10 • [MAIN: DNXL07 - TPC]")
 
     def test_mll_drop_count_and_format_lines(self):
         """Kiểm tra bổ sung số lần rớt trong ngày (Lần X) vào dòng báo cáo MLL."""

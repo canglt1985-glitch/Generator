@@ -107269,8 +107269,9 @@
       "tram_main_tx": "DNIXLO02 (DNXL07)",
       "nguon_thiet_bi": "Dùng thiết bị dự phòng/thiết bị xuất kho",
       "last_mile_primary": "DNIXLO32-DNIXLO02",
-      "don_vi_van_hanh_cap": "MobiFone",
-      "phuong_an_cap_quang": "MobiFone TP tự triển khai"
+      "don_vi_van_hanh_cap": "TPC",
+      "phuong_an_cap_quang": "MobiFone TP tự triển khai",
+      "chu_dau_tu_cap": "TPC"
     },
     "contract_number": null,
     "contract_info": {}
@@ -107386,8 +107387,9 @@
       "tram_main_tx": "DNIXLO02 (DNXL07)",
       "nguon_thiet_bi": "Dùng thiết bị dự phòng/thiết bị xuất kho",
       "last_mile_primary": "DNIXLO33-DNIXLO02",
-      "don_vi_van_hanh_cap": "MobiFone",
-      "phuong_an_cap_quang": "MobiFone TP tự triển khai"
+      "don_vi_van_hanh_cap": "TPC",
+      "phuong_an_cap_quang": "MobiFone TP tự triển khai",
+      "chu_dau_tu_cap": "TPC"
     },
     "contract_number": null,
     "contract_info": {}

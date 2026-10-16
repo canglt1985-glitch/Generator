@@ -2,6 +2,15 @@
 
 ## [2026-10-16]
 ### Added & Standardized
+- **Chuẩn Hóa Đơn Vị Vận Hành Cáp & Đối Tác Truyền Dẫn MLL**:
+  - Phân loại rõ ràng 3 nhóm vận hành cáp quang:
+    1. Cáp nội bộ Tổ VT3 tự vận hành: Nhãn chuẩn `Local` (không gắn tag đối tác ngoài trên bot).
+    2. Cáp do MobiFone đầu tư thuê ngoài vận hành: `PITC` và `MBG`.
+    3. Cáp do đối tác ngoài đầu tư: Đối tác nào thì chính đối tác đó vận hành (`TPC`, `VNPT`, `VTC`, `CADICOM`).
+  - Triệt tiêu hoàn toàn nhãn generic `Đối tác ngoài` trên bot MLL; tự động fallback sang `chu_dau_tu_cap` và chuẩn hóa `TPCOMS` $\rightarrow$ `TPC`.
+  - Cập nhật trạm `DNIXLO32` và `DNIXLO33` về đối tác `TPC`, tag bản tin MLL hiển thị chuẩn xác: `[MAIN: DNXL07 - TPC]`.
+  - Nâng cấp giao diện Web UI (`DatasiteDetailFullscreen.jsx`, `Datasites.jsx`, `NetworkMap.jsx`): Dropdown đơn vị vận hành (`Local`, `PITC`, `MBG`, `TPC`, `VNPT`, `VTC`, `CADICOM`), tự động gợi ý đơn vị vận hành khi chọn chủ đầu tư và nhận diện dải màu neon `TPC` trên bản đồ cáp.
+  - Bổ sung bộ kiểm thử tự động tại `backend/tests/test_mll_topology_and_drop_count.py` (25/25 tests passed 100%).
 - **Đồng Bộ Cấu Hình Cell & RF Trạm Núi Chứa Chan (`DNIXLO32` & `DNIXLO33`)**:
   - Khai báo cấu hình 3 sector (A, B, C) cho cả 3G và 4G của 2 trạm `DNIXLO32` (Macro) và `DNIXLO33` (CRAN) trên toàn hệ thống (`site_cell_count.json`, `site_sectors.json`, `datacells`, `datasites`).
   - Hỗ trợ thuật toán nhận diện rớt đủ 3 sector 4G để tự động thăng cấp thành MLL Trạm thay vì bị kẹt ở bộ lọc Cell Off.

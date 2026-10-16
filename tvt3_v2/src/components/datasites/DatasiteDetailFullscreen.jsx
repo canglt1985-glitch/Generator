@@ -551,16 +551,31 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, on
                     <label className="text-slate-500 font-semibold">Chủ sở hữu cáp (Chủ đầu tư)</label>
                     <select 
                       value={editedTrans.chu_dau_tu_cap || ''} 
-                      onChange={(e) => setEditedTrans(prev => ({ ...prev, chu_dau_tu_cap: e.target.value }))}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setEditedTrans(prev => {
+                          const next = { ...prev, chu_dau_tu_cap: val };
+                          // Tự động gợi ý đơn vị vận hành tương ứng với chủ đầu tư cáp
+                          if (['VNPT', 'TPC', 'TPCOMS', 'VTC', 'CADICOM'].includes(val)) {
+                            next.don_vi_van_hanh_cap = val === 'TPCOMS' ? 'TPC' : val;
+                          } else if (val === 'MobiFone' && (!prev.don_vi_van_hanh_cap || ['TPC', 'TPCOMS', 'VNPT', 'VTC', 'CADICOM'].includes(prev.don_vi_van_hanh_cap))) {
+                            next.don_vi_van_hanh_cap = 'Local';
+                          }
+                          return next;
+                        });
+                      }}
                       className="w-full p-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/25 text-slate-800 bg-white"
                     >
                       <option value="">-- Chưa chọn --</option>
                       <option value="MobiFone">MobiFone</option>
                       <option value="VNPT">VNPT</option>
-                      <option value="TPCOMS">TPCOMS</option>
+                      <option value="TPC">TPC (TPCOMS)</option>
                       <option value="VTC">VTC</option>
                       <option value="CADICOM">CADICOM</option>
                       <option value="Khác">Khác / Chưa rõ</option>
+                      {editedTrans.chu_dau_tu_cap && !['', 'MobiFone', 'VNPT', 'TPC', 'VTC', 'CADICOM', 'Khác'].includes(editedTrans.chu_dau_tu_cap) && (
+                        <option value={editedTrans.chu_dau_tu_cap}>{editedTrans.chu_dau_tu_cap}</option>
+                      )}
                     </select>
                   </div>
 
@@ -572,8 +587,17 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, on
                       className="w-full p-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/25 text-slate-800 bg-white"
                     >
                       <option value="">-- Chưa chọn --</option>
-                      <option value="Tổ VT3">Tổ VT3 tự vận hành</option>
-                      <option value="Đối tác ngoài">Đối tác ngoài vận hành</option>
+                      <option value="Local">Local (Tổ VT3 tự vận hành)</option>
+                      <option value="PITC">PITC (Vận hành cáp MBF)</option>
+                      <option value="MBG">MBG (Vận hành cáp MBF)</option>
+                      <option value="TPC">TPC (TPCOMS vận hành)</option>
+                      <option value="VNPT">VNPT vận hành</option>
+                      <option value="VTC">VTC vận hành</option>
+                      <option value="CADICOM">CADICOM vận hành</option>
+                      <option value="Khác">Khác / Đối tác khác</option>
+                      {editedTrans.don_vi_van_hanh_cap && !['', 'Local', 'PITC', 'MBG', 'TPC', 'VNPT', 'VTC', 'CADICOM', 'Khác'].includes(editedTrans.don_vi_van_hanh_cap) && (
+                        <option value={editedTrans.don_vi_van_hanh_cap}>{editedTrans.don_vi_van_hanh_cap}</option>
+                      )}
                     </select>
                   </div>
                 </div>

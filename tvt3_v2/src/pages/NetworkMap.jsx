@@ -716,8 +716,8 @@ export default function NetworkMap() {
       color = '#22c55e'; // Xanh lục Neon: Mobifone
     } else if (chuDauTu.includes('vnpt')) {
       color = '#06b6d4'; // Xanh dương Cyan Neon: VNPT
-    } else if (chuDauTu.includes('tpcoms') || chuDauTu.includes('tpcom')) {
-      color = '#ec4899'; // Hồng Neon: TPCOMS
+    } else if (chuDauTu.includes('tpcoms') || chuDauTu.includes('tpcom') || chuDauTu === 'tpc' || chuDauTu.startsWith('tpc')) {
+      color = '#ec4899'; // Hồng Neon: TPC / TPCOMS
     } else if (chuDauTu.includes('vtc')) {
       color = '#f97316'; // Cam Neon: VTC
     } else if (chuDauTu.includes('cadicom') || chuDauTu.includes('cadi')) {

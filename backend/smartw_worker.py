@@ -153,6 +153,29 @@ def _get_datasites_list():
     return _datasites_cache
 
 
+def _normalize_partner(name: str) -> str:
+    """Chuẩn hóa tên đối tác truyền dẫn (TPCOMS -> TPC, CADICOM, VNPT, VTC, PITC, MBG...)."""
+    if not name:
+        return ""
+    clean = str(name).strip()
+    u = clean.upper()
+    if u in ('TPCOMS', 'TPCOM', 'TPC'):
+        return 'TPC'
+    if u in ('CADICOM', 'CADI'):
+        return 'CADICOM'
+    if u == 'VNPT':
+        return 'VNPT'
+    if u == 'VTC':
+        return 'VTC'
+    if u == 'PITC':
+        return 'PITC'
+    if u == 'MBG':
+        return 'MBG'
+    if u in ('MOBIFONE', 'MBF'):
+        return 'Mobifone'
+    return clean
+
+
 def _build_topology_cache():
     """Build in-memory topology dictionary: Main ↔ CRAN, External Cable Partner, Local CSG/LSW, Remote CSG Hub."""
     global _topology_cache_built, _main_to_crans, _site_to_main, _site_to_partner, _site_is_local_csg, _site_to_csg_hub, _id_lookup, _id_to_old
@@ -193,12 +216,18 @@ def _build_topology_cache():
         csg_raw = str(ti.get('csg') or '').strip()
 
         # Đối tác truyền dẫn (ưu tiên don_vi_van_hanh_cap, sau đó chu_dau_tu_cap)
-        invalid_p = {'KHÔNG', 'NONE', 'NULL', '', 'CÁP LOCAL', 'LOCAL'}
+        # Các giá trị nội bộ / generic không phải tên đối tác ngoài
+        invalid_p = {
+            'KHÔNG', 'NONE', 'NULL', '', 'CÁP LOCAL', 'LOCAL',
+            'TỔ VT3', 'TỔ VT3 TỰ VẬN HÀNH', 'VT3',
+            'ĐỐI TÁC NGOÀI', 'ĐỐI TÁC NGOÀI VẬN HÀNH', 'ĐỐI TÁC', 'KHÁC',
+            'MOBIFONE', 'MBF'
+        }
         partner = ""
         if dv_vh and dv_vh.upper() not in invalid_p:
-            partner = dv_vh
+            partner = _normalize_partner(dv_vh)
         elif chu_dt and chu_dt.upper() not in invalid_p:
-            partner = chu_dt
+            partner = _normalize_partner(chu_dt)
 
         if partner:
             s_to_p[sid] = partner

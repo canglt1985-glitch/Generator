@@ -1814,11 +1814,11 @@ export default function Datasites() {
                 
                 if (lkn.includes('MW') || lkn.includes('VI BA')) {
                   acc.trans_mw++;
-                } else if (cdt.includes('mobifone')) {
+                } else if (cdt.includes('mobifone') || cdt.includes('mbf')) {
                   acc.trans_mbf++;
                 } else if (cdt.includes('vnpt')) {
                   acc.trans_vnpt++;
-                } else if (cdt.includes('tpcoms')) {
+                } else if (cdt.includes('tpcoms') || cdt === 'tpc' || cdt.startsWith('tpc')) {
                   acc.trans_tpcoms++;
                 } else if (cdt.includes('vtc')) {
                   acc.trans_vtc++;
@@ -1910,7 +1910,7 @@ export default function Datasites() {
                   { label: 'Tổng trạm kết nối', value: stats.trans_sites, bold: true },
                   { label: 'Cáp Mobifone', value: stats.trans_mbf, color: 'text-emerald-600' },
                   { label: 'Cáp VNPT', value: stats.trans_vnpt, color: 'text-blue-600' },
-                  { label: 'Cáp TPCOMS', value: stats.trans_tpcoms, color: 'text-rose-500' },
+                  { label: 'Cáp TPC / TPCOMS', value: stats.trans_tpcoms, color: 'text-rose-500' },
                   { label: 'Cáp VTC / CADICOM', value: stats.trans_vtc + stats.trans_cadicom },
                   { label: 'Vi ba (MW)', value: stats.trans_mw, color: 'text-amber-600' },
                   { label: 'Cáp đối tác khác', value: stats.trans_others },

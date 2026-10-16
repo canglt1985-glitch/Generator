@@ -247,7 +247,9 @@
         "cells_4g": 3,
         "total_cells": 6
       },
-      "cau_hinh_ran": "3 cell 3G, 3 cell 4G"
+      "cau_hinh_ran": "3 cell 3G, 3 cell 4G",
+      "don_vi_van_hanh_cap": "TPC",
+      "chu_dau_tu_cap": "TPC"
     }
   },
   "DNIBVI05": {
@@ -300,7 +302,9 @@
         "cells_4g": 3,
         "total_cells": 6
       },
-      "cau_hinh_ran": "3 cell 3G, 3 cell 4G"
+      "cau_hinh_ran": "3 cell 3G, 3 cell 4G",
+      "don_vi_van_hanh_cap": "TPC",
+      "chu_dau_tu_cap": "TPC"
     }
   },
   "DNILKH13": {
