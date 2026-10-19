@@ -1,0 +1,682 @@
+{
+    "DNTP00": {
+        "ip": "10.252.30.211",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNTP05": {
+        "ip": "10.252.30.175",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNTP26": {
+        "ip": "10.252.30.208",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNTP28": {
+        "ip": "10.252.30.156",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNTP32": {
+        "ip": "10.252.30.166",
+        "model": "NCS540",
+        "device_type": "cisco_xr"
+    },
+    "DNTP37": {
+        "ip": "10.252.30.155",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNTP47": {
+        "ip": "10.252.30.209",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNTP52": {
+        "ip": "10.252.30.210",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNTP06": {
+        "ip": "10.252.20.208",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNTP07": {
+        "ip": "10.252.22.68",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNTP10": {
+        "ip": "10.252.22.71",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNTP12": {
+        "ip": "10.252.22.67",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNTP19": {
+        "ip": "10.252.22.65",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNTP29": {
+        "ip": "10.252.30.174",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNTP46": {
+        "ip": "10.252.22.70",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNDQ00": {
+        "ip": "10.252.30.171",
+        "model": "NCS540",
+        "device_type": "cisco_xr"
+    },
+    "DNDQ01": {
+        "ip": "10.252.30.157",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNDQ02": {
+        "ip": "10.252.30.212",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNDQ03": {
+        "ip": "10.252.30.213",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNDQ04": {
+        "ip": "10.252.30.148",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNDQ06": {
+        "ip": "10.252.30.147",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNDQ10": {
+        "ip": "10.252.30.194",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNDQ12": {
+        "ip": "10.252.30.169",
+        "model": "NCS540",
+        "device_type": "cisco_xr"
+    },
+    "DNDQ13": {
+        "ip": "10.252.59.169",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNDQ15": {
+        "ip": "10.252.59.161",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNDQ16": {
+        "ip": "10.252.30.220",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNDQ31": {
+        "ip": "10.252.30.161",
+        "model": "NCS540",
+        "device_type": "cisco_xr"
+    },
+    "DNDQ33": {
+        "ip": "10.252.30.152",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNDQ34": {
+        "ip": "10.252.59.162",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNDQ35": {
+        "ip": "10.252.59.163",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNDQ41": {
+        "ip": "10.252.30.218",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNDQ43": {
+        "ip": "10.252.30.146",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNDQ44": {
+        "ip": "10.252.30.154",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNDQ47": {
+        "ip": "10.252.30.138",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNDQ55": {
+        "ip": "10.252.30.219",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNDQN1": {
+        "ip": "10.252.30.139",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNDQ09": {
+        "ip": "10.252.30.158",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNDQ14": {
+        "ip": "10.252.20.213",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNDQ50": {
+        "ip": "10.252.22.83",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNDQ58": {
+        "ip": "10.252.30.222",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNTN00": {
+        "ip": "10.252.29.231",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNTN01": {
+        "ip": "10.252.30.179",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNTN02": {
+        "ip": "10.252.59.176",
+        "model": "NCS540",
+        "device_type": "cisco_xr"
+    },
+    "DNTN05": {
+        "ip": "10.252.30.188",
+        "model": "NCS540",
+        "device_type": "cisco_xr"
+    },
+    "DNTN06": {
+        "ip": "10.252.30.182",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNTN08": {
+        "ip": "10.252.29.204",
+        "model": "ASR920",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNTN09": {
+        "ip": "10.252.29.229",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNTN10": {
+        "ip": "10.252.30.180",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNTN18": {
+        "ip": "10.252.29.212",
+        "model": "NCS540",
+        "device_type": "cisco_xr"
+    },
+    "DNTN19": {
+        "ip": "10.252.30.92",
+        "model": "NCS540",
+        "device_type": "cisco_xr"
+    },
+    "DNTN25": {
+        "ip": "10.252.30.181",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNTN27": {
+        "ip": "10.252.30.137",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNTN29": {
+        "ip": "10.252.29.230",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNTN31": {
+        "ip": "10.252.29.203",
+        "model": "ASR920",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNTN35": {
+        "ip": "10.252.29.224",
+        "model": "NCS540",
+        "device_type": "cisco_xr"
+    },
+    "DNTN37": {
+        "ip": "10.252.30.98",
+        "model": "ASR920",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNTN39": {
+        "ip": "10.252.29.213",
+        "model": "NCS540",
+        "device_type": "cisco_xr"
+    },
+    "DNTNT1": {
+        "ip": "10.252.29.205",
+        "model": "ASR920",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNLK00": {
+        "ip": "10.252.30.41",
+        "model": "ASR920",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNLK04": {
+        "ip": "10.252.30.97",
+        "model": "ASR920",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNLK05": {
+        "ip": "10.252.30.68",
+        "model": "NCS540",
+        "device_type": "cisco_xr"
+    },
+    "DNLK07": {
+        "ip": "10.252.30.19",
+        "model": "ASR920",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNLK08": {
+        "ip": "10.252.30.81",
+        "model": "NCS540",
+        "device_type": "cisco_xr"
+    },
+    "DNLK09": {
+        "ip": "10.252.30.83",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNLK10": {
+        "ip": "10.252.30.117",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNLK13": {
+        "ip": "10.252.30.90",
+        "model": "NCS540",
+        "device_type": "cisco_xr"
+    },
+    "DNLK15": {
+        "ip": "10.252.30.91",
+        "model": "NCS540",
+        "device_type": "cisco_xr"
+    },
+    "DNLK17": {
+        "ip": "10.252.30.187",
+        "model": "NCS540",
+        "device_type": "cisco_xr"
+    },
+    "DNLK18": {
+        "ip": "10.252.30.185",
+        "model": "NCS540",
+        "device_type": "cisco_xr"
+    },
+    "DNLK20": {
+        "ip": "10.252.30.89",
+        "model": "NCS540",
+        "device_type": "cisco_xr"
+    },
+    "DNLK24": {
+        "ip": "10.252.30.186",
+        "model": "NCS540",
+        "device_type": "cisco_xr"
+    },
+    "DNLK25": {
+        "ip": "10.252.30.93",
+        "model": "NCS540",
+        "device_type": "cisco_xr"
+    },
+    "DNLK37": {
+        "ip": "10.252.30.178",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNLK46": {
+        "ip": "10.252.30.21",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNLKH1": {
+        "ip": "10.252.30.177",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNLK31": {
+        "ip": "10.252.30.74",
+        "model": "ASR920",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNLK02": {
+        "ip": "10.252.30.22",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNCM00": {
+        "ip": "10.252.30.124",
+        "model": "ASR920",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNCM01": {
+        "ip": "10.252.30.66",
+        "model": "NCS540",
+        "device_type": "cisco_xr"
+    },
+    "DNCM02": {
+        "ip": "10.252.30.105",
+        "model": "ASR920",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNCM03": {
+        "ip": "10.252.30.49",
+        "model": "ASR920",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNCM06": {
+        "ip": "10.252.30.51",
+        "model": "ASR920",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNCM08": {
+        "ip": "10.252.30.69",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNCM12": {
+        "ip": "10.252.30.125",
+        "model": "ASR920",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNCM13": {
+        "ip": "10.252.30.131",
+        "model": "NCS540",
+        "device_type": "cisco_xr"
+    },
+    "DNCM22": {
+        "ip": "10.252.22.107",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNCM24": {
+        "ip": "10.252.30.121",
+        "model": "ASR920",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNCM31": {
+        "ip": "10.252.22.106",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNCM34": {
+        "ip": "10.252.30.135",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNCM36": {
+        "ip": "10.252.30.53",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNCM37": {
+        "ip": "10.252.30.50",
+        "model": "ASR920",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNCM40": {
+        "ip": "10.252.30.123",
+        "model": "ASR920",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNCM43": {
+        "ip": "10.252.30.122",
+        "model": "ASR920",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNCM45": {
+        "ip": "10.252.22.108",
+        "model": "ASR920",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNCM47": {
+        "ip": "10.252.30.130",
+        "model": "NCS540",
+        "device_type": "cisco_xr"
+    },
+    "DNCM14": {
+        "ip": "10.252.30.132",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNCM15": {
+        "ip": "10.252.30.133",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNCM26": {
+        "ip": "10.252.29.228",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNXL00": {
+        "ip": "10.252.30.115",
+        "model": "ASR920",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNXL01": {
+        "ip": "10.252.30.18",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNXL02": {
+        "ip": "10.252.30.20",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNXL03": {
+        "ip": "10.252.30.193",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNXL04": {
+        "ip": "10.252.30.67",
+        "model": "NCS540",
+        "device_type": "cisco_xr"
+    },
+    "DNXL06": {
+        "ip": "10.252.30.109",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNXL07": {
+        "ip": "10.252.30.9",
+        "model": "ASR920",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNXL09": {
+        "ip": "10.252.22.109",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNXL12": {
+        "ip": "10.252.30.44",
+        "model": "ASR920",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNXL13": {
+        "ip": "10.252.30.25",
+        "model": "ASR920",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNXL14": {
+        "ip": "10.252.30.10",
+        "model": "ASR920",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNXL17": {
+        "ip": "10.252.30.43",
+        "model": "ASR920",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNXL19": {
+        "ip": "10.252.30.34",
+        "model": "NCS540",
+        "device_type": "cisco_xr"
+    },
+    "DNXL20": {
+        "ip": "10.252.30.107",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNXL22": {
+        "ip": "10.252.30.108",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNXL23": {
+        "ip": "10.252.30.46",
+        "model": "ASR920",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNXL28": {
+        "ip": "10.252.30.106",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNXL30": {
+        "ip": "10.252.30.17",
+        "model": "ASR920",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNXL32": {
+        "ip": "10.252.30.13",
+        "model": "ASR920",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNXL33": {
+        "ip": "10.252.30.114",
+        "model": "ASR920",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNXL37": {
+        "ip": "10.252.30.36",
+        "model": "NCS540",
+        "device_type": "cisco_xr"
+    },
+    "DNXL38": {
+        "ip": "10.252.30.33",
+        "model": "NCS540",
+        "device_type": "cisco_xr"
+    },
+    "DNXL39": {
+        "ip": "10.252.30.12",
+        "model": "ASR920",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNXL40": {
+        "ip": "10.252.30.37",
+        "model": "NCS540",
+        "device_type": "cisco_xr"
+    },
+    "DNXL44": {
+        "ip": "10.252.22.105",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNXL47": {
+        "ip": "10.252.30.42",
+        "model": "ASR920",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNXL48": {
+        "ip": "10.252.30.116",
+        "model": "ASR920",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNXL56": {
+        "ip": "10.252.30.45",
+        "model": "ASR920",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNXL64": {
+        "ip": "10.252.30.26",
+        "model": "ASR920",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNXL65": {
+        "ip": "10.252.30.35",
+        "model": "NCS540",
+        "device_type": "cisco_xr"
+    },
+    "DNXL75": {
+        "ip": "10.252.30.113",
+        "model": "ASR920",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNXL46": {
+        "ip": "10.252.30.195",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNXL05": {
+        "ip": "10.252.30.111",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNXL24": {
+        "ip": "10.252.22.114",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNXL31": {
+        "ip": "10.252.30.40",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNXL35": {
+        "ip": "10.252.30.14",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNXL36": {
+        "ip": "10.252.30.47",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    },
+    "DNXL41": {
+        "ip": "10.252.30.23",
+        "model": "ASR901",
+        "device_type": "cisco_ios_telnet"
+    }
+}

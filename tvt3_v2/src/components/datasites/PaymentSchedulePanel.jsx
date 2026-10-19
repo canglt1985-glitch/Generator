@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
-import { generatePaymentSchedule } from '../../utils/contractCalculations';
+import { buildSchedule, breakdownTags } from '../../utils/negotiation';
 import { CalendarDays, Calculator } from 'lucide-react';
 import { format } from 'date-fns';
+import { isExempt1245, isMatBangInvest } from '../../utils/contractChecks';
 
 export default function PaymentSchedulePanel({ contract, overridePrice }) {
     const formatCurrency = (val) => {
@@ -17,26 +18,38 @@ export default function PaymentSchedulePanel({ contract, overridePrice }) {
         
         // Tính newPrice từ cost_details (giá sau đàm phán)
         let newPrice;
+        const isMatBang = isMatBangInvest(contract);
         if (overridePrice !== undefined && overridePrice !== null) {
             newPrice = Number(overridePrice);
         } else {
             const cost = contract.cost_details || {};
-            const mat_bang = Number(cost.mat_bang) || 0;
-            const phong_mfd = Number(cost.phong_mfd) || 0;
-            const phong_may = Number(cost.phong_may_mat_dat) || 0;
-            const cot_anten = Number(cost.cot_anten_mat_dat_tren_35m) || 0;
-            const giam_tru = Number(cost.giam_tru_dung_chung) || 0;
-            const round10k = (val) => Math.floor(val / 10000) * 10000;
-            
-            const cot_chot = round10k(cot_anten + giam_tru);
-            const temp_total = mat_bang + phong_may + phong_mfd + cot_chot;
-            newPrice = round10k(temp_total);
+            const raw = {
+                mb: Number(cost.mat_bang) || 0,
+                pm: Number(cost.phong_may_mat_dat) || 0,
+                mfd: Number(cost.phong_mfd) || 0,
+                cot: Number(cost.cot_anten_mat_dat_tren_35m) || 0,
+                giamTru: Number(cost.giam_tru_dung_chung) || 0,
+                vhkt: Number(cost.van_hanh_khai_thac) || 0,
+            };
+            // Giá khung chính xác, không làm tròn
+            newPrice = breakdownTags(raw, 0, isMatBang).breakdown.khung;
         }
 
         const paidUntilDateStr = contract.financials.da_thanh_toan_den;
         const endContractStr = contract.dates?.ngay_ket_thuc_hd;
 
-        return { ...generatePaymentSchedule(paidUntilDateStr, endContractStr, oldPrice, newPrice), newPrice };
+        return {
+            ...buildSchedule({
+                paidUntil: paidUntilDateStr,
+                endDate: endContractStr,
+                cycle: contract.financials.chu_ky_thanh_toan || contract.dates?.chu_ky_thanh_toan,
+                // Trạm MB chưa hết khấu hao: không áp đơn giá 1245 => không tách giá cũ/mới, không khấu trừ
+                oldPrice: isExempt1245(contract) ? newPrice : oldPrice,
+                newPrice,
+                isMatBang,
+            }),
+            newPrice,
+        };
     }, [contract, overridePrice]);
 
     if (!contract || !contract.financials || !scheduleData) return null;

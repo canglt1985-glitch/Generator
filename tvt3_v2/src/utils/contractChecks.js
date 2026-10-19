@@ -1,4 +1,35 @@
-import { COST_DETAIL_KEYS } from './contractConstants';
+import { COST_DETAIL_KEYS } from './contractConstants.js';
+
+// Trạm đã thanh toán đến sau mốc này (30/04/2026) được xem là đã đồng ý giá VB1245
+const PAID_AGREED_AFTER = '2026-04-30';
+
+// Trạm thuê mặt bằng (MobiFone đầu tư) CHƯA HẾT KHẤU HAO => KHÔNG áp dụng đơn giá VB1245
+export const KHAU_HAO_YEARS = 5;
+
+// Cột "HTCS/MBF/VNPT" của sheet (vb1245.loai_tram_sheet) là chuẩn xác định trạm MBF; thiếu thì dùng phân loại DB
+export const isMatBangInvest = (contract) => {
+  const loai = contract?._raw_contract_info?.vb1245?.loai_tram_sheet;
+  if (loai) return loai === 'MobiFone';
+  return (contract?.datasites?.classification?.hinh_thuc_dau_tu || '').toUpperCase() === 'TRẠM MOBIFONE';
+};
+
+const parseVNDate = (s) => {
+  const m = String(s || '').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/) || String(s || '').match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (!m) return null;
+  return String(s).includes('/') ? new Date(+m[3], +m[2] - 1, +m[1]) : new Date(+m[1], +m[2] - 1, +m[3]);
+};
+
+// Chưa hết khấu hao: tick tay (chua_het_khau_hao) hoặc ngày phát sóng + 5 năm còn ở tương lai
+export const isMbChuaHetKhauHao = (contract, now = new Date()) => {
+  if (!isMatBangInvest(contract)) return false;
+  if (contract?.chua_het_khau_hao || contract?._raw_contract_info?.chua_het_khau_hao) return true;
+  const d = parseVNDate(contract?.datasites?.management_info?.ngay_phat_song);
+  if (!d || isNaN(d.getTime())) return false;
+  d.setFullYear(d.getFullYear() + KHAU_HAO_YEARS);
+  return d > now;
+};
+
+export const isExempt1245 = (contract) => isMbChuaHetKhauHao(contract);
 
 // Helper: Calculate days between two dates
 const daysBetween = (date1, date2) => {
@@ -53,20 +84,38 @@ export const checkPriceFrame = (contract) => {
   };
 };
 
-// 3. Check Account Match
+// Chuẩn hoá tên: bỏ dấu, hạ chữ thường, gộp khoảng trắng
+const normName = (s) => String(s || '')
+  .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  .replace(/đ/gi, 'd')
+  .toLowerCase()
+  .replace(/_x000d_/g, ' ')
+  .replace(/\s+/g, ' ')
+  .trim();
+
+// Tách danh sách chủ thể (nhiều người) và bỏ danh xưng ông/bà
+const splitParties = (s) => normName(s)
+  .split(/[,;&\n/+]|\sva\s|\s-\s/)
+  .map((p) => p.replace(/^(ong|ba|anh|chi)\s+/, '').replace(/\s+/g, ' ').trim())
+  .filter(Boolean);
+
+// 3. Check Account Match: chủ tài khoản là MỘT TRONG các chủ thể hợp đồng thì khớp
 export const checkAccountMatch = (contract) => {
   if (!contract?.bank_info?.chu_tai_khoan || !contract?.contractor_info?.chu_the_hop_dong) {
     return { matched: true, holder: '', contractor: '' };
   }
-  
-  const holder = contract.bank_info.chu_tai_khoan.trim().toLowerCase();
-  const contractor = contract.contractor_info.chu_the_hop_dong.trim().toLowerCase();
-  
-  return {
-    matched: contractor.includes(holder),
-    holder: contract.bank_info.chu_tai_khoan,
-    contractor: contract.contractor_info.chu_the_hop_dong
-  };
+
+  const holderRaw = contract.bank_info.chu_tai_khoan;
+  const contractorRaw = contract.contractor_info.chu_the_hop_dong;
+  const holder = normName(holderRaw).replace(/^(ong|ba|anh|chi)\s+/, '');
+  const parties = splitParties(contractorRaw);
+
+  const matched = !!holder && (
+    normName(contractorRaw).includes(holder) ||
+    parties.some((p) => p === holder || p.includes(holder) || holder.includes(p))
+  );
+
+  return { matched, holder: holderRaw, contractor: contractorRaw };
 };
 
 // 4. Check Payment Status
@@ -138,6 +187,26 @@ export const getContractFlags = (contract) => {
       flags.push('mb_can_gia_han');
     }
   }
+  if (expiry.status === 'expired') flags.push('da_het_han');
+  if (expiry.status === 'expiring_6m') flags.push('sap_het_han');
+
+  // VB1245: đã đồng ý (sheet VB1245 đánh dấu 'x' hoặc tiến độ repo ≥ đồng ý) / đã trình phụ lục
+  const vb = contract?._raw_contract_info?.vb1245 || contract?.vb1245 || {};
+  const trk = vb?.tracker?.status || '';
+  const manual = String(contract?.status || '').toLowerCase();
+  const manualTrinh = manual.includes('dong_y_da_trinh_pl') || manual.includes('da_hoan_tat');
+  const paidStr = contract?.financials?.da_thanh_toan_den || contract?.dates?.ngay_thanh_toan_den || '';
+  const paidBeyondApr26 = String(paidStr).slice(0, 10) > PAID_AGREED_AFTER;
+  const dongY1245 = vb.da_thoa_thuan === true ||
+    ['dong_y', 'trinh_ky_phu_luc', 'gia_han_5_nam'].includes(trk) ||
+    manual.includes('dong_y') || manual.includes('da_hoan_tat') ||
+    paidBeyondApr26;
+  if (isExempt1245(contract)) {
+    flags.push('khong_ap_dung_1245');
+  } else {
+    flags.push(dongY1245 ? 'dong_y_1245' : 'chua_dong_y_1245');
+  }
+  flags.push(trk === 'trinh_ky_phu_luc' || manualTrinh ? 'da_trinh' : 'chua_trinh');
 
   // Price Frame check
   const price = checkPriceFrame(contract);

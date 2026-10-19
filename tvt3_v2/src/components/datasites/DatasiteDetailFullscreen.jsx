@@ -1,13 +1,17 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { 
   X, Edit, FileDown, Trash2, Info, Server, Radio, 
-  FileText, Clock, 
+  FileText, Clock, Camera, Plus, PlusCircle,
   FileSignature, Building, Wallet, CreditCard, Calculator, ExternalLink, Zap, Compass
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import ContractExportButton from './ContractExportButton';
 import PaymentSchedulePanel from './PaymentSchedulePanel';
 import SiteRfDataPanel from './SiteRfDataPanel';
+import SitePhotoGallery from './SitePhotoGallery';
+import SerialMismatchModal from './SerialMismatchModal';
+import AssetPhotoModal from './AssetPhotoModal';
+import AddEquipmentModal from './AddEquipmentModal';
 import { useCurrentUser } from '../../utils/useCurrentUser';
 import { exportB4RepairProposal, B4_REPAIR_CATEGORIES } from '../../utils/b4RepairExporter';
 import b4ReferenceCatalog from '../../data/b4ReferenceCatalog.json';
@@ -18,6 +22,41 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, on
   const [isEditingTrans, setIsEditingTrans] = useState(false);
   const [editedTrans, setEditedTrans] = useState({});
   const [allSites, setAllSites] = useState([]);
+  const [inspectingEquipment, setInspectingEquipment] = useState(null);
+  const [isInspectModalOpen, setIsInspectModalOpen] = useState(false);
+
+  // Local site state for real-time reactivity when adding equipment
+  const [localSite, setLocalSite] = useState(site);
+  useEffect(() => {
+    setLocalSite(site);
+  }, [site]);
+  const activeSite = localSite || site;
+
+  // States cho Modal Thêm Tài Sản / Thiết Bị Mới
+  const [isAddEquipModalOpen, setIsAddEquipModalOpen] = useState(false);
+  const [addEquipInitialType, setAddEquipInitialType] = useState('may_lanh');
+
+  // States cho Modal Hồ sơ Ảnh Thiết Bị theo Mã Tài Sản / CCDC
+  const [assetModalEquipment, setAssetModalEquipment] = useState(null);
+  const [isAssetModalOpen, setIsAssetModalOpen] = useState(false);
+  const [sitePhotos, setSitePhotos] = useState([]);
+
+  const fetchSitePhotos = useCallback(async () => {
+    if (!site?.site_id) return;
+    try {
+      const { data } = await supabase
+        .from('site_photos')
+        .select('*')
+        .eq('site_id', site.site_id);
+      setSitePhotos(data || []);
+    } catch (err) {
+      console.error('Lỗi nạp ảnh trạm:', err);
+    }
+  }, [site?.site_id]);
+
+  useEffect(() => {
+    fetchSitePhotos();
+  }, [fetchSitePhotos]);
   const [savingTrans, setSavingTrans] = useState(false);
   const [sranInfo, setSranInfo] = useState(null);
   
@@ -252,6 +291,7 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, on
 
   const tabs = [
     { id: 'general', label: 'Thông tin chung', icon: Info },
+    { id: 'photos', label: 'Thư viện ảnh', icon: Camera },
     { id: 'rf_data', label: 'Vô tuyến & Cánh sóng', icon: Compass },
     { id: 'transmission', label: 'Truyền dẫn trạm', icon: Radio },
     { id: 'infrastructure', label: 'Hạ tầng phụ trợ', icon: Server },
@@ -262,6 +302,20 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, on
 
   const renderTabContent = () => {
     switch (activeTab) {
+      case 'photos': {
+        return (
+          <SitePhotoGallery
+            siteId={site.site_id}
+            siteName={site.name || site.site_id}
+            site={site}
+            onOpenSerialModal={(equip, photo) => {
+              setInspectingEquipment(equip);
+              setIsInspectModalOpen(true);
+            }}
+          />
+        );
+      }
+
       case 'general': {
         const InfoRowGeneral = ({ label, value }) => value && String(value).trim() !== '' && String(value) !== 'KHÔNG CÓ' ? (
           <div className="flex justify-between items-start py-2 border-b border-slate-100 last:border-0 gap-4">
@@ -668,7 +722,7 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, on
         );
       }
       case 'infrastructure': {
-        const infra = site.infrastructure_info || {};
+        const infra = activeSite.infrastructure_info || {};
         const mpd = infra.may_phat_dien || {};
         const mpdList = mpd.mpd || [];
         const accuDeCount = mpdList.reduce((sum, m) => sum + (m.accu_de?.length || 0), 0);
@@ -705,11 +759,125 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, on
           </div>
         ) : null;
 
+        const EquipmentPhotoStrip = ({ equipKey, equipCode, label, equipData, type, phanLoai, categoryHint }) => {
+          const assigned = sitePhotos.filter(p => p.asset_key === equipKey || (equipCode && p.asset_code === equipCode));
+          
+          return (
+            <div className="mt-3 pt-2.5 border-t border-slate-200/80">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-slate-700 flex items-center gap-1">
+                    📸 Hồ sơ ảnh thực tế
+                  </span>
+                  <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded font-mono ${
+                    assigned.length > 0 ? 'bg-blue-100 text-blue-800' : 'bg-slate-200 text-slate-600'
+                  }`}>
+                    {assigned.length} ảnh
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAssetModalEquipment({
+                      key: equipKey,
+                      asset_code: equipCode,
+                      label: label || equipData?.ten || 'Thiết bị',
+                      type: type,
+                      phan_loai: phanLoai || equipData?.phan_loai,
+                      brand: equipData?.nhan_hieu,
+                      serial: equipData?.serial,
+                      category_hint: categoryHint
+                    });
+                    setIsAssetModalOpen(true);
+                  }}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-all cursor-pointer shadow-2xs"
+                >
+                  <Camera className="h-3.5 w-3.5 text-blue-600" />
+                  <span>Chụp / Gán ảnh</span>
+                </button>
+              </div>
+
+              {assigned.length > 0 ? (
+                <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                  {assigned.map((p) => (
+                    <div
+                      key={p.id}
+                      onClick={() => {
+                        setAssetModalEquipment({
+                          key: equipKey,
+                          asset_code: equipCode,
+                          label: label || equipData?.ten || 'Thiết bị',
+                          type: type,
+                          phan_loai: phanLoai || equipData?.phan_loai,
+                          brand: equipData?.nhan_hieu,
+                          serial: equipData?.serial,
+                          category_hint: categoryHint
+                        });
+                        setIsAssetModalOpen(true);
+                      }}
+                      className="relative w-16 h-12 rounded-lg overflow-hidden border border-slate-200 shrink-0 group cursor-pointer hover:border-blue-400 bg-slate-100"
+                    >
+                      <img
+                        src={p.photo_url || (p.tg_file_id ? `/api/photo?file_id=${p.tg_file_id}` : '')}
+                        alt="Ảnh thiết bị"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                      />
+                      <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px]">
+                        🔍
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-[11px] text-slate-400 bg-white/60 p-2 rounded-lg border border-dashed border-slate-200 flex items-center justify-between">
+                  <span>Chưa có ảnh gắn với {equipCode ? `mã ${equipCode}` : 'thiết bị này'}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAssetModalEquipment({
+                        key: equipKey,
+                        asset_code: equipCode,
+                        label: label || equipData?.ten || 'Thiết bị',
+                        type: type,
+                        phan_loai: phanLoai || equipData?.phan_loai,
+                        brand: equipData?.nhan_hieu,
+                        serial: equipData?.serial,
+                        category_hint: categoryHint
+                      });
+                      setIsAssetModalOpen(true);
+                    }}
+                    className="text-blue-600 hover:underline font-semibold"
+                  >
+                    + Thêm ảnh
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        };
+
         const hasData = Object.keys(infra).length > 0;
 
         return (
           <div className="space-y-6 animate-in fade-in duration-300">
-            <h2 className="text-lg font-bold text-slate-800 border-b border-slate-200 pb-2">Hạ tầng phụ trợ</h2>
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3">
+              <div>
+                <h2 className="text-lg font-bold text-slate-800">Hạ tầng phụ trợ</h2>
+                <p className="text-xs text-slate-500">Quản lý hồ sơ máy phát điện, nguồn điện, máy lạnh bám theo Mã TSCĐ & CCDC</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setAddEquipInitialType('may_lanh');
+                  setIsAddEquipModalOpen(true);
+                }}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-sm cursor-pointer hover:shadow-md"
+              >
+                <Plus className="h-4 w-4" />
+                <span>+ Thêm tài sản / thiết bị</span>
+              </button>
+            </div>
             
             {!hasData ? (
               <div className="text-center py-12 text-slate-400">
@@ -725,7 +893,18 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, on
                     <div className="bg-gradient-to-r from-orange-50 to-amber-50 px-4 py-3 border-b border-slate-100 flex items-center gap-2">
                       <span className="text-lg">⚡</span>
                       <h3 className="font-bold text-slate-800 text-sm">Máy phát điện & Khởi động</h3>
-                      <span className="text-xs text-slate-500 ml-auto">{mpdList.length} MPĐ · {accuDeCount} Accu đề · {atsCount} ATS</span>
+                      <span className="text-xs text-slate-500">{mpdList.length} MPĐ · {accuDeCount} Accu đề · {atsCount} ATS</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAddEquipInitialType('mpd');
+                          setIsAddEquipModalOpen(true);
+                        }}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-200/80 hover:bg-amber-300 text-amber-900 border border-amber-300 transition-colors cursor-pointer ml-auto"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        <span>Thêm MPĐ</span>
+                      </button>
                     </div>
                     <div className="p-4 space-y-4">
                       {/* MPĐ */}
@@ -739,13 +918,48 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, on
                             <InfoRow label="Nhãn hiệu" value={item.nhan_hieu} />
                             <InfoRow label="Công suất" value={item.cong_suat ? `${item.cong_suat} KVA` : null} />
                             <InfoRow label="Nhiên liệu" value={item.nhien_lieu} />
-                            <InfoRow label="Serial" value={item.serial} />
+                            <div className="flex justify-between items-center py-2 border-b border-slate-100 last:border-0 gap-4">
+                              <span className="text-slate-500 text-[13px] shrink-0">Serial</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-slate-800 font-semibold text-[13px] text-right font-mono" title={item.serial}>
+                                  {item.serial || 'N/A'}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setInspectingEquipment({
+                                      label: item.ten || `MPĐ (${i+1})`,
+                                      db_serial: item.serial || '',
+                                      brand: item.nhan_hieu,
+                                      index: i
+                                    });
+                                    setIsInspectModalOpen(true);
+                                  }}
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 transition-colors cursor-pointer"
+                                  title="Xem ảnh chụp tem nhãn thực tế & đối soát số serial"
+                                >
+                                  <Camera className="h-3 w-3 text-amber-600" />
+                                  <span>Xem tem</span>
+                                </button>
+                              </div>
+                            </div>
                             <InfoRow label="Ngày sử dụng" value={item.ngay_su_dung} />
                             <InfoRow label="Bảo hành" value={item.bao_hanh} />
                             <InfoRow label="Mã tài sản" value={item.ma_tai_san} />
                             {item.ma_vat_tu && <InfoRow label="Mã vật tư EAM" value={item.ma_vat_tu} />}
                             {item.ma_tai_san_moi && <InfoRow label="Mã TSCĐ mới (2027B)" value={item.ma_tai_san_moi} />}
                           </div>
+
+                          {/* Bộ ảnh thực tế gắn theo Mã TSCĐ MPĐ */}
+                          <EquipmentPhotoStrip
+                            equipKey={`mpd_${i}`}
+                            equipCode={item.ma_tai_san_moi || item.ma_vat_tu || item.ma_tai_san_cu}
+                            label={item.ten || `MPĐ (${i+1})`}
+                            equipData={item}
+                            type="mpd"
+                            phanLoai={item.phan_loai || 'TSCĐ'}
+                            categoryHint="mpd"
+                          />
 
                           {/* Thông tin phê duyệt sửa chữa B4 */}
                           {item.b4_approved_repair_2025 && (
@@ -822,7 +1036,31 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, on
                     <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 border-b border-slate-100 flex items-center gap-2">
                       <span className="text-lg">🔌</span>
                       <h3 className="font-bold text-slate-800 text-sm">Nguồn điện DC</h3>
-                      <span className="text-xs text-slate-500 ml-auto">{tuNguonList.length} Tủ nguồn · {toAccuCount} Tổ accu</span>
+                      <span className="text-xs text-slate-500">{tuNguonList.length} Tủ nguồn · {toAccuCount} Tổ accu</span>
+                      <div className="ml-auto flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAddEquipInitialType('tu_nguon');
+                            setIsAddEquipModalOpen(true);
+                          }}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-100 hover:bg-blue-200 text-blue-900 border border-blue-200 transition-colors cursor-pointer"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          <span>Thêm Tủ nguồn</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAddEquipInitialType('to_accu');
+                            setIsAddEquipModalOpen(true);
+                          }}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-indigo-100 hover:bg-indigo-200 text-indigo-900 border border-indigo-200 transition-colors cursor-pointer"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          <span>Thêm Ắc quy</span>
+                        </button>
+                      </div>
                     </div>
                     <div className="p-4 space-y-4">
                       {/* Tủ nguồn */}
@@ -841,6 +1079,17 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, on
                             <InfoRow label="Model" value={item.product_code} />
                             <InfoRow label="Ngày sử dụng" value={item.ngay_su_dung} />
                           </div>
+
+                          {/* Bộ ảnh thực tế Tủ Nguồn */}
+                          <EquipmentPhotoStrip
+                            equipKey={`tu_nguon_${i}`}
+                            equipCode={item.ma_tai_san || item.ma_vat_tu}
+                            label={item.ten || `Tủ nguồn (${i+1})`}
+                            equipData={item}
+                            type="tu_nguon"
+                            phanLoai="TSCĐ"
+                            categoryHint="nguon_accu"
+                          />
 
                           {/* Tổ accu con */}
                           {item.to_accu && item.to_accu.length > 0 && (
@@ -862,6 +1111,17 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, on
                                     {accu.bao_hanh && <div><span className="text-slate-400">Bảo hành:</span> <span className="font-medium text-slate-700">{accu.bao_hanh}</span></div>}
                                     {accu.serial && <div><span className="text-slate-400">Serial:</span> <span className="font-mono text-[11px] text-slate-700">{accu.serial}</span></div>}
                                   </div>
+
+                                  {/* Bộ ảnh thực tế Tổ Accu */}
+                                  <EquipmentPhotoStrip
+                                    equipKey={`to_accu_${i}_${idx}`}
+                                    equipCode={accu.ma_tai_san || accu.serial}
+                                    label={accu.ten || `Tổ accu (${idx+1})`}
+                                    equipData={accu}
+                                    type="accu"
+                                    phanLoai="CCDC"
+                                    categoryHint="nguon_accu"
+                                  />
                                 </div>
                               ))}
                             </div>
@@ -878,7 +1138,18 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, on
                     <div className="bg-gradient-to-r from-cyan-50 to-sky-50 px-4 py-3 border-b border-slate-100 flex items-center gap-2">
                       <span className="text-lg">❄️</span>
                       <h3 className="font-bold text-slate-800 text-sm">Máy lạnh</h3>
-                      <span className="text-xs text-slate-400 ml-auto">{mayLanh.length} máy</span>
+                      <span className="text-xs text-slate-500">{mayLanh.length} máy</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAddEquipInitialType('may_lanh');
+                          setIsAddEquipModalOpen(true);
+                        }}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-cyan-100 hover:bg-cyan-200 text-cyan-900 border border-cyan-200 transition-colors cursor-pointer ml-auto"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        <span>Thêm Máy lạnh</span>
+                      </button>
                     </div>
                     <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
                       {mayLanh.map((item, i) => (
@@ -893,9 +1164,22 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, on
                             <InfoRow label="Loại" value={item.loai} />
                             <InfoRow label="Model" value={item.product_code} />
                             <InfoRow label="Serial" value={item.serial} />
+                            {item.ma_vat_tu && <InfoRow label="Mã CCDC / Vật tư" value={item.ma_vat_tu} />}
+                            {item.ma_tai_san_moi && <InfoRow label="Mã TSCĐ" value={item.ma_tai_san_moi} />}
                             <InfoRow label="Ngày sử dụng" value={item.ngay_su_dung} />
                             <InfoRow label="Bảo hành" value={item.bao_hanh} />
                           </div>
+
+                          {/* Bộ ảnh thực tế Máy Lạnh gắn theo Mã CCDC */}
+                          <EquipmentPhotoStrip
+                            equipKey={`may_lanh_${i}`}
+                            equipCode={item.ma_vat_tu || item.ma_tai_san_moi}
+                            label={item.ten || `Máy lạnh (${i+1})`}
+                            equipData={item}
+                            type="may_lanh"
+                            phanLoai={item.phan_loai || 'CCDC'}
+                            categoryHint="mat_bang"
+                          />
                         </div>
                       ))}
                     </div>
@@ -1571,6 +1855,55 @@ export default function DatasiteDetailFullscreen({ site, onClose, defaultTab, on
           </div>
         );
       })()}
+
+      {/* Modal: Đối soát & Sửa Số Serial từ Tem Nhãn */}
+      {isInspectModalOpen && (
+        <SerialMismatchModal
+          isOpen={isInspectModalOpen}
+          onClose={() => setIsInspectModalOpen(false)}
+          siteId={site.site_id}
+          site={site}
+          equipment={inspectingEquipment}
+          onSerialUpdated={(newSerial, updatedInfra) => {
+            if (site) {
+              site.infrastructure_info = updatedInfra;
+            }
+          }}
+        />
+      )}
+
+      {/* Modal: Hồ sơ ảnh thiết bị theo Mã Tài Sản / CCDC */}
+      {isAssetModalOpen && (
+        <AssetPhotoModal
+          isOpen={isAssetModalOpen}
+          onClose={() => setIsAssetModalOpen(false)}
+          siteId={activeSite.site_id}
+          site={activeSite}
+          equipment={assetModalEquipment}
+          allSitePhotos={sitePhotos}
+          onPhotosUpdated={fetchSitePhotos}
+        />
+      )}
+
+      {/* Modal: Thêm Thiết Bị / Tài Sản Mới */}
+      {isAddEquipModalOpen && (
+        <AddEquipmentModal
+          isOpen={isAddEquipModalOpen}
+          onClose={() => setIsAddEquipModalOpen(false)}
+          site={activeSite}
+          initialType={addEquipInitialType}
+          onSuccess={(updatedSite) => {
+            setLocalSite(updatedSite);
+            if (site) {
+              site.infrastructure_info = updatedSite.infrastructure_info;
+            }
+          }}
+          onOpenPhotoModal={(equipParams) => {
+            setAssetModalEquipment(equipParams);
+            setIsAssetModalOpen(true);
+          }}
+        />
+      )}
     </div>
   );
 }

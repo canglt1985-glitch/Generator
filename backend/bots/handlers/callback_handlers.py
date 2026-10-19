@@ -132,8 +132,55 @@ async def handle_callback_query(client: TelegramClient, callback_query: Dict[str
             "💡 <b>MẸO TÌM KIẾM NHANH:</b>\n\n"
             "• Gõ mã trạm mới: <code>26DNa_LK00</code>\n"
             "• Gõ mã trạm cũ: <code>DNLK00</code>\n"
-            "• Gõ tên trạm: <code>Long Khánh</code>\n"
+            "• Lệnh mạng ERA: <code>lst cell DNXL00</code>, <code>alt DNXL00</code>\n"
+            "• Lệnh mạng CSG: <code>port DNTP00</code>, <code>ping DNTP00</code>\n"
             "• Gửi Vị trí GPS (Live Location) để xem trạm gần nhất."
         )
         await client.edit_message_text(chat_id, message_id, help_msg)
         return
+
+    # 5. Network Equipment Actions: N:<TYPE>:<SITE_ID>
+    if data.startswith("N:"):
+        parts = data.split(":")
+        if len(parts) >= 3:
+            net_type = parts[1]
+            sid = parts[2]
+
+            if query_id:
+                await client.answer_callback_query(query_id, f"⏳ Đang kết nối thiết bị trạm {sid}...")
+
+            status_msg = await client.send_message(
+                chat_id,
+                f"⏳ <b>Đang truy vấn {net_type} trạm <code>{sid}</code>...</b>\n<i>Vui lòng chờ trong giây lát...</i>"
+            )
+
+            from ..network.era_service import era_service
+            from ..network.csg_service import csg_service
+
+            try:
+                if net_type == "ERA":
+                    res = await era_service.execute_async("lst_cell", sid)
+                elif net_type == "CSG":
+                    res = await csg_service.check_ports_async(sid)
+                elif net_type == "ALT":
+                    res = await era_service.execute_async("alt", sid)
+                else:
+                    res = "❌ Lệnh mạng không xác định."
+
+                if status_msg and "message_id" in status_msg:
+                    try:
+                        await client.edit_message_text(chat_id, status_msg["message_id"], res, parse_mode="Markdown")
+                    except Exception:
+                        await client.edit_message_text(chat_id, status_msg["message_id"], res)
+                else:
+                    try:
+                        await client.send_message(chat_id, res, parse_mode="Markdown")
+                    except Exception:
+                        await client.send_message(chat_id, res)
+            except Exception as e:
+                err_text = f"❌ Lỗi truy vấn {net_type} trạm {sid}: {e}"
+                if status_msg and "message_id" in status_msg:
+                    await client.edit_message_text(chat_id, status_msg["message_id"], err_text)
+                else:
+                    await client.send_message(chat_id, err_text)
+            return

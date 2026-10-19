@@ -23,17 +23,8 @@ export default function ContractFilterDropdown({ contracts, activeFilter, onFilt
 
   // Calculate counts for each filter
   const counts = useMemo(() => {
-    const result = {
-      all: contracts.length,
-      mb_can_gia_han: 0,
-      csht_can_dam_phan: 0,
-      tram_vnpt: 0,
-      dong_y_chua_pl: 0,
-      dong_y_da_trinh_pl: 0,
-      da_hoan_tat: 0,
-      lech_tai_khoan: 0,
-      chua_thanh_toan: 0,
-    };
+    const result = Object.fromEntries(FILTER_OPTIONS.map(o => [o.key, 0]));
+    result.all = contracts.length;
 
     contracts.forEach(c => {
       const flags = getContractFlags(c);

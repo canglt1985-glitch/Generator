@@ -55,7 +55,6 @@ STATION_CONVERSIONS = {
     'DNITPU07': {'type': 'Macro', 'kva': '6', 'brand': 'MLĐ KiBii', 'quota': 3.44, 'name': 'Tân Phú 7 (DNTP19)'},
     'DNITPU06': {'type': 'Macro', 'kva': '6', 'brand': 'MLĐ KiBii', 'quota': 3.44, 'name': 'Tân Phú 6 (DNTP17)'},
     'DNIPLA04': {'type': 'Macro', 'kva': '6', 'brand': 'MLĐ KiBii', 'quota': 3.44, 'name': 'Phú Lâm 4 (DNTP18)'},
-    'DNIXLO07': {'type': 'Macro', 'kva': '6', 'brand': 'MLĐ KiBii', 'quota': 3.44, 'name': 'Xuân Lộc 7 (DNXL15)'},
     'DNIPLA05': {'type': 'Macro', 'kva': '6', 'brand': 'MLĐ KiBii', 'quota': 3.44, 'name': 'Phú Lâm 5 (DNTP20)'},
     'DNIXHO05': {'type': 'Macro', 'kva': '6', 'brand': 'MLĐ KiBii', 'quota': 3.44, 'name': 'Xuân Hòa 5 (DNXL22)'},
     'DNILKH01': {'type': 'Macro', 'kva': '6', 'brand': 'MLĐ KiBii', 'quota': 3.44, 'name': 'Long Khánh 1 (DNLK07)'},

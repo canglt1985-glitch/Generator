@@ -2,9 +2,33 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
+function photoApiDevPlugin() {
+  return {
+    name: 'photo-api-dev',
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        if (req.url && req.url.startsWith('/api/photo')) {
+          try {
+            const { default: handler } = await import('./api/photo.js');
+            const url = new URL(req.url, 'http://localhost');
+            const query = Object.fromEntries(url.searchParams.entries());
+            req.query = query;
+            return handler(req, res);
+          } catch (err) {
+            console.error('[photo-api-dev-error]', err);
+            res.statusCode = 500;
+            return res.end('Internal Server Error in Photo Proxy');
+          }
+        }
+        next();
+      });
+    }
+  };
+}
+
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), photoApiDevPlugin()],
   build: {
     rollupOptions: {
       output: {

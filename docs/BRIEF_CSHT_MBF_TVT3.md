@@ -86,7 +86,7 @@ Theo kế hoạch triển khai của MobiFone tỉnh Đồng Nai, 4 gói đầu 
         14. `26DNa053` (Định Quán)
         15. `26DNa070` (Xuân Lộc)
     *   **14 trạm CHƯA KHẢO SÁT** (Chưa có tọa độ khảo sát trên DB):
-        `26DNa179`, `26DNa131`, `26DNa076`, `26DNa080`, `DNTNL1`, `DNTNL2`, `DNXL10`, `26DNa311`, `26DNa316`, `26DNa318`, `26DNa330`, `26DNa290`, `26DNa291`, `26DNa295`.
+        `26DNa129`, `26DNa131`, `26DNa076`, `26DNa080`, `DNTNL1`, `DNTNL2`, `DNXL10`, `26DNa311`, `26DNa316`, `26DNa318`, `26DNa330`, `26DNa290`, `26DNa291`, `26DNa295`.
 
 ---
 

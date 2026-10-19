@@ -4,3 +4,5 @@ requests==2.32.5
 beautifulsoup4==4.14.3
 playwright==1.58.0
 pypdf==6.14.2
+paramiko>=3.5.0
+netmiko>=4.4.0

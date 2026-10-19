@@ -28,4 +28,13 @@ export const FILTER_OPTIONS = [
   { key: 'da_hoan_tat',      label: 'Đã hoàn tất',         icon: '✅', color: 'emerald' },
   { key: 'lech_tai_khoan',   label: 'Lệch tài khoản',      icon: '🏦', color: 'purple' },
   { key: 'chua_thanh_toan',  label: 'Chưa thanh toán',     icon: '💳', color: 'red' },
+  { key: 'da_het_han',       label: 'Đã hết hạn HĐ',       icon: '⛔', color: 'red' },
+  { key: 'sap_het_han',      label: 'Sắp hết hạn (≤12 tháng)', icon: '⏳', color: 'amber' },
+  { key: 'chua_trinh',       label: 'Chưa trình phụ lục',  icon: '📄', color: 'orange' },
+  { key: 'da_trinh',         label: 'Đã trình phụ lục',    icon: '📨', color: 'indigo' },
+  { key: 'dong_y_1245',      label: 'Đã đồng ý 1245',      icon: '🤝', color: 'emerald' },
+  { key: 'chua_dong_y_1245', label: 'Chưa đồng ý 1245',    icon: '❓', color: 'slate' },
 ];
+
+// Các bộ lọc nhanh dựa hoàn toàn trên cờ (flag) của getContractFlags
+export const FLAG_ONLY_FILTERS = ['da_het_han', 'sap_het_han', 'chua_trinh', 'da_trinh', 'dong_y_1245', 'chua_dong_y_1245'];

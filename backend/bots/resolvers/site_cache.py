@@ -143,6 +143,10 @@ class SiteCacheManager:
 
         return None
 
+    def get(self, code: str) -> Optional[Dict[str, Any]]:
+        """Convenience alias for find_by_code."""
+        return self.find_by_code(code)
+
     def search_keyword(self, keyword: str, limit: int = 5) -> List[Dict[str, Any]]:
         """
         Search sites by keyword (site code, name, commune, landlord name, contract number).

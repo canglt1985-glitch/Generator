@@ -17,6 +17,53 @@ async def handle_text_query(client: TelegramClient, chat_id: int, text: str):
     if not query:
         return
 
+    # 0. Check if query is a Network command (ERA Moshell or Metro CSG)
+    from ..network.intent_parser import parse_network_command
+    from ..network.era_service import era_service
+    from ..network.csg_service import csg_service
+
+    net_cmd = parse_network_command(query)
+    if net_cmd.is_network_cmd:
+        service_label = "ERA Vô tuyến" if net_cmd.service_type == "era" else "Metro CSG"
+        target_info = f" ({net_cmd.target})" if net_cmd.target else ""
+        status_msg = await client.send_message(
+            chat_id,
+            f"⏳ <b>[{service_label}] Đang truy vấn trạm <code>{net_cmd.site_name}</code>{target_info}...</b>\n<i>Vui lòng chờ trong giây lát...</i>"
+        )
+        try:
+            if net_cmd.service_type == "era":
+                result = await era_service.execute_async(
+                    action=net_cmd.action,
+                    nodeb_name=net_cmd.site_name,
+                    target=net_cmd.target,
+                    tech_hint=net_cmd.tech_hint
+                )
+            elif net_cmd.service_type == "csg":
+                if net_cmd.action == "ping":
+                    result = await csg_service.ping_async(net_cmd.site_name)
+                else:
+                    result = await csg_service.check_ports_async(net_cmd.site_name, net_cmd.target)
+            else:
+                result = "❌ Lệnh không hỗ trợ."
+
+            if status_msg and "message_id" in status_msg:
+                try:
+                    await client.edit_message_text(chat_id, status_msg["message_id"], result, parse_mode="Markdown")
+                except Exception:
+                    await client.edit_message_text(chat_id, status_msg["message_id"], result)
+            else:
+                try:
+                    await client.send_message(chat_id, result, parse_mode="Markdown")
+                except Exception:
+                    await client.send_message(chat_id, result)
+        except Exception as e:
+            err_text = f"❌ Lỗi thực thi lệnh mạng: {e}"
+            if status_msg and "message_id" in status_msg:
+                await client.edit_message_text(chat_id, status_msg["message_id"], err_text)
+            else:
+                await client.send_message(chat_id, err_text)
+        return
+
     # 1. Search in cached sites
     matches = site_cache.search_keyword(query, limit=6)
 

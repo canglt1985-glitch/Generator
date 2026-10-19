@@ -6,7 +6,8 @@ import ContractCard from '../components/contracts/ContractCard';
 import ContractTable from '../components/contracts/ContractTable';
 import ContractDetailPanel from '../components/contracts/ContractDetailPanel';
 import { exportContractsToExcel, importContractsFromExcel } from '../utils/excel';
-import { getContractFlags } from '../utils/contractChecks';
+import { getContractFlags, isMbChuaHetKhauHao } from '../utils/contractChecks';
+import { FLAG_ONLY_FILTERS } from '../utils/contractConstants';
 import ContractAlertCards from '../components/contracts/ContractAlertCards';
 import ContractFilterDropdown from '../components/contracts/ContractFilterDropdown';
 import ContractFilterPanel from '../components/contracts/ContractFilterPanel';
@@ -36,7 +37,7 @@ export default function ContractDashboard() {
       // Query từ bảng datasites (đã gộp contracts vào)
       const { data, error } = await supabase
         .from('datasites')
-        .select('site_id, site_id_old, name, status, location_info, classification, contract_number, contract_info')
+        .select('site_id, site_id_old, name, status, location_info, classification, management_info, contract_number, contract_info')
         .not('contract_number', 'is', null);
 
       if (error) {
@@ -62,6 +63,7 @@ export default function ContractDashboard() {
             name: site.name,
             location_info: site.location_info,
             classification: site.classification,
+            management_info: site.management_info,
             status: site.status
           }
         }));
@@ -85,7 +87,7 @@ export default function ContractDashboard() {
       try {
         const { data, error } = await supabase
           .from('datasites')
-          .select('site_id, site_id_old, name, status, location_info, classification, contract_number, contract_info')
+          .select('site_id, site_id_old, name, status, location_info, classification, management_info, contract_number, contract_info')
           .eq('site_id', updatedSiteId)
           .single();
 
@@ -108,6 +110,7 @@ export default function ContractDashboard() {
               name: data.name,
               location_info: data.location_info,
               classification: data.classification,
+              management_info: data.management_info,
               status: data.status
             }
           };
@@ -202,6 +205,7 @@ export default function ContractDashboard() {
 
       // Compute attributes for the contract
       const flags = getContractFlags(c);
+      if (FLAG_ONLY_FILTERS.includes(activeFilter) && !flags.includes(activeFilter)) return false;
       const cl = c.datasites?.classification || {};
       const chuThe = (c.contractor_info?.chu_the_hop_dong || c.contractor_info?.chu_nha || '').trim().toLowerCase();
       const loaiHinhDauTu = String(cl.hinh_thuc_dau_tu || '').toUpperCase();
@@ -218,7 +222,7 @@ export default function ContractDashboard() {
       const isChuaDuyet = !isApproved && !isDongYChuaPL && !isDongYDaTrinhPL;
 
       const isPaid = !flags.includes('chua_thanh_toan');
-      const isChuaHetKhauHao = c.chua_het_khau_hao || c._raw_contract_info?.chua_het_khau_hao || false;
+      const isChuaHetKhauHao = c.chua_het_khau_hao || c._raw_contract_info?.chua_het_khau_hao || isMbChuaHetKhauHao(c) || false;
       const isLechTaiKhoan = flags.includes('lech_tai_khoan');
 
       // 2. Filter by loaiHinh
@@ -275,7 +279,7 @@ export default function ContractDashboard() {
 
       return true;
     });
-  }, [contracts, filters, searchTerm]);
+  }, [contracts, filters, searchTerm, activeFilter]);
 
   // Handlers for Export / Import
   const handleExport = () => {

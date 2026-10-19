@@ -6,7 +6,16 @@ import { saveAs } from 'file-saver';
  * @param {object} data - Dữ liệu data object để điền vào Word
  * @param {string} outputFileName - Tên file sẽ được download về máy
  */
-export const generateWordBlob = async (templatePath, data) => {
+import { sanitizeContractData } from './smartContractSanitizer';
+import { formatDocumentND30 } from './nd30WordPostProcessor';
+
+/**
+ * Hàm tải và xuất file Word sử dụng docxtemplater kết hợp chuẩn hóa NĐ 30/2020/NĐ-CP
+ * @param {string} templatePath - Đường dẫn tới file template (ví dụ: '/templates/HOP_DONG_MOI_CSHT.docx')
+ * @param {object} data - Dữ liệu data object để điền vào Word
+ * @param {boolean} applyND30 - Có áp dụng chuẩn hóa Nghị định 30 (font, lề, bảng, dọn dấu '-') hay không
+ */
+export const generateWordBlob = async (templatePath, data, applyND30 = true) => {
     try {
         const [{ default: Docxtemplater }, { default: PizZip }] = await Promise.all([
             import('docxtemplater'),
@@ -18,6 +27,9 @@ export const generateWordBlob = async (templatePath, data) => {
             throw new Error(`Không thể tải template từ ${templatePath}`);
         }
         
+        // 1. Làm sạch dữ liệu trước khi đưa vào template (loại bỏ '-', '--', số 0 vô duyên)
+        const cleanData = applyND30 ? sanitizeContractData(data) : data;
+
         const arrayBuffer = await response.arrayBuffer();
         const zip = new PizZip(arrayBuffer);
         const doc = new Docxtemplater(zip, {
@@ -34,8 +46,14 @@ export const generateWordBlob = async (templatePath, data) => {
             }
         });
         
-        doc.render(data);
+        // 2. Render dữ liệu vào Word
+        doc.render(cleanData);
         
+        // 3. Hậu xử lý chuẩn hóa thể thức Nghị định 30 (lề trang 30-15-20-20, ép font Times New Roman, canh bảng giữa, xóa rác)
+        if (applyND30) {
+            formatDocumentND30(doc.getZip());
+        }
+
         const out = doc.getZip().generate({
             type: "blob",
             mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -55,11 +73,12 @@ export const generateWordBlob = async (templatePath, data) => {
     }
 };
 
-export const generateWordDocument = async (templatePath, data, outputFileName) => {
-    const result = await generateWordBlob(templatePath, data);
+export const generateWordDocument = async (templatePath, data, outputFileName, applyND30 = true) => {
+    const result = await generateWordBlob(templatePath, data, applyND30);
     if (result.success) {
         saveAs(result.blob, outputFileName);
         return { success: true };
     }
     return result;
 };
+

@@ -22,6 +22,15 @@ def build_summary_keyboard(site_id: str, lat: Optional[float] = None, lon: Optio
         maps_url = f"https://www.google.com/maps/dir/?api=1&destination={lat},{lon}"
         buttons[1].append({"text": "🗺️ Google Maps", "url": maps_url})
 
+    # Network Equipment Inspection Buttons (ERA & CSG)
+    buttons.append([
+        {"text": "📶 Cell ERA (3G/4G/5G)", "callback_data": f"N:ERA:{sid}"},
+        {"text": "🔌 Cổng Metro CSG", "callback_data": f"N:CSG:{sid}"},
+    ])
+    buttons.append([
+        {"text": "🔔 Cảnh báo ALT (Moshell)", "callback_data": f"N:ALT:{sid}"}
+    ])
+
     return {"inline_keyboard": buttons}
 
 

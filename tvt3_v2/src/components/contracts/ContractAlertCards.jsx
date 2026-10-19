@@ -13,6 +13,12 @@ export default function ContractAlertCards({ contracts, activeFilter, onFilterSe
       da_hoan_tat: 0,
       lech_tai_khoan: 0,
       chua_thanh_toan: 0,
+      da_het_han: 0,
+      sap_het_han: 0,
+      chua_trinh: 0,
+      da_trinh: 0,
+      dong_y_1245: 0,
+      chua_dong_y_1245: 0,
     };
 
     contracts.forEach(c => {
@@ -36,10 +42,16 @@ export default function ContractAlertCards({ contracts, activeFilter, onFilterSe
     { key: 'da_hoan_tat',      label: 'Đã hoàn tất',      icon: '✅', count: counts.da_hoan_tat,      color: 'emerald' },
     { key: 'lech_tai_khoan',   label: 'Lệch tài khoản',  icon: '🏦', count: counts.lech_tai_khoan,   color: 'purple' },
     { key: 'chua_thanh_toan',  label: 'Chưa thanh toán',  icon: '💳', count: counts.chua_thanh_toan,  color: 'red' },
+    { key: 'da_het_han',       label: 'Đã hết hạn HĐ',   icon: '⛔', count: counts.da_het_han,       color: 'red' },
+    { key: 'sap_het_han',      label: 'Sắp hết hạn',    icon: '⏳', count: counts.sap_het_han,      color: 'amber' },
+    { key: 'chua_trinh',       label: 'Chưa trình PL',   icon: '📄', count: counts.chua_trinh,       color: 'orange' },
+    { key: 'da_trinh',         label: 'Đã trình PL',     icon: '📨', count: counts.da_trinh,         color: 'indigo' },
+    { key: 'dong_y_1245',      label: 'Đã đồng ý 1245', icon: '🤝', count: counts.dong_y_1245,      color: 'emerald' },
+    { key: 'chua_dong_y_1245', label: 'Chưa đồng ý 1245',icon: '❓', count: counts.chua_dong_y_1245, color: 'slate' },
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 mb-6">
+    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
       {cards.map(card => {
         const isActive = activeFilter === card.key;
         

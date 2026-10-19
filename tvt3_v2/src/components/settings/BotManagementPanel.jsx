@@ -45,14 +45,6 @@ export default function BotManagementPanel({ currentUser }) {
   // Ping test result
   const [pingResult, setPingResult] = useState(null);
 
-  // Load configs from Supabase system_config
-  useEffect(() => {
-    fetchBotConfigs();
-    return () => {
-      if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
-    };
-  }, []);
-
   async function fetchBotConfigs() {
     setLoading(true);
     try {
@@ -80,6 +72,14 @@ export default function BotManagementPanel({ currentUser }) {
       setLoading(false);
     }
   }
+
+  // Load configs from Supabase system_config
+  useEffect(() => {
+    fetchBotConfigs();
+    return () => {
+      if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
+    };
+  }, []);
 
   function showNotice(type, message) {
     if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
@@ -153,7 +153,7 @@ export default function BotManagementPanel({ currentUser }) {
     setTestingPing(true);
     setPingResult(null);
     try {
-      const t0 = performance.now();
+      const t0 = Date.now();
       // Fetch token from system_config
       const { data } = await supabase
         .from('system_config')
@@ -171,7 +171,7 @@ export default function BotManagementPanel({ currentUser }) {
 
       const res = await fetch(`https://api.telegram.org/bot${token}/getMe`);
       const json = await res.json();
-      const latency = Math.round(performance.now() - t0);
+      const latency = Math.round(Date.now() - t0);
 
       if (json.ok) {
         setPingResult({

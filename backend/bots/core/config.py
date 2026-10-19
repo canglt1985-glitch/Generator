@@ -174,3 +174,38 @@ TELEGRAM_TOKEN = get_telegram_token()
 ALLOWED_USERS = get_allowed_user_ids()
 ADMIN_USERS = get_admin_user_ids()
 
+def get_oss_credentials() -> dict:
+    """Retrieve OSS Gateway credentials for Ericsson Moshell."""
+    cfg_path = os.path.join(DATA_DIR, "system_config.json")
+    local_cfg = {}
+    if os.path.exists(cfg_path):
+        try:
+            with open(cfg_path, "r", encoding="utf-8") as f:
+                local_cfg = json.load(f)
+        except Exception:
+            pass
+
+    return {
+        "host": os.getenv("OSS_HOST") or local_cfg.get("oss_host", "10.53.138.6"),
+        "port": int(os.getenv("OSS_PORT") or local_cfg.get("oss_port", 5022)),
+        "username": os.getenv("OSS_USERNAME") or local_cfg.get("oss_username", "dn.phantd"),
+        "password": os.getenv("OSS_PASSWORD") or local_cfg.get("oss_password", "")
+    }
+
+def get_csg_credentials() -> dict:
+    """Retrieve default credentials for Cisco/CSG Metro devices."""
+    cfg_path = os.path.join(DATA_DIR, "system_config.json")
+    local_cfg = {}
+    if os.path.exists(cfg_path):
+        try:
+            with open(cfg_path, "r", encoding="utf-8") as f:
+                local_cfg = json.load(f)
+        except Exception:
+            pass
+
+    return {
+        "username": os.getenv("CSG_USERNAME") or os.getenv("TELEBOT_USERNAME") or local_cfg.get("csg_username", ""),
+        "password": os.getenv("CSG_PASSWORD") or os.getenv("PASSWORD") or local_cfg.get("csg_password", "")
+    }
+
+

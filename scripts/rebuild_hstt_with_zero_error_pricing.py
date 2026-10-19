@@ -14,8 +14,9 @@ Các tiêu chuẩn kỹ thuật:
    - Loại bỏ 8 ca chạy Seath Group hiện đang nằm trong sheet 02A_TTNB_ToanCau.
    - Đảm bảo 0 trạm Seath nào lọt vào file thanh toán nội bộ.
 3. Chuyển đổi trạm Vikyno 10kVA sang máy xăng lưu động:
-   - Chuyển 4 ca chạy của trạm DNDQ19, DNXL15, DNLK08 từ Phần Dầu sang Phần A (Máy chạy xăng).
-   - Áp định mức máy xăng (3.15 L/h hoặc 3.44 L/h) và tính đúng giá Xăng RON 95.
+   - Chuyển các ca chạy của trạm DNDQ19, DNLK08 từ Phần Dầu sang Phần A (Máy chạy xăng).
+   - Lưu ý: Trạm DNXL15 (DNIXLO07) giữ nguyên là Máy Dầu cố định Vietgen 10KVA.
+   - Áp định mức máy xăng (3.15 L/h hoặc 3.44 L/h) và tính đúng giá Xăng RON 95 cho các trạm Vikyno còn lại.
 4. Chạy Waterfall Allocation đảm bảo 100% khớp hóa đơn:
    - Tổng tiền trạm = Tổng tiền hóa đơn gán cho cả Nhóm 1 và Nhóm 2.
 5. Kích hoạt Pre-Flight Dynamic Web-Price Audit:
@@ -66,7 +67,7 @@ ALIGN_RIGHT = Alignment(horizontal='right', vertical='center')
 VIKYNO_SITES = {
     'DNIDQU06', 'DNDQ18', 'DNIDQU07', 'DNDQ19', 'DNILKH01', 'DNLK07', 'DNILKH02', 'DNLK08',
     'DNINCT01', 'DNTP22', 'DNIPLA05', 'DNTP20', 'DNITLA04', 'DNTP15', 'DNITPU05', 'DNTP16',
-    'DNITPU06', 'DNTP17', 'DNITPU07', 'DNTP19', 'DNXL15', 'DNIXLO07'
+    'DNITPU06', 'DNTP17', 'DNITPU07', 'DNTP19'
 }
 
 def clear_sheet_from_row(ws, from_row):

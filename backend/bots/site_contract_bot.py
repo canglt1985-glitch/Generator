@@ -25,10 +25,17 @@ from bots.handlers.command_handlers import (
     handle_help,
     handle_sync,
     handle_direct_site_command,
+    handle_era_direct_command,
+    handle_csg_direct_command,
 )
 from bots.handlers.text_search_handlers import handle_text_query
 from bots.handlers.location_handlers import handle_location_query
 from bots.handlers.callback_handlers import handle_callback_query
+from bots.handlers.photo_handlers import (
+    handle_photo_message,
+    handle_anh_command,
+    handle_tontai_command,
+)
 
 # Configure stream logging (stdout is piped to log file by runner)
 logging.basicConfig(
@@ -121,7 +128,12 @@ class SiteContractBotApp:
                 await handle_location_query(self.client, chat_id, msg["location"])
                 return
 
-            # Sub-case B: Text message
+            # Sub-case B: Photo message (single photo or album item)
+            if "photo" in msg:
+                await handle_photo_message(self.client, msg)
+                return
+
+            # Sub-case C: Text message
             text = (msg.get("text") or "").strip()
             if not text:
                 return
@@ -140,6 +152,14 @@ class SiteContractBotApp:
                     await handle_sync(self.client, chat_id, user_id)
                 elif cmd in ("/tram", "/csht", "/tb", "/thietbi", "/hd", "/hopdong", "/chu", "/khoa", "/vaotram"):
                     await handle_direct_site_command(self.client, chat_id, cmd, args)
+                elif cmd in ("/anh", "/photo", "/photos"):
+                    await handle_anh_command(self.client, chat_id, args)
+                elif cmd in ("/tontai", "/defect", "/defects", "/loi"):
+                    await handle_tontai_command(self.client, chat_id, args)
+                elif cmd in ("/cell", "/cells", "/cabx", "/alt", "/rru", "/era"):
+                    await handle_era_direct_command(self.client, chat_id, cmd, args)
+                elif cmd in ("/port", "/ports", "/csg", "/ping", "/env"):
+                    await handle_csg_direct_command(self.client, chat_id, cmd, args)
                 else:
                     # Treat unknown slash command as search query
                     await handle_text_query(self.client, chat_id, text.lstrip("/"))

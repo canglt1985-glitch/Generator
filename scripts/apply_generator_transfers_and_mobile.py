@@ -57,16 +57,16 @@ source_transfers = [
         'tech_desc': '3G/4G/5G (AIR2600 32T32R)',
         'mobile_generator': {
             'ten': 'MÁY NỔ XĂNG LƯU ĐỘNG',
-            'nhan_hieu': 'MLĐ KiBii',
-            'cong_suat': '6',
-            'dinh_muc': 3.44,
-            'dinh_muc_thuc_te': 3.44,
-            'dinh_muc_quy_chuan': 3.44,
+            'nhan_hieu': 'MLĐ KYO POWER',
+            'cong_suat': '7',
+            'dinh_muc': 4.02,
+            'dinh_muc_thuc_te': 4.02,
+            'dinh_muc_quy_chuan': 4.02,
             'nhien_lieu': 'Xăng',
             'loai_lap_dat': 'Lưu động',
             'tinh_trang': 'Hoạt động',
             'ngay_bat_dau': '2025-08-08',
-            'ghi_chu': 'Máy nổ xăng lưu động 6KVA thay thế máy dầu chuyển đi (Trạm 3G/4G/5G)'
+            'ghi_chu': 'Máy nổ xăng lưu động 7KVA thay thế máy dầu chuyển đi (Trạm 3G/4G/5G)'
         }
     },
     {

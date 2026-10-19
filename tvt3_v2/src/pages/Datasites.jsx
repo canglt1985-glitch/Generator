@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
-import { Search, FileDown, X, ChevronDown, Upload, BarChart2, Database } from 'lucide-react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { Search, FileDown, X, ChevronDown, Upload, BarChart2, Database, RefreshCw, Zap } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import * as XLSX from 'xlsx';
 import DatasiteDetailFullscreen from '../components/datasites/DatasiteDetailFullscreen';
@@ -170,40 +170,96 @@ export default function Datasites() {
   const [viewMode, setViewMode] = useState('list');
   const [statCategory, setStatCategory] = useState('');
 
-  useEffect(() => {
-    async function fetchDatasites() {
-      try {
-        const { data: sites, error } = await supabase
-          .from('datasites')
-          .select('*')
-          .order('site_id', { ascending: true });
-          
-        if (error) throw error;
-        setData(sites || []);
+  // Quản lý chế độ nạp & Tải siêu tốc
+  const [siteLimit, setSiteLimit] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    const lim = params.get('limit');
+    return lim ? parseInt(lim, 10) : null;
+  });
+  const [isBackgroundSyncing, setIsBackgroundSyncing] = useState(false);
+  const [isLoadedFromCache, setIsLoadedFromCache] = useState(false);
 
-        // Auto filter and open detail if search/site_id query parameter exists
-        const params = new URLSearchParams(window.location.search);
-        const searchParam = params.get('search') || params.get('site_id');
-        if (searchParam && sites) {
-          const query = searchParam.trim().toLowerCase();
-          setSearchQuery(searchParam);
-          const found = sites.find(s => 
-            s.site_id?.toLowerCase() === query || 
-            s.site_id_old?.toLowerCase() === query
-          );
-          if (found) {
-            setSelectedSite(found);
+  const CACHE_KEY = 'tvt3_datasites_cache_v2';
+
+  const fetchDatasites = useCallback(async (limitOverride) => {
+    const targetLimit = limitOverride !== undefined ? limitOverride : siteLimit;
+    
+    // 1. Nếu tải tất cả trạm: nạp từ Cache LocalStorage trước để hiển thị tức thì (0ms)
+    if (!targetLimit) {
+      try {
+        const cached = localStorage.getItem(CACHE_KEY);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setData(parsed);
+            setLoading(false);
+            setIsLoadedFromCache(true);
+            setIsBackgroundSyncing(true); // Đang đồng bộ nền
           }
         }
-      } catch (err) {
-        console.error("Lỗi khi tải dữ liệu trạm:", err);
-      } finally {
-        setLoading(false);
+      } catch (e) {
+        console.warn('Lỗi đọc cache trạm:', e);
       }
+    } else {
+      setLoading(true);
+      setIsLoadedFromCache(false);
     }
-    
+
+    try {
+      let query = supabase
+        .from('datasites')
+        .select('*')
+        .order('site_id', { ascending: true });
+
+      if (targetLimit && targetLimit > 0) {
+        query = query.limit(targetLimit);
+      }
+
+      const { data: sites, error } = await query;
+      if (error) throw error;
+
+      setData(sites || []);
+
+      // Lưu cache nếu tải toàn bộ (với cơ chế chống tràn LocalStorage Quota)
+      if (!targetLimit && sites && sites.length > 0) {
+        try {
+          localStorage.setItem(CACHE_KEY, JSON.stringify(sites));
+        } catch (e) {
+          console.warn('LocalStorage đầy, tự động dọn cache cũ:', e);
+          try {
+            localStorage.removeItem('tvt3_datasites_cache');
+            localStorage.setItem(CACHE_KEY, JSON.stringify(sites));
+          } catch (innerErr) {
+            console.warn('Không thể ghi cache trạm (bỏ qua cache):', innerErr);
+          }
+        }
+      }
+
+      // Auto filter and open detail if search/site_id query parameter exists
+      const params = new URLSearchParams(window.location.search);
+      const searchParam = params.get('search') || params.get('site_id');
+      if (searchParam && sites) {
+        const q = searchParam.trim().toLowerCase();
+        setSearchQuery(searchParam);
+        const found = sites.find(s => 
+          s.site_id?.toLowerCase() === q || 
+          s.site_id_old?.toLowerCase() === q
+        );
+        if (found) {
+          setSelectedSite(found);
+        }
+      }
+    } catch (err) {
+      console.error("Lỗi khi tải dữ liệu trạm:", err);
+    } finally {
+      setLoading(false);
+      setIsBackgroundSyncing(false);
+    }
+  }, [siteLimit]);
+
+  useEffect(() => {
     fetchDatasites();
-  }, []);
+  }, [fetchDatasites]);
 
   useEffect(() => {
     const handleTransUpdate = (e) => {

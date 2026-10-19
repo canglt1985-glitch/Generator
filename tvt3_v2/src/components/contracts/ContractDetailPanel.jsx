@@ -1,11 +1,11 @@
 import { useMemo, useState, useEffect } from 'react';
 import { X, CreditCard, CheckCircle2, FileText, AlertCircle, RefreshCw, Calculator, Edit, Save, Undo, Loader2 } from 'lucide-react';
-import { generatePaymentCycles } from '../../utils/contractLogic';
 import { checkPriceFrame, checkExpiry, checkPaymentStatus, checkAccountMatch } from '../../utils/contractChecks';
 import { CONTRACT_STATUSES } from '../../utils/contractConstants';
 import { supabase } from '../../supabaseClient';
 import ContractExportButton from '../datasites/ContractExportButton';
 import PaymentSchedulePanel from '../datasites/PaymentSchedulePanel';
+import NegotiationPanel from './NegotiationPanel';
 import { useCurrentUser } from '../../utils/useCurrentUser';
 
 export default function ContractDetailPanel({ contract, onClose, onUpdate }) {
@@ -270,8 +270,8 @@ export default function ContractDetailPanel({ contract, onClose, onUpdate }) {
     }
   }
 
-  // Giá mục tiêu đã bao gồm VAT (làm tròn xuống số lẻ < 10.000đ để tránh vượt khung)
-  const targetPriceWithVat = Math.floor(targetPriceSum / 10000) * 10000;
+  // Giá mục tiêu đã bao gồm VAT = tổng khung chính xác (không làm tròn)
+  const targetPriceWithVat = targetPriceSum;
   const _targetPriceStr = new Intl.NumberFormat('vi-VN').format(targetPriceWithVat) + ' đ';
 
   const negotiatedPrice = customPriceStr ? Number(customPriceStr.replace(/\D/g, '')) : (originalPrice > 0 ? targetPriceWithVat : 0);
@@ -295,18 +295,10 @@ export default function ContractDetailPanel({ contract, onClose, onUpdate }) {
 
   const startDate = formatDate(contract.dates?.ngay_ky_hd);
   const endDate = formatDate(contract.dates?.ngay_ket_thuc_hd);
-  const paidUntilDate = contract.financials?.da_thanh_toan_den || '';
-  const cycleString = contract.dates?.chu_ky_thanh_toan || '6 tháng';
   
   const bankName = contract.bank_info?.ngan_hang || 'Chưa cập nhật';
   const bankAccount = contract.bank_info?.so_tai_khoan || 'Chưa cập nhật';
   const bankOwner = contract.bank_info?.chu_tai_khoan || 'Chưa cập nhật';
-
-  // Tính toán danh sách chu kỳ tự động
-  const _paymentCycles = useMemo(() => {
-    if (!paidUntilDate || !endDate) return [];
-    return generatePaymentCycles(paidUntilDate, endDate, cycleString, negotiatedPrice || originalPrice);
-  }, [paidUntilDate, endDate, cycleString, negotiatedPrice, originalPrice]);
 
   if (!contract) return null;
 
@@ -815,7 +807,12 @@ export default function ContractDetailPanel({ contract, onClose, onUpdate }) {
           
           {/* Cột phải */}
           <div className="lg:col-span-5">
-            <div className="sticky top-24">
+            <div className="sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto">
+                <NegotiationPanel
+                  contract={contract}
+                  price={negotiatedPrice}
+                  onPriceChange={(n) => setCustomPriceStr(n ? new Intl.NumberFormat('vi-VN').format(n) : '')}
+                />
                 <PaymentSchedulePanel contract={contract} overridePrice={negotiatedPrice} />
             </div>
           </div>
