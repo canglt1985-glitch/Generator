@@ -1,7 +1,7 @@
 # BRIEF: SMARTF-SMARTW CORRELATION PIPELINE & HỆ THỐNG QUẢN LÝ ẢNH DỰ ÁN
 
 - **Ngày ghi nhận:** 19/10/2026
-- **Tác giả ý tưởng:** anh Cương (TVT3)
+- **Tác giả ý tưởng:** anh Cảng (Tổ Kỹ thuật TVT3)
 - **Mục tiêu:** 
   1. Phối hợp 2 luồng SmartF (KPI suy giảm) -> SmartW (Nguyên nhân cảnh báo) -> Điều hành tự động.
   2. Kiến trúc nén, lưu trữ, mã hóa và tra cứu thông minh kho hình ảnh khổng lồ từ các dự án CSHT & VHKT.
